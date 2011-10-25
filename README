@@ -2,7 +2,7 @@ Building & installing
 ---------------------
 
 From fMBT sources you can build a normal version, and a low-dependency
-"android" version.
+"Android" version.
 
 Normal version dependencies:
         glib-2.0, boost (regex), libedit,
@@ -16,8 +16,15 @@ Normal version dependencies:
 make
 make install
 
+
 Testing
 -------
+
+make check
+        Tests the source tree.
+
+test/git-HEAD/run.sh
+        Test the latest commit in the current git branch.
 
 
 Documentation
