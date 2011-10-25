@@ -1,0 +1,38 @@
+:144: syntax error after ';'
+:145: syntax error after '}
+	'
+:146: syntax error after '}
+	'
+:147: syntax error after 'bool dragged;
+	'
+:148: syntax error after '{
+		if( input.button == Key.Escape ) '
+:149: syntax error after 'if'
+:150: syntax error after ';'
+:153: syntax error after '}'
+:158: syntax error after '}'
+:159: syntax error after '}}
+	'
+:160: syntax error after ')'
+:161: syntax error after 'RightButton) ) {
+			if(!dragged) '
+:162: syntax error after '}'
+:163: syntax error after '}'
+:164: syntax error after '}
+		}
+		'
+:165: syntax error after '}'
+:166: syntax error after '}}
+	'
+:167: syntax error after '}}
+	void move() { with(input) {
+		if( rZ ) '
+:168: syntax error after '}}
+	void move() { with(input) {
+		if( rZ ) {
+			if( modifiers[Key.LeftShift] '
+:169: syntax error after ')'
+:171: syntax error after '}'
+:176: syntax error after ';'
+:177: syntax error after ';'
+fatal error, '' line 177

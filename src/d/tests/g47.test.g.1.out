@@ -1,0 +1,18 @@
+PARA(A para.)
+BARE
+BLOCK(%A para.)
+PARA(List item 1.)
+PARA( Item 1, para 2.)
+ITEM(---List item 1. Item 1, para 2.)
+PARA(List item 2.)
+ITEM(%---List item 2.)
+PARA(List item 3.)
+ITEM(%---List item 3.)
+LIST(---List item 1. Item 1, para 2.%---List item 2.%---List item 3.)
+BLOCK(---List item 1. Item 1, para 2.%---List item 2.%---List item 3.)
+PARA(Final para.)
+BARE
+BLOCK(%Final para.)
+82 states 30 scans 17 shifts 80 reductions 3 compares 0 ambiguities
+(( %  A para. )(( --- ( List item 1.   Item 1, para 2. ))( %---  List item 2. )( %---  List item 3. ))(( %  Final para. )  
+ ))

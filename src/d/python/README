@@ -1,0 +1,17 @@
+This module was created by Brian Sabbey (sabbey at u.washington.edu).
+
+See index.html for details.
+
+Swig:
+	make swig
+
+	made with SWIG Version 1.3
+	
+Thanks to:
+
+	Brennan Evans for more general unix support.
+
+	Milosz Krajewski for non-unix support (mostly superseded by binary table support in d parser) and directory independence.
+
+	Yves Forkl for bugs, usability suggestions, and emacs lisp code to jump to syntax error location.
+

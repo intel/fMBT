@@ -1,0 +1,6 @@
+Building from git
+-----------------
+
+autoreconf --install
+./configure
+make

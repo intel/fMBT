@@ -1,0 +1,191 @@
+module image.colorist;
+import core.time, core.task, core.error, sys.console, core.text, core.array, core.math;
+import sys.file, sys.display, sys.opengl, sys.input, sys.network;
+import math.vector, math.matrix, math.geometry;
+import gl.render, gl.shader, gl.transform, gl.fbo;
+import image.image, image.resource, image.color;
+import file.png;
+import ui.text, ui.widget, ui.colorpicker;
+import image.tool, image.document, image.layer;
+
+/**
+~/Dev
+xfbuild image/colorist.d
+rm .deps && xfbuild image/colorist.d -clean
+dmd0xf
+#FIXME:
+	- fill bounding box ?
+	- colorpicker: when dragging color, dont leave
+	- max texture: 16 -> cache operation, max size: 4096 -> tile image
+#OPTI:
+	- undo: store subimage [+PNG compressed, +delta]
+#CLEAN:
+	- Widget system:
+		- Container { Circle, Box( Dock, DropList ) }
+		- Widget { Button, Text, Slider }
+#TODO:
+	- XML Layer tree + layer position
+	- move Layer
+	- create/delete/rename/edit Layer/Operation
+	- tool: remember color, layer
+	- document selection -> dock style, load on demand, save on leave
+	- windows compatibilty + publish
+	- Photobook: /resize layer; +text tool;
+	- Photoshop: + image adjustment; +stamp;
+	- interactive comic: music, SFX, animation, morphing
+**/
+
+Document[] docs;
+Document current;
+
+Layer readLayer;
+Layer writeLayers[];
+
+Tool tool;
+
+ColorPicker colorPicker;
+ContextMenu toolSelector;
+LayerSelector layerSelector;
+DocumentSelector documentSelector;
+Shader defaultShader;
+
+vec2 cursor;
+vec4 pickHSV( Layer layer ) { return RGBtoHSV( pick(layer).toVec ); }
+Color pick( Layer layer ) {
+	if( layer.image.outOfBound( cast(int)cursor.x, cast(int)cursor.y ) ) return Black;
+	return layer.image[cast(int)cursor.x, cast(int)cursor.y];
+}
+
+class Colorist : Interactive {
+	//#TODO: keep color
+	void selectBrush() { if(tool) tool.exit(); if( writeLayers.length ) tool=new Brush( 1.0 ); }
+	void selectAirbrush() { if(tool) tool.exit(); if( writeLayers.length ) tool=new Brush( 0.5 ); }
+	void selectFill() { if(tool) tool.exit(); if( readLayer && writeLayers.length ) tool=new Fill( Fill.Type.Uniform ); }
+	void selectLinear() { if(tool) tool.exit(); if( readLayer && writeLayers.length ) tool=new Fill( Fill.Type.Linear ); }
+	void selectRadial() { if(tool) tool.exit(); if( readLayer && writeLayers.length ) tool=new Fill( Fill.Type.Radial ); }
+
+	this( string args[] ) {
+		Interactive.enable();
+
+		toolSelector = new ContextMenu( [
+			new Button("../icon/brush",
+				"Brush: brush flat areas\n"
+				"- LMB: brush\n"
+				"- RMB: pick brush color [+Ctrl+Drag: color wheel]\n"
+				"- Wheel: change brush size",
+				&selectBrush ),
+			new Button("../icon/fill",
+				"Fill: adjust flat color\n"
+				"- LMB: select area\n"
+				"- RMB: pick color [+Ctrl+Drag: color wheel]\n"
+				"- Wheel: change saturation",
+				&selectFill ),
+			new Button("../icon/airbrush",
+				"Airbrush: smooth brush lighting\n"
+				"- LMB: brush\n"
+				"- RMB: pick brush color [+drag: color wheel]\n"
+				"- Wheel: change brush size [+Ctrl/MMB:change color value]",
+				&selectAirbrush ),
+			new Button("../icon/linear",
+				"Linear Gradient Fill: shade using gradient\n"
+				"- LMB: select area\n"
+				"- RMB: pick color [+Ctrl+Drag: color wheel]\n"
+				"- Wheel: change gradient width [+Ctrl/MMB:change color value]",
+				&selectLinear ),
+			new Button("../icon/radial",
+				"Radial Gradient Fill: shade using gradient\n"
+				"- LMB: select area\n"
+				"- RMB: pick color [+Ctrl+Drag: color wheel]\n"
+				"- Wheel: change gradient width [+Ctrl/MMB:change color value]",
+				&selectRadial )
+		] );
+
+		layerSelector = new LayerSelector();
+		colorPicker = new ColorPicker();
+		foreach( name; args ) docs ~= new Document( name );
+		documentSelector = new DocumentSelector();
+		if( docs ) {
+			selectDocument( 0 );
+			auto flat = cast(Layer)current.root.findByName("flat");
+			if( flat ) { readLayer=flat; writeLayers=[flat]; }
+			selectBrush();
+		}
+
+		new Task( &draw, true );
+	}
+	void draw() {
+		setDefaultState();
+		setWindowMatrix();
+
+		glModelView = Matrix.identity
+			.translate( Vec3( Display().width/2,Display().height/2, 0 ) )
+			.scale( Vec3( current.scale, -current.scale, 1 ) )
+			.translate( current.translate.xyz );
+		cursor = unproject( input.cursor.xyz ).xy;
+
+			if( current ) current.draw();
+
+		glModelView = Matrix.identity;
+		glColor( White );
+
+		foreach( v; visibleWidgets ) v.draw();
+		if(tool) tool.draw(); else .draw( input.cursor.xyz, 4, 16, White.withAlpha( 128 ) );
+
+		//Text( Profiler.main.results(), Vec2( 0, 16 ), 16 ).draw();
+		//Profiler().count("FPS ");
+		flip();
+	}
+	void save( Document doc ) { if( doc.savedState==doc.currentState ) return;
+		doc.root.traverse( (int depth, Operation op){ op.save( doc.name ); } );
+		PNG.write( "color/"~doc.name~".png", doc.render );
+		if( cast(Layer)doc.root.findByName("line") )
+		PNG.write( "bw/"~doc.name~".png", (cast(Layer)doc.root.findByName("line")).image );
+		doc.savedState=doc.currentState;
+	}
+	void saveAll() { foreach( doc; docs ) save(doc); }
+	bool dragged;
+	bool press() { with(input) {
+		if( input.button == Key.Escape ) { /*saveAll(); #TODO: ask user*/ TaskManager().stopWork();
+		} else if( button == Key.S && modifiers[Key.LeftCtrl] ) { saveAll();
+		} else if( modifiers[Key.LeftCtrl] && button == Key.Z ) {
+			if(  modifiers[Key.LeftShift] ) current.redo(); else current.undo();
+		//} else if( button == Key.R ) { foreach( layer; [flat,light] ) layer.upload();
+		} else if( button == Key.LeftButton || button == Key.RightButton || button == Key.MiddleButton ) {
+			if( !modifiers[Key.LeftShift] && cursor != Vec2.None ) if(tool) tool.press();
+			dragged=false;
+		} else return false;
+		return true;
+	}}
+	void release() { with(input) {
+		if( !modifiers[Key.LeftShift] && (button == Key.LeftButton || button == Key.RightButton) ) {
+			if(!dragged) { if(tool) tool.click(); }
+			else { if(tool) tool.release(); }
+		}
+		dragged=false;
+	}}
+	void move() { with(input) {
+		if( rZ ) {
+			if( modifiers[Key.LeftShift] ) current.scale *= 1.0+rZ/16.0;
+			else if(tool) tool.wheel( rZ/16.0 );
+		}
+	}}
+	void drag() { with(input) {
+		dragged=true;
+		if( modifiers[Key.LeftButton] && modifiers[Key.LeftShift] ) { //move
+			if( rX != 0 ) current.translate += Vec2( rX/current.scale, 0 );
+			if( rY != 0 ) current.translate += Vec2( 0, rY/current.scale );
+			mX -= rX;  mY -= rY;
+		} else {
+			if( input.modifiers[Key.MiddleButton] ) toolSelector.show();
+			if( tool && cursor != Vec2.None ) tool.drag();
+		}
+	}}
+}
+
+int main( string[] args ) {
+	new Display( 1280,768,false );
+	new Colorist( args[1..$] );
+	TaskManager().work();
+	TaskManager().waitWorkers();
+	return 0;
+}
