@@ -1,0 +1,372 @@
+=============
+fMBT Overview
+=============
+
+
+Introduction
+------------
+
+fMBT is a tool for generating and executing model-based tests. This
+document gives understanding on what exactly happens inside the tool
+during generation and execution of a test.
+
+This document is targeted for everyone who uses the fMBT tool. Once
+you understanding the big picture and essential bits below the
+surface, you will feel more comfortable start using the tool: run
+tests, debug errors, modify and create new test configurations, design
+test models (see models.rst) and extend or implement new adapters (see
+adapters.rst).
+
+As a running example we will be using an fMBT test for Connman
+[1]. Example test setup contains
+
+- a laptop which is driving the test. Test generation takes place
+  here, and the top-level adapter redirects actions to be executed
+  from here to the other two devices.
+
+- a tablet PC where Connman is running. There is a "remote_python"
+  adapter running here. It listens to actions coming from the
+  top-level adapter and executes them in Python interpreter.
+
+- a wireless access point runs OpenWrt and a "remote_exec.sh"
+  adapter. This adapter executes actions in shell.
+
+Next we will go through what happens in the actual test run in
+bottom-up order: from low-level adapters to test generation and
+execution. The stack in the example is as follows:
+
+Test generation
+    |
+    V
+Top-level adapter
+    |
+    V
+Low-level adapters
+    |
+    V
+Connman & WiFi access point
+
+        Note that using the fMBT tool does not necessarily require
+        using multiple adapter layers. However, if testing needs
+        execution of actions on multiple devices, fMBT includes
+        adapters for redirecting actions to several low-level
+        adapters, some possibly running different hosts.
+
+
+Low-level adapters
+------------------
+
+Adapters execute actions, report execution results, and report
+spontaneous events occuring in the system under test.
+
+There are two low-level adapters in Connman tests: remote_python and
+remote_exec.sh. Both implement a simple remote adapter protocol:
+
+1. read line with an integer n (in ASCII) from stdin. This is the
+number of actions that can be used in the test run.
+
+2. read n actions, one per line, from stdin. Each action is either a
+Python expression (remote_python) or a shell command (remote_exec.sh).
+
+3. Run in loop:
+
+3.1 Read integer n from stdin (index to the array of actions)
+
+3.2 Execute (n+1)th action.
+
+3.3 If the execution was successful, write n to stderr.
+    If the execution was unsuccessful, but action m (m!=n) corresponds
+    to what actually happened, write m to stderr.
+
+3.4 If a spontaneous event corresponding to action number o has been
+    observed, write o to stdout.
+
+Example 1: Check if wifi technology is available on Connman running on
+the tablet. Give input:
+
+$ ssh root@tablet ./remote_python
+2
+iDBus('system','net.connman','/','net.connman.Manager').GetProperties()['AvailableTechnologies'].count('wifi')==0
+iDBus('system','net.connman','/','net.connman.Manager').GetProperties()['AvailableTechnologies'].count('wifi')==1
+0
+
+
+This sends two actions to the adapter and suggests execution of the
+first one. If the adapter responds 0 the first action became executed,
+meaning that the technology is not available. If it responds 1, the
+technology is there. Otherwise an error is printed (for instance, if
+Connman does not respond or there is no corresponding action in the
+list of actions).
+
+Example 2: remote_python for human beings. Yet the adapter is used as
+in Example 1 in the real test run, it has a shell mode. The shell is
+helps in debugging errors, in extending the adapter and in designing
+the model. In that mode the adapter executes Python expressions and
+prints results:
+
+$ ssh root@tablet ./remote_python --shell
+>>> iDBus('system','net.connman','/','net.connman.Manager').GetProperties()['AvailableTechnologies']
+
+
+remote_python and remote_exec.sh adapters have nothing specific to the
+Connman or the access point. They can be used to test or control any
+software or device that can be accessed via Python interpreter or
+shell. For instance, fMBT interactive mode test uses remote_python,
+but controls the interactive mode with the pexpect [pexpect] Python
+library. See [fMBT-imt] for further details.
+
+These two adapters are written in Python and shell script: no
+cross-compilation is needed. Adapters don't have dependencies outside
+the standard Python libraries or /bin/sh.
+
+
+High-level adapters
+-------------------
+
+In this example, adapter_mapper is the top-level adapter running on
+the laptop. It redirects actions to remote_python and remote_exec.sh
+for execution and forwards their reports to the test generation.
+
+The mapper adapter has a configuration file which maps actions in the
+model to low-level actions in the low-level adapters. In Example 3
+there are four high-level actions mapped to remote_python and
+remote_exec.sh adapters, two for each. The file contains parameters
+for launching the low-level adapters, too.
+
+Example 3: a mapper adapter configuration file
+
+1="remote:ssh root@192.168.1.3 ./remote_python --action-delay 0.3"
+2="remote:ssh root@192.168.1.1 ./remote_exec.sh"
+
+"iWifiTechAvailable"   -> (1, "iDBus('system','net.connman','/','net.connman.Manager').GetProperties()['AvailableTechnologies'].count('wifi')==1")
+"iWifiTechUnavailable" -> (1, "iDBus('system','net.connman','/','net.connman.Manager').GetProperties()['AvailableTechnologies'].count('wifi')==0")
+"iAPStartDHCPServer"         -> (2, "/etc/init.d/dnsmasq start")
+"iAPStopDHCPServer"          -> (2, "/etc/init.d/dnsmasq stop")
+
+
+Every file that is read in by the test engine, like the mapper adapter
+configuration, is preprocessed using standard cpp. This allows using
+macros for keeping the files easier to maintain. Furthermore,
+adapter's internal state can be taken advantage of in tests. For
+intsance, after executing an action that runs
+
+     iCatch('''manager = DBus('system','net.connman','/','net.connman.Manager')''')
+
+The Manager D-Bus interface can be referred as "manager" in the action
+names. Therefore, the actual mapper configuration file for Connman
+models looks more like this:
+
+Example 4: a mapper adapter configuration file with macros
+
+1="remote:ssh root@192.168.1.3 ./remote_python --action-delay 0.3"
+2="remote:ssh root@192.168.1.1 ./remote_exec.sh"
+
+"iWifiTechAvailable"   -> (1, "manager.GetProperties()['AvailableTechnologies'].count('wifi') == 1")
+"iWifiTechUnavailable" -> (1, "manager.GetProperties()['AvailableTechnologies'].count('wifi') == 0")
+"iAPWifiOn"            -> (2, "/sbin/wifi")
+"iAPWifiOff"           -> (2, "/sbin/wifi down")
+
+
+Test model
+----------
+
+Test models are constructed from model components. Each of the
+components is like a finite state machine (without the "final
+states"). Another name for them is a "labelled state transition
+system", or LSTS for short. They define names for actions and the
+order in which they can be executed.
+
+LSTSs can be generated, for instance, with a graph transition tool
+(gt) from the TEMA toolkit[1]. Example 5 defines an LSTS and stores it
+to enable-wifi.lsts file.
+
+Example 5: A model component that tests enabling/disabling wifi
+technology:
+
+utils/gt new enable-wifi.lsts 'P(s0,p) ->
+    T(s0,        "iWifiTechUnavailable",      s0)
+    T(s0,        "iWifiTechAvailable",        wifi)
+
+    T(wifi,      "iWifiTechEnabled",          wifion)
+    T(wifi,      "iWifiTechDisabled",         wifioff)
+
+    T(wifion,    "iWifiTechEnabled",          wifion)
+    T(wifion,    "iEnableEnabledWifiTech",    wifion)
+    T(wifion,    "iDisableWifiTech",          wifioff)
+
+    T(wifioff,   "iWifiTechDisabled",         wifioff)
+    T(wifioff,   "iDisableDisabledWifiTech",  wifioff)
+    T(wifioff,   "iEnableWifiTech",           wifion)'
+
+
+In the initial state, referred as s0 in Example 5, there are two
+actions that can be executed: iWifiTechUnavailable and
+iWifiTechAvailable. Executing the former will keep the state machine
+in the same state. Executing the latter takes it to the next state,
+called "wifi". From that state the execution continues to wifion if
+the wifi technology is enabled, or to wifioff otherwise, and so on.
+
+Test generation could generate the following sequence of actions from
+this model component alone:
+
+1. iWifiTechAvailable
+2. iWifiTechDisabled
+3. iDisableDisabledWifiTech
+4. iWifiTechDisabled
+5. iEnableWifiTech
+6. iWifiTechEnabled
+7. iEnableEnabledWifiTech
+...
+
+When passed through adapter mapper, this could result in the following
+executions in the remote_python adapter:
+
+1. manager.GetProperties()['AvailableTechnologies'].count('wifi')==1
+2. manager.GetProperties()['EnabledTechnologies'].count('wifi')==0
+3. iCatch('''manager.DisableTechnology('wifi')''')==Error('net.connman.Error.AlreadyDisabled: Already disabled')
+4. manager.GetProperties()['EnabledTechnologies'].count('wifi')==0
+5. iCatch('''manager.EnableTechnology('wifi')''')==None
+6. manager.GetProperties()['EnabledTechnologies'].count('wifi')==1
+7. iCatch('''manager.EnableTechnology('wifi')''')==Error('net.connman.Error.AlreadyEnabled: Already enabled')
+...
+
+Test models can be composed of several model components in the real
+test runs. In the composite models it is possible to test sequences
+where executions of actions of model components are interleaved.
+
+For instance, one can test interleavings of
+    1) switching the access point radio on and off
+    2) enable and disable the wifi technology in ConnMan, and
+    3) create, disconnect and remove connections to the wifi network
+
+by modelling these to separate model components and including them in
+the test model. As these actions are interleaved in the test model,
+testing the following sequences are possible:
+
+1. ConnMan connects to the access point
+2. ConnMan wifi technology is disabled during connection
+3. access point switches the wifi radio off
+4. ConnMan wifi technology is enabled
+5. ConnMan tries reconnecting (should give an error)
+6. access point switches the wifi radio on
+...
+
+There is a huge number of different interleavings of actions. Which of
+them actually becomes executed depends on the test generation.
+
+
+Test generation
+---------------
+
+There are three modules involved in the test generation: "coverage",
+"heuristic" and the model which we have handled already. The coverage
+module stores the history of executed actions and provides a value
+within closed interval from 0 to 1, describing how much of the
+required coverage is already fulfilled. The heuristic module suggests
+actions that should be executed next. It can use the model (which
+actions are possible) and the coverage (which actions would give the
+biggest improvement on the coverage) for making up the decision.
+
+A good heuristic, for instance, could be a bounded search algorithm
+which could try adding and removing different action sequences to /
+from the coverage and look for the shortest path to the best coverage
+value. This can be further improved by adding a little "understanding"
+on which suggested actions usually lead to which actual executions.
+
+fMBT includes two coverage modules at the moment. One allows defining
+explicitely the actions that should be executed, another makes
+requirements like execute "all actions", "all interleavings of two
+actions", ..., "all interleavings of n actions", and is therefore easy
+to use with any model.
+
+fMBT includes two simple heuristic modules: a random walk, that
+totally ignores the coverage, and a greedy selection. The latter picks
+up the first available action that gives the best improvement on
+coverage.
+
+
+Test execution
+--------------
+
+Now we have covered all bits and pieces needed for the actual test
+execution. The execution starts by loading a test configuration
+file. For instance:
+
+$ fmbt test.conf
+
+The configuration file specifies
+
+- a file containing the test model. This can be a LSTS file, or an
+  xrules file which is a model including several model components.
+
+- name of the heuristic module and parameters for it.
+
+- name of the coverage module and parameters for it.
+
+- name of the adapter module and parameters for it. In the ConnMan
+  example this is the mapper adapter, and it is given the
+  configuration file described in High-level adapters section.
+
+- end condition for the test based on coverage value.
+
+- end condition for the test based on the number of executed actions.
+
+The test execution runs in a loop:
+
+1. Let the heuristic module suggest an action to be executed next.
+
+2. Send the suggested action to the top level adapter and read which
+   action it reports to be really executed.
+
+3. Check if the action reported by the adapter can be executed in the
+   model. If not, an error has occured. In the next section we will
+   have an overview on debugging. If execution is possible, testing
+   can continue from the next state.
+
+4. Loop again unless an end condition is satisfied: coverage reaches
+   the wanted value, or the maximum number of test steps has been
+   reached.
+
+
+Debugging
+---------
+
+When an error is detected, fMBT drops to interactive mode by
+default. Interactive mode enables executing any action on any adapter
+layer to investigate the issue more deeply. For further
+investigations, fMBT can be started to the interactive mode:
+
+$ fmbt -i test.conf
+
+fMBT writes a test log during the test run. The log contains a lot of
+information. fmbt-log tool helps extracting the information that is
+relevant for each particular case. Try
+
+$ fmbt-log --help
+
+Remote adapters remote_exec.sh and remote_python write their own logs,
+too. Those logs are located on the hosts where the adapters are run.
+
+
+TODO
+----
+
+- Explain outputs in main loop and adapters.
+
+- Explain multiple alternative actions reported from adapters to top.
+
+
+References
+----------
+
+[Connman]  ConnMan - Open source connection manager.
+	   http://connman.net/
+
+[fMBT-imt] fMBT interactive mode tests.
+	   test/interactive/fmbt_i.py in the fMBT source tree.
+
+[pexpect]  The pexpect Python library.
+	   http://pexpect.sourceforge.net/pexpect.html
+
+[TEMA]     TEMA tools
+	   http://tema.cs.tut.fi/

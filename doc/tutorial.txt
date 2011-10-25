@@ -1,0 +1,351 @@
+=============
+fMBT tutorial
+=============
+
+In this tutorial we will create a model-based test for mkdir and rmdir
+in the Python "os" module. We will cover everything from scratch to
+running the test and inspecting the results using fMBT.
+
+
+Before we start
+---------------
+
+Install the fMBT tool and Graphviz.
+
+
+Creating a simple model
+-----------------------
+
+Our test model defines what happens on creating and removing the
+/tmp/fmbt.mkrmdir directory. In addition to successful cases the model
+covers two negative cases: create an already existing directory, and
+remove a non-existing directory. The model is created as follows:
+
+$ fmbt-gt -o mkrmdir.lsts -f - << EOF
+P(init0, "gt:istate") ->
+
+P(init0, "gt:istate")
+T(init0, "iCatch('from os import mkdir, rmdir') == None",       init1)
+T(init1, "iCatch('dname=\'/tmp/fmbt.mkrmdir\'')",               start)
+
+T(start, "iCatch('mkdir(dname)') == None",                      dir)
+T(start, "iCatch('mkdir(dname)') == Error('.*File exists.*')",  dir)
+
+P(dir,   "directory")
+T(dir,   "iCatch('mkdir(dname)') == Error('.*File exists.*')",  dir)
+T(dir,   "iCatch('rmdir(dname)') == None",                      nodir)
+
+P(nodir, "no directory")
+T(nodir, "iCatch('mkdir(dname)') == None",                      dir)
+T(nodir, "iCatch('rmdir(dname)') == Error('.*No such file.*')", nodir)
+EOF
+
+Execution of the model starts from the state with "gt:istate" label.
+The state is called "init0" above.
+
+"T" rules define transitions: T(source_state, action_name,
+dest_state). First two steps in the test model, from states "init0"
+and "init1", setup a generic adapter called remote_python for the test
+run: import the functions that will be called during the test and
+define a shorthand for the name of the directory to be made and
+removed. The adapter provides function iCatch that executes the
+parameter and returns raised exception or None.
+
+At the "start" state the model allows mkdir to be executed either
+without an error or with a "File exists" error. Here the effect is
+that we can start the test with and without existing /tmp/fmbt.mkrmdir
+directory. In general this demonstrates how a model can adapt to the
+current state of the system under test. This helps testing
+non-deterministic systems.
+
+"P" rules label states: P(state, label). Here they label dir and nodir
+states. The labels would not be needed for the first test run, but
+they help extending the model as we shall see later.
+
+Have a look at the resulting model:
+
+$ fmbt-view mkrmdir.lsts
+
+
+Writing test configuration file
+-------------------------------
+
+Create a test configuration file:
+
+$ cat > mkrmdir.conf << EOF
+model        = "mkrmdir.lsts"
+heuristic    = "greedy"
+coverage     = "perm:1"
+adapter      = "remote:remote_python -L adapter.log"
+engine.cov   = 1.0
+engine.count = -1
+EOF
+
+Greedy test generation heuristic suggests executing an action that
+immediately gives the best improvement on coverage.
+
+Coverage module "perm" with parameter n reaches full coverage (1.0)
+when all permutations of n actions have been executed in the test
+run. With n = 1 this requires executing every action at least once.
+
+Remote adapter executes "remote_python -L adapter.log" to create an
+adapter.
+
+Test is finished if test coverage limit defined by engine.cov is
+reached. Test step count is not used as an end condition in this
+configuration.
+
+
+Running the test
+----------------
+
+Now we have the model and the configuration. We are ready to run the
+test:
+
+$ rm -f adapter.log mkrmdir.log
+
+$ fmbt -L mkrmdir.log mkrmdir.conf
+
+
+Inspecting logs
+---------------
+
+By default fmbt-log prints the sequence of executed actions and test
+verdict at the bottom:
+
+$ fmbt-log mkrmdir.log
+iCatch('from os import mkdir, rmdir') == None
+iCatch('dname=\'/tmp/fmbt.mkrmdir\'')
+iCatch('mkdir(dname)') == None
+iCatch('mkdir(dname)') == Error('.*File exists.*')
+iCatch('rmdir(dname)') == None
+iCatch('rmdir(dname)') == Error('.*No such file.*')
+pass
+
+But the log tool can do much more. This prints suggested action,
+executed action and coverage after each step:
+
+$ fmbt-log -f 'sugg: $as\nexec: $ax\n cov: $sc\n' mkrmdir.log
+...
+
+Details on what has happened on remote_python adapter can be read from
+adapter.log. Now that the test passed, there's not much to see in the
+log. But in case of an error it may help us a lot, as we shall see.
+
+
+Extending the model
+-------------------
+
+Next we modify the model so that it tests creating a subdirectory "d"
+to the directory it has already created.
+
+$ fmbt-gt -i mkrmdir.lsts -o mkrmdir.lsts -f - << EOF
+P(s, "directory") ->
+P(s, "directory")
+T(s, "iCatch('mkdir(dname+\'/d\')') == None",                     s)
+T(s, "iCatch('mkdir(dname+\'/d\')') == Error('.*File exists.*')", s)
+EOF
+
+This will add two transitions from state s to state s for every state
+s that has a "directory" label in mkrmdir.lsts. Again, you can
+visualise the model to see it:
+
+$ fmbt-view mkrmdir.lsts
+
+But now the model includes an error: it assumes that rmdir(dname)
+works similarly with an empty and a non-empty directory.
+
+Let's try if the difference in the model and real mkdir/rmdir
+behaviour can be detected with the current test configuration. The
+error may go undetected because there are many ways to execute every
+action at least once so that removing a non-empty directory will not
+be tested.
+
+Our test run did not find the error:
+
+$ rm -rf /tmp/fmbt.mkrmdir mkrmdir.log adapter.log
+
+$ fmbt -L mkrmdir.log mkrmdir.conf
+
+$ fmbt-log -f '$tv$sc $ax' mkrmdir.log
+0.222222 iCatch('from os import mkdir, rmdir') == None
+0.333333 iCatch('dname=\'/tmp/fmbt.mkrmdir\'')
+0.444444 iCatch('mkdir(dname)') == None
+0.555556 iCatch('mkdir(dname)') == Error('.*File exists.*')
+0.666667 iCatch('rmdir(dname)') == None
+0.777778 iCatch('rmdir(dname)') == Error('.*No such file.*')
+0.777778 iCatch('rmdir(dname)') == Error('.*No such file.*')
+0.777778 iCatch('mkdir(dname)') == None
+0.888889 iCatch('mkdir(dname+\'/d\')') == None
+1.000000 iCatch('mkdir(dname+\'/d\')') == Error('.*File exists.*')
+pass
+
+
+Increasing error detection power
+--------------------------------
+
+This is how we can make sure that the error is detected. First, let's
+increase permutations of actions that must be covered:
+
+$ sed -i 's/perm:1/perm:2/' mkrmdir.conf
+
+Then set a limit for test steps because executing all permutations of
+any two actions is not possible. This limit guarantees that the test
+will eventually stop even if there would not be an error.
+
+$ sed -i 's/-1/100/' mkrmdir.conf
+
+Now, rerun the test
+
+$ rm -rf /tmp/fmbt.mkrmdir mkrmdir.log adapter.log
+
+$ fmbt -L mkrmdir.log mkrmdir.conf
+
+By default, fMBT drops to an interactive mode when an error is
+found. That is, this test run results in a prompt:
+
+fMBT> 
+
+In the interactive mode we can inspect and walk through states of the
+model and try executing all actions available at adapters.
+
+
+Debugging an error
+------------------
+
+First we need to find out what happened. For that, let's quit the
+interactive mode for now (command "q") and read new logs.
+
+Let's see the last two suggested and executed actions:
+
+$ fmbt-log -f 's: $as\nx: $ax\n' mkrmdir.log
+...
+s: iCatch('mkdir(dname+\'/d\')') == None
+x: iCatch('mkdir(dname+\'/d\')') == Error('.*File exists.*')
+
+s: iCatch('rmdir(dname)') == None
+x: 
+
+The last suggested action tried to execute "rmdir(dname)", but the
+adapter did not report any known action to be executed. The previous
+action shows that directory "dname + '/d'" exists in the system. This
+already points us to the error in the model.
+
+Let's still check adapter's point of view. After all, some other
+anomaly could have caused the problem as well. The last "Executing"
+looks like this in the log:
+
+$ tail adapter.log
+...
+Executing    5: 'iCatch('rmdir(dname)') == None'
+    eval: 'iCatch('rmdir(dname)')'
+    eval: 'Error('''OSError: [Errno 39] Directory not empty: \'/tmp/fmbt.mkrmdir\'''') == None'
+    eval: 'Error('''OSError: [Errno 39] Directory not empty: \'/tmp/fmbt.mkrmdir\'''') == Error('.*No such file.*')'
+Cannot report execution: action 'iCatch('rmdir(dname)') == Error('''OSError: [Errno 39] Directory not empty: \'/tmp/fmbt.mkrmdir\'''')' not found.
+...
+
+That is, executing "rmdir(dname)" caused error "Directory not
+empty". Adapter could not find a matching result for this error among
+any of the known results for rmdir(dname), that is None and "No such
+file" error. Finally it logged that it cannot report execution of any
+known action.
+
+
+Finding shortest error traces
+-----------------------------
+
+Let's imagine - just for a little while - that rmdir actually was
+supposed to remove the /tmp/fmbt.mkrmdir directory even if it was not
+empty. So we need to report a bug against the os module. For the bug
+report we need a compact, preferably the shortest possible, error
+trace.
+
+We already think we know what caused the error, so we can try
+reproducing it in fMBT's interactive mode. First we print the list of
+suggested actions in the original error trace. Then we enter the
+interactive mode by starting fMBT with argument "-i":
+
+$ fmbt-log -f '$as' mkrmdir.log
+iCatch('from os import mkdir, rmdir') == None
+iCatch('dname=\'/tmp/fmbt.mkrmdir\'')
+iCatch('mkdir(dname)') == None
+iCatch('mkdir(dname)') == Error('.*File exists.*')
+iCatch('rmdir(dname)') == None
+iCatch('rmdir(dname)') == Error('.*No such file.*')
+iCatch('mkdir(dname)') == None
+iCatch('mkdir(dname+\'/d\')') == None
+iCatch('mkdir(dname+\'/d\')') == Error('.*File exists.*')
+iCatch('mkdir(dname)') == Error('.*File exists.*')
+iCatch('mkdir(dname)') == Error('.*File exists.*')
+iCatch('mkdir(dname+\'/d\')') == None
+iCatch('rmdir(dname)') == None
+
+$ rm -rf /tmp/fmbt.mkrmdir adapter.log minimal.log
+
+$ fmbt -i -L minimal.log mkrmdir.conf
+fMBT>
+
+Now it is easiest to just copy and paste actions from log output to
+the interactive mode prompt. We pick only the actions that we assume
+to be needed. That is actions 1, 2, 3, 8 and 13:
+
+iCatch('from os import mkdir, rmdir') == None
+iCatch('dname=\'/tmp/fmbt.mkrmdir\'')
+iCatch('mkdir(dname)') == None
+iCatch('mkdir(dname+\'/d\')') == None
+iCatch('rmdir(dname)') == None
+
+Copy-pasting actions above to the interactive mode prompt looks like
+this:
+
+fMBT> iCatch('from os import mkdir, rmdir') == None
+executing: iCatch('from os import mkdir, rmdir') == None
+adapter:   iCatch('from os import mkdir, rmdir') == None
+model:     [skipped]
+fMBT> iCatch('dname=\'/tmp/fmbt.mkrmdir\'')
+executing: iCatch('dname=\'/tmp/fmbt.mkrmdir\'')
+adapter:   iCatch('dname=\'/tmp/fmbt.mkrmdir\'')
+model:     [skipped]
+fMBT> iCatch('mkdir(dname)') == None
+executing: iCatch('mkdir(dname)') == None
+adapter:   iCatch('mkdir(dname)') == None
+model:     [skipped]
+fMBT> iCatch('mkdir(dname+\'/d\')') == None
+executing: iCatch('mkdir(dname+\'/d\')') == None
+adapter:   iCatch('mkdir(dname+\'/d\')') == None
+model:     [skipped]
+fMBT> iCatch('rmdir(dname)') == None
+executing: iCatch('rmdir(dname)') == None
+adapter:   
+model:     [skipped]
+fMBT> 
+
+Which confirms that the adapter cannot execute the last action after
+the previous actions. We found an error trace of 5 steps instead of
+the original 13 steps.
+
+Let's try if this is 10/10 reproducable, the minimal trace is now
+easily reproduced directly from the log:
+
+$ rm -rf /tmp/fmbt.mkrmdir adapter.log
+
+$ fmbt-log -f '$as' minimal.log | fmbt -i -L/dev/null mkrmdir.conf
+
+
+Conclusions
+-----------
+
+We have now covered basic usage of:
+
+fmbt      - test generator and runner
+
+fmbt-log  - test log processor
+
+fmbt-gt   - model creation and transformation
+
+fmbt-view - model visualisation
+
+Further fMBT documentation will take you deeper in modelling,
+adapters, possible test setups and tool internals. And when you start
+playing with the tool and the real thing you need to test, you will
+find your own way to use fMBT. Enjoy!

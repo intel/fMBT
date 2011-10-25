@@ -1,0 +1,112 @@
+===========
+fMBT Models
+===========
+
+
+Introduction
+------------
+
+fMBT tool supports two types of test model file formats: LSTS
+(labelled state-transition system) and xrules (extended parallel
+composition rules).
+
+The first part of this document explains what these formats are and
+how you can create test models in these formats. The second part
+describes the test model API of fMBT tool and instructs how to
+implement support for other test model formats.
+
+This document is targeted for people who design test models and
+possibly wish to extend fMBT model support to other model formalisms.
+
+
+Graph transition tool and labelled state-transition system (LSTS)
+-----------------------------------------------------------------
+
+LSTS file defines a state machine. Formally, LSTS is composed of
+
+- a set of states, one of which is an initial state from which the
+  execution starts
+
+- a set of state transitions
+
+- a set of actions: every transition is labelled by exactly one
+  action, and the same action can be a label of several transitions.
+
+- a set of state propositions: every state can be associated with zero
+  or more state propositions.
+
+gt is a graph transformation tool that operates on LSTSs. The tool can
+create new LSTSs if "new" is given in place of input LSTS
+filename. The following command prints a two-state LSTS into standard
+output:
+
+$ gt new - 'P(off, x) ->
+    T(off, "iOn", on)
+    P(on, "lights on")
+    T(on, "iOff", off)'
+
+fmbt-view visualises LSTSs using Graphviz. To see what the above state
+machine looks like, pipe the LSTS to "fmbt-view -".
+
+Here is a brief explanation of the above gt command.
+
+Keyword "new" as an input LSTS forces gt to internally create an LSTS
+to start with, instead of loading an existing LSTS. Created LSTS has a
+single state labelled by a special state proposition:
+"gt:istate". There is no transitions and no actions. The "gt:istate"
+proposition is always set to the initial state of any input LSTS, and
+it is never written out.
+
+"-" as an output LSTS tells gt to write the resulting LSTS to the
+standard output. Another option would have been to give a
+filename. The output LSTS is written out when all transformation rules
+have been applied to the input LSTS.
+
+The rest of the parameters are transformation rules. Rules consists of
+the left-hand part and the right-hand part, separated by "->". All
+content matching the left-hand side will be replaced by the content
+defined by the right-hand side of the rule. The above command has only
+one rule:
+
+'P(off, x) ->'
+replace any proposition "x" on any state "off" with the following:
+
+'T(off, "iOn", on)'
+add a transition from state "off" to a new state that will be called
+"on" from this point on in the rule. The transition is labelled with
+action "iOn".
+
+'P(on, "lights on")'
+add a state proposition "lights on" to the state called "on".
+
+'T(on, "iOff", off)'
+add a transition, labelled by action "iOff", from the "on" state to
+the "off" state.
+
+As there is only one state with one state proposition, there is only
+one match for the left-hand side of the rule.
+
+For more detailed explanation of the graph transition rules refer to
+
+$ gt --help
+
+An example of using gt for creating a test model can be found in fMBT
+test/interactivemode/create_model.sh.
+
+
+Extended rules
+--------------
+
+Model API
+---------
+
+The first part of this document explains what these formats are and
+how you can create test models in these formats. The second part
+describes the test model API of fMBT tool and instructs how to
+implement support for other test model formats.
+
+This document is targeted for people who design test models and
+possibly wish to extend fMBT model support to other model formalisms.
+
+
+L

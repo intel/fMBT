@@ -1,0 +1,26 @@
+Building & installing
+---------------------
+
+From fMBT sources you can build a normal version, and a low-dependency
+"android" version.
+
+Normal version dependencies:
+        glib-2.0, boost (regex), libedit,
+        python2.6+, python-pexpect, python-dbus
+
+"Android" version dependencies:
+        libedit
+
+./autogen.sh # needed if working on sources from git repo
+./configure
+make
+make install
+
+Testing
+-------
+
+
+Documentation
+-------------
+
+Start with doc/tutorial.txt and doc/overview.txt.

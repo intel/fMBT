@@ -1,0 +1,5 @@
+1="dummy"
+2="dummy"
+3="mapper:singledummy.mrules"
+
+"(.*)Dummy" -> (3, "($1)Road")

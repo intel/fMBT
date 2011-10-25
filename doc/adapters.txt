@@ -1,0 +1,285 @@
+==================
+fMBT tool adapters
+==================
+
+
+Introduction
+------------
+
+Adapters are responsible for translation between actions in test
+models and what actually happens in systems under test (SUT) and test
+environments. This document describes how adapters work in the fMBT
+tool, how a generic adapter can be extended, and how to implement new
+adapters.
+
+After a brief overview, we will introduce adapter stacks and concepts
+of local and remote adapters. Then we will introduce a generic
+adapter, and finally show how to implement your own local and remote
+adapters.
+
+
+Overview
+--------
+
+Adapters have two responsibilities in the fMBT tool:
+
+1. they read an input action suggested by the test generator, try to
+   execute it, and finally report the result back to the generator in
+   the form of input actions.
+
+2. they make observations on SUT and the test environment, and report
+   the results to the test generator in the form of output actions.
+
+As said, the first responsibility handles *input actions*. These
+actions interact with the SUT or the test environment. In the model
+these actions are always prefixed with "i". For instance, let
+
+    iSetOperationMode('offline')
+
+be an input action that changes the operation mode of a device. If the
+action would correspond to a function call in an API of the SUT,
+adapter might just make the call and report the action to be
+executed. In another setting the action might be a high level
+description that the adapter would unfold to series of commands, like
+
+    if (stop_services() < 0) {
+        adapter_log("go offline: stopping services failed\n");
+        abort();
+    }
+    pwr_before = read_power_consumption();
+    set_oper_mode(OM_OFFLINE);
+    pwr_after = read_power_consumption();
+    if (power_after > pwr_before - RADIO_PWR)
+        adapter_log("go offline warning: power consumption high\n");
+
+Input actions can specify the required return values as well. For
+instance,
+
+    iGetOperationMode() == 'offline'
+    iGetOperationMode() == 'online'
+
+might correspond to calling the same method in the API of the SUT, but
+they require a different return value. It can happen that the test
+generator suggests executing the first action, but when the adapter
+calls the method, it gets 'online' as a return value. In this case the
+adapter would report that the second action was executed.
+
+The second responsibility handles *output actions*, that is, actions
+whose execution has been observed by the adapter. In the model these
+actions are always prefixed with "o". For instance,
+
+    oOperationModeChanged('online')
+    oOperationModeChanged('offline')
+
+are two output actions which correspond to the SUT reporting operation
+mode changes to its users.
+
+
+Adapter stack
+-------------
+
+Local adapters are adapters which implement the fMBT adapter API and
+are instantiated inside the process that also generates the test, that
+is fmbt. Remote adapters are adapters that implement the adapter
+protocol. They are running on a separate process, but may or may not
+run on the same host.
+
+There is always at least one local adapter in a test run. The name and
+the parameters of the adapter are specified in a test configuration
+file.
+
+Adapter stack may contain the following building blocks.
+
+- adapter_remote is a local adapter that acts as a bridge between the
+  model (or a higher level adapter) and any remote
+  adapter. adapter_remote takes one parameter: a shell command. It
+  forks and executes the command that should launch a new remote
+  adapter. Child processes standard input, output and error are used
+  for communication between adapter_remote and the remote adapter. For
+  example, a test configuration file can contain specification:
+  
+    adapter="remote:ssh root@testhost /usr/local/bin/remote_python"
+
+- adapter_mapper is a local adapter that forwards actions between the
+  model (or a higher level adapter) and a number of local adapters. It
+  takes a configuration file as a parameter. The file defines two
+  things. First, it lists lower level adapters and their
+  parameters. Second, it defines a mapping between actions in the
+  model (or a higher level adapter) to actions in the lower level
+  adapters. The mapping allows renaming of actions, too, making the
+  configuration file a convenient place to convert human readable
+  actions in the model into commands or expressions to be run in
+  low-level adapters. For example, configuration
+
+    1 = "remote:ssh root@testhost /usr/local/bin/remote_python"
+    2 = "remote:/usr/local/bin/remote_exec.sh"
+    "itesthost:(.*)"   -> (1, "$1")
+    "ilocalhost:(.*)"  -> (2, "$1")
+
+  sends actions "itesthost:X" as actions "X" to remote_python adapter
+  running on testhost, and "ilocalhost:Y" as "Y" to remote_exec.sh
+  running on localhost. Obviously adapter_mapper makes the adapter
+  stack actually a tree.
+
+- remote_adapter_loader is a remote adapter that is capable of loading
+  and acting as any local adapter. It takes two command line
+  arguments: the name of the local adapter and parameters for it.
+
+
+remote_python - a generic adapter
+---------------------------------
+
+Testing a new SUT does not necessarily mean that you need a new
+adapter. Testing might be possible with a generic adapter with proper
+naming of actions, and possibly with a test-specific library.
+
+remote_python is a generic remote adapter implemented in Python. The
+adapter executes actions as expressions in Python interpreter. For
+example, action "iCatch('import mylib') == None" imports mylib and
+requires that importing did not raise any exceptions. After that
+execution of the later actions can use whatever objects mylib makes
+available. For an example, see test/interactivemode/fmbt_i.py.
+
+The rules for executing actions and reporting the results are the
+following:
+
+- If an action does not include a top-level comparison, like
+  
+  os.system("rm -rf /var/run/lock/sut.lock")
+
+  it is executed and the execution is reported to be successful. The
+  return value and possible exceptions are logged but they do not
+  affect the reported result.
+
+- If an action includes a top-level comparison operator, like
+
+  os.system("mkdir /var/run/lock/sut.lock 2>/dev/null") == 0
+  os.system("mkdir /var/run/lock/sut.lock 2>/dev/null") in range(1,255)
+  os.system("mkdir /var/run/lock/sut.lock 2>/dev/null") > 254
+
+  the left hand side of the action is evaluated first. The result is
+  stored, and then the following evaluations are made until the
+  comparison returns True:
+
+  result == 0
+  result in range(1,255)
+  result > 254
+
+  That is, the result is compared to all right hand side values of
+  actions that have the same left hand side expression. Finally the
+  execution of the corresponding action is reported to the SUT, or an
+  error is reported if there is no corresponding action.
+
+- the adapter generates output actions from D-Bus signals it listens
+  to. For instance, after executing action
+
+  iDBusListen('session','com.example.TestService','HelloSignal')
+
+  it will start capturing HelloSignals. Once one is received, the
+  adapter will report it as an execution of the corresponding output
+  action. For instance,
+
+  oDBusSignal('HelloSignal', 42)
+
+  is reported whenever HelloSignal is emitted with argument 42. On the
+  other hand, if such action is not defined, but
+
+  oDBusSignal('HelloSignal', StoreAs(helloSignalArg))
+
+  is, that will be reported and helloSignalArg variable in the action
+  evaluation namespace in the adapter will contain value 42. That
+  value can be used in later action names, such as in
+
+  iCatch('assert 1 <= helloSignalArg < 128') == None
+
+For convenience, the remote_python adapter adds some functions to the
+namespace where actions are evaluated. Input-action like functions are
+
+iDBus(bus, service, objpath, interface[, timeout = s])
+
+    returns D-Bus interface of the specified object. If the timeout
+    parameter is given, then the method call made through this
+    interface will timeout after given number of seconds.
+
+iDBusListen(bus, service, signalname)
+
+    registers a listener for the given signal, returns None.
+
+iShell(command)
+
+    forks and lets shell execute the command in the child
+    process. Stdout and stderr of the child will be logged. Returns
+    subprocess instance.
+
+iCatch(statement)
+
+    executes the Python statement. If an exception is raised, it is
+    returned inside an Error object for easy comparison. Otherwise,
+    None is returned.
+    Example: iCatch('foo+=2') == Error('NameError:.*') is True
+
+Remote_python adapter can be easily extended to provide similar
+convenience functions in other domains, too. The functions or classes
+can be written into a normal Python library, say myadapter.py. The
+module becomes available after executing iCatch('import myadapter').
+
+
+Remote adapters
+---------------
+
+Remote adapters read input as ASCII from standard input. They report
+execution results as ASCII to standard output (output actions) and
+standard error (executed input actions).
+
+The protocol of a remote adapter is the following:
+
+1. read an integer n from standard input. This is the number of
+actions that can be used in the test run.
+
+2. read n actions, each on its own row, from standard input. Action
+names are urlencoded. (If "remote_noencode" is used as a local
+adapter, then action names are not urlencoded, but they cannot contain
+line breaks.)
+
+3. Run in loop:
+
+3.1 Read integer n from stdin.
+
+3.2 Execute (n+1)th action.
+
+3.3 If the execution and the observed result corresponds to the
+    (m+1)th action, write m to standard error.
+
+    If there is no action that would match to the execution and the
+    result, write 0 to standard error.
+
+3.4 Whenever an output is observed, write the index of the
+    corresponding output action to standard output.
+
+
+Local adapters
+--------------
+
+Local adapters are inherited from the Adapter class (adapter.hh). They
+need to implement
+
+- a creator function that is registered to adapter_factory. This
+  creator is called when configuration of the launched test needs the
+  adapter. Parameters to the creator consist of vector of actions
+  (strings), adapter parameters read from the configuration file, and
+  a logger instance. Creator must return a pointer to an adapter
+  object.
+
+- "execute" method which takes index of the suggested action as a
+  parameter, tries to execute it, and returns index of the executed
+  action.
+
+- "readAction" method for reporting executions of output
+  actions. readAction takes two parameters: output parameter action
+  for reporting the action, a "block" boolean. If the block is True,
+  readAction should until there is output to be reported before
+  returning. If block is False, then readAction should report output
+  actions that have been already observed.
+
+Include the adapter object file to be linked to the target binary in
+the Makefile.

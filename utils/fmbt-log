@@ -1,0 +1,127 @@
+#!/usr/bin/env python
+#
+# fMBT, free Model Based Testing tool
+# Copyright (c) 2011, Intel Corporation.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU Lesser General Public License,
+# version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for
+# more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+"""
+fMBT log tool
+
+Usage: fmbt-log [options] [logfile]
+
+Options:
+  -o, --output=<file>
+          output will be written to given file. Default: the standard
+          output.
+
+  -f, --format=<fmt>
+          fmt defines output format. Default format is '$ax'.
+          Available fields:
+          $al - adapter log messages
+          $as - action name suggested to top-level adapter
+          $ax - action name actually executed in top-level adapter
+          $mc - mapper adapter configuration
+          $mn - mapper adapter number
+          $ms - suggested action name after renaming in mapper adapter
+          $sn - number of test step
+          $sc - coverage after the test step
+          $tv - test verdict: pass or fail
+          $tr - reason for the verdict
+
+If logfile is not given, log is read from standard input.
+"""
+
+import sys
+import getopt
+import urllib2
+
+fields = {
+    '$ax' : ['<action type=', '"', 3],
+    '$as' : ['<suggested_action type=', '"', 3],
+    '$al' : ['<remote msg=', '"', 1],
+    '$ms' : ['<redirect id=', '"', 5],
+    '$mc' : ['<redirect id=', '"', 3],
+    '$mn' : ['<redirect id=', '"', 1],
+    '$sc' : ['<status steps=', '"', 3],
+    '$sn' : ['<status steps=', '"', 1],
+    '$tv' : ['<stop verdict=', '"', 1],
+    '$tr' : ['<stop verdict=', '"', 3],
+}
+
+def extract(input_file_obj, output_file_obj, output_format):
+    # FIXME: this is just a quick to get input action names
+    # printed. What this really should do is:
+    # 1. parse everything that is done during a single test step
+    # 2. write the stuff in requested format to output_file_obj
+
+    def pick(line, delimiter, fieldindex):
+        try: contents = urllib2.unquote(line.split(delimiter)[fieldindex])
+        except: contents = '<syntax error>'
+        return contents
+
+    clean_data = lambda: dict([(field, []) for field in fields])
+
+    parsed_data = clean_data()
+    for lineno, line in enumerate(input_file_obj):
+        for field in fields:
+            match, delimiter, fieldno = fields[field]
+            if match in line:
+                parsed_data[field].append(pick(line, delimiter, fieldno))
+
+        # a test step done, print values
+        ppoutput = ""
+        if ('<status steps=' in line) or ('</test_engine>' in line):
+            printable_data = {}
+            for field in parsed_data:
+                printable_data[field] = '; '.join(parsed_data[field])
+            ppoutput = output_format % printable_data
+            parsed_data = clean_data()
+        elif parsed_data['$al'] != [] and '%($al)' in output_format:
+            # print immediately and only this
+            printable_data = {}
+            for field in parsed_data:
+                if field == '$al': printable_data[field] = parsed_data['$al'][0]
+                else: printable_data[field] = ''
+            ppoutput = output_format % printable_data
+            parsed_data['$al'] = []
+        if ppoutput.strip(): output_file_obj.write(ppoutput)
+
+if __name__ == '__main__':
+    input_file_obj = sys.stdin
+    output_file_obj = sys.stdout
+    output_format = '$tv$ax'
+
+    opts, remainder = getopt.getopt(
+        sys.argv[1:], 'hf:o:',
+        ['help', 'format=', 'output='])
+    for opt, arg in opts:
+        if opt in ['-h', '--help']:
+            print __doc__
+            sys.exit(0)
+        elif opt in ['-f', '--format']:
+            output_format = arg
+        elif opt in ['-o', '--output'] and not arg in ['', '-']:
+            output_file_obj = file(arg, 'w')
+
+    output_format = output_format.replace('\\n', '\n').replace('\\t', '\t')
+    for field in fields:
+        output_format = output_format.replace(field,
+                                              '%(' + field + ')s')
+    output_format += '\n'
+
+    if remainder and remainder[0] != "-":
+        input_file_obj = file(remainder[0], "r")
+
+    extract(input_file_obj, output_file_obj, output_format)

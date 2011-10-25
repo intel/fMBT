@@ -1,0 +1,740 @@
+#!/usr/bin/env python
+
+# fMBT, free Model Based Testing tool
+# Copyright (c) 2011, Intel Corporation.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU Lesser General Public License,
+# version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for
+# more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+"""
+remote_python adapter
+
+Usage: remote_python [options]
+
+Options:
+  -d, --action-delay=<float>
+          set minimum delay between executed actions to <float>
+          seconds. By default there is no delay.
+
+  -L, --log-file=<file>
+          write log to the file instead of /tmp/remote_python.log.
+
+  -s, --shell
+          start in shell mode, reads and executes Python expressions
+          from the standard input.
+
+  -T, --self-test
+          run built-in unit tests
+"""
+
+import sys
+import os
+import urllib
+import time
+import getopt
+
+import gobject
+
+import dbus
+import dbus.mainloop.glib
+import thread
+
+import subprocess
+import fcntl
+
+import compiler
+import ast
+import re
+
+MAX_LINE_LENGTH=1024*1024 # bytes
+
+gLogFile = "/tmp/remote_python.log"
+
+def log(msg, writeToFile=1, writeToStdout=0, writeToStderr=0):
+    timestamped = "l%13.2f %s\n" % (time.time(), msg.rstrip())
+    if writeToFile:
+        file(gLogFile, "a").write(timestamped)
+    if writeToStdout:
+        sys.stdout.write(timestamped)
+        sys.stdout.flush()
+    if writeToStderr:
+        sys.stderr.write(timestamped)
+
+def error(msg):
+    global g_loop
+    log("ERROR: %s" % (msg,), writeToStderr=1)
+    g_loop.quit()
+    sys.exit(1)
+
+def warning(msg):
+    log("WARNING: %s" % (msg,))
+
+def debug(msg):
+    log("DEBUG: %s" % (msg,))
+
+dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+try: g_sessionBus = dbus.SessionBus()
+except:
+    g_sessionBus = None
+    warning("Could not connect to the session bus.")
+
+try: g_systemBus = dbus.SystemBus()
+except:
+    g_systemBus = None
+    warning("Could not connect to the system bus.")
+
+g_actions = []
+
+g_shellMode = False
+g_ioHandler = None
+
+def executeAction():
+    pass
+
+def readActionIndex(fd):
+   """actionSpec: foo(42)=='ok'"""
+   line = fd.readline().strip()
+   try:
+       return int(line)
+   except:
+       error("readActionIndex: converting action index to int failed. Got: '%s'" % (line,))
+
+class _DBusObjwTimeout:
+    """
+    _DBusObjwTimeout is a proxy whose method call timeouts can be parameterised
+    at constructor.
+    """
+    def __init__(self, iface, timeout):
+        self._obj           = iface.proxy_object
+        self._dest          = iface.requested_bus_name
+        self._objPath       = iface.object_path
+        self._interfaceName = iface.dbus_interface
+        self._timeout       = timeout
+    def __getattr__(self, functionName):
+        def proxyMethod(*args):
+            try:
+                signature = self._obj._introspect_method_map[
+                    self._interfaceName+"."+functionName]
+            except:
+                signature = None
+                warning("Guessing D-Bus method call signature for calling %s.%s" %
+                        (self._interfaceName, functionName))
+            return self._obj._bus.call_blocking(self._dest, self._objPath,
+                                                self._interfaceName, functionName,
+                                                signature, args, timeout=self._timeout)
+        return proxyMethod
+
+class DBusObjGetter:
+    """
+    DBusObjGetter implements iDBus function.
+    It returns a D-Bus interface ready for method calls.
+    Example:
+iDBus('session','org.freedesktop.NetworkManager','/org/freedesktop/NetworkManager/Devices/eth0','org.freedesktop.NetworkManager.Devices').getProperties()
+    """
+    def __init__(self, *args):
+        global g_systemBus, g_sessionBus
+        self.cache = {}
+        self.sessionBus = g_sessionBus
+        self.systemBus = g_systemBus
+
+    def __call__(self, busName, dest, objPath, interface, timeout=None):
+        try:
+            retval = self.cache[busName + ' ' + dest + ' ' + objPath + ' ' + interface]
+        except:
+            if busName == 'session': busObj = self.sessionBus
+            elif busName == 'system': busObj = self.systemBus
+            else: error("illegal bus name: '%s'" % (busName,))
+
+            try: obj = busObj.get_object(dest, objPath)
+            except Exception, e:
+                error("could not get_object('%s', '%s'):\n    %s" % (dest, objPath, e))
+            
+            retval = dbus.Interface(obj, interface)
+            self.cache[busName + ' ' + dest + ' ' + objPath + ' ' + interface] = retval
+
+        if timeout:
+            return _DBusObjwTimeout(retval, timeout)
+
+        return retval
+
+class DBusSignalReceiver:
+    """
+    DBusSignalReceiver registers receivers for D-Bus signals. When a
+    signal is received, DBusSignalReceiver converts the signal into an
+    output action and writes the corresponding action index to
+    standard output.
+
+    Let iDBusListen be the name of a DBusSignalReceiver instance. Then
+
+iDBusListen('session','com.example.TestService','HelloSignal')
+
+    registers a receiver for HelloSignal from the
+    com.example.TestService interface.
+
+    The corresponding output action for the catched signal will be
+
+oDBusSignal('HelloSignal',arg1,arg2,...)
+
+    Values of string arguments are in '', boolean and numerics values
+    are not quoted. If exact match for this action is not found,
+    matching of regexp and 'StoreAs' actions will be tested, in the
+    order of their appearance in the action list.
+
+    Regexp actions must be escaped (try re.escape()):
+
+oDBusSignal\(\'HelloSignal\',.*\)
+
+    and StoreAs actions must not contain regular expressions:
+
+oDBusSignal('HelloSignal',StoreAs(var1),StoreAs(var2),'valueOfArg3')
+
+    The last action matches all emitted HelloSignal signals where
+    argument 3 equals valueOfArg3. Values of arg1 and arg2 are stored
+    to variables var1 and var2 for later use in action names.
+    """
+    def __init__(self):
+        self.numericTypes = set([
+            dbus.Int16, dbus.Int32, dbus.Int64,
+            dbus.UInt16, dbus.UInt32, dbus.UInt64,
+            dbus.Double])
+
+    def reportOutput(self, actionName, args):
+        global g_shellMode
+        global g_actions
+
+        if g_shellMode != False:
+            print actionName
+            sys.stdout.flush()
+            return
+
+        try: actionIndex = g_actions.index(actionName)
+        except ValueError: actionIndex = -1
+
+        if (actionIndex == -1) and (',' in actionName):
+            # actionName is not in g_actions, but there might be a
+            # regexp which matches to it. Go through all strings
+            # starting with oDBusSignal\(\'signalName\',
+            # (Note that actions that are regular expressions must
+            # be escaped properly!)
+            prefix = actionName.split(',')[0]
+            for i, a in enumerate(g_actions):
+                if (a.startswith(re.escape(prefix)) and
+                    re.match(a, actionName)):
+                    actionIndex = i
+                    break
+                elif 'StoreAs(' in a:
+                    # Change action name into a regular expression:
+                    # oDBusSignal(...,StoreAs(foo),...)
+                    # ->
+                    # oDBusSignal(...,([^,]*),...)
+                    # and try matching it to the signal.
+                    # If matches, store matching value under given name.
+                    # TODO: Caching action regexps would make sense.
+                    varNames = re.findall('StoreAs\(([^)]*)\)', a)
+                    actionRegexp = re.sub('\\\,\\\<',',(.*)',
+                                          re.escape(re.sub('StoreAs\(([^)]*)\)','<',a)))
+                    values = re.findall(actionRegexp, actionName)
+                    if values:
+                        if len(varNames) == len(values):
+                            for vi, v in enumerate(varNames):
+                                debug("store %s = %s" % (v, values[vi]))
+                                g_dbusEvalGlobals[v] = eval(values[vi])
+                        else:
+                            warning("Number of StoreAs(variable)'s and values does not match on action name '%s' and regexp '%s'" % (actionName, actionRegexp))
+                        actionIndex = i
+                        break
+                        
+        if actionIndex >= 0:
+            sys.stdout.write("%s\n" % (actionIndex,))
+            sys.stdout.flush()
+        else:
+            log("No matching action for signal " + actionName)
+
+    def newSignalHandler(self, signalName):
+        def dbusValueToStr(v):
+            if type(v) in [dbus.String, dbus.ObjectPath]:
+                retval = "'%s'" % (v,)
+            elif type(v) in self.numericTypes:
+                retval = "%s" % (v,)
+            elif type(v) == dbus.Boolean:
+                retval = "%s" % ("False", "True")[int(v)]
+            elif type(v) == dbus.Array:
+                retval = "[%s]" % (",".join([dbusValueToStr(vv) for vv in v]),)
+            else:
+                warning("dbusValueToStr: don't know how to convert value of type '%s' in signal '%s'" % (type(v), signalName))
+                retval = "%s" % (v,)
+            return retval
+        def signalHandler(*args, **kwargs):
+            actionName = "oDBusSignal('%s'" % (signalName,)
+            for i, a in enumerate(args):
+                actionName += ",%s" % (dbusValueToStr(a),)
+            actionName += ")"
+            self.reportOutput(actionName, args)
+        return signalHandler
+
+    def __call__(self, busName, interfaceName, signalName):
+        global g_sessionBus, g_systemBus
+        log("registering listening to %s:%s" % (interfaceName, signalName))
+        if busName == 'session': busObj = g_sessionBus
+        elif busName == 'system': busObj = g_systemBus
+        else: error("illegal bus name: '%s'" % (busName,))
+        busObj.add_signal_receiver(
+            self.newSignalHandler(signalName),
+            dbus_interface = interfaceName,
+            signal_name = signalName)
+
+class Error:
+    """
+    Allows comparing cought and wanted exceptions. Example:
+
+iDBus('system','net.connman','/','net.connman.Manager').SetProperty('foobar',2)==Error(DBusException,'Invalid property')
+    """
+    def __init__(self, arg1, arg2 = None):
+        """
+        Usage:
+            Error(DBusException)
+            Error(DBusException,'Invalid property')
+            Error('Invalid property')
+        """
+        if type(arg1) == str:
+            self._exceptionClass = None
+            self._strException = arg1
+        else:
+            if isinstance(arg1, BaseException):
+                self._exceptionClass = arg1.__class__
+            else:
+                self._exceptionClass = arg1
+            self._strException = arg2
+    def __eq__(self, other):
+        if other == None:
+            return False
+        elif isinstance(other, Error):
+            if self._exceptionClass:
+                myErrorStr = '%s: %s' % (self._exceptionClass.__name__,
+                                         self._strException)
+                return re.match(other._strException,
+                                myErrorStr) != None
+            else:
+                return re.match(other._strException,
+                                self._strException) != None
+        elif isinstance(other, Exception):
+            if self._exceptionClass:
+                if not isinstance(other,  self._exceptionClass):
+                    return False
+            if self._strException:
+                strOther = str(other)
+                if (self._strException != strOther and
+                    not re.match(self._strException, strOther)):
+                    return False
+            return True
+        else:
+            return False
+
+    def __repr__(self):
+        if not self._exceptionClass:
+            return "Error('''%s''')" % (self._strException.replace("'","\\'"),)
+        return "Error('''%s: %s''')" % (self._exceptionClass.__name__,
+                                        self._strException.replace("'","\\'"))
+
+class Exec:
+    """
+    Executes arbitrary Python code.
+    __call__ returns None, but exceptions are passed through.
+    """
+    def __init__(self, _globals):
+        self._globals = _globals
+    def __call__(self, codeString):
+        try:
+            exec codeString.strip() in self._globals
+        except Exception, e:
+            return Error(e, str(e))
+
+g_dbusEvalGlobals = {}
+
+class Shell:
+    """
+    Runs commands in shell.
+    """
+    def __init__(self):
+        self._processList = []
+
+    def __call__(self, args, stdinHandler=None, stdoutHandler=None, stderrHandler=None):
+        """
+        Run the command (given as args) in shell in child process.
+
+        User-defined functions can be registered as handlers for
+        events in stdin, stdout and stderr of the child process. These
+        functions are called with two parameters: corresponding file
+        object and condition (see gobject.io_add_watch callback,
+        gobject.IO_*).
+        
+        If handlers are not given, data read from stdout and stderr is
+        logged.
+        """
+        p = subprocess.Popen(args, 
+                             stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE,
+                             close_fds=True,
+                             shell=True)
+        self._processList.append(p)
+        p.childNumber = len(self._processList)-1
+        log("  Child %4s pid=%s cmd='%s'" %
+            (p.childNumber, p.pid, args))
+
+        if stdinHandler:
+            gobject.io_add_watch(p.stdin,
+                                 gobject.IO_ERR | gobject.IO_HUP,
+                                 stdinHandler)
+
+        if not stdoutHandler: stdoutHandler = self.readFd('stdout', p)
+        gobject.io_add_watch(p.stdout,
+                             gobject.IO_IN | gobject.IO_ERR | gobject.IO_HUP,
+                             stdoutHandler)
+        if not stderrHandler: stderrHandler = self.readFd('stderr', p)
+        gobject.io_add_watch(p.stderr,
+                             gobject.IO_IN | gobject.IO_ERR | gobject.IO_HUP,
+                             stderrHandler)
+        return p
+
+    def readFd(self, fdName, process):
+        def logOutput(fd, condition):
+            outputAvailable = True
+
+            try: line = fd.readline()
+            except: outputAvailable = False
+            if line == "": outputAvailable = False
+
+            if outputAvailable:
+                log("  Child %4s %s: %s"
+                    % (process.childNumber, fdName, line.rstrip()))
+                return True
+            else:
+                log("  Child %4s %s closed" %
+                    (process.childNumber, fdName))
+                fd.close()
+                return False
+        return logOutput
+
+def leftOpRight(actionName):
+    """parse Python comparison expression in actionName and return it
+    in three strings: the left hand side, the operator and the right
+    hand side."""
+    # TODO: cache!
+    fakeFilename="<actionName '%s'>" % (actionName,)
+    astparsed = ast.parse(actionName, fakeFilename, "eval")
+    cparsed = compiler.parse(actionName, "eval")
+    operator = cparsed.node.asList()[1]
+    right = actionName[astparsed.body.comparators[0].col_offset:]
+    leftAndOp = actionName[:-len(right)].strip()
+    op = leftAndOp[-len(operator):]
+    left = leftAndOp[:-len(operator)].strip()
+    return (left, op, right)
+
+def safeEval(expression, globalsDict):
+    log("    eval: '%s'" % (expression,))
+    try:
+        return eval(expression, globalsDict)
+    except Exception, e:
+        return Error(e,str(e))
+
+def executeString(actionName):
+    global g_dbusEvalGlobals
+    
+    resultIncluded = 1
+    try: left, op, right = leftOpRight(actionName)
+    except: resultIncluded = 0
+
+    if resultIncluded:
+        # actionName includes a return value.
+        # Evaluate the left hand side and compare the
+        # result with all valid values.
+        result = safeEval(left, g_dbusEvalGlobals)
+        if safeEval(repr(result) + " " + op + " " + right, g_dbusEvalGlobals) == True:
+            return actionName
+        else:
+            for otherAction in g_actions:
+                if otherAction == actionName: continue
+                try: otherLeft, otherOp, otherRight = leftOpRight(otherAction)
+                except: continue
+                if otherLeft == left:
+                    rv = safeEval(repr(result) + " " + otherOp + " " + otherRight, g_dbusEvalGlobals)
+                    if rv == True:
+                        return otherAction
+                    if rv != False:
+                        warning("    non-boolean evaluation output: %s" % (rv,))
+            # There is no matching action in the list.
+            # Return a new action name
+            return left + ' == ' + str(result)
+    else:
+        # There's no constraint for the result in the action name
+        result = safeEval(actionName, g_dbusEvalGlobals)
+        if result != 'None':
+            log("    not reported return value: %s" % (result,))
+        resultActionName = actionName
+    return resultActionName
+
+class AdapterIO:
+    """
+    AdapterIO implements the adapter protocol:
+
+    1. stateReadNumberOfActions:
+       read number of actions (#a) from stdin
+       when done, move to state 2
+
+    2. stateReadActionTable
+       read action names from stdin (read #a lines) from stdin
+       when all read, move to state 3
+
+    3. stateExecute:
+       3.1 read action to be executed from stdin
+       3.2 print number of synchronously executed action to stderr
+       3.3 print numbers of asynchronous actions to stdout
+       never leave this state
+    """
+    def __init__(self, delayBetweenActions):
+        self._lastExecutionTime = time.time()
+        self._delayBetweenActions = delayBetweenActions
+        self._state = self.stateReadNumberOfActions
+        self._nonblock_buffer = ""
+        
+        fl = fcntl.fcntl(sys.stdin, fcntl.F_GETFL)
+        fcntl.fcntl(sys.stdin, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+
+        gobject.io_add_watch(sys.stdin, 
+                             gobject.IO_IN | gobject.IO_ERR | gobject.IO_HUP,
+                             self.readInput)
+
+    def _nonblock_readline(self, fd):
+        while 1:
+            try: s = fd.read(1024)
+            except: break
+            if s != '': self._nonblock_buffer += s
+            else: break
+            if len(self._nonblock_buffer)>MAX_LINE_LENGTH:
+                error("MAX_LINE_LENGTH exceeded.")
+                break
+        retval = ""
+        if '\n' in self._nonblock_buffer:
+            retval, self._nonblock_buffer = self._nonblock_buffer.split('\n',1)
+            retval += '\n'
+        return retval
+
+    def readInput(self, fd, condition):
+        line = self._nonblock_readline(fd)
+        if condition != gobject.IO_IN or line == '':
+            log("AdapterMode.readInput: cannot read stdin.")
+            g_loop.quit()
+        while line:
+            self._state(line)
+            line = self._nonblock_readline(fd)
+        return True
+
+    def stateReadNumberOfActions(self, inputline):
+        ignore = False
+        try: self._numberOfActions = int(inputline.strip())
+        except: ignore = True
+        if ignore or self._numberOfActions <= 0:
+            warning('Input ignored. Expected number of actions > 0.')
+            return
+
+        self._numberOfReadActions = 0
+        self._state = self.stateReadActionTable
+        debug("Num of actions to be read: %s" % (self._numberOfActions,))
+
+    def stateReadActionTable(self, inputline):
+        global g_actions
+        actionName = urllib.unquote(inputline.strip())
+        g_actions.append(actionName.strip())
+        self._numberOfReadActions += 1
+        if self._numberOfActions <= self._numberOfReadActions:
+            self._state = self.stateExecute
+
+        debug("Action %s/%s: '%s'" %
+              (self._numberOfReadActions, self._numberOfActions, g_actions[-1]))
+
+    def executionDelay(self):
+        if self._delayBetweenActions <= 0:
+            return
+        timeToWait = (self._lastExecutionTime + self._delayBetweenActions) - time.time()
+        if timeToWait > 0:
+            time.sleep(timeToWait)
+
+    def stateExecute(self, inputline):
+        global g_actions
+        global g_loop
+        
+        ignore = False
+        try: actionIndex = int(inputline.strip())
+        except: ignore = True
+
+        if ignore == False and actionIndex >= len(g_actions): ignore = True
+
+        if ignore:
+            warning('Input ignored. Expected integer 0..%s, got "%s".' %
+                    (len(g_actions) - 1, inputline,))
+            return
+
+        self.executionDelay()
+
+        log("Executing %4s: '%s'" % (actionIndex, g_actions[actionIndex]))
+        executedActionName = executeString(g_actions[actionIndex])
+        self._lastExecutionTime = time.time()
+
+        try:
+            executedActionIndex = g_actions.index(executedActionName)
+            log("Reporting %4s: '%s'" %
+                (executedActionIndex, g_actions[executedActionIndex]), writeToStdout=1)
+            sys.stderr.write(str(executedActionIndex) + '\n')
+        except ValueError:
+            log("Cannot report execution: action '%s' not found." % (executedActionName,), writeToStdout=1)
+            sys.stderr.write('0\n')
+
+class InteractiveShellIO:
+    def __init__(self):
+        global g_dbusEvalGlobals
+        import code
+        self.interpreter = code.InteractiveConsole()
+        self.interpreter.locals = g_dbusEvalGlobals
+        self.promptReady = ">>> "
+        self.promptNeedMore = "... "
+        gobject.io_add_watch(sys.stdin, 
+                             gobject.IO_IN | gobject.IO_ERR| gobject.IO_HUP,
+                             self.readInput)
+        self.printPrompt(self.promptReady)
+
+    def printPrompt(self, prompt):
+        sys.stderr.write('%s' % (prompt,))
+
+    def readInput(self, fd, condition):
+        try: line = fd.readline()
+        except: line = ''
+
+        if line == '':
+            g_loop.quit()
+            return True
+
+        needMore = self.interpreter.push(line.rstrip())
+        if needMore: self.printPrompt(self.promptNeedMore)
+        else: self.printPrompt(self.promptReady)
+        sys.stdout.flush()
+        return True
+
+def self_test():
+    global g_dbusEvalGlobals
+    global g_actions
+    PASS, FAIL = "pass", "fail"
+
+    verdict, test = FAIL, "Catch matching errors"
+    try:
+        actionName = "iCatch('a+=2')==Error('NameError:.*')"
+        if actionName == executeString(actionName):
+            verdict = PASS
+    finally: print verdict, test
+
+    verdict, test = FAIL, "Don't catch non-matching errors"
+    try:
+        actionName = "iCatch('b+=2')==Error('ValueError:.*')"
+        if actionName != executeString(actionName):
+            verdict = PASS
+    finally: print verdict, test
+
+    verdict, test = FAIL, "Evaluating three operators, varying white space"
+    try:
+        g_actions = [ "iCatch('''a=0''')==None",
+                      "iCatch('''a+=1''')==None",
+                      "a + 1<2",
+                      "a + 1 == 2",
+                      "a + 1  >=  2 " ]
+        # set and verify a = 1
+        assert executeString(g_actions[0]) == g_actions[0]
+        assert executeString(g_actions[2]) == g_actions[2]
+        assert executeString(g_actions[3]) == g_actions[2]
+        assert executeString(g_actions[4]) == g_actions[2]
+        # set and verify a = 2, note that both 3 and 4 are true
+        assert executeString(g_actions[1]) == g_actions[1]
+        assert executeString(g_actions[2]) == g_actions[3]
+        assert executeString(g_actions[3]) == g_actions[3]
+        assert executeString(g_actions[4]) == g_actions[4]
+        # set and verify a = 3
+        assert executeString(g_actions[1]) == g_actions[1]
+        assert executeString(g_actions[2]) == g_actions[4]
+        assert executeString(g_actions[3]) == g_actions[4]
+        assert executeString(g_actions[4]) == g_actions[4]
+        verdict = PASS
+    finally: print verdict, test
+
+    return 0 # end of self_test
+
+if __name__ == "__main__":
+
+    selfTest = False
+    shellMode = False
+    delay = 0
+
+    opts, remainder = getopt.getopt(
+        sys.argv[1:], 'hsTd:L:',
+        ['help', 'shell', 'self-test',
+         'action-delay=', 'log-file='])
+
+    for opt, arg in opts:
+        if opt in ['-h', '--help']:
+            print __doc__
+            sys.exit(0)
+        elif opt in ['-s', '--shell']:
+            shellMode = True
+        elif opt in ['-T', '--self-test']:
+            selfTest = True
+        elif opt in ['-d', '--action-delay']:
+            delay = float(arg)
+        elif opt in ['-L', '--log-file']:
+            gLogFile = arg
+        else:
+            print __doc__
+            print 'Unknown option: "%s"' % (opt,)
+            sys.exit(1)
+
+    gobject.threads_init()
+    g_dbusEvalGlobals = {
+        'iDBus': DBusObjGetter(),
+        'iDBusListen': DBusSignalReceiver(),
+        'iShell': Shell(),
+        'Error': Error,
+        'DBusException': dbus.DBusException,
+        'dbus': dbus,
+        're':   re,
+        'time': time,
+        'sys':  sys,
+        'os':   os,
+        'actions': g_actions,
+        'log': lambda msg: log("  " + str(msg))
+        }
+    g_dbusEvalGlobals['iCatch'] = Exec(g_dbusEvalGlobals)
+    exec "sys.path.append(''); sys.path.append(os.getcwd())" in g_dbusEvalGlobals
+
+    if selfTest:
+        sys.exit(self_test())
+
+    if shellMode:
+        print "Dropping into the DBus-adapter shell. Available commands:"
+        print ""
+        print DBusObjGetter.__doc__
+        print DBusSignalReceiver.__doc__
+        sys.stdout.flush()
+        g_ioHandler = InteractiveShellIO()
+    else:
+        g_ioHandler = AdapterIO(delay)
+
+    g_loop = gobject.MainLoop()
+    log("entering main loop")
+    g_loop.run()
