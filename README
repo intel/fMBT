@@ -5,7 +5,7 @@ From fMBT sources you can build a normal version, and a low-dependency
 "Android" version.
 
 Normal version dependencies:
-        glib-2.0, boost (regex), libedit,
+        glib-2.0, boost (regex), libedit, cpp,
         python2.6+, python-pexpect, python-dbus
 
 "Android" version dependencies:
