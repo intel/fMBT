@@ -28,13 +28,13 @@ void Coverage::add_factory(std::string name,creator c)
 
 Coverage* Coverage::create(Log& l,std::string& name,std::string& param)
 {
-    creator c=(*factory)[name];
+  if (!factory) return NULL;
+
+  creator c=(*factory)[name];
 
   if (c) {
     return c(l,param);
   }
-
-  throw (int)42422;
 
   return NULL;
 }

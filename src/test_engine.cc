@@ -154,6 +154,11 @@ bool Test_engine::run(float target_coverage,
       actions[0]=action;
       log_adapter_suggest(log, adapter, actions[0]);
       adapter.execute(actions);
+      if (actions.size()==0) {
+        test_passed(false, "adapter communication failure", log);
+        log.pop();
+        return false;
+      }
       int adapter_response = policy.choose(actions);
       log_adapter_execute(log, adapter, adapter_response);
       log.debug("Test_engine::run: passing adapter response action %i to test generation.\n",
@@ -278,10 +283,14 @@ void Test_engine::interactive()
 	    actions_v[0]=action_num;
             log_adapter_suggest(log, *current_adapter, actions_v[0]);
 	    current_adapter->execute(actions_v);
-	    int adapter_response = policy.choose(actions_v);
-            log_adapter_execute(log, *current_adapter, adapter_response);
-            printf("adapter:   %s\n", ca_anames[adapter_response].c_str());
-            printf("model:     [skipped]\n");
+            if (actions_v.size()==0) {
+              printf("adapter:   [communication failure]\n");
+            } else {
+              int adapter_response = policy.choose(actions_v);
+              log_adapter_execute(log, *current_adapter, adapter_response);
+              printf("adapter:   %s\n", ca_anames[adapter_response].c_str());
+              printf("model:     [skipped]\n");
+            }
           } else {
             printf("adapter:   [skipped]\n");
             if (current_adapter->up()==NULL) {

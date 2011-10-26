@@ -55,13 +55,13 @@ float Heuristic::getCoverage() {
 
 Heuristic* Heuristic::create(Log&l,std::string name)
 {
+  if (!factory) return NULL;
+
   creator c=(*factory)[name];
 
   if (c) {
     return c(l);
   }
-
-  throw (int)42423;
 
   return NULL;
 }

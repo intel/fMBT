@@ -22,6 +22,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <error.h>
 
 #include <string.h>
 #include <unistd.h>
@@ -41,15 +42,23 @@ int main(int argc,char** argv)
   size_t si=0;
   std::vector<std::string> anames;
 
-  getline(&s,&si,stdin);
-  actions_size=atoi(s);
-  
+  if (argc < 3)
+    error(1, 0, "Invalid arguments.\n"
+          "Usage: remote_adapter_loader adapter args");
+
+  /* read number of all actions */
+  if (getline(&s,&si,stdin) <= 1)
+    error(2, 0, "Reading number of actions failed.");
+  if ((actions_size=atoi(s)) < 1)
+    error(3, 0, "Invalid number of actions.");
   free(s);
 
+  /* read all actions */
   for(int i=0;i<actions_size;i++) {
     s=NULL;
-    
-    getline(&s,&si,stdin);
+    if (getline(&s,&si,stdin) < 0) {
+      error(3, 0, "Reading list of actions failed.");
+    }
     if (s[strlen(s)-1]=='\n') {
       s[strlen(s)-1]='\0';
     }
@@ -57,18 +66,25 @@ int main(int argc,char** argv)
     free(s);
   }
 
+  /* create local adapter */
   Log_null l;
   Adapter* adapter=Adapter::create(argv[1],anames,argv[2],l);
+  if (adapter == NULL)
+    error(10, 0, "Creating adapter \"%s:%s\" failed.", argv[1], argv[2]);
   s=NULL;
-  adapter->init();
+  if (!adapter->init())
+    error(11, 0, "Initialising adapter \"%s:%s\" failed.", argv[1], argv[2]);
 
+  /* adapter protocol loop: read suggested actions from stdin, report
+     results to stderr, report asynchrous events to stdout. */
   while(!ferror(stdin)) {
     std::vector<int> action;
     while (adapter->readAction(action)) {
       for(unsigned i=0;i<action.size();i++) {
-	printf("%i ",action[i]);
+        fprintf(stdout, "%i ",action[i]);
       }
-      printf("\n");
+      fprintf(stdout, "\n");
+      fflush(stdout);
     }
     if (getline(&s,&si,stdin)>1) {
       action.resize(1);
@@ -78,7 +94,8 @@ int main(int argc,char** argv)
       }
       if (action[0]>=actions_size) {
 	fprintf(stderr,"-1\n");
-	return -1;
+        error(20, 0, "Execution of action number %d suggested (max. %d).",
+              action[0], actions_size - 1);
       }
       adapter->execute(action);
       fprintf(stderr,"%i\n",action[0]);

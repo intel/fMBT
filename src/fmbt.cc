@@ -24,6 +24,7 @@
 #include "helper.hh"
 #include <iostream>
 #include <unistd.h>
+#include <error.h>
 
 /*
 std::string read_req() {
@@ -97,8 +98,7 @@ int main(int argc,char * const argv[])
  
     if (optind == argc) {
       print_usage();
-      printf("test configuration file missing.\n");
-      return 3;
+      error(3, 0, "test configuration file missing.\n");
     }
     { 
       Log log(logfile);
@@ -106,20 +106,23 @@ int main(int argc,char * const argv[])
       std::string conffilename(argv[optind]);
       c.load(conffilename);
 
-      if (!c.status) {
-	return 4;
-      }
+      if (!c.status)
+        error(4, 0, "%s", c.stringify().c_str());
      
       if (E) {
 	printf("%s\n",c.stringify().c_str());
       } else {
 	c.execute(interactive);
+        if (!c.status) {
+          printf("%s\n",c.stringify().c_str());
+          return 5;
+        }
       }
     }
   } catch (int i) {
     print_usage();
     std::printf("catched %i\n",i);
-    return 5;
+    return 6;
   }
   
   return 0;

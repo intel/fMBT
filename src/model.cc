@@ -29,16 +29,13 @@ void Model::add_factory(std::string name,creator c)
 
 Model* Model::create(Log&l,std::string name)
 {
-  creator c=(*factory)[name];
+  if (!factory) return NULL;
 
-  //log.debug("%s(\"%s\")\n",__func__,name.c_str());
+  creator c=(*factory)[name];
 
   if (c) {
     return c(l);
   }
 
-  throw (int)42421;
-
   return NULL;
-
 }

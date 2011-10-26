@@ -35,15 +35,13 @@ void Adapter::add_factory(std::string name,creator c)
 
 Adapter* Adapter::create(std::string name,std::vector<std::string>& actions,std::string params,Log&l)
 {
+  if (!factory) return NULL;
+
   creator c=(*factory)[name];
-  
-  l.debug("trying to load adapter %s",name.c_str());
 
   if (c) {
     return c(actions,params,l);
   }
-
-  throw (int)42429;
 
   return NULL;
 }

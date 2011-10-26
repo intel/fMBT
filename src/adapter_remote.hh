@@ -43,6 +43,8 @@ protected:
   FILE* d_stderr;
 
   std::string prm;
+
+  std::string errormsg;
   
   GPid pid;
   bool urlencode;

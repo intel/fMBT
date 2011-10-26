@@ -26,6 +26,12 @@ extern D_ParserTables parser_tables_conf;
 
 extern Conf* conf_obj;
 
+#define RETURN_ERROR(s) { \
+  status=false; \
+  errormsg=s; \
+  return; \
+  }
+
 void Conf::split(std::string& val,std::string& name,
 			std::string& param)
 {
@@ -53,17 +59,13 @@ void Conf::load(std::string& name)
   conf_obj=this;
 
   s=readfile(name.c_str());
-  if (s==NULL) {
-    log.debug("Can't load lts %s",name.c_str());
-    throw (int)(42011);
-  }
+  if (s==NULL)
+    RETURN_ERROR("Loading \"" + name + "\" failed.");
 
   bool ret=dparse(p,s,std::strlen(s));
 
-  if (!ret) {
-    log.debug("Error in parsing %s\n",name.c_str());
-    return;
-  }
+  if (!ret)
+    RETURN_ERROR("Parsing \"" + name + "\" failed.");
 
   free(s);
 
@@ -71,30 +73,41 @@ void Conf::load(std::string& name)
 
   conf_obj=tmp;
 
-  heuristic=Heuristic::create(log,heuristic_name);
+  if ((heuristic=Heuristic::create(log,heuristic_name)) == NULL)
+    RETURN_ERROR("Creating heuristic \"" + heuristic_name + "\" failed.");
 
-  model=Model::create(log,filetype(model_name));
+  if ((model=Model::create(log,filetype(model_name))) == NULL)
+    RETURN_ERROR("Creating model loader \"" + filetype(model_name)
+                 + "\" failed.");
 
-  if (!model->load(model_name)) {
-    status=false;
-  } else {
-    model->reset();
-  }
+  Coverage* coverage = Coverage::create(log,coverage_name,coverage_param);
+  if (coverage == NULL)
+    RETURN_ERROR("Creating coverage \"" + coverage_name + "\" failed.");
 
-  Coverage* t = Coverage::create(log,coverage_name,coverage_param);
+  if (!model->load(model_name))
+    RETURN_ERROR("Loading model \"" + model_name + "\" failed.");
 
-  heuristic->set_coverage(t);
+  model->reset();
 
-  t->setmodel(model);
+  heuristic->set_coverage(coverage);
+
+  heuristic->set_model(model);
+
+  coverage->setmodel(model);
 
   adapter = Adapter::create(adapter_name,
 			    model->getActionNames(),
 			    adapter_param,log);
 
-  heuristic->set_model(model);
-  if (!t->status || !adapter->status) {
-    status=false;
-  }
+  if (adapter == NULL)
+    RETURN_ERROR("Creating adapter \"" + adapter_name + "\" failed.");
+
+  if (!coverage->status)
+    RETURN_ERROR("Coverage error: " + coverage->stringify());
+
+  if (!adapter->status)
+    RETURN_ERROR("Adapter error: " + adapter->stringify());
+
   log.pop();
 }
 
@@ -104,7 +117,7 @@ std::string Conf::stringify() {
   std::ostringstream t(std::ios::out | std::ios::binary);
 
   if (!status) {
-    return std::string("");
+    return errormsg;
   }
 
   t << "model = \"" << removehash(model_name) << capsulate(model->stringify()) << std::endl;
@@ -129,7 +142,8 @@ void Conf::execute(bool interactive) {
     return;
   }
 
-  adapter->init();
+  if (!adapter->init())
+    RETURN_ERROR("Initialising adapter failed: " + adapter->stringify());
 
   Test_engine engine(*heuristic,*adapter,log,policy);
 

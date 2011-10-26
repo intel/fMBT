@@ -99,16 +99,20 @@ bool Adapter_remote::init()
   g_shell_parse_argv(prm.c_str(),&argc,&argv,&gerr);
 
   if (gerr) {
-    log.debug("adapter_remote: g_shell_parse_argv error: %s\n    when parsing '%s'\n",
-           gerr->message, prm.c_str());
-    throw (424);
+    errormsg = "adapter_remote: g_shell_parse_argv error: " + std::string(gerr->message)
+      + " when parsing " + prm;
+    log.debug(errormsg.c_str());
+    status = false;
+    return false;
   }
 
   g_spawn_async_with_pipes(NULL,argv,NULL,G_SPAWN_SEARCH_PATH,NULL,&pid,NULL,&_stdin,&_stdout,&_stderr,&gerr);
 
   if (gerr) {
-    log.debug("Err is %s\n",gerr->message);
-    throw (42);
+    errormsg = "adapter_remote g_spawn_async_with_pipes error: " + std::string(gerr->message);
+    log.debug(errormsg.c_str());
+    status = false;
+    return false;
   }
 
   d_stdin=fdopen(_stdin,"w");
@@ -141,6 +145,8 @@ std::string Adapter_remote::stringify()
 {
   std::ostringstream t(std::ios::out | std::ios::binary);
 
+  if (!status) return errormsg;
+
   return t.str();
 }
 
@@ -161,7 +167,11 @@ void Adapter_remote::execute(std::vector<int>& action)
 
   fflush(d_stdin);
 
-  getline(&s,&si,d_stderr);
+  if (getline(&s,&si,d_stderr) < 0) {
+    log.debug("Adapter_remote::execute reading child processes execution status failed\n");
+    action.resize(0);
+    return;
+  }
 
   string2vector(s,action);
 
