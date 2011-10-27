@@ -1,0 +1,9 @@
+#!/usr/bin/make -f
+
+build: configure
+
+configure:
+	./autogen.sh
+
+%:
+	dh $@

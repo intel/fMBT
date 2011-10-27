@@ -1,0 +1,12 @@
+Source: fmbt
+Maintainer: Pablo Virolainen <pablo.virolainen@intel.com>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.0
+Build-Depends: debhelper (>= 7.3.8), libglib2.0-dev,libboost1.42-dev, libedit-dev
+
+Package: fmbt
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, cpp, python2.6, python-pexpect, python-dbus
+Description: free Model Based Testing tool
+  fMBT is a tool for generating and executing model-based tests.
