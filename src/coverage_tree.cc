@@ -33,9 +33,9 @@ void Coverage_Tree::precalc()
   }
 }
 
-void Coverage_Tree::setmodel(Model* _model)
+void Coverage_Tree::set_model(Model* _model)
 {
-  Coverage::setmodel(_model);
+  Coverage::set_model(_model);
   precalc();
 }
 

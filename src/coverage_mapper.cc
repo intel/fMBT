@@ -134,7 +134,7 @@ int Coverage_Mapper::fitness(int* actions,int n, float* fitness)
   return ret;
 }
 
-void Coverage_Mapper::setmodel(Model* _model)
+void Coverage_Mapper::set_model(Model* _model)
 {
   model=_model;
   pload(load_name);
@@ -230,7 +230,7 @@ void Coverage_Mapper::add_file(unsigned index,
   Conf::split(cname,cc,cp);
   log.debug("Trying to create coverage %s(%s)\n",cc.c_str(),cp.c_str());
   coverages[index] = Coverage::create(log,cc,cp);
-  coverages[index]->setmodel(models[index]);
+  coverages[index]->set_model(models[index]);
   
 }
 

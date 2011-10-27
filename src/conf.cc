@@ -93,7 +93,7 @@ void Conf::load(std::string& name)
 
   heuristic->set_model(model);
 
-  coverage->setmodel(model);
+  coverage->set_model(model);
 
   adapter = Adapter::create(adapter_name,
 			    model->getActionNames(),

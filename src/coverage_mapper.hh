@@ -46,7 +46,7 @@ public:
   virtual void add_result_action(std::string* name);
   virtual void add_component(unsigned index,std::string& name);
 
-  virtual void setmodel(Model* _model);
+  virtual void set_model(Model* _model);
 protected:
   bool pload(std::string& name);
   int l_index;

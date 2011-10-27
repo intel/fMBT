@@ -44,7 +44,7 @@ Coverage::Coverage(Log& l) : model(NULL), log(l)
 
 }
 
-void Coverage::setmodel(Model* _model)
+void Coverage::set_model(Model* _model)
 {
   model=_model;
 }

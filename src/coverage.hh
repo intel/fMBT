@@ -37,7 +37,7 @@ public:
   virtual float getCoverage()=0;
 
   virtual int fitness(int* actions,int n, float* fitness)=0;
-  virtual void setmodel(Model* _model); // for input alphabet
+  virtual void set_model(Model* _model); // for input alphabet
   /*
   virtual void addmodel(Model* model); // for coverage
   */

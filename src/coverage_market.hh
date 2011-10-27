@@ -60,7 +60,7 @@ public:
     models.push_back(model);
   }
 
-  virtual void setmodel(Model* _model)
+  virtual void set_model(Model* _model)
   {
     model=_model;
   }

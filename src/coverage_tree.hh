@@ -37,7 +37,7 @@ public:
 
   void set_max_depth(std::string&s);
 
-  virtual void setmodel(Model* _model);
+  virtual void set_model(Model* _model);
 
 protected:
   void precalc();
