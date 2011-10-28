@@ -1,33 +1,45 @@
 Building & installing
 ---------------------
 
-From fMBT sources you can build a normal version, and a low-dependency
-"Android" version.
+Quick start for Debian (Ubuntu) users:
+    (sudo) apt-get install build-essential libglib2.0-dev libboost-regex-dev libedit-dev python-pexpect python-dbus gawk
 
-Normal version dependencies:
-        glib-2.0, boost (regex), libedit, cpp,
-        python2.6+, python-pexpect, python-dbus
+Quick start for Fedora users:
+    yum install  glibc-devel glib2-devel boost-devel libedit-devel gcc-c++ pexpect dbus-python
 
-"Android" version dependencies:
-        libedit
-
-./autogen.sh # needed if working on sources from git repo
 ./configure
 make
 make install
+
+From fMBT sources you can build a normal version as above, and a
+low-dependency "Android" version (./configure --enable-android): it
+needs only C and C++ runtimes.
+
+
+Documentation
+-------------
+
+doc/tutorial.txt - hands on with fMBT using a tiny example
+
+doc/overview.txt - technical introduction on how fmbt works
+                   in a real-life example
+
+
+Working on git source tree
+--------------------------
+
+Install autoconf and automake. Then build:
+
+./autogen.sh
+./configure
+make
 
 
 Testing
 -------
 
 make check
-        Tests the source tree.
+        Run tests against the source tree as it is.
 
 test/git-HEAD/run.sh
-        Test the latest commit in the current git branch.
-
-
-Documentation
--------------
-
-Start with doc/tutorial.txt and doc/overview.txt.
+        Run tests against the latest commit in the current git branch.
