@@ -264,22 +264,69 @@ Local adapters are inherited from the Adapter class (adapter.hh). They
 need to implement
 
 - a creator function that is registered to adapter_factory. This
-  creator is called when configuration of the launched test needs the
-  adapter. Parameters to the creator consist of vector of actions
-  (strings), adapter parameters read from the configuration file, and
-  a logger instance. Creator must return a pointer to an adapter
-  object.
+  function is called when launched test needs the adapter. Creator
+  parameters consist of
 
-- "execute" method which takes index of the suggested action as a
-  parameter, tries to execute it, and returns index of the executed
+  1) a vector of actions (strings),
+
+  2) adapter parameters read from the configuration file,
+
+  3) and a logger instance.
+
+  Creator must return a pointer to instantiated Adapter, or NULL in
+  case of an error.
+
+- "execute" method that takes index of suggested action as a
+  parameter, tries to execute it, and returns index of executed
   action.
 
 - "readAction" method for reporting executions of output
-  actions. readAction takes two parameters: output parameter action
-  for reporting the action, a "block" boolean. If the block is True,
-  readAction should until there is output to be reported before
-  returning. If block is False, then readAction should report output
-  actions that have been already observed.
+  actions. readAction takes two parameters:
+
+  1) output parameter for reporting executed action
+
+  2) boolean value "block". If the value is True, readAction should
+  wait until there is output to be reported before returning. If block
+  is False, then readAction should report output actions that have
+  been already observed.
 
 Include the adapter object file to be linked to the target binary in
 the Makefile.
+
+The following example shows how to make a simple local adapter for
+testing a minimal library:
+
+$ cat > src/mylocaladapter.hh << EOF
+#include "adapter.hh"
+
+class MyLocalAdapter: public Adapter {
+public:
+  MyLocalAdapter(std::vector<std::string>& _actions, Log& l);
+  virtual void        execute(std::vector<int>& action);
+  virtual bool        readAction(std::vector<int> &action,bool block=false);
+  virtual std::string stringify();
+};
+EOF
+
+$ cat > src/mylocaladapter.cc << EOF
+#include "mylocaladapter.hh"
+
+MyLocalAdapter::MyLocalAdapter(std::vector<std::string>& _actions, Log& l)
+{
+}
+
+void MyLocalAdapter::execute(std::vector<int>& action)
+{
+    return action;
+}
+
+bool MyLocalAdapter::readAction(std::vector<int> &action,bool block=false)
+{
+    return false;
+}
+
+std::string stringify() {
+    return "";
+};
+EOF
+
