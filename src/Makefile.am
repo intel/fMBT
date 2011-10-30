@@ -8,9 +8,11 @@ if HAVE_PYTHON
 dist_bin_SCRIPTS = remote_python
 endif
 
-fmbt_SOURCES       = fmbt.cc lts.cc test_engine.cc heuristic_random.cc log.cc helper.cc lts.g.d_parser.cc adapter_model.cc adapter_mapper.cc xrules.g.d_parser.cc lts_xrules.cc coverage_market.cc coverage_mapper.cc requirement.g.d_parser.cc heuristic_greedy.cc coverage_tree.cc adapter_dummy.cc model.cc heuristic.cc coverage.cc adapter.cc conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc adapter_remote.cc
+COMMON_SOURCES = fmbt.cc lts.cc test_engine.cc heuristic_random.cc log.cc helper.cc lts.g.d_parser.cc adapter_model.cc adapter_mapper.cc adapter_dlopen.cc xrules.g.d_parser.cc lts_xrules.cc coverage_market.cc coverage_mapper.cc requirement.g.d_parser.cc heuristic_greedy.cc coverage_tree.cc adapter_dummy.cc model.cc heuristic.cc coverage.cc adapter.cc conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc
 
-fmbt_droid_SOURCES = fmbt.cc lts.cc test_engine.cc heuristic_random.cc log.cc helper.cc lts.g.d_parser.cc adapter_model.cc adapter_mapper.cc xrules.g.d_parser.cc lts_xrules.cc coverage_market.cc coverage_mapper.cc requirement.g.d_parser.cc heuristic_greedy.cc coverage_tree.cc adapter_dummy.cc model.cc heuristic.cc coverage.cc adapter.cc conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc
+fmbt_SOURCES       = $(COMMON_SOURCES) adapter_remote.cc
+
+fmbt_droid_SOURCES = $(COMMON_SOURCES)
 
 remote_adapter_loader_SOURCES = remote_adapter_loader.cc adapter.cc log.cc adapter_dummy.cc adapter_model.cc helper.cc model.cc
 
