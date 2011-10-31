@@ -78,6 +78,7 @@ Adapter_dlopen::Adapter_dlopen(Log& log, std::string params) :
 
 void Adapter_dlopen::set_actions(std::vector<std::string>* _actions)
 {
+  Adapter::set_actions(_actions);
   loaded_adapter->set_actions(_actions);
 }
 
