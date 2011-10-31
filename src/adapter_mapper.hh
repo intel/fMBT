@@ -16,6 +16,11 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+
+/* Adapter mapper handles renaming and redirecting actions to multiple
+ * adapters.
+ */
+
 #ifndef __adapter_mapper_hh__
 #define __adapter_mapper_hh__
 
@@ -26,21 +31,17 @@
 
 class Adapter_mapper : public Adapter, Rules {
 public:
-  Adapter_mapper(std::vector<std::string>& _actions,
-		 std::string params,Log&l) : Adapter(_actions,l), Rules() {
-    //printf("%s called\n",__PRETTY_FUNCTION__);
-    robin=0;
-    load(params);
-  }
+  Adapter_mapper(Log& log, std::string params);
+  virtual bool init();
 
   virtual void execute(std::vector<int>& action);
-  virtual bool readAction(std::vector<int> &action,bool block=false);
+  virtual bool readAction(std::vector<int> &action, bool block=false);
 
   bool load(std::string& name);
 
   virtual void add_file(unsigned index, std::string& adaptername);
   virtual void add_result_action(std::string* name);
-  virtual void add_component(unsigned int index,std::string& name);
+  virtual void add_component(unsigned int index, std::string& name);
 
   virtual Adapter* down(unsigned int a) { 
     if (a>=adapters.size()) {
@@ -49,7 +50,6 @@ public:
     return adapters[a];
   } 
   virtual std::string stringify();
-  virtual bool init();
 protected:
   bool readActionRobin(std::vector<int> &action);
   void m1_convert(int index,std::vector<int>&action);
@@ -65,6 +65,7 @@ protected:
 
   unsigned int robin;
   int l_index;
+  std::string params;
   std::string l_name;
   std::string load_name;
 

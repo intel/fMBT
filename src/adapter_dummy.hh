@@ -20,13 +20,8 @@
 
 class Adapter_dummy: public Adapter {
 public:
-  Adapter_dummy(std::vector<std::string>& _actions, std::string params, Log&l);
+  Adapter_dummy(Log& l, std::string params);
+
   virtual void execute(std::vector<int>& action);
   virtual bool readAction(std::vector<int> &action,bool block=false);
-  virtual std::string stringify();
-  virtual bool init() {
-    return true;
-  }
-private:
-
 };

@@ -8,13 +8,13 @@ if HAVE_PYTHON
 dist_bin_SCRIPTS = remote_python
 endif
 
-COMMON_SOURCES = fmbt.cc lts.cc test_engine.cc heuristic_random.cc log.cc helper.cc lts.g.d_parser.cc adapter_factory.cc adapter_model.cc adapter_mapper.cc adapter_dlopen.cc xrules.g.d_parser.cc lts_xrules.cc coverage_market.cc coverage_mapper.cc requirement.g.d_parser.cc heuristic_greedy.cc coverage_tree.cc adapter_dummy.cc model.cc heuristic.cc coverage.cc adapter.cc conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc
+COMMON_SOURCES = fmbt.cc lts.cc test_engine.cc heuristic_random.cc log.cc helper.cc lts.g.d_parser.cc adapter_model.cc adapter_mapper.cc adapter_dlopen.cc xrules.g.d_parser.cc lts_xrules.cc coverage_market.cc coverage_mapper.cc requirement.g.d_parser.cc heuristic_greedy.cc coverage_tree.cc adapter_dummy.cc model.cc heuristic.cc coverage.cc adapter.cc conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc
 
 fmbt_SOURCES       = $(COMMON_SOURCES) adapter_remote.cc
 
 fmbt_droid_SOURCES = $(COMMON_SOURCES)
 
-remote_adapter_loader_SOURCES = remote_adapter_loader.cc adapter.cc adapter_factory.cc log.cc adapter_dummy.cc adapter_model.cc helper.cc model.cc
+remote_adapter_loader_SOURCES = remote_adapter_loader.cc adapter.cc log.cc adapter_dummy.cc adapter_model.cc adapter_v4l2.cc helper.cc model.cc
 
 noinst_HEADERS = adapter_dummy.hh adapter.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_v4l2.hh adapter_xrules.hh conf.hh coverage.hh coverage_mapper.hh coverage_market.hh coverage_tree.hh helper.hh heuristic_greedy.hh heuristic.hh heuristic_random.hh log.hh log_null.hh lts.hh lts_remote.hh lts_xrules.hh model.hh policy.hh rules.hh test_engine.hh writable.hh
 

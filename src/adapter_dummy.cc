@@ -17,24 +17,16 @@
  *
  */
 #include "adapter_dummy.hh"
+#include "log.hh"
 #include <cstdio>
 #include <sstream>
 
-Adapter_dummy::Adapter_dummy(std::vector<std::string>& _actions, std::string params, Log&l) :
-    Adapter::Adapter(_actions,l)
+
+Adapter_dummy::Adapter_dummy(Log& l, std::string params) :
+  Adapter::Adapter(l)
 {
 }
 
-std::string Adapter_dummy::stringify()
-{
-  std::ostringstream t(std::ios::out | std::ios::binary);
-
-
-
-  return t.str();
-}
-
-/* adapter can execute.. */
 void Adapter_dummy::execute(std::vector<int>& action)
 {
   log.push("Adapter_dummy");
@@ -52,13 +44,3 @@ bool  Adapter_dummy::readAction(std::vector<int> &action,
 }
 
 FACTORY_DEFAULT_CREATOR(Adapter, Adapter_dummy, "dummy");
-
-/*
-namespace {
-  Adapter* adapter_creator(std::vector<std::string>& _actions,
-			   std::string params, Log& l) {
-    return new Adapter_dummy(_actions, l);
-  }
-  static AdapterFactory::Register me("dummy", adapter_creator);
-};
-*/

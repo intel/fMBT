@@ -37,8 +37,16 @@ extern Rules* amobj;
 
 #define debugprint(...)
 
+Adapter_mapper::Adapter_mapper(Log& log, std::string _params)
+  : Adapter(log), Rules(), params(_params)
+{
+  robin=0;
+  
+}
+
 bool Adapter_mapper::init()
 {
+  load(params);
   for(unsigned i=0;i<adapters.size();i++) {
     if (adapters[i]) {
       if (!adapters[i]->init()) {
@@ -67,13 +75,13 @@ std::string Adapter_mapper::stringify()
   for(std::map<int,adapter_action>::iterator it=m2.begin();
       it!=m2.end();it++) {
   */
-  for(unsigned j=0;j<actions.size();j++) {
+  for(unsigned j=0;j<actions->size();j++) {
     std::map<int,adapter_action>::iterator it=m2.find(j);
     if (it!=m2.end()) {
       adapter_action a=it->second;
       int i=it->first;
       
-      t << "\"" << actions[i] << "\" -> ("
+      t << "\"" << (*actions)[i] << "\" -> ("
 	<< a.first << ", \""
 	<< adapter_anames[a.first][a.second]
 	<< "\")" << std::endl;
@@ -114,7 +122,7 @@ void Adapter_mapper::add_map(int index,std::string& n,int action) {
       log.debug("Error in '%s': ", load_name.c_str());
     if (is_used(action)) {
       log.debug("duplicate action on the model side: \"%s\"\n",
-             actions[action].c_str());
+                (*actions)[action].c_str());
     } else { //  is_used(a)
       log.debug("duplicate action on the adapter side: \"%s\"\n",
         adapter_anames[a.first][a.second].c_str());
@@ -171,9 +179,9 @@ bool Adapter_mapper::load(std::string& name)
              adapter_class.c_str(),
              adapter_params.c_str());
 
-      Adapter* a= AdapterFactory::create(adapter_class,
-                                         adapter_anames[i],
-                                         adapter_params,log);
+      Adapter* a = AdapterFactory::create(log, adapter_class,
+                                          adapter_params);
+      a->set_actions(&adapter_anames[i]);
       log.debug("Created adapter to %p\n",a);
       a->setparent(this);
       adapters[i] = a;
@@ -210,8 +218,8 @@ void Adapter_mapper::add_file(unsigned index, std::string& adaptername)
 
 int Adapter_mapper::action_number(std::string& name) 
 {
-  for(size_t i=0;i<actions.size();i++) {
-    if (actions[i]==name) {
+  for(size_t i=0;i<actions->size();i++) {
+    if ((*actions)[i]==name) {
       return i;
     }
   }
@@ -240,15 +248,14 @@ void Adapter_mapper::add_result_action(std::string* name)
     boost::regex expression(*name);
     boost::cmatch what;
 
-    for(unsigned int i=1;i<actions.size();i++) {
-      log.debug("Action %s\n",actions[i].c_str());
-      if(boost::regex_match(actions[i].c_str(), what, expression)) {
+    for(unsigned int i=1;i<actions->size();i++) {
+      log.debug("Action %s\n",(*actions)[i].c_str());
+      if(boost::regex_match((*actions)[i].c_str(), what, expression)) {
         /* Match */
-        //log.debug("MATCH (%s %s)\n",actions[i].c_str(),name->c_str());
         std::ostringstream t(std::ios::out | std::ios::binary);
         std::ostream_iterator<char> oi(t);
         std::string s;
-        boost::regex_replace(oi,actions[i].begin(),actions[i].end(),expression,format_string, boost::match_default | boost::format_all | boost::format_first_only);
+        boost::regex_replace(oi,(*actions)[i].begin(),(*actions)[i].end(),expression,format_string, boost::match_default | boost::format_all | boost::format_first_only);
         
         s=t.str();
         
@@ -364,15 +371,3 @@ bool Adapter_mapper::readAction(std::vector<int> &action,bool block)
 }
 
 FACTORY_DEFAULT_CREATOR(Adapter, Adapter_mapper, "mapper");
-
-/*
-namespace {
-  Adapter* adapter_creator(std::vector<std::string>& _actions,
-                           std::string params,Log&l) {
-    l.debug("adapter_creator Adapter_mapper called (%s)\n",
-            params.c_str());
-    return new Adapter_mapper(_actions,params,l);
-  }
-  static AdapterFactory::Register me("mapper",adapter_creator);
-};
-*/

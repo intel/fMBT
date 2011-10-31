@@ -20,13 +20,14 @@
 
 class Adapter_dlopen: public Adapter {
 public:
-  Adapter_dlopen(std::vector<std::string>& _actions, Log&l);
+  Adapter_dlopen(Log& l, std::string params = "");
+  virtual void set_actions(std::vector<std::string>* _actions);
+  virtual bool init();
+
   virtual void execute(std::vector<int>& action);
   virtual bool readAction(std::vector<int>& action, bool block=false);
+
   virtual std::string stringify();
-  virtual bool init() {
-    return true;
-  }
 private:
   Adapter* loaded_adapter;
 };

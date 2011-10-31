@@ -21,17 +21,26 @@
 #include <sstream>
 #include <cstdlib>
 
-Adapter_model::Adapter_model(std::vector<std::string>& _actions,Log&l,Model* m) : Adapter::Adapter(_actions,l), model(m)
+Adapter_model::Adapter_model(Log& l, std::string params) :
+  Adapter::Adapter(l)
+{
+  model = Model::create(log, filetype(params));
+  model->load(params);
+  model->reset();
+}
+
+bool Adapter_model::init()
 {
   std::vector<std::string>& mactions=model->getActionNames();
-  adapter2model.resize(actions.size());
-  for(unsigned i=0;i<actions.size();i++) {
-    adapter2model[i]=find(mactions,actions[i]);
+  adapter2model.resize(actions->size());
+  for(unsigned i = 0; i < actions->size(); i++) {
+      adapter2model[i]=find(mactions, (*actions)[i]);
   }
   adapter2model.resize(mactions.size());
-  for(unsigned i=0;i<mactions.size();i++) {
-    model2adapter[i]=find(actions,mactions[i]);
+  for(unsigned i = 0; i < mactions.size(); i++) {
+    model2adapter[i]=find(*actions, mactions[i]);
   }
+  return true;
 }
 
 std::string Adapter_model::stringify()
@@ -81,14 +90,4 @@ bool Adapter_model::readAction(std::vector<int> &action,bool block)
   return true;
 }
 
-namespace {
-  Adapter* adapter_creator(std::vector<std::string>& _actions,
-			   std::string params, Log& l) {
-    Model* m=Model::create(l,filetype(params));
-    m->load(params);
-    m->reset();
-
-    return new Adapter_model(_actions,l,m);
-  }
-  static AdapterFactory::Register me("model", adapter_creator);
-};
+FACTORY_DEFAULT_CREATOR(Adapter, Adapter_model, "model")

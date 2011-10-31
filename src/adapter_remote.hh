@@ -21,15 +21,15 @@
 
 class Adapter_remote: public Adapter {
 public:
-  Adapter_remote(std::vector<std::string>& _actions, std::string& params,Log&l,bool encode=true);
+  Adapter_remote(Log& l, std::string& params, bool encode=true);
   ~Adapter_remote() {
-
   }
+  virtual bool init();
 
   virtual void execute(std::vector<int>& action);
   virtual bool readAction(std::vector<int> &action,bool block=false);
+
   virtual std::string stringify();
-  virtual bool init();
 protected:
   ssize_t nonblock_getline(char **lineptr, size_t *n, FILE *stream,
                            const char delimiter = '\n');

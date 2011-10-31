@@ -46,6 +46,12 @@ int main(int argc,char** argv)
     error(1, 0, "Invalid arguments.\n"
           "Usage: remote_adapter_loader adapter args");
 
+  /* create local adapter */
+  Log_null l;
+  Adapter* adapter = AdapterFactory::create(l, argv[1], argv[2]);
+  if (adapter == NULL)
+    error(10, 0, "Creating adapter \"%s:%s\" failed.", argv[1], argv[2]);
+
   /* read number of all actions */
   if (getline(&s,&si,stdin) <= 1)
     error(2, 0, "Reading number of actions failed.");
@@ -66,17 +72,14 @@ int main(int argc,char** argv)
     free(s);
   }
 
-  /* create local adapter */
-  Log_null l;
-  Adapter* adapter = AdapterFactory::create(argv[1], anames, argv[2], l);
-  if (adapter == NULL)
-    error(10, 0, "Creating adapter \"%s:%s\" failed.", argv[1], argv[2]);
-  s=NULL;
+  adapter->set_actions(&anames);
+
   if (!adapter->init())
     error(11, 0, "Initialising adapter \"%s:%s\" failed.", argv[1], argv[2]);
 
   /* adapter protocol loop: read suggested actions from stdin, report
      results to stderr, report asynchrous events to stdout. */
+  s=NULL;
   while(!ferror(stdin)) {
     std::vector<int> action;
     while (adapter->readAction(action)) {

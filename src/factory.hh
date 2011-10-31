@@ -26,8 +26,17 @@
  * calling <Module>Factory::create(name, ...) that calls associated
  * creator function. Yet FACTORY_DEFAULT_CREATOR provides a default
  * creator function, modules that need to do something special in
- * creators define their own functions and use
- * <Module>Factory::Register for registration.
+ * creators can define their own functions and use
+ * <Module>Factory::Register for registering it.
+ *
+ * FACTORY_DECLARATION(Module) is needed in the header file of the
+ * Module base class only.
+ *
+ * FACTORY_IMPLEMENTATION(Module) is needed in the implementation of
+ * the Module base class only.
+ *
+ * FACTORY_DEFAULT_CREATOR(Module, Instance, Name) is needed in
+ * the implementation of every Instance that implements Module.
  */
 
 #ifndef __factory_h__
@@ -44,12 +53,11 @@ class Log;                                                             \
                                                                        \
 namespace CLASSNAME##Factory {                                         \
                                                                        \
-    typedef CLASSNAME*(*creator)(std::vector<std::string>&,            \
-                               std::string, Log& log);                 \
+    typedef CLASSNAME*(*creator)(Log& log, std::string params);        \
                                                                        \
-    extern CLASSNAME* create(std::string name,                         \
-                           std::vector<std::string>& actions,          \
-                           std::string params, Log& log);              \
+    extern CLASSNAME* create(Log& log,                                 \
+                             std::string name,                         \
+                             std::string params);                      \
                                                                        \
     extern void add_factory(std::string name, creator c);              \
                                                                        \
@@ -74,29 +82,24 @@ void CLASSNAME##Factory::add_factory(std::string name, creator c)      \
   (*creators)[name] = c;                                               \
 }                                                                      \
                                                                        \
-CLASSNAME* CLASSNAME##Factory::create(std::string name,                \
-    std::vector<std::string>& actions,                                 \
-    std::string params, Log& l)                                        \
+CLASSNAME* CLASSNAME##Factory::create(                                 \
+    Log& log, std::string name, std::string params = "")               \
 {                                                                      \
   if (!creators) return NULL;                                          \
                                                                        \
   creator c = (*creators)[name];                                       \
                                                                        \
-  if (c) {                                                             \
-    return c(actions, params, l);                                      \
-  }                                                                    \
+  if (c) return c(log, params);                                        \
                                                                        \
   return NULL;                                                         \
 }
 
-// Example:
-// FACTORY_DEFAULT_CREATOR(Adapter, Adapter_dummy, "dummy")
 
 #define FACTORY_DEFAULT_CREATOR(CLASSNAME, INSTANCENAME, ID)           \
 namespace {                                                            \
-  CLASSNAME* creator_func(std::vector<std::string>& actions,           \
-                          std::string params, Log& l) {                \
-    return new INSTANCENAME(actions, params, l);                       \
+  CLASSNAME* creator_func(Log& log, std::string params = "")           \
+  {                                                                    \
+    return new INSTANCENAME(log, params);                              \
   }                                                                    \
   static CLASSNAME##Factory::Register me(ID, creator_func);            \
 };

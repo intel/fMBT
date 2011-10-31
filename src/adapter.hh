@@ -22,22 +22,35 @@
 #include <vector>
 #include <string>
 #include <map>
-#include "adapter_factory.hh"
-#include "log.hh"
 #include "writable.hh"
 #include "helper.hh"
+#include "factory.hh"
+#include "log.hh"
+
+/* Creating and initialising an adapter is a call sequence
+
+   1. constructor(log, params) where params contain configuration
+   arguments
+
+   2. set_actions(actions), by default just stored to the "actions"
+   member.
+
+   3. init()
+
+   If init() returns true, adapter must be ready for responding to
+   execute() and readAction(). If init returns false, stringify() may
+   return reason for failure.
+*/
 
 class Adapter: public Writable {
 public:
-  Adapter(std::vector<std::string>& _actions, Log& l);
+  Adapter(Log& l, std::string params = "");
+  virtual void set_actions(std::vector<std::string>* _actions);
+  virtual bool init();
 
-  virtual bool init() { return true;};
   virtual void execute(std::vector<int> &action) =0;
-  virtual bool readAction(std::vector<int> &action,bool block=false)=0;
-  /*
-    virtual int execute(int action)=0;
-    virtual bool readAction(int &action,bool block=false)=0;
-  */
+  virtual bool readAction(std::vector<int> &action, bool block=false)=0;
+
   virtual Adapter* up();
   virtual Adapter* down(unsigned int a);
   virtual std::vector<std::string>& getAdapterNames();
@@ -46,14 +59,14 @@ public:
   const char* getUActionName(int action);
 
 protected:
+  Log& log;
+  std::vector<std::string>* actions;
+
   std::vector<const char*> unames;
   Adapter* parent;
   std::vector<std::string> adapter_names;
-  std::vector<std::string>& actions;
-  Log&log;
 };
 
-//namespace {
-//};
+FACTORY_DECLARATION(Adapter);
 
 #endif

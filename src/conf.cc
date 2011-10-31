@@ -73,7 +73,7 @@ void Conf::load(std::string& name)
 
   conf_obj=tmp;
 
-  if ((heuristic=Heuristic::create(log,heuristic_name)) == NULL)
+  if ((heuristic=Heuristic::create(log, heuristic_name)) == NULL)
     RETURN_ERROR("Creating heuristic \"" + heuristic_name + "\" failed.");
 
   if ((model=Model::create(log,filetype(model_name))) == NULL)
@@ -95,12 +95,12 @@ void Conf::load(std::string& name)
 
   coverage->set_model(model);
 
-  adapter = AdapterFactory::create(adapter_name,
-                                   model->getActionNames(),
-                                   adapter_param,log);
+  adapter = AdapterFactory::create(log, adapter_name, adapter_param);
 
   if (adapter == NULL)
     RETURN_ERROR("Creating adapter \"" + adapter_name + "\" failed.");
+
+  adapter->set_actions(&model->getActionNames());
 
   if (!coverage->status)
     RETURN_ERROR("Coverage error: " + coverage->stringify());

@@ -21,13 +21,12 @@
 
 class Adapter_model: public Adapter {
 public:
-  Adapter_model(std::vector<std::string>& _actions,Log&l,Model*);
+  Adapter_model(Log& l, std::string params);
+  virtual bool init();
+
   virtual void execute(std::vector<int> &action);
-  virtual bool readAction(std::vector<int> &action,bool block=false);
+  virtual bool readAction(std::vector<int> &action, bool block=false);
   virtual std::string stringify();
-  virtual bool init() {
-    return true;
-  }
 private:
   Model* model;
   std::vector<int> adapter2model;

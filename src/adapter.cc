@@ -20,11 +20,23 @@
 #include <cstdio>
 #include "log.hh"
 
-Adapter::Adapter(std::vector<std::string>& _actions,Log&l) :parent(NULL), actions(_actions), log(l)
+FACTORY_IMPLEMENTATION(Adapter)
+
+Adapter::Adapter(Log& l, std::string params) :
+log(l), actions(NULL), parent(NULL)
 {
-  unames.resize(actions.size()+1);
 }
 
+void Adapter::set_actions(std::vector<std::string>* _actions)
+{
+  actions = _actions;
+  unames.resize(actions->size()+1);
+}
+
+bool Adapter::init()
+{
+  return true;
+}
 
 Adapter* Adapter::up()
 {
@@ -44,7 +56,7 @@ std::vector<std::string>& Adapter::getAdapterNames()
 
 std::vector<std::string>& Adapter::getAllActions()
 { 
-  return actions;
+  return *actions;
 }
 
 void Adapter::setparent(Adapter* a)
@@ -55,7 +67,7 @@ void Adapter::setparent(Adapter* a)
 const char* Adapter::getUActionName(int action)
 {
   if (!unames[action]) {
-    unames[action]=escape_string(actions[action].c_str());
+    unames[action]=escape_string((*actions)[action].c_str());
   }
   return unames[action];
 }

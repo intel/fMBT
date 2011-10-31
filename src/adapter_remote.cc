@@ -119,17 +119,17 @@ bool Adapter_remote::init()
   d_stdout=fdopen(_stdout,"r");
   d_stderr=fdopen(_stderr,"r");
 
-  std::fprintf(d_stdin,"%i\n",(int)actions.size());
+  std::fprintf(d_stdin,"%i\n",(int)actions->size());
 
-  for(size_t i=0;i<actions.size();i++) {
+  for(size_t i=0;i<actions->size();i++) {
     if (urlencode) {
-      char* s=g_uri_escape_string(actions[i].c_str(),
+      char* s=g_uri_escape_string((*actions)[i].c_str(),
 				  NULL,false);
       
       std::fprintf(d_stdin,"%s\n",s);
       g_free(s);
     } else {
-      std::fprintf(d_stdin,"%s\n",actions[i].c_str());
+      std::fprintf(d_stdin,"%s\n",(*actions)[i].c_str());
     }
     
   }
@@ -151,19 +151,21 @@ std::string Adapter_remote::stringify()
 }
 
 
-Adapter_remote::Adapter_remote(std::vector<std::string>& _actions,std::string& params,Log&l, bool encode) : Adapter::Adapter(_actions,l),read_buf(NULL),read_buf_pos(0),d_stdin(NULL),d_stdout(NULL),d_stderr(NULL), urlencode(encode)
+Adapter_remote::Adapter_remote(Log& l, std::string& params, bool encode) :
+  Adapter::Adapter(l), read_buf(NULL), read_buf_pos(0),
+  d_stdin(NULL), d_stdout(NULL), d_stderr(NULL),
+  urlencode(encode)
 {
-  prm=params;
+  prm = params;
   read_buf = (char*)malloc(MAX_LINE_LENGTH+1);
   memset(read_buf, 'M', MAX_LINE_LENGTH);
 }
 
-/* adapter can execute.. */
 void Adapter_remote::execute(std::vector<int>& action)
 {
-  char* s=NULL;
-  size_t si=0;
-  std::fprintf(d_stdin,"%i\n",action[0]);
+  char* s = NULL;
+  size_t si = 0;
+  std::fprintf(d_stdin, "%i\n", action[0]);
 
   fflush(d_stdin);
 
@@ -229,17 +231,15 @@ bool Adapter_remote::readAction(std::vector<int> &action,bool block)
 }
 
 namespace {
-  Adapter* adapter_creator(std::vector<std::string>& _actions,
-			   std::string params,Log&l) {
-    return new Adapter_remote(_actions, params, l, true);
+  Adapter* adapter_creator(Log& l, std::string params) {
+    return new Adapter_remote(l, params, true);
   }
 
-  Adapter* adapter_creator_noencode(std::vector<std::string>& _actions,
-				    std::string params,Log&l) {
-    return new Adapter_remote(_actions, params, l, false);
+  Adapter* adapter_creator_noencode(Log& l, std::string params) {
+    return new Adapter_remote(l, params, false);
   }
 
-  static AdapterFactory::Register with_encoding("remote", adapter_creator);
+  static AdapterFactory::Register with_enc("remote", adapter_creator);
 
-  static AdapterFactory::Register without_encoding("remote_noencode", adapter_creator_noencode);
+  static AdapterFactory::Register without_enc("remote_noencode", adapter_creator_noencode);
 };

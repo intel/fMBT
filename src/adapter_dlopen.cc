@@ -17,9 +17,14 @@
  *
  */
 
-/* Implements adapter_dlopen: an adapter which replaces itself by an
- * adapter that is loaded according to give specs. (reconsider: if
- * this would work as a brige, stringify() would work better.)*/
+/* Implements adapter_dlopen: an adapter which dynamically loads an
+ * adapter plugin library and creates the wanted adapter from there.
+ *
+ * adapter_dlopen params: <sharedlib> "," <adapter_name> "," <adapter_params>
+ * where sharedlib will be dynamically loaded. It should register
+ * adapter_name to the adapter factory. adapter_params will be
+ * passed to the loaded adapter.
+ */
 
 #include "adapter_dlopen.hh"
 #include <cstdio>
@@ -27,23 +32,64 @@
 #include <dlfcn.h>
 #include <cstdlib>
 
-#define RETURN_NULL_ERROR(s) { \
-    proxy->status=false;       \
-    proxy->errormsg=s;         \
-    return NULL;               \
+#define RETURN_ERROR(s) { \
+    status = false;       \
+    errormsg = s;         \
+    return;               \
   }
 
-Adapter_dlopen::Adapter_dlopen(std::vector<std::string>& _actions, Log& l) :
-  Adapter::Adapter(_actions,l),
+Adapter_dlopen::Adapter_dlopen(Log& log, std::string params) :
+  Adapter::Adapter(log),
   loaded_adapter(NULL)
 {
+  void *library_handle;
+  char library_file[1024];
+  char adapter_name[1024];
+  char adapter_params[1024];
+  
+  std::stringstream s(params);
+  s.getline(library_file, 1024, ',');
+  s.getline(adapter_name, 1024, ',');
+  s.getline(adapter_params, 1024);
+  
+  if (library_file[0] == '\0')
+    RETURN_ERROR("library filename missing in adapter parameters");
+  
+  if (adapter_name[0] == '\0')
+    RETURN_ERROR("adapter name missing in adapter parameters");
+  
+  library_handle = dlopen(library_file, RTLD_NOW | RTLD_GLOBAL);
+  if (!library_handle) {
+    std::ostringstream dlopenerror;
+    dlopenerror << "opening \"" << library_file << "\" failed: " << dlerror();
+    fprintf(stderr, "%s\n", dlopenerror.str().c_str());
+    RETURN_ERROR(dlopenerror.str());
+  }
+  
+  /* dlopening the adapter registers the loaded adapter to
+     adapter_factory. Just try fetching it from there.
+  */
+  loaded_adapter = AdapterFactory::create(log,
+                                          adapter_name,
+                                          adapter_params);
+  if (!loaded_adapter)
+    RETURN_ERROR("creating adapter from successfully opened library failed");
+}
 
+void Adapter_dlopen::set_actions(std::vector<std::string>* _actions)
+{
+  loaded_adapter->set_actions(_actions);
+}
+
+bool Adapter_dlopen::init()
+{
+  return loaded_adapter->init();
 }
 
 std::string Adapter_dlopen::stringify()
 {
-  std::ostringstream t(std::ios::out | std::ios::binary);
-  return t.str();
+  if (!status) return errormsg;
+  return "dlopen:" + loaded_adapter->stringify();
 }
 
 /* adapter can execute.. */
@@ -58,51 +104,4 @@ bool  Adapter_dlopen::readAction(std::vector<int> &action,
   return loaded_adapter->readAction(action, block);
 }
 
-namespace {
-  Adapter* adapter_creator(std::vector<std::string>& _actions,
-			   std::string params, Log& l) {
-
-    /* dlopen params: <sharedlib> "," <adapter_name> ","
-       <adapter_params> where sharedlib will be dynamically loaded. It
-       should register adapter_name to the adapter
-       factory. adapter_params will be passed to the loaded adapter.*/
-        
-    void *library_handle;
-    char library_file[1024];
-    char adapter_name[1024];
-    char adapter_params[1024];
-
-    std::stringstream s(params);
-    s.getline(library_file, 1024, ',');
-    s.getline(adapter_name, 1024, ',');
-    s.getline(adapter_params, 1024);
-
-    Adapter* proxy = new Adapter_dlopen(_actions, l);
-
-    if (!proxy) abort();
-
-    if (library_file[0] == '\0')
-      RETURN_NULL_ERROR("library filename missing in adapter parameters");
-
-    if (adapter_name[0] == '\0')
-      RETURN_NULL_ERROR("adapter name missing in adapter parameters");
-
-    library_handle = dlopen(library_file, RTLD_NOW | RTLD_GLOBAL);
-    if (!library_handle) {
-      std::ostringstream dlopenerror;
-      dlopenerror << "opening \"" << library_file << "\" failed: " << dlerror();
-      fprintf(stderr, "%s\n", dlopenerror.str().c_str());
-      RETURN_NULL_ERROR(dlopenerror.str());
-    }
-
-    /* dlopening the adapter registers the loaded adapter to
-       adapter_factory. Just try fetching it from there.
-     */
-    Adapter* adapter = AdapterFactory::create(adapter_name,
-                                              _actions,
-                                              adapter_params, l);
-
-    return adapter;
-  }
-  static AdapterFactory::Register me("dlopen", adapter_creator);
-};
+FACTORY_DEFAULT_CREATOR(Adapter, Adapter_dlopen, "dlopen");
