@@ -28,5 +28,5 @@ public:
     return true;
   }
 private:
-
+  Adapter* loaded_adapter;
 };

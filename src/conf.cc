@@ -95,9 +95,9 @@ void Conf::load(std::string& name)
 
   coverage->set_model(model);
 
-  adapter = Adapter::create(adapter_name,
-			    model->getActionNames(),
-			    adapter_param,log);
+  adapter = AdapterFactory::create(adapter_name,
+                                   model->getActionNames(),
+                                   adapter_param,log);
 
   if (adapter == NULL)
     RETURN_ERROR("Creating adapter \"" + adapter_name + "\" failed.");

@@ -296,7 +296,7 @@ the Makefile.
 The following example shows how to make a simple local adapter for
 testing a minimal library:
 
-$ cat > src/mylocaladapter.hh << EOF
+$ cat > mylocaladapter.hh << EOF
 #include "adapter.hh"
 
 class MyLocalAdapter: public Adapter {
@@ -304,15 +304,16 @@ public:
   MyLocalAdapter(std::vector<std::string>& _actions, Log& l);
   virtual void        execute(std::vector<int>& action);
   virtual bool        readAction(std::vector<int> &action,bool block=false);
-  virtual std::string stringify();
 };
 EOF
 
-$ cat > src/mylocaladapter.cc << EOF
+$ cat > mylocaladapter.cc << EOF
 #include "mylocaladapter.hh"
+#include "log.hh"
 
 MyLocalAdapter::MyLocalAdapter(std::vector<std::string>& _actions, Log& l)
 {
+    log.print("<adapter name=\"mylocal\" state=\"read actions\" />");
 }
 
 void MyLocalAdapter::execute(std::vector<int>& action)

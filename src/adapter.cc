@@ -25,28 +25,9 @@ Adapter::Adapter(std::vector<std::string>& _actions,Log&l) :parent(NULL), action
   unames.resize(actions.size()+1);
 }
 
-std::map<std::string,Adapter::creator>* Adapter::factory = 0;
 
-void Adapter::add_factory(std::string name,creator c)
+Adapter* Adapter::up()
 {
-  if (!factory) factory = new std::map<std::string,Adapter::creator>;
-  (*factory)[name]=c;
-}
-
-Adapter* Adapter::create(std::string name,std::vector<std::string>& actions,std::string params,Log&l)
-{
-  if (!factory) return NULL;
-
-  creator c=(*factory)[name];
-
-  if (c) {
-    return c(actions,params,l);
-  }
-
-  return NULL;
-}
-
-Adapter* Adapter::up() { 
   return parent;
 }
 
@@ -54,6 +35,29 @@ Adapter* Adapter::down(unsigned int a)
 {
   printf("adapter_base %i\n",a);
   return NULL;
+}
+
+std::vector<std::string>& Adapter::getAdapterNames()
+{
+  return adapter_names;
+}
+
+std::vector<std::string>& Adapter::getAllActions()
+{ 
+  return actions;
+}
+
+void Adapter::setparent(Adapter* a)
+{
+  parent = a;
+}
+
+const char* Adapter::getUActionName(int action)
+{
+  if (!unames[action]) {
+    unames[action]=escape_string(actions[action].c_str());
+  }
+  return unames[action];
 }
 
 /*

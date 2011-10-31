@@ -101,7 +101,7 @@ int Coverage_Mapper::fitness(int* actions,int n, float* fitness)
       float fn[models[i]->getActionNames().size()];
       int bm[models[i]->getActionNames().size()];
 
-      int c;
+      int c = 0;
 
       for(int j=0;j<n;j++) {
 	std::pair<std::multimap<int,coverage_action>::iterator,

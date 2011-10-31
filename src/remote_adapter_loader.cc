@@ -68,7 +68,7 @@ int main(int argc,char** argv)
 
   /* create local adapter */
   Log_null l;
-  Adapter* adapter=Adapter::create(argv[1],anames,argv[2],l);
+  Adapter* adapter = AdapterFactory::create(argv[1], anames, argv[2], l);
   if (adapter == NULL)
     error(10, 0, "Creating adapter \"%s:%s\" failed.", argv[1], argv[2]);
   s=NULL;

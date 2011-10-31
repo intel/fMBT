@@ -20,9 +20,9 @@
 #include <cstdio>
 #include <sstream>
 
-Adapter_dummy::Adapter_dummy(std::vector<std::string>& _actions,Log&l) : Adapter::Adapter(_actions,l)
+Adapter_dummy::Adapter_dummy(std::vector<std::string>& _actions, std::string params, Log&l) :
+    Adapter::Adapter(_actions,l)
 {
-
 }
 
 std::string Adapter_dummy::stringify()
@@ -51,10 +51,14 @@ bool  Adapter_dummy::readAction(std::vector<int> &action,
   return false;
 }
 
+FACTORY_DEFAULT_CREATOR(Adapter, Adapter_dummy, "dummy");
+
+/*
 namespace {
   Adapter* adapter_creator(std::vector<std::string>& _actions,
-			   std::string params,Log&l) {
-    return new Adapter_dummy(_actions,l);
+			   std::string params, Log& l) {
+    return new Adapter_dummy(_actions, l);
   }
-  static adapter_factory adapter_foo("dummy",adapter_creator);
+  static AdapterFactory::Register me("dummy", adapter_creator);
 };
+*/

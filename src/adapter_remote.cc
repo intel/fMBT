@@ -231,14 +231,15 @@ bool Adapter_remote::readAction(std::vector<int> &action,bool block)
 namespace {
   Adapter* adapter_creator(std::vector<std::string>& _actions,
 			   std::string params,Log&l) {
-    return new Adapter_remote(_actions,params,l);
+    return new Adapter_remote(_actions, params, l, true);
   }
 
   Adapter* adapter_creator_noencode(std::vector<std::string>& _actions,
 				    std::string params,Log&l) {
-    return new Adapter_remote(_actions,params,l,false);
+    return new Adapter_remote(_actions, params, l, false);
   }
 
-  static adapter_factory adapter_foo("remote",adapter_creator);
-  static adapter_factory adapter_foo2("remote_noencode",adapter_creator_noencode);
+  static AdapterFactory::Register with_encoding("remote", adapter_creator);
+
+  static AdapterFactory::Register without_encoding("remote_noencode", adapter_creator_noencode);
 };

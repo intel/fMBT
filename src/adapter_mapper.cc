@@ -171,9 +171,9 @@ bool Adapter_mapper::load(std::string& name)
              adapter_class.c_str(),
              adapter_params.c_str());
 
-      Adapter* a= Adapter::create(adapter_class,
-                                  adapter_anames[i],
-                                  adapter_params,log);
+      Adapter* a= AdapterFactory::create(adapter_class,
+                                         adapter_anames[i],
+                                         adapter_params,log);
       log.debug("Created adapter to %p\n",a);
       a->setparent(this);
       adapters[i] = a;
@@ -363,6 +363,9 @@ bool Adapter_mapper::readAction(std::vector<int> &action,bool block)
   return false;
 }
 
+FACTORY_DEFAULT_CREATOR(Adapter, Adapter_mapper, "mapper");
+
+/*
 namespace {
   Adapter* adapter_creator(std::vector<std::string>& _actions,
                            std::string params,Log&l) {
@@ -370,5 +373,6 @@ namespace {
             params.c_str());
     return new Adapter_mapper(_actions,params,l);
   }
-  static adapter_factory adapter_foo("mapper",adapter_creator);
+  static AdapterFactory::Register me("mapper",adapter_creator);
 };
+*/

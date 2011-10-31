@@ -83,13 +83,12 @@ bool Adapter_model::readAction(std::vector<int> &action,bool block)
 
 namespace {
   Adapter* adapter_creator(std::vector<std::string>& _actions,
-			   std::string params,Log&l) {
-
+			   std::string params, Log& l) {
     Model* m=Model::create(l,filetype(params));
     m->load(params);
     m->reset();
 
     return new Adapter_model(_actions,l,m);
   }
-  static adapter_factory adapter_foo("model",adapter_creator);
+  static AdapterFactory::Register me("model", adapter_creator);
 };

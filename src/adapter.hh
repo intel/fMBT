@@ -22,20 +22,14 @@
 #include <vector>
 #include <string>
 #include <map>
+#include "adapter_factory.hh"
 #include "log.hh"
 #include "writable.hh"
 #include "helper.hh"
 
 class Adapter: public Writable {
 public:
-  typedef Adapter*(*creator)(std::vector<std::string>&,
- 			     std::string,Log&);
-  static void add_factory(std::string name, creator c);
-  static Adapter* create(std::string name,
-			 std::vector<std::string>& actions,
-			 std::string params,Log&);
-
-  Adapter(std::vector<std::string>& _actions,Log&l);
+  Adapter(std::vector<std::string>& _actions, Log& l);
 
   virtual bool init() { return true;};
   virtual void execute(std::vector<int> &action) =0;
@@ -46,18 +40,11 @@ public:
   */
   virtual Adapter* up();
   virtual Adapter* down(unsigned int a);
-  virtual std::vector<std::string>& getAdapterNames() { return adapter_names; }
-  virtual std::vector<std::string>& getAllActions() { return actions; }
-  void setparent(Adapter* a) { parent = a; }
-  const char* getUActionName(int action) {
-    if (!unames[action]) {
-      unames[action]=escape_string(actions[action].c_str());
-    }
-    return unames[action];
-  }
+  virtual std::vector<std::string>& getAdapterNames();
+  virtual std::vector<std::string>& getAllActions();
+  void setparent(Adapter* a);
+  const char* getUActionName(int action);
 
-private:
-  static std::map<std::string,creator>* factory;
 protected:
   std::vector<const char*> unames;
   Adapter* parent;
@@ -66,13 +53,7 @@ protected:
   Log&log;
 };
 
-namespace {
-  class adapter_factory {
-  public:
-    adapter_factory(std::string name, Adapter::creator c) {
-      Adapter::add_factory(name,c);
-    }
-  };
-};
+//namespace {
+//};
 
 #endif
