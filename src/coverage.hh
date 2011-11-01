@@ -19,15 +19,19 @@
 #ifndef __coverage_hh__
 #define __coverage_hh__
 
-#include "model.hh"
+#include "factory.hh"
+#include "writable.hh"
 #include "log.hh"
+
+class Model;
 
 class Coverage: public Writable {
 
 public:
   typedef Coverage*(*creator)(Log& l,std::string&);
-  static void add_factory(std::string name, creator c);
+/*  static void add_factory(std::string name, creator c);
   static Coverage* create(Log&,std::string&,std::string&);
+*/
 
   Coverage(Log& l);
   virtual void push()=0;
@@ -35,6 +39,8 @@ public:
 
   virtual bool execute(int action)=0;
   virtual float getCoverage()=0;
+
+  virtual std::string stringify();
 
   virtual int fitness(int* actions,int n, float* fitness)=0;
   virtual void set_model(Model* _model); // for input alphabet
@@ -50,10 +56,6 @@ public:
    *
    */
 
-  virtual std::string stringify() {
-    return std::string("");
-  }
-
 private:
   static std::map<std::string,creator>* factory;
 protected:
@@ -61,6 +63,9 @@ protected:
   Log& log;
 };
 
+FACTORY_DECLARATION(Coverage);
+
+/*
 namespace {
   class Coverage_Creator {
   public:
@@ -69,6 +74,6 @@ namespace {
     }
   };
 };
-
+*/
 #endif
 

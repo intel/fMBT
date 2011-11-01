@@ -35,6 +35,12 @@ extern D_ParserTables parser_tables_mrules;
 
 extern Rules* amobj;
 
+Coverage_Mapper::Coverage_Mapper(Log& l, std::string params) :
+  Coverage(l)
+{
+  load(params);
+}
+
 std::string Coverage_Mapper::stringify()
 {
   std::ostringstream t(std::ios::out | std::ios::binary);
@@ -190,7 +196,7 @@ bool Coverage_Mapper::pload(std::string& name)
 	     coverage_class.c_str(),
 	     coverage_params.c_str());
       
-      Coverage* a= Coverage::create(log,coverage_class,
+      Coverage* a= CoverageFactory::create(log,coverage_class,
 				    coverage_params);
       log.debug("Created coverage to %p\n",a);
       if (!a || !a->status) {
@@ -229,7 +235,7 @@ void Coverage_Mapper::add_file(unsigned index,
 
   Conf::split(cname,cc,cp);
   log.debug("Trying to create coverage %s(%s)\n",cc.c_str(),cp.c_str());
-  coverages[index] = Coverage::create(log,cc,cp);
+  coverages[index] = CoverageFactory::create(log,cc,cp);
   coverages[index]->set_model(models[index]);
   
 }
@@ -320,11 +326,4 @@ void Coverage_Mapper::add_component(unsigned index,
 
 }
 
-namespace {
-  Coverage* coverage_creator(Log&l,std::string& name) {
-    Coverage_Mapper* r = new Coverage_Mapper(l);
-    r->load(name);
-    return r;
-  }
-  static Coverage_Creator coverage_foo("mapper",coverage_creator);
-};
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Mapper, "mapper");

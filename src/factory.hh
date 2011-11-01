@@ -35,8 +35,8 @@
  * FACTORY_IMPLEMENTATION(Module) is needed in the implementation of
  * the Module base class only.
  *
- * FACTORY_DEFAULT_CREATOR(Module, Instance, Name) is needed in
- * the implementation of every Instance that implements Module.
+ * FACTORY_DEFAULT_CREATOR(Module, Class, Name) is needed in
+ * the implementation of every Class that implements Module.
  */
 
 #ifndef __factory_h__
@@ -46,16 +46,16 @@
 #include <map>
 #include <string>
 
-#define FACTORY_DECLARATION(CLASSNAME)                                 \
+#define FACTORY_DECLARATION(MODULETYPE)                                \
                                                                        \
-class CLASSNAME;                                                       \
+class MODULETYPE;                                                      \
 class Log;                                                             \
                                                                        \
-namespace CLASSNAME##Factory {                                         \
+namespace MODULETYPE##Factory {                                        \
                                                                        \
-    typedef CLASSNAME*(*creator)(Log& log, std::string params);        \
+    typedef MODULETYPE*(*creator)(Log& log, std::string params);       \
                                                                        \
-    extern CLASSNAME* create(Log& log,                                 \
+    extern MODULETYPE* create(Log& log,                                \
                              std::string name,                         \
                              std::string params);                      \
                                                                        \
@@ -71,18 +71,18 @@ namespace CLASSNAME##Factory {                                         \
 }
 
 
-#define FACTORY_IMPLEMENTATION(CLASSNAME)                              \
-std::map<std::string, CLASSNAME##Factory::creator>*                    \
-    CLASSNAME##Factory::creators = 0;                                  \
+#define FACTORY_IMPLEMENTATION(MODULETYPE)                             \
+std::map<std::string, MODULETYPE##Factory::creator>*                   \
+    MODULETYPE##Factory::creators = 0;                                 \
                                                                        \
-void CLASSNAME##Factory::add_factory(std::string name, creator c)      \
+void MODULETYPE##Factory::add_factory(std::string name, creator c)     \
 {                                                                      \
   if (!creators)                                                       \
-    creators = new std::map<std::string, CLASSNAME##Factory::creator>; \
+    creators = new std::map<std::string, MODULETYPE##Factory::creator>;\
   (*creators)[name] = c;                                               \
 }                                                                      \
                                                                        \
-CLASSNAME* CLASSNAME##Factory::create(                                 \
+MODULETYPE* MODULETYPE##Factory::create(                               \
     Log& log, std::string name, std::string params = "")               \
 {                                                                      \
   if (!creators) return NULL;                                          \
@@ -95,13 +95,13 @@ CLASSNAME* CLASSNAME##Factory::create(                                 \
 }
 
 
-#define FACTORY_DEFAULT_CREATOR(CLASSNAME, INSTANCENAME, ID)           \
+#define FACTORY_DEFAULT_CREATOR(MODULETYPE, CLASSNAME, ID)             \
 namespace {                                                            \
-  CLASSNAME* creator_func(Log& log, std::string params = "")           \
+  MODULETYPE* creator_func(Log& log, std::string params = "")          \
   {                                                                    \
-    return new INSTANCENAME(log, params);                              \
+    return new CLASSNAME(log, params);                                 \
   }                                                                    \
-  static CLASSNAME##Factory::Register me(ID, creator_func);            \
+  static MODULETYPE##Factory::Register me(ID, creator_func);           \
 };
 
 #endif

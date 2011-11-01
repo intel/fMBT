@@ -16,12 +16,17 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+
+/* Coverage_Market measures coverage requirement based on a coverage
+ * language. Coverage requirements are given as a parameter. For
+ * syntax refer to requirements.g.
+ */
+
 #ifndef __coverage_market_hh__
 #define __coverage_market_hh__
 
 #include <stack>
 
-#include "model.hh"
 #include "coverage.hh"
 
 #include <regex.h>
@@ -34,6 +39,8 @@
 #define max(a,b) (((a)>(b))?(a):(b))
 #define min(a,b) (((a)<(b))?(a):(b))
 
+class Model;
+
 class Coverage_Market;
 extern Coverage_Market* cobj;
 
@@ -41,7 +48,7 @@ class Coverage_Market: public Coverage {
 
 public:
   class unit;
-  Coverage_Market(Log& l): Coverage(l) {}
+  Coverage_Market(Log& l, std::string& params);
   ~Coverage_Market() {
     for(size_t i=0;i<Units.size();i++) {
       delete Units[i];
@@ -65,7 +72,7 @@ public:
     model=_model;
   }
 
-  void addrequirement(std::string& req);
+  void add_requirement(std::string& req);
 
   unit* req_rx_action(const char m,const char* action);
 

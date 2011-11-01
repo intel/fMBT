@@ -18,33 +18,18 @@
  */
 #include "coverage.hh"
 
-std::map<std::string,Coverage::creator>* Coverage::factory = 0;
+FACTORY_IMPLEMENTATION(Coverage);
 
-void Coverage::add_factory(std::string name,creator c)
+Coverage::Coverage(Log& l) :
+  model(NULL), log(l)
 {
-  if (!factory) factory = new std::map<std::string,Coverage::creator>;
-  (*factory)[name]=c;
-}
-
-Coverage* Coverage::create(Log& l,std::string& name,std::string& param)
-{
-  if (!factory) return NULL;
-
-  creator c=(*factory)[name];
-
-  if (c) {
-    return c(l,param);
-  }
-
-  return NULL;
-}
-
-Coverage::Coverage(Log& l) : model(NULL), log(l)
-{
-
 }
 
 void Coverage::set_model(Model* _model)
 {
   model=_model;
+}
+
+std::string Coverage::stringify() {
+    return std::string("");
 }

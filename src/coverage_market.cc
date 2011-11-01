@@ -16,7 +16,15 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+
 #include "coverage_market.hh"
+#include "model.hh"
+
+Coverage_Market::Coverage_Market(Log& l, std::string& params) :
+    Coverage(l)
+{
+    add_requirement(params);
+}
 
 bool Coverage_Market::execute(int action)
 {
@@ -94,16 +102,15 @@ int Coverage_Market::fitness(int* action,int n,float* fitness)
 
 #include "dparse.h"
 extern "C" {
-extern D_ParserTables parser_tables_requirement;
+extern D_ParserTables parser_tables_covlang;
 };
 
 extern Coverage_Market* cobj;
 
-void Coverage_Market::addrequirement(std::string& req)
-{
-  
+void Coverage_Market::add_requirement(std::string& req)
+{  
   cobj=this;
-  D_Parser *p = new_D_Parser(&parser_tables_requirement, 32);
+  D_Parser *p = new_D_Parser(&parser_tables_covlang, 32);
   dparse(p,(char*)req.c_str(),req.length());
   free_D_Parser(p);
 }
@@ -157,12 +164,4 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const char* a
   return u;  
 }
 
-namespace {
-  Coverage* coverage_creator(Log& l,std::string& param) {
-    Coverage* c=new Coverage_Market(l);
-    /* param handling == marketroid configuration.. */
-    return c;
-  }
-  static Coverage_Creator coverage_foo("market",
-				       coverage_creator);
-};
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Market, "covlang");

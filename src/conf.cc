@@ -80,7 +80,7 @@ void Conf::load(std::string& name)
     RETURN_ERROR("Creating model loader \"" + filetype(model_name)
                  + "\" failed.");
 
-  Coverage* coverage = Coverage::create(log,coverage_name,coverage_param);
+  Coverage* coverage = CoverageFactory::create(log,coverage_name,coverage_param);
   if (coverage == NULL)
     RETURN_ERROR("Creating coverage \"" + coverage_name + "\" failed.");
 

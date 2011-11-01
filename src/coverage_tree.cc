@@ -17,7 +17,15 @@
  *
  */
 #include "coverage_tree.hh"
+#include "model.hh"
 #include <cstdlib>
+
+Coverage_Tree::Coverage_Tree(Log& l, std::string params) :
+  Coverage(l), max_depth(2)
+{ 
+  exec[0] = &root_node;
+  set_max_depth(params);
+}
 
 void Coverage_Tree::precalc()
 {
@@ -117,12 +125,4 @@ void Coverage_Tree::set_max_depth(std::string&s)
   log.debug("%s(%s) -> %i\n",__PRETTY_FUNCTION__,s.c_str(),max_depth);
 }
 
-
-namespace {
-  Coverage* coverage_creator(Log&l,std::string& param) {
-    Coverage_Tree*r= new Coverage_Tree(l);
-    r->set_max_depth(param);
-    return r;
-  }
-  static Coverage_Creator coverage_foo("perm",coverage_creator);
-};
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Tree, "perm");

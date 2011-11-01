@@ -21,7 +21,6 @@
 
 #include <vector>
 #include <string>
-#include <fstream>
 #include <map>
 #include "helper.hh"
 #include "log.hh"

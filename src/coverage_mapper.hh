@@ -26,9 +26,7 @@
 
 class Coverage_Mapper: public Coverage, Rules {
 public:
-  Coverage_Mapper(Log&l): Coverage(l) {
-
-  }
+  Coverage_Mapper(Log& l, std::string params = "");
 
   virtual std::string stringify();
 

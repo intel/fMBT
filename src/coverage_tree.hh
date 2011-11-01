@@ -16,6 +16,12 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+
+/* Coverage_Tree implements a permutation coverage. Coverage reaches
+ * 1.0 when all permutations of any n subsequent actions have been
+ * executed. n is given as a parameter.
+ */
+
 #ifndef __coverage_tree_hh__
 #define __coverage_tree_hh__
 
@@ -26,7 +32,7 @@
 class Coverage_Tree: public Coverage {
 
 public:
-  Coverage_Tree(Log&l): Coverage(l), max_depth(2) { exec[0]=&root_node;};
+  Coverage_Tree(Log& l, std::string params);
   virtual void push(){};
   virtual void pop(){};
 

@@ -25,6 +25,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <error.h>
+#include <cstdio>
 
 /*
 std::string read_req() {
@@ -48,7 +49,7 @@ std::string read_req() {
 
 void print_usage()
 {
-  printf(
+  std::printf(
     "Usage: fmbt [options] configfile\n"
     "Options:\n"
     "    -D     enable debug output (written to the log)\n"
@@ -81,7 +82,7 @@ int main(int argc,char * const argv[])
 	   case 'L':
 	     logfile=fopen(optarg,"a");
 	     if (!logfile) {
-	       printf("Can't open logfile \"%s\"\n",optarg);
+	       std::printf("Can't open logfile \"%s\"\n",optarg);
 	       return 1;
 	     }
 	     break;
@@ -110,11 +111,11 @@ int main(int argc,char * const argv[])
         error(4, 0, "%s", c.stringify().c_str());
      
       if (E) {
-	printf("%s\n",c.stringify().c_str());
+	std::printf("%s\n",c.stringify().c_str());
       } else {
 	c.execute(interactive);
         if (!c.status) {
-          printf("%s\n",c.stringify().c_str());
+          std::printf("%s\n",c.stringify().c_str());
           return 5;
         }
       }
