@@ -22,42 +22,29 @@
 #include <vector>
 #include <string>
 
-#include "coverage.hh"
-#include "model.hh"
+#include "factory.hh"
+
+class Coverage;
+class Model;
+class Log;
 
 class Heuristic {
 public:
-  typedef Heuristic*(*creator)(Log&);
-  Heuristic(Log&l): log(l) {}
-  static void add_factory(std::string name, creator c);
-  static Heuristic* create(Log&l,std::string name);
+  Heuristic(Log& l, std::string params = "");
 
   virtual bool execute(int action);
   std::vector<std::string>& getAllActions();
 
-  std::string& getActionName(int action) {
-    none=std::string("NONE");
-    if (action>0) {
-      return model->getActionName(action);
-    } return none;
-  }
-  Model* get_model() {
-    return model;
-  }
   virtual float getCoverage();
   virtual int getAction()=0;
   virtual int getIAction()=0;
 
-  void set_coverage(Coverage* c) {
-    my_coverage=c;
-  }
+  std::string& getActionName(int action);
+  Model* get_model();
 
-  void set_model(Model* _model) {
-    model=_model;
-  }
+  void set_coverage(Coverage* c);
+  void set_model(Model* _model);
 
-private:
-  static std::map<std::string,creator>* factory;
 protected:
   std::vector<Coverage*> coverage;
   Model* model;
@@ -66,13 +53,6 @@ protected:
   Log& log;
 };
 
-namespace {
-  class Heuristic_Creator {
-  public:
-    Heuristic_Creator(std::string name, Heuristic::creator c) {
-      Heuristic::add_factory(name,c);
-    }
-  };
-};
+FACTORY_DECLARATION(Heuristic);
 
 #endif

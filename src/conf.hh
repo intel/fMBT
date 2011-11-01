@@ -31,7 +31,7 @@
 
 class Conf:public Writable {
  public:
-  Conf(Log& l,bool debug_enabled=false)
+  Conf(Log& l, bool debug_enabled=false)
     :log(l),
      heuristic_name("random"), coverage_name("tree"),
      adapter_name("dummy"), engine_cov(1.0),
@@ -43,30 +43,30 @@ class Conf:public Writable {
     log.pop();
   }
 
-  void set_model(std::string&s) {
+  void set_model(std::string& s) {
     model_name=s;
   }
-  void set_heuristic(std::string&s) {
-    heuristic_name=s;
+  void set_heuristic(std::string& s) {
+    split(s, heuristic_name, heuristic_param);
   }
-  void set_coverage(std::string&s) {
-    split(s,coverage_name,coverage_param);
+  void set_coverage(std::string& s) {
+    split(s, coverage_name, coverage_param);
   }
-  void set_adapter(std::string&s) {
-    split(s,adapter_name,adapter_param);
+  void set_adapter(std::string& s) {
+    split(s, adapter_name, adapter_param);
   }
   void set_engine_cov(float f) {
-    engine_cov=f;
+    engine_cov = f;
   }
   void set_engine_count(int i) {
-    engine_count=i;
+    engine_count = i;
   }
 
   void execute(bool interactive=false);
 
   void load(std::string& name);
 
-  static void split(std::string& val,std::string& name,
+  static void split(std::string& val, std::string& name,
 		    std::string& param);
   
   Log& log;
@@ -75,7 +75,9 @@ class Conf:public Writable {
 
  protected:
   std::string model_name;
+
   std::string heuristic_name;
+  std::string heuristic_param;
 
   std::string coverage_name;
   std::string coverage_param;

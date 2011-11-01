@@ -27,7 +27,7 @@
 
 class Heuristic_random : public Heuristic {
 public:
-  Heuristic_random(Log&l):Heuristic(l) {srandom(time(NULL));}
+  Heuristic_random(Log& l, std::string params);
   virtual float getCoverage();
   virtual int getAction();
   virtual int getIAction();

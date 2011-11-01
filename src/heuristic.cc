@@ -17,14 +17,16 @@
  *
  */
 
+#include "coverage.hh"
 #include "heuristic.hh"
+#include "model.hh"
+#include "log.hh"
 
-std::map<std::string,Heuristic::creator>* Heuristic::factory = 0;
+FACTORY_IMPLEMENTATION(Heuristic);
 
-void Heuristic::add_factory(std::string name,creator c)
+Heuristic::Heuristic(Log& l, std::string params) :
+  log(l)
 {
-  if (!factory) factory = new std::map<std::string,Heuristic::creator>;
-  (*factory)[name]=c;
 }
 
 bool Heuristic::execute(int action)
@@ -43,7 +45,14 @@ bool Heuristic::execute(int action)
   }
   return true;
 }
-  
+
+std::string& Heuristic::getActionName(int action) {
+  none=std::string("NONE");
+  if (action>0) {
+    return model->getActionName(action);
+  } return none;
+}
+
 std::vector<std::string>& Heuristic::getAllActions()
 {
   return model->getActionNames();
@@ -53,15 +62,14 @@ float Heuristic::getCoverage() {
   return my_coverage->getCoverage();  
 }
 
-Heuristic* Heuristic::create(Log&l,std::string name)
-{
-  if (!factory) return NULL;
+Model* Heuristic::get_model() {
+  return model;
+}
 
-  creator c=(*factory)[name];
+void Heuristic::set_coverage(Coverage* c) {
+  my_coverage=c;
+}
 
-  if (c) {
-    return c(l);
-  }
-
-  return NULL;
+void Heuristic::set_model(Model* _model) {
+  model=_model;
 }

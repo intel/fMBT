@@ -26,7 +26,7 @@
 
 class Heuristic_greedy : public Heuristic {
 public:
-  Heuristic_greedy(Log&l) : Heuristic(l) {}
+  Heuristic_greedy(Log& l, std::string params = "") : Heuristic(l) {}
   virtual float getCoverage();
   virtual int getAction();
   virtual int getIAction();

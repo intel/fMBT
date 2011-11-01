@@ -73,7 +73,7 @@ void Conf::load(std::string& name)
 
   conf_obj=tmp;
 
-  if ((heuristic=Heuristic::create(log, heuristic_name)) == NULL)
+  if ((heuristic=HeuristicFactory::create(log, heuristic_name, heuristic_param)) == NULL)
     RETURN_ERROR("Creating heuristic \"" + heuristic_name + "\" failed.");
 
   if ((model=Model::create(log,filetype(model_name))) == NULL)

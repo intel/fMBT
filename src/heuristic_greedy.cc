@@ -92,9 +92,4 @@ int Heuristic_greedy::getIAction()
   return actions[pos]; // Quite bad greedy..
 }
 
-namespace {
-  Heuristic* heuristic_creator(Log&l) {
-    return new Heuristic_greedy(l);
-  }
-  static Heuristic_Creator heuristic_foo("greedy",heuristic_creator);
-};
+FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "greedy");

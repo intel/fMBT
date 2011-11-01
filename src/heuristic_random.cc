@@ -20,6 +20,19 @@
 #include "heuristic_random.hh"
 #include <stdlib.h>
 
+Heuristic_random::Heuristic_random(Log& l, std::string params) :
+  Heuristic(l)
+{
+  unsigned int random_seed = 0;
+  if (params == "") {
+    random_seed = time(NULL);
+  } else {
+    random_seed = atoi(params.c_str());
+  }
+  log.print("<heuristic_random seed=\"%d\"/>\n", random_seed);
+  srandom(random_seed);
+}
+
 float Heuristic_random::getCoverage() {
   if (my_coverage==NULL) {
     return 0.0;
@@ -71,10 +84,4 @@ int Heuristic_random::getIAction()
   return actions[pos]; // Quite bad random..
 }
 
-namespace {
-  Heuristic* heuristic_random_creator(Log&l) {
-    return new Heuristic_random(l);
-  }
-  static Heuristic_Creator
-  heuristic_foo("random",heuristic_random_creator);
-};
+FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_random, "random");
