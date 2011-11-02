@@ -261,73 +261,119 @@ Local adapters
 --------------
 
 Local adapters are inherited from the Adapter class (adapter.hh). They
-need to implement
-
-- a creator function that is registered to adapter_factory. This
-  function is called when launched test needs the adapter. Creator
-  parameters consist of
-
-  1) a vector of actions (strings),
-
-  2) adapter parameters read from the configuration file,
-
-  3) and a logger instance.
-
-  Creator must return a pointer to instantiated Adapter, or NULL in
-  case of an error.
+must implement
 
 - "execute" method that takes index of suggested action as a
-  parameter, tries to execute it, and returns index of executed
-  action.
+  parameter, tries to execute it, and reports the executed
+  action in the i/o parameter.
 
-- "readAction" method for reporting executions of output
-  actions. readAction takes two parameters:
+- "observe" method for reporting executions of output
+  actions. observe takes two parameters:
 
   1) output parameter for reporting executed action
 
-  2) boolean value "block". If the value is True, readAction should
+  2) boolean value "block". If the value is True, observe should
   wait until there is output to be reported before returning. If block
-  is False, then readAction should report output actions that have
+  is False, then observe should report output actions that have
   been already observed.
 
-Include the adapter object file to be linked to the target binary in
-the Makefile.
-
-The following example shows how to make a simple local adapter for
-testing a minimal library:
+Example: a simple local adapter for testing a MySUT class:
 
 $ cat > mylocaladapter.hh << EOF
 #include "adapter.hh"
+#include "mysut.hh"
 
 class MyLocalAdapter: public Adapter {
 public:
-  MyLocalAdapter(std::vector<std::string>& _actions, Log& l);
-  virtual void        execute(std::vector<int>& action);
-  virtual bool        readAction(std::vector<int> &action,bool block=false);
+    MyLocalAdapter(Log& log, std::string params):
+        Adapter(log, params), m_mysut(NULL) {
+        log.print("<adapter name=\"mylog\" params=\"%s\" />\n",
+                  params.c_str());
+    }
+
+    void execute(std::vector<int>& action) {
+
+        std::string suggested(getActionName(action[0]));
+
+        // Example 1: input executed, nothing checked
+        if ("iInstantiate" == suggested) {
+            m_mysut = new MySUT();
+        } else
+
+        // Example 2: input executed, result checked
+        if ("iFoo:NoError" == suggested) {
+            m_mysut->foo();
+            if (m_mysut->error()) {
+                log.print("<adapter name=\"mylog\""
+                          "msg=\"iFoo caused error %d\">",
+                          m_mysut->error());
+                action[0] = 0;
+            }
+        } else
+
+        // Example 3: might report different action
+        if ("iBar=0" == suggested ||
+            "iBar=1" == suggested) {
+            int result = m_mysut->bar();
+            if (result == 0)      action[0] = getActionNumber("iBar=0");
+            else if (result == 1) action[0] = getActionNumber("iBar=1");
+            else action[0] = 0; // no matching action
+        }
+    }
+
+    bool observe(std::vector<int> &action,bool block=false) {
+        return false;
+    }
+
+protected:
+    MySUT* m_mysut;
+};
+
+FACTORY_DEFAULT_CREATOR(Adapter, MyLocalAdapter, "mylocal")
+EOF
+
+FACTORY_DEFAULT_CREATOR macro registers MyLocalAdapter to Adapter
+factory with a default creator function. The default creator
+instantiates adapter class when "mylocal" adapter is needed in test
+configuration file. The constructor will be passed a log object and
+configuration parameters, that is, xyz in configuration line
+adapter="mylocal:xyz".
+
+For completeness of this example, here is an implementation for MySUT.
+
+$ cat > mysut.hh << EOF
+class MySUT {
+public:
+    MySUT(): m_count(0), m_error(0) {}
+    void foo()  { m_count++; }
+    int bar()   { return m_count; }
+    int error() { return m_error; }
+private:
+    int m_count;
+    int m_error;
 };
 EOF
 
-$ cat > mylocaladapter.cc << EOF
-#include "mylocaladapter.hh"
-#include "log.hh"
 
-MyLocalAdapter::MyLocalAdapter(std::vector<std::string>& _actions, Log& l)
-{
-    log.print("<adapter name=\"mylocal\" state=\"read actions\" />");
-}
+Building local adapter
+----------------------
 
-void MyLocalAdapter::execute(std::vector<int>& action)
-{
-    return action;
-}
+A local adapter can be built into a shared library:
 
-bool MyLocalAdapter::readAction(std::vector<int> &action,bool block=false)
-{
-    return false;
-}
+$ g++ -g -O0 -Wall -fPIC -shared mylocaladapter.hh mysut.hh -o myadapters.so
 
-std::string stringify() {
-    return "";
-};
+After which it can be used through the "dlopen" adapter:
+
+$ cat > test.conf << EOF
+model        = "mysut.lsts"
+heuristic    = "greedy"
+coverage     = "perm:1"
+adapter      = "dlopen:mylocal"
+engine.cov   = 1.0
+engine.count = -1
 EOF
 
+Or it can be statically linked to fmbt by adding it to LOCAL_ADAPTERS
+in src/Makefile.am:
+
+$ sed -i 's/^(LOCAL_ADAPTERS =.*)$/\1 mylocaladapter.hh/' Makefile.am
