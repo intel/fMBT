@@ -260,8 +260,8 @@ line breaks.)
 Local adapters
 --------------
 
-Local adapters are inherited from the Adapter class (adapter.hh). They
-must implement
+Local adapters are inherited from the Adapter base class
+(adapter.hh). They must implement
 
 - "execute" method that takes index of suggested action as a
   parameter, tries to execute it, and reports the executed
@@ -279,7 +279,7 @@ must implement
 
 Example: a simple local adapter for testing a MySUT class:
 
-$ cat > mylocaladapter.hh << EOF
+$ cat > mylocaladapter.cc << EOF
 #include "adapter.hh"
 #include "mysut.hh"
 
@@ -287,7 +287,7 @@ class MyLocalAdapter: public Adapter {
 public:
     MyLocalAdapter(Log& log, std::string params):
         Adapter(log, params), m_mysut(NULL) {
-        log.print("<adapter name=\"mylog\" params=\"%s\" />\n",
+        log.print("<adapter name=\"mylocal\" params=\"%s\" />\n",
                   params.c_str());
     }
 
@@ -332,7 +332,7 @@ protected:
 FACTORY_DEFAULT_CREATOR(Adapter, MyLocalAdapter, "mylocal")
 EOF
 
-FACTORY_DEFAULT_CREATOR macro registers MyLocalAdapter to Adapter
+The FACTORY_DEFAULT_CREATOR macro registers MyLocalAdapter to Adapter
 factory with a default creator function. The default creator
 instantiates adapter class when "mylocal" adapter is needed in test
 configuration file. The constructor will be passed a log object and
@@ -358,22 +358,45 @@ EOF
 Building local adapter
 ----------------------
 
-A local adapter can be built into a shared library:
+There are two options how to build a local adapter: a shared library
+or link it statically. Building and using a shared library works as
+follows:
 
-$ g++ -g -O0 -Wall -fPIC -shared mylocaladapter.hh mysut.hh -o myadapters.so
+$ g++ -g -O0 -Wall -fPIC -shared mylocaladapter.cc -o myadapters.so
 
-After which it can be used through the "dlopen" adapter:
+Shared library adapter can be used through the "dlopen" adapter:
 
-$ cat > test.conf << EOF
+$ cat > plugin-test.conf << EOF
 model        = "mysut.lsts"
 heuristic    = "greedy"
 coverage     = "perm:1"
-adapter      = "dlopen:mylocal"
+adapter      = "dlopen:myadapters.so,mylocal:xyz"
 engine.cov   = 1.0
 engine.count = -1
 EOF
 
-Or it can be statically linked to fmbt by adding it to LOCAL_ADAPTERS
-in src/Makefile.am:
+Let's verify this really works. Create a model and run a test:
 
-$ sed -i 's/^(LOCAL_ADAPTERS =.*)$/\1 mylocaladapter.hh/' Makefile.am
+$ fmbt-gt -o mysut.lsts 'P(s0,p)->T(s0,"iInstantiate",s1)T(s1,"iBar=0",s2)'
+
+$ LD_LIBRARY_PATH=. fmbt -Lplugin.log plugin-test.conf
+
+Alternatively, an adapter can be statically linked to fmbt by adding
+it to LOCAL_ADAPTERS in src/Makefile.am and rebuilding it.
+
+$ sed -i 's/^\(LOCAL_ADAPTERS =.*\)$/\1 mylocaladapter.cc/' Makefile.am
+
+$ make fmbt
+
+In this case we can use it directly in the configuration file:
+
+$ cat > static-test.conf << EOF
+model        = "mysut.lsts"
+heuristic    = "greedy"
+coverage     = "perm:1"
+adapter      = "mylocal:xyz"
+engine.cov   = 1.0
+engine.count = -1
+EOF
+
+$ fmbt -Lstatic.log static-test.conf

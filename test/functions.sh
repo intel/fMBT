@@ -33,3 +33,43 @@ testfailed() {
     echo "# failed." >>$LOGFILE
     exit 1
 }
+
+check_minimum_num_of_lines() {
+    FILENAME=$1
+    MINIMUM_NUMOFLINES=$2
+    if [ ! -f $FILENAME ]; then
+        echo "$FILENAME does not exist." >> $LOGFILE
+        testfailed
+    fi
+    FOUND_LINES=$(wc -l $FILENAME | awk '{print $1}')
+    if  [ $FOUND_LINES -lt $MINIMUM_NUMOFLINES ]; then
+        echo "$FILENAME too short." >> $LOGFILE
+        echo "    $MINIMUM_NUMOFLINES lines required," >> $LOGFILE
+        echo "    $FOUND_LINES lines found." >> $LOGFILE
+        testfailed
+    fi
+}
+
+teststep "check that utils/fmbt-gt is used..."
+dirandfmbtgt=$(which fmbt-gt | sed 's:.*\(utils/.*\):\1:')
+echo "fmbt-gt: $dirandfmbtgt" >> $LOGFILE
+if [ "$dirandfmbtgt" != "utils/fmbt-gt" ]; then
+    testfailed
+fi
+testpassed
+
+teststep "check that src/fmbt is used..."
+dirandfmbt=$(which fmbt | sed 's:.*\(src/.*\):\1:')
+echo "fmbt: $dirandfmbt" >> $LOGFILE
+if [ "$dirandfmbt" != "src/fmbt" ]; then
+    testfailed
+fi
+testpassed
+
+teststep "check working python version..."
+pyver=$(/usr/bin/env python --version 2>&1 | awk '{if ($2 >= "2.6") print "ok"}')
+if [ "$pyver" != "ok" ]; then
+    echo "Python >= 2.6 required, you run $(/usr/bin/env python --version 2>&1)" >> $LOGFILE
+    testfailed
+fi
+testpassed

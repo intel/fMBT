@@ -49,7 +49,7 @@ Adapter_dlopen::Adapter_dlopen(Log& log, std::string params) :
   
   std::stringstream s(params);
   s.getline(library_file, 1024, ',');
-  s.getline(adapter_name, 1024, ',');
+  s.getline(adapter_name, 1024, ':');
   s.getline(adapter_params, 1024);
   
   if (library_file[0] == '\0')
@@ -79,7 +79,7 @@ Adapter_dlopen::Adapter_dlopen(Log& log, std::string params) :
 void Adapter_dlopen::set_actions(std::vector<std::string>* _actions)
 {
   Adapter::set_actions(_actions);
-  loaded_adapter->set_actions(_actions);
+  if (loaded_adapter) loaded_adapter->set_actions(_actions);
 }
 
 bool Adapter_dlopen::init()
@@ -93,10 +93,10 @@ std::string Adapter_dlopen::stringify()
   return "dlopen:" + loaded_adapter->stringify();
 }
 
-/* adapter can execute.. */
 void Adapter_dlopen::execute(std::vector<int>& action)
 {
-  loaded_adapter->execute(action);
+  if (!loaded_adapter) action.resize(0);
+  else loaded_adapter->execute(action);
 }
 
 bool  Adapter_dlopen::observe(std::vector<int> &action,
