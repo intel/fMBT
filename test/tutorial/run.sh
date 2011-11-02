@@ -41,32 +41,18 @@ awk '/^\$ .*EOF/{p=1; k=1; $1=""; cn+=1; f="create."cn}
      /^EOF$/{k=0}
      {if (p) print >> f;
       if (!k) { p=0; f=""} }' ../../doc/tutorial.txt
-if [ ! -f create.3 ]; then
-    echo "create.3 missing" >> $LOGFILE
-    testfailed
-fi
-if [ ! -f fmbt.3 ]; then
-    echo "fmbt.3 missing" >> $LOGFILE
-    testfailed
-fi
+check_minimum_num_of_lines create.3 1
+check_minimum_num_of_lines fmbt.3 1
 testpassed
 
 teststep "create the simple model (create.1)"
 source create.1
-if  [ $(wc -l mkrmdir.lsts | awk '{print $1}') -ne 36 ]; then
-    echo "unexpected number of lines in mkrmdir.lsts" >> $LOGFILE
-    wc mkrmdir.lsts >> $LOGFILE
-    testfailed
-fi
+check_minimum_num_of_lines mkrmdir.lsts 30
 testpassed
 
 teststep "create the configuration file (create.2)"
 source create.2
-if  [ $(wc -l mkrmdir.conf | awk '{print $1}') -ne 6 ]; then
-    echo "unexpected number of lines in mkrmdir.conf" >> $LOGFILE
-    wc mkrmdir.conf >> $LOGFILE
-    testfailed
-fi
+check_minimum_num_of_lines mkrmdir.conf 6
 testpassed
 
 teststep "run:$(cat fmbt.1)..."
@@ -81,11 +67,7 @@ testpassed
 
 teststep "modify the model..."
 source create.3
-if  [ $(wc -l mkrmdir.lsts | awk '{print $1}') -ne 38 ]; then
-    echo "unexpected number of lines in mkrmdir.lsts" >> $LOGFILE
-    wc mkrmdir.lsts >> $LOGFILE
-    testfailed
-fi
+check_minimum_num_of_lines mkrmdir.lsts 30
 testpassed
 
 teststep "modify perm and step limit in configuration..."
