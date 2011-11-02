@@ -18,7 +18,9 @@ fmbt_droid_SOURCES = $(COMMON_SOURCES)
 
 remote_adapter_loader_SOURCES = remote_adapter_loader.cc adapter.cc log.cc adapter_dummy.cc adapter_model.cc adapter_v4l2.cc helper.cc model.cc
 
-noinst_HEADERS = adapter_dummy.hh adapter.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_v4l2.hh adapter_xrules.hh conf.hh coverage.hh coverage_mapper.hh coverage_market.hh coverage_tree.hh helper.hh heuristic_greedy.hh heuristic.hh heuristic_random.hh log.hh log_null.hh lts.hh lts_remote.hh lts_xrules.hh model.hh policy.hh rules.hh test_engine.hh writable.hh
+noinst_HEADERS = adapter_dlopen.hh adapter_dummy.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_v4l2.hh adapter_xrules.hh conf.hh coverage.hh coverage_mapper.hh coverage_market.hh coverage_tree.hh helper.hh heuristic_greedy.hh heuristic.hh heuristic_random.hh log_null.hh lts.hh lts_remote.hh lts_xrules.hh model.hh policy.hh rules.hh test_engine.hh
+
+pkginclude_HEADERS=adapter.hh factory.hh writable.hh log.hh
 
 noinst_HEADERS += conf.g lts.g mrules.g covlang.g xrules.g
 

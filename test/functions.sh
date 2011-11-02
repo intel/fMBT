@@ -50,8 +50,6 @@ check_minimum_num_of_lines() {
     fi
 }
 
-echo "FUNCTIONS IMPORTED BY $0"
-
 if [ -z "$SKIP_PATH_CHECKS" ]; then
 
     teststep "check that utils/fmbt-gt is used..."

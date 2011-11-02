@@ -22,7 +22,7 @@
 
 cd "$(dirname "$0")"
 LOGFILE=/tmp/fmbt.test.interactivemode.log
-FMBT_BIN=../../src/fmbt
+export PATH=../../src:../../utils:$PATH
 
 source ../functions.sh
 
@@ -38,7 +38,7 @@ teststep "create model for interactive mode test..."
 testpassed
 
 teststep "run interactive mode mbt test..."
-$FMBT_BIN -L testlog.txt test.conf >>$LOGFILE 2>&1 || {
+fmbt -L testlog.txt test.conf >>$LOGFILE 2>&1 || {
     echo "error: fmbt returned non-zero return value: $?" >> $LOGFILE
     echo "mbt test log:     $(dirname $0)/testlog.txt" >> $LOGFILE
     echo "adapter test log: $(dirname $0)/testlog-adapter.txt" >> $LOGFILE

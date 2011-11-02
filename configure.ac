@@ -1,4 +1,4 @@
-AC_INIT([fmbt], [0.1rc1], [antti.kervinen@intel.com])
+AC_INIT([fmbt], [0.1rc2], [antti.kervinen@intel.com])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
 AC_PROG_CC
 AC_PROG_CXX

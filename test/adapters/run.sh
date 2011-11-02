@@ -1,3 +1,4 @@
+#!/bin/bash
 
 # fMBT, free Model Based Testing tool
 # Copyright (c) 2011, Intel Corporation.
@@ -15,17 +16,17 @@
 # this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
-
 # This test runs through the commands in the doc/adapters.txt
 
 ##########################################
 # Setup test environment
 
-TESTDIR=/tmp/fmbt.test.adapter
+TESTDIR=/tmp/fmbt.test.adapters
 
 cd "$(dirname "$0")"
 cd ../..
-rm -rf $TESTDIR
+chmod -R u+w $TESTDIR >/dev/null 2>&1
+rm -rf $TESTDIR >/dev/null 2>&1
 mkdir $TESTDIR
 cp -rp * $TESTDIR || {
     echo "test setup error: copying src to src-test.adapter failed"
@@ -136,4 +137,5 @@ testpassed
 ##########################################
 # Clean up
 cd /tmp
+chmod -R u+w $TESTDIR
 rm -rf $TESTDIR
