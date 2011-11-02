@@ -94,7 +94,11 @@ public:
   virtual std::vector<std::string>& getAllActions();
 
   /// Returns action name for string comparisons
-  std::string getActionName(int action);
+  std::string& getActionName(int action);
+
+  /// Returns number corresponding to actionName or -1 if not found
+  int getActionNumber(std::string& name);
+  int getActionNumber(const char* name);
 
   /// Returns escaped action name (can be logged to XML)
   const char* getUActionName(int action);

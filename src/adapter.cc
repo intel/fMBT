@@ -59,6 +59,27 @@ std::vector<std::string>& Adapter::getAllActions()
   return *actions;
 }
 
+std::string& Adapter::getActionName(int action) {
+  return (*actions)[action];
+}
+
+int Adapter::getActionNumber(std::string& name) 
+{
+  for(size_t i=0;i<actions->size();i++) {
+    if ((*actions)[i]==name) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+int Adapter::getActionNumber(const char *name)
+{
+  std::string _name(name);
+  return getActionNumber(_name);
+}
+
+
 void Adapter::setparent(Adapter* a)
 {
   parent = a;
@@ -72,14 +93,3 @@ const char* Adapter::getUActionName(int action)
   return unames[action];
 }
 
-/*
-int Adapter::action_number(std::string& name) 
-{
-  for(size_t i=0;i<actions.size();i++) {
-    if (actions[i]==name) {
-      return i;
-    }
-  }
-  return -1;
-}
-*/
