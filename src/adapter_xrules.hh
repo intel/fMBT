@@ -29,7 +29,7 @@ public:
     action_names=_actions;
   }
   virtual int execute(int action);
-  virtual bool readAction(int &action,bool block=false);  
+  virtual bool observe(int &action,bool block=false);  
 
   bool load(std::string& name);
 

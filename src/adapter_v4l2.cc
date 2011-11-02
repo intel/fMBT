@@ -170,7 +170,7 @@ void Adapter_v4l2::execute(std::vector<int>& action_list)
   RETURN(0);
 }
 
-bool Adapter_v4l2::readAction(std::vector<int>& action, bool block)
+bool Adapter_v4l2::observe(std::vector<int>& action, bool block)
 {
   return false;
 }

@@ -25,7 +25,7 @@ public:
   virtual bool init();
 
   virtual void execute(std::vector<int> &action);
-  virtual bool readAction(std::vector<int> &action, bool block=false);
+  virtual bool observe(std::vector<int> &action, bool block=false);
   virtual std::string stringify();
 private:
   Model* model;

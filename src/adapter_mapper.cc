@@ -337,7 +337,7 @@ void Adapter_mapper::m1_convert(int index,
   }  
 }
 
-bool Adapter_mapper::readActionRobin(std::vector<int> &action)
+bool Adapter_mapper::observeRobin(std::vector<int> &action)
 {
   if (adapters.size()==0) {
     abort();
@@ -349,9 +349,9 @@ bool Adapter_mapper::readActionRobin(std::vector<int> &action)
 
   if (adapters[robin]==NULL) {
     robin++;
-    return readActionRobin(action);
+    return observeRobin(action);
   }
-  bool ret = adapters[robin]->readAction(action,false);
+  bool ret = adapters[robin]->observe(action,false);
   if (ret)
     m1_convert(robin,action);
     //action=m1[adapter_action(robin,a)];
@@ -359,11 +359,11 @@ bool Adapter_mapper::readActionRobin(std::vector<int> &action)
   return ret;
 }
 
-bool Adapter_mapper::readAction(std::vector<int> &action,bool block)
+bool Adapter_mapper::observe(std::vector<int> &action,bool block)
 {
   /* Ok. This is a bit hairy */
   do {
-    if (readActionRobin(action)) {
+    if (observeRobin(action)) {
       return true;
     }
   } while (block);

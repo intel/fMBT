@@ -90,7 +90,7 @@ bool Test_engine::run(float target_coverage,
   do {
     action=0;
 
-    while (adapter.readAction(actions)) {
+    while (adapter.observe(actions)) {
       step_count++;
       action = policy.choose(actions);
       log_adapter_output(log, adapter, action);
@@ -118,7 +118,7 @@ bool Test_engine::run(float target_coverage,
     switch(action) {
     case DEADLOCK: {
       log.print("<state type=\"deadlock\"/>\n");
-      if (adapter.readAction(actions,true)) {
+      if (adapter.observe(actions,true)) {
         test_passed(false, "response on deadlock", log);
         log.pop(); // test_engine
 	return false; // Error: Unexpected output
@@ -131,7 +131,7 @@ bool Test_engine::run(float target_coverage,
     case OUTPUT_ONLY: {
       log.print("<state type=\"output only\"/>\n");
 
-      bool value = adapter.readAction(actions,true);
+      bool value = adapter.observe(actions,true);
       if (!value) {
 	action = SILENCE;
         log.debug("Test_engine::run: SUT remained silent (action %i).\n", action);
@@ -148,7 +148,7 @@ bool Test_engine::run(float target_coverage,
       }
       break;
     }
-    default: {
+    default: { /* INPUT: suggest execution of an input action */
       log.debug("Test_engine::run: sending input action %i to the SUT.\n", action);
       actions.resize(1);
       actions[0]=action;
@@ -201,7 +201,7 @@ void Test_engine::interactive()
 
   while (run) {
 
-    while (adapter.readAction(actions_v)) {
+    while (adapter.observe(actions_v)) {
       printf("Action %i:%s\n",action,heuristic.getActionName(action).c_str());
       actions_v.resize(0);
     }

@@ -35,7 +35,7 @@ public:
   virtual bool init();
 
   virtual void execute(std::vector<int>& action);
-  virtual bool readAction(std::vector<int> &action, bool block=false);
+  virtual bool observe(std::vector<int> &action, bool block=false);
 
   bool load(std::string& name);
 
@@ -51,7 +51,7 @@ public:
   } 
   virtual std::string stringify();
 protected:
-  bool readActionRobin(std::vector<int> &action);
+  bool observeRobin(std::vector<int> &action);
   void m1_convert(int index,std::vector<int>&action);
 
   typedef std::pair<int,int> adapter_action;

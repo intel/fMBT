@@ -37,7 +37,7 @@ void Adapter_dummy::execute(std::vector<int>& action)
   log.pop();
 }
 
-bool  Adapter_dummy::readAction(std::vector<int> &action,
+bool  Adapter_dummy::observe(std::vector<int> &action,
 				bool block)
 {
   return false;

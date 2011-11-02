@@ -217,7 +217,7 @@ int execute(int action)
   return 0;
 }
 
-int readAction(int *action,int block)
+int observe(int *action,int block)
 {
   return 0;
 }

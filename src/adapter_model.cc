@@ -69,7 +69,7 @@ void Adapter_model::execute(std::vector<int> &action)
   log.pop();
 }
 
-bool Adapter_model::readAction(std::vector<int> &action,bool block)
+bool Adapter_model::observe(std::vector<int> &action,bool block)
 {
   int* act,*iact;
   int actions=-model->getIActions(&iact)+model->getActions(&act);

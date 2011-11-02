@@ -189,7 +189,7 @@ int  Adapter_xrules::execute(int action)
 	   i,adapters[i]);
     if (adapters[i]) {
       int action=0;
-      if (adapters[i]->readAction(action,false)) {
+      if (adapters[i]->observe(action,false)) {
 	/* Ok. Let's feed the action to the composer */
 	log.debug("got action %i\n",action);
       } else {
@@ -358,7 +358,7 @@ void Adapter_xrules::compose()
   valid=true;
 }
 
-bool Adapter_xrules::readAction(int &action,bool block)
+bool Adapter_xrules::observe(int &action,bool block)
 {
   // implementme
   return false;

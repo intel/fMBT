@@ -209,7 +209,7 @@ ssize_t Adapter_remote::agetline(char **lineptr, size_t *n, FILE *stream)
 }
 
 
-bool Adapter_remote::readAction(std::vector<int> &action,bool block)
+bool Adapter_remote::observe(std::vector<int> &action,bool block)
 {
   char* s=NULL;
   size_t si=0;
@@ -224,7 +224,7 @@ bool Adapter_remote::readAction(std::vector<int> &action,bool block)
 
   string2vector(s,action);
   /*
-  log.debug("Adapter_remote::readAction: output action number from the SUT: '%s' == %i\n",s,action);
+  log.debug("Adapter_remote::observe: output action number from the SUT: '%s' == %i\n",s,action);
   */
   std::free(s);
   return true;

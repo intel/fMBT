@@ -37,9 +37,9 @@
 
    3. init()
 
-   If init() returns true, adapter must be ready for responding to
-   execute() and readAction(). If init returns false, stringify() may
-   return reason for failure.
+   If is ready for responding to execute() and observe(), init()
+   returns true. If init() returns false, stringify() may return
+   reason for failure.
 */
 
 class Adapter: public Writable {
@@ -48,14 +48,55 @@ public:
   virtual void set_actions(std::vector<std::string>* _actions);
   virtual bool init();
 
-  virtual void execute(std::vector<int> &action) =0;
-  virtual bool readAction(std::vector<int> &action, bool block=false)=0;
+  /** \brief execute an action and report results
+   * \param action input/output parameter for suggesting and reporting
+   *               executed action
+   *
+   * When called, action table contains exactly one action: executing
+   * action[0] is suggested by the test generator. At exit it contains
+   * the action whose execution is reported. Reporting more unusual
+   * cases:
+   *
+   * 1. Result of the execution does not match any of the known
+   *    actions: action table contains only integer 0.
+   *
+   * 2. Execution result corresponds to more than one actions:
+   *    action table contains all alternative actions.
+   *
+   * 3. Execution of the suggested action is blocked:
+   *    action table is empty.
+   */
+  virtual void execute(std::vector<int> &action) = 0;
 
+  /** \brief report observed events
+   * \param action (output) corresponds to observed event
+   * \param block should adapter wait for events
+   * \return true if events have been observed
+   *
+   * observe reports one event at a time. If an event matches to
+   * multiple actions, all alternative actions are returned in the
+   * action parameter.
+   *
+   * If block is false, observe should report events occured so
+   * far. Otherwise it should wait for events and return either when
+   * there is something to report or when there will not be anything
+   * to report.
+   */
+  virtual bool observe(std::vector<int> &action, bool block = false) = 0;
+
+  /* Adapter stack / tree setup and browsing API */
+  void setparent(Adapter* a);
   virtual Adapter* up();
   virtual Adapter* down(unsigned int a);
   virtual std::vector<std::string>& getAdapterNames();
+
+  /* Methods for reading action names */
   virtual std::vector<std::string>& getAllActions();
-  void setparent(Adapter* a);
+
+  /// Returns action name for string comparisons
+  std::string getActionName(int action);
+
+  /// Returns escaped action name (can be logged to XML)
   const char* getUActionName(int action);
 
 protected:

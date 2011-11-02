@@ -99,10 +99,10 @@ void Adapter_dlopen::execute(std::vector<int>& action)
   loaded_adapter->execute(action);
 }
 
-bool  Adapter_dlopen::readAction(std::vector<int> &action,
+bool  Adapter_dlopen::observe(std::vector<int> &action,
 				bool block)
 {
-  return loaded_adapter->readAction(action, block);
+  return loaded_adapter->observe(action, block);
 }
 
 FACTORY_DEFAULT_CREATOR(Adapter, Adapter_dlopen, "dlopen");

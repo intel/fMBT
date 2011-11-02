@@ -82,7 +82,7 @@ int main(int argc,char** argv)
   s=NULL;
   while(!ferror(stdin)) {
     std::vector<int> action;
-    while (adapter->readAction(action)) {
+    while (adapter->observe(action)) {
       for(unsigned i=0;i<action.size();i++) {
         fprintf(stdout, "%i ",action[i]);
       }
