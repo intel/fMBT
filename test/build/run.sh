@@ -22,12 +22,13 @@ rm -f "$LOGFILE"
 
 cd "$(dirname "$0")"
 
+SKIP_PATH_CHECKS=1
 source ../functions.sh
 
 cd ../..
 
-teststep "recreating the configure file..."
-autoreconf --install >> $LOGFILE 2>&1 || testfailed
+teststep "running autogen.sh..."
+./autogen.sh >> $LOGFILE 2>&1 || testfailed
 testpassed
 
 teststep "running configure..."

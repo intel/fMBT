@@ -50,26 +50,32 @@ check_minimum_num_of_lines() {
     fi
 }
 
-teststep "check that utils/fmbt-gt is used..."
-dirandfmbtgt=$(which fmbt-gt | sed 's:.*\(utils/.*\):\1:')
-echo "fmbt-gt: $dirandfmbtgt" >> $LOGFILE
-if [ "$dirandfmbtgt" != "utils/fmbt-gt" ]; then
-    testfailed
-fi
-testpassed
+echo "FUNCTIONS IMPORTED BY $0"
 
-teststep "check that src/fmbt is used..."
-dirandfmbt=$(which fmbt | sed 's:.*\(src/.*\):\1:')
-echo "fmbt: $dirandfmbt" >> $LOGFILE
-if [ "$dirandfmbt" != "src/fmbt" ]; then
-    testfailed
-fi
-testpassed
+if [ -z "$SKIP_PATH_CHECKS" ]; then
 
-teststep "check working python version..."
-pyver=$(/usr/bin/env python --version 2>&1 | awk '{if ($2 >= "2.6") print "ok"}')
-if [ "$pyver" != "ok" ]; then
-    echo "Python >= 2.6 required, you run $(/usr/bin/env python --version 2>&1)" >> $LOGFILE
-    testfailed
+    teststep "check that utils/fmbt-gt is used..."
+    dirandfmbtgt=$(which fmbt-gt | sed 's:.*\(utils/.*\):\1:')
+    echo "fmbt-gt: $dirandfmbtgt" >> $LOGFILE
+    if [ "$dirandfmbtgt" != "utils/fmbt-gt" ]; then
+        testfailed
+    fi
+    testpassed
+    
+    teststep "check that src/fmbt is used..."
+    dirandfmbt=$(which fmbt | sed 's:.*\(src/.*\):\1:')
+    echo "fmbt: $dirandfmbt" >> $LOGFILE
+    if [ "$dirandfmbt" != "src/fmbt" ]; then
+        testfailed
+    fi
+    testpassed
+    
+    teststep "check working python version..."
+    pyver=$(/usr/bin/env python --version 2>&1 | awk '{if ($2 >= "2.6") print "ok"}')
+    if [ "$pyver" != "ok" ]; then
+        echo "Python >= 2.6 required, you run $(/usr/bin/env python --version 2>&1)" >> $LOGFILE
+        testfailed
+    fi
+    testpassed
+
 fi
-testpassed

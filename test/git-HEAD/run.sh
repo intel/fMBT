@@ -20,31 +20,26 @@
 
 LOGFILE=/tmp/fmbt.test.git-HEAD.txt
 
-source test/functions.sh 2>/dev/null || {
-    echo "You should run this script by executing"
-    echo "    test/git-HEAD/run.sh"
-    echo "in the root of the fmbt git repository"
-    exit 1
-}
-
-echo 'Running all tests in completely clean setup in the current branch'
-
-TESTDIR=/tmp/fmbt.test.git-HEAD.testing
+TESTDIR=/tmp/fmbt.test.git-HEAD
 
 BRANCH=$(git branch | awk '/\*/{print $2}')
 
 rm -rf $TESTDIR
 mkdir -p $TESTDIR
 
-teststep "archive $BRANCH to $TESTDIR..."
-( git archive $BRANCH | tar xvf - -C $TESTDIR ) >>$LOGFILE 2>&1 || testfailed
-testpassed
+( git archive $BRANCH | tar xvf - -C $TESTDIR ) >>$LOGFILE 2>&1 || {
+    echo "Running \"git archive $BRANCH\" failed, see $LOGFILE"
+    exit 1
+}
 
 cd $TESTDIR
 
+test/build/run.sh || exit 1
+
 for f in test/*/run.sh; do
-    if [ $(echo $f | sed 's:.*/\(.*\)/.*$:\1:') == "git-HEAD" ]; then
-	continue; # do not try to run this script
+    dirname=$(echo $f | sed 's:.*/\(.*\)/.*$:\1:')
+    if [ $dirname == "git-HEAD" ] || [ $dirname == "build" ]; then
+	continue; # skip these tests
     fi
     $f
 done
