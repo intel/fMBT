@@ -90,6 +90,7 @@ bool Test_engine::run(float target_coverage,
   do {
     action=0;
 
+    gettimeofday(&Adapter::current_time,NULL);
     while (adapter.observe(actions)) {
       step_count++;
       action = policy.choose(actions);
@@ -104,6 +105,7 @@ bool Test_engine::run(float target_coverage,
         log.pop(); // test_engine
 	return false; // Error: Unexpected output
       }
+      gettimeofday(&Adapter::current_time,NULL);
     }
     
     action = heuristic.getIAction();
