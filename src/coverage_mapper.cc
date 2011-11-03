@@ -311,7 +311,7 @@ void Coverage_Mapper::add_result_action(std::string* name)
   }
 }
 void Coverage_Mapper::add_component(unsigned index,
-				    std::string& name)
+				    std::string& name,bool)
 {
   log.debug("%s(%i,%s)\n",__func__,index,name.c_str());
 

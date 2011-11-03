@@ -32,9 +32,10 @@ xrules_e_file: filename+ rule+;
 
 filename: int '=' string { amobj->add_file($0.val,*$2.str); delete $2.str; $2.str=NULL; };
 
-rule: string '->' component { amobj->add_result_action($0.str); };
+rule: string '->' component+ { amobj->add_result_action($0.str); };
 
-component: '(' int ',' string ')' { amobj->add_component($1.val,*$3.str); delete $3.str; $3.str=NULL; };
+component: '(' int ',' string ')' { amobj->add_component($1.val,*$3.str); delete $3.str; $3.str=NULL; } |
+           '[' int ',' string ']' { amobj->add_component($1.val,*$3.str,false); delete $3.str; $3.str=NULL; };
 
 string: "\"([^\"\\]|\\[^])*\"" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); };
 

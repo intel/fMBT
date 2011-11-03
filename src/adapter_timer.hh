@@ -16,18 +16,26 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#ifndef __rules_hh__
-#define __rules_hh__
+#include "adapter.hh"
+#include <sys/time.h>
 
-#include <string>
-
-class Rules {
+class Adapter_timer: public Adapter {
 public:
-
-  virtual void add_file(unsigned index, std::string& adaptername)=0;
-  virtual void add_result_action(std::string* name)=0;
-  virtual void add_component(unsigned int index,std::string& name,bool tau=true)=0;
-
+  Adapter_timer(Log& l, std::string params);
+  virtual void execute(std::vector<int>& action);
+  virtual bool observe(std::vector<int> &action,bool block=false);
+  virtual std::string stringify();
+  virtual void set_actions(std::vector<std::string>* _actions);
+  virtual bool init() {
+    return true;
+  }
+private:
+  std::vector<struct timeval> timeout;
+  struct action_timeout {
+    int timer;
+    struct timeval time;
+  };
+  std::vector<struct action_timeout> atime; // atime[action]
+  std::vector<int> enabled; 
+  std::vector<int> expire_map;
 };
-
-#endif
