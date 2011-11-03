@@ -26,26 +26,7 @@
 #include <unistd.h>
 #include <error.h>
 #include <cstdio>
-
-/*
-std::string read_req() {
-  
-  static FILE* f=fdopen(3,"r");
-  char* s=NULL;
-  size_t si=0;
-
-  getline(&s,&si,f);
-
-  if (s==NULL || feof(f)) {
-    fclose(f);
-    return std::string("");
-  }
-
-  std::string ret(s);
-  free(s);
-  return ret;
-}
-*/
+#include <getopt.h>
 
 void print_usage()
 {
@@ -69,7 +50,12 @@ int main(int argc,char * const argv[])
     bool E=false;
     int c;
 
-    while ((c = getopt (argc, argv, "DEL:ie")) != -1)
+    static struct option long_opts[] = {
+        {"help", no_argument, 0, 'h'},
+        {0, 0, 0, 0}
+    };
+
+    while ((c = getopt_long (argc, argv, "DEL:eih", long_opts, NULL)) != -1)
          switch (c)
            {
 	   case 'D': 
@@ -86,13 +72,16 @@ int main(int argc,char * const argv[])
 	       return 1;
 	     }
 	     break;
-	   case 'i':
-	     interactive=true;
-	     break;
 	   case 'e':
 	     human_readable=false;
 	     E=true;
 	     break;
+	   case 'i':
+	     interactive=true;
+	     break;
+           case 'h':
+             print_usage();
+             return 0;
            default:
              return 2;
            }
