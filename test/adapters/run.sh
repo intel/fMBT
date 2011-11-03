@@ -37,7 +37,7 @@ cd $TESTDIR/src || {
     exit 2
 }
 
-LOGFILE=/tmp/fmbt.test.adapter.log
+LOGFILE=$TESTDIR.log
 rm -f $LOGFILE
 export PATH=.:$TESTDIR/utils:$PATH
 

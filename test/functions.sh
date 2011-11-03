@@ -60,10 +60,11 @@ if [ -z "$SKIP_PATH_CHECKS" ]; then
     fi
     testpassed
     
-    teststep "check that src/fmbt is used..."
+    teststep "check that fmbt is used from source tree..."
     dirandfmbt=$(which fmbt | sed 's:.*\(src/.*\):\1:')
+    echo "using: $dirandfmbt" >> $LOGFILE
     echo "fmbt: $dirandfmbt" >> $LOGFILE
-    if [ "$dirandfmbt" != "src/fmbt" ]; then
+    if [ "$dirandfmbt" != "src/fmbt" ] && [ "$dirandfmbt" != "./fmbt" ]; then
         testfailed
     fi
     testpassed
