@@ -8,7 +8,8 @@ if HAVE_PYTHON
 dist_bin_SCRIPTS = remote_python
 endif
 
-LOCAL_ADAPTERS = adapter_model.cc adapter_mapper.cc adapter_dlopen.cc adapter_dummy.cc # disabled-missing: adapter_timer.cc
+LOCAL_ADAPTERS = adapter_model.cc adapter_mapper.cc adapter_dlopen.cc adapter_dummy.cc
+# disabled due to missing files: adapter_timer.cc
 
 COMMON_SOURCES = fmbt.cc lts.cc test_engine.cc heuristic_random.cc log.cc helper.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc coverage_market.cc coverage_mapper.cc covlang.g.d_parser.cc heuristic_greedy.cc coverage_tree.cc model.cc heuristic.cc coverage.cc adapter.cc $(LOCAL_ADAPTERS) conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc
 
