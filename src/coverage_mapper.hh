@@ -42,7 +42,7 @@ public:
 
   virtual void add_file(unsigned index, std::string& adaptername);
   virtual void add_result_action(std::string* name);
-  virtual void add_component(unsigned index,std::string& name);
+  virtual void add_component(unsigned index,std::string& name,bool tau=true);
 
   virtual void set_model(Model* _model);
 protected:

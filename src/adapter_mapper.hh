@@ -41,7 +41,8 @@ public:
 
   virtual void add_file(unsigned index, std::string& adaptername);
   virtual void add_result_action(std::string* name);
-  virtual void add_component(unsigned int index, std::string& name);
+
+  virtual void add_component(unsigned int index, std::string& name, bool tau=true);
 
   virtual Adapter* down(unsigned int a) { 
     if (a>=adapters.size()) {
@@ -64,9 +65,10 @@ protected:
   void add_map(int index,std::string& n,int action);
 
   unsigned int robin;
-  int l_index;
+  std::vector<int> l_index;
+  std::vector<bool> l_tau;
   std::string params;
-  std::string l_name;
+  std::vector<std::string> l_name;
   std::string load_name;
 
   std::map<adapter_action,int> m1;

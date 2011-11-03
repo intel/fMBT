@@ -241,7 +241,7 @@ void Adapter_mapper::add_result_action(std::string* name)
 #ifndef DROI
     /* try regexp case */
     log.debug("Regexp case\n");
-    const char* format_string = l_name.c_str();
+    const char* format_string = l_name[0].c_str();
     
     log.debug("Format string \"%s\"\n",format_string);
 
@@ -260,7 +260,7 @@ void Adapter_mapper::add_result_action(std::string* name)
         s=t.str();
         
         if (!is_used(i)) {
-          add_map(l_index,s,i);
+          add_map(l_index[0],s,i);
         } else {
           log.debug("action %s already used, won't add it again.\n");
         }
@@ -268,11 +268,14 @@ void Adapter_mapper::add_result_action(std::string* name)
     }
 #endif
   } else {
-    add_map(l_index,l_name,action);
+    add_map(l_index[0],l_name[0],action);
   }
+  l_index.resize(0);
+  l_name.resize(0);
+  l_tau.resize(0);
 }
 
-void Adapter_mapper::add_component(unsigned int index,std::string& name)
+void Adapter_mapper::add_component(unsigned int index,std::string& name, bool tau)
 {
   /* Validate index */
   log.debug("%s(%i,%s)\n",__func__,index,name.c_str());
@@ -290,8 +293,9 @@ void Adapter_mapper::add_component(unsigned int index,std::string& name)
     throw((int)420);
   }
   
-  l_name=name;
-  l_index=index;
+  l_name.push_back(name);
+  l_index.push_back(index);
+  l_tau.push_back(tau);
 }
 
 void Adapter_mapper::execute(std::vector<int>& action)
