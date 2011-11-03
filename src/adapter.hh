@@ -26,6 +26,7 @@
 #include "helper.hh"
 #include "factory.hh"
 #include "log.hh"
+#include <sys/time.h>
 
 /* Creating and initialising an adapter is a call sequence
 
@@ -44,6 +45,7 @@
 
 class Adapter: public Writable {
 public:
+  static struct timeval current_time;
   Adapter(Log& l, std::string params = "");
   virtual void set_actions(std::vector<std::string>* _actions);
   virtual bool init();

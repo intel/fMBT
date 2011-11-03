@@ -16,9 +16,12 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+
 #include "adapter.hh"
 #include <cstdio>
 #include "log.hh"
+
+struct timeval Adapter::current_time;
 
 FACTORY_IMPLEMENTATION(Adapter)
 
