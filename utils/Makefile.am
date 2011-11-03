@@ -6,7 +6,8 @@ CLEANFILES = $(PYTHON_WRAPPERS)
 wrapperdir:
 	$(MKDIR_P) $@
 
-$(PYTHON_WRAPPERS): wrapperdir
+$(PYTHON_WRAPPERS): wrapperdir ../config.status
+	@echo Generating $@...
 	@echo '#!/bin/sh' > $@
 	@echo 'exec $(PYTHON) $(pkgpythondir)/'$$(basename $@)' "$$@"' >> $@
 
