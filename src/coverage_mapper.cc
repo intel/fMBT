@@ -291,18 +291,9 @@ void Coverage_Mapper::add_result_action(std::string* name)
       fflush(stdout);
       if(boost::regex_match(actions[i].c_str(), what, expression)) {
 	/* Match */
-	//log.debug("MATCH (%s %s)\n",actions[i].c_str(),name->c_str());
-	std::ostringstream t(std::ios::out | std::ios::binary);
-	std::ostream_iterator<char> oi(t);
-	std::string s;
-	boost::regex_replace(oi,actions[i].begin(),actions[i].end(),expression,format_string, boost::match_default | boost::format_all);
-
-	std::cout << std::endl;
-
-	s=t.str();
-
+	std::string s=replace(expression,l_name.c_str(),
+		  actions[i].begin(),actions[i].end());
 	add_map(l_index,s,i);
-
       }
     }
 #endif
