@@ -25,8 +25,6 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
-#undef max
-#undef min
 #include <sstream>
 
 #define debugprint(a ...) log.debug(a)

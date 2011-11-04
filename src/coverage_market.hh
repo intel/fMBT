@@ -36,8 +36,8 @@
 
 #include <cstdlib>
 
-#define max(a,b) (((a)>(b))?(a):(b))
-#define min(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#define MIN(a,b) (((a)<(b))?(a):(b))
 
 class Model;
 
@@ -159,7 +159,7 @@ public:
       val vr=right->get_value();
       /* ???? */
       value.first = 
-	max(vl.first/vl.second,
+	MAX(vl.first/vl.second,
 	    vr.first/vr.second)*(vl.second+vr.second);
       value.second=vl.second+vr.second;
     }

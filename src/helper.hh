@@ -19,6 +19,10 @@
 #include <string>
 #include <vector>
 
+#ifndef DROI
+#include <boost/regex.hpp>
+#endif
+
 extern bool human_readable;
 int  find(const std::vector<std::string>&,const std::string);
 bool isInputName(const std::string& name);
@@ -32,3 +36,9 @@ std::string capsulate(std::string s);
 char* escape_string(const char* msg);
 std::string removehash(std::string& s);
 void string2vector(char* s,std::vector<int>& a);
+#ifndef DROI
+std::string replace(boost::regex& expression,
+		    const char* format_string,
+ 		    std::string::iterator first,
+		    std::string::iterator last);
+#endif

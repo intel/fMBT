@@ -108,16 +108,27 @@ int Adapter_mapper::anum_create(int index,std::string& n) {
   return adapter_anames[index].size()-1;
 }
 
-void Adapter_mapper::add_map(int index,std::string& n,int action) {
-  
-  int anum = anum_create(index,n);
+void Adapter_mapper::add_map(std::vector<int>& index,std::vector<std::string>& n,int action) {
 
-  log.debug("%s(%i,%s,%i) %i\n",__func__,index,n.c_str(),action,anum);
   
-  adapter_action a(index,anum);
+  
+  int anum = anum_create(index[0],n[0]);
+
+  log.debug("%s(%i,%s,%i) %i\n",__func__,index[0],n[0].c_str(),action,anum);
+
+  adapter_action a(index[0],anum);
   if (!is_used(action) && !is_used(a)) {
     m1[a]=action;
     m2[action]=a;
+    for(unsigned u=1;u<index.size();u++) {
+      int bnum = anum_create(index[u],n[u]);
+      adapter_action b(index[u],bnum);
+      if (l_tau[u]) {
+	_tm2.insert(std::pair<int,adapter_action>(bnum,b));
+      } else {
+	_fm2.insert(std::pair<int,adapter_action>(bnum,b));
+      }
+    }
   } else {
       log.debug("Error in '%s': ", load_name.c_str());
     if (is_used(action)) {
@@ -251,16 +262,21 @@ void Adapter_mapper::add_result_action(std::string* name)
     for(unsigned int i=1;i<actions->size();i++) {
       log.debug("Action %s\n",(*actions)[i].c_str());
       if(boost::regex_match((*actions)[i].c_str(), what, expression)) {
-        /* Match */
-        std::ostringstream t(std::ios::out | std::ios::binary);
-        std::ostream_iterator<char> oi(t);
-        std::string s;
-        boost::regex_replace(oi,(*actions)[i].begin(),(*actions)[i].end(),expression,format_string, boost::match_default | boost::format_all | boost::format_first_only);
-        
-        s=t.str();
-        
+        /* Match */        
         if (!is_used(i)) {
-          add_map(l_index[0],s,i);
+	  std::vector<std::string> s;
+	  
+	  if (l_index.size()!=l_name.size()) {
+	    abort();
+	  }
+
+	  for(unsigned j=0;j<l_index.size();j++) {
+	    s.push_back(replace(expression,
+				l_name[j].c_str(),
+				(*actions)[i].begin(),
+				(*actions)[i].end()));
+	  }
+          add_map(l_index,s,i);
         } else {
           log.debug("action %s already used, won't add it again.\n");
         }
@@ -268,7 +284,7 @@ void Adapter_mapper::add_result_action(std::string* name)
     }
 #endif
   } else {
-    add_map(l_index[0],l_name[0],action);
+    add_map(l_index,l_name,action);
   }
   l_index.resize(0);
   l_name.resize(0);
@@ -298,19 +314,20 @@ void Adapter_mapper::add_component(unsigned int index,std::string& name, bool ta
   l_tau.push_back(tau);
 }
 
-void Adapter_mapper::execute(std::vector<int>& action)
+int Adapter_mapper::adapter_action_execute(adapter_action& a)
 {
-  /* Output Actions for each component */
-  adapter_action a=m2[action[0]];
-  
-  log.push("adapter_mapper");
-  
-  if (a.first==0) { /* No such action map? */
-    log.debug("execute without adapter: %i (action not mapped to any adapter)\n",action[0]);
-    log.pop();
-    return;
-  }
+  log.print("<redirect id=\"%i\" name=\"%s\" action=\"%s\"/>\n",
+            a.first,adapter_names[a.first].c_str(),adapter_anames[a.first][a.second].c_str());
 
+  std::vector<int> f;
+  f.push_back(a.second);
+
+  adapters[a.first]->execute(f);
+  return f[0];
+}
+
+int Adapter_mapper::map_execute(adapter_action& a)
+{
   /* redirect to correct adapter */
   log.debug("execute with adapter %i (%s) action %i (%s)\n",
          a.first,adapter_names[a.first].c_str(),a.second,
@@ -319,18 +336,80 @@ void Adapter_mapper::execute(std::vector<int>& action)
   log.print("<redirect id=\"%i\" name=\"%s\" action=\"%s\"/>\n",
             a.first,adapter_names[a.first].c_str(),adapter_anames[a.first][a.second].c_str());
 
-  action.resize(1);
-  action[0]=a.second;
+  std::vector<int> f;
+  f.push_back(a.second);
 
-  adapters[a.first]->execute(action);
-  m1_convert(a.first,action);
-  /*
-  for(unsigned i=0;i<action.size();i++) {
-    action[i] = m1[adapter_action(a.first,action[i])];
+  adapters[a.first]->execute(f);
+  m1_convert(a.first,f);
+  return f[0];
+}
+
+bool Adapter_mapper::map_execute(int& action)
+{
+  adapter_action a=m2[action];
+    
+  if (a.first==0) { /* No such action map? */
+    log.debug("execute without adapter: %i (action not mapped to any adapter)\n",action);
+    return false;
   }
-  */
-  log.pop();
 
+  action=map_execute(a);
+
+  return true;
+}
+
+void Adapter_mapper::execute(std::vector<int>& action)
+{
+  log.push("adapter_mapper");
+  /* Output Actions for each component */
+
+  bool tau=false;
+
+  if (map_execute(action[0])) {
+    std::pair<std::multimap<int,adapter_action>::iterator,
+      std::multimap<int,adapter_action>::iterator> r =
+      _tm2.equal_range(action[0]);
+    adapter_action a;
+    
+    for(std::multimap<int,adapter_action>::iterator i=r.first;
+	i!=r.second;i++) 
+      {
+	a=i->second;
+	log.debug("execute extras with check adapter %i (%s) action %i (%s)\n",
+		  a.first,adapter_names[a.first].c_str(),a.second,
+		  adapter_anames[a.first][a.second].c_str());
+
+	// Handle true case
+	if (a.second!=
+	    adapter_action_execute(a)) {
+	  /* ERROR. adapter didn't response as expected */
+	  log.print("<configuration failure, returning tau>\n");
+	  tau=true;
+	}
+      }
+
+    r = _fm2.equal_range(action[0]);
+
+    for(std::multimap<int,adapter_action>::iterator i=r.first;
+	i!=r.second;i++) 
+      {
+	// Handle false case
+	a=i->second;
+	log.debug("execute extras without check adapter %i (%s) action %i (%s)\n",
+		  a.first,adapter_names[a.first].c_str(),a.second,
+		  adapter_anames[a.first][a.second].c_str());
+
+	adapter_action_execute(a);	
+      }
+
+  }
+
+  if (tau) {
+    action.resize(1);
+    action[0]=0;
+  }
+
+  log.pop();
 }
 
 void Adapter_mapper::m1_convert(int index,
@@ -358,7 +437,6 @@ bool Adapter_mapper::observeRobin(std::vector<int> &action)
   bool ret = adapters[robin]->observe(action,false);
   if (ret)
     m1_convert(robin,action);
-    //action=m1[adapter_action(robin,a)];
   robin++;
   return ret;
 }

@@ -52,17 +52,21 @@ public:
   } 
   virtual std::string stringify();
 protected:
+  typedef std::pair<int,int> adapter_action;
+
+  int  adapter_action_execute(adapter_action& a);
+  bool map_execute(int& action);
+  int  map_execute(adapter_action& a);
   bool observeRobin(std::vector<int> &action);
   void m1_convert(int index,std::vector<int>&action);
 
-  typedef std::pair<int,int> adapter_action;
   int anum_create(int index,std::string& n);
   int action_number(std::string& name);
 
   bool is_used(int action); 
   bool is_used(adapter_action& action);
 
-  void add_map(int index,std::string& n,int action);
+  void add_map(std::vector<int>& index,std::vector<std::string>& n,int action);
 
   unsigned int robin;
   std::vector<int> l_index;
@@ -73,6 +77,9 @@ protected:
 
   std::map<adapter_action,int> m1;
   std::map<int,adapter_action> m2;
+
+  std::multimap<int,adapter_action> _fm2;
+  std::multimap<int,adapter_action> _tm2;
 
   std::vector<std::vector<std::string> > adapter_anames;
   std::vector<Adapter*> adapters;

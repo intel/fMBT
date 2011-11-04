@@ -22,6 +22,7 @@
 #include <cstdlib>
 
 #ifndef DROI
+#include <boost/regex.hpp>
 #include <glib.h>
 #include <glib-object.h>
 #else
@@ -242,3 +243,22 @@ void string2vector(char* s,std::vector<int>& a)
     i++;
   } 
 }
+
+#ifndef DROI
+std::string replace(boost::regex& expression,
+		    const char* format_string,
+		    std::string::iterator first,
+		    std::string::iterator last)
+{
+  std::ostringstream t(std::ios::out | std::ios::binary);
+  std::ostream_iterator<char> oi(t);
+  std::string s;
+  boost::regex_replace(oi,first,last,expression,format_string,
+		       boost::match_default | boost::format_all
+		       | boost::format_first_only);
+
+  s=t.str();
+  return s;
+}
+
+#endif
