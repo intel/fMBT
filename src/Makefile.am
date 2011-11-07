@@ -10,7 +10,7 @@ endif
 
 LOCAL_ADAPTERS = adapter_model.cc adapter_mapper.cc adapter_dummy.cc adapter_timer.cc
 
-COMMON_SOURCES = fmbt.cc lts.cc test_engine.cc heuristic_random.cc log.cc helper.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc coverage_market.cc coverage_mapper.cc covlang.g.d_parser.cc heuristic_greedy.cc coverage_tree.cc model.cc heuristic.cc coverage.cc adapter.cc $(LOCAL_ADAPTERS) conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc
+COMMON_SOURCES = fmbt.cc lts.cc lts_remote.cc xrules_remote.cc test_engine.cc heuristic_random.cc log.cc helper.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc coverage_market.cc coverage_mapper.cc covlang.g.d_parser.cc heuristic_greedy.cc coverage_tree.cc model.cc heuristic.cc coverage.cc adapter.cc $(LOCAL_ADAPTERS) conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc
 
 fmbt_SOURCES       = $(COMMON_SOURCES) adapter_dlopen.cc adapter_remote.cc
 
@@ -18,7 +18,7 @@ fmbt_droid_SOURCES = $(COMMON_SOURCES)
 
 remote_adapter_loader_SOURCES = remote_adapter_loader.cc adapter.cc log.cc adapter_dummy.cc adapter_model.cc adapter_v4l2.cc helper.cc model.cc
 
-noinst_HEADERS = adapter_dlopen.hh adapter_dummy.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_v4l2.hh adapter_xrules.hh conf.hh coverage.hh coverage_mapper.hh coverage_market.hh coverage_tree.hh helper.hh heuristic_greedy.hh heuristic.hh heuristic_random.hh log_null.hh lts.hh lts_remote.hh lts_xrules.hh model.hh policy.hh rules.hh test_engine.hh
+noinst_HEADERS = adapter_dlopen.hh adapter_dummy.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_v4l2.hh adapter_xrules.hh conf.hh coverage.hh coverage_mapper.hh coverage_market.hh coverage_tree.hh helper.hh heuristic_greedy.hh heuristic.hh heuristic_random.hh log_null.hh lts.hh lts_remote.hh lts_xrules.hh xrules_remote.hh model.hh policy.hh rules.hh test_engine.hh
 
 pkginclude_HEADERS=adapter.hh factory.hh writable.hh log.hh
 
