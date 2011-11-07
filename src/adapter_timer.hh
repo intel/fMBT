@@ -30,12 +30,14 @@ public:
     return true;
   }
 private:
-  std::vector<struct timeval> timeout;
+  std::vector<struct timeval> timeout; // timeout[timerid]...
   struct action_timeout {
     int timer;
     struct timeval time;
   };
-  std::vector<struct action_timeout> atime; // atime[action]
-  std::vector<int> enabled; 
-  std::vector<int> expire_map;
+
+  std::map<int,struct action_timeout> atime; // maps action number to structure
+  std::vector<int> enabled;      // keeps track of enabled timers
+  std::map<int,int> expire_map;   // expire_map[timer] == action
+  std::map<int,int> clear_map;    // clear_map[action] == timer
 };

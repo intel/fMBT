@@ -1,0 +1,13 @@
+
+P(init0, "gt:istate") ->
+
+P(init0, "gt:istate")
+T(init0, "iSetTimer 1 1.0", timer)
+T(init0, "iSetTimer 1 2.0", timer)
+
+P(timer, "timer")
+
+T(timer, "iClearTimer 1", init0)
+T(timer, "oTimeout 1", init0)
+
+
