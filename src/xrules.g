@@ -17,6 +17,12 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+
+/*
+ * Parser for xrules files. If compiled with CAPI, parser implements a
+ * C API, otherwise expected to be called with a Lts_xrules instance.
+ */
+
 #include <stdlib.h>
 #include <string>
 typedef struct _node {
@@ -24,18 +30,71 @@ typedef struct _node {
   std::string* str;
 } node;
 #define D_ParseNode_User node
+
+#ifdef CAPI
+
+#include "dparse.h"
+#include "helper.hh"
+#include <string.h>
+
+extern D_ParserTables parser_tables_xrules;
+
+void (*add_file_cb)(unsigned int, const char*) = 0;
+void (*add_result_action_cb)(const char*) = 0;
+void (*add_component_cb)(unsigned int, const char*) = 0;
+
+extern "C" {
+    int xrules_add_file(void (*f)(unsigned int, const char*)) {
+        add_file_cb = f; return 1; }
+    int xrules_add_result_action(void (*f)(const char*)) {
+        add_result_action_cb = f; return 0;}
+    int xrules_add_component(void (*f)(unsigned int, const char*)) {
+        add_component_cb = f; return 0;}
+    int xrules_load(const char* filename) {
+        D_Parser* p = new_D_Parser(&parser_tables_xrules, 16);
+        char* s = readfile(filename);
+        dparse(p, s, strlen(s));
+        free(s);
+        free_D_Parser(p);
+        return 0;
+    }
+}
+
+void add_file(unsigned int index, std::string& filename)
+{
+    add_file_cb(index, filename.c_str());
+}
+
+void add_result_action(std::string* name)
+{
+    add_result_action_cb(name->c_str());
+}
+
+void add_component(unsigned int index, std::string& name)
+{
+    add_component_cb(index, name.c_str());
+}
+
+#define PREFIX
+
+#else /* Parser for Lts_xrules */
+
 #include "lts_xrules.hh"
 Lts_xrules* xobj;
+#define PREFIX xobj->
+
+
+#endif
 
 }
 
 xrules_file: filename+ rule+;
 
-filename: int '=' string { xobj->add_file($0.val,*$2.str); delete $2.str; $2.str=NULL; };
+filename: int '=' string { PREFIX add_file($0.val,*$2.str); delete $2.str; $2.str=NULL; };
 
-rule: | component+ '->' string { xobj->add_result_action($2.str); };
+rule: | component+ '->' string { PREFIX add_result_action($2.str); };
 
-component: '(' int ',' string ')' { xobj->add_component($1.val,*$3.str); delete $3.str; $3.str=NULL; };
+component: '(' int ',' string ')' { PREFIX add_component($1.val,*$3.str); delete $3.str; $3.str=NULL; };
 
 string: "\"([^\"\\]|\\[^])*\"" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); };
 
