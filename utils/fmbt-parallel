@@ -32,11 +32,23 @@ Options:
         standard output.
 """
 
+import sys
+import os
+libpath = [os.path.dirname(__file__),
+           os.path.dirname(__file__) + "/../src/.libs"]
+
 import ctypes
 void_func_uint_charp = ctypes.CFUNCTYPE(None, ctypes.c_uint, ctypes.c_char_p)
-void_func_charp = ctypes.CFUNCTYPE(None, ctypes.c_uint, ctypes.c_char_p)
+void_func_charp = ctypes.CFUNCTYPE(None, ctypes.c_char_p)
 
-l=ctypes.CDLL("./xrules_cparser.so")
+for dirname in libpath:
+    try: 
+        l=ctypes.CDLL(dirname + os.sep + "fmbt_cparsers.so")
+        break
+    except: pass
+else:
+    print "cannot find fmbt_cparsers.so"
+    sys.exit(1)
 
 def add_file(i, s):
     print "add_file"
@@ -51,11 +63,11 @@ def add_component(i, s):
     print "add_component", i, s
 add_component.c = void_func_uint_charp(add_component)
 
-print l.set_add_file(add_file.c)
-print l.set_add_result_action(add_result_action.c)
-print l.set_add_component(add_component.c)
+l.xrules_add_file(add_file.c)
+l.xrules_add_result_action(add_result_action.c)
+l.xrules_add_component(add_component.c)
 
 print "calling load"
-l.load("/home/ask/git/fmbt/test/interactivemode/testmodel.xrules")
+l.xrules_load("/home/ask/git/fmbt/test/interactivemode/testmodel.xrules")
 
 print "done"
