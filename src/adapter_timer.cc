@@ -29,7 +29,53 @@ void Adapter_timer::set_actions(std::vector<std::string>* _actions)
 {
   /* handle actions... */
   Adapter::set_actions(_actions);
+
+  for(unsigned i=0;i<actions->size();i++) {
+    if ((*actions)[i]!="") {
+      const char* s=(*actions)[i].c_str();
+
+      if (strncmp(s,"iSetTimer ",strlen("iSetTimer "))==0) {
+	/* Set Timer */
+	char* endp;
+	unsigned timer=strtol(s+strlen("iSetTimer "),&endp,10);
+
+	if (timeout.size()<=timeout.size()) {
+	  timeout.resize(timer+1);
+	}
+
+	double time=strtod(endp+1,NULL);
+
+	atime[timer].timer=timer;
+	atime[timer].time.tv_sec=trunc(time);
+	atime[timer].time.tv_usec=1000000*(time-trunc(time));
+      }
+
+      if (strncmp(s,"iClearTimer ",strlen("iClearTimer "))==0) {
+	/* Clear Timer */
+	unsigned timer=atoi(s+strlen("iClearTimer "));
+
+	if (timeout.size()<=timeout.size()) {
+	  timeout.resize(timer+1);
+	}
+
+	clear_map[i]=timer;
+      }
+
+      if (strncmp(s,"oTimeout ",strlen("oTimeout "))==0) {
+	unsigned timer=atoi(s+strlen("oTimeout "));	
+	if (timeout.size()<=timeout.size()) {
+	  timeout.resize(timer+1);
+	}
+	expire_map[timer]=i;
+      }
+
+    }
+
+  }
+
 }
+
+
 std::string Adapter_timer::stringify()
 {
   std::ostringstream t(std::ios::out | std::ios::binary);
@@ -47,7 +93,11 @@ void Adapter_timer::execute(std::vector<int>& action)
   log.print("<action type=\"input\" name=\"%s\"/>\n",
 	    getUActionName(action[0]));
 
-  
+  struct action_timeout& at=atime[action[0]];
+
+  //at.timer;
+
+  timeradd(&at.time,&current_time,&timeout[at.timer]);
 
   log.pop();
 }
@@ -55,7 +105,6 @@ void Adapter_timer::execute(std::vector<int>& action)
 bool Adapter_timer::observe(std::vector<int> &action,
 			    bool block)
 {
-  return false;
   for(unsigned i=0;i<enabled.size();i++) {
     int pos=enabled[i];
     if (pos) {
