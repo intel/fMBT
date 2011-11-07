@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+#
+# fMBT, free Model Based Testing tool
+# Copyright (c) 2011, Intel Corporation.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU Lesser General Public License,
+# version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for
+# more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+"""
+Usage: fmbt-parallel [options] component [component...]
+
+Options:
+    -s, --sync action-regexp
+        all components containing an action that matches action-regexp
+        execute the action synchronously. By default nothing is
+        executed synchronously. Default corresponds to the process
+        algebraic operator "|||". action-regexp ".*" corresponds to
+        "||", and others to "|[ list-of-matchin-actions ]|".
+
+    -o, --output output-file
+        write resulting xrules file to output-file. The default is
+        standard output.
+"""
+
+import ctypes
+void_func_uint_charp = ctypes.CFUNCTYPE(None, ctypes.c_uint, ctypes.c_char_p)
+void_func_charp = ctypes.CFUNCTYPE(None, ctypes.c_uint, ctypes.c_char_p)
+
+l=ctypes.CDLL("./xrules_cparser.so")
+
+def add_file(i, s):
+    print "add_file"
+    print "add_file args:", i, s
+add_file.c = void_func_uint_charp(add_file)
+
+def add_result_action(s):
+    print "add_result_action", s
+add_result_action.c = void_func_charp(add_result_action)
+
+def add_component(i, s):
+    print "add_component", i, s
+add_component.c = void_func_uint_charp(add_component)
+
+print l.set_add_file(add_file.c)
+print l.set_add_result_action(add_result_action.c)
+print l.set_add_component(add_component.c)
+
+print "calling load"
+l.load("/home/ask/git/fmbt/test/interactivemode/testmodel.xrules")
+
+print "done"
