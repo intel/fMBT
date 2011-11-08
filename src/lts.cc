@@ -162,11 +162,11 @@ void Lts::add_transitions(int st,
   state[st].transitions=oa.size()+ia.size();
   state[st].otransitions=oa.size();
 
-  actions.insert(actions.end(),oa.begin(),oa.end());
   actions.insert(actions.end(),ia.begin(),ia.end());
+  actions.insert(actions.end(),oa.begin(),oa.end());
 
-  dstate.insert(dstate.end(),os.begin(),os.end());
   dstate.insert(dstate.end(),is.begin(),is.end());
+  dstate.insert(dstate.end(),os.begin(),os.end());
 }
 
 int Lts::execute(int action)

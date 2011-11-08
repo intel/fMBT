@@ -110,8 +110,6 @@ int Adapter_mapper::anum_create(int index,std::string& n) {
 
 void Adapter_mapper::add_map(std::vector<int>& index,std::vector<std::string>& n,int action) {
 
-  
-  
   int anum = anum_create(index[0],n[0]);
 
   log.debug("%s(%i,%s,%i) %i\n",__func__,index[0],n[0].c_str(),action,anum);
@@ -123,23 +121,25 @@ void Adapter_mapper::add_map(std::vector<int>& index,std::vector<std::string>& n
     for(unsigned u=1;u<index.size();u++) {
       int bnum = anum_create(index[u],n[u]);
       adapter_action b(index[u],bnum);
+      log.debug("%s(%i,%s,%i) %i",__func__,index[u],n[u].c_str(),action,bnum);
       if (l_tau[u]) {
-	_tm2.insert(std::pair<int,adapter_action>(bnum,b));
+	_tm2.insert(std::pair<int,adapter_action>(action,b));
       } else {
-	_fm2.insert(std::pair<int,adapter_action>(bnum,b));
+	_fm2.insert(std::pair<int,adapter_action>(action,b));
       }
     }
   } else {
       log.debug("Error in '%s': ", load_name.c_str());
     if (is_used(action)) {
-      log.debug("duplicate action on the model side: \"%s\"\n",
+      log.debug("duplicate action on the model side: \"%s\"",
                 (*actions)[action].c_str());
     } else { //  is_used(a)
-      log.debug("duplicate action on the adapter side: \"%s\"\n",
+      log.debug("duplicate action on the adapter side: \"%s\"",
         adapter_anames[a.first][a.second].c_str());
     }
     throw (int)42424;
   }
+  log.debug("%s ready",__func__);
 }
 
 
@@ -148,7 +148,7 @@ bool Adapter_mapper::load(std::string& name)
   D_Parser *p = new_D_Parser(&parser_tables_mrules, 16);
   char *s;
 
-  log.debug("%s called\n",__func__);
+  log.debug("%s called",__func__);
 
   load_name = name;
 
@@ -161,9 +161,9 @@ bool Adapter_mapper::load(std::string& name)
   bool ret=dparse(p,s,std::strlen(s));
 
   if (ret) {
-    log.debug("loading %s ok\n",name.c_str());
+    log.debug("loading %s ok",name.c_str());
   } else {
-    log.debug("loading %s failed\n",name.c_str());
+    log.debug("loading %s failed",name.c_str());
     status=false;
   }
 
@@ -178,7 +178,7 @@ bool Adapter_mapper::load(std::string& name)
   for(unsigned int i=0;i<adapter_names.size();i++) {
     if (adapter_names[i]!=std::string("")) {
 
-      log.debug("Loading adapter \"%s\"\n",
+      log.debug("Loading adapter \"%s\"",
              adapter_names[i].c_str());
 
       std::string adapter_class;
@@ -186,14 +186,14 @@ bool Adapter_mapper::load(std::string& name)
       
       Conf::split(adapter_names[i],adapter_class,adapter_params);
 
-      log.debug("class %s, params %i\n",
+      log.debug("class %s, params %i",
              adapter_class.c_str(),
              adapter_params.c_str());
 
       Adapter* a = AdapterFactory::create(log, adapter_class,
                                           adapter_params);
       a->set_actions(&adapter_anames[i]);
-      log.debug("Created adapter to %p\n",a);
+      log.debug("Created adapter to %p",a);
       a->setparent(this);
       adapters[i] = a;
       if (!a->status) {
@@ -218,7 +218,7 @@ bool Adapter_mapper::is_used(adapter_action& action)
 
 void Adapter_mapper::add_file(unsigned index, std::string& adaptername)
 {
-  log.debug("%s(%i,%s)\n",__func__,index,adaptername.c_str());
+  log.debug("%s(%i,%s)",__func__,index,adaptername.c_str());
   if (adapter_names.capacity()<=index) {
     adapter_names.resize(index+2);
     adapter_anames.resize(index+2);
@@ -246,21 +246,21 @@ void Adapter_mapper::add_result_action(std::string* name)
 {
   int action=action_number(*name);
 
-  log.debug("%s(%s) called\n",__func__,name->c_str());
+  log.debug("%s(%s) called",__func__,name->c_str());
 
   if (action==-1) {
 #ifndef DROI
     /* try regexp case */
-    log.debug("Regexp case\n");
+    log.debug("Regexp case");
     const char* format_string = l_name[0].c_str();
     
-    log.debug("Format string \"%s\"\n",format_string);
+    log.debug("Format string \"%s\"",format_string);
 
     boost::regex expression(*name);
     boost::cmatch what;
 
     for(unsigned int i=1;i<actions->size();i++) {
-      log.debug("Action %s\n",(*actions)[i].c_str());
+      log.debug("Action %s",(*actions)[i].c_str());
       if(boost::regex_match((*actions)[i].c_str(), what, expression)) {
         /* Match */        
         if (!is_used(i)) {
@@ -278,7 +278,7 @@ void Adapter_mapper::add_result_action(std::string* name)
 	  }
           add_map(l_index,s,i);
         } else {
-          log.debug("action %s already used, won't add it again.\n");
+          log.debug("action %s already used, won't add it again.");
         }
       }
     }
@@ -294,12 +294,12 @@ void Adapter_mapper::add_result_action(std::string* name)
 void Adapter_mapper::add_component(unsigned int index,std::string& name, bool tau)
 {
   /* Validate index */
-  log.debug("%s(%i,%s)\n",__func__,index,name.c_str());
+  log.debug("%s(%i,%s)",__func__,index,name.c_str());
 
   if (index>=adapter_names.size() || adapter_names[index]==std::string("")) {
     
     log.debug("adapter_names.size() %i,"
-           "adapter_names[index] \"%s\"\n",
+           "adapter_names[index] \"%s\"",
            adapter_names.size(),adapter_names[index].c_str());
 
     log.debug("%s\n%s\n",
@@ -372,7 +372,7 @@ void Adapter_mapper::execute(std::vector<int>& action)
     adapter_action a;
     
     for(std::multimap<int,adapter_action>::iterator i=r.first;
-	i!=r.second;i++) 
+	i!=r.second;i++)
       {
 	a=i->second;
 	log.debug("execute extras with check adapter %i (%s) action %i (%s)\n",
