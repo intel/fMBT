@@ -33,41 +33,53 @@ Options:
 """
 
 import sys
-import os
-libpath = [os.path.dirname(__file__),
-           os.path.dirname(__file__) + "/../src/.libs"]
+import getopt
+import fmbtparsers
 
-import ctypes
-void_func_uint_charp = ctypes.CFUNCTYPE(None, ctypes.c_uint, ctypes.c_char_p)
-void_func_charp = ctypes.CFUNCTYPE(None, ctypes.c_char_p)
+_file2actions = {}
+_current_file = None
 
-for dirname in libpath:
-    try: 
-        l=ctypes.CDLL(dirname + os.sep + "fmbt_cparsers.so")
-        break
-    except: pass
-else:
-    print "cannot find fmbt_cparsers.so"
-    sys.exit(1)
+def parsed_action(s):
+    global _file2actions
+    global _current_file
+    if not _current_file in _file2actions:
+        _file2actions[_current_file] = []
+    _file2actions[_current_file].append(s)
 
-def add_file(i, s):
-    print "add_file"
-    print "add_file args:", i, s
-add_file.c = void_func_uint_charp(add_file)
+def setup_parser():
+    # Setup parser for reading only action names of lsts files and result
+    # actions of xrules files
 
-def add_result_action(s):
-    print "add_result_action", s
-add_result_action.c = void_func_charp(add_result_action)
+    # Define and set callback functions to be called when parsing a file
+    def xrules_action_cb(s):
+        parsed_action(s)
 
-def add_component(i, s):
-    print "add_component", i, s
-add_component.c = void_func_uint_charp(add_component)
+    def lts_action_cb(_, s):
+        parsed_action(s)
 
-l.xrules_add_file(add_file.c)
-l.xrules_add_result_action(add_result_action.c)
-l.xrules_add_component(add_component.c)
+    fmbtparsers.xrules_result_action(xrules_action_cb)
+    fmbtparsers.lts_action(lts_action_cb)
 
-print "calling load"
-l.xrules_load("/home/ask/git/fmbt/test/interactivemode/testmodel.xrules")
+if __name__ == "__main__":
+    opts, remainder = getopt.getopt(
+        sys.argv[1:], 'hkvf:i:o:',
+        ["help", "verbose", "version", "keep-labels",
+         "file=", "input=", "output="])
 
-print "done"
+    for opt, arg in opts:
+        if opt in ["-h", "--help"]:
+            print __doc__
+            sys.exit(0)
+
+    setup_parser()
+
+    for _current_file in remainder:
+        fmbtparsers.load(_current_file)
+    
+    print ""
+    for f in _file2actions:
+        print f
+        for a in _file2actions[f]:
+            print "    ", a
+
+    print "done"

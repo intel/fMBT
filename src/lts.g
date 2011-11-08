@@ -17,6 +17,8 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+
+#include <vector>
 #include <stdlib.h>
 #include <string>
 typedef struct _node {
@@ -24,13 +26,106 @@ typedef struct _node {
   std::string* str;
 } node;
 #define D_ParseNode_User node
-#include "lts.hh"
-Lts* obj;
 
 std::vector<int> oa;
 std::vector<int> ia;
 std::vector<int> os;
 std::vector<int> is;
+
+#ifdef CAPI
+
+#include "dparse.h"
+#include "helper.hh"
+#include <string.h>
+
+extern D_ParserTables parser_tables_lts;
+
+void (*set_state_cnt_cb)(int)                                 = 0;
+void (*set_prop_cnt_cb)(int)                                  = 0;
+void (*set_action_cnt_cb)(int)                                = 0;
+void (*set_transition_cnt_cb)(int)                            = 0;
+void (*set_initial_state_cb)(int)                             = 0;
+void (*add_action_cb)(int, const char*)                       = 0;
+void (*add_transition_cb)(int sstate, int aindex, int dstate) = 0;
+
+extern "C" {
+    int lts_state_cnt(void (*f)(int)) {
+        set_state_cnt_cb = f;      return f != NULL; }
+
+    int lts_prop_cnt(void (*f)(int)) {
+        set_prop_cnt_cb = f;       return f != NULL; }
+
+    int lts_action_cnt(void (*f)(int)) {
+        set_action_cnt_cb = f;     return f != NULL; }
+
+    int lts_transition_cnt(void (*f)(int)) {
+        set_transition_cnt_cb = f; return f != NULL; }
+
+    int lts_initial_state(void (*f)(int)) {
+        set_initial_state_cb = f;  return f != NULL; }
+
+    int lts_action(void (*f)(int, const char *)) {
+        add_action_cb = f;         return f != NULL; }
+
+    int lts_transition(void (*f)(int, int, int)) {
+        add_transition_cb = f;     return f != NULL; }
+
+    int lts_load(const char* filename) {
+        D_Parser* p = new_D_Parser(&parser_tables_lts, 512);
+        char* s = readfile(filename);
+        dparse(p, s, strlen(s));
+        free(s);
+        free_D_Parser(p);
+        return 0;
+    }
+}
+
+namespace lts_local {
+    void set_state_cnt(int count) {
+        if (set_state_cnt_cb) set_state_cnt_cb(count);
+    }
+    void set_prop_cnt(int count) {
+        if (set_prop_cnt_cb) set_prop_cnt_cb(count);
+    }
+    void set_action_cnt(int count) {
+        if (set_action_cnt_cb) set_action_cnt_cb(count);
+    }
+    void set_transition_cnt(int count) {
+        if (set_transition_cnt_cb) set_transition_cnt_cb(count);
+    }
+    void set_initial_state(int count) {
+        if (set_initial_state_cb) set_initial_state_cb(count);
+    }
+    void add_action(int number, std::string& name) {
+        if (add_action_cb) add_action_cb(number, name.c_str());
+    }
+    void add_transitions(int sstate, 
+                        std::vector<int>& oa,
+                        std::vector<int>& ia,
+                        std::vector<int>& os,
+                        std::vector<int>& is) {
+        if (add_transition_cb) {
+            for (unsigned int i = 0; i < ia.size(); i++) {
+                add_transition_cb(sstate, ia[i], is[i]);
+            }
+        }
+    }
+    /* C API does not differentiate inputs and outputs */
+    bool is_output(int) { return false; }
+    void header_done() {}
+    void precalc_input_output() {}
+}
+
+#define PREFIX lts_local::
+
+#else /* Parser using Lts class */
+
+#include "lts.hh"
+Lts* obj;
+
+#define PREFIX obj->
+
+#endif
 
 }
 
@@ -50,20 +145,20 @@ state_prop: 'Begin' 'State_props'
 
 prop_line: string ':' int* ';' ;
 
-header: 'Begin' 'Header' header_variable+ ';' 'End' 'Header' { obj->header_done(); } ;
+header: 'Begin' 'Header' header_variable+ ';' 'End' 'Header' { PREFIX header_done(); } ;
 
-header_variable: 'State_cnt' '=' int { obj->set_state_cnt($2.val);      } |
-          'State_prop_cnt'   '=' int { obj->set_prop_cnt($2.val);       } |
- 		  'Action_cnt'       '=' int { obj->set_action_cnt($2.val);     } |
- 		  'Transition_cnt'   '=' int { obj->set_transition_cnt($2.val); } |
- 		  'Initial_states'   '=' int { obj->set_initial_state($2.val);  };
+header_variable: 'State_cnt' '=' int { PREFIX set_state_cnt($2.val);      } |
+          'State_prop_cnt'   '=' int { PREFIX set_prop_cnt($2.val);       } |
+ 		  'Action_cnt'       '=' int { PREFIX set_action_cnt($2.val);     } |
+ 		  'Transition_cnt'   '=' int { PREFIX set_transition_cnt($2.val); } |
+ 		  'Initial_states'   '=' int { PREFIX set_initial_state($2.val);  };
 
 action_names: 'Begin' 'Action_names'
 	      action_name_line*
-	      'End' 'Action_names' { obj->precalc_input_output(); } ;
+	      'End' 'Action_names' { PREFIX precalc_input_output(); } ;
 
 action_name_line: int '=' string {
-                                   obj->add_action($0.val,*$2.str); 
+                                   PREFIX add_action($0.val,*$2.str); 
                                    delete $2.str;
                                    $2.str=NULL;
                                  } ;
@@ -74,11 +169,11 @@ transitions:
 	'End' 'Transitions';
 
 transition_line:
-	int ':' pair* ';' { obj->add_transitions($0.val,oa,ia,os,is);
+	int ':' pair* ';' { PREFIX add_transitions($0.val,oa,ia,os,is);
                         oa.clear(); ia.clear();os.clear();is.clear(); };
 
 pair: int ',' int {
-    if (obj->is_output($2.val)) {
+    if (PREFIX is_output($2.val)) {
       oa.push_back($2.val);
       os.push_back($0.val);
     } else {

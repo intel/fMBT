@@ -44,12 +44,12 @@ void (*add_result_action_cb)(const char*) = 0;
 void (*add_component_cb)(unsigned int, const char*) = 0;
 
 extern "C" {
-    int xrules_add_file(void (*f)(unsigned int, const char*)) {
-        add_file_cb = f; return 1; }
-    int xrules_add_result_action(void (*f)(const char*)) {
-        add_result_action_cb = f; return 0;}
-    int xrules_add_component(void (*f)(unsigned int, const char*)) {
-        add_component_cb = f; return 0;}
+    int xrules_file(void (*f)(unsigned int, const char*)) {
+        add_file_cb = f; return f != NULL; }
+    int xrules_result_action(void (*f)(const char*)) {
+        add_result_action_cb = f; return f != NULL;}
+    int xrules_component(void (*f)(unsigned int, const char*)) {
+        add_component_cb = f; return f != NULL;}
     int xrules_load(const char* filename) {
         D_Parser* p = new_D_Parser(&parser_tables_xrules, 16);
         char* s = readfile(filename);
@@ -62,17 +62,17 @@ extern "C" {
 
 void add_file(unsigned int index, std::string& filename)
 {
-    add_file_cb(index, filename.c_str());
+    if (add_file_cb) add_file_cb(index, filename.c_str());
 }
 
 void add_result_action(std::string* name)
 {
-    add_result_action_cb(name->c_str());
+    if (add_result_action_cb) add_result_action_cb(name->c_str());
 }
 
 void add_component(unsigned int index, std::string& name)
 {
-    add_component_cb(index, name.c_str());
+    if (add_component_cb) add_component_cb(index, name.c_str());
 }
 
 #define PREFIX
