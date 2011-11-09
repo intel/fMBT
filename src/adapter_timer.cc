@@ -45,9 +45,9 @@ void Adapter_timer::set_actions(std::vector<std::string>* _actions)
 
 	double time=strtod(endp+1,NULL);
 
-	atime[timer].timer=timer;
-	atime[timer].time.tv_sec=trunc(time);
-	atime[timer].time.tv_usec=1000000*(time-trunc(time));
+	atime[i].timer=timer;
+	atime[i].time.tv_sec=trunc(time);
+	atime[i].time.tv_usec=1000000*(time-trunc(time));
       }
 
       if (strncmp(s,"iClearTimer ",strlen("iClearTimer "))==0) {
@@ -67,6 +67,8 @@ void Adapter_timer::set_actions(std::vector<std::string>* _actions)
 	  timeout.resize(timer+1);
 	}
 	expire_map[timer]=i;
+	log.print("<timer id=%i,action=%i name=\"%s\"/>\n",
+		  timer,i,s);
       }
 
     }
@@ -85,20 +87,58 @@ std::string Adapter_timer::stringify()
   return t.str();
 }
 
+void Adapter_timer::clear_timer(int timer)
+{
+  int pos=-1;
+  for(unsigned i=0;i<enabled.size() && pos==-1;i++) {
+    if (enabled[i]==timer) {
+      pos=i;
+    }
+  }
+  if (pos>0) {
+    enabled.erase(enabled.begin()+pos);
+  }
+}
+
 /* adapter can execute.. */
 void Adapter_timer::execute(std::vector<int>& action)
 {
   log.push("Adapter_timer");
 
-  log.print("<action type=\"input\" name=\"%s\"/>\n",
-	    getUActionName(action[0]));
-
   struct action_timeout& at=atime[action[0]];
 
-  //at.timer;
+  log.print("<action type=\"input\" name=\"%s\" timer=%i/>\n",
+	    getUActionName(action[0]),at.timer);
 
-  timeradd(&at.time,&current_time,&timeout[at.timer]);
+  if (!isInputName((*actions)[action[0]])) {
+    abort();
+  }
 
+  if (at.timer>0) {
+    unsigned i;
+    log.print("<we have a timeradd %i/>\n",at.timer);
+    
+    timeradd(&at.time,&current_time,&timeout[at.timer]);
+    /* Let's enable the timer.. */
+    for(i=0;i<enabled.size() && enabled[i]!=at.timer;i++) { }
+    if (i==enabled.size()) {
+      enabled.push_back(at.timer);
+    }
+    for(i=0;i<enabled.size();i++) {
+      log.print("<timer enabled=%i expire %i.%06i/>\n",
+		enabled[i],
+		timeout[enabled[i]].tv_sec,
+		timeout[enabled[i]].tv_usec
+		);
+    }
+  } else {
+    int timer=clear_map[action[0]];
+    log.print("<we have a timerclean %i/>\n",timer);
+    if (timer>0) {
+      clear_timer(timer);
+    }
+  }
+  
   log.pop();
 }
 
@@ -106,18 +146,18 @@ bool Adapter_timer::observe(std::vector<int> &action,
 			    bool block)
 {
   for(unsigned i=0;i<enabled.size();i++) {
-    int pos=enabled[i];
-    if (pos) {
-      struct timeval* tv=&timeout[pos];
+    int timer_id=enabled[i];
+    if (timer_id) {
+      struct timeval* tv=&timeout[timer_id];
       if (!timercmp(&current_time,tv,<)) {
 	/* expire */
-	enabled[i]=0;
+	clear_timer(timer_id);
 	action.resize(1);
-	if (expire_map[pos]) {
-	  action[0]=expire_map[pos];
-	} else {
-	  action[0]=0;
-	}
+	action[0]=expire_map[timer_id];
+	log.print("<timer_expire id=%i, action=%i, name=\"%s\"/>\n",
+		  timer_id,action[0],
+		  (*actions)[action[0]].c_str()
+		  );
 	return true;
       }
     }

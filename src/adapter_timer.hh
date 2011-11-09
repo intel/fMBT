@@ -30,6 +30,7 @@ public:
     return true;
   }
 private:
+  void clear_timer(int timer);
   std::vector<struct timeval> timeout; // timeout[timerid]...
   struct action_timeout {
     int timer;
