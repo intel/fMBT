@@ -60,32 +60,29 @@ extern "C" {
     }
 }
 
-void add_file(unsigned int index, std::string& filename)
-{
-    if (add_file_cb) add_file_cb(index, filename.c_str());
+namespace xrules_local {
+    void add_file(unsigned int index, std::string& filename)
+    {
+        if (add_file_cb) add_file_cb(index, filename.c_str());
+    }
+    void add_result_action(std::string* name)
+    {
+        if (add_result_action_cb) add_result_action_cb(name->c_str());
+    }
+    void add_component(unsigned int index, std::string& name)
+    {
+        if (add_component_cb) add_component_cb(index, name.c_str());
+    }
 }
+#define PREFIX xrules_local::
 
-void add_result_action(std::string* name)
-{
-    if (add_result_action_cb) add_result_action_cb(name->c_str());
-}
-
-void add_component(unsigned int index, std::string& name)
-{
-    if (add_component_cb) add_component_cb(index, name.c_str());
-}
-
-#define PREFIX
-
-#else /* Parser for Lts_xrules */
+#else /* (ifdef CAPI) parser for Lts_xrules class */
 
 #include "lts_xrules.hh"
 Lts_xrules* xobj;
 #define PREFIX xobj->
 
-
 #endif
-
 }
 
 xrules_file: filename+ rule+;

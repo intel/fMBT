@@ -118,7 +118,7 @@ namespace lts_local {
 
 #define PREFIX lts_local::
 
-#else /* Parser using Lts class */
+#else /* (ifdef CAPI) parser for Lts class */
 
 #include "lts.hh"
 Lts* obj;

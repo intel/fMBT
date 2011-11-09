@@ -23,9 +23,9 @@ Options:
     -s, --sync action-regexp
         all components containing an action that matches action-regexp
         execute the action synchronously. By default nothing is
-        executed synchronously. Default corresponds to the process
+        executed synchronously which corresponds to the process
         algebraic operator "|||". action-regexp ".*" corresponds to
-        "||", and others to "|[ list-of-matchin-actions ]|".
+        "||", and others to "|[ list-of-matching-actions ]|".
 
     -o, --output output-file
         write resulting xrules file to output-file. The default is
@@ -33,53 +33,96 @@ Options:
 """
 
 import sys
+import os
+import re
 import getopt
 import fmbtparsers
 
-_file2actions = {}
-_current_file = None
+def parse_actions_in_files(list_of_files):
+    """
+    Returns a dictionary:
+        action   -> list of files where action occurs
+    """
+    action2filelist = {}
+    current_file = None
 
-def parsed_action(s):
-    global _file2actions
-    global _current_file
-    if not _current_file in _file2actions:
-        _file2actions[_current_file] = []
-    _file2actions[_current_file].append(s)
-
-def setup_parser():
-    # Setup parser for reading only action names of lsts files and result
-    # actions of xrules files
+    def add_action(s):
+        if not s in action2filelist:
+            action2filelist[s] = []
+        action2filelist[s].append(current_file)
 
     # Define and set callback functions to be called when parsing a file
     def xrules_action_cb(s):
-        parsed_action(s)
+        add_action(s)
 
     def lts_action_cb(_, s):
-        parsed_action(s)
+        add_action(s)
 
     fmbtparsers.xrules_result_action(xrules_action_cb)
     fmbtparsers.lts_action(lts_action_cb)
 
+    for current_file in list_of_files:
+        if not os.access(current_file, os.R_OK):
+            raise IOError("No such file: '%s'" % (current_file,))
+        fmbtparsers.load(current_file)
+
+    return action2filelist
+
 if __name__ == "__main__":
-    opts, remainder = getopt.getopt(
-        sys.argv[1:], 'hkvf:i:o:',
-        ["help", "verbose", "version", "keep-labels",
-         "file=", "input=", "output="])
+    # Default values for commandline arguments
+    sync_regexps = []
+    output_file = sys.stdout
+
+    # Parse arguments
+    opts, remainder = getopt.gnu_getopt(
+        sys.argv[1:], 'hvo:s:',
+        ["help", "verbose", "output=", "sync="])
 
     for opt, arg in opts:
         if opt in ["-h", "--help"]:
             print __doc__
             sys.exit(0)
+        elif opt in ["-s", "--sync"]:
+            try: sync_regexps.append(re.compile(arg))
+            except:
+                print "Syntax error in regexp: '%s'" % (arg,)
+                sys.exit(1)
+        elif opt in ["-o", "--output"]:
+            try: output_file = file(arg, "w")
+            except Exception, e:
+                print "%s" % (e,)
+                sys.exit(2)
 
-    setup_parser()
+    # Read actions in files
+    a2fl = parse_actions_in_files(remainder)
 
-    for _current_file in remainder:
-        fmbtparsers.load(_current_file)
-    
-    print ""
-    for f in _file2actions:
-        print f
-        for a in _file2actions[f]:
-            print "    ", a
+    # Write xrules content to output in two phases
+    output = []
 
-    print "done"
+    # Phase 1: print file names
+    for findex, fname in enumerate(remainder):
+        output.append('%s = "%s"' % (findex + 1, fname))
+
+    # Phase 2: print rules: which actions are executed synchronously,
+    #          which independently of each other
+    for action in sorted(a2fl.keys()):
+        for regexp in sync_regexps:
+            # if action matches to any regexp, execute it synchronously in every
+            # file where it can be found
+            if regexp.match(action):
+                output.append("")
+                for fname in a2fl[action]:
+                    output[-1] += '(%s, "%s") ' % (remainder.index(fname) + 1, action)
+                output[-1] += '-> "%s"' % (action,)
+                break
+        else:
+            # action does not match in any regex, execute it independently in
+            # every file:
+            for fname in a2fl[action]:
+                output.append('(%s, "%s") -> "%s"' % 
+                              (remainder.index(fname) + 1, action, action))
+
+    # Dump the output
+    for l in output:
+        output_file.write("%s\n" % (l,))
+    output_file.close()
