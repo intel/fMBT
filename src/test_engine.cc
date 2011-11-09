@@ -135,13 +135,15 @@ bool Test_engine::run(float target_coverage,
 
       bool value = adapter.observe(actions,true);
       if (!value) {
-	action = SILENCE;
+	actions.resize(1);
+	actions[0] = SILENCE;
         log.debug("Test_engine::run: SUT remained silent (action %i).\n", action);
       } else {
         log.debug("Test_engine::run: SUT executed %i '%s'\n",
-		  action,heuristic.getActionName(action).c_str());
+		  actions[0],heuristic.getActionName(actions[0]).c_str());
       }
-      if (!heuristic.execute(action),value) {
+      action = actions[0];
+      if (!heuristic.execute(action)) {
         log.debug("Test_engine::run: ERROR: action %i not possible in the model.\n", action);
 	log.write(action,heuristic.getActionName(action).c_str(),"broken response");
         test_passed(false, "unexpected output", log);
