@@ -214,6 +214,25 @@ int  Lts_xrules::execute(int action)
   return true; 
 }
 
+void Lts_xrules::push()
+{
+  for(unsigned i=0;i<lts.size();i++) {
+    if (lts[i]) {
+      lts[i]->push();
+    }
+  }
+}
+
+void Lts_xrules::pop()
+{
+  for(unsigned i=0;i<lts.size();i++) {
+    if (lts[i]) {
+      lts[i]->pop();
+    }
+  }
+  compose();
+}
+
 bool Lts_xrules::reset()
 {
   for(int i=lts.size()-1;i>=0;i--) {

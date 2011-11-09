@@ -38,8 +38,8 @@ public:
   // NULL ja 1 == OUTPUTONLY
   virtual bool reset();
   virtual int  execute(int action);
-  void push();
-  void pop();
+  virtual void push();
+  virtual void pop();
 
   virtual bool load(std::string& name);
   

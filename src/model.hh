@@ -70,10 +70,10 @@ public:
   virtual int  execute(int action)      =0;
 
   //! Push the current state of the model to the stack
-  void push();
+  virtual void push() =0;
 
   //! Pop a state from the stack and set it as a current state
-  void pop();
+  virtual void pop() =0;
 
   /* Let's hope this won't be called too often with large 
    * number of outputs/inputs..
