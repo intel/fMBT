@@ -192,6 +192,16 @@ int Lts::execute(int action)
   return false;
 }
 
+void Lts::push()
+{
+  state_save.push_front(current_state);
+}
+void Lts::pop()
+{
+  current_state=state_save.front();
+  state_save.pop_front();
+}
+
 namespace {
   Model* lts_creator(Log&l) {
     return new Lts(l);
