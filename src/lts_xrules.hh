@@ -28,6 +28,9 @@ public:
   virtual bool reset();
   virtual int  execute(int action);
 
+  virtual void push();
+  virtual void pop();
+
   virtual int getActions(int** actions); // vireessä olevat tapahtumat
   virtual int getIActions(int** actions); // Vireessä olevat syöte tapahtumat. NULL ja 0 == DEADLOCK.
 
