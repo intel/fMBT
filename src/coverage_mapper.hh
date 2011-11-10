@@ -16,8 +16,8 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#ifndef __coverage_tree_hh__
-#define __coverage_tree_hh__
+#ifndef __coverage_mapper_hh__
+#define __coverage_mapper_hh__
 
 #include "coverage.hh"
 #include "rules.hh"
