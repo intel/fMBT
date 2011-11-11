@@ -292,7 +292,8 @@ void Test_engine::interactive()
             if (actions_v.size()==0) {
               printf("adapter:   [communication failure]\n");
             } else {
-              int adapter_response = policy.choose(actions_v);
+              // skipping model => cannot ask policy which actions to choose
+              int adapter_response = actions_v[0];
               log_adapter_execute(log, *current_adapter, adapter_response);
               printf("adapter:   %s\n", ca_anames[adapter_response].c_str());
               printf("model:     [skipped]\n");
@@ -325,7 +326,8 @@ void Test_engine::interactive()
 	    actions_v[0]=action_num;
             log_adapter_suggest(log, *current_adapter, actions_v[0]);
 	    current_adapter->execute(actions_v);
-            int adapter_response = policy.choose(actions_v);
+            // skipping model => do not ask policy which actions to choose
+            int adapter_response = actions_v[0];
             log_adapter_execute(log, *current_adapter, adapter_response);
             printf("adapter:   %s\n", ca_anames[adapter_response].c_str());
             printf("model:     [skipped]\n");
