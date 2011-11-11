@@ -1,3 +1,8 @@
+fmbt (0.1-rc2) UNRELEASED; urgency=low
+
+  * Fixes.
+
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 11 Nov 2011 10:25:15 +0300
 fmbt (0.1-rc1) UNRELEASED; urgency=low
 
   * Initial release.
