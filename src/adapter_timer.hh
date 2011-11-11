@@ -37,6 +37,7 @@ private:
     struct timeval time;
   };
 
+  std::map<int,int> sleep_time;
   std::map<int,struct action_timeout> atime; // maps action number to structure
   std::vector<int> enabled;      // keeps track of enabled timers
   std::map<int,int> expire_map;   // expire_map[timer] == action

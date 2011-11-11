@@ -34,6 +34,10 @@ void Adapter_timer::set_actions(std::vector<std::string>* _actions)
     if ((*actions)[i]!="") {
       const char* s=(*actions)[i].c_str();
 
+      if (strncmp(s,"iSleep ",strlen("iSleep "))==0) {
+	sleep_time[i]=atoi(s+strlen("iSleep "));
+      }
+
       if (strncmp(s,"iSetTimer ",strlen("iSetTimer "))==0) {
 	/* Set Timer */
 	char* endp;
@@ -112,6 +116,13 @@ void Adapter_timer::execute(std::vector<int>& action)
 
   if (!isInputName((*actions)[action[0]])) {
     abort();
+  }
+
+  if (sleep_time[action[0]]) {
+    sleep(sleep_time[action[0]]);
+    log.pop();
+    action.resize(1);
+    return;
   }
 
   if (at.timer>0) {
