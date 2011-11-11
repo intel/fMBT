@@ -31,7 +31,6 @@ int Policy::choose(std::vector<int>& actions)
 	}
       }
     }
-    return actions[0];
   }
   return 0;
 }
