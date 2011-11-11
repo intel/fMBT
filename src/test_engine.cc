@@ -398,6 +398,10 @@ void Test_engine::interactive()
 	      }
 	      break;
 	    }
+      case 't': // TODO
+          printf("t <+diff>\n");
+          printf("not implemented: advance Adapter::current_time");
+          break;
       default:
         printf("Execute actions:\n"
                "    s       - list executable actions at current state\n"
