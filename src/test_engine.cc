@@ -107,6 +107,7 @@ bool Test_engine::run(float target_coverage,
         log.pop(); // test_engine
 	return false; // Error: Unexpected output
       }
+      log_status(log, step_count, heuristic.getCoverage());
       gettimeofday(&Adapter::current_time,NULL);
     }
     
@@ -144,7 +145,8 @@ bool Test_engine::run(float target_coverage,
         log.debug("Test_engine::run: SUT executed %i '%s'\n",
 		  actions[0],heuristic.getActionName(actions[0]).c_str());
       }
-      action = actions[0];
+      action = actions[0]; // TODO: add policy here when it works
+      log_adapter_output(log, adapter, action);
       if (!heuristic.execute(action)) {
         log.debug("Test_engine::run: ERROR: action %i not possible in the model.\n", action);
 	log.write(action,heuristic.getActionName(action).c_str(),"broken response");

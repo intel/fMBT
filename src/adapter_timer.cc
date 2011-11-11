@@ -19,6 +19,7 @@
 #include "adapter_timer.hh"
 #include <cstdio>
 #include <sstream>
+#include <time.h>
 
 Adapter_timer::Adapter_timer(Log& l,std::string params): Adapter::Adapter(l)
 {
@@ -33,9 +34,11 @@ void Adapter_timer::set_actions(std::vector<std::string>* _actions)
   for(unsigned i=0;i<actions->size();i++) {
     if ((*actions)[i]!="") {
       const char* s=(*actions)[i].c_str();
-
-      if (strncmp(s,"iSleep ",strlen("iSleep "))==0) {
-	sleep_time[i]=atoi(s+strlen("iSleep "));
+      
+      if (strncmp(s, "iSleep ", strlen("iSleep ")) == 0) {
+	double time = strtod(s + strlen("iSleep "), NULL);
+	sleep_time[i].tv_sec  = trunc(time);
+	sleep_time[i].tv_nsec = 1000000000*(time-trunc(time));
       }
 
       if (strncmp(s,"iSetTimer ",strlen("iSetTimer "))==0) {
@@ -99,7 +102,7 @@ void Adapter_timer::clear_timer(int timer)
       pos=i;
     }
   }
-  if (pos>0) {
+  if (pos>=0) {
     enabled.erase(enabled.begin()+pos);
   }
 }
@@ -118,8 +121,8 @@ void Adapter_timer::execute(std::vector<int>& action)
     abort();
   }
 
-  if (sleep_time[action[0]]) {
-    sleep(sleep_time[action[0]]);
+  if (sleep_time.find(action[0]) != sleep_time.end()) {
+    nanosleep(&(sleep_time[action[0]]), NULL);
     log.pop();
     action.resize(1);
     return;
