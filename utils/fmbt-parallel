@@ -75,8 +75,8 @@ if __name__ == "__main__":
 
     # Parse arguments
     opts, remainder = getopt.gnu_getopt(
-        sys.argv[1:], 'hvo:s:',
-        ["help", "verbose", "output=", "sync="])
+        sys.argv[1:], 'ho:s:',
+        ["help", "output=", "sync="])
 
     for opt, arg in opts:
         if opt in ["-h", "--help"]:

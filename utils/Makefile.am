@@ -13,7 +13,7 @@ $(PYTHON_WRAPPERS): wrapperdir ../config.status
 
 dist_bin_SCRIPTS = $(PYTHON_WRAPPERS) fmbt-view
 
-pkgpython_PYTHON = lsts.py fmbt-gt fmbt-log lsts2dot fmbt-parallel
+pkgpython_PYTHON = lsts.py fmbtparsers.py fmbt-gt fmbt-log lsts2dot fmbt-parallel
 
 dist_noinst_SCRIPTS = parallel rextendedrules.py
 
