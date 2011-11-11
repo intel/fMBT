@@ -26,8 +26,8 @@ int Policy::choose(std::vector<int>& actions)
     int c=m->getActions(&act);
     for(unsigned i=0;i<actions.size();i++) {
       for(unsigned j=0;j<c;j++) {
-	if (act[c]==actions[i]) {
-	  return act[c];
+	if (act[j]==actions[i]) {
+	  return act[j];
 	}
       }
     }
