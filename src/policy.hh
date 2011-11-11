@@ -22,6 +22,7 @@
 
 class Policy {
 public:
+  Policy() : m(NULL) {};
   int choose(std::vector<int>&);
   void set_model(Model*);
 private:

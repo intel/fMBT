@@ -47,7 +47,9 @@ extern "C" {
 #include <cstdlib>
 #include <cstring>
 
-Test_engine::Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p) : heuristic(h),adapter(a),log(l),policy(p) {}
+Test_engine::Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p) : heuristic(h),adapter(a),log(l),policy(p) {
+  p.set_model(h.get_model());
+}
 
 namespace {
   void test_passed(bool pass, const char* reason, Log& log) {

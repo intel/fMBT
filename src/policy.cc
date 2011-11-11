@@ -20,7 +20,17 @@
 
 int Policy::choose(std::vector<int>& actions)
 {
+  int* act=NULL;
+
   if (actions.size()>0) {
+    int c=m->getActions(&act);
+    for(unsigned i=0;i<actions.size();i++) {
+      for(unsigned j=0;j<c;j++) {
+	if (act[c]==actions[i]) {
+	  return act[c];
+	}
+      }
+    }
     return actions[0];
   }
   return 0;
