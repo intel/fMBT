@@ -85,7 +85,7 @@ void Conf::load(std::string& name)
     RETURN_ERROR("Creating coverage \"" + coverage_name + "\" failed.");
 
   if (!model->load(model_name))
-    RETURN_ERROR("Loading model \"" + model_name + "\" failed.");
+    RETURN_ERROR("Loading model \"" + model_name + "\" failed: " + model->errormsg);
 
   model->reset();
 

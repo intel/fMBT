@@ -16,45 +16,32 @@
 # this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
-# This tests fMBT interactive mode (fmbt -i) commands.
-# See create_model.sh for more details.
+# Tests adapter_timer, test model defined in timer.gt
 
 ##########################################
 # Setup test environment
 
 cd "$(dirname "$0")"
-LOGFILE=/tmp/fmbt.test.interactivemode.log
-export PATH=../../src:../../utils:$PATH
+LOGFILE=/tmp/fmbt.test.adapters.timer.log
+MBTLOGFILE=/tmp/fmbt.test.adapters.timer.mbt.log
+export PATH=../../../src:../../../utils:$PATH
 
-source ../functions.sh
-
-rm -f testlog.txt
+source ../../functions.sh
+rm -f $LOGFILE $MBTLOGFILE
 
 ##########################################
 # Run the test
 
-teststep "create model for interactive mode test..."
-./create-model.sh >>$LOGFILE 2>&1 || {
-    testfailed
-}
-testpassed
+teststep "testing adapter_timer..."
 
-teststep "run interactive mode mbt test..."
-fmbt -L testlog.txt test.conf >>$LOGFILE 2>&1 || {
-    echo "error: fmbt returned non-zero return value: $?" >> $LOGFILE
-    echo "mbt test log:     $(dirname $0)/testlog.txt" >> $LOGFILE
-    echo "adapter test log: $(dirname $0)/testlog-adapter.txt" >> $LOGFILE
-    testfailed
-}
-testpassed
+fmbt -L$MBTLOGFILE timer.conf >>$LOGFILE 2>&1
 
-##########################################
-# Verify the result
-
-teststep "check coverage..."
-covered=$(awk -F\" '/coverage=/{print $4}' < testlog.txt | tail -n1)
-if [ "$covered" != "1.000000" ]; then
-    echo "Failed: did not achieve the required coverage." >> $LOGFILE
+VERDICT=$(fmbt-log -f '$tv' $MBTLOGFILE 2>>$LOGFILE)
+REASON=$(fmbt-log -f '$tr' $MBTLOGFILE 2>>$LOGFILE)
+if [ "$VERDICT" != "pass" ] ||
+    [ "$REASON" != "step limit reached" ]; then
+    echo "# Expected verdict: pass, reason: step limit reached." >> $LOGFILE
+    echo "# Received verdict: $VERDICT, reason: $REASON" >> $LOGFILE
     testfailed
 fi
 testpassed

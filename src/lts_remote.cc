@@ -29,15 +29,21 @@ bool Lts_remote::load(std::string& name)
   bool ret;
   g_spawn_command_line_sync(name.c_str()+11,&stdout,&stderr,
 			    &exit_status,&ger);
-  model+=stdout;
-  if (exit_status) {
-    ret=false;
+  if (!stdout) {
+    errormsg = std::string("Lts_remote cannot execute \"") + (name.c_str()+11) + "\"";
+    status = false;
+    ret = false;
   } else {
-    ret=Lts::load(model);
+    model+=stdout;
+    if (exit_status) {
+      ret=false;
+    } else {
+      ret=Lts::load(model);
+    }
+    g_free(stdout);
+    g_free(stderr);
+    g_free(ger);
   }
-  g_free(stdout);
-  g_free(stderr);
-  g_free(ger);
   return ret;
 }
 

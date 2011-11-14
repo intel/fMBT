@@ -1,13 +1,29 @@
+P(init, "gt:istate") ->
 
-P(init0, "gt:istate") ->
+P(init, "gt:istate")
+T(init, "iSetTimer 1 0.25", timer1)
+T(init, "iSetTimer 1 1.0", timer1)
 
-P(init0, "gt:istate")
-T(init0, "iSetTimer 1 1.0", timer)
-T(init0, "iSetTimer 1 2.0", timer)
+P(timer1, "timer one ticking")
+T(timer1, "iClearTimer 1", init)
+T(timer1, "oTimeout 1", init)
+T(timer1, "iforce", timeout1)
+T(timer1, "iSetTimer 2 0.5", timers12)
 
-P(timer, "timer")
+P(timers12, "timers one and two ticking")
+T(timers12, "iSleep 0.5",    timers12)
+T(timers12, "iSleep 1",      timeout12)
+T(timers12, "oTimeout 1",    timeout2)
+T(timers12, "iClearTimer 1", timeout2)
+T(timers12, "oTimeout 2",    timer1)
+T(timers12, "iClearTimer 2", timer1)
 
-T(timer, "iClearTimer 1", init0)
-T(timer, "oTimeout 1", init0)
+P(timeout12, "timeout either one")
+T(timeout12, "oTimeout 2", timer1)
+T(timeout12, "oTimeout 1", timeout2)
 
+P(timeout1, "timeout only timer one")
+T(timeout1, "oTimeout 1", init)
 
+P(timeout2, "timeout only timer two")
+T(timeout2, "oTimeout 2", init)
