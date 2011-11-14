@@ -16,14 +16,22 @@
 # this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
-# This test runs through the commands in the doc/adapters.txt
+# This test runs tests in subdirectories and finally through the
+# commands in the doc/adapters.txt
+
+##########################################
+# Run tests in subdirectories
+cd "$(dirname "$0")"
+mydir=$PWD
+
+timer/run.sh || exit 1
 
 ##########################################
 # Setup test environment
 
 TESTDIR=/tmp/fmbt.test.adapters
 
-cd "$(dirname "$0")"
+cd "$mydir"
 cd ../..
 chmod -R u+w $TESTDIR >/dev/null 2>&1
 rm -rf $TESTDIR >/dev/null 2>&1
