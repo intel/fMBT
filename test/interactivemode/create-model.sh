@@ -17,7 +17,7 @@
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
 GT=../../utils/fmbt-gt
-PARALLEL=../../utils/parallel
+PARALLEL=fmbt-parallel
 
 $GT -o main.lsts '
     P(init0,        p)
@@ -94,4 +94,4 @@ $GT -o walk-on-model.lsts '
     P(cannot_walk,  "cannot_walk")
 '
 
-$PARALLEL main.lsts walk-on-model.lsts >testmodel.xrules
+$PARALLEL --sync '.*' main.lsts walk-on-model.lsts >testmodel.xrules
