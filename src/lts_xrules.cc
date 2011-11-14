@@ -214,6 +214,29 @@ int  Lts_xrules::execute(int action)
   return true; 
 }
 
+int Lts_xrules::getprops(int** props) {
+  int count=0;
+
+  for(unsigned i=0;i<lts.size();i++) {
+    if (lts[i]) {
+      int* tmp;
+      int tmp_count=lts[i]->getprops(&tmp);
+      if (tmp_count) {
+	for(int j=0;j<tmp_count;j++) {
+	  tprops.push_back(tmp[j]+pzero[i]);
+	}
+      }
+      count+=tmp_count;
+    }
+  }
+
+  if (count) {
+    *props=&(tprops[0]);
+  }
+      
+  return count;
+}
+
 void Lts_xrules::push()
 {
   for(unsigned i=0;i<lts.size();i++) {

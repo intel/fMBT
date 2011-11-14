@@ -28,6 +28,8 @@ public:
   virtual bool reset();
   virtual int  execute(int action);
 
+  virtual int getprops(int** props);
+
   virtual void push();
   virtual void pop();
 
@@ -51,6 +53,9 @@ public:
   
 protected:
   void compose();
+
+  std::vector<int> pzero;
+  std::vector<int> tprops;
   
   /* type, which contains component number (1 = "general_camera.lsts") 
    * and action number (within the component)

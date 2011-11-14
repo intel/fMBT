@@ -42,3 +42,5 @@ std::string replace(boost::regex& expression,
  		    std::string::iterator first,
 		    std::string::iterator last);
 #endif
+void print_vectors(int* v,unsigned size,std::vector<std::string>& s,const char* prefix,int add);
+void print_vector(std::vector<std::string>& s,const char* prefix,int add);

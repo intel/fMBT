@@ -46,6 +46,11 @@ public:
     return action_names;
   }
 
+  //! Returns names of all available state propositions
+  std::vector<std::string>& getSPNames() {
+    return prop_names;
+  }
+
   //! Returns the name of the given action
   std::string& getActionName(int action) {
     return action_names[action];
@@ -68,6 +73,12 @@ public:
 
   //! Execute the given action in the current state. Returns false if not possible.
   virtual int  execute(int action)      =0;
+
+  /*!
+   * Returns the number of state propositions at current state
+   * The (out) parameters refers to the array containing the propositions.
+   */
+  virtual int getprops(int** props)     =0;
 
   //! Push the current state of the model to the stack
   virtual void push() =0;
@@ -137,6 +148,7 @@ private:
   static std::map<std::string,creator>* factory;
 protected:
   Log &log;
+  std::vector<std::string> prop_names; /* proposition names.. */
   std::vector<std::string> action_names; /* action names.. */
   std::vector<int> inputs;  /* all input action numbers */
   std::vector<int> outputs; /* all output action numbers */

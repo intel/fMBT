@@ -262,3 +262,20 @@ std::string replace(boost::regex& expression,
 }
 
 #endif
+
+void print_vectors(int* v,unsigned size,std::vector<std::string>& s,const char* prefix,int add)
+{
+  for(unsigned i=0;i<size;i++) {
+    if (s[v[i]]!="")
+      printf("%s,%i:%s\n",prefix,i+add,s[v[i]].c_str());
+  }
+}
+
+void print_vector(std::vector<std::string>& s,const char* prefix,int add)
+{
+  for(unsigned i=0;i<s.size();i++) {
+    if (s[i]!="") {
+      printf("%s%i:%s\n",prefix,i+add,s[i].c_str());
+    }
+  }
+}

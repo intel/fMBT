@@ -264,10 +264,14 @@ void Test_engine::interactive()
         }
         log_status(log, -1, 0.0);
         // print actions available at current state
+	print_vectors(actions,action_count,
+		      current_model->getActionNames(),"s",1);
+	/*
         for(unsigned int i=0;i<action_count;i++) {
           // printf("s%i:%s\n",i+1,names[actions[i]].c_str());
           printf("s%i:%s\n",i+1,current_model->getActionName(actions[i]).c_str());
         }
+	*/
       }
         break;
         
@@ -375,6 +379,20 @@ void Test_engine::interactive()
 
       case 'm':
         num = std::atoi(s+1);
+	if (strncmp(s,"mt",2)==0) {
+	  /* List model tags */
+	  print_vector(current_model->getSPNames(),"tag ",0);
+	  break;
+	} else
+	if (strncmp(s,"mc",2)==0) {
+	  /* how current tags */
+	  int* tags = 0;
+	  unsigned int tag_count=current_model->getprops(&tags);	  
+	  print_vectors(tags,tag_count,
+			current_model->getSPNames(),"t",0);
+	  
+	  break;
+	} else
         if (strncmp(s,"mup",3)==0) {
 	  /* up */
           if (!current_model->up()) {
@@ -424,6 +442,8 @@ void Test_engine::interactive()
                "    m      - list model subcomponents\n"
                "    m<num> - move down to model subcomponent <num>\n"
                "    mup    - move up to parent model\n"
+	       "    mc     - show current tags\n"
+	       "    mt     - list model tags\n"
                "    q      - quit\n");
         printf("Unknown command \"%s\"\n",s);
       }

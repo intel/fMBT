@@ -33,6 +33,16 @@ extern "C" {
 extern D_ParserTables parser_tables_lts;
 };
 
+int Lts::getprops(int** props) {
+  int count=stateprops[current_state].size();
+
+  if (props && count) {
+    *props=&(stateprops[current_state][0]);
+  }
+    
+  return count;
+}
+
 std::string Lts::stringify()
 {
   std::ostringstream t(std::ios::out | std::ios::binary);
@@ -85,6 +95,19 @@ int Lts::getIActions(int** _actions)
 }
 
 extern Lts* obj;
+
+void Lts::add_prop(std::string* name,std::vector<int>& pr)
+{
+  if (prop_names.size()==0) {
+    prop_names.push_back("");
+  }
+  int pro=prop_names.size();
+  prop_names.push_back(*name);
+
+  for(unsigned i=0;i<pr.size();i++) {
+    stateprops[pr[i]].push_back(pro);
+  }
+}
 
 bool Lts::load(std::string& name)
 {

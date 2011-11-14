@@ -31,6 +31,7 @@ std::vector<int> oa;
 std::vector<int> ia;
 std::vector<int> os;
 std::vector<int> is;
+std::vector<int> intv;
 
 #ifdef CAPI
 
@@ -81,6 +82,9 @@ extern "C" {
 }
 
 namespace lts_local {
+    void add_prop(std::string* name,std::vector<int>& pr) {
+    }
+
     void set_state_cnt(int count) {
         if (set_state_cnt_cb) set_state_cnt_cb(count);
     }
@@ -143,7 +147,10 @@ state_prop: 'Begin' 'State_props'
             prop_line*
             'End' 'State_props';
 
-prop_line: string ':' int* ';' ;
+prop_line: string ':' intv* ';' { PREFIX add_prop($0.str,intv); intv.clear(); } ;
+
+intv: ( int { intv.push_back($0.val); } )* ;
+
 
 header: 'Begin' 'Header' header_variable+ ';' 'End' 'Header' { PREFIX header_done(); } ;
 

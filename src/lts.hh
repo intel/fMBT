@@ -37,12 +37,15 @@ public:
   virtual int getIActions(int** actions); // Vireessä olevat syöte tapahtumat. NULL ja 0 == DEADLOCK.
   // NULL ja 1 == OUTPUTONLY
   virtual bool reset();
+  virtual int getprops(int** props);
   virtual int  execute(int action);
   virtual void push();
   virtual void pop();
 
   virtual bool load(std::string& name);
-  
+
+  virtual void add_prop(std::string* name,std::vector<int>& pr);
+
   bool header_done();
   
   void set_state_cnt(int count) {
@@ -78,7 +81,8 @@ public:
   virtual std::string stringify();
 
 protected:
-  
+  std::map<int,std::vector<int> > stateprops;
+
   void new_state();
 
   bool start(std::string s);
