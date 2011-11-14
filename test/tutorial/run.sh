@@ -92,7 +92,7 @@ if [ $(fmbt-log -f '$tv' mkrmdir.log) != "fail" ]; then
 fi
 testpassed
 
-teststep "repeate the error trace (without minimising)..."
+teststep "repeat the error trace (without minimising)..."
 cp mkrmdir.log minimal.log
 source log.6 > errortrace.txt
 if  [ $(grep adapter errortrace.txt | tail -n1) != "adapter:" ]; then
