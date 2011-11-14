@@ -25,8 +25,9 @@ _c_int    = ctypes.c_int
 _c_char_p = ctypes.c_char_p
 _c_func   = ctypes.CFUNCTYPE
 
-_libpath = [os.path.dirname(__file__),
-            os.path.dirname(__file__) + "/../src/.libs"]
+_libpath = ["",
+            os.path.dirname(__file__) + os.sep,
+            os.path.dirname(__file__) + "/../src/.libs" + os.sep]
 
 def load(filename):
     if filename.endswith(".lsts"):
@@ -46,7 +47,7 @@ def lts_action(callback):
 
 for _dirname in _libpath:
     try:
-        clib = ctypes.CDLL(_dirname + os.sep + "fmbt_cparsers.so")
+        clib = ctypes.CDLL(_dirname + "fmbt_cparsers.so")
         break
     except: pass
 else:

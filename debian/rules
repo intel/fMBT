@@ -6,4 +6,4 @@ configure:
 	./autogen.sh
 
 %:
-	dh $@
+	dh $@ --with python2
