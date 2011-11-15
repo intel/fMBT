@@ -226,28 +226,41 @@ void Coverage_Mapper::add_file(unsigned index,
   Conf::split(coveragename,mname,cname);
 
   coverage_names[index]=std::string(cname);
-  models[index] = Model::create(log,filetype(mname));
-  models[index]->load(mname);
-  models[index]->reset();
-
+  if (cname=="") {
+    models[index] = model;
+  } else {
+    models[index] = Model::create(log,filetype(mname));
+    if (!models[index]) {
+      status=false;
+      return;
+    }
+    models[index]->load(mname);
+    models[index]->reset();
+  }
   std::string cc;
   std::string cp;
 
   Conf::split(cname,cc,cp);
   log.debug("Trying to create coverage %s(%s)\n",cc.c_str(),cp.c_str());
   coverages[index] = CoverageFactory::create(log,cc,cp);
-  coverages[index]->set_model(models[index]);
   
+  if (!coverages[index]) {
+    status=false;
+    return;
+  }  
+  coverages[index]->set_model(models[index]);
+  status&=coverages[index]->status;
 }
 
 void Coverage_Mapper::add_map(unsigned int index,std::string& n,int action) {
-
   log.debug("%s(%i,%s,%i)\n",__PRETTY_FUNCTION__,index,n.c_str(),
 	 action);
 
   if (models.size()<=index ||
       models[index]==NULL) {
     /* No such model */
+    errormsg=std::string("index ") + to_string(index) + std::string(" out of bounds");
+    status=false;
     log.debug("No such model\n");
     return;
   }
@@ -256,6 +269,8 @@ void Coverage_Mapper::add_map(unsigned int index,std::string& n,int action) {
 
   if (an < 0) { 
     /* No such action.. */
+    errormsg=std::string("(") + to_string(index) + std::string("\"") + n + std::string("\") no such action");
+    status=false;
     log.debug("No such action\n");
     return;
   }
@@ -267,6 +282,10 @@ void Coverage_Mapper::add_map(unsigned int index,std::string& n,int action) {
 
 void Coverage_Mapper::add_result_action(std::string* name)
 {
+  if (!status) {
+    return;
+  }
+
   log.debug("%s(%s) called\n",__func__,name->c_str());
 
   int action=model->action_number(*name);
@@ -304,13 +323,17 @@ void Coverage_Mapper::add_result_action(std::string* name)
 void Coverage_Mapper::add_component(unsigned index,
 				    std::string& name,bool)
 {
+  if (!status) {
+    return;
+  }
   log.debug("%s(%i,%s)\n",__func__,index,name.c_str());
 
   if (index>=coverages.size() || coverages[index]==NULL) {
 
     log.debug("%i, %p\n",coverages.size(),coverages[index]);
 
-    throw((int)4202);    
+    errormsg=std::string("index ") + to_string(index) + std::string(" out of bounds");
+    status=false;
   }
   l_name=name;
   l_index=index;

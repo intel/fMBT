@@ -110,6 +110,9 @@ int Adapter_mapper::anum_create(int index,std::string& n) {
 
 void Adapter_mapper::add_map(std::vector<int>& index,std::vector<std::string>& n,int action) {
 
+  if (!status) {
+    return;
+  }
   int anum = anum_create(index[0],n[0]);
 
   log.debug("%s(%i,%s,%i) %i\n",__func__,index[0],n[0].c_str(),action,anum);
@@ -129,15 +132,13 @@ void Adapter_mapper::add_map(std::vector<int>& index,std::vector<std::string>& n
       }
     }
   } else {
-      log.debug("Error in '%s': ", load_name.c_str());
+    //log.debug("Error in '%s': ", load_name.c_str());
     if (is_used(action)) {
-      log.debug("duplicate action on the model side: \"%s\"",
-                (*actions)[action].c_str());
+      errormsg=std::string("duplicate action on the model side: \"")+(*actions)[action]+std::string("\"");
     } else { //  is_used(a)
-      log.debug("duplicate action on the adapter side: \"%s\"",
-        adapter_anames[a.first][a.second].c_str());
+      errormsg=std::string("duplicate action on the adapter side: \"")+(*actions)[action]+std::string("\"");
     }
-    throw (int)42424;
+    status=false;
   }
   log.debug("%s ready",__func__);
 }
@@ -164,7 +165,9 @@ bool Adapter_mapper::load(std::string& name)
     log.debug("loading %s ok",name.c_str());
   } else {
     log.debug("loading %s failed",name.c_str());
+    errormsg=std::string("Loading file \"")+name+std::string("\" failed");
     status=false;
+    return status;
   }
 
   free(s);
@@ -175,7 +178,7 @@ bool Adapter_mapper::load(std::string& name)
 
   /* Time to load adapters */
 
-  for(unsigned int i=0;i<adapter_names.size();i++) {
+  for(unsigned int i=0;i<adapter_names.size()&&status;i++) {
     if (adapter_names[i]!=std::string("")) {
 
       log.debug("Loading adapter \"%s\"",
@@ -202,7 +205,7 @@ bool Adapter_mapper::load(std::string& name)
     }
   }
 
-  return true;
+  return status;
 }
 
 bool Adapter_mapper::is_used(int action)
@@ -244,6 +247,9 @@ int Adapter_mapper::action_number(std::string& name)
  */
 void Adapter_mapper::add_result_action(std::string* name)
 {
+  if (!status) {
+    return;
+  }
   int action=action_number(*name);
 
   log.debug("%s(%s) called",__func__,name->c_str());
@@ -293,6 +299,9 @@ void Adapter_mapper::add_result_action(std::string* name)
 
 void Adapter_mapper::add_component(unsigned int index,std::string& name, bool tau)
 {
+  if (!status) {
+    return;
+  }
   /* Validate index */
   log.debug("%s(%i,%s)",__func__,index,name.c_str());
 
@@ -306,7 +315,8 @@ void Adapter_mapper::add_component(unsigned int index,std::string& name, bool ta
            adapter_names[1].c_str(),
            adapter_names[2].c_str());
 
-    throw((int)420);
+    errormsg=std::string("index ") + to_string(index) + std::string(" out of bounds");
+    status=false;
   }
   
   l_name.push_back(name);

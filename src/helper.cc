@@ -279,3 +279,10 @@ void print_vector(std::vector<std::string>& s,const char* prefix,int add)
     }
   }
 }
+
+std::string to_string (const int t)
+{
+  std::stringstream ss;
+  ss << t;
+  return ss.str();
+}

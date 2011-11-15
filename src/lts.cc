@@ -123,8 +123,9 @@ bool Lts::load(std::string& name)
   s=readfile(name.c_str());
 
   if (s==NULL) {
-    debugprint("Can't load lts %s",name.c_str());
-    throw (int)(42011);
+    errormsg=std::string("Can't load lts \"")+name+std::string("\"");
+    status=false;
+    return false;
   }
 
   ret=dparse(p,s,std::strlen(s));

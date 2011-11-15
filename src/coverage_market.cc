@@ -108,15 +108,19 @@ extern D_ParserTables parser_tables_covlang;
 extern Coverage_Market* cobj;
 
 void Coverage_Market::add_requirement(std::string& req)
-{  
-  cobj=this;
+{
+  cobj=this;  
   D_Parser *p = new_D_Parser(&parser_tables_covlang, 32);
-  dparse(p,(char*)req.c_str(),req.length());
+  bool ret=dparse(p,(char*)req.c_str(),req.length());
+  status&=ret;
   free_D_Parser(p);
 }
 
 Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const char* action) {
   /* m(ode) == a|e */
+  if (!status) {
+    return NULL;
+  }
   std::vector<std::string> &names(model->getActionNames());
   regex_t rx;
 
@@ -124,8 +128,9 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const char* a
 
   if (m) {
     if (regcomp(&rx,action,0)) {
-      log.debug("Something went wrong with RexExp\n");
-      abort();
+      errormsg=std::string("Something wrong with RexExp \"")+std::string(action)+std::string("\"");
+      status=false;
+      return NULL;
     }
     
     for(size_t i=0;i<names.size();i++) {
@@ -152,13 +157,15 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const char* a
     std::string s(action);
     int an = model->action_number(s);
     if (an<=0) {
-      throw((int)42000);
+      errormsg=std::string("No such action \"")+s+std::string("\"");
+      status=false;
     }
     u = new Coverage_Market::unit_leaf(an);
   }
 
   if (u==NULL) {
-    throw((int)42001);
+    errormsg=std::string("parse error");
+    status=false;
   }
 
   return u;  
