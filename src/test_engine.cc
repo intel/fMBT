@@ -19,6 +19,7 @@
 
 #include "test_engine.hh"
 #include "log.hh"
+#include "alg_bdfs.hh"
 #include <cstdio>
 #include <algorithm>
 
@@ -379,7 +380,11 @@ void Test_engine::interactive()
 
       case 'm':
         num = std::atoi(s+1);
-	if (strncmp(s,"mt",2)==0) {
+	if (strncmp(s,"ma",2)==0) {
+          /* List actions in the current model */
+          print_vector(current_model->getActionNames(), "", 0);
+        } else
+        if (strncmp(s,"mt",2)==0) {
 	  /* List model tags */
 	  print_vector(current_model->getSPNames(),"tag ",0);
 	  break;
@@ -422,6 +427,23 @@ void Test_engine::interactive()
 	      }
 	      break;
 	    }
+      case '?':
+        if (strncmp(s,"?a",2) == 0) {
+          int num = std::atoi(s+2);
+          int search_depth = 7;
+          std::vector<int> path;
+          int path_len = Alg_BDFS::path_to_state_with_action(num, *current_model, path, search_depth);
+          if (path_len < 0) {
+              printf("No path found to action %d within search depth %d\n", num, search_depth);
+          } else {
+              printf("Path to execute action %s:\n", current_model->getActionName(num).c_str());
+              for (int i = 0; i < path_len; i++)
+              {
+                  printf("%s\n", current_model->getActionName(path[i]).c_str());
+              }
+          }
+        }
+        break;
       case 't': // TODO
           printf("t <+diff>\n");
           printf("not implemented: advance Adapter::current_time");
@@ -442,8 +464,12 @@ void Test_engine::interactive()
                "    m      - list model subcomponents\n"
                "    m<num> - move down to model subcomponent <num>\n"
                "    mup    - move up to parent model\n"
-	       "    mc     - show current tags\n"
-	       "    mt     - list model tags\n"
+               "Properties of the current model:\n"
+               "    ma     - list all actions\n"
+               "    mc     - list tags at current state\n"
+               "    mt     - list all state tags\n"
+               "Search:\n"
+               "    ?a<num>- search shortest path to execute action <num>\n"
                "    q      - quit\n");
         printf("Unknown command \"%s\"\n",s);
       }

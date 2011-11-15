@@ -253,6 +253,7 @@ void Lts_xrules::pop()
       lts[i]->pop();
     }
   }
+  valid = false;
   compose();
 }
 
