@@ -385,7 +385,7 @@ void Test_engine::interactive()
 	  break;
 	} else
 	if (strncmp(s,"mc",2)==0) {
-	  /* how current tags */
+	  /* Show tags at current state */
 	  int* tags = 0;
 	  unsigned int tag_count=current_model->getprops(&tags);	  
 	  print_vectors(tags,tag_count,

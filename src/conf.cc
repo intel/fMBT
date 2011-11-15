@@ -27,9 +27,10 @@ extern D_ParserTables parser_tables_conf;
 extern Conf* conf_obj;
 
 #define RETURN_ERROR(s) { \
+  log.pop();    \
   status=false; \
-  errormsg=s; \
-  return; \
+  errormsg=s;   \
+  return;       \
   }
 
 void Conf::split(std::string& val,std::string& name,
@@ -147,9 +148,20 @@ void Conf::execute(bool interactive) {
 
   Test_engine engine(*heuristic,*adapter,log,policy);
 
-  if (interactive || !engine.run(engine_cov,engine_count)) {
+  if (interactive) {
     engine.interactive();
+  } else {
+    if (!engine.run(engine_cov,engine_count)) {
+      // Test failed. Continue according to the on_error
+      // configuration. In addition to the following it could at
+      // somepoint specify a shell command (for instance, package and
+      // send log files, etc.)
+      if (on_error == "interactive")
+        engine.interactive();
+      else
+        RETURN_ERROR("Test failed.");
+    }
+    // Test passed
   }
-
   log.pop();
 }
