@@ -267,7 +267,7 @@ void print_vectors(int* v,unsigned size,std::vector<std::string>& s,const char* 
 {
   for(unsigned i=0;i<size;i++) {
     if (s[v[i]]!="")
-      printf("%s,%i:%s\n",prefix,i+add,s[v[i]].c_str());
+      printf("%s%i:%s\n",prefix,i+add,s[v[i]].c_str());
   }
 }
 
@@ -278,4 +278,11 @@ void print_vector(std::vector<std::string>& s,const char* prefix,int add)
       printf("%s%i:%s\n",prefix,i+add,s[i].c_str());
     }
   }
+}
+
+std::string to_string (const int t)
+{
+  std::stringstream ss;
+  ss << t;
+  return ss.str();
 }
