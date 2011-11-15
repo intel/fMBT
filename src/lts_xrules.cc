@@ -50,6 +50,23 @@ std::string Lts_xrules::stringify()
   return t.str();
 }
 
+void Lts_xrules::prop_create()
+{
+  if (prop_names.size()==0) {
+    prop_names.push_back("");
+  }
+  int count=0;
+  for(unsigned i=0;i<lts.size();i++) {
+    pzero.push_back(count);
+    if (lts[i]) {
+      std::vector<std::string>&sn=lts[i]->getSPNames();
+      count+=sn.size();
+      prop_names.insert(prop_names.end(),sn.begin(),sn.end());
+    }
+  }
+}
+
+
 bool Lts_xrules::load(std::string& name)
 {
   D_Parser *p = new_D_Parser(&parser_tables_xrules, 16);
@@ -82,11 +99,13 @@ bool Lts_xrules::load(std::string& name)
 
   free_D_Parser(p);
 
-  precalc_input_output();  
+  precalc_input_output();
+
+  prop_create();
 
   xobj=tmp;
 
-  return ret;
+  return ret && status;
 }
 
 void Lts_xrules::add_file(unsigned int index,std::string& filename)
@@ -107,7 +126,7 @@ void Lts_xrules::add_file(unsigned int index,std::string& filename)
   lts[index]=Model::create(log,filetype(filename));
   
   if (!lts[index]->load(filename)) {
-    status=false;
+    status=false;    
   }
   lts[index]->setparent(this);
   
@@ -120,6 +139,10 @@ void Lts_xrules::add_file(unsigned int index,std::string& filename)
  */
 void Lts_xrules::add_result_action(std::string* name)
 {
+  if (!status) {
+    return;
+  }
+
   int action=action_number(*name);
 
   log.debug("%s(,%s)",__PRETTY_FUNCTION__,name->c_str());
@@ -151,19 +174,25 @@ void Lts_xrules::add_result_action(std::string* name)
 
 void Lts_xrules::add_component(unsigned int index,std::string& name)
 {
+  if (!status) {
+    return;
+  }
   /* Validate index */
 
   log.debug("%s(%i,%s)",__PRETTY_FUNCTION__,index,name.c_str());
 
   if (index>=model_names.size() || lts[index]==NULL) {
-    throw((int)420);
+    errormsg=std::string("rule name with invalid number (")+to_string(index)+std::string(")");
+    status=false;
+    return;
   }
 
   int anum=lts[index]->action_number(name);
 
   if (anum<0) {
-    debugprint("anum %s -> %i\n",name.c_str(),anum);
-    throw((int)4200);
+    errormsg=std::string("xrules name \"")+name+std::string("\" doesn't belong to alphabet");
+    status=false;
+    return;
   }
 
   comp pos(index,anum);
@@ -253,6 +282,7 @@ void Lts_xrules::pop()
       lts[i]->pop();
     }
   }
+  valid=false;
   compose();
 }
 

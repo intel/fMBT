@@ -53,6 +53,7 @@ public:
   
 protected:
   void compose();
+  void prop_create();
 
   std::vector<int> pzero;
   std::vector<int> tprops;
