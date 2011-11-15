@@ -267,7 +267,7 @@ void print_vectors(int* v,unsigned size,std::vector<std::string>& s,const char* 
 {
   for(unsigned i=0;i<size;i++) {
     if (s[v[i]]!="")
-      printf("%s,%i:%s\n",prefix,i+add,s[v[i]].c_str());
+      printf("%s%i:%s\n",prefix,i+add,s[v[i]].c_str());
   }
 }
 
