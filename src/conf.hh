@@ -35,7 +35,7 @@ class Conf:public Writable {
     :log(l),
      heuristic_name("random"), coverage_name("tree"),
      adapter_name("dummy"), engine_cov(1.0),
-     engine_count(-1) {
+     engine_count(-1), on_error("interactive") {
     log.push("fmbt_log");
     log.set_debug(debug_enabled);
   }
@@ -60,6 +60,9 @@ class Conf:public Writable {
   }
   void set_engine_count(int i) {
     engine_count = i;
+  }
+  void set_on_error(std::string &s) {
+    on_error = s;
   }
 
   void execute(bool interactive=false);
@@ -87,6 +90,8 @@ class Conf:public Writable {
 
   float engine_cov;
   int engine_count;
+
+  std::string on_error;
 
   Heuristic* heuristic;
   Model* model;

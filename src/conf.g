@@ -36,7 +36,8 @@ conf_entry: model |
             coverage |
             adapter |
             engine_cov |
-            engine_count ;
+            engine_count |
+            on_error;
 
 model: 'model' '=' string { conf_obj->set_model(*$2.str); } ;
 
@@ -49,6 +50,8 @@ adapter: 'adapter' '=' string { conf_obj->set_adapter(*$2.str); } ;
 engine_cov: 'engine.cov' '=' float { conf_obj->set_engine_cov($2.f); } ;
 
 engine_count: 'engine.count' '=' int { conf_obj->set_engine_count($2.val); };
+
+on_error: 'on_error' '=' string { conf_obj->set_on_error(*$2.str); };
 
 string: "\"([^\"\\]|\\[^])*\"" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); };
 

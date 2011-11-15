@@ -85,7 +85,7 @@ testpassed
 
 teststep "rerun the test and check it fails now..."
 rm -rf mkrmdir.log /tmp/fmbt.mkrmdir
-echo q | source fmbt.3
+echo q | source fmbt.3 >>$LOGFILE 2>&1
 if [ $(fmbt-log -f '$tv' mkrmdir.log) != "fail" ]; then
     echo "test was passed unexpectedly" >> $LOGFILE
     testfailed
