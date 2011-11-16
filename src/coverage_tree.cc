@@ -27,6 +27,31 @@ Coverage_Tree::Coverage_Tree(Log& l, std::string params) :
   set_max_depth(params);
 }
 
+void Coverage_Tree::push()
+{
+  push_depth++;
+  std::list<std::pair<struct node*, int> > a;
+  push_restore.push_front(a);
+}
+
+void Coverage_Tree::pop()
+{
+  std::list<std::pair<struct node*, int> >::iterator i
+    = push_restore.front().begin();
+
+  while(i!=push_restore.front().end()) {
+    node_count--;
+    int action=i->second;
+    struct node* current_node=i->first;
+    delete current_node->nodes[action];
+    current_node->nodes[action]=NULL;
+    current_node->nodes.erase(action);
+    i++;
+  }
+  
+  push_restore.pop_front();
+  push_depth--;
+}
 void Coverage_Tree::precalc()
 {
   if (model) {
@@ -58,6 +83,10 @@ bool Coverage_Tree::execute(int action)
       current_node->nodes[action]=new struct node;
       current_node->nodes[action]->action=action;
       node_count++;
+      if (push_depth) {
+	std::pair<struct node*, int> a(current_node,action);
+	push_restore.front().push_front(a);
+      }
     }
     depth++;
     next_node=exec[depth];

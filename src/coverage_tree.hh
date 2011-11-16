@@ -28,13 +28,14 @@
 #include "coverage.hh"
 
 #include <map>
+#include <list>
 
 class Coverage_Tree: public Coverage {
 
 public:
   Coverage_Tree(Log& l, std::string params);
-  virtual void push(){};
-  virtual void pop(){};
+  virtual void push();
+  virtual void pop();
 
   virtual bool execute(int action);
   virtual float getCoverage();
@@ -55,6 +56,9 @@ protected:
     int action;
     std::map<int,struct node*> nodes;
   };
+
+  int push_depth;
+  std::list<std::list<std::pair<struct node*, int> > > push_restore;
 
   struct node root_node;
   long node_count;
