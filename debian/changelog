@@ -1,3 +1,10 @@
+fmbt (0.1-rc4) maverick; urgency=low
+
+  * A lot of fixes
+  * Added bounded depth-first-search for models
+
+ -- Pablo Virolainen <pablo.virolainen@intel.com>  Wed, 16 Nov 2011 12:42:57 +0200
+
 fmbt (0.1-rc3) maverick; urgency=low
 
   * A lot of fixes
