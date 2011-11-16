@@ -41,7 +41,7 @@ public:
   static void add_factory(std::string name, creator c);
   static Model* create(Log&,std::string name);
 
-  //! Returns names of all actions available
+  //! Returns names of all actions available.
   std::vector<std::string>& getActionNames() {
     return action_names;
   }
@@ -59,12 +59,14 @@ public:
   /*! 
    * Returns the number of actions executable in the current state.
    * The (out) parameter refers to the array containing the actions.
+   * Data might become invalid/corrupted after executing an action
    */
   virtual int getActions(int** actions) =0;
 
   /*!
    * Returns the number of input actions executable in the current state.
    * The (out) parameter refers to the array containing the actions.
+   * Data might become invalid/corrupted after executing an action
    */
   virtual int getIActions(int** actions)=0;
 
