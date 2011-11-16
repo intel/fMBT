@@ -49,6 +49,63 @@ protected:
   void precalc();
   int max_depth;
 
+  /* 
+     The data structure
+
+     root_node is the root of the tree where each node represents an
+     executed action, and contains a map of actions executed after it.
+
+     exec points to nodes that need to be updated on next execute().
+     
+     Example how data structure evolves when two actions are executed
+     with depth == 3:
+     
+     0. Initial state:
+     
+        exec = {0 -> root_node}
+     
+        root_node
+          .action = 0
+          .nodes = {}
+     
+     1. Add action 42:
+     
+        exec = {0 -> root_node,
+                1 -> node_1}
+
+        root_node
+          .action = 0
+          .nodes = {42 -> node_1}
+
+        node_1
+          .action = 42
+          .nodes = {}
+
+    2. Add action 53:
+
+       exec = {0 -> root_node,
+               1 -> node_2,
+               2 -> node_1}
+
+       root_node
+         .action = 0
+         .nodes = {42 -> node_1,
+                   53 -> node_2}
+
+       node_1
+         .action = 42
+         .nodes = {53 -> node_3}
+
+       node_2
+         .action = 53
+         .nodes = {}
+
+       node_3
+         .action = 53
+         .nodes = {}
+   */
+
+
   struct node;
 
   struct node {
