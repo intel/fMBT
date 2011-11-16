@@ -32,6 +32,7 @@ void Coverage_Tree::push()
   push_depth++;
   std::list<std::pair<struct node*, int> > a;
   push_restore.push_front(a);
+  exec_restore.push_front(exec);
 }
 
 void Coverage_Tree::pop()
@@ -48,8 +49,10 @@ void Coverage_Tree::pop()
     current_node->nodes.erase(action);
     i++;
   }
-  
   push_restore.pop_front();
+
+  exec=exec_restore.front();
+  exec_restore.pop_front();
   push_depth--;
 }
 void Coverage_Tree::precalc()
