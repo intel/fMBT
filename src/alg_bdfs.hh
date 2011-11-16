@@ -24,18 +24,63 @@
 #define __alg_bdfs_hh__
 
 class Model;
+class Coverage;
 
 #include <vector>
 
-class Alg_BDFS {
+class AlgBDFS
+{
 public:
-    /** \brief return path to a state where action can be executed
-     * \param action (input) to be executed
-     * \param model (input) search starts from its current state
-     * \param path (output) actions on the path to the state
-     * \return length of the path if found, otherwise -1
+    AlgBDFS(int searchDepth): m_search_depth(searchDepth) {};
+    virtual ~AlgBDFS() {};
+
+    /** \brief return shortest path giving the best evaluation
+     * \param model (input parameter) search starts from model's current state
+     * \param path (output parameter) the best path if one was found, otherwise empty
+     * \return the evaluation value for the path
      */
-    static int path_to_state_with_action(const int find_me, Model& model, std::vector<int>& path, int depth);
+    double path_to_best_evaluation(Model& model, std::vector<int>& path, int depth);
+
+protected:
+    virtual double evaluate() = 0;
+    virtual void doExecute(int action) = 0;
+    virtual void undoExecute() = 0;
+    int m_search_depth;
+private:
+    double _path_to_best_evaluation(Model& model, std::vector<int>& path, int depth);
 };
+
+class AlgPathToBestCoverage: public AlgBDFS
+{
+public:
+    AlgPathToBestCoverage(int searchDepth = 3): AlgBDFS(searchDepth) {}
+    virtual ~AlgPathToBestCoverage() {};
+
+    double search(Model& model, Coverage& coverage, std::vector<int>& path);
+protected:
+    virtual double evaluate();
+    virtual void doExecute(int action);
+    virtual void undoExecute();
+    Coverage* m_coverage;
+    Model*    m_model;
+};
+
+
+class AlgPathToAction: public AlgBDFS
+{
+public:
+    AlgPathToAction(int searchDepth = 3): AlgBDFS(searchDepth) {}
+    virtual ~AlgPathToAction() {}
+
+    double search(Model& model, int find_this_action, std::vector<int>& path);
+protected:
+    virtual double evaluate();
+    virtual void doExecute(int action);
+    virtual void undoExecute();
+    Model* m_model;
+    int    m_find_this_action;
+};
+
+
 
 #endif

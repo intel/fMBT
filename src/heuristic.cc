@@ -70,6 +70,10 @@ void Heuristic::set_coverage(Coverage* c) {
   my_coverage=c;
 }
 
+Coverage* Heuristic::get_coverage() {
+  return my_coverage;
+}
+
 void Heuristic::set_model(Model* _model) {
   model=_model;
 }

@@ -43,6 +43,7 @@ public:
   Model* get_model();
 
   void set_coverage(Coverage* c);
+  Coverage* get_coverage();
   void set_model(Model* _model);
 
 protected:

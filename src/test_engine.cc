@@ -20,6 +20,7 @@
 #include "test_engine.hh"
 #include "log.hh"
 #include "alg_bdfs.hh"
+#include "coverage.hh"
 #include <cstdio>
 #include <algorithm>
 
@@ -383,6 +384,7 @@ void Test_engine::interactive()
 	if (strncmp(s,"ma",2)==0) {
           /* List actions in the current model */
           print_vector(current_model->getActionNames(), "", 0);
+          break;
         } else
         if (strncmp(s,"mt",2)==0) {
 	  /* List model tags */
@@ -395,7 +397,6 @@ void Test_engine::interactive()
 	  unsigned int tag_count=current_model->getprops(&tags);	  
 	  print_vectors(tags,tag_count,
 			current_model->getSPNames(),"t",0);
-	  
 	  break;
 	} else
         if (strncmp(s,"mup",3)==0) {
@@ -407,26 +408,27 @@ void Test_engine::interactive()
           }
 	  break;
 	} else
-	  if (strlen(s)==1) {
-	    /* print */
-	    std::vector<std::string>& model_names=current_model->getModelNames();
-	    for(unsigned int i=0;i<model_names.size();i++) {
-	      if (model_names[i]!=std::string("")) {
-		printf("m%i:%s\n",i,model_names[i].c_str());
-	      }
-	    }
-	    break;
-	  } else 
-	    if (num>0) {
-	      /* switch to <num> */
-	      /* down */
-	      if (!current_model->down(num)) {
-		printf("Can't go down in model tree\n");
-	      } else {
-		current_model=current_model->down(num);
-	      }
-	      break;
-	    }
+        if (strlen(s)==1) {
+          /* print */
+          std::vector<std::string>& model_names=current_model->getModelNames();
+          for(unsigned int i=0;i<model_names.size();i++) {
+            if (model_names[i]!=std::string("")) {
+              printf("m%i:%s\n",i,model_names[i].c_str());
+            }
+          }
+          break;
+        } else 
+	if (num>0) {
+          /* switch to <num> */
+          /* down */
+          if (!current_model->down(num)) {
+            printf("Can't go down in model tree\n");
+          } else {
+            current_model=current_model->down(num);
+          }
+          break;
+        }
+        goto unknown_command;
       case 't': // TODO
           printf("t <+diff>\n");
           printf("not implemented: advance Adapter::current_time");
@@ -436,19 +438,34 @@ void Test_engine::interactive()
           int num = std::atoi(s+2);
           int search_depth = 7;
           std::vector<int> path;
-          int path_len = Alg_BDFS::path_to_state_with_action(num, *current_model, path, search_depth);
-          if (path_len < 0) {
+          AlgPathToAction alg(search_depth);
+          double score = alg.search(*current_model, num, path);
+          if (score != 1.0) {
               printf("No path found to action %d within search depth %d\n", num, search_depth);
           } else {
               printf("Path to execute action %s:\n", current_model->getActionName(num).c_str());
-              for (int i = 0; i < path_len; i++)
-              {
+              for (unsigned int i = 0; i < path.size(); i++) {
                   printf("%s\n", current_model->getActionName(path[i]).c_str());
               }
           }
 	  break;
+        } else
+        if (strncmp(s,"?c",2) == 0) {
+          int num = std::atoi(s+2);
+          std::vector<int> path;
+          AlgPathToBestCoverage alg(num);
+          Coverage* coverage = heuristic.get_coverage();
+          double score = alg.search(*current_model, *coverage, path);
+          printf("Coverage %f achievable with path:\n", score);
+          for (unsigned int i = 0; i < path.size(); i++) {
+            printf("%s\n", current_model->getActionName(path[i]).c_str());
+          }
+          break;
         }
+        goto unknown_command;
+
       default:
+      unknown_command:
         printf("Execute actions:\n"
                "    s       - list executable actions at current state\n"
                "    s<num>  - exec action <num> of current state in adapter and model\n"
@@ -470,6 +487,7 @@ void Test_engine::interactive()
                "    mt     - list all state tags\n"
                "Search:\n"
                "    ?a<num>- search shortest path to execute action <num>\n"
+               "    ?c<num>- search path of length <num> for maximal coverage\n"
                "    q      - quit\n");
         printf("Unknown command \"%s\"\n",s);
       }

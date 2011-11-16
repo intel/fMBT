@@ -18,7 +18,16 @@
  */
 
 #include "heuristic_greedy.hh"
+#include "alg_bdfs.hh"
 #include <stdlib.h>
+#include <vector>
+
+Heuristic_greedy::Heuristic_greedy(Log& l, std::string params) :
+  Heuristic(l)
+{
+  m_search_depth = atoi(params.c_str());
+}
+
 
 float Heuristic_greedy::getCoverage() {
   if (my_coverage==NULL) {
@@ -30,40 +39,36 @@ float Heuristic_greedy::getCoverage() {
 int Heuristic_greedy::getAction()
 {
   int* actions;
-  int i;
-
-  i=model->getActions(&actions);
+  int i = model->getActions(&actions);
 
   if (i==0) {
-    // DEADLOCK
-    return DEADLOCK;
+    return DEADLOCK;      
   }
 
   float* f=new float[i];
-
   int pos=my_coverage->fitness(actions,i,f);
-
-  if (f[pos]==0.0) {
-    pos=(((float)random())/RAND_MAX)*i;
-  }
-
+  float score = f[pos];
   delete [] f;
 
-  log.debug("Greedy selected %i (out of %i)\n",
-	 pos,i);
+  if (score > 0.0) {
+    log.debug("Greedy selected %i (out of %i)\n",
+              pos,i);
+    return actions[pos];
+  }
 
-  return actions[pos]; // Quite bad greedy..
+  /* Fall back to random selection */
+  pos=(((float)random())/RAND_MAX)*i;
+  return actions[pos];
 }
 
 int Heuristic_greedy::getIAction()
 {
   int* actions;
-  int i;
-
-  i=model->getIActions(&actions);
+  int i = model->getIActions(&actions);
+  int pos = -1;
 
   if (i==0) {
-    // Ok.. no output actions
+    // No input actions. See if there are output actions available.
     i=model->getActions(&actions);
     if (i==0) {
       return DEADLOCK;      
@@ -71,25 +76,34 @@ int Heuristic_greedy::getIAction()
     return OUTPUT_ONLY;
   }
 
-  float* f=new float[i];
+  if (m_search_depth <= 1) {
+    /* Do a very fast lookup */
+    float* f=new float[i];
+    pos=my_coverage->fitness(actions,i,f);
+    float score = f[pos];
+    delete [] f;
 
-  int pos=my_coverage->fitness(actions,i,f);
-
-  for(int j=0;j<i;j++) {
-    log.debug("%i (%i:%s) %04f\n",j,actions[j],
-	   getActionName(actions[j]).c_str(),f[j]);
+    if (score > 0.0) {
+      log.debug("Greedy selected %i (out of %i)\n",
+                pos,i);
+      return actions[pos];
+    }
+  } else {
+    /* Spend more time for better coverage */
+    AlgPathToBestCoverage alg(m_search_depth);
+    std::vector<int> path;
+    double score = alg.search(*model, *my_coverage, path);
+    if (path.size() > 0) {
+      fprintf(stderr, "\nactions:");
+      for (unsigned int u = 0; u < path.size(); u++) fprintf(stderr, " %d ", path[u]);
+      fprintf(stderr, "\nscore: %f\n", score);
+      return path[0];
+    }
   }
 
-  if (f[pos]==0.0) {
-    pos=(((float)random())/RAND_MAX)*i;
-  }
-
-  delete [] f;
-
-  log.debug("Greedy selected %i (out of %i)\n",
-	 pos,i);
-
-  return actions[pos]; // Quite bad greedy..
+  /* Fall back to random selection */
+  pos=(((float)random())/RAND_MAX)*i;
+  return actions[pos];
 }
 
 FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "greedy");
