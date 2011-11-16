@@ -427,6 +427,10 @@ void Test_engine::interactive()
 	      }
 	      break;
 	    }
+      case 't': // TODO
+          printf("t <+diff>\n");
+          printf("not implemented: advance Adapter::current_time");
+          break;
       case '?':
         if (strncmp(s,"?a",2) == 0) {
           int num = std::atoi(s+2);
@@ -442,12 +446,8 @@ void Test_engine::interactive()
                   printf("%s\n", current_model->getActionName(path[i]).c_str());
               }
           }
+	  break;
         }
-        break;
-      case 't': // TODO
-          printf("t <+diff>\n");
-          printf("not implemented: advance Adapter::current_time");
-          break;
       default:
         printf("Execute actions:\n"
                "    s       - list executable actions at current state\n"
