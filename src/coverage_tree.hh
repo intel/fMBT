@@ -116,6 +116,7 @@ protected:
 
   int push_depth;
   std::list<std::list<std::pair<struct node*, int> > > push_restore;
+  std::list<std::map<int,struct node*> > exec_restore;
 
   struct node root_node;
   long node_count;
