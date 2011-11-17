@@ -11,7 +11,7 @@ endif
 
 LOCAL_ADAPTERS = adapter_model.cc adapter_mapper.cc adapter_dummy.cc adapter_timer.cc
 
-COMMON_SOURCES = fmbt.cc lts.cc lts_remote.cc xrules_remote.cc test_engine.cc heuristic_random.cc log.cc helper.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc coverage_market.cc coverage_mapper.cc covlang.g.d_parser.cc heuristic_greedy.cc coverage_tree.cc model.cc heuristic.cc coverage.cc adapter.cc $(LOCAL_ADAPTERS) conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc alg_bdfs.cc
+COMMON_SOURCES = fmbt.cc lts.cc lts_remote.cc lts_trace.cc xrules_remote.cc test_engine.cc heuristic_random.cc log.cc helper.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc coverage_market.cc coverage_mapper.cc covlang.g.d_parser.cc heuristic_greedy.cc coverage_tree.cc model.cc heuristic.cc coverage.cc adapter.cc $(LOCAL_ADAPTERS) conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc alg_bdfs.cc
 
 fmbt_SOURCES                  = $(COMMON_SOURCES) adapter_dlopen.cc adapter_remote.cc
 
