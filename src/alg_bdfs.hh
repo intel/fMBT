@@ -34,7 +34,7 @@ public:
     AlgBDFS(int searchDepth): m_search_depth(searchDepth) {};
     virtual ~AlgBDFS() {};
 
-    /** \brief return shortest path giving the best evaluation
+    /** \brief returns the shortest path that results in  the best evaluation
      * \param model (input parameter) search starts from model's current state
      * \param path (output parameter) the best path if one was found, otherwise empty
      * \return the evaluation value for the path
@@ -47,8 +47,10 @@ protected:
     virtual void undoExecute() = 0;
     int m_search_depth;
 private:
-    double _path_to_best_evaluation(Model& model, std::vector<int>& path, int depth);
+    double _path_to_best_evaluation(Model& model, std::vector<int>& path, int depth, double best_evaluation);
+    bool grows_first(std::vector<int>&, int, std::vector<int>&, int);
 };
+
 
 class AlgPathToBestCoverage: public AlgBDFS
 {
@@ -80,7 +82,6 @@ protected:
     Model* m_model;
     int    m_find_this_action;
 };
-
 
 
 #endif
