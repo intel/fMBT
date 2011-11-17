@@ -17,7 +17,7 @@
  *
  */
 
-/* Implementation of Bounded Depth-First-Search for models and
+/* Implementations of Bounded Depth-First-Search for models and
  * coverages with push() and pop() */
 
 #include "alg_bdfs.hh"
@@ -40,9 +40,9 @@ double AlgPathToBestCoverage::evaluate()
 void AlgPathToBestCoverage::doExecute(int action)
 {
     m_model->push();
-    m_model->execute(action);
-
     m_coverage->push();
+
+    m_model->execute(action);
     m_coverage->execute(action);
 }
 
@@ -63,7 +63,7 @@ double AlgPathToAction::evaluate()
 {
     int *actions;
     int action_count;
-    /* Is find_me in the current state? */
+    /* Is action m_find_this_action available in the current state? */
     action_count = m_model->getActions(&actions);
     for (int i = 0; i < action_count; i++)
     {
@@ -85,60 +85,100 @@ void AlgPathToAction::undoExecute()
 
 double AlgBDFS::path_to_best_evaluation(Model& model, std::vector<int>& path, int depth)
 {
-    // The real algorithm constructs the best path in the opposite
-    // direction to the path vector, this wrapper just reverses it.
-    double score = _path_to_best_evaluation(model, path, depth);
-    if (score != -1)
+    double current_score = evaluate();
+    double best_score = _path_to_best_evaluation(model, path, depth, current_score);
+
+    if (best_score > current_score) {
+        // The real algorithm constructs the best path in the opposite
+        // direction to the path vector, this wrapper reverses it.
         reverse(path.begin(), path.end());
-    return score;
+    } else {
+        path.resize(0);
+    }
+    return best_score;
 }
 
-double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, int depth)
+bool AlgBDFS::grows_first(std::vector<int>& first_path, int first_path_start,
+                          std::vector<int>& second_path, int second_path_start)
+{
+    if (first_path.size() != second_path.size()) abort();
+    
+    double path1eval;
+    double path2eval;
+
+    doExecute(first_path_start);
+    path1eval = evaluate();
+    undoExecute();
+
+    doExecute(second_path_start);
+    path2eval = evaluate();
+    undoExecute();
+
+    if (path1eval > path2eval) return true;
+    else if (path1eval < path2eval) return false;
+
+    if (first_path.size() == 0) return false;
+    else if (second_path.size() == 0) return false;
+    else
+    {
+        std::vector<int> new_first_rest = first_path;
+        std::vector<int> new_second_rest = second_path;
+        first_path_start = new_first_rest.back();
+        second_path_start = new_second_rest.back();
+        new_first_rest.pop_back();
+        new_second_rest.pop_back();
+        return grows_first(new_first_rest, first_path_start,
+                           new_second_rest, second_path_start);
+    }
+}
+
+double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, int depth,
+                                         double best_evaluation)
 {
     int *input_actions = NULL;
     int input_action_count = 0;
 
+    double current_state_evaluation = evaluate();
+
+    if (current_state_evaluation > best_evaluation)
+        best_evaluation = current_state_evaluation;
+
     /* Can we still continue the search? */
-    if (depth < 0) return evaluate();
+    if (depth <= 0)
+        return current_state_evaluation;
 
     /* If maximum evaluation has been achieved, there is no need to
      * continue. */
-    if (evaluate() == 1.0) return 1.0;
+    if (current_state_evaluation == 1.0)
+        return current_state_evaluation;
 
-    /* Recursive search for the shortest path */
+    /* Recursive search for the best path */
     input_action_count = model.getIActions(&input_actions);
     std::vector<int> action_candidates;
     for (int i = 0; i < input_action_count; i++)
         action_candidates.push_back(input_actions[i]);
     
     std::vector<int> best_path;
-    unsigned int best_path_length = depth + 1;
+    unsigned int best_path_length = 0;
     int best_action = -1;
-    double best_evaluation = -1;
     for (int i = 0; i < input_action_count; i++)
     {
         std::vector<int> a_path;
         double an_evaluation;
-        int remaining_depth;
-
-        if (best_evaluation == 1.0) {
-            /* small optimisation: if the best possible evaluation has
-             * been found, search only paths that are strictly shorter
-             * than the best path so far */
-            remaining_depth = depth < (int)best_path_length ? depth - 1 : best_path_length - 1;
-        } else {
-            remaining_depth = depth - 1;
-        }
 
         doExecute(action_candidates[i]);
 
-        an_evaluation = _path_to_best_evaluation(model, a_path, remaining_depth);
+        an_evaluation = _path_to_best_evaluation(model, a_path, depth - 1, best_evaluation);
 
         undoExecute();
 
         if (an_evaluation > best_evaluation ||
-            (an_evaluation == best_evaluation
-             && a_path.size() < best_path_length))
+            (an_evaluation == best_evaluation && 
+             (best_action == -1 ||
+              (best_action > -1 &&
+               (a_path.size() < best_path_length ||
+                (a_path.size() == best_path_length &&
+                 grows_first(a_path, action_candidates[i], best_path, best_action)))))))
         {
             best_path_length = a_path.size();
             best_path = a_path;
@@ -147,11 +187,10 @@ double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, i
         }
     }
     
-    if (best_evaluation > -1) {
+    if ((int)best_action > -1) {
         path = best_path;
         path.push_back(best_action);
         return best_evaluation;
-    } else {
-        return -1;
     }
+    return current_state_evaluation;
 }

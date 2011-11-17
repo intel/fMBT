@@ -27,9 +27,14 @@
 class Heuristic_greedy : public Heuristic {
 public:
   Heuristic_greedy(Log& l, std::string params = "");
+
+  virtual bool execute(int action);
+
   virtual float getCoverage();
   virtual int getAction();
   virtual int getIAction();
 private:
   int m_search_depth;
+  bool m_burst;
+  std::vector<int> m_path;
 };

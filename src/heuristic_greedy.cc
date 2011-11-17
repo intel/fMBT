@@ -21,11 +21,27 @@
 #include "alg_bdfs.hh"
 #include <stdlib.h>
 #include <vector>
+#include <algorithm>
 
 Heuristic_greedy::Heuristic_greedy(Log& l, std::string params) :
-  Heuristic(l)
+  Heuristic(l), m_search_depth(0), m_burst(false)
 {
   m_search_depth = atoi(params.c_str());
+  if (strchr(params.c_str(), 'b')) {
+    m_burst = true;
+  }
+}
+
+bool Heuristic_greedy::execute(int action)
+{
+  if (m_burst && m_path.size() > 0) {
+    int planned_action = m_path.back();
+    if (planned_action != action) // invalidate planned path
+      m_path.resize(0);
+    else
+      m_path.pop_back();
+  }
+  return Heuristic::execute(action);
 }
 
 
@@ -89,19 +105,25 @@ int Heuristic_greedy::getIAction()
       return actions[pos];
     }
   } else {
-    /* Spend more time for better coverage */
-    AlgPathToBestCoverage alg(m_search_depth);
-    std::vector<int> path;
-    double score = alg.search(*model, *my_coverage, path);
-    if (path.size() > 0) {
-      fprintf(stderr, "\nactions:");
-      for (unsigned int u = 0; u < path.size(); u++) fprintf(stderr, " %d ", path[u]);
-      fprintf(stderr, "\nscore: %f\n", score);
-      return path[0];
+    /* In burst mode new path is not searched before previosly found
+     * path is fully consumed */
+    if (!m_burst || m_path.size() == 0) {
+      /* Spend more time for better coverage */
+      AlgPathToBestCoverage alg(m_search_depth);
+      double score = alg.search(*model, *my_coverage, m_path);
+      if (m_path.size() > 0) {
+        reverse(m_path.begin(), m_path.end());
+        log.debug("score: %f, path length: %d", score, m_path.size());
+      }
+    }
+    if (m_path.size() > 0) {
+      return m_path.back();
     }
   }
 
-  /* Fall back to random selection */
+  /* Fall back to random selection. Input actions table might not be
+   * valid anymore (execute might have happened), ask it again. */
+  i = model->getIActions(&actions);
   pos=(((float)random())/RAND_MAX)*i;
   return actions[pos];
 }
