@@ -229,7 +229,7 @@ void Coverage_Mapper::add_file(unsigned index,
   if (cname=="") {
     models[index] = model;
   } else {
-    models[index] = Model::create(log,filetype(mname));
+    models[index] = ModelFactory::create(log,filetype(mname),"");
     if (!models[index]) {
       status=false;
       return;

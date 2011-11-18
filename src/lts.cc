@@ -19,6 +19,7 @@
 
 #include "lts.hh"
 #include "dparse.h"
+#include "factory.hh"
 #include <inttypes.h>
 
 #include "helper.hh"
@@ -227,9 +228,9 @@ void Lts::pop()
 }
 
 namespace {
-  Model* lts_creator(Log&l) {
-    return new Lts(l);
+  Model* lts_creator(Log&l, std::string params) {
+    return new Lts(l, params);
   }
-  static model_factory lts_foo("lts",lts_creator);
-  static model_factory lsts_foo("lsts",lts_creator);
+  static ModelFactory::Register lts("lts", lts_creator);
+  static ModelFactory::Register lsts("lsts", lts_creator);
 };

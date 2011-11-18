@@ -17,6 +17,7 @@
  *
  */
 #include "lts_trace.hh"
+#include "factory.hh"
 #include <glib.h>
 
 bool Lts_trace::load(std::string& name)
@@ -109,9 +110,4 @@ std::string Lts_trace::trace2model(char* str)
   return ret;
 }
 
-namespace {
-  Model* lts_trace_creator(Log&l) {
-    return new Lts_trace(l);
-  }
-  static model_factory lts_foo("lts_trace",lts_trace_creator);
-};
+FACTORY_DEFAULT_CREATOR(Model, Lts_trace, "lts_trace");

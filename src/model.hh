@@ -25,6 +25,7 @@
 #include "helper.hh"
 #include "log.hh"
 #include "writable.hh"
+#include "factory.hh"
 
 #define SILENCE      (-3)
 #define DEADLOCK     (-2)
@@ -35,11 +36,7 @@ class Writable;
 
 class Model: public Writable {
 public:
-  Model(Log&l):log(l), parent(NULL) {}
-  typedef Model*(*creator)(Log&);
-
-  static void add_factory(std::string name, creator c);
-  static Model* create(Log&,std::string name);
+  Model(Log&l, std::string params = ""):log(l), parent(NULL) {}
 
   //! Returns names of all actions available.
   std::vector<std::string>& getActionNames() {
@@ -146,8 +143,6 @@ public:
 
   void setparent(Model* m) { parent = m; }
 
-private:
-  static std::map<std::string,creator>* factory;
 protected:
   Log &log;
   std::vector<std::string> prop_names; /* proposition names.. */
@@ -158,13 +153,7 @@ protected:
   std::vector<std::string> model_names;
 };
 
-namespace {
-  class model_factory {
-  public:
-    model_factory(std::string name, Model::creator c) {
-      Model::add_factory(name,c);
-    }
-  };
-};
+FACTORY_DECLARATION(Model)
+
 #endif
 

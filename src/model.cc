@@ -19,23 +19,4 @@
 #include "model.hh"
 #include <iostream>
 
-std::map<std::string,Model::creator>* Model::factory = 0;
-
-void Model::add_factory(std::string name,creator c)
-{
-  if (!factory) factory = new std::map<std::string,Model::creator>();
-  (*factory)[name]=c;
-}
-
-Model* Model::create(Log&l,std::string name)
-{
-  if (!factory) return NULL;
-
-  creator c=(*factory)[name];
-
-  if (c) {
-    return c(l);
-  }
-
-  return NULL;
-}
+FACTORY_IMPLEMENTATION(Model)

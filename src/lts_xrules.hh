@@ -21,10 +21,11 @@
 
 #include "model.hh"
 #include <map>
+#include <string>
 
 class Lts_xrules : public Model {
 public:
-  Lts_xrules(Log&l): Model(l) {}
+  Lts_xrules(Log&l, std::string params): Model(l, params) {}
   virtual bool reset();
   virtual int  execute(int action);
 

@@ -17,6 +17,7 @@
  *
  */
 #include "lts_remote.hh"
+#include "factory.hh"
 #include <glib.h>
 
 bool Lts_remote::load(std::string& name)
@@ -47,9 +48,4 @@ bool Lts_remote::load(std::string& name)
   return ret;
 }
 
-namespace {
-  Model* lts_remote_creator(Log&l) {
-    return new Lts_remote(l);
-  }
-  static model_factory lts_foo("lts_remote",lts_remote_creator);
-};
+FACTORY_DEFAULT_CREATOR(Model, Lts_remote, "lts_remote");

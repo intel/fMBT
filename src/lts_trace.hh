@@ -20,10 +20,11 @@
 #define __lts_trace_hh__
 
 #include "lts.hh"
+#include <string>
 
 class Lts_trace: public Lts {
 public:
-  Lts_trace(Log&l): Lts(l) {}
+  Lts_trace(Log&l, std::string params): Lts(l, params) {}
   virtual bool load(std::string& name);
 protected:
   std::string trace2model(char*);

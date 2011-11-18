@@ -20,10 +20,11 @@
 #define __xrules_remote_hh__
 
 #include "lts_xrules.hh"
+#include <string>
 
 class Xrules_remote: public Lts_xrules {
 public:
-  Xrules_remote(Log&l): Lts_xrules(l) {}
+  Xrules_remote(Log&l, std::string params): Lts_xrules(l, params) {}
   virtual bool load(std::string& name);
 
 };

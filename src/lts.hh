@@ -32,7 +32,9 @@
 
 class Lts: public Model {
 public:
-  Lts(Log&l): Model(l),state_cnt(0),action_cnt(0),transition_cnt(0),prop_cnt(0),init_state(0) {}
+  Lts(Log&l, std::string params = ""):
+    Model(l, params), state_cnt(0),action_cnt(0),transition_cnt(0),prop_cnt(0),init_state(0) {}
+
   virtual int getActions(int** actions); // vireessä olevat tapahtumat
   virtual int getIActions(int** actions); // Vireessä olevat syöte tapahtumat. NULL ja 0 == DEADLOCK.
   // NULL ja 1 == OUTPUTONLY

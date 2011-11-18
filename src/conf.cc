@@ -77,7 +77,7 @@ void Conf::load(std::string& name)
   if ((heuristic=HeuristicFactory::create(log, heuristic_name, heuristic_param)) == NULL)
     RETURN_ERROR("Creating heuristic \"" + heuristic_name + "\" failed.");
 
-  if ((model=Model::create(log,filetype(model_name))) == NULL)
+  if ((model=ModelFactory::create(log,filetype(model_name),"")) == NULL)
     RETURN_ERROR("Creating model loader \"" + filetype(model_name)
                  + "\" failed.");
 

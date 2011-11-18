@@ -21,6 +21,7 @@
 #include "dparse.h"
 #include <cstring>
 #include "helper.hh"
+#include "factory.hh"
 #include <sstream>
 
 extern "C" {
@@ -123,7 +124,7 @@ void Lts_xrules::add_file(unsigned int index,std::string& filename)
   
   model_names[index]=std::string(filename);
 
-  lts[index]=Model::create(log,filetype(filename));
+  lts[index]=ModelFactory::create(log,filetype(filename),"");
   
   if (!lts[index]->load(filename)) {
     status=false;    
@@ -468,9 +469,4 @@ bool Lts_xrules::parent_active_par(struct par* par)
   return ret;
 }
 
-namespace {
-  Model* lts_xrules_creator(Log&l) {
-    return new Lts_xrules(l);
-  }
-  static model_factory lts_xrules_foo("xrules",lts_xrules_creator);
-};
+FACTORY_DEFAULT_CREATOR(Model, Lts_xrules, "xrules");

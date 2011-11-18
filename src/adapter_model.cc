@@ -24,7 +24,7 @@
 Adapter_model::Adapter_model(Log& l, std::string params) :
   Adapter::Adapter(l)
 {
-  model = Model::create(log, filetype(params));
+  model = ModelFactory::create(log, filetype(params),"");
   model->load(params);
   model->reset();
 }

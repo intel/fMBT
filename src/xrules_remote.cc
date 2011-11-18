@@ -17,6 +17,7 @@
  *
  */
 #include "xrules_remote.hh"
+#include "factory.hh"
 #include <glib.h>
 
 bool Xrules_remote::load(std::string& name)
@@ -42,9 +43,4 @@ bool Xrules_remote::load(std::string& name)
   return ret;
 }
 
-namespace {
-  Model* xrules_remote_creator(Log&l) {
-    return new Xrules_remote(l);
-  }
-  static model_factory xrules_foo("xrules_remote",xrules_remote_creator);
-};
+FACTORY_DEFAULT_CREATOR(Model, Xrules_remote, "xrules_remote");

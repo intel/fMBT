@@ -23,8 +23,7 @@
 
 class Lts_remote: public Lts {
 public:
-  Lts_remote(Log&l): Lts(l) {}
+  Lts_remote(Log&l, std::string params): Lts(l, params) {}
   virtual bool load(std::string& name);
-
 };
 #endif
