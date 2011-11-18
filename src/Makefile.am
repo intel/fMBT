@@ -1,7 +1,7 @@
 if ANDROID
 bin_PROGRAMS = fmbt_droid
 else
-bin_PROGRAMS = fmbt remote_adapter_loader
+bin_PROGRAMS = fmbt remote_adapter_loader lang
 endif
 
 if HAVE_PYTHON
@@ -17,6 +17,8 @@ fmbt_SOURCES                  = $(COMMON_SOURCES) adapter_dlopen.cc adapter_remo
 
 fmbt_droid_SOURCES            = $(COMMON_SOURCES)
 
+lang_SOURCES = lang.g.d_parser.cc lang.cc helper.cc
+
 remote_adapter_loader_SOURCES = remote_adapter_loader.cc adapter.cc log.cc adapter_dummy.cc adapter_model.cc adapter_v4l2.cc helper.cc model.cc
 
 fmbt_cparsers_la_SOURCES      = xrules.g.d_parser.cc lts.g.d_parser.cc helper.cc
@@ -25,22 +27,25 @@ noinst_HEADERS = adapter_dlopen.hh adapter_dummy.hh adapter_mapper.hh adapter_mo
 
 pkginclude_HEADERS = adapter.hh factory.hh writable.hh log.hh
 
-noinst_HEADERS += conf.g lts.g mrules.g covlang.g xrules.g
+noinst_HEADERS += conf.g lts.g mrules.g covlang.g xrules.g lang.g
 
 fmbt_CPPFLAGS                  = -Wall -g -O0 -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0`
 fmbt_droid_CPPFLAGS            = -Wall -g -O0 -I d -I `pwd` `pkg-config --cflags libedit` -DDROI
 remote_adapter_loader_CPPFLAGS = -Wall -g -I d -DDROI
 fmbt_cparsers_la_CPPFLAGS      = -Wall -g -O0 -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DCAPI
+lang_CPPFLAGS		       = -Wall -g -O0 -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0`
 
 fmbt_LDFLAGS                   = -g `pkg-config --libs glib-2.0 gobject-2.0 libedit` -lboost_regex -Wl,-E -ldl
 fmbt_droid_LDFLAGS             = -g -ledit
 fmbt_cparsers_la_LDFLAGS       = -g `pkg-config --libs glib-2.0 gobject-2.0 libedit` -lboost_regex -Wl,-E -ldl -avoid-version -module -shared -export-dynamic
 remote_adapter_loader_LDFLAGS  = -g
+lang_LDFLAGS		       = -g `pkg-config --libs glib-2.0 gobject-2.0 libedit` -lboost_regex -Wl,-E -ldl
 
 fmbt_LDADD                     = d/libdparse.a
 fmbt_droid_LDADD               = d/libdparse.a
 fmbt_cparsers_la_LIBADD        = d/libdparse.a
 remote_adapter_loader_LDADD    = d/libdparse.a
+lang_LDADD                     = d/libdparse.a
 
 dsources = d/baseline d/BUILD_VERSION d/calc d/CHANGES d/COPYRIGHT d/Makefile d/parser_tests d/README d/arg.h d/d.h d/dparse.h d/dparse_tables.h d/dparse_tree.h d/dsymtab.h d/gramgram.h d/gram.h d/lex.h d/lr.h d/mkdparse.h d/parse.h d/read_binary.h d/scan.h d/util.h d/write_tables.h d/arg.c d/dparse_tree.c d/driver_parsetree.c d/gram.c d/grammar.g.c d/lex.c d/lr.c d/make_dparser.c d/mkdparse.c d/my.c d/parse.c d/read_binary.c d/sample_parser.c d/scan.c d/symtab.c d/test_parser.c d/util.c d/version.c d/write_tables.c d/4calc.g d/C.g d/my.g d/sample.g d/faq.html d/index.html d/manual.html d/make_dparser.1 d/make_dparser.cat
 
@@ -49,6 +54,9 @@ noinst_HEADERS += $(dsources)
 d/make_dparser d/libdparse.a:
 	(mkdir d 2>/dev/null && cp -r $(VPATH)/d .) || true # qnd way to for VPATH build
 	cd d; $(MAKE) make_dparser libdparse.a
+
+lang.g.d_parser.cc: lang.g d/make_dparser
+	d/make_dparser -o lang.g.d_parser.cc -i lang ./$(VPATH)/lang.g
 
 mrules.g.d_parser.cc: mrules.g d/make_dparser
 	d/make_dparser -o mrules.g.d_parser.cc -i mrules ./$(VPATH)/mrules.g

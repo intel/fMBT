@@ -1,0 +1,27 @@
+Model {
+  name = "myModel";
+  variables {
+    int x;
+    std::string foo;
+  }
+  initial_state {
+    x = 0;
+    foo = "x";
+  }
+  
+  Action {
+    name = "myFuncCall";
+    guard() {
+      if (x==1||foo=="bar") return false;
+      return true;
+    }
+    body() {
+      x+=1;
+    }
+    adapter() {
+      int retval=myFuncCall(x);
+      assert retval==0;
+      return retval;
+    }
+  }
+}
