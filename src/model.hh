@@ -36,22 +36,16 @@ class Writable;
 
 class Model: public Writable {
 public:
-  Model(Log&l, std::string params = ""):log(l), parent(NULL) {}
+  Model(Log&l, std::string params = "");
 
   //! Returns names of all actions available.
-  std::vector<std::string>& getActionNames() {
-    return action_names;
-  }
+  std::vector<std::string>& getActionNames();
 
   //! Returns names of all available state propositions
-  std::vector<std::string>& getSPNames() {
-    return prop_names;
-  }
+  std::vector<std::string>& getSPNames();
 
   //! Returns the name of the given action
-  std::string& getActionName(int action) {
-    return action_names[action];
-  }
+  std::string& getActionName(int action);
 
   /*! 
    * Returns the number of actions executable in the current state.
@@ -80,33 +74,15 @@ public:
   virtual int getprops(int** props)     =0;
 
   //! Push the current state of the model to the stack
-  virtual void push() =0;
+  virtual void push()                   =0;
 
   //! Pop a state from the stack and set it as a current state
-  virtual void pop() =0;
+  virtual void pop()                    =0;
 
   /* Let's hope this won't be called too often with large 
    * number of outputs/inputs..
    */
-  bool is_output(int action)
-  {
-    if (outputs.size()<inputs.size()) {
-      for(size_t i=0;i<outputs.size();i++) {
-	if (outputs[i]==action) {
-	  return true;
-	}
-      }
-      return false;
-    }
-    
-    for(size_t i=0;i<inputs.size();i++) {
-      if (inputs[i]==action) {
-	return false;
-      }
-    }
-    
-    return true;
-  }
+  bool is_output(int action);
 
   /*!
    * Loads model based on the given name.
@@ -114,34 +90,15 @@ public:
    */
   virtual bool load(std::string& name)  =0;
 
+  void precalc_input_output();
 
-  void precalc_input_output()
-  {
-    for(size_t i=0;i<action_names.size();i++) {
-      if (isOutputName(action_names[i])) {
-	outputs.push_back(i);
-      }
-      
-      if (isInputName(action_names[i])) {
-	inputs.push_back(i);
-      }
-    }
-  }
+  virtual int action_number(std::string& s);
 
-  virtual int action_number(std::string& s) {
-    for(size_t i=0;i<action_names.size();i++) {
-      if (action_names[i]==s) {
-	return i;
-      }
-    }
-    return -1;
-  }
+  virtual Model* up();
+  virtual Model* down(unsigned int a);
+  virtual std::vector<std::string>& getModelNames();
 
-  virtual Model* up() { return parent; }
-  virtual Model* down(unsigned int a) { return NULL; }
-  virtual std::vector<std::string>& getModelNames() { return model_names; }
-
-  void setparent(Model* m) { parent = m; }
+  void setparent(Model* m);
 
 protected:
   Log &log;
