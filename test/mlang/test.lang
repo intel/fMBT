@@ -1,16 +1,19 @@
-Model {
-  name = "myModel";
+model myModel {
+  language: C++;
+  default action type: input;
+
   variables {
     int x;
     std::string foo;
   }
+
   initial_state {
     x = 0;
     foo = "x";
   }
   
-  Action {
-    name = "myFuncCall";
+  action {
+    name: "myFuncCall";
     guard() {
       if (x==1||foo=="bar") return false;
       return true;
@@ -20,7 +23,7 @@ Model {
     }
     adapter() {
       int retval=myFuncCall(x);
-      assert retval==0;
+      assert(retval==0);
       return retval;
     }
   }

@@ -33,27 +33,31 @@ int action=0;
 
 lang: model* ;
 
-model: 'Model' '{' mname variables istate action* '}' {
+model: 'model' namestr '{' language variables istate action* '}' {
             printf("};\n");} ;
 
-mname: { printf("class _gen_"); } name { printf(" {\npublic:\n\t"); };
+language: 'language:' 'C++' ';';
 
-name: 'name' '=' string ';' { printf("%s",$2.str->c_str()); delete $2.str; $2.str=NULL; } ;
+namestr: { printf("class _gen_"); } unquoted_string { printf("%s {\npublic:\n\t", $1.str->c_str()); };
+
+name: 'name' ':' string ';' { printf("%s",$2.str->c_str()); delete $2.str; $2.str=NULL; } ;
 
 variables: 'variables' '{' bstr '}' { printf("//variables\n%s\n",$2.str->c_str()); } ;
 
 istate: 'initial_state' '{' bstr '}' ;
 
-action: 'Action' '{' { printf("\n\t//action%i: ",action); } name { printf("\n"); } guard body adapter '}' { action++; } ;
+action: 'action' '{' { printf("\n\t//action%i: ",action); } name { printf("\n"); } guard body adapter '}' { action++; } ;
 
 guard: 'guard' '()' '{' bstr '}' { printf("bool action%i_guard() {\n%s}\n",action,$3.str->c_str()); } ;
 
 body: 'body' '()' '{' bstr '}' { printf("void action%i_body() {\n%s}\n",action,$3.str->c_str()); } ;
 
-adapter: 'adapter' '()' '{' bstr '}' { printf("int action%i_adapter {\n%s}\n",action,$3.str->c_str()); } ;
+adapter: 'adapter' '()' '{' bstr '}' { printf("int action%i_adapter() {\n%s}\n",action,$3.str->c_str()); } ;
 
 bstr: "([^{}])*" { $$.str = new std::string($n0.start_loc.s,$n0.end-$n0.start_loc.s); } |
         '{'bstr'}' { $$.str = new std::string(std::string("{")+*$1.str+std::string("}")); delete $1.str;
         } ;
 
 string: "\"([^\"\\]|\\[^])*\"" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); };
+
+unquoted_string: "([a-zA-Z]*)" { $$.str = new std::string($n0.start_loc.s,$n0.end-$n0.start_loc.s); };
