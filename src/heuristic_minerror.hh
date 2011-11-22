@@ -76,6 +76,9 @@
  *
  */
 
+#ifndef __heuristic_minerror_hh__
+#define __heuristic_minerror_hh__
+
 #include <vector>
 #include <string>
 

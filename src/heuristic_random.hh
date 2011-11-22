@@ -16,6 +16,10 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+
+#ifndef __heuristic_random_hh__
+#define __heuristic_random_hh__
+
 #include <vector>
 #include <string>
 
@@ -32,3 +36,5 @@ public:
   virtual int getAction();
   virtual int getIAction();
 };
+
+#endif

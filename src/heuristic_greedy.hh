@@ -17,6 +17,9 @@
  *
  */
 
+#ifndef __heuristic_greedy_hh__
+#define __heuristic_greedy_hh__
+
 #include <vector>
 #include <string>
 
@@ -38,3 +41,5 @@ private:
   bool m_burst;
   std::vector<int> m_path;
 };
+
+#endif
