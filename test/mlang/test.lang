@@ -1,6 +1,6 @@
 model myModel {
   language: C++;
-  default action type: input;
+//  default action type: input;
 
   variables {
     int x;
