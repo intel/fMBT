@@ -16,24 +16,29 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#ifndef __aalang_hh__
-#define __aalang_hh__
+#ifndef __aalang_cpp_hh__
+#define __aalang_cpp_hh__
 
+
+#include "aalang.hh"
 #include <string>
+#include <vector>
 
-class aalang {
+class aalang_cpp: public aalang {
 public:
-  virtual void set_name(std::string* name) = 0;
-  virtual void set_namestr(std::string* name) = 0;
-  virtual void set_variables(std::string* var) = 0;
-  virtual void set_istate(std::string* ist) = 0;
-  virtual void set_guard(std::string* gua) = 0;
-  virtual void set_body(std::string* bod) = 0;
-  virtual void set_adapter(std::string* ada) = 0;
-  virtual void next_action() = 0;
-  virtual std::string stringify() = 0;
+  virtual void set_name(std::string* name);
+  virtual void set_namestr(std::string* name);
+  virtual void set_variables(std::string* var);
+  virtual void set_istate(std::string* ist);
+  virtual void set_guard(std::string* gua);
+  virtual void set_body(std::string* bod);
+  virtual void set_adapter(std::string* ada);
+  virtual void next_action();
+  virtual std::string stringify();
 protected:
-  
+  std::vector<std::string> aname;
+  std::string s;
+  int action_cnt;
 };
 
 #endif

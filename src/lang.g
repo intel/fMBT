@@ -22,18 +22,23 @@
 #include <stdlib.h>
 #include <string>
 #include <stdio.h>
+#include "aalang.hh"
+#include "aalang_cpp.hh"
+
+aalang* obj=NULL;
 
 typedef struct _node {
   std::string* str;
 } node;
 #define D_ParseNode_User node
-std::vector<std::string> anames;
+std::vector<std::string> aname;
 int action=1;
+
 }
 
 lang: model* ;
 
-model: 'model' { anames.clear(); } namestr '{' language variables istate action* '}' {
+model: 'model' namestr '{' language variables istate action* '}' {
             printf("public:\n");
             printf("int adapter_execute(int action) {\n");
             printf("\tswitch(action) {\n");
@@ -73,23 +78,25 @@ model: 'model' { anames.clear(); } namestr '{' language variables istate action*
 
             printf("};\n");
         };
-language: 'language:' 'C++' ';';
+language: 'language:' 'C++' ';' { obj=new aalang_cpp ; } ;
 
-namestr: { printf("class _gen_"); } unquoted_string { printf("%s: public aal {\nprivate:\n\t", $1.str->c_str()); };
+namestr: unquoted_string {
+            obj->set_namestr($0.str);
+        };
 
-name: 'name' ':' string ';' { anames.push_back(*$2.str); printf("%s",$2.str->c_str()); delete $2.str; $2.str=NULL; } ;
+name: 'name' ':' string ';' { obj->set_name($2.str); };
 
-variables: 'variables' '{' bstr '}' { printf("//variables\n%s\n",$2.str->c_str()); } ;
+variables: 'variables' '{' bstr '}' { obj->set_variables($2.str); };
 
-istate: 'initial_state' '{' bstr '}' ;
+istate: 'initial_state' '{' bstr '}' { obj->set_istate($2.str); } ;
 
-action: 'action' '{' { printf("\n\t//action%i: ",action); } name { printf("\n"); } guard body adapter '}' { action++; } ;
+action: 'action' '{' name guard body adapter '}' { obj->next_action(); };
 
-guard: 'guard' '()' '{' bstr '}' { printf("bool action%i_guard() {\n%s}\n",action,$3.str->c_str()); } ;
+guard: 'guard' '()' '{' bstr '}' { obj->set_guard($3.str); };
 
-body: 'body' '()' '{' bstr '}' { printf("void action%i_body() {\n%s}\n",action,$3.str->c_str()); } ;
+body: 'body' '()' '{' bstr '}' { obj->set_body($3.str); };
 
-adapter: 'adapter' '()' '{' bstr '}' { printf("int action%i_adapter() {\n%s}\n",action,$3.str->c_str()); }|;
+adapter: 'adapter' '()' '{' bstr '}' { obj->set_adapter($3.str); }|;
 
 bstr: "([^{}])*" { $$.str = new std::string($n0.start_loc.s,$n0.end-$n0.start_loc.s); } |
         '{'bstr'}' { $$.str = new std::string(std::string("{")+*$1.str+std::string("}")); delete $1.str;
