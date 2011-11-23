@@ -81,6 +81,7 @@
 
 #include <vector>
 #include <string>
+#include <set>
 
 #include "heuristic.hh"
 #include "coverage.hh"
@@ -105,12 +106,19 @@ protected:
    * true. If the trace is stored, copy it! */
   virtual void parsed_trace(std::vector<int>& trace, bool is_error_trace);
 
-  virtual void add_not_arming_trace(std::vector<int>& trace, int trace_begin, int trace_end);
-  virtual void add_arming_trace(std::vector<int>& trace, int trace_begin, int trace_end);
+  virtual void add_not_arming_subtrace(std::vector<int>& trace, int trace_begin, int trace_end);
+  virtual void add_arming_subtrace(std::vector<int>& trace, int trace_begin, int trace_end);
+
+  virtual void suggest_new_path();
   
   int m_search_depth;
   int m_key_action;
   std::string m_logfilename;
+
+  std::vector<int> m_current_trace;
+
+  std::map<std::vector<int>, double> m_subtrace2prob;
+  std::set<std::vector<int> > m_key_action_candidates;
 };
 
 #endif
