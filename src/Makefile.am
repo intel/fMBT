@@ -21,7 +21,7 @@ fmbt_SOURCES                  = $(COMMON_SOURCES) adapter_dlopen.cc adapter_remo
 
 fmbt_droid_SOURCES            = $(COMMON_SOURCES)
 
-lang_SOURCES = lang.g.d_parser.cc lang.cc helper.cc
+lang_SOURCES = lang.g.d_parser.cc lang.cc helper.cc aalang_cpp.cc
 
 remote_adapter_loader_SOURCES = remote_adapter_loader.cc adapter.cc log.cc adapter_dummy.cc adapter_model.cc adapter_v4l2.cc helper.cc model.cc
 
