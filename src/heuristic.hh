@@ -23,28 +23,34 @@
 #include <string>
 
 #include "factory.hh"
+#include "writable.hh"
 
 class Coverage;
 class Model;
 class Log;
 
-class Heuristic {
+class Heuristic: public Writable {
 public:
   Heuristic(Log& l, std::string params = "");
 
+  /** \brief execute an action, returns true on success
+   * \param action
+   *
+   * Informs heuristics that the action that has been executed on SUT.
+   */
   virtual bool execute(int action);
-  std::vector<std::string>& getAllActions();
 
+  std::vector<std::string>& getAllActions();
   virtual float getCoverage();
   virtual int getAction()=0;
   virtual int getIAction()=0;
 
   std::string& getActionName(int action);
-  Model* get_model();
+  virtual Model* get_model();
 
-  void set_coverage(Coverage* c);
-  Coverage* get_coverage();
-  void set_model(Model* _model);
+  virtual void set_coverage(Coverage* c);
+  virtual Coverage* get_coverage();
+  virtual void set_model(Model* _model);
 
 protected:
   std::vector<Coverage*> coverage;

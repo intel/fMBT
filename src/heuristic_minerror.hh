@@ -94,6 +94,23 @@ public:
   virtual float getCoverage();
   virtual int getAction();
   virtual int getIAction();
-private:
+
+  virtual void set_model(Model* _model);
+
+protected:
+  void parse_traces(char *log_contents);
+
+  /* parsed_trace is called by parse_traces for every trace found in
+   * the input. If test was passed, errortrace == false, otherwise
+   * true. If the trace is stored, copy it! */
+  virtual void parsed_trace(std::vector<int>& trace, bool is_error_trace);
+
+  virtual void add_not_arming_trace(std::vector<int>& trace, int trace_begin, int trace_end);
+  virtual void add_arming_trace(std::vector<int>& trace, int trace_begin, int trace_end);
+  
   int m_search_depth;
+  int m_key_action;
+  std::string m_logfilename;
 };
+
+#endif
