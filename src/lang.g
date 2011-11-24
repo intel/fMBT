@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include "aalang.hh"
 #include "aalang_cpp.hh"
+#include "aalang_py.hh"
 
 aalang* obj=NULL;
 
@@ -40,7 +41,8 @@ lang: model* ;
 model: 'model' namestr '{' language { obj->set_namestr(nstr); } variables istate action* '}' {  
             printf("%s",obj->stringify().c_str());
       };
-language: 'language:' 'C++' ';' { obj=new aalang_cpp ; } ;
+language: 'language:' 'C++' ';' { obj=new aalang_cpp ; } |
+          'language:' 'python' ';' { obj=new aalang_py ; } ;
 
 namestr: unquoted_string {
             nstr=$0.str; // I'm too lazy to figure out why this can't be returned in $0
