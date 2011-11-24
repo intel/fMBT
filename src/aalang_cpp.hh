@@ -26,6 +26,7 @@
 
 class aalang_cpp: public aalang {
 public:
+  aalang_cpp(): aalang(), istate(NULL), name(NULL) {};
   virtual void set_name(std::string* name);
   virtual void set_namestr(std::string* name);
   virtual void set_variables(std::string* var);
@@ -39,6 +40,8 @@ protected:
   std::vector<std::string> aname;
   std::string s;
   int action_cnt;
+  std::string* istate;
+  std::string* name;
 };
 
 #endif
