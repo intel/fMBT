@@ -26,8 +26,8 @@
 
 class aalang_cpp: public aalang {
 public:
-  aalang_cpp(): aalang(), istate(NULL), name(NULL) {};
-  virtual void set_name(std::string* name);
+  aalang_cpp(): aalang(),action_cnt(1), istate(NULL), name(NULL) {};
+  virtual void set_name(std::string* _name);
   virtual void set_namestr(std::string* name);
   virtual void set_variables(std::string* var);
   virtual void set_istate(std::string* ist);

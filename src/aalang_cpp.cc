@@ -94,6 +94,8 @@ void aalang_cpp::next_action()
 std::string aalang_cpp::stringify()
 {
   s=s+
+    "public:\n"
+    "\t_gen_"+*name+"() {\n"+*istate+"}\n"+
     "int adapter_execute(int action) {\n"+
     "\tswitch(action) {\n";
 
