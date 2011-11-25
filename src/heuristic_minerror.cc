@@ -242,6 +242,22 @@ void Heuristic_minerror::suggest_new_path()
          cand_iter++)
     {
         debugprint("remaining candidate: "); for (unsigned int j = 0; j < (*cand_iter).size(); j++) debugprint("%d ", (*cand_iter)[j]); debugprint("\n");
+
+        int step = 1;
+        model->push();
+        for (int actnum = 0; actnum < (*cand_iter).size(); actnum++) {
+            std::vector<int> path;
+            AlgPathToAction alg(4);
+            alg.search(*model, (*cand_iter)[actnum], path);
+            debugprint("path:\n");
+            for (unsigned int i=0; i < path.size(); i++) {
+                debugprint("    %d %s\n", step++, getActionName(path[i]).c_str());
+                model->execute(path[i]);
+            }
+            debugprint("    %d %s\n", step++, getActionName( (*cand_iter)[actnum]).c_str());
+            model->execute((*cand_iter)[actnum]);
+        }
+        model->pop();
     }
 
     if (m_key_action_candidates.size() == 0) return;

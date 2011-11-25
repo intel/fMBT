@@ -74,6 +74,11 @@
  * Heuristics prefer testing potential arming traces bring most of new
  * information to not-arming subtraces.
  *
+ * If all actions in a key action candidate appear in the same
+ * non-arming subtrace in the same order, it's unlikely they are
+ * the key actions of any arming trace. At this point such candidates
+ * are dropped.
+ *
  */
 
 #ifndef __heuristic_minerror_hh__
