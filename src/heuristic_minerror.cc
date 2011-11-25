@@ -40,6 +40,7 @@ void Heuristic_minerror::set_model(Model* _model)
         g_free(_stderr);
         g_free(ger);
     }
+
 }
 
 void Heuristic_minerror::parse_traces(char* log_contents)
@@ -72,7 +73,7 @@ void Heuristic_minerror::parse_traces(char* log_contents)
                 trace.push_back(n);
             }
         }
-    }    
+    }
 }
 
 void Heuristic_minerror::parsed_trace(std::vector<int>& trace, bool is_error_trace)
@@ -87,7 +88,7 @@ void Heuristic_minerror::parsed_trace(std::vector<int>& trace, bool is_error_tra
         /* This prototype works efficiently with only one key_action,
            something to be enhanced later. */
         if (m_key_action == key_action) {
-            add_arming_trace(trace, 0, key_action_position - 1);
+            add_arming_subtrace(trace, 0, key_action_position - 1);
         } else  {
             debugprint("WARNING: different key actions: old: \"%s\", new: \"%s\"\n",
                        getActionName(m_key_action).c_str(),
@@ -98,7 +99,7 @@ void Heuristic_minerror::parsed_trace(std::vector<int>& trace, bool is_error_tra
         for (int i = 0; i < key_action_position; i++)
         {
             if (trace[i] == key_action)
-                add_not_arming_trace(trace, 0, i-1);
+                add_not_arming_subtrace(trace, 0, i-1);
         }
     }
     else if (!is_error_trace)
@@ -109,19 +110,75 @@ void Heuristic_minerror::parsed_trace(std::vector<int>& trace, bool is_error_tra
         for (unsigned int i = 0; i < trace.size(); i++)
         {
             if (trace[i] == m_key_action)
-                add_not_arming_trace(trace, 0, i-1);
+                add_not_arming_subtrace(trace, 0, i-1);
         }
     }
 }
 
-void Heuristic_minerror::add_not_arming_trace(std::vector<int>& trace, int trace_begin, int trace_end)
+void Heuristic_minerror::add_not_arming_subtrace(std::vector<int>& trace, int trace_begin, int trace_end)
 {
-    
+    for (int i = trace_end; i >= trace_begin; i--)
+    {
+        std::vector<int> subtrace;
+        std::map<std::vector<int>, double>::iterator it;
+        subtrace.assign(trace.begin() + i, trace.begin() + trace_end);
+        it = m_subtrace2prob.find(subtrace);
+
+        if (it == m_subtrace2prob.end()) {
+            m_subtrace2prob[subtrace] = 0;
+            
+            debugprint("added: 0 == "); for (unsigned int j = 0; j < subtrace.size(); j++) debugprint("%d ", subtrace[j]); debugprint("\n");
+        }
+        else
+        {
+            debugprint("subtrace already exists");
+        }
+    }
 }
 
-void Heuristic_minerror::add_arming_trace(std::vector<int>& trace, int trace_begin, int trace_end)
+void Heuristic_minerror::add_arming_subtrace(std::vector<int>& trace, int trace_begin, int trace_end)
 {
+    debugprint("arming trace: "); for (int j = 0; j <= trace_end; j++) debugprint("%d ", trace[j]); debugprint("\n");
+    const int max_key_actions = 2;
+    std::vector<int> candidate_indexes;
     
+    for (int num_of_key_actions = 1; // don't include zero-length - though it should be there!
+         num_of_key_actions <= max_key_actions; num_of_key_actions++)
+    {
+        if (trace_begin > trace_end - num_of_key_actions) break;
+
+        candidate_indexes.resize(num_of_key_actions);
+
+        for (int i = 0; i < num_of_key_actions; i++)
+            candidate_indexes[i] = trace_end - i;
+        
+        while (1) {
+            std::vector<int> candidates;
+            candidates.resize(num_of_key_actions);
+            for (unsigned int i = 0; i < candidate_indexes.size(); i++)
+                candidates[num_of_key_actions-i-1] = trace[candidate_indexes[i]];
+
+            if (m_key_action_candidates.find(candidates) == m_key_action_candidates.end())
+            {
+                m_key_action_candidates.insert(candidates);
+                debugprint("candidates: "); for (unsigned int j = 0; j < candidates.size(); j++) debugprint("%d ", candidates[j]); debugprint("\n");
+            }
+
+            // pick next candidate_indexes
+            int dec_this_index = num_of_key_actions - 1;
+            while (dec_this_index >= 0) {
+                if (candidate_indexes[dec_this_index] >= trace_begin + num_of_key_actions - 1) {
+                    candidate_indexes[dec_this_index]--;
+                    for (int i = dec_this_index + 1; i < num_of_key_actions; i++)
+                        candidate_indexes[i] = candidate_indexes[i-1] - 1;
+                    break;
+                }
+                dec_this_index --;
+            }
+            if (dec_this_index < 0 || candidate_indexes[num_of_key_actions-1] < trace_begin)
+                break;
+        }
+    }
 }
 
 
@@ -142,7 +199,75 @@ int Heuristic_minerror::getAction()
 
 int Heuristic_minerror::getIAction()
 {
+    if (m_current_trace.size() == 0)
+    {
+        suggest_new_path();
+    }
     return 1;
+}
+
+void Heuristic_minerror::suggest_new_path()
+{
+    /* clean up bad key action candidates */
+    for (std::set<std::vector<int> >::iterator cand_iter = m_key_action_candidates.begin();
+         cand_iter != m_key_action_candidates.end();
+         cand_iter++)
+    {
+        if ((*cand_iter).size() == 0) continue;
+        for (std::map<std::vector<int>, double>::iterator subtrace_iter = m_subtrace2prob.begin();
+             subtrace_iter != m_subtrace2prob.end();
+             subtrace_iter++)
+        {
+            // If all key action candidates exist in the same
+            // non-arming trace in the same order, remove they can't
+            // be key actions. (This assumption does not take into
+            // account possibility of disarming traces, so it might
+            // be removing key action candidates too eagerly.)
+            unsigned int cand_pos = 0;
+            for (unsigned int trace_pos = 0; trace_pos < subtrace_iter->first.size(); trace_pos++) {
+                if (subtrace_iter->first[trace_pos] == (*cand_iter)[cand_pos]) {
+                    cand_pos++;
+                    if (cand_pos >= (*cand_iter).size()) {
+                        m_key_action_candidates.erase(cand_iter);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // DEBUG print remaining candidates
+    for (std::set<std::vector<int> >::iterator cand_iter = m_key_action_candidates.begin();
+         cand_iter != m_key_action_candidates.end();
+         cand_iter++)
+    {
+        debugprint("remaining candidate: "); for (unsigned int j = 0; j < (*cand_iter).size(); j++) debugprint("%d ", (*cand_iter)[j]); debugprint("\n");
+
+        int step = 1;
+        model->push();
+        for (int actnum = 0; actnum < (*cand_iter).size(); actnum++) {
+            std::vector<int> path;
+            AlgPathToAction alg(4);
+            alg.search(*model, (*cand_iter)[actnum], path);
+            debugprint("path:\n");
+            for (unsigned int i=0; i < path.size(); i++) {
+                debugprint("    %d %s\n", step++, getActionName(path[i]).c_str());
+                model->execute(path[i]);
+            }
+            debugprint("    %d %s\n", step++, getActionName( (*cand_iter)[actnum]).c_str());
+            model->execute((*cand_iter)[actnum]);
+        }
+        model->pop();
+    }
+
+    if (m_key_action_candidates.size() == 0) return;
+    
+    std::vector<int> chosen = *(++m_key_action_candidates.begin());
+    
+    debugprint("chosen candidate: ");
+    for (unsigned int i=0; i < chosen.size(); i++)
+        debugprint("%s ", getActionName(chosen[i]).c_str());
+    debugprint("\n");
 }
 
 FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_minerror, "minerror")
