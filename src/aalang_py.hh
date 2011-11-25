@@ -16,17 +16,16 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#ifndef __aalang_cpp_hh__
-#define __aalang_cpp_hh__
+#ifndef __aalang_py_hh__
+#define __aalang_py_hh__
 
 
 #include "aalang.hh"
 #include <string>
 #include <vector>
 
-class aalang_cpp: public aalang {
+class aalang_py: public aalang {
 public:
-  aalang_cpp(): aalang(), istate(NULL), name(NULL) {};
   virtual void set_name(std::string* name);
   virtual void set_namestr(std::string* name);
   virtual void set_variables(std::string* var);
@@ -37,11 +36,6 @@ public:
   virtual void next_action();
   virtual std::string stringify();
 protected:
-  std::vector<std::string> aname;
-  std::string s;
-  int action_cnt;
-  std::string* istate;
-  std::string* name;
 };
 
 #endif

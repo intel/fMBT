@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include "aalang.hh"
 #include "aalang_cpp.hh"
+#include "aalang_py.hh"
 
 aalang* obj=NULL;
 
@@ -32,56 +33,19 @@ typedef struct _node {
 } node;
 #define D_ParseNode_User node
 std::vector<std::string> aname;
-int action=1;
-
+std::string* nstr=NULL;
 }
 
 lang: model* ;
 
-model: 'model' namestr '{' language variables istate action* '}' {
-            printf("public:\n");
-            printf("int adapter_execute(int action) {\n");
-            printf("\tswitch(action) {\n");
-
-            for(unsigned i=1;i<action;i++) {
-                printf("\t\tcase %i:\n",i);
-                printf("\t\treturn action%i_adapter();\n\t\tbreak;\n",i);
-            }
-            printf("\t\tdefault:\n");
-            printf("\t\treturn 0;\n");
-            printf("\t};\n") ;
-            printf("}\n") ;
-
-            printf("int model_execute(int action) {\n");            
-
-            printf("\tswitch(action) {\n");
-
-            for(unsigned i=1;i<action;i++) {
-                printf("\t\tcase %i:\n",i);
-                printf("\t\taction%i_body();\n\t\treturn %i;\n\t\tbreak;\n",i,i);
-            }
-            printf("\t\tdefault:\n");
-            printf("\t\treturn 0;\n");
-            printf("\t};\n") ;
-            printf("}\n") ;
-
-            printf("int getActions(int** act) {\n");
-            printf("\tactions.clear();\n");
-            for(unsigned i=1;i<action;i++) {
-                printf("\tif (action%i_guard()) {\n",i);
-                printf("\t\tactions.push_back(%i);\n",i);
-                printf("\t}\n");
-            }
-            printf("\t*act=&actions[0];\n");
-            printf("\treturn actions.size();\n");
-            printf("}\n");
-
-            printf("};\n");
-        };
-language: 'language:' 'C++' ';' { obj=new aalang_cpp ; } ;
+model: 'model' namestr '{' language { obj->set_namestr(nstr); } variables istate action* '}' {  
+            printf("%s",obj->stringify().c_str());
+      };
+language: 'language:' 'C++' ';' { obj=new aalang_cpp ; } |
+          'language:' 'python' ';' { obj=new aalang_py ; } ;
 
 namestr: unquoted_string {
-            obj->set_namestr($0.str);
+            nstr=$0.str; // I'm too lazy to figure out why this can't be returned in $0
         };
 
 name: 'name' ':' string ';' { obj->set_name($2.str); };

@@ -33,13 +33,14 @@ void aalang_cpp::set_name(std::string* name)
   aname.push_back(*name);
 }
 
-void aalang_cpp::set_namestr(std::string* name)
+void aalang_cpp::set_namestr(std::string* _name)
 { 
   /*
   printf("class _gen_"); 
   printf("%s: public aal {\nprivate:\n\t", 
 	 $1.str->c_str()); };
   */
+  name=_name;
   s+="class _gen_"+*name+":public aal {\nprivate:\n\t";
 }
 
@@ -49,11 +50,12 @@ void aalang_cpp::set_variables(std::string* var)
     printf("//variables\n%s\n",$2.str->c_str()); } ;
   */
   s+="//variables\n"+*var+"\n";
+  delete var;
 }
 
 void aalang_cpp::set_istate(std::string* ist)
 {
-  
+  istate=ist;
 }
 
 void aalang_cpp::set_guard(std::string* gua)
@@ -63,6 +65,7 @@ void aalang_cpp::set_guard(std::string* gua)
   */
   s+="bool action"+to_string(action_cnt)+"guard() {\n"+
     *gua+"}\n";
+  delete gua;
 }
 
 void aalang_cpp::set_body(std::string* bod)
@@ -71,6 +74,7 @@ void aalang_cpp::set_body(std::string* bod)
     printf("void action%i_body() {\n%s}\n",action,$3.str->c_str()); } ;
   */
   s+="void action"+to_string(action_cnt)+"_body() {\n"+*bod+"}\n";
+  delete bod;
 }
 
 void aalang_cpp::set_adapter(std::string* ada)
@@ -79,6 +83,7 @@ void aalang_cpp::set_adapter(std::string* ada)
   printf("int action%i_adapter() {\n%s}\n",action,$3.str->c_str()); }|;
   */
   s+="int action"+to_string(action_cnt)+"adapter() {\n"+*ada+"}\n";
+  delete ada;
 }
 
 void aalang_cpp::next_action()
@@ -88,6 +93,45 @@ void aalang_cpp::next_action()
 
 std::string aalang_cpp::stringify()
 {
+  s=s+
+    "int adapter_execute(int action) {\n"+
+    "\tswitch(action) {\n";
+
+  for(unsigned i=1;i<action_cnt;i++) {
+    s+="\t\tcase "+to_string(i)+":\n"+
+      "\t\treturn action"+to_string(i)+
+      "i_adapter();\n\t\tbreak;\n";
+  }
+  s=s+"\t\tdefault:\n"+
+    "\t\treturn 0;\n"+
+    "\t};\n"+
+    "}\n"+
+    "int model_execute(int action) {\n"+            
+    "\tswitch(action) {\n";
+
+  for(unsigned i=1;i<action_cnt;i++) {
+    s+="\t\tcase "+to_string(i)+":\n"+
+      "\t\taction"+to_string(i)+"_body(+\n\t\treturn "+
+      to_string(i)+";\n\t\tbreak;\n";
+  }
+  s=s+"\t\tdefault:\n"+
+    "\t\treturn 0;\n"+
+    "\t};\n"+
+    "}\n"+
+
+    "int getActions(int** act) {\n"+
+    "\tactions.clear();\n";
+
+  for(unsigned i=1;i<action_cnt;i++) {
+    s+="\tif (action"+to_string(i)+"_guard()) {\n"+
+      "\t\tactions.push_back("+to_string(i)+");\n"+
+      "\t}\n";
+  }
+  s=s+"\t*act=&actions[0];\n"+
+    "\treturn actions.size();\n"+
+    "}\n"+
+    "};\n";
+  
   return s;
 }
 
