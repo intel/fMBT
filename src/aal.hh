@@ -1,15 +1,16 @@
-
+#include "factory.hh"
 #include <vector>
+#include <string>
 
 class aal {
 public:
-  int adapter_execute(int action)=0;
-  int model_execute(int action)  =0;
-  int getActions(int** act)      =0;
-  std::vector<std::string>& getActionNames() {
+  virtual int adapter_execute(int action)=0;
+  virtual int model_execute(int action)  =0;
+  virtual int getActions(int** act)      =0;
+  virtual std::vector<std::string>& getActionNames() {
     return action_names;
   }
-private:
+protected:
   std::vector<int> actions;
   std::vector<std::string> action_names; /* action names.. */
-}
+};
