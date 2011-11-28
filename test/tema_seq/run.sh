@@ -25,14 +25,37 @@
 
 # Simple smoke test and example of usage.
 
+##########################################
+# Setup test environment
+
+cd "$(dirname "$0")"
+LOGFILE=/tmp/fmbt.test.tema_seq.log
+export PATH=../../src:../../utils:$PATH
+
+source ../functions.sh
+
 cp mkrmdir.conf minimizer.conf
 sed -i -r -e 's/^(heuristic.*")[^"]*(".*)/\1greedy:6b\2/g' minimizer.conf
 sed -i -r -e 's/^(coverage.*")[^"]*(".*)/\1tema_seq:org_error.tr\2/g' minimizer.conf
 
 rm -rf minimizer.log adapter.log /tmp/fmbt.mkrmdir
 
-../../utils/fmbt-log -f '$as' mkrmdir.log > org_error.tr
-../../src/fmbt -L minimizer.log minimizer.conf < /dev/null
+##########################################
+# Run the test
 
-echo "Original error trace:" $(wc -l < org_error.tr)
-echo "Resulting error trace:" $(../../utils/fmbt-log -f '$as' minimizer.log | wc -l)
+teststep "preprocessing error log..."
+fmbt-log -f '$as' mkrmdir.log > org_error.tr 2>>$LOGFILE
+testpassed
+
+teststep "searching for shorter error trace..."
+fmbt -L minimizer.log minimizer.conf < /dev/null
+ORIGLEN=$(wc -l < org_error.tr)
+NEWLEN=$(fmbt-log -f '$as' minimizer.log | wc -l)
+echo "Original error trace: $ORIGLEN"  >>$LOGFILE
+echo "Resulting error trace: $NEWLEN"  >> $LOGFILE
+if (( $NEWLEN < $ORIGLEN )); then
+    testpassed
+else
+    echo "Error: did not find shorter error trace" >> $LOGFILE
+    testfailed
+fi

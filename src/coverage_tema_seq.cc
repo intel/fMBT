@@ -38,7 +38,6 @@ extern "C" {
 
 Coverage_Tema_seq::Coverage_Tema_seq(Log &l, std::string params)
   : Coverage(l), a_trace_file_name(params), a_trace_ptr(0) {
-  std::cerr << "Reading trace from file: " << params << std::endl;
 }
 
 
@@ -119,7 +118,6 @@ Coverage_Tema_seq::set_model(Model* _model){
     for( std::ifstream trace(a_trace_file_name.c_str());
 	 std::getline(trace, cur_action) ; ) {
       int action = conversion_table.at(cur_action);
-      std::cerr << action << " " << cur_action << std::endl;
       a_trace.push_back(action);
     }
   } catch( std::out_of_range &) {
@@ -130,9 +128,6 @@ Coverage_Tema_seq::set_model(Model* _model){
     abort();
   }
   a_step_coverage = 1.0 / ( 4 * ceil(a_trace.size()/2.0) );
-  std::cerr << "Length of trace: " << a_trace.size() << " " 
-	    << a_step_coverage << std::endl;
-
 }
 
 FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Tema_seq, "tema_seq");
