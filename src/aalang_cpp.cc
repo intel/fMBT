@@ -41,6 +41,7 @@ void aalang_cpp::set_namestr(std::string* _name)
 	 $1.str->c_str()); };
   */
   name=_name;
+  s+="#include \"aal.hh\"\n\n";
   s+="class _gen_"+*name+":public aal {\nprivate:\n\t";
 }
 
@@ -63,7 +64,7 @@ void aalang_cpp::set_guard(std::string* gua)
   /*
     printf("bool action%i_guard() {\n%s}\n",action,$3.str->c_str()); } ;
   */
-  s+="bool action"+to_string(action_cnt)+"guard() {\n"+
+  s+="bool action"+to_string(action_cnt)+"_guard() {\n"+
     *gua+"}\n";
   delete gua;
 }
@@ -82,7 +83,7 @@ void aalang_cpp::set_adapter(std::string* ada)
   /*
   printf("int action%i_adapter() {\n%s}\n",action,$3.str->c_str()); }|;
   */
-  s+="int action"+to_string(action_cnt)+"adapter() {\n"+*ada+"}\n";
+  s+="int action"+to_string(action_cnt)+"_adapter() {\n"+*ada+"}\n";
   delete ada;
 }
 
@@ -94,13 +95,15 @@ void aalang_cpp::next_action()
 std::string aalang_cpp::stringify()
 {
   s=s+
+    "public:\n"
+    "\t_gen_"+*name+"() {\n"+*istate+"}\n"+
     "int adapter_execute(int action) {\n"+
     "\tswitch(action) {\n";
 
   for(unsigned i=1;i<action_cnt;i++) {
     s+="\t\tcase "+to_string(i)+":\n"+
       "\t\treturn action"+to_string(i)+
-      "i_adapter();\n\t\tbreak;\n";
+      "_adapter();\n\t\tbreak;\n";
   }
   s=s+"\t\tdefault:\n"+
     "\t\treturn 0;\n"+
@@ -111,7 +114,7 @@ std::string aalang_cpp::stringify()
 
   for(unsigned i=1;i<action_cnt;i++) {
     s+="\t\tcase "+to_string(i)+":\n"+
-      "\t\taction"+to_string(i)+"_body(+\n\t\treturn "+
+      "\t\taction"+to_string(i)+"_body();\n\t\treturn "+
       to_string(i)+";\n\t\tbreak;\n";
   }
   s=s+"\t\tdefault:\n"+
@@ -120,8 +123,8 @@ std::string aalang_cpp::stringify()
     "}\n"+
 
     "int getActions(int** act) {\n"+
-    "\tactions.clear();\n";
-
+    "actions.clear();\n";
+  
   for(unsigned i=1;i<action_cnt;i++) {
     s+="\tif (action"+to_string(i)+"_guard()) {\n"+
       "\t\tactions.push_back("+to_string(i)+");\n"+

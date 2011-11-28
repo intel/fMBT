@@ -16,32 +16,15 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#ifndef __aalang_cpp_hh__
-#define __aalang_cpp_hh__
 
+#include "awrapper.hh"
 
-#include "aalang.hh"
-#include <string>
-#include <vector>
+void Awrapper::execute(int action)
+{
+  ada->adapter_execute(action);
+}
 
-class aalang_cpp: public aalang {
-public:
-  aalang_cpp(): aalang(),action_cnt(1), istate(NULL), name(NULL) {};
-  virtual void set_name(std::string* _name);
-  virtual void set_namestr(std::string* name);
-  virtual void set_variables(std::string* var);
-  virtual void set_istate(std::string* ist);
-  virtual void set_guard(std::string* gua);
-  virtual void set_body(std::string* bod);
-  virtual void set_adapter(std::string* ada);
-  virtual void next_action();
-  virtual std::string stringify();
-protected:
-  std::vector<std::string> aname;
-  std::string s;
-  int action_cnt;
-  std::string* istate;
-  std::string* name;
-};
-
-#endif
+bool Awrapper::observe(std::vector<int> &action,
+		       bool block) {
+  return false;
+}

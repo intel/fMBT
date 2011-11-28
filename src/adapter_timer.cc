@@ -20,6 +20,7 @@
 #include <cstdio>
 #include <sstream>
 #include <time.h>
+#include <math.h>
 
 Adapter_timer::Adapter_timer(Log& l,std::string params): Adapter::Adapter(l)
 {

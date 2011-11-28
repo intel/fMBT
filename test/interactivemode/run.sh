@@ -30,6 +30,12 @@ source ../functions.sh
 
 rm -f testlog.txt
 
+teststep "check that Python pexpect can be found..."
+python -c 'import pexpect' >>$LOGFILE 2>&1 || {
+    testfailed
+}
+testpassed
+
 ##########################################
 # Run the test
 
