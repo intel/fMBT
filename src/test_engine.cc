@@ -200,11 +200,65 @@ bool Test_engine::run(float target_coverage,
   return true;
 }
 
+namespace interactive {
+  void execute(Log &log,
+               Adapter& adapter, Heuristic& heuristic, Model& model,
+               int action, Policy& policy,
+               bool skip_a, bool skip_m)
+  {
+    int adapter_response = 0;
+
+    if (skip_m)
+      printf("executing: %s\n", adapter.getActionName(action).c_str());
+    else
+      printf("executing: %s\n", heuristic.getActionName(action).c_str());
+
+    if (skip_a) {
+      printf(  "adapter:   [skipped]\n");
+      adapter_response = action;
+    } else if (model.up() != NULL) {
+      printf(  "adapter:   [skipped] (submodel exec)\n");
+      adapter_response = action;
+    } else {
+      std::vector<int> actions_v;
+      actions_v.resize(1);
+      actions_v[0] = action;
+      log_adapter_suggest(log, adapter, actions_v[0]);
+      adapter.execute(actions_v);
+      log_adapter_execute(log, adapter, adapter_response);
+      if (actions_v.size()==0) {
+        printf("adapter:   [communication failure]\n");
+      } else {
+        if (skip_m) adapter_response = actions_v[0];
+        else adapter_response = policy.choose(actions_v);
+        printf("adapter:   %s\n", heuristic.getActionName(adapter_response).c_str());
+      }
+    }
+
+    if (skip_m)
+      printf(                    "model:     [skipped]\n");
+    else if (adapter.up() != NULL)
+      printf(                    "model:     [skipped] (subadapter exec)\n");
+    else {
+      bool model_response;
+      if (model.up()) model_response = model.execute(adapter_response);
+      else model_response = heuristic.execute(adapter_response);
+      if (model_response) printf("model:     ok\n");
+      else printf(               "model:     failed\n");
+    }
+
+    log_status(log, -1, heuristic.getCoverage());
+  }
+}
+
 void Test_engine::interactive()
 {
   int action=0;
   std::vector<int> actions_v;
   bool run=true;
+
+  bool skip_adapter_execute   = false;
+  bool skip_model_execute     = true;
 
   Adapter* current_adapter=&adapter;
   Model* current_model=heuristic.get_model();
@@ -224,66 +278,27 @@ void Test_engine::interactive()
       unsigned int num = 0;
 
       switch (*s) {
-      case 's': { // commands "s", "s<num>", "sm<num>": execute action at current state
+      case 's': { // commands "s", "s<num>": execute action at current state
         int* actions = 0;
         unsigned int action_count=current_model->getActions(&actions);
-        bool tell_adapter = true;
-        if (*(s+1)=='m') {
-          num=std::atoi(s+2);
-          tell_adapter = false;
-        }
-        else num=std::atoi(s+1);
+        num=std::atoi(s+1);
         if (num>0 && num<=action_count) {
           // sm<num> command: execute the nth action at the current
           // state of the model. Always use the top-level adapter.
-          int adapter_response = 0;
-          printf("executing: %s\n", heuristic.getActionName(actions[num-1]).c_str());
-          if (tell_adapter && current_adapter==&adapter) {
-	    actions_v.resize(1);
-	    actions_v[0]=actions[num-1];
-            log_adapter_suggest(log, adapter, actions_v[0]);
-	    adapter.execute(actions_v);
-	    adapter_response = policy.choose(actions_v);
-            log_adapter_execute(log, adapter, adapter_response);
-            printf("adapter:   %s\n", heuristic.getActionName(adapter_response).c_str());
-          } else {
-            printf("adapter:   [skipped]\n");
-            adapter_response = actions[num-1];
-          }
-	  bool model_response;
-	  if (current_model->up()) {
-	    model_response = current_model->execute(adapter_response);
-	  } else {
-	    model_response = heuristic.execute(adapter_response);
-	  }
-          printf("model:     ");
-          if (model_response) {
-            printf("ok\n");
-            // state might have changed, update available actions
-            action_count=current_model->getActions(&actions);
-          }
-          else printf("failed\n");
+          interactive::execute(log, adapter, heuristic, *current_model,
+                               actions[num-1], policy,
+                               skip_adapter_execute, skip_model_execute);
+          // state might have changed, update available actions
+          action_count=current_model->getActions(&actions);
         }
-        log_status(log, -1, 0.0);
         // print actions available at current state
 	print_vectors(actions,action_count,
 		      current_model->getActionNames(),"s",1);
-	/*
-        for(unsigned int i=0;i<action_count;i++) {
-          // printf("s%i:%s\n",i+1,names[actions[i]].c_str());
-          printf("s%i:%s\n",i+1,current_model->getActionName(actions[i]).c_str());
-        }
-	*/
       }
         break;
         
-      case 'e': { // commands "e", "e<num>", "em<num>": execute any action at current adapter
-        bool tell_adapter = true;
-        if (*(s+1)=='m') {
-          num=std::atoi(s+2);
-          tell_adapter = false;
-        }
-        else num=std::atoi(s+1);
+      case 'e': { // commands "e", "e<num>": execute any action at current adapter
+        num=std::atoi(s+1);
         std::vector<std::string>& ca_anames=current_adapter->getAllActions();
         std::vector<std::string> sca_anames=ca_anames; /* copy for sorted actions */
         sort(sca_anames.begin(), sca_anames.end());
@@ -291,55 +306,29 @@ void Test_engine::interactive()
           unsigned action_num=0;
           for (action_num=1; action_num<sca_anames.size(); action_num++)
             if (ca_anames[action_num]==sca_anames[num]) break;
-          printf("executing: %s\n", ca_anames[action_num].c_str());
-          if (tell_adapter) {
-	    actions_v.resize(1);
-	    actions_v[0]=action_num;
-            log_adapter_suggest(log, *current_adapter, actions_v[0]);
-	    current_adapter->execute(actions_v);
-            if (actions_v.size()==0) {
-              printf("adapter:   [communication failure]\n");
-            } else {
-              // skipping model => cannot ask policy which actions to choose
-              int adapter_response = actions_v[0];
-              log_adapter_execute(log, *current_adapter, adapter_response);
-              printf("adapter:   %s\n", ca_anames[adapter_response].c_str());
-              printf("model:     [skipped]\n");
-            }
-          } else {
-            printf("adapter:   [skipped]\n");
-            if (current_adapter->up()==NULL) {
-              if (heuristic.execute(action_num)) printf("model:     ok\n");
-              else printf("model:     failed\n");
-            } else printf("model:     not updated (not topmost adapter)\n");
-          }
-          log_status(log, -1, 0.0);
+          
+          interactive::execute(log, *current_adapter, heuristic, *current_model,
+                               action_num, policy,
+                               skip_adapter_execute, skip_model_execute);
+          
         }
-        if (strnlen(s,2)==1) {
+        else {
           for(unsigned i=1;i<sca_anames.size();i++){
             printf("e%i:%s\n",i,sca_anames[i].c_str());
           }
         }
       }
         break;
-
+        
       case 'i': { // starts an input action name?
         std::vector<std::string>& ca_anames=current_adapter->getAllActions();
         unsigned int action_num;
         for (action_num=1;action_num<ca_anames.size();action_num++) {
           if (ca_anames[action_num]==std::string(s)) {
-            // action found in adapter, execute it!
-            printf("executing: %s\n", ca_anames[action_num].c_str());
-	    actions_v.resize(1);
-	    actions_v[0]=action_num;
-            log_adapter_suggest(log, *current_adapter, actions_v[0]);
-	    current_adapter->execute(actions_v);
-            // skipping model => do not ask policy which actions to choose
-            int adapter_response = actions_v[0];
-            log_adapter_execute(log, *current_adapter, adapter_response);
-            printf("adapter:   %s\n", ca_anames[adapter_response].c_str());
-            printf("model:     [skipped]\n");
-            log_status(log, -1, 0.0);
+
+            interactive::execute(log, *current_adapter, heuristic, *current_model,
+                                 action_num, policy,
+                                 skip_adapter_execute, skip_model_execute);
             break;
           }
         }
@@ -429,10 +418,31 @@ void Test_engine::interactive()
           break;
         }
         goto unknown_command;
+      case 'o':
+        if (strncmp(s,"oea",3) == 0) {
+          if (strnlen(s,4) == 4) {
+            if (!atoi(s+3)) skip_adapter_execute = true;
+            else skip_adapter_execute = false;
+          }
+          printf("execute action in adapter: ");
+          if (skip_adapter_execute) printf("no\n");
+          else printf("yes\n");
+        }
+        else if (strncmp(s,"oem",3) == 0) {
+          if (strnlen(s,4) == 4) {
+            if (!atoi(s+3)) skip_model_execute = true;
+            else skip_model_execute = false;
+          }
+          printf("execute action in model: ");
+          if (skip_model_execute) printf("no\n");
+          else printf("yes\n");
+        }
+        else goto unknown_command;
+        break;
       case 't': // TODO
-          printf("t <+diff>\n");
-          printf("not implemented: advance Adapter::current_time");
-          break;
+        printf("t <+diff>\n");
+        printf("not implemented: advance Adapter::current_time");
+        break;
       case '?':
         if (strncmp(s,"?a",2) == 0) {
           int num = std::atoi(s+2);
@@ -468,12 +478,10 @@ void Test_engine::interactive()
       unknown_command:
         printf("Execute actions:\n"
                "    s       - list executable actions at current state\n"
-               "    s<num>  - exec action <num> of current state in adapter and model\n"
-               "    sm<num> - exec action <num> of current state in model (skip adapter)\n"
+               "    s<num>  - exec action <num> of current state\n"
                "    e       - list executable actions at current adapter\n"
-               "    e<num>  - exec action <num> of current adapter in adapter (skip model)\n"
-               "    em<num> - exec action <num> of current adapter in model (skip adapter)\n"
-               "    <iname> - exec input action iname (starts with \"i\", skip model)\n"
+               "    e<num>  - exec action <num> of current adapter\n"
+               "    <iname> - exec input action iname (starts with \"i\")\n"
                "Change adapters/models:\n"
                "    a      - list low-level adapters of current adapter\n"
                "    a<num> - move down to adapter <num>\n"
@@ -485,6 +493,9 @@ void Test_engine::interactive()
                "    ma     - list all actions\n"
                "    mc     - list tags at current state\n"
                "    mt     - list all state tags\n"
+               "Options:\n"
+               "    oea[0|1]- get/set executing action in adapter\n"
+               "    oem[0|1]- get/set executing action in model\n"
                "Search:\n"
                "    ?a<num>- search shortest path to execute action <num>\n"
                "    ?c<num>- search path of length <num> for maximal coverage\n"

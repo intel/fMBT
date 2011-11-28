@@ -24,14 +24,14 @@ import signal
 FMBT_BINARY = '../../src/fmbt'
 
 # Fmbt instances started during tests write their log to FMBT_LOGFILE
-FMBT_LOGFILE = '/tmp/fmbt.log'
+FMBT_LOGFILE = '/tmp/fmbt.test.interactivemode.subfmbt.log'
 
 # If an assertion fails, compared value is most often saved to the
 # debug file
-TEST_DEBUGFILE ='/tmp/fmbt.debug'
+TEST_DEBUGFILE ='/tmp/fmbt.test.interactivemode.debug'
 
 # Writes from started fmbt instances are redirected to FMBT_STDERRFILE
-FMBT_STDERRFILE = '/tmp/fmbt.stderr'
+FMBT_STDERRFILE = '/tmp/fmbt.test.interactivemode.subfmbt.stderr'
 
 PROMPT = 'fMBT> '
 
@@ -40,7 +40,7 @@ ui_response_time = lambda: time.sleep(0.1)
 all_actions = []
 
 def _debug(x):
-    file(TEST_DEBUGFILE,'w').write(str(x) + '\n')
+    file(TEST_DEBUGFILE,'a').write(str(x) + '\n\n')
     return x
 
 def _output2list(ttyoutput):
@@ -51,7 +51,7 @@ def _run_command(cmd, delay_before_output = ui_response_time):
     fmbt.write(cmd + '\n')
     delay_before_output()
     output = fmbt_output()[1:]
-    _debug(output)
+    _debug("command: '%s'\nresult:%s\n" % (cmd, output))
     return output
 
 # Fmbt-i.mrules expects functions corresponding to actions to return
@@ -142,7 +142,7 @@ def _validateExecOutput(output, executedAction, adapterResult, modelResult, next
                        "model:     " + modelResult]
     expected_output.extend(nextActions)
     expected_output.append(PROMPT)
-    _debug(str(output) + '\n==\n' + str(expected_output))
+    _debug('observed: ' + str(output) + '\nrequired: ' + str(expected_output))
     assert output == expected_output, "Validating exec result failed."
 
 def iListActionsAtState():
@@ -154,17 +154,23 @@ def iListActionsAtAdapter():
     return output[0].startswith('e1:')
 
 def iExecuteInitAtState():
+    _run_command('oea1')
+    _run_command('oem1')
     output = _run_command(_find_action_cmd('s', 'init'))
     _validateExecOutput(output, "init", "init", "ok", ["s1:iReadAllActionsInAdapter"])
     return True
 
 def iExecuteInitAtStateExecModel():
-    output = _run_command('sm' + _find_action_cmd('s', 'init')[1:])
+    _run_command('oea0')
+    _run_command('oem1')
+    output = _run_command('s' + _find_action_cmd('s', 'init')[1:])
     _validateExecOutput(output, "init", "[skipped]", "ok", ["s1:iReadAllActionsInAdapter"])
     return True
 
 def iExecuteReadAllAtState():
-    output = _run_command('sm' + _find_action_cmd('s', 'iReadAllActionsInAdapter')[1:])
+    _run_command('oea0')
+    _run_command('oem1')
+    output = _run_command('s' + _find_action_cmd('s', 'iReadAllActionsInAdapter')[1:])
     _validateExecOutput(output, "iReadAllActionsInAdapter", "[skipped]", "ok", 
                         ["s1:iStartGoodFmbt"])
     return True
@@ -173,16 +179,22 @@ def iExecuteReadAllAtState():
 # Execute actions at top-level adapter
 
 def iExecuteInitAtAdapter():
+    _run_command('oea1')
+    _run_command('oem0')
     output = _run_command(_find_action_cmd('e', 'init'))
     _validateExecOutput(output, "init", "init", "[skipped]")
     return True
 
 def iExecuteInitAtAdapterByName():
+    _run_command('oea1')
+    _run_command('oem0')
     output = _run_command('init')
     _validateExecOutput(output, "init", "init", "[skipped]")
     return True
 
 def iExecuteInitAtAdapterExecModel():
-    output = _run_command('em' + _find_action_cmd('e', 'init')[1:])
+    _run_command('oea0')
+    _run_command('oem1')
+    output = _run_command('e' + _find_action_cmd('e', 'init')[1:])
     _validateExecOutput(output, "init", "[skipped]", "ok")
     return True
