@@ -95,11 +95,11 @@ testpassed
 teststep "repeat the error trace (without minimising)..."
 cp mkrmdir.log minimal.log
 source log.6 > errortrace.txt
-if  [ $(grep adapter errortrace.txt | tail -n1) != "adapter:" ]; then
+if  ! ( grep adapter errortrace.txt | tail -n1 | grep NONE >> $LOGFILE 2>&1 ); then
     echo "adapter should not have responded on last step" >> $LOGFILE
     testfailed
 fi
-if ! grep adapter errortrace.txt | tail -n2 | head -n1 | grep -q 'File exists'; then
+if ! ( grep adapter errortrace.txt | tail -n2 | head -n1 | grep -q 'File exists') ; then
     echo "expected last executed action to be mkdir existing dir" >> $LOGFILE
     testfailed
 fi
