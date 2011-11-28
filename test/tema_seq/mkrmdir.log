@@ -1,0 +1,87 @@
+<fmbt_log>
+<conf_load>
+</conf_load>
+<conf_execute>
+    <test_engine>
+        <suggested_action type="input" name="iCatch%28%27from%20os%20import%20mkdir%2C%20rmdir%27%29%20%3D%3D%20None">
+        <action type="input" name="iCatch%28%27from%20os%20import%20mkdir%2C%20rmdir%27%29%20%3D%3D%20None">
+        <adapter_executed>
+        </adapter_executed>
+        <status steps="1" coverage="0.022222"/>
+        <remote msg="1322252222.85%20Reporting%20%20%20%201%3A%20%27iCatch%28%27from%20os%20import%20mkdir%2C%20rmdir%27%29%20%3D%3D%20None%27%0A">
+        <suggested_action type="input" name="iCatch%28%27dname%3D%5C%27%2Ftmp%2Ffmbt.mkrmdir%5C%27%27%29">
+        <action type="input" name="iCatch%28%27dname%3D%5C%27%2Ftmp%2Ffmbt.mkrmdir%5C%27%27%29">
+        <adapter_executed>
+        </adapter_executed>
+        <status steps="2" coverage="0.044444"/>
+        <remote msg="1322252222.85%20Reporting%20%20%20%202%3A%20%27iCatch%28%27dname%3D%5C%27%2Ftmp%2Ffmbt.mkrmdir%5C%27%27%29%27%0A">
+        <suggested_action type="input" name="iCatch%28%27mkdir%28dname%29%27%29%20%3D%3D%20None">
+        <action type="input" name="iCatch%28%27mkdir%28dname%29%27%29%20%3D%3D%20None">
+        <adapter_executed>
+        </adapter_executed>
+        <status steps="3" coverage="0.066667"/>
+        <remote msg="1322252222.85%20Reporting%20%20%20%203%3A%20%27iCatch%28%27mkdir%28dname%29%27%29%20%3D%3D%20None%27%0A">
+        <suggested_action type="input" name="iCatch%28%27mkdir%28dname%29%27%29%20%3D%3D%20Error%28%27.%2AFile%20exists.%2A%27%29">
+        <action type="input" name="iCatch%28%27mkdir%28dname%29%27%29%20%3D%3D%20Error%28%27.%2AFile%20exists.%2A%27%29">
+        <adapter_executed>
+        </adapter_executed>
+        <status steps="4" coverage="0.088889"/>
+        <remote msg="1322252222.85%20Reporting%20%20%20%204%3A%20%27iCatch%28%27mkdir%28dname%29%27%29%20%3D%3D%20Error%28%27.%2AFile%20exists.%2A%27%29%27%0A">
+        <suggested_action type="input" name="iCatch%28%27rmdir%28dname%29%27%29%20%3D%3D%20None">
+        <action type="input" name="iCatch%28%27rmdir%28dname%29%27%29%20%3D%3D%20None">
+        <adapter_executed>
+        </adapter_executed>
+        <status steps="5" coverage="0.111111"/>
+        <remote msg="1322252222.85%20Reporting%20%20%20%205%3A%20%27iCatch%28%27rmdir%28dname%29%27%29%20%3D%3D%20None%27%0A">
+        <suggested_action type="input" name="iCatch%28%27rmdir%28dname%29%27%29%20%3D%3D%20Error%28%27.%2ANo%20such%20file.%2A%27%29">
+        <action type="input" name="iCatch%28%27rmdir%28dname%29%27%29%20%3D%3D%20Error%28%27.%2ANo%20such%20file.%2A%27%29">
+        <adapter_executed>
+        </adapter_executed>
+        <status steps="6" coverage="0.133333"/>
+        <remote msg="1322252222.85%20Reporting%20%20%20%208%3A%20%27iCatch%28%27rmdir%28dname%29%27%29%20%3D%3D%20Error%28%27.%2ANo%20such%20file.%2A%27%29%27%0A">
+        <suggested_action type="input" name="iCatch%28%27mkdir%28dname%29%27%29%20%3D%3D%20None">
+        <action type="input" name="iCatch%28%27mkdir%28dname%29%27%29%20%3D%3D%20None">
+        <adapter_executed>
+        </adapter_executed>
+        <status steps="7" coverage="0.144444"/>
+        <remote msg="1322252222.85%20Reporting%20%20%20%203%3A%20%27iCatch%28%27mkdir%28dname%29%27%29%20%3D%3D%20None%27%0A">
+        <suggested_action type="input" name="iCatch%28%27mkdir%28dname%2B%5C%27%2Fd%5C%27%29%27%29%20%3D%3D%20None">
+        <action type="input" name="iCatch%28%27mkdir%28dname%2B%5C%27%2Fd%5C%27%29%27%29%20%3D%3D%20None">
+        <adapter_executed>
+        </adapter_executed>
+        <status steps="8" coverage="0.166667"/>
+        <remote msg="1322252222.85%20Reporting%20%20%20%206%3A%20%27iCatch%28%27mkdir%28dname%2B%5C%27%2Fd%5C%27%29%27%29%20%3D%3D%20None%27%0A">
+        <suggested_action type="input" name="iCatch%28%27mkdir%28dname%2B%5C%27%2Fd%5C%27%29%27%29%20%3D%3D%20Error%28%27.%2AFile%20exists.%2A%27%29">
+        <action type="input" name="iCatch%28%27mkdir%28dname%2B%5C%27%2Fd%5C%27%29%27%29%20%3D%3D%20Error%28%27.%2AFile%20exists.%2A%27%29">
+        <adapter_executed>
+        </adapter_executed>
+        <status steps="9" coverage="0.188889"/>
+        <remote msg="1322252222.86%20Reporting%20%20%20%207%3A%20%27iCatch%28%27mkdir%28dname%2B%5C%27%2Fd%5C%27%29%27%29%20%3D%3D%20Error%28%27.%2AFile%20exists.%2A%27%29%27%0A">
+        <suggested_action type="input" name="iCatch%28%27mkdir%28dname%29%27%29%20%3D%3D%20Error%28%27.%2AFile%20exists.%2A%27%29">
+        <action type="input" name="iCatch%28%27mkdir%28dname%29%27%29%20%3D%3D%20Error%28%27.%2AFile%20exists.%2A%27%29">
+        <adapter_executed>
+        </adapter_executed>
+        <status steps="10" coverage="0.200000"/>
+        <remote msg="1322252222.86%20Reporting%20%20%20%204%3A%20%27iCatch%28%27mkdir%28dname%29%27%29%20%3D%3D%20Error%28%27.%2AFile%20exists.%2A%27%29%27%0A">
+        <suggested_action type="input" name="iCatch%28%27mkdir%28dname%29%27%29%20%3D%3D%20Error%28%27.%2AFile%20exists.%2A%27%29">
+        <action type="input" name="iCatch%28%27mkdir%28dname%29%27%29%20%3D%3D%20Error%28%27.%2AFile%20exists.%2A%27%29">
+        <adapter_executed>
+        </adapter_executed>
+        <status steps="11" coverage="0.211111"/>
+        <remote msg="1322252222.86%20Reporting%20%20%20%204%3A%20%27iCatch%28%27mkdir%28dname%29%27%29%20%3D%3D%20Error%28%27.%2AFile%20exists.%2A%27%29%27%0A">
+        <suggested_action type="input" name="iCatch%28%27mkdir%28dname%2B%5C%27%2Fd%5C%27%29%27%29%20%3D%3D%20None">
+        <action type="input" name="iCatch%28%27mkdir%28dname%2B%5C%27%2Fd%5C%27%29%27%29%20%3D%3D%20Error%28%27.%2AFile%20exists.%2A%27%29">
+        <adapter_executed>
+        </adapter_executed>
+        <status steps="12" coverage="0.222222"/>
+        <remote msg="1322252222.86%20Reporting%20%20%20%207%3A%20%27iCatch%28%27mkdir%28dname%2B%5C%27%2Fd%5C%27%29%27%29%20%3D%3D%20Error%28%27.%2AFile%20exists.%2A%27%29%27%0A">
+        <suggested_action type="input" name="iCatch%28%27rmdir%28dname%29%27%29%20%3D%3D%20None">
+        <action type="input" name="">
+        <adapter_executed>
+        </adapter_executed>
+Action 5, name "iCatch('rmdir(dname)') == None", msg "broken input acceptance"
+        <stop verdict="fail" reason="unexpected input">
+    </test_engine>
+    <remote msg="1322252222.87%20Cannot%20report%20execution%3A%20action%20%27iCatch%28%27rmdir%28dname%29%27%29%20%3D%3D%20Error%28%27%27%27OSError%3A%20%5BErrno%2039%5D%20Directory%20not%20empty%3A%20%5C%27%2Ftmp%2Ffmbt.mkrmdir%5C%27%27%27%27%29%27%20not%20found.%0A">
+</conf_execute>
+</fmbt_log>
