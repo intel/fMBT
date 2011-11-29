@@ -13,7 +13,7 @@ LOCAL_ADAPTERS = adapter.cc awrapper.cc adapter_model.cc adapter_mapper.cc adapt
 
 LOCAL_HEURISTICS =  heuristic.cc heuristic_random.cc heuristic_mrandom.cc heuristic_minerror.cc heuristic_greedy.cc
 
-LOCAL_COVERAGES = coverage.cc coverage_market.cc coverage_mapper.cc coverage_tree.cc
+LOCAL_COVERAGES = coverage.cc coverage_market.cc coverage_mapper.cc coverage_tree.cc coverage_tema_seq.cc
 
 COMMON_SOURCES = fmbt.cc mwrapper.cc lts.cc lts_remote.cc lts_trace.cc xrules_remote.cc test_engine.cc log.cc helper.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc covlang.g.d_parser.cc model.cc $(LOCAL_ADAPTERS) $(LOCAL_HEURISTICS) $(LOCAL_COVERAGES) conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc alg_bdfs.cc
 
@@ -27,7 +27,7 @@ remote_adapter_loader_SOURCES = remote_adapter_loader.cc adapter.cc log.cc adapt
 
 fmbt_cparsers_la_SOURCES      = xrules.g.d_parser.cc lts.g.d_parser.cc helper.cc
 
-noinst_HEADERS = adapter_dlopen.hh adapter_dummy.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_v4l2.hh adapter_xrules.hh conf.hh coverage.hh coverage_mapper.hh coverage_market.hh coverage_tree.hh helper.hh heuristic_greedy.hh heuristic.hh heuristic_minerror.hh heuristic_random.hh log_null.hh lts.hh lts_remote.hh lts_xrules.hh xrules_remote.hh model.hh policy.hh rules.hh test_engine.hh alg_bdfs.hh
+noinst_HEADERS = adapter_dlopen.hh adapter_dummy.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_v4l2.hh adapter_xrules.hh conf.hh coverage.hh coverage_mapper.hh coverage_market.hh coverage_tree.hh coverage_tema_seq.hh helper.hh heuristic_greedy.hh heuristic.hh heuristic_minerror.hh heuristic_random.hh log_null.hh lts.hh lts_remote.hh lts_xrules.hh xrules_remote.hh model.hh policy.hh rules.hh test_engine.hh alg_bdfs.hh
 
 pkginclude_HEADERS = adapter.hh factory.hh writable.hh log.hh
 

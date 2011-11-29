@@ -1,0 +1,38 @@
+Begin Lsts
+
+Begin History
+End History
+
+Begin Header
+ State_cnt = 5
+ Action_cnt = 8
+ Transition_cnt = 10
+ State_prop_cnt = 2
+ Initial_states = 1;
+End Header
+
+Begin Action_names
+ 1 = "iCatch('from os import mkdir, rmdir') == None"
+ 2 = "iCatch('dname=\'/tmp/fmbt.mkrmdir\'')"
+ 3 = "iCatch('mkdir(dname)') == None"
+ 4 = "iCatch('mkdir(dname)') == Error('.*File exists.*')"
+ 5 = "iCatch('rmdir(dname)') == None"
+ 6 = "iCatch('mkdir(dname+\'/d\')') == None"
+ 7 = "iCatch('mkdir(dname+\'/d\')') == Error('.*File exists.*')"
+ 8 = "iCatch('rmdir(dname)') == Error('.*No such file.*')"
+End Action_names
+
+Begin State_props
+  "directory" : 4;
+  "no directory" : 5;
+End State_props
+
+Begin Transitions
+ 1: 2,1;
+ 2: 3,2;
+ 3: 4,3 4,4;
+ 4: 4,4 5,5 4,6 4,7;
+ 5: 4,3 5,8;
+End Transitions
+
+End Lsts
