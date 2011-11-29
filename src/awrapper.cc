@@ -19,9 +19,10 @@
 
 #include "awrapper.hh"
 
-void Awrapper::execute(int action)
+void Awrapper::execute(std::vector<int>& action)
 {
-  ada->adapter_execute(action);
+  action[0]=ada->adapter_execute(action[0]);
+  action.resize(1);
 }
 
 bool Awrapper::observe(std::vector<int> &action,

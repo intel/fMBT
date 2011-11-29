@@ -32,7 +32,7 @@ public:
   Awrapper(Log&l, std::string params, aal* _ada):
     Adapter(l, params), ada(_ada)  {}
 
-  virtual void execute(int action);
+  virtual void execute(std::vector<int>& action);
   virtual bool observe(std::vector<int> &action,bool block=false);
 protected:
   aal* ada;
