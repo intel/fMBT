@@ -45,3 +45,7 @@ std::string replace(boost::regex& expression,
 void print_vectors(int* v,unsigned size,std::vector<std::string>& s,const char* prefix,int add);
 void print_vector(std::vector<std::string>& s,const char* prefix,int add);
 std::string to_string (const int t);
+void strvec(std::vector<std::string> & v,std::string& s,
+	    std::string& separator);
+
+char* unescape_string(char* msg);

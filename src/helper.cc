@@ -17,6 +17,7 @@
  *
  */
 #include <string>
+#include <vector>
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
@@ -285,4 +286,18 @@ std::string to_string (const int t)
   std::stringstream ss;
   ss << t;
   return ss.str();
+}
+
+void strvec(std::vector<std::string>& v,std::string& s,
+	    std::string& separator)
+{
+  unsigned long cutpos;
+
+  while ((cutpos=s.find_first_of(separator))!=s.npos) {
+    std::string a=s.substr(0,cutpos);
+    v.push_back(a);
+    s=s.substr(cutpos+1);
+  }
+
+  v.push_back(s);
 }
