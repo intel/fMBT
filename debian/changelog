@@ -1,3 +1,12 @@
+fmbt (0.1-rc5) maverick; urgency=low
+
+  * Added The Lang
+  * Automagic error trace shortener
+  * Weighted random heuristic mapper
+  * A lot of fixes
+
+ -- Pablo Virolainen <pablo.virolainen@intel.com>  Tue, 29 Nov 2011 15:58:25 +0200
+
 fmbt (0.1-rc4) maverick; urgency=low
 
   * A lot of fixes
