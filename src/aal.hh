@@ -36,4 +36,9 @@ protected:
   std::vector<std::string> action_names; /* action names.. */
 };
 
+#include "model.hh"
+#include "adapter.hh"
+#include "awrapper.hh"
+#include "mwrapper.hh"
+
 #endif

@@ -36,9 +36,8 @@ extern Conf* conf_obj;
 void Conf::split(std::string& val,std::string& name,
 			std::string& param)
 {
-  
-   unsigned long cutpos = val.find_first_of(":");
-  
+  unsigned long cutpos = val.find_first_of(":");
+
   if (cutpos == val.npos) {
     name  = val;
     param = std::string("");

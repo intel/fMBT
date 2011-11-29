@@ -134,7 +134,33 @@ std::string aalang_cpp::stringify()
     "\treturn actions.size();\n"+
     "}\n"+
     "};\n";
+
+  factory_register();
   
   return s;
 }
+
+void aalang_cpp::factory_register()
+{
+  s=s+"  /* factory register */\n\n"
+    "namespace {\n"
+    "static aal* a=NULL;\n\n"
+    "Model* mcreator(Log&l, std::string params) {\n"
+    "\tif (!a) {\n"
+    "\t  a=new _gen_"+*name+"();\n"
+    "\t}\n"
+    "\treturn new Mwrapper(l,params,a);\n"
+    "}\n\n"
+    "static ModelFactory::Register me1(\""+*name+"\", mcreator);\n\n"
+    "Adapter* creator_func(Log&l, std::string params = \"\")\n"
+    "{\n"
+    "\tif (!a) {\n"
+    "\t  a=new _gen_"+*name+"();\n"
+    "\t}\n"
+    "\treturn new Awrapper(l,params,a);\n"
+    "}\n"
+    "static AdapterFactory::Register me2(\""+*name+"\", creator_func);\n"+
+    "};\n";
+  
+};
 
