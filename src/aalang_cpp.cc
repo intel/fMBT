@@ -96,7 +96,13 @@ std::string aalang_cpp::stringify()
 {
   s=s+
     "public:\n"
-    "\t_gen_"+*name+"() {\n"+*istate+"}\n"
+    "\t_gen_"+*name+"() {\n\taction_names.push_back(\"\");\n";
+
+  for(unsigned i=0;i<aname.size();i++) {
+    s+="\taction_names.push_back(\""+aname[i]+"\");\n";
+  }
+  
+  s+=*istate+"}\n"
     "virtual int adapter_execute(int action) {\n"
     "\tswitch(action) {\n";
 
