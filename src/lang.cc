@@ -31,19 +31,30 @@ void print_usage()
     "Usage: lang [options] inputfile\n"
     "Options:\n"
     "    -h     print usage\n"
+    "    -o     output to a file (defaults to stdout)\n"
     );
 }
 
+extern std::string result;
+
 int main(int argc,char** argv) {
   int c;
+  FILE* outputfile=stdout;
   static struct option long_opts[] = {
     {"help", no_argument, 0, 'h'},
     {0, 0, 0, 0}
   };
 
-  while ((c = getopt_long (argc, argv, "h", long_opts, NULL)) != -1) {
+  while ((c = getopt_long (argc, argv, "ho:", long_opts, NULL)) != -1) {
     switch (c)
       {
+      case 'o':
+	outputfile=fopen(optarg,"w");
+	if (!outputfile) {
+	  std::printf("Can't open output file \"%s\"\n",optarg);
+	  return 1;
+	}
+	break;
       case 'h':
 	print_usage();
 	return 0;
@@ -59,8 +70,11 @@ int main(int argc,char** argv) {
 
   char *s;
   D_Parser *p = new_D_Parser(&parser_tables_lang, 512);
+
   s=readfile(argv[optind]);
   dparse(p,s,std::strlen(s));
+
+  fprintf(outputfile,"%s",result.c_str());
 
   free_D_Parser(p);
   free(s);

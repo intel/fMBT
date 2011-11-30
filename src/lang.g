@@ -26,6 +26,7 @@
 #include "aalang_cpp.hh"
 #include "aalang_py.hh"
 
+std::string result("");
 aalang* obj=NULL;
 
 typedef struct _node {
@@ -38,8 +39,8 @@ std::string* nstr=NULL;
 
 lang: model* ;
 
-model: 'model' namestr '{' language { obj->set_namestr(nstr); } variables istate action* '}' {  
-            printf("%s",obj->stringify().c_str());
+model: 'model' namestr '{' language { obj->set_namestr(nstr); } variables istate action* '}' {
+            result+=obj->stringify();
       };
 
 language: 'language:' 'C++' ';' { obj=new aalang_cpp ; } |
