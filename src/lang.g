@@ -41,8 +41,11 @@ lang: model* ;
 model: 'model' namestr '{' language { obj->set_namestr(nstr); } variables istate action* '}' {  
             printf("%s",obj->stringify().c_str());
       };
+
 language: 'language:' 'C++' ';' { obj=new aalang_cpp ; } |
-          'language:' 'python' ';' { obj=new aalang_py ; } ;
+          'language:' python ';' { obj=new aalang_py ; } ;
+
+python: 'python' | 'py';
 
 namestr: unquoted_string {
             nstr=$0.str; // I'm too lazy to figure out why this can't be returned in $0
@@ -50,9 +53,9 @@ namestr: unquoted_string {
 
 name: 'name' ':' string ';' { obj->set_name($2.str); };
 
-variables: 'variables' '{' bstr '}' { obj->set_variables($2.str); };
+variables: 'variables' '{' bstr '}' { obj->set_variables($2.str); } |;
 
-istate: 'initial_state' '{' bstr '}' { obj->set_istate($2.str); } ;
+istate: 'initial_state' '{' bstr '}' { obj->set_istate($2.str); } | ;
 
 action: 'action' '{' name guard body adapter '}' { obj->next_action(); };
 
@@ -62,7 +65,12 @@ body: 'body' '()' '{' bstr '}' { obj->set_body($3.str); };
 
 adapter: 'adapter' '()' '{' bstr '}' { obj->set_adapter($3.str); }|;
 
-bstr: "([^{}])*" { $$.str = new std::string($n0.start_loc.s,$n0.end-$n0.start_loc.s); } |
+bstr: "([^{}])*" {
+            /*$$.str = new std::string($n0.start_loc.s,$n0.end-$n0.start_loc.s); */
+            char* start=d_ws_before(NULL,& $n0);
+            char* end=d_ws_after(NULL,& $n0);
+            $$.str = new std::string(start,end-start);
+        } |
         '{'bstr'}' { $$.str = new std::string(std::string("{")+*$1.str+std::string("}")); delete $1.str;
         } ;
 

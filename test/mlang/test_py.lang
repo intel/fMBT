@@ -1,0 +1,17 @@
+model myModel {
+  language: py;
+//  default action type: input;
+
+  action {
+    name: "myFuncCall";
+    guard() {
+      return true
+    }
+    body() {
+      pass
+    }
+    adapter() {
+      return 1
+    }
+  }
+}
