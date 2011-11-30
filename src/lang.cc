@@ -59,7 +59,6 @@ int main(int argc,char** argv) {
 
   char *s;
   D_Parser *p = new_D_Parser(&parser_tables_lang, 512);
-  //std::string name(argv[1]);
   s=readfile(argv[optind]);
   dparse(p,s,std::strlen(s));
 

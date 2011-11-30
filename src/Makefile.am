@@ -11,7 +11,7 @@ endif
 
 LOCAL_ADAPTERS = adapter.cc awrapper.cc adapter_model.cc adapter_mapper.cc adapter_dummy.cc adapter_timer.cc
 
-LOCAL_HEURISTICS =  heuristic.cc heuristic_random.cc heuristic_minerror.cc heuristic_greedy.cc
+LOCAL_HEURISTICS =  heuristic.cc heuristic_random.cc heuristic_mrandom.cc heuristic_minerror.cc heuristic_greedy.cc
 
 LOCAL_COVERAGES = coverage.cc coverage_market.cc coverage_mapper.cc coverage_tree.cc coverage_tema_seq.cc
 

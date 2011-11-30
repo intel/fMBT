@@ -16,29 +16,29 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#ifndef __aal_hh__
-#define __aal_hh__
 
-#include "factory.hh"
+#ifndef __heuristic_mrandom_hh__
+#define __heuristic_mrandom_hh__
+
 #include <vector>
 #include <string>
 
-class aal {
-public:
-  virtual int adapter_execute(int action)=0;
-  virtual int model_execute(int action)  =0;
-  virtual int getActions(int** act)      =0;
-  virtual std::vector<std::string>& getActionNames() {
-    return action_names;
-  }
-protected:
-  std::vector<int> actions;
-  std::vector<std::string> action_names; /* action names.. */
-};
+#include "heuristic.hh"
+#include "coverage.hh"
+#include "lts.hh"
+#include <stdlib.h>
+#include <time.h>
 
-#include "model.hh"
-#include "adapter.hh"
-#include "awrapper.hh"
-#include "mwrapper.hh"
+class Heuristic_mrandom : public Heuristic {
+public:
+  Heuristic_mrandom(Log& l, std::string params);
+  virtual float getCoverage();
+  virtual int getAction();
+  virtual int getIAction();
+  virtual void set_model(Model* _model);
+  virtual void set_coverage(Coverage* c);
+protected:
+  std::vector<std::pair<float,Heuristic*> > h;
+};
 
 #endif

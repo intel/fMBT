@@ -36,6 +36,10 @@ public:
   virtual void set_adapter(std::string* ada);
   virtual void next_action();
   virtual std::string stringify();
+
+private:
+  void factory_register();
+
 protected:
   std::vector<std::string> aname;
   std::string s;

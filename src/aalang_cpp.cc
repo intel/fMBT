@@ -96,45 +96,70 @@ std::string aalang_cpp::stringify()
 {
   s=s+
     "public:\n"
-    "\t_gen_"+*name+"() {\n"+*istate+"}\n"+
-    "int adapter_execute(int action) {\n"+
+    "\t_gen_"+*name+"() {\n"+*istate+"}\n"
+    "virtual int adapter_execute(int action) {\n"
     "\tswitch(action) {\n";
 
-  for(unsigned i=1;i<action_cnt;i++) {
-    s+="\t\tcase "+to_string(i)+":\n"+
+  for(int i=1;i<action_cnt;i++) {
+    s+="\t\tcase "+to_string(i)+":\n"
       "\t\treturn action"+to_string(i)+
       "_adapter();\n\t\tbreak;\n";
   }
-  s=s+"\t\tdefault:\n"+
-    "\t\treturn 0;\n"+
-    "\t};\n"+
-    "}\n"+
-    "int model_execute(int action) {\n"+            
+  s=s+"\t\tdefault:\n"
+    "\t\treturn 0;\n"
+    "\t};\n"
+    "}\n"
+    "virtual int model_execute(int action) {\n"
     "\tswitch(action) {\n";
 
-  for(unsigned i=1;i<action_cnt;i++) {
-    s+="\t\tcase "+to_string(i)+":\n"+
+  for(int i=1;i<action_cnt;i++) {
+    s+="\t\tcase "+to_string(i)+":\n"
       "\t\taction"+to_string(i)+"_body();\n\t\treturn "+
       to_string(i)+";\n\t\tbreak;\n";
   }
-  s=s+"\t\tdefault:\n"+
-    "\t\treturn 0;\n"+
-    "\t};\n"+
-    "}\n"+
-
-    "int getActions(int** act) {\n"+
+  s=s+"\t\tdefault:\n"
+    "\t\treturn 0;\n"
+    "\t};\n"
+    "}\n"
+    "virtual int getActions(int** act) {\n"
     "actions.clear();\n";
   
-  for(unsigned i=1;i<action_cnt;i++) {
-    s+="\tif (action"+to_string(i)+"_guard()) {\n"+
-      "\t\tactions.push_back("+to_string(i)+");\n"+
+  for(int i=1;i<action_cnt;i++) {
+    s+="\tif (action"+to_string(i)+"_guard()) {\n"
+      "\t\tactions.push_back("+to_string(i)+");\n"
       "\t}\n";
   }
-  s=s+"\t*act=&actions[0];\n"+
-    "\treturn actions.size();\n"+
-    "}\n"+
+  s=s+"\t*act=&actions[0];\n"
+    "\treturn actions.size();\n"
+    "}\n"
     "};\n";
+
+  factory_register();
   
   return s;
 }
+
+void aalang_cpp::factory_register()
+{
+  s=s+"  /* factory register */\n\n"
+    "namespace {\n"
+    "static aal* a=NULL;\n\n"
+    "Model* mcreator(Log&l, std::string params) {\n"
+    "\tif (!a) {\n"
+    "\t  a=new _gen_"+*name+"();\n"
+    "\t}\n"
+    "\treturn new Mwrapper(l,params,a);\n"
+    "}\n\n"
+    "static ModelFactory::Register me1(\""+*name+"\", mcreator);\n\n"
+    "Adapter* creator_func(Log&l, std::string params = \"\")\n"
+    "{\n"
+    "\tif (!a) {\n"
+    "\t  a=new _gen_"+*name+"();\n"
+    "\t}\n"
+    "\treturn new Awrapper(l,params,a);\n"
+    "}\n"
+    "static AdapterFactory::Register me2(\""+*name+"\", creator_func);\n"+
+    "};\n";
+  
+};
 
