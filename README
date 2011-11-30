@@ -2,11 +2,12 @@ Building & installing
 ---------------------
 
 Quick start for Debian (Ubuntu) users:
-    (sudo) apt-get install build-essential libglib2.0-dev libboost-regex-dev libedit-dev python-pexpect python-dbus gawk
+    (sudo) apt-get install build-essential libglib2.0-dev libboost-regex-dev libedit-dev python-pexpect python-dbus gawk libtool autoconf automake 
 
 Quick start for Fedora users:
-    yum install  glibc-devel glib2-devel boost-devel libedit-devel gcc-c++ pexpect dbus-python
+    yum install  glibc-devel glib2-devel boost-devel libedit-devel gcc-c++ pexpect dbus-python libtool autoconf automake
 
+./autogen.sh
 ./configure
 make
 make install
@@ -23,16 +24,6 @@ doc/tutorial.txt - hands on with fMBT using a tiny example
 
 doc/overview.txt - technical introduction on how fmbt works
                    in a real-life example
-
-
-Working on git source tree
---------------------------
-
-Install autoconf and automake. Then build:
-
-./autogen.sh
-./configure
-make
 
 
 Testing
