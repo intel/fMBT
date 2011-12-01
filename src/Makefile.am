@@ -13,7 +13,7 @@ LOCAL_ADAPTERS = adapter.cc awrapper.cc adapter_model.cc adapter_mapper.cc adapt
 
 LOCAL_HEURISTICS =  heuristic.cc heuristic_random.cc heuristic_mrandom.cc heuristic_minerror.cc heuristic_greedy.cc
 
-LOCAL_COVERAGES = coverage.cc coverage_market.cc coverage_mapper.cc coverage_tree.cc coverage_tema_seq.cc
+LOCAL_COVERAGES = coverage.cc coverage_market.cc coverage_mapper.cc coverage_tree.cc coverage_tema_seq.cc coverage_prop.cc
 
 COMMON_SOURCES = fmbt.cc mwrapper.cc lts.cc lts_remote.cc lts_trace.cc xrules_remote.cc test_engine.cc log.cc helper.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc covlang.g.d_parser.cc model.cc $(LOCAL_ADAPTERS) $(LOCAL_HEURISTICS) $(LOCAL_COVERAGES) conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc alg_bdfs.cc
 
