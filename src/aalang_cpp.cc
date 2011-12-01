@@ -103,6 +103,9 @@ std::string aalang_cpp::stringify()
   }
   
   s+=*istate+"}\n"
+    "virtual bool reset() {\n"+
+    *istate +
+    "return true;\n}\n\n"
     "virtual int adapter_execute(int action) {\n"
     "\tswitch(action) {\n";
 

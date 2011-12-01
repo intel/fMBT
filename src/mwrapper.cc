@@ -28,8 +28,7 @@ int Mwrapper::getIActions(int** actions) {
 }
 
 bool Mwrapper::reset() {
-  /* doesn't work... */
-  return true;
+  return model->reset();
 }
 
 /* No props */

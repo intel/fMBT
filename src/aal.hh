@@ -28,6 +28,9 @@ public:
   virtual int adapter_execute(int action)=0;
   virtual int model_execute(int action)  =0;
   virtual int getActions(int** act)      =0;
+  virtual bool reset() {
+    return true;
+  }
   virtual std::vector<std::string>& getActionNames() {
     return action_names;
   }
