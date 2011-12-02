@@ -36,7 +36,6 @@ class Mwrapper: public Model {
 public:
   Mwrapper(Log&l, std::string params, aal* _model):
     Model(l, params), model(_model)  {
-    printf("Model action names size %i\n",model->getActionNames().size());
     action_names=model->getActionNames();
   }
 
