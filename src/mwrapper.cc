@@ -54,7 +54,7 @@ void Mwrapper::pop() {
 
 bool Mwrapper::load(std::string& name)
 {
-  return false;
+  return true;
 }
 
 std::string Mwrapper::stringify()
