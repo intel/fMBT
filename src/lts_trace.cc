@@ -17,8 +17,11 @@
  *
  */
 #include "lts_trace.hh"
+#include "helper.hh"
 #include "factory.hh"
 #include <glib.h>
+#include <string.h>
+#include <stdlib.h>
 
 bool Lts_trace::load(std::string& name)
 {

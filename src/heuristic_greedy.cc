@@ -20,6 +20,7 @@
 #include "heuristic_greedy.hh"
 #include "alg_bdfs.hh"
 #include <stdlib.h>
+#include <string.h>
 #include <vector>
 #include <algorithm>
 

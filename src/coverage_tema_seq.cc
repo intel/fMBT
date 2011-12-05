@@ -26,6 +26,7 @@
 
 #include "coverage_tema_seq.hh"
 #include "model.hh"
+#include "helper.hh"
 
 #include <iostream>
 #include <fstream>

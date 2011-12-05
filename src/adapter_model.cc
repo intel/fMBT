@@ -17,6 +17,7 @@
  *
  */
 #include "adapter_model.hh"
+#include "helper.hh"
 #include <cstdio>
 #include <sstream>
 #include <cstdlib>

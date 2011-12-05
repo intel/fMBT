@@ -17,6 +17,7 @@
  *
  */
 #include "adapter_timer.hh"
+#include "helper.hh"
 #include <cstdio>
 #include <sstream>
 #include <time.h>

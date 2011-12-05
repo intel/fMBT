@@ -17,6 +17,8 @@
  *
  */
 #include "model.hh"
+
+#include "helper.hh"
 #include <iostream>
 
 FACTORY_IMPLEMENTATION(Model)

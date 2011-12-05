@@ -21,6 +21,7 @@
 #include "rules.hh"
 #include "coverage_mapper.hh"
 #include "conf.hh"
+#include "helper.hh"
 
 #include <sstream>
 #include <iostream>

@@ -21,6 +21,7 @@
 #include "log.hh"
 #include "alg_bdfs.hh"
 #include "coverage.hh"
+#include "helper.hh"
 #include <cstdio>
 #include <algorithm>
 

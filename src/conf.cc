@@ -18,6 +18,7 @@
  */
 #include "conf.hh"
 #include "dparse.h"
+#include "helper.hh"
 #include <cstring>
 
 extern "C" {

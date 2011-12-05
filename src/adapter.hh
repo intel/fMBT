@@ -23,7 +23,6 @@
 #include <string>
 #include <map>
 #include "writable.hh"
-#include "helper.hh"
 #include "factory.hh"
 #include "log.hh"
 #include <sys/time.h>

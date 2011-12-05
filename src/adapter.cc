@@ -18,6 +18,7 @@
  */
 
 #include "adapter.hh"
+#include "helper.hh"
 #include <cstdio>
 #include "log.hh"
 

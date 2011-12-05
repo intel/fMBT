@@ -20,6 +20,7 @@
 #define __lts_hh__
 
 #include <vector>
+#include <list>
 #include <string>
 #include <fstream>
 

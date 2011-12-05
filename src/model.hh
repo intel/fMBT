@@ -22,7 +22,6 @@
 #include <vector>
 #include <string>
 #include <map>
-#include "helper.hh"
 #include "log.hh"
 #include "writable.hh"
 #include "factory.hh"
