@@ -20,6 +20,8 @@
 #include "dparse.h"
 #include "helper.hh"
 #include <getopt.h>
+#include <glib.h>
+#include <errno.h>
 
 extern "C" {
 extern D_ParserTables parser_tables_lang;
@@ -32,24 +34,36 @@ void print_usage()
     "Options:\n"
     "    -h     print usage\n"
     "    -o     output to a file (defaults to stdout)\n"
+    "    -c     compile (needs to have output file)\n"
     );
 }
 
 extern std::string result;
 
+std::string compile_command("g++ -fPIC -shared -x c++  - -I /usr/include/fmbt -o ");
+
 int main(int argc,char** argv) {
   int c;
+  bool lib=false;
   FILE* outputfile=stdout;
   static struct option long_opts[] = {
     {"help", no_argument, 0, 'h'},
     {0, 0, 0, 0}
   };
 
-  while ((c = getopt_long (argc, argv, "ho:", long_opts, NULL)) != -1) {
+  while ((c = getopt_long (argc, argv, "b:hco:", long_opts, NULL)) != -1) {
     switch (c)
       {
+      case 'b':
+	compile_command=optarg;
+	compile_command+=" ";
+	break;
+      case 'c':
+	lib=true;
+	break;
       case 'o':
 	outputfile=fopen(optarg,"w");
+	compile_command=compile_command+optarg;
 	if (!outputfile) {
 	  std::printf("Can't open output file \"%s\"\n",optarg);
 	  return 1;
@@ -63,7 +77,7 @@ int main(int argc,char** argv) {
       }
   }
 
-  if (optind == argc) {
+  if (optind == argc || outputfile==stdout) {
     print_usage();
     return -1;
   }
@@ -73,8 +87,27 @@ int main(int argc,char** argv) {
 
   s=readfile(argv[optind]);
   dparse(p,s,std::strlen(s));
+  if (lib) {
+    int _stdin; //,_stdout,_stder;
+    GPid pid;
+    int argc;
+    gchar **argv=(gchar**)malloc(42*sizeof(gchar*));
+    GError *gerr=NULL;
+    
+    g_shell_parse_argv(compile_command.c_str(),
+		       &argc,&argv,&gerr);
 
-  fprintf(outputfile,"%s",result.c_str());
+    g_spawn_async_with_pipes(NULL,argv,NULL,G_SPAWN_SEARCH_PATH,NULL,&pid,NULL,&_stdin,NULL,NULL,&gerr);
+
+    int pos=0;
+    int wrote=0;
+    do {
+      wrote=TEMP_FAILURE_RETRY(write(_stdin,result.c_str()+pos,result.length()-pos));
+      pos+=wrote;
+    } while (wrote>0 && pos<result.length());
+  } else {
+    fprintf(outputfile,"%s",result.c_str());
+  }
 
   free_D_Parser(p);
   free(s);
