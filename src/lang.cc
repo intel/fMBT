@@ -77,7 +77,7 @@ int main(int argc,char** argv) {
       }
   }
 
-  if (optind == argc || outputfile==stdout) {
+  if (optind == argc || (lib && outputfile==stdout)) {
     print_usage();
     return -1;
   }
