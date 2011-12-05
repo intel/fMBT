@@ -1,0 +1,58 @@
+model myModel {
+  language: C++;
+//  default action type: input;
+
+  variables {
+    int x;
+    std::string foo;
+  }
+
+  initial_state {
+    x = 0;
+    foo = "x";
+  }
+  
+  action {
+    name: "mkdir(dname)";
+    guard() {
+      return true;
+    }
+
+    body() {
+    }
+
+    adapter() {
+      if (mkdir("/tmp/fmbt.mkrmdir",0777)!=0)
+      	 return find(action_names,"mkdir(dname) exists");
+      return find(action_names,"mkdir(dname)");
+    }
+  }
+
+  action {
+    name: "mkdir(dname) exists";
+    guard() {
+      return true;
+    }
+    body() {
+    }
+    adapter() {
+      if (mkdir("/tmp/fmbt.mkrmdir",0777)!=0)
+            return find(action_names,"mkdir(dname) exists");
+      return find(action_names,"mkdir(dname)");
+    }
+  }
+
+  action {
+    name: "rmdir(dname)";
+    guard() {
+      return true;
+    }
+    body() {
+    }
+    adapter() {
+      if (rmdir("/tmp/fmbt.mkrmdir",0777)!=0)
+      	 return find(action_names,"rmdir(dname) no");
+    return find(action_names,"rmdir(dname)");
+    }
+  }
+}
