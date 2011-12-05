@@ -29,12 +29,16 @@
 
 class Awrapper: public Adapter {
 public:
-  Awrapper(Log&l, std::string params, aal* _ada):
-    Adapter(l, params), ada(_ada)  {}
+  Awrapper(Log&l, std::string params, aal* _ada);
+
+  virtual void set_actions(std::vector<std::string>* _actions);
 
   virtual void execute(std::vector<int>& action);
-  virtual bool observe(std::vector<int> &action,bool block=false);
+  virtual bool observe(std::vector<int> &action,bool block=false
+);
 protected:
+  std::map<int,int> ada2aal;
+  std::map<int,int> aal2ada;
   aal* ada;
 };
 
