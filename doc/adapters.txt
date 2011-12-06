@@ -98,12 +98,12 @@ Adapter stack may contain the following building blocks.
   for communication between adapter_remote and the remote adapter. For
   example, a test configuration file can contain specification:
   
-    adapter="remote:ssh root@testhost /usr/local/bin/remote_python"
+    adapter = "remote:ssh root@testhost /usr/local/bin/remote_python"
 
 - adapter_mapper is a local adapter that forwards actions between the
-  model (or a higher level adapter) and a number of local adapters. It
-  takes a configuration file as a parameter. The file defines two
-  things. First, it lists lower level adapters and their
+  model (or a higher level adapter) and any number of local
+  adapters. It takes a configuration file as a parameter. The file
+  defines two things. First, it lists lower level adapters and their
   parameters. Second, it defines a mapping between actions in the
   model (or a higher level adapter) to actions in the lower level
   adapters. The mapping allows renaming of actions, too, making the
@@ -121,9 +121,20 @@ Adapter stack may contain the following building blocks.
   running on localhost. Obviously adapter_mapper makes the adapter
   stack actually a tree.
 
-- remote_adapter_loader is a remote adapter that is capable of loading
-  and acting as any local adapter. It takes two command line
-  arguments: the name of the local adapter and parameters for it.
+- adapter_dlopen is a local adapter that loads a shared library
+  containing local adapters and instantiates an adapter from
+  there. For instance, test configuration
+
+  adapter = "dlopen:myadapters.so,mylocal:xyz"
+
+  loads myadapters.so and uses "mylocal" adapter with parameters "xyz"
+  as a top level adapter.
+
+- remote_adapter_loader runs local adapters as remote adapters. With
+  the mapper adapter this enables using several local adapters on
+  several hosts in the same test run. remote_adapter_loader takes two
+  command line arguments: the name of the local adapter and parameters
+  for it.
 
 
 remote_python - a generic adapter
@@ -136,9 +147,13 @@ naming of actions, and possibly with a test-specific library.
 remote_python is a generic remote adapter implemented in Python. The
 adapter executes actions as expressions in Python interpreter. For
 example, action "iCatch('import mylib') == None" imports mylib and
-requires that importing did not raise any exceptions. After that
-execution of the later actions can use whatever objects mylib makes
-available. For an example, see test/interactivemode/fmbt_i.py.
+requires that importing did not raise any exceptions. Later actions
+can use whatever objects mylib makes available. For an example,
+test/interactivemode/fmbt_i.py is a library imported to the
+interactive mode test. Execution of almost any action in the model
+(see test/interactivemode/create-model.sh) causes calling the function
+of the same name in fmbt_i library, because of the translation done in
+fmbt-i.mrules.
 
 The rules for executing actions and reporting the results are the
 following:
@@ -334,9 +349,9 @@ EOF
 
 The FACTORY_DEFAULT_CREATOR macro registers MyLocalAdapter to Adapter
 factory with a default creator function. The default creator
-instantiates adapter class when "mylocal" adapter is needed in test
+instantiates adapter class if "mylocal" adapter is needed in any
 configuration file. The constructor will be passed a log object and
-configuration parameters, that is, xyz in configuration line
+configuration parameters, that is, xyz in configuration
 adapter="mylocal:xyz".
 
 For completeness of this example, here is an implementation for MySUT.
@@ -398,5 +413,7 @@ adapter      = "mylocal:xyz"
 engine.cov   = 1.0
 engine.count = -1
 EOF
+
+and finally run the test to verify that it works:
 
 $ fmbt -Lstatic.log static-test.conf
