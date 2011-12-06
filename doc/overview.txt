@@ -14,8 +14,8 @@ This document is targeted for everyone who uses the fMBT tool. Once
 you understanding the big picture and essential bits below the
 surface, you will feel more comfortable start using the tool: run
 tests, debug errors, modify and create new test configurations, design
-test models (see models.rst) and extend or implement new adapters (see
-adapters.rst).
+test models (see models.txt) and extend or implement new adapters (see
+adapters.txt).
 
 As a running example we will be using an fMBT test for Connman
 [1]. Example test setup contains
@@ -176,14 +176,14 @@ states"). Another name for them is a "labelled state transition
 system", or LSTS for short. They define names for actions and the
 order in which they can be executed.
 
-LSTSs can be generated, for instance, with a graph transition tool
-(gt) from the TEMA toolkit[1]. Example 5 defines an LSTS and stores it
-to enable-wifi.lsts file.
+LSTSs can be generated, for instance, with the fmbt-gt (graph
+transformation) tool. Example 5 defines an LSTS and stores it to
+enable-wifi.lsts file.
 
 Example 5: A model component that tests enabling/disabling wifi
 technology:
 
-utils/gt new enable-wifi.lsts 'P(s0,p) ->
+fmbt-gt -o enable-wifi.lsts 'P(s0,p) ->
     T(s0,        "iWifiTechUnavailable",      s0)
     T(s0,        "iWifiTechAvailable",        wifi)
 
@@ -367,6 +367,3 @@ References
 
 [pexpect]  The pexpect Python library.
 	   http://pexpect.sourceforge.net/pexpect.html
-
-[TEMA]     TEMA tools
-	   http://tema.cs.tut.fi/
