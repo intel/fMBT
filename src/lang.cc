@@ -99,8 +99,8 @@ int main(int argc,char** argv) {
 
     g_spawn_async_with_pipes(NULL,argv,NULL,G_SPAWN_SEARCH_PATH,NULL,&pid,NULL,&_stdin,NULL,NULL,&gerr);
 
-    int pos=0;
-    int wrote=0;
+    unsigned int pos=0;
+    unsigned int wrote=0;
     do {
       wrote=TEMP_FAILURE_RETRY(write(_stdin,result.c_str()+pos,result.length()-pos));
       pos+=wrote;

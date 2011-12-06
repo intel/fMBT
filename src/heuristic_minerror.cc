@@ -245,7 +245,7 @@ void Heuristic_minerror::suggest_new_path()
 
         int step = 1;
         model->push();
-        for (int actnum = 0; actnum < (*cand_iter).size(); actnum++) {
+        for (unsigned int actnum = 0; actnum < (*cand_iter).size(); actnum++) {
             std::vector<int> path;
             AlgPathToAction alg(4);
             alg.search(*model, (*cand_iter)[actnum], path);
