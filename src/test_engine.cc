@@ -226,12 +226,12 @@ namespace interactive {
       actions_v[0] = action;
       log_adapter_suggest(log, adapter, actions_v[0]);
       adapter.execute(actions_v);
-      log_adapter_execute(log, adapter, adapter_response);
       if (actions_v.size()==0) {
         printf("adapter:   [communication failure]\n");
       } else {
         if (skip_m) adapter_response = actions_v[0];
         else adapter_response = policy.choose(actions_v);
+        log_adapter_execute(log, adapter, adapter_response);
         printf("adapter:   %s\n", heuristic.getActionName(adapter_response).c_str());
       }
     }
