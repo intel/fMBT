@@ -28,12 +28,20 @@ public:
   virtual void set_variables(std::string* var) = 0;
   virtual void set_istate(std::string* ist) = 0;
   virtual void set_guard(std::string* gua) = 0;
+  virtual void empthy_guard() {
+    set_guard(&default_guard);
+  }
   virtual void set_body(std::string* bod) = 0;
+  virtual void empthy_body() {
+    set_body(&default_body);
+  }
   virtual void set_adapter(std::string* ada) = 0;
   virtual void next_action() = 0;
   virtual std::string stringify() = 0;
+  virtual void set_starter(std::string* st) = 0;
 protected:
-  
+  std::string default_guard;
+  std::string default_body;
 };
 
 #endif

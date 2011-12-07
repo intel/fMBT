@@ -26,7 +26,7 @@
 
 class aalang_cpp: public aalang {
 public:
-  aalang_cpp(): aalang(),action_cnt(1), istate(NULL), name(NULL) {};
+  aalang_cpp(): aalang(),action_cnt(1), istate(NULL), name(NULL) {default_guard="return true;"; default_body="";};
   virtual void set_name(std::string* _name);
   virtual void set_namestr(std::string* name);
   virtual void set_variables(std::string* var);
@@ -36,7 +36,7 @@ public:
   virtual void set_adapter(std::string* ada);
   virtual void next_action();
   virtual std::string stringify();
-
+  virtual void set_starter(std::string* st);
 private:
   void factory_register();
 

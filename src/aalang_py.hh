@@ -26,7 +26,9 @@
 
 class aalang_py: public aalang {
 public:
-  aalang_py(): aalang(), name(NULL), action_cnt(1), acnt("1") {}
+  aalang_py(): aalang(), name(NULL), action_cnt(1), acnt("1") { default_body="\tpass"; default_guard="\treturn 1";};
+
+  virtual void set_starter(std::string* st);
   virtual void set_name(std::string* name);
   virtual void set_namestr(std::string* name);
   virtual void set_variables(std::string* var);

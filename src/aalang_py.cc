@@ -21,6 +21,12 @@
 #include "aalang_py.hh"
 #include "helper.hh"
 
+void aalang_py::set_starter(std::string* st)
+{
+  s+=*st;
+}
+
+
 void aalang_py::set_name(std::string* name)
 {
     s+="    action"+acnt+"name = \""+*name+"\"\n"

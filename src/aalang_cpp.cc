@@ -21,6 +21,11 @@
 #include "aalang_cpp.hh"
 #include "helper.hh"
 
+void aalang_cpp::set_starter(std::string* st)
+{
+  s+=*st;
+}
+
 void aalang_cpp::set_name(std::string* name)
 {
   /*
@@ -59,6 +64,7 @@ void aalang_cpp::set_istate(std::string* ist)
   istate=ist;
 }
 
+
 void aalang_cpp::set_guard(std::string* gua)
 {
   /*
@@ -66,7 +72,8 @@ void aalang_cpp::set_guard(std::string* gua)
   */
   s+="bool action"+to_string(action_cnt)+"_guard() {\n"+
     *gua+"}\n";
-  delete gua;
+  if (gua!=&default_guard) 
+    delete gua;
 }
 
 void aalang_cpp::set_body(std::string* bod)
@@ -75,7 +82,8 @@ void aalang_cpp::set_body(std::string* bod)
     printf("void action%i_body() {\n%s}\n",action,$3.str->c_str()); } ;
   */
   s+="void action"+to_string(action_cnt)+"_body() {\n"+*bod+"}\n";
-  delete bod;
+  if (bod!=&default_body) 
+    delete bod;
 }
 
 void aalang_cpp::set_adapter(std::string* ada)
