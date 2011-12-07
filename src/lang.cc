@@ -86,6 +86,10 @@ int main(int argc,char** argv) {
   D_Parser *p = new_D_Parser(&parser_tables_lang, 512);
 
   s=readfile(argv[optind]);
+  if (!s) {
+    std::printf("Can't read input file \"%s\"\n",argv[optind]);
+    return 3;
+  }
   dparse(p,s,std::strlen(s));
   if (lib) {
     int _stdin; //,_stdout,_stder;
