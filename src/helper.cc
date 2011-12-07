@@ -184,23 +184,29 @@ std::string removehash(std::string& s)
   return "";
 }
 
-char* readfile(const char* filename)
+char* readfile(const char* filename,bool preprocess)
 {
   std::string fn(filename);
   unsigned long cutpos = fn.find_last_of("#");
 
   if (cutpos == fn.npos) {
 #ifndef DROI
-  char* out=NULL;
-  int status;
-  GString *gs=g_string_new("");
-
-  g_string_printf(gs,"/bin/sh -c \"cpp '%s'|grep -v ^#\"",filename);
-
-  if (!g_spawn_command_line_sync(gs->str,&out,NULL,&status,NULL)) {
-    throw (int)(24);
-  }
-  return out;
+    if (preprocess) {
+      char* out=NULL;
+      int status;
+      GString *gs=g_string_new("");
+      
+      g_string_printf(gs,"/bin/sh -c \"cpp '%s'|grep -v ^#\"",filename);
+      
+      if (!g_spawn_command_line_sync(gs->str,&out,NULL,&status,NULL)) {
+	throw (int)(24);
+      }
+      return out;
+    } else {
+      char* out=NULL;
+      g_file_get_contents(filename,&out,NULL,NULL);
+      return out;
+    }
 #else
   return NULL;
 #endif

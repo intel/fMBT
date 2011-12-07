@@ -31,7 +31,7 @@ void clear_whitespace(std::string& s);
 void clear_coding(std::string& s);
 bool isxrules(std::string& s);
 std::string filetype(std::string& s);
-char* readfile(const char* filename);
+char* readfile(const char* filename,bool preprocess=true);
 std::string capsulate(std::string s);
 char* escape_string(const char* msg);
 std::string removehash(std::string& s);
