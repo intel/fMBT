@@ -32,6 +32,9 @@ int Policy::choose(std::vector<int>& actions)
       }
     }
   }
+  if (actions.size()>0) {
+    return actions[0];
+  }
   return 0;
 }
 
