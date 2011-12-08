@@ -92,10 +92,16 @@ bool Test_engine::run(float target_coverage,
   bool coverage_reached = false;
   bool step_limit_reached = false;
   log.push("test_engine");
+  struct timeval start_time;
+  struct timeval total_time;
+  gettimeofday(&start_time,NULL);
   do {
     action=0;
 
     gettimeofday(&Adapter::current_time,NULL);
+    log.print("<current_time time=%i.%06i/>\n",Adapter::current_time.tv_sec,
+	      Adapter::current_time.tv_usec);
+
     while (adapter.observe(actions)) {
       step_count++;
       action = policy.choose(actions);
@@ -107,7 +113,10 @@ bool Test_engine::run(float target_coverage,
 
         test_passed(false, "unexpected output", log);
 
-        log.pop(); // test_engine
+	timersub(&Adapter::current_time,&start_time,&total_time);
+	log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
+	      total_time.tv_usec);
+	log.pop();
 	return false; // Error: Unexpected output
       }
       log_status(log, step_count, heuristic.getCoverage());
@@ -128,10 +137,16 @@ bool Test_engine::run(float target_coverage,
       log.print("<state type=\"deadlock\"/>\n");
       if (adapter.observe(actions,true)) {
         test_passed(false, "response on deadlock", log);
-        log.pop(); // test_engine
+	timersub(&Adapter::current_time,&start_time,&total_time);
+	log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
+	      total_time.tv_usec);
+	log.pop();
 	return false; // Error: Unexpected output
       }
       test_passed(true, "model cannot continue", log);
+      timersub(&Adapter::current_time,&start_time,&total_time);
+      log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
+		total_time.tv_usec);
       log.pop(); // test_engine
       return true;
       break;
@@ -154,6 +169,9 @@ bool Test_engine::run(float target_coverage,
         log.debug("Test_engine::run: ERROR: action %i not possible in the model.\n", action);
 	log.write(action,heuristic.getActionName(action).c_str(),"broken response");
         test_passed(false, "unexpected output", log);
+	timersub(&Adapter::current_time,&start_time,&total_time);
+	log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
+	      total_time.tv_usec);
         log.pop();
 	return false; // Error: Unexpected output
       }
@@ -167,6 +185,9 @@ bool Test_engine::run(float target_coverage,
       adapter.execute(actions);
       if (actions.size()==0) {
         test_passed(false, "adapter communication failure", log);
+	timersub(&Adapter::current_time,&start_time,&total_time);
+	log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
+		  total_time.tv_usec);
         log.pop();
         return false;
       }
@@ -197,7 +218,10 @@ bool Test_engine::run(float target_coverage,
   else if (step_limit_reached) test_passed(true, "step limit reached", log);
   else abort();
 
-  log.pop(); // test_engine
+  timersub(&Adapter::current_time,&start_time,&total_time);
+  log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
+	    total_time.tv_usec);
+  log.pop();
   return true;
 }
 
