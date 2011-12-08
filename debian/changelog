@@ -1,3 +1,11 @@
+fmbt (0.1-rc6) maverick; urgency=low
+
+  * Some bug fixes (core dumping etc etc)
+  * aal update
+  * Documentation update
+
+ -- Pablo Virolainen <pablo.virolainen@intel.com>  Thu, 08 Dec 2011 13:28:00 +0200
+
 fmbt (0.1-rc5) maverick; urgency=low
 
   * Added The Lang
