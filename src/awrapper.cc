@@ -19,6 +19,7 @@
 
 #include "awrapper.hh"
 #include <algorithm>
+#include "helper.hh"
 
 Awrapper::Awrapper(Log&l, std::string params, aal* _ada):
   Adapter(l, params), ada(_ada) {
@@ -31,13 +32,9 @@ void Awrapper::set_actions(std::vector<std::string>* _actions)
 
   std::vector<std::string>& wn=ada->getActionNames();
 
-  for(unsigned i=0;i<wn.size();i++) {
-    unsigned result;
+  for(unsigned i=1;i<wn.size();i++) {
+    unsigned result=find(*actions,wn[i]);
 
-    for(result=0;result<actions->size() && 
-	  (*actions)[result]==wn[i]
-	  ;result++) {
-    }
     ada2aal[i]=result;
     aal2ada[result]=i;
   }
@@ -48,7 +45,8 @@ void Awrapper::execute(std::vector<int>& action)
 {
   /* We need to map.. */
 
-  action[0]=aal2ada[ada->adapter_execute(ada2aal[action[0]])];
+  int tmp=ada->adapter_execute(aal2ada[action[0]]);
+  action[0]=ada2aal[tmp];
   action.resize(1);
 }
 
