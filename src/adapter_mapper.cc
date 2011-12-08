@@ -195,12 +195,17 @@ bool Adapter_mapper::load(std::string& name)
 
       Adapter* a = AdapterFactory::create(log, adapter_class,
                                           adapter_params);
-      a->set_actions(&adapter_anames[i]);
-      log.debug("Created adapter to %p",a);
-      a->setparent(this);
-      adapters[i] = a;
-      if (!a->status) {
+
+      if (!a) {
 	status=false;
+      } else {      
+	a->set_actions(&adapter_anames[i]);
+	log.debug("Created adapter to %p",a);
+	a->setparent(this);
+	adapters[i] = a;
+	if (!a->status) {
+	  status=false;
+	}
       }
     }
   }
