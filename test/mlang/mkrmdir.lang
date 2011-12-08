@@ -1,5 +1,9 @@
-model myModel {
-  language: C++;
+model mymkdirrmdir {
+  language: C++ {
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <helper.hh>
+  } ;
 //  default action type: input;
 
   variables {
@@ -13,46 +17,83 @@ model myModel {
   }
   
   action {
-    name: "mkdir(dname)";
-    guard() {
-      return true;
-    }
-
-    body() {
-    }
+    name: "imkdir(dname)";
 
     adapter() {
       if (mkdir("/tmp/fmbt.mkrmdir",0777)!=0)
-      	 return find(action_names,"mkdir(dname) exists");
-      return find(action_names,"mkdir(dname)");
+      	 return find(action_names,"imkdir(dname) exists");
+      return find(action_names,"imkdir(dname)");
     }
   }
 
   action {
-    name: "mkdir(dname) exists";
-    guard() {
-      return true;
-    }
-    body() {
-    }
+    name: "imkdir(dname) exists";
+ 
     adapter() {
       if (mkdir("/tmp/fmbt.mkrmdir",0777)!=0)
-            return find(action_names,"mkdir(dname) exists");
-      return find(action_names,"mkdir(dname)");
+            return find(action_names,"imkdir(dname) exists");
+      return find(action_names,"imkdir(dname)");
     }
   }
 
   action {
-    name: "rmdir(dname)";
-    guard() {
-      return true;
-    }
-    body() {
-    }
+    name: "irmdir(dname)";
+ 
     adapter() {
-      if (rmdir("/tmp/fmbt.mkrmdir",0777)!=0)
-      	 return find(action_names,"rmdir(dname) no");
-    return find(action_names,"rmdir(dname)");
+      if (rmdir("/tmp/fmbt.mkrmdir")!=0)
+      	 return find(action_names,"irmdir(dname) no");
+    return find(action_names,"irmdir(dname)");
     }
   }
+
+  action {
+    name: "irmdir(dname) no";
+ 
+    adapter() {
+      if (rmdir("/tmp/fmbt.mkrmdir")!=0)
+      	 return find(action_names,"irmdir(dname) no");
+    return find(action_names,"irmdir(dname)");
+    }
+  }
+
+  action {
+    name: "irmdir(dname/d)";
+ 
+    adapter() {
+      if (rmdir("/tmp/fmbt.mkrmdir/d")!=0)
+      	 return find(action_names,"irmdir(dname/d) no");
+    return find(action_names,"irmdir(dname/d)");
+    }
+  }
+
+  action {
+    name: "irmdir(dname/d) no";
+ 
+    adapter() {
+      if (rmdir("/tmp/fmbt.mkrmdir/d")!=0)
+      	 return find(action_names,"irmdir(dname/d) no");
+    return find(action_names,"irmdir(dname/d)");
+    }
+  }
+
+  action {
+    name: "imkdir(dname/d)";
+ 
+    adapter() {
+      if (mkdir("/tmp/fmbt.mkrmdir/d",0777)!=0)
+      	 return find(action_names,"imkdir(dname/d) exists");
+      return find(action_names,"imkdir(dname/d)");
+    }
+  }
+
+  action {
+    name: "imkdir(dname/d) exists";
+
+    adapter() {
+      if (mkdir("/tmp/fmbt.mkrmdir/d",0777)!=0)
+            return find(action_names,"imkdir(dname/d) exists");
+      return find(action_names,"imkdir(dname/d)");
+    }
+  }
+
 }
