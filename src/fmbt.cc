@@ -36,8 +36,10 @@ void print_usage()
     "    -D     enable debug output (written to the log)\n"
     "    -E     print precompiled configuration in human readable form\n"
     "    -e     print precompiled configuration in machine readable form\n"
+    "    -h     help\n"
     "    -i     start in interactive mode\n"
-    "    -L<f>  write log to file f (default: standard error)\n"
+    "    -L<f>  append log to file f (default: standard error)\n"
+    "    -l<f>  overwrite log to file f (default: standard error)\n"
     );
 }
 
@@ -55,7 +57,7 @@ int main(int argc,char * const argv[])
         {0, 0, 0, 0}
     };
 
-    while ((c = getopt_long (argc, argv, "DEL:eih", long_opts, NULL)) != -1)
+    while ((c = getopt_long (argc, argv, "DEL:heil:", long_opts, NULL)) != -1)
          switch (c)
            {
 	   case 'D': 
@@ -66,7 +68,12 @@ int main(int argc,char * const argv[])
 	     E=true;
 	     break;
 	   case 'L':
-	     logfile=fopen(optarg,"a");
+	   case 'l':
+	     if (logfile!=stderr) {
+	       std::printf("Only one logfile\n");
+	       return 3;
+	     }
+	     logfile=fopen(optarg,c=='L'?"a":"w");
 	     if (!logfile) {
 	       std::printf("Can't open logfile \"%s\"\n",optarg);
 	       return 1;
