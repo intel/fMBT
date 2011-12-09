@@ -16,6 +16,7 @@ From fMBT sources you can build a normal version as above, and a
 low-dependency "Android" version (./configure --enable-android): it
 needs only C and C++ runtimes.
 
+For fmbt-view, you need graphviz imagemagick
 
 Documentation
 -------------
