@@ -10,7 +10,7 @@ running the test and inspecting the results using fMBT.
 Before we start
 ---------------
 
-Install the fMBT tool and Graphviz.
+Install the fMBT tool, Graphviz and imagemagick.
 
 
 Creating a simple model
