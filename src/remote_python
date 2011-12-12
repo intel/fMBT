@@ -49,6 +49,8 @@ import dbus
 import dbus.mainloop.glib
 import thread
 
+import random
+
 import subprocess
 import fcntl
 
@@ -81,6 +83,35 @@ def warning(msg):
 
 def debug(msg):
     log("DEBUG: %s" % (msg,))
+
+fuzzing_helpers = '''
+rnd = random.Random(1)
+def rndi(minimum, maximum):
+    """returns random integer within range [x, y]"""
+    global _fuzzlog
+    global rnd
+    retval = rnd.randint(minimum, maximum)
+    _fuzzlog.append('rndi(%s, %s) == %s' % (minimum, maximum, retval))
+    return retval
+
+def rnds(minlen, maxlen, charrange):
+    """returns random string of length within minlen and maxlen. The
+    string contains characters within charrange[0] and charrange[1].
+    Example: rnds(0,80,'az'), chs defaults to ' ~'."""
+    global _fuzzlog
+    global rnd
+    retval = ''.join([chr(rnd.randint(ord(charrange[0]),ord(charrange[1]))) for x in xrange(random.randint(minlen, maxlen))])
+    _fuzzlog.append('rnds(%s, %s, "%s") == """%s"""' % (minlen, maxlen, charrange, retval))
+    return retval
+
+def rnde(elemlist):
+    """returns random element from the list"""
+    global _fuzzlog
+    global rnd
+    retval = rnd.choice(elemlist)
+    _fuzzlog.append('rnde(%s) == %s' % (elemlist, repr(retval)))
+    return retval
+'''
 
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 try: g_sessionBus = dbus.SessionBus()
@@ -443,10 +474,15 @@ def leftOpRight(actionName):
 
 def safeEval(expression, globalsDict):
     log("    eval: '%s'" % (expression,))
+    globalsDict['_fuzzlog'] = []
     try:
         return eval(expression, globalsDict)
     except Exception, e:
         return Error(e,str(e))
+    finally:
+        for s in globalsDict['_fuzzlog']:
+            log("      with " + s)
+        globalsDict['_fuzzlog'] = []
 
 def executeString(actionName):
     global g_dbusEvalGlobals
@@ -716,10 +752,13 @@ if __name__ == "__main__":
         'time': time,
         'sys':  sys,
         'os':   os,
+        'random': random,
         'actions': g_actions,
+        '_fuzzlog': [],
         'log': lambda msg: log("  " + str(msg))
         }
     g_dbusEvalGlobals['iCatch'] = Exec(g_dbusEvalGlobals)
+    exec fuzzing_helpers in g_dbusEvalGlobals
     exec "sys.path.append(''); sys.path.append(os.getcwd())" in g_dbusEvalGlobals
 
     if selfTest:
