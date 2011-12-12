@@ -6,17 +6,206 @@ fMBT Models
 Introduction
 ------------
 
-fMBT tool supports two types of test model file formats: LSTS
-(labelled state-transition system) and xrules (extended parallel
-composition rules).
+Test cases are generated automatically in model-based testing. Test
+case generation needs a test model as an input. This document
+describes how to define test models.
 
-The first part of this document explains what these formats are and
-how you can create test models in these formats. The second part
-describes the test model API of fMBT tool and instructs how to
-implement support for other test model formats.
+*Model* is an entity that specifies a set of *actions* for every state
+of a test run.x An action describes either an input that can be sent
+to the system under test (SUT), or observation of an event that is
+allowed (or required) to occur in the SUT.
 
-This document is targeted for people who design test models and
-possibly wish to extend fMBT model support to other model formalisms.
+Defining test models is different from defining test cases. Models are
+more compact and have more expressive power. Models can define
+behaviours that are hard or impossible to express using traditional
+test cases. For instance, you can easily define all possible
+interleavings of n concurrent users of a service, and let the tool
+generate and run the tests.
+
+In this document we will study test models in three different
+perspectives:
+
+1. Test design perspective: how to turn test requirements into test
+   models
+
+2. Technical perspective: how to define test models in different
+   formats
+
+3. fMBT developer perspective: how to extend fMBT to support new test
+   model formats.
+
+This document is split in three parts, one for each of the
+perspectives.
+
+
+PART 1: From test requirements to test models
+=============================================
+
+Consider the following test requirements for testing functions mkdir
+(make directory) and rmdir (remove directory):
+
+Positive cases to be tested:
+1. create a directory successfully
+2. remove a directory successfully
+
+Negative cases to be tested:
+3. try creating an already existing directory
+4. try removing a non-existing directory
+5. try creating a directory to   a non-existing path
+6. try removing a directory from a non-existing path
+7. try removing a non-empty directory
+8. try creating a directory without a write permission to parent dir
+9. try removing a directory without a write permission to parent dir
+
+How many test cases are needed to cover all the requirements? All this
+can be covered with a quite simple test model. Next we will create the
+model in small increments and finally give the full model that is
+runnable.
+
+Designing a model
+-----------------
+
+Let's start from the requirements for positive cases. Requirement 1 is
+about running mkdir without an error. Let's use action name "mkdir:ok"
+to denote that. On the other hand, requirement 2 says we should remove
+a directory successfully, let's name it "rmdir:ok" for short.
+
+A test case that covers the positive requirements could be:
+1. verify that a directory does not exist
+2. "mkdir:ok" (create the directory)
+3. verify that the directory exists
+4. "rmdir:ok" (remove the directory)
+5. verify that the directory does not exist anymore.
+
+We start with a test model where we specify that in the initial state
+we should test "mkdir:ok", and after that we should test "rmdir:ok",
+after which the situation must be the same as in the initial
+state. fmbt-gt specification of this is the following:
+
+$ fmbt-gt -o 2reqs.lsts -f- << EOF
+P(nodir, "gt:istate") ->
+T(nodir, "mkdir:ok", dir)
+T(dir,   "rmdir:ok", nodir)
+EOF
+
+$ fmbt-view 2reqs.lsts
+
+This model has two major differences to the above test case. First, it
+specifies that "rmdir:ok" must *always* succeed after "mkdir:ok", and
+vice versa. You can already generate arbitrarily long tests from this
+model.
+
+Second, the model does not contain verifications for the
+all. Verifications are absolutely necessary in the test case, because
+there is no other way to make sure that actions had the wanted
+effect. In test models, however, actions that will be executed next
+can take care of the verification as well. The 2reqs model does not
+contain enough actions for proper verification, but this will change
+when we add new actions to cover more requirements.
+
+[TODO: to be continued... test requirements 3-4]
+
+[TODO: to be continued... test requirements 5-6]
+
+
+Below is the fmbt-gt command that specifies the model as a state
+machine. After some transitions there is comment "# Rn" where n is the
+number of the requirement that the transition tests.
+
+$ fmbt-gt -o all9reqs.lsts -f- <<EOF
+P(init, "gt:istate") ->
+P(init, "gt:istate")
+T(init, "iCatch('''from os import mkdir,rmdir,chmod; d='/tmp/mkrmdir'; subd='/tmp/mkrmdir/subd'; iShell('chmod u+w -R '+d+'; rm -rf '+d).wait()''')==None", nd)
+
+P(nd, "no directory")
+T(nd, "iCatch('mkdir(d)')==None", d)                                # R1
+T(nd, "iCatch('rmdir(d)')==Error('.*No such file.*')", nd)          # R4
+T(nd, "iCatch('mkdir(subd)')==Error('.*No such file.*')", nd)       # R5
+T(nd, "iCatch('rmdir(subd)')==Error('.*No such file.*')", nd)       # R6
+
+P(d, "directory")
+T(d, "iCatch('rmdir(d)')==None", nd)                                # R2
+T(d, "iCatch('mkdir(d)')==Error('.*File exists.*')", d)             # R3
+T(d, "iCatch('mkdir(subd)')==None", sd)
+T(d, "iCatch('chmod(d,0500)')==None", dw-)
+
+P(sd, "directory + subdirectory")
+T(sd, "iCatch('rmdir(d)')==Error('.*Directory not empty.*')", sd)   # R7
+T(sd, "iCatch('rmdir(subd)')==None", d)
+T(sd, "iCatch('chmod(d,0500)')==None", sw-)
+
+P(dw-, "directory, no write permission")
+T(dw-, "iCatch('chmod(d,0700)')==None", d)
+T(dw-, "iCatch('mkdir(subd)')==Error('.*Permission denied.*')", dw-)# R8
+
+P(sw-, "directory, no write permission + subdirectory")
+T(sw-, "iCatch('chmod(d,0700)')==None", sd)
+T(sw-, "iCatch('rmdir(subd)')==Error('.*Permission denied.*')", sw-)# R9
+EOF
+
+In order to see the graphical representation of the model, run
+
+$ fmbt-view all9reqs.lsts
+
+This model defines the behaviour on very detailed level. The model
+contains an initialisation routine for the test run, and all the
+needed commands with required responses. Because of the level of
+detail, no special adapter or translation layer is needed in order to
+run the tests. Actions in the model are directly executable with the
+generic remote_python adapter. Let's run a test that executes every
+action in the model once.
+
+$ cat > test.conf << EOF
+model     = "all9reqs.lsts"
+adapter   = "remote:remote_python"
+coverage  = "perm:1"
+heuristic = "greedy:3"
+engine.cov = 1.0
+engine.count = 50
+on_error  = "exit"
+EOF
+
+$ fmbt -Ltest.log test.conf
+
+$ fmbt-log test.log
+iCatch('''from os import mkdir,rmdir,chmod; d='/tmp/mkrmdir'; subd='/tmp/mkrmdir/subd'; iShell('chmod u+w -R '+d+'; rm -rf '+d).wait()''')==None
+iCatch('mkdir(d)')==None
+iCatch('rmdir(d)')==None
+iCatch('rmdir(d)')==Error('.*No such file.*')
+iCatch('mkdir(subd)')==Error('.*No such file.*')
+iCatch('rmdir(subd)')==Error('.*No such file.*')
+iCatch('mkdir(d)')==None
+iCatch('mkdir(d)')==Error('.*File exists.*')
+iCatch('mkdir(subd)')==None
+iCatch('rmdir(d)')==Error('.*Directory not empty.*')
+iCatch('rmdir(subd)')==None
+iCatch('chmod(d,0500)')==None
+iCatch('mkdir(subd)')==Error('.*Permission denied.*')
+iCatch('chmod(d,0700)')==None
+iCatch('mkdir(subd)')==None
+iCatch('chmod(d,0500)')==None
+iCatch('rmdir(subd)')==Error('.*Permission denied.*')
+pass
+
+
+
+PART 2: Different test model types
+==================================
+
+fMBT tool supports three different test model types:
+
+- LSTS (labelled state-transition system) that specifies state
+  machines
+
+- AAL (adapter action language) modules that may contain a model, an
+  adapter or both
+
+- xrules (extended parallel composition rules) file that specifies
+  concurrent behaviour of model components of any type.
+
+[TODO: clean up the rest of this document]
+
+[Warning for readers: this might be almost as confusing as Confuse-A-Cat]
 
 
 Graph transition tool and labelled state-transition system (LSTS)
@@ -109,4 +298,4 @@ This document is targeted for people who design test models and
 possibly wish to extend fMBT model support to other model formalisms.
 
 
-L
+PART 3: 
