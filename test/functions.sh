@@ -34,13 +34,20 @@ testfailed() {
     exit 1
 }
 
-check_minimum_num_of_lines() {
+check_file_exists() {
     FILENAME=$1
-    MINIMUM_NUMOFLINES=$2
     if [ ! -f $FILENAME ]; then
         echo "$FILENAME does not exist." >> $LOGFILE
         testfailed
     fi
+}
+
+check_minimum_num_of_lines() {
+    FILENAME=$1
+    MINIMUM_NUMOFLINES=$2
+
+    check_file_exists $FILENAME
+
     FOUND_LINES=$(wc -l $FILENAME | awk '{print $1}')
     if  [ $FOUND_LINES -lt $MINIMUM_NUMOFLINES ]; then
         echo "$FILENAME too short." >> $LOGFILE

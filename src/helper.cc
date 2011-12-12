@@ -126,7 +126,7 @@ char* unescape_string(char* msg)
   int l=std::strlen(msg);
   int j=0;
 
-  for(int i=0;i<l-1;i++) {
+  for(int i=0;i<l;i++) {
     if (msg[i]=='%') {
       char* endp;
       char s[] = {
