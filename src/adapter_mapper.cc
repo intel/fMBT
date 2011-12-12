@@ -47,6 +47,9 @@ Adapter_mapper::Adapter_mapper(Log& log, std::string _params)
 bool Adapter_mapper::init()
 {
   load(params);
+  if (!status) {
+    return false;
+  }
   for(unsigned i=0;i<adapters.size();i++) {
     if (adapters[i]) {
       if (!adapters[i]->init()) {
@@ -92,7 +95,7 @@ std::string Adapter_mapper::stringify()
 }
 
 int Adapter_mapper::anum_create(int index,std::string& n) {
-  
+
   for(unsigned int i=0;i<adapter_anames[index].size();i++) {
     if (adapter_anames[index][i]==n) {
       return i;
@@ -109,7 +112,7 @@ int Adapter_mapper::anum_create(int index,std::string& n) {
 }
 
 void Adapter_mapper::add_map(std::vector<int>& index,std::vector<std::string>& n,int action) {
-
+  
   if (!status) {
     return;
   }
@@ -161,7 +164,7 @@ bool Adapter_mapper::load(std::string& name)
 
   bool ret=dparse(p,s,std::strlen(s));
 
-  if (ret) {
+  if (ret && status) {
     log.debug("loading %s ok",name.c_str());
   } else {
     log.debug("loading %s failed",name.c_str());
@@ -198,13 +201,16 @@ bool Adapter_mapper::load(std::string& name)
 
       if (!a) {
 	status=false;
-      } else {      
+	errormsg=std::string("Can't create adapter ")
+	  + adapter_class + ":"+adapter_params;
+      } else {
 	a->set_actions(&adapter_anames[i]);
 	log.debug("Created adapter to %p",a);
 	a->setparent(this);
 	adapters[i] = a;
 	if (!a->status) {
 	  status=false;
+	  errormsg=a->errormsg;
 	}
       }
     }
