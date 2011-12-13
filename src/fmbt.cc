@@ -38,15 +38,15 @@ void print_usage()
     "    -e     print precompiled configuration in machine readable form\n"
     "    -h     help\n"
     "    -i     start in interactive mode\n"
-    "    -L<f>  append log to file f (default: standard error)\n"
-    "    -l<f>  overwrite log to file f (default: standard error)\n"
+    "    -L<f>  append log to file f (default: standard output)\n"
+    "    -l<f>  overwrite log to file f (default: standard output)\n"
     );
 }
 
 int main(int argc,char * const argv[])
 {
   try {
-    FILE* logfile=stderr;
+    FILE* logfile=stdout;
     bool interactive=false;
     bool debug_enabled=false;
     bool E=false;
@@ -69,7 +69,7 @@ int main(int argc,char * const argv[])
 	     break;
 	   case 'L':
 	   case 'l':
-	     if (logfile!=stderr) {
+	     if (logfile!=stdout) {
 	       std::printf("Only one logfile\n");
 	       return 3;
 	     }

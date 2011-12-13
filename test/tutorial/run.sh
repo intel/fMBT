@@ -94,7 +94,7 @@ testpassed
 
 teststep "repeat the error trace (without minimising)..."
 cp mkrmdir.log minimal.log
-source log.6 > errortrace.txt
+source log.6 2> errortrace.txt
 if  ! ( grep adapter errortrace.txt | tail -n1 | grep NONE >> $LOGFILE 2>&1 ); then
     echo "adapter should not have responded on last step" >> $LOGFILE
     testfailed

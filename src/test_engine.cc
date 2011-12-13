@@ -38,7 +38,7 @@ extern "C" {
 #define READLINE(a)         \
   (__extension__            \
     ({ char* __result;      \
-       printf("%s",a);      \
+       fprintf(stderr,"%s",a);      \
        __result=readline(); \
        __result;}))
 #else
@@ -234,15 +234,15 @@ namespace interactive {
     int adapter_response = 0;
 
     if (skip_m)
-      printf("executing: %s\n", adapter.getActionName(action).c_str());
+      fprintf(stderr,"executing: %s\n", adapter.getActionName(action).c_str());
     else
-      printf("executing: %s\n", heuristic.getActionName(action).c_str());
+      fprintf(stderr,"executing: %s\n", heuristic.getActionName(action).c_str());
 
     if (skip_a) {
-      printf(  "adapter:   [skipped]\n");
+      fprintf(stderr,  "adapter:   [skipped]\n");
       adapter_response = action;
     } else if (model.up() != NULL) {
-      printf(  "adapter:   [skipped] (submodel exec)\n");
+      fprintf(stderr,  "adapter:   [skipped] (submodel exec)\n");
       adapter_response = action;
     } else {
       std::vector<int> actions_v;
@@ -251,25 +251,25 @@ namespace interactive {
       log_adapter_suggest(log, adapter, actions_v[0]);
       adapter.execute(actions_v);
       if (actions_v.size()==0) {
-        printf("adapter:   [communication failure]\n");
+        fprintf(stderr,"adapter:   [communication failure]\n");
       } else {
         if (skip_m) adapter_response = actions_v[0];
         else adapter_response = policy.choose(actions_v);
         log_adapter_execute(log, adapter, adapter_response);
-        printf("adapter:   %s\n", heuristic.getActionName(adapter_response).c_str());
+        fprintf(stderr,"adapter:   %s\n", heuristic.getActionName(adapter_response).c_str());
       }
     }
 
     if (skip_m)
-      printf(                    "model:     [skipped]\n");
+      fprintf(stderr,                    "model:     [skipped]\n");
     else if (adapter.up() != NULL)
-      printf(                    "model:     [skipped] (subadapter exec)\n");
+      fprintf(stderr,                    "model:     [skipped] (subadapter exec)\n");
     else {
       bool model_response;
       if (model.up()) model_response = model.execute(adapter_response);
       else model_response = heuristic.execute(adapter_response);
-      if (model_response) printf("model:     ok\n");
-      else printf(               "model:     failed\n");
+      if (model_response) fprintf(stderr,"model:     ok\n");
+      else fprintf(stderr,               "model:     failed\n");
     }
 
     log_status(log, -1, heuristic.getCoverage());
@@ -288,10 +288,12 @@ void Test_engine::interactive()
   Adapter* current_adapter=&adapter;
   Model* current_model=heuristic.get_model();
 
+  rl_outstream=stderr;
+
   while (run) {
 
     while (adapter.observe(actions_v)) {
-      printf("Action %i:%s\n",action,heuristic.getActionName(action).c_str());
+      fprintf(stderr,"Action %i:%s\n",action,heuristic.getActionName(action).c_str());
       actions_v.resize(0);
     }
     
@@ -339,7 +341,7 @@ void Test_engine::interactive()
         }
         else {
           for(unsigned i=1;i<sca_anames.size();i++){
-            printf("e%i:%s\n",i,sca_anames[i].c_str());
+            fprintf(stderr,"e%i:%s\n",i,sca_anames[i].c_str());
           }
         }
       }
@@ -358,7 +360,7 @@ void Test_engine::interactive()
           }
         }
         if (action_num==ca_anames.size()) {
-          printf("action \"%s\" not found in the adapter\n", s);
+          fprintf(stderr,"action \"%s\" not found in the adapter\n", s);
         }
       }
         break;
@@ -368,7 +370,7 @@ void Test_engine::interactive()
         if (strncmp(s,"aup",3)==0) {
           // do up in the adapter tree
           if (!current_adapter->up()) {
-            printf("Can't go up in adapter tree\n");
+            fprintf(stderr,"Can't go up in adapter tree\n");
           } else {
             current_adapter=current_adapter->up();
           }
@@ -376,13 +378,13 @@ void Test_engine::interactive()
           std::vector<std::string>& adapter_names=current_adapter->getAdapterNames();
           for(unsigned int i=0;i<adapter_names.size();i++) {
             if (adapter_names[i]!=std::string("")) {
-              printf("a%i:%s\n",i,adapter_names[i].c_str());
+              fprintf(stderr,"a%i:%s\n",i,adapter_names[i].c_str());
             }
           }
         } else {
           num=std::atoi(s+1);
           if (!current_adapter->down(num)) {
-            printf("Can't change to adapter %i\n",num);
+            fprintf(stderr,"Can't change to adapter %i\n",num);
           } else {
             current_adapter=current_adapter->down(num);
           }
@@ -416,7 +418,7 @@ void Test_engine::interactive()
         if (strncmp(s,"mup",3)==0) {
 	  /* up */
           if (!current_model->up()) {
-            printf("Can't go up in model tree\n");
+            fprintf(stderr,"Can't go up in model tree\n");
           } else {
             current_model=current_model->up();
           }
@@ -427,7 +429,7 @@ void Test_engine::interactive()
           std::vector<std::string>& model_names=current_model->getModelNames();
           for(unsigned int i=0;i<model_names.size();i++) {
             if (model_names[i]!=std::string("")) {
-              printf("m%i:%s\n",i,model_names[i].c_str());
+              fprintf(stderr,"m%i:%s\n",i,model_names[i].c_str());
             }
           }
           break;
@@ -436,7 +438,7 @@ void Test_engine::interactive()
           /* switch to <num> */
           /* down */
           if (!current_model->down(num)) {
-            printf("Can't go down in model tree\n");
+            fprintf(stderr,"Can't go down in model tree\n");
           } else {
             current_model=current_model->down(num);
           }
@@ -449,24 +451,24 @@ void Test_engine::interactive()
             if (!atoi(s+3)) skip_adapter_execute = true;
             else skip_adapter_execute = false;
           }
-          printf("execute action in adapter: ");
-          if (skip_adapter_execute) printf("no\n");
-          else printf("yes\n");
+          fprintf(stderr,"execute action in adapter: ");
+          if (skip_adapter_execute) fprintf(stderr,"no\n");
+          else fprintf(stderr,"yes\n");
         }
         else if (strncmp(s,"oem",3) == 0) {
           if (strnlen(s,4) == 4) {
             if (!atoi(s+3)) skip_model_execute = true;
             else skip_model_execute = false;
           }
-          printf("execute action in model: ");
-          if (skip_model_execute) printf("no\n");
-          else printf("yes\n");
+          fprintf(stderr,"execute action in model: ");
+          if (skip_model_execute) fprintf(stderr,"no\n");
+          else fprintf(stderr,"yes\n");
         }
         else goto unknown_command;
         break;
       case 't': // TODO
-        printf("t <+diff>\n");
-        printf("not implemented: advance Adapter::current_time");
+        fprintf(stderr,"t <+diff>\n");
+        fprintf(stderr,"not implemented: advance Adapter::current_time");
         break;
       case '?':
         if (strncmp(s,"?a",2) == 0) {
@@ -476,11 +478,11 @@ void Test_engine::interactive()
           AlgPathToAction alg(search_depth);
           double score = alg.search(*current_model, num, path);
           if (score != 1.0) {
-              printf("No path found to action %d within search depth %d\n", num, search_depth);
+              fprintf(stderr,"No path found to action %d within search depth %d\n", num, search_depth);
           } else {
-              printf("Path to execute action %s:\n", current_model->getActionName(num).c_str());
+              fprintf(stderr,"Path to execute action %s:\n", current_model->getActionName(num).c_str());
               for (unsigned int i = 0; i < path.size(); i++) {
-                  printf("%s\n", current_model->getActionName(path[i]).c_str());
+                  fprintf(stderr,"%s\n", current_model->getActionName(path[i]).c_str());
               }
           }
 	  break;
@@ -491,9 +493,9 @@ void Test_engine::interactive()
           AlgPathToBestCoverage alg(num);
           Coverage* coverage = heuristic.get_coverage();
           double score = alg.search(*current_model, *coverage, path);
-          printf("Coverage %f achievable with path:\n", score);
+          fprintf(stderr,"Coverage %f achievable with path:\n", score);
           for (unsigned int i = 0; i < path.size(); i++) {
-            printf("%s\n", current_model->getActionName(path[i]).c_str());
+            fprintf(stderr,"%s\n", current_model->getActionName(path[i]).c_str());
           }
           break;
         }
@@ -501,7 +503,7 @@ void Test_engine::interactive()
 
       default:
       unknown_command:
-        printf("Execute actions:\n"
+        fprintf(stderr,"Execute actions:\n"
                "    s       - list executable actions at current state\n"
                "    s<num>  - exec action <num> of current state\n"
                "    e       - list executable actions at current adapter\n"
@@ -525,7 +527,7 @@ void Test_engine::interactive()
                "    ?a<num>- search shortest path to execute action <num>\n"
                "    ?c<num>- search path of length <num> for maximal coverage\n"
                "    q      - quit\n");
-        printf("Unknown command \"%s\"\n",s);
+        fprintf(stderr,"Unknown command \"%s\"\n",s);
       }
     }
     std::free(s);
