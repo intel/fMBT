@@ -232,7 +232,7 @@ import lsts
 # Rule syntax:
 reflags=re.DOTALL|re.MULTILINE
 tr_re=re.compile("([!]?)T\(\s*([^),]+)\s*,\s*([^\"),]+|\"[^\"]*\")\s*,\s*([^),]+)\s*\)",reflags)
-sp_re=re.compile("([!]?)P\(\s*([^),]+)\s*,\s*([^),]+)\s*\)",reflags)
+sp_re=re.compile("([!]?)P\(\s*([^),]+)\s*,\s*([^)]+)\s*\)",reflags)
 req_re=re.compile("REQ\[([^]]+)\]",reflags)
 print_re=re.compile("OUT\[([^]]+)\]",reflags)
 quant_re=re.compile("Q\[([a-zA-Z0-9_']+)\s+in\s+([^]]+)\]",reflags)

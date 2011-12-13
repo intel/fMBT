@@ -31,7 +31,7 @@ void Adapter_dummy::execute(std::vector<int>& action)
 {
   log.push("Adapter_dummy");
 
-  log.print("<action type=\"input\" name=\"%s\"/>\n",
+  log.print("<dummy_execute type=\"input\" name=\"%s\"/>\n",
 	    getUActionName(action[0]));
 
   log.pop();
