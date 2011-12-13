@@ -31,13 +31,14 @@ Conf* conf_obj;
 
 conf_file: conf_entry+;
 
-conf_entry: model |
-            heuristic |
-            coverage |
-            adapter |
-            engine_cov |
+conf_entry: model        |
+            heuristic    |
+            coverage     |
+            adapter      |
+            engine_cov   |
             engine_count |
-            on_error;
+            history      |
+            on_error     ;
 
 model: 'model' '=' string { conf_obj->set_model(*$2.str); } ;
 
@@ -50,6 +51,8 @@ adapter: 'adapter' '=' string { conf_obj->set_adapter(*$2.str); } ;
 engine_cov: 'engine.cov' '=' float { conf_obj->set_engine_cov($2.f); } ;
 
 engine_count: 'engine.count' '=' int { conf_obj->set_engine_count($2.val); };
+
+history: 'history' '=' string { conf_obj->add_history($2.str); };
 
 on_error: 'on_error' '=' string { conf_obj->set_on_error(*$2.str); };
 

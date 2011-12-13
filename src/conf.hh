@@ -64,6 +64,9 @@ class Conf:public Writable {
   void set_on_error(std::string &s) {
     on_error = s;
   }
+  void add_history(std::string* s) {
+    history.push_back(s);
+  }
 
   void execute(bool interactive=false);
 
@@ -77,6 +80,7 @@ class Conf:public Writable {
   virtual std::string stringify();
 
  protected:
+  std::vector<std::string*> history;
   std::string model_name;
 
   std::string heuristic_name;
