@@ -37,7 +37,7 @@ bool Adapter_model::init()
   for(unsigned i = 0; i < actions->size(); i++) {
       adapter2model[i]=find(mactions, (*actions)[i]);
   }
-  adapter2model.resize(mactions.size());
+  model2adapter.resize(mactions.size());
   for(unsigned i = 0; i < mactions.size(); i++) {
     model2adapter[i]=find(*actions, mactions[i]);
   }
