@@ -15,9 +15,9 @@ LOCAL_HEURISTICS =  heuristic.cc heuristic_random.cc heuristic_mrandom.cc heuris
 
 LOCAL_COVERAGES = coverage.cc coverage_market.cc coverage_mapper.cc coverage_tree.cc coverage_tema_seq.cc coverage_prop.cc
 
-COMMON_SOURCES = fmbt.cc mwrapper.cc lts.cc lts_remote.cc lts_trace.cc xrules_remote.cc test_engine.cc log.cc helper.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc covlang.g.d_parser.cc model.cc $(LOCAL_ADAPTERS) $(LOCAL_HEURISTICS) $(LOCAL_COVERAGES) conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc alg_bdfs.cc
+COMMON_SOURCES = fmbt.cc mwrapper.cc lts.cc lts_remote.cc lts_trace.cc xrules_remote.cc test_engine.cc log.cc helper.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc covlang.g.d_parser.cc model.cc $(LOCAL_ADAPTERS) $(LOCAL_HEURISTICS) $(LOCAL_COVERAGES) conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc alg_bdfs.cc history.cc history_remote.cc
 
-fmbt_SOURCES                  = $(COMMON_SOURCES) adapter_dlopen.cc adapter_remote.cc adapter_lib.cc model_lib.cc
+fmbt_SOURCES                  = $(COMMON_SOURCES) adapter_dlopen.cc adapter_remote.cc adapter_lib.cc model_lib.cc 
 
 fmbt_droid_SOURCES            = $(COMMON_SOURCES)
 
