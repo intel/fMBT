@@ -36,10 +36,11 @@ cd $TESTDIR
 
 test/build/run.sh || exit 1
 
-for f in test/*/run.sh; do
-    dirname=$(echo $f | sed 's:.*/\(.*\)/.*$:\1:')
+for f in $(awk -F= '/^TESTS =/{print $2}' < test/Makefile.am); do
+    run=test/$f
+    dirname=$(echo $run | sed 's:.*/\(.*\)/.*$:\1:')
     if [ $dirname == "git-HEAD" ] || [ $dirname == "build" ]; then
 	continue; # skip these tests
     fi
-    $f
+    $run
 done
