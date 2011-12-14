@@ -165,7 +165,7 @@ $ cat > test.conf << EOF
 model     = "4reqs.lsts"
 adapter   = "dummy"
 coverage  = "perm:2"
-heuristic = "greedy:2"
+heuristic = "lookahead:2"
 engine.count = 12
 EOF
 
@@ -254,7 +254,7 @@ $ cat > test.conf << EOF
 model     = "all9reqs.lsts"
 adapter   = "remote:remote_python"
 coverage  = "perm:1"
-heuristic = "greedy:3"
+heuristic = "lookahead:3"
 engine.cov = 1.0
 engine.count = 50
 on_error  = "exit"

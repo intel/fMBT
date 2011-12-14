@@ -147,7 +147,7 @@ Create a test configuration file:
 
 $ cat > mkrmdir_aal.conf << EOF
 model        = "mkrmdir.lsts"
-heuristic    = "greedy"
+heuristic    = "lookahead:1"
 coverage     = "perm:1"
 adapter      = "mapper:mlang.mrules"
 engine.cov   = 1.0

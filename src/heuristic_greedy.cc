@@ -93,7 +93,7 @@ int Heuristic_greedy::getIAction()
     return OUTPUT_ONLY;
   }
 
-  if (m_search_depth <= 1) {
+  if (m_search_depth < 1) {
     /* Do a very fast lookup */
     float* f=new float[i];
     pos=my_coverage->fitness(actions,i,f);
