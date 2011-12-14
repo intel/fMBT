@@ -25,6 +25,7 @@
 #include "log.hh"
 #include "writable.hh"
 #include "factory.hh"
+#include "alphabet.hh"
 
 #define SILENCE      (-3)
 #define DEADLOCK     (-2)
@@ -33,18 +34,18 @@
 class Model;
 class Writable;
 
-class Model: public Writable {
+class Model: public Writable, public Alphabet {
 public:
   Model(Log&l, std::string params = "");
 
   //! Returns names of all actions available.
-  std::vector<std::string>& getActionNames();
+  virtual std::vector<std::string>& getActionNames();
 
   //! Returns names of all available state propositions
-  std::vector<std::string>& getSPNames();
+  virtual std::vector<std::string>& getSPNames();
 
   //! Returns the name of the given action
-  std::string& getActionName(int action);
+  virtual std::string& getActionName(int action);
 
   /*! 
    * Returns the number of actions executable in the current state.
