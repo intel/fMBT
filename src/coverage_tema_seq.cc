@@ -66,6 +66,17 @@ Coverage_Tema_seq::pop() {
   a_stack.pop_back();
 }
 
+void Coverage_Tema_seq::history(int action,
+				std::vector<int>& props,
+				bool verdict)
+{
+  if (action) {
+    execute(action);
+  } else {
+    // verdict. And now we should do ??
+  }
+}
+
 bool
 Coverage_Tema_seq::execute(int action) {
   int next_ptr = 1 + cur_trace_ptr(a_trace_ptr, a_stack);

@@ -53,6 +53,8 @@ public:
   virtual void push();
   virtual void pop();
 
+  virtual void history(int action, std::vector<int>& props, 
+		       bool verdict);
   virtual bool execute(int action);
   virtual float getCoverage();
 

@@ -75,6 +75,15 @@ void Coverage_Tree::set_model(Model* _model)
   precalc();
 }
 
+void Coverage_Tree::history(int action,std::vector<int>& props,
+			    bool verdict)
+{
+  if (action) {
+    execute(action);
+  } else {
+    // verdict. And now we should do ??
+  }
+}
 
 bool Coverage_Tree::execute(int action)
 {

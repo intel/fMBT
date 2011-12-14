@@ -64,6 +64,12 @@ std::string Coverage_Mapper::stringify()
   return t.str();
 }
 
+void Coverage_Mapper::history(int action,
+                             std::vector<int>& props, 
+                             bool verdict)
+{
+}
+
 bool Coverage_Mapper::execute(int action)
 {
   std::pair<std::multimap<int,coverage_action>::iterator,

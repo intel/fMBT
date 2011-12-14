@@ -26,6 +26,13 @@ Coverage_Prop::Coverage_Prop(Log& l, std::string& params) :
 
 }
 
+void Coverage_Prop::history(int action,
+			    std::vector<int>& props, 
+			    bool verdict)
+{
+
+}
+
 bool Coverage_Prop::execute(int action)
 {
   return true;

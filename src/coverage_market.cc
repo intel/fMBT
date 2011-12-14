@@ -26,6 +26,18 @@ Coverage_Market::Coverage_Market(Log& l, std::string& params) :
     add_requirement(params);
 }
 
+void Coverage_Market::history(int action,
+			      std::vector<int>& props, 
+			      bool verdict)
+{
+  if (action) {
+    execute(action);
+  } else {
+    // verdict
+    // Ok. We'll need to init the system.
+  }
+}
+
 bool Coverage_Market::execute(int action)
 {
   /* Dummy */

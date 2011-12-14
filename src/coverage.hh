@@ -37,6 +37,8 @@ public:
   virtual void push()=0;
   virtual void pop()=0;
 
+  virtual void history(int action, std::vector<int>& props, 
+		       bool verdict)=0; 
   virtual bool execute(int action)=0;
   virtual float getCoverage()=0;
 
