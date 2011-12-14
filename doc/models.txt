@@ -11,7 +11,7 @@ case generation needs a test model as an input. This document
 describes how to define test models.
 
 *Model* is an entity that specifies a set of *actions* for every state
-of a test run.x An action describes either an input that can be sent
+of a test run. An action describes either an input that can be sent
 to the system under test (SUT), or observation of an event that is
 allowed (or required) to occur in the SUT.
 
@@ -38,11 +38,19 @@ This document is split in three parts, one for each of the
 perspectives.
 
 
-PART 1: From test requirements to test models
+PART I: From test requirements to test models
 =============================================
 
+In this part we will first give an example how to get from simple test
+requirements to a simple test model. Then we will show how to create
+models that allow testing all possible interleavings of actions.
+
+
+Designing a model
+-----------------
+
 Consider the following test requirements for testing functions mkdir
-(make directory) and rmdir (remove directory):
+(make directory) and rmdir (remove directory) in Python's os library:
 
 Positive cases to be tested:
 1. create a directory successfully
@@ -54,67 +62,159 @@ Negative cases to be tested:
 5. try creating a directory to   a non-existing path
 6. try removing a directory from a non-existing path
 7. try removing a non-empty directory
-8. try creating a directory without a write permission to parent dir
-9. try removing a directory without a write permission to parent dir
+8. try creating a directory without write permission to parent dir
+9. try removing a directory without write permission to parent dir
 
 How many test cases are needed to cover all the requirements? All this
-can be covered with a quite simple test model. Next we will create the
-model in small increments and finally give the full model that is
-runnable.
+can be covered with a quite simple test model. We will first create
+the model in small increments and finally give a full model and run
+the tests.
 
-Designing a model
------------------
+We start designing mkdir/rmdir test model by deciding the level of
+detail to be used in actions. The level can range from low-level
+direct function calls and expected return values to high-level
+human-readable descriptions of the action. In the latter case action
+names will be translated into real I/O by adapters.
 
-Let's start from the requirements for positive cases. Requirement 1 is
-about running mkdir without an error. Let's use action name "mkdir:ok"
-to denote that. On the other hand, requirement 2 says we should remove
-a directory successfully, let's name it "rmdir:ok" for short.
+In this example we will use human readable action names in the first
+modelling steps, but we will give the final model with detailed
+function calls to give an idea of both of the options.
 
-A test case that covers the positive requirements could be:
+
+Covering requirements 1 and 2
+
+Let's start modelling from the test requirements for positive
+cases. Requirement 1 is about running mkdir without an error. We will
+denote that with action name "i_mkdir:ok". On the other hand,
+Requirement 2 says we should remove a directory successfully, let's
+name it "i_rmdir:ok" for short. "i_" prefix means that these are input
+actions, in contrast to uncontrollable output.
+
+A test case that covers both of the positive requirements could be:
 1. verify that a directory does not exist
-2. "mkdir:ok" (create the directory)
+2. "i_mkdir:ok" (create the directory)
 3. verify that the directory exists
-4. "rmdir:ok" (remove the directory)
+4. "i_rmdir:ok" (remove the directory)
 5. verify that the directory does not exist anymore.
 
-We start with a test model where we specify that in the initial state
-we should test "mkdir:ok", and after that we should test "rmdir:ok",
-after which the situation must be the same as in the initial
-state. fmbt-gt specification of this is the following:
+In the initial state of the test model we should test "i_mkdir:ok",
+then "i_rmdir:ok", after which the test can continue exactly as in the
+initial state. fmbt-gt description of this model is the following:
 
 $ fmbt-gt -o 2reqs.lsts -f- << EOF
 P(nodir, "gt:istate") ->
-T(nodir, "mkdir:ok", dir)
-T(dir,   "rmdir:ok", nodir)
+T(nodir, "i_mkdir:ok", dir)
+T(dir,   "i_rmdir:ok", nodir)
 EOF
+
+Have a look at the result with:
 
 $ fmbt-view 2reqs.lsts
 
 This model has two major differences to the above test case. First, it
-specifies that "rmdir:ok" must *always* succeed after "mkdir:ok", and
-vice versa. You can already generate arbitrarily long tests from this
-model.
+specifies that "i_rmdir:ok" must *always* succeed after "i_mkdir:ok",
+and vice versa. You can already generate arbitrarily long tests from
+this model.
 
-Second, the model does not contain verifications for the
-all. Verifications are absolutely necessary in the test case, because
-there is no other way to make sure that actions had the wanted
+The second major difference is that the model does not contain any
+verifications. Verifications are absolutely necessary in the test case
+because there is no other way to make sure that actions had the wanted
 effect. In test models, however, actions that will be executed next
-can take care of the verification as well. The 2reqs model does not
-contain enough actions for proper verification, but this will change
-when we add new actions to cover more requirements.
-
-[TODO: to be continued... test requirements 3-4]
-
-[TODO: to be continued... test requirements 5-6]
+can often take care of the verification as well. The 2reqs model does
+not contain enough actions for proper verification, but this will
+change when we add new actions to cover more requirements.
 
 
-Below is the fmbt-gt command that specifies the model as a state
-machine. After some transitions there is comment "# Rn" where n is the
-number of the requirement that the transition tests.
+Covering requirements from 1 to 4
+
+Next we will cover the first requirements for negative cases, too:
+
+3. try creating an already existing directory
+
+4. try removing a non-existing directory
+
+We will name actions that test these requirements as
+"i_mkdir:error(exists)" and "i_rmdir:error(not found)",
+respectively. Including these to the next version of the test model is
+straightforward. rmdir should always result in the error in the state
+where the directory should not exist ("nodir"), and mkdir should fail
+in the state where the directory should exist ("dir").
+
+$ fmbt-gt -o 4reqs.lsts -f- << EOF
+P(nodir, "gt:istate") ->
+T(nodir, "i_mkdir:ok",               dir)
+T(nodir, "i_rmdir:error(not found)", nodir)
+
+T(dir,   "i_mkdir:error(exists)",    dir)
+T(dir,   "i_rmdir:ok",               nodir)
+EOF
+
+The test model still looks very simple:
+
+$ fmbt-view 4reqs.lsts
+
+We can quickly check out what kind of tests could be generated from
+this model. Let's see a dozen-step test that tries to cover all
+combinations of any two actions in the model. We create a
+configuration that uses a "dummy" adapter. This adapter does nothing
+but report successful execution of every action, so it is helpful in
+checking out what kind of tests can be generated or generating
+off-line test cases in certain situations.
+
+$ cat > test.conf << EOF
+model     = "4reqs.lsts"
+adapter   = "dummy"
+coverage  = "perm:2"
+heuristic = "greedy:2"
+engine.count = 12
+EOF
+
+Now we will run the test and see which actions are executed on the
+adapter:
+
+$ fmbt test.conf | fmbt-log
+i_mkdir:ok
+i_mkdir:error(exists)
+i_rmdir:ok
+i_rmdir:error(not found)
+i_mkdir:ok
+i_rmdir:ok
+i_mkdir:ok
+i_mkdir:error(exists)
+i_mkdir:error(exists)
+i_rmdir:ok
+i_rmdir:error(not found)
+i_rmdir:error(not found)
+pass
+
+The need for separate verification steps that were a must in the test
+case is already diminishing. For instance, the result of
+"i_mkdir:ok" is verified by executing both "i_mkdir:error(exists)" and
+"i_rmdir:ok" immediately after it (on lines 1-2 and 5-6 above). The
+same applies to all other actions as well.
+
+
+Covering all 9 requirements
+
+In this final step we abandon human-readable action names. Instead, we
+will use action names that call Python's os library's mkdir and rmdir
+directly from the remote_python adapter and specify the expected
+result. If we were about to test mkdir/rmdir in a C library or
+filesystem level, we would still use the high-level action names and
+implement an adapter (see adapters.txt) that would call the correct
+functions.
+
+Below is the fmbt-gt command that produces a test model that covers
+all 9 test requirements. After some transitions there is a comment "#
+Rn" where n is the number of the requirement that the transition
+tests. We have included an init sequence to the test model. The
+sequence imports the functions to be used in the test, defines
+shorthands for directory names, and resets the test environment
+(removes existing directories). For clarification we tagged the states
+as "no directory", "directory", etc.
 
 $ fmbt-gt -o all9reqs.lsts -f- <<EOF
 P(init, "gt:istate") ->
-P(init, "gt:istate")
 T(init, "iCatch('''from os import mkdir,rmdir,chmod; d='/tmp/mkrmdir'; subd='/tmp/mkrmdir/subd'; iShell('chmod u+w -R '+d+'; rm -rf '+d).wait()''')==None", nd)
 
 P(nd, "no directory")
@@ -143,17 +243,12 @@ T(sw-, "iCatch('chmod(d,0700)')==None", sd)
 T(sw-, "iCatch('rmdir(subd)')==Error('.*Permission denied.*')", sw-)# R9
 EOF
 
-In order to see the graphical representation of the model, run
+In order to see graphical representation of the model, run
 
 $ fmbt-view all9reqs.lsts
 
-This model defines the behaviour on very detailed level. The model
-contains an initialisation routine for the test run, and all the
-needed commands with required responses. Because of the level of
-detail, no special adapter or translation layer is needed in order to
-run the tests. Actions in the model are directly executable with the
-generic remote_python adapter. Let's run a test that executes every
-action in the model once.
+Let's run a test that executes every action in the model at least
+once.
 
 $ cat > test.conf << EOF
 model     = "all9reqs.lsts"
@@ -165,9 +260,7 @@ engine.count = 50
 on_error  = "exit"
 EOF
 
-$ fmbt -Ltest.log test.conf
-
-$ fmbt-log test.log
+$ fmbt test.conf | fmbt-log
 iCatch('''from os import mkdir,rmdir,chmod; d='/tmp/mkrmdir'; subd='/tmp/mkrmdir/subd'; iShell('chmod u+w -R '+d+'; rm -rf '+d).wait()''')==None
 iCatch('mkdir(d)')==None
 iCatch('rmdir(d)')==None
@@ -187,10 +280,19 @@ iCatch('chmod(d,0500)')==None
 iCatch('rmdir(subd)')==Error('.*Permission denied.*')
 pass
 
+This is a good smoke test for the functions. We can generate long
+tests with a lot of variation by increasing the permutation coverage
+and engine.count.
 
 
-PART 2: Different test model types
-==================================
+Testing all interleavings
+-------------------------
+
+[TODO: fmbt-parallel]
+
+
+PART II: Different test model types
+===================================
 
 fMBT tool supports three different test model types:
 
@@ -205,11 +307,12 @@ fMBT tool supports three different test model types:
 
 [TODO: clean up the rest of this document]
 
-[Warning for readers: this might be almost as confusing as Confuse-A-Cat]
+[WARNING for readers: the rest of the document might be almost as
+confusing as Confuse-A-Cat. It's under construction.]
 
 
-Graph transition tool and labelled state-transition system (LSTS)
------------------------------------------------------------------
+Graph transformation tool and labelled state-transition system (LSTS)
+---------------------------------------------------------------------
 
 LSTS file defines a state machine. Formally, LSTS is composed of
 
@@ -221,15 +324,15 @@ LSTS file defines a state machine. Formally, LSTS is composed of
 - a set of actions: every transition is labelled by exactly one
   action, and the same action can be a label of several transitions.
 
-- a set of state propositions: every state can be associated with zero
-  or more state propositions.
+- a set of state tags: every state can be associated with zero or more
+  state tags.
 
-gt is a graph transformation tool that operates on LSTSs. The tool can
-create new LSTSs if "new" is given in place of input LSTS
+fmbt-gt is a graph transformation tool that operates on LSTSs. The
+tool can create new LSTSs if "new" is given in place of input LSTS
 filename. The following command prints a two-state LSTS into standard
 output:
 
-$ gt new - 'P(off, x) ->
+$ fmbt-gt -o- 'P(off, x) ->
     T(off, "iOn", on)
     P(on, "lights on")
     T(on, "iOff", off)'
@@ -237,28 +340,28 @@ $ gt new - 'P(off, x) ->
 fmbt-view visualises LSTSs using Graphviz. To see what the above state
 machine looks like, pipe the LSTS to "fmbt-view -".
 
-Here is a brief explanation of the above gt command.
+Here is a brief explanation of the above fmbt-gt command.
 
-Keyword "new" as an input LSTS forces gt to internally create an LSTS
-to start with, instead of loading an existing LSTS. Created LSTS has a
-single state labelled by a special state proposition:
-"gt:istate". There is no transitions and no actions. The "gt:istate"
-proposition is always set to the initial state of any input LSTS, and
-it is never written out.
+fmbt-gt is an LSTS editor. As input LSTS to be edited is not given,
+fmbt-gt creates new LSTS to be edited, instead of loading the given
+file. Created LSTSs always have a single state that is tagged with a
+special fmbt-gt's tag: "gt:istate". They do not contain any
+transitions or any actions. The "gt:istate" tag is always set to the
+initial state of edited LSTS, and it is never printed to the output
+like other normal tags.
 
-"-" as an output LSTS tells gt to write the resulting LSTS to the
-standard output. Another option would have been to give a
-filename. The output LSTS is written out when all transformation rules
-have been applied to the input LSTS.
+"-" as an output LSTS file name (-o) tells fmbt-gt to write the
+resulting LSTS to the standard output. The output LSTS is written out
+when all transformation rules have been applied to the edited LSTS.
 
-The rest of the parameters are transformation rules. Rules consists of
-the left-hand part and the right-hand part, separated by "->". All
-content matching the left-hand side will be replaced by the content
-defined by the right-hand side of the rule. The above command has only
-one rule:
+The rest of the fmbt-gt parameters are transformation rules. Rules
+consists of the left-hand part and the right-hand part, separated by
+"->". All content in the edited LSTS that matches the left-hand side
+will be replaced by the content defined by the right-hand side of the
+rule. The above command has only one rule:
 
 'P(off, x) ->'
-replace any proposition "x" on any state "off" with the following:
+replace any tag "x" on any state "off" with the following:
 
 'T(off, "iOn", on)'
 add a transition from state "off" to a new state that will be called
@@ -266,36 +369,24 @@ add a transition from state "off" to a new state that will be called
 action "iOn".
 
 'P(on, "lights on")'
-add a state proposition "lights on" to the state called "on".
+add a state tag "lights on" to the state called "on".
 
 'T(on, "iOff", off)'
 add a transition, labelled by action "iOff", from the "on" state to
 the "off" state.
 
-As there is only one state with one state proposition, there is only
+As there is only one state with one state tag, there is only
 one match for the left-hand side of the rule.
 
 For more detailed explanation of the graph transition rules refer to
 
-$ gt --help
-
-An example of using gt for creating a test model can be found in fMBT
-test/interactivemode/create_model.sh.
+$ fmbt-gt --help
 
 
-Extended rules
---------------
+PART III: Extending fMBT to support new model formats
+=====================================================
 
 Model API
 ---------
 
-The first part of this document explains what these formats are and
-how you can create test models in these formats. The second part
-describes the test model API of fMBT tool and instructs how to
-implement support for other test model formats.
-
-This document is targeted for people who design test models and
-possibly wish to extend fMBT model support to other model formalisms.
-
-
-PART 3: 
+[TODO: explain model.hh]
