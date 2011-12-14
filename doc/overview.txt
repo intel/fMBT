@@ -279,10 +279,16 @@ requirements like execute "all actions", "all interleavings of two
 actions", ..., "all interleavings of n actions", and is therefore easy
 to use with any model.
 
-fMBT includes two simple heuristic modules: a random walk, that
-totally ignores the coverage, and a greedy selection. The latter picks
-up the first available action that gives the best improvement on
-coverage.
+fMBT includes three heuristic modules:
+
+- "random" chooses a random action, ignores coverage completely.
+
+- "action_fitness" chooses action based on its coverage fitness
+  value. Does not simulate executions, ignores covering state tags.
+
+- "lookahead:n": simulates executions of length 1..n, chooses the
+  shortest execution that gives the best increase in the
+  coverage. Slowest and smartest of all.
 
 
 Test execution

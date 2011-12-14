@@ -74,14 +74,14 @@ Create a test configuration file:
 
 $ cat > mkrmdir.conf << EOF
 model        = "mkrmdir.lsts"
-heuristic    = "greedy"
+heuristic    = "lookahead:1"
 coverage     = "perm:1"
 adapter      = "remote:remote_python -L adapter.log"
 engine.cov   = 1.0
 engine.count = -1
 EOF
 
-Greedy test generation heuristic suggests executing an action that
+Lookahead test generation heuristic suggests executing an action that
 immediately gives the best improvement on coverage.
 
 Coverage module "perm" with parameter n reaches full coverage (1.0)

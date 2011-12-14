@@ -383,7 +383,7 @@ Shared library adapter can be used through the "dlopen" adapter:
 
 $ cat > plugin-test.conf << EOF
 model        = "mysut.lsts"
-heuristic    = "greedy"
+heuristic    = "lookahead:1"
 coverage     = "perm:1"
 adapter      = "dlopen:myadapters.so,mylocal:xyz"
 engine.cov   = 1.0
@@ -407,7 +407,7 @@ In this case we can use it directly in the configuration file:
 
 $ cat > static-test.conf << EOF
 model        = "mysut.lsts"
-heuristic    = "greedy"
+heuristic    = "lookahead:1"
 coverage     = "perm:1"
 adapter      = "mylocal:xyz"
 engine.cov   = 1.0
