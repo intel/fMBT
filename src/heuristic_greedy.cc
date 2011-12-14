@@ -130,3 +130,13 @@ int Heuristic_greedy::getIAction()
 }
 
 FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "greedy");
+FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "lookahead");
+
+namespace {
+  Heuristic* creator_func(Log& log, std::string params = "")
+  {
+    std::string p("");
+    return new Heuristic_greedy(log, p);
+  }
+  static HeuristicFactory::Register me("action_fitness", creator_func);
+};
