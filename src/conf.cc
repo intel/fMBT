@@ -107,7 +107,7 @@ void Conf::load(std::string& name)
     History* h=HistoryFactory::create(log, name, param);
     
     if (h) {
-      h->set_coverage(coverage);
+      h->set_coverage(coverage,model);
       if (!h->status) {
 	RETURN_ERROR(h->errormsg);
       }

@@ -25,17 +25,18 @@
 #include "factory.hh"
 #include "writable.hh"
 #include "coverage.hh"
+#include "alphabet.hh"
 
 class Log;
 
 class History: public Writable {
 public:
-  History(Log& l, std::string params = "");
+  History(Log& l, std::string params = "") : log(l) {}
 
-  virtual void set_coverage(Coverage*) =0;
+  virtual void set_coverage(Coverage*,Alphabet* alpha) =0;
 
 protected:
-
+  Log log;
 };
 
 FACTORY_DECLARATION(History);

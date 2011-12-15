@@ -17,18 +17,17 @@
  *
  */
 #include "history.hh"
-#include <glib.h>
+#include "alphabet.hh"
 
 class History_remote: public History {
 public:
   History_remote(Log& l, std::string params = "");
 
-  virtual void set_coverage(Coverage*);
+  virtual void set_coverage(Coverage*,Alphabet* alpha);
 
 protected:
-  FILE* d_stdin;
-  FILE* d_stdout;
-  FILE* d_stderr;
-  
-  GPid pid;
+  Coverage* c;
+  Alphabet* a;
+  bool send_action(std::string& a,std::vector<std::string>& props);
+  std::string cmd;
 };
