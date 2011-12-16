@@ -19,6 +19,7 @@
 #include "conf.hh"
 #include "dparse.h"
 #include "helper.hh"
+#include "history.hh"
 #include <cstring>
 
 extern "C" {
@@ -97,6 +98,23 @@ void Conf::load(std::string& name)
   coverage->set_model(model);
 
   adapter = AdapterFactory::create(log, adapter_name, adapter_param);
+
+  /* handle history */
+  for(unsigned i=0;i<history.size();i++) {
+    std::string name,param;
+    split(*history[i],name,param);
+
+    History* h=HistoryFactory::create(log, name, param);
+    
+    if (h) {
+      h->set_coverage(coverage);
+      if (!h->status) {
+	RETURN_ERROR(h->errormsg);
+      }
+    } else {
+      RETURN_ERROR("Creating history \""+ *history[i] + "\" failed");
+    }
+  }
 
   if (adapter == NULL)
     RETURN_ERROR("Creating adapter \"" + adapter_name + "\" failed.");
