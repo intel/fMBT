@@ -40,6 +40,9 @@ Options:
           $tv - test verdict: pass or fail
           $tr - reason for the verdict
 
+  -r, --raw
+          do not decode action names
+
 If logfile is not given, log is read from standard input.
 """
 
@@ -60,15 +63,18 @@ fields = {
     '$tr' : ['<stop verdict=', '"', 3],
 }
 
-def extract(input_file_obj, output_file_obj, output_format):
+def extract(input_file_obj, output_file_obj, output_format, raw):
     # FIXME: this is just a quick to get input action names
     # printed. What this really should do is:
     # 1. parse everything that is done during a single test step
     # 2. write the stuff in requested format to output_file_obj
 
     def pick(line, delimiter, fieldindex):
-        try: contents = urllib2.unquote(line.split(delimiter)[fieldindex])
-        except: contents = '<syntax error>'
+        if raw == 1:
+            contents = line.split(delimiter)[fieldindex]
+        else:
+            try: contents = urllib2.unquote(line.split(delimiter)[fieldindex])
+            except: contents = '<syntax error>'
         return contents
 
     clean_data = lambda: dict([(field, []) for field in fields])
@@ -102,14 +108,17 @@ if __name__ == '__main__':
     input_file_obj = sys.stdin
     output_file_obj = sys.stdout
     output_format = '$tv$ax'
+    option_raw = 0
 
     opts, remainder = getopt.getopt(
-        sys.argv[1:], 'hf:o:',
-        ['help', 'format=', 'output='])
+        sys.argv[1:], 'hrf:o:',
+        ['help', 'raw', 'format=', 'output='])
     for opt, arg in opts:
         if opt in ['-h', '--help']:
             print __doc__
             sys.exit(0)
+        elif opt in ['-r', '--raw']:
+            option_raw = 1
         elif opt in ['-f', '--format']:
             output_format = arg
         elif opt in ['-o', '--output'] and not arg in ['', '-']:
@@ -124,4 +133,4 @@ if __name__ == '__main__':
     if remainder and remainder[0] != "-":
         input_file_obj = file(remainder[0], "r")
 
-    extract(input_file_obj, output_file_obj, output_format)
+    extract(input_file_obj, output_file_obj, output_format, option_raw)
