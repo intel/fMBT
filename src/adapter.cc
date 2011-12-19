@@ -91,6 +91,15 @@ void Adapter::setparent(Adapter* a)
 
 const char* Adapter::getUActionName(int action)
 {
+  switch (action) {
+  case -1: return "OUTPUTONLY";
+  case -2: return "DEADLOCK";
+  case -3: return "SILENCE";
+  default:
+    if (action<0) {
+      return "";
+    }
+  }
   if (!unames[action]) {
     unames[action]=escape_string((*actions)[action].c_str());
   }
