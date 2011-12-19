@@ -116,7 +116,7 @@ void Adapter_timer::execute(std::vector<int>& action)
 
   struct action_timeout& at=atime[action[0]];
 
-  log.print("<action type=\"input\" name=\"%s\" timer=%i/>\n",
+  log.print("<timer_action type=\"input\" name=\"%s\" timer=%i/>\n",
 	    getUActionName(action[0]),at.timer);
 
   if (!isInputName((*actions)[action[0]])) {
