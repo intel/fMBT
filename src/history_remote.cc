@@ -56,7 +56,12 @@ void History_remote::set_coverage(Coverage* cov,
     std::vector<std::string> props;
     
     Conf::split(vec[i],act,tmp);
+    unescape_string(act);
+
     strvec(props,tmp,separator);
+    for(unsigned j=0;j<props.size();j++) {
+      unescape_string(props[j]);
+    }
     send_action(act,props);
   }
 }
