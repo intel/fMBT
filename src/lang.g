@@ -83,4 +83,4 @@ bstr: "[^\}\{]+" {
 
 string: "\"([^\"\\]|\\[^])*\"" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); };
 
-unquoted_string: "([a-zA-Z]*)" { $$.str = new std::string($n0.start_loc.s,$n0.end-$n0.start_loc.s); };
+unquoted_string: "([a-zA-Z_]*)" { $$.str = new std::string($n0.start_loc.s,$n0.end-$n0.start_loc.s); };
