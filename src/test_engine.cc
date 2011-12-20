@@ -50,7 +50,9 @@ extern "C" {
 #include <cstdlib>
 #include <cstring>
 
-Test_engine::Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p) : heuristic(h),adapter(a),log(l),policy(p) {
+Test_engine::Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p) : heuristic(h),adapter(a),log(l),policy(p),coverage_reached(false),step_limit_reached(false),tag_reached(false)
+
+ {
   p.set_model(h.get_model());
 }
 
@@ -83,14 +85,22 @@ namespace {
   }
 }
 
-bool Test_engine::run(float target_coverage,
-		      int max_step_count)
+bool Test_engine::run(float _target_coverage,
+		      int   _max_step_count,
+		      int   _exit_tag)
 {
+  target_coverage=_target_coverage;
+  max_step_count=_max_step_count;
+  exit_tag=_exit_tag;
+
   int action=0;
   std::vector<int> actions;
   int step_count=0;
+  /*
   bool coverage_reached = false;
   bool step_limit_reached = false;
+  bool tag_reached = false;
+  */
   log.push("test_engine");
   struct timeval start_time;
   struct timeval total_time;
@@ -121,8 +131,11 @@ bool Test_engine::run(float target_coverage,
       }
       log_status(log, step_count, heuristic.getCoverage());
       gettimeofday(&Adapter::current_time,NULL);
+      if (!coverage_status(step_count)) {
+	goto out;
+      }
     }
-    
+
     action = heuristic.getIAction();
     if (action >= 0)
       log.debug("Test_engine::run: test generator suggests executing %i '%s'\n",
@@ -210,13 +223,9 @@ bool Test_engine::run(float target_coverage,
     } // switch
     log_status(log, step_count, heuristic.getCoverage());
 
-    coverage_reached = heuristic.getCoverage() >= target_coverage;
-    step_limit_reached = (max_step_count != -1 && step_count >= max_step_count);
-  } while ( !coverage_reached && !step_limit_reached );
+  } while (coverage_status(step_count));
 
-  if (coverage_reached) test_passed(true, "coverage reached", log);
-  else if (step_limit_reached) test_passed(true, "step limit reached", log);
-  else abort();
+ out:
 
   timersub(&Adapter::current_time,&start_time,&total_time);
   log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
@@ -532,4 +541,36 @@ void Test_engine::interactive()
     }
     std::free(s);
   }
+}
+
+bool Test_engine::coverage_status(int step_count)
+{
+  coverage_reached = heuristic.getCoverage() >= target_coverage;
+  step_limit_reached = (max_step_count != -1 && 
+			step_count >= max_step_count);
+
+  int* t;
+  if (exit_tag>0) {
+    int s=heuristic.get_model()->getprops(&t);
+
+    for(int i=0;i<s&&!tag_reached;i++) {
+      tag_reached=(t[i]==exit_tag);
+    }
+  }
+
+  if (coverage_reached) {
+    test_passed(true, "coverage reached", log);
+  } else {
+    if (step_limit_reached) {
+      test_passed(true, "step limit reached", log); 
+    } else {
+      if (tag_reached) {
+	test_passed(true,"tag reached", log);
+      }
+    }
+  }
+
+  return !coverage_reached && !step_limit_reached 
+    && !tag_reached;
+
 }

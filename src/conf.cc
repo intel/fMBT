@@ -155,6 +155,7 @@ std::string Conf::stringify() {
 void Conf::execute(bool interactive) {
 
   Policy policy;
+  int engine_tag=-1;
   log.push("conf_execute");
 
   if (!status) {
@@ -166,10 +167,14 @@ void Conf::execute(bool interactive) {
 
   Test_engine engine(*heuristic,*adapter,log,policy);
 
+  if (status && model && exit_tag!="") {
+    engine_tag=find(model->getSPNames(),exit_tag);
+  }
+
   if (interactive) {
     engine.interactive();
   } else {
-    if (!engine.run(engine_cov,engine_count)) {
+    if (!engine.run(engine_cov,engine_count,engine_tag)) {
       // Test failed. Continue according to the on_error
       // configuration. In addition to the following it could at
       // somepoint specify a shell command (for instance, package and
@@ -183,3 +188,4 @@ void Conf::execute(bool interactive) {
   }
   log.pop();
 }
+

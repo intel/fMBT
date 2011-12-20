@@ -26,11 +26,19 @@
 class Test_engine {
 public:
   Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p);
-  bool run(float target_coverage,int max_step_count=-1);
+  bool run(float _target_coverage,int _max_step_count=-1,
+	   int _exit_tag=-1);
   void interactive();
+  virtual bool coverage_status(int step_count);
 protected:
+  int       max_step_count;
+  float     target_coverage;
+  int       exit_tag;
   Heuristic &heuristic;
   Adapter   &adapter;
   Log       &log;
   Policy    &policy;
+  bool      coverage_reached;
+  bool      step_limit_reached;
+  bool      tag_reached;
 };
