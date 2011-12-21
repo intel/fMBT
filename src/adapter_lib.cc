@@ -49,7 +49,7 @@ namespace {
 	std::string em("");
 	a = AdapterFactory::create(log, d, em);
 	a->status   = false;
-	a->errormsg = std::string("lib:Can't load adapter. ") + dlerror();
+	a->errormsg = std::string("lib:Can't load adapter ") + params + ":" + dlerror();
       }
     }
     return a;
