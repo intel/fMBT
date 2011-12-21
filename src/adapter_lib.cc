@@ -21,6 +21,7 @@
 #include "conf.hh"
 #include "helper.hh"
 #include <dlfcn.h>
+#include <string.h>
 
 namespace {
   Adapter* creator_func(Log& log, std::string params = "") {
@@ -31,11 +32,24 @@ namespace {
     Conf::split(s, adapter_name, adapter_param);
 
     a = AdapterFactory::create(log, adapter_name, adapter_param);
+
     if (!a) {
       std::string lib("lib"+adapter_name+".so");
       void* handle=dlopen(lib.c_str(),RTLD_NOW);
+
+      if (!handle) {
+	lib="./"+lib;
+	handle=dlopen(lib.c_str(),RTLD_NOW);
+      }
+
       if (handle) {
 	a = AdapterFactory::create(log, adapter_name, adapter_param);
+      } else {
+	std::string d("dummy");
+	std::string em("");
+	a = AdapterFactory::create(log, d, em);
+	a->status   = false;
+	a->errormsg = std::string("lib:Can't load adapter. ") + dlerror();
       }
     }
     return a;
