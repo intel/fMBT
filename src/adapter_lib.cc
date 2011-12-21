@@ -22,14 +22,14 @@
 #include "helper.hh"
 #include <dlfcn.h>
 
-namespace { 
+namespace {
   Adapter* creator_func(Log& log, std::string params = "") {
     Adapter* a;
     std::string adapter_name,adapter_param;
     std::string s(unescape_string(strdup(params.c_str())));
 
     Conf::split(s, adapter_name, adapter_param);
-   
+
     a = AdapterFactory::create(log, adapter_name, adapter_param);
     if (!a) {
       std::string lib("lib"+adapter_name+".so");
@@ -39,6 +39,6 @@ namespace {
       }
     }
     return a;
-  } 
+  }
   static AdapterFactory::Register me("lib", creator_func);
 };

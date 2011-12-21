@@ -29,6 +29,23 @@ export PATH=../../src:../../utils:$PATH
 source ../functions.sh
 rm -f $LOGFILE
 
+teststep "brainfuck"
+rm -f program.lsts libbrainfuck_memory.so bf2gt
+make bf2gt
+check_file_exists bf2gt
+./bf2gt -i helloworld.bf|fmbt-gt -f - > program.lsts
+check_file_exists program.lsts
+lang -c -o libbrainfuck_memory.so brainfuck_memory.lang
+check_file_exists libbrainfuck_memory.so
+which fmbt
+LD_LIBRARY_PATH=`pwd`
+echo $LD_LIBRARY_PATH
+strace -o oo ../../src/fmbt -l brainfuck.log brainfuck.conf 
+exit
+cmp output hello
+testpassed
+
+
 ##########################################
 # Run the test
 
@@ -78,3 +95,5 @@ if [ "$(fmbt-log -f '$tr' mkrmdir_aal.log)" != "coverage reached" ]; then
     testfailed
 fi
 testpassed
+
+

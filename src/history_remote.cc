@@ -18,8 +18,84 @@
  */
 
 #include "history_remote.hh"
+#include <glib.h>
+#include "helper.hh"
+#include "conf.hh"
 
-void History_remote::set_coverage(Coverage*)
+History_remote::History_remote(Log& l, std::string params) :
+  History(l,params)
 {
-  
+  cmd=params;
+}
+
+void History_remote::set_coverage(Coverage* cov,
+				  Alphabet* alpha)
+{
+  a=alpha;
+  c=cov;
+
+  gchar* stdout=NULL;
+  gchar* stderr=NULL;
+  gint   exit_status=0;
+  GError *ger=NULL;
+
+  g_spawn_command_line_sync(cmd.c_str(),&stdout,&stderr,
+			    &exit_status,&ger);
+
+  /* Let's iterate over the actions and state props */
+
+  std::vector<std::string> vec;
+  std::string s(stdout);
+  std::string separator("\n");
+  strvec(vec,s,separator);
+
+  for(unsigned i=0;i<vec.size();i++) {
+    std::string act;
+    std::string tmp;
+    std::string separator(" ");
+    std::vector<std::string> props;
+    
+    Conf::split(vec[i],act,tmp);
+    unescape_string(act);
+
+    strvec(props,tmp,separator);
+    for(unsigned j=0;j<props.size();j++) {
+      unescape_string(props[j]);
+    }
+    send_action(act,props);
+  }
+}
+
+bool History_remote::send_action(std::string& act,
+				 std::vector<std::string>& props)
+{
+  std::vector<int> p;
+
+  if (c&&a) {
+    if (act=="pass") {
+      c->history(0,p,true);
+      return true;
+    } 
+
+    if (act=="fail") {
+      c->history(0,p,false);
+      return true;
+    }
+
+    int action=find(a->getActionNames(),act);
+
+    if (action>0) {
+
+      for(unsigned i=0;i<props.size();i++) {
+	p.push_back(find(a->getSPNames(),props[i]));
+      }
+
+      c->history(action,p,false);
+      return true;
+    } else {
+      // Tau?
+    }
+  }
+
+  return false;
 }

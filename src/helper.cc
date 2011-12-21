@@ -53,7 +53,7 @@ int find(const std::vector<std::string> &v,const std::string s)
       return i;
     }
   }
-  return 0;  
+  return 0;
 }
 
 bool isOutputName(const std::string& name)
@@ -147,6 +147,16 @@ char* unescape_string(char* msg)
   
   return msg;
 }
+
+void unescape_string(std::string& msg)
+{
+  char* tmp=strdup(msg.c_str());
+  unescape_string(tmp);
+
+  msg=tmp;
+  free(tmp);
+}
+
 
 char* escape_string(const char* msg)
 {

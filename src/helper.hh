@@ -49,3 +49,4 @@ void strvec(std::vector<std::string> & v,std::string& s,
 	    std::string& separator);
 
 char* unescape_string(char* msg);
+void unescape_string(std::string& msg);

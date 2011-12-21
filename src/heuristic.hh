@@ -45,8 +45,8 @@ public:
   virtual int getAction()=0;
   virtual int getIAction()=0;
 
-  std::string& getActionName(int action);
-  virtual Model* get_model();
+  std::string& getActionName(int action)
+;  virtual Model* get_model();
 
   virtual void set_coverage(Coverage* c);
   virtual Coverage* get_coverage();

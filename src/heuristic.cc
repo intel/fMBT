@@ -25,7 +25,7 @@
 FACTORY_IMPLEMENTATION(Heuristic);
 
 Heuristic::Heuristic(Log& l, std::string params) :
-  log(l)
+  none(""), log(l)
 {
 }
 

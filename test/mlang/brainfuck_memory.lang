@@ -1,0 +1,90 @@
+model brainfuck_memory {
+  language: C++ {
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <helper.hh>
+  };
+
+  variables {
+    int pos;
+    unsigned char memory[32768];
+  }
+
+  initial_state {
+    pos = 0;
+    memset(memory,0,sizeof(memory));
+  }
+
+  
+  action {
+    name: "inext";
+
+    adapter() {
+      pos++;
+      return find(action_names,"inext");
+    }
+  }
+
+  action {
+    name: "iprev";
+
+    adapter() {
+      pos--;
+      return find(action_names,"iprev");
+    }
+  }
+
+  action {
+    name: "iinc";
+
+    adapter() {
+      memory[pos]++;
+      return find(action_names,"iinc");
+    }
+  }
+
+  action {
+    name: "idec";
+
+    adapter() {
+      memory[pos]--;
+      return find(action_names,"idec");
+    }
+  }
+
+  action {
+    name: "iprint";
+
+    adapter() {
+      fprintf(stdout,"%c",memory[pos]);
+      return find(action_names,"iprint");
+    }
+  }
+
+  action {
+    name: "imemz";
+    adapter() {
+       if (memory[pos]==0)
+       	  return find(action_names,"imemz");
+       return find(action_names,"imemnz");
+    }
+  }
+
+  action {
+    name: "imemnz";
+    adapter() {
+       if (memory[pos]==0)
+       	  return find(action_names,"imemz");
+       return find(action_names,"imemnz");
+    }
+  }
+
+  action {
+    name: "iinput";
+
+    adapter() {
+      memory[pos]=getc(stdin);
+      return find(action_names,"iinput");            
+    }
+  }
+}
