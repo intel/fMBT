@@ -23,11 +23,16 @@
 
 class aalang {
 public:
+  aalang(): default_action_input(true) {}
   virtual void set_name(std::string* name) = 0;
   virtual void set_namestr(std::string* name) = 0;
   virtual void set_variables(std::string* var) = 0;
   virtual void set_istate(std::string* ist) = 0;
   virtual void set_guard(std::string* gua) = 0;
+
+  virtual void set_push(std::string* p) = 0;
+  virtual void set_pop(std::string* p) = 0;
+
   virtual void empthy_guard() {
     set_guard(&default_guard);
   }
@@ -39,9 +44,13 @@ public:
   virtual void next_action() = 0;
   virtual std::string stringify() = 0;
   virtual void set_starter(std::string* st) = 0;
+  virtual void set_default_action_input(bool b) {
+    default_action_input=b;
+  }
 protected:
   std::string default_guard;
   std::string default_body;
+  bool default_action_input;
 };
 
 #endif

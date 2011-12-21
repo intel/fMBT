@@ -45,11 +45,11 @@ int Mwrapper::execute(int action)
 }
 
 void Mwrapper::push() {
-  
+  model->push();
 }
 
 void Mwrapper::pop() {
-
+  model->pop();
 }
 
 bool Mwrapper::load(std::string& name)

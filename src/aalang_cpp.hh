@@ -32,6 +32,10 @@ public:
   virtual void set_variables(std::string* var);
   virtual void set_istate(std::string* ist);
   virtual void set_guard(std::string* gua);
+
+  virtual void set_push(std::string* p);
+  virtual void set_pop(std::string* p);
+
   virtual void set_body(std::string* bod);
   virtual void set_adapter(std::string* ada);
   virtual void next_action();
@@ -46,6 +50,8 @@ protected:
   int action_cnt;
   std::string* istate;
   std::string* name;
+  std::string push;
+  std::string pop;
 };
 
 #endif

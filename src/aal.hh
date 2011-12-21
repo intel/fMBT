@@ -34,6 +34,8 @@ public:
   virtual std::vector<std::string>& getActionNames() {
     return action_names;
   }
+  virtual void push() {}
+  virtual void pop() {}
 protected:
   std::vector<int> actions;
   std::vector<std::string> action_names; /* action names.. */
