@@ -25,6 +25,20 @@
 #include <cstdio>
 #include <algorithm>
 
+#ifdef DROI
+char* READLINE(char* prompt)
+{
+    char *s = (char*)malloc(1024);
+    int scanf_status;
+    if (s == NULL) return s;
+    fprintf(stderr, "%s", prompt);
+    scanf_status = scanf("%1023[^\n]", s);
+    scanf("\n");
+    if (scanf_status > 0) return s;
+    std::free(s);
+    return NULL;
+}
+#else
 #ifdef USE_GNU_READLINE
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -47,6 +61,7 @@ extern "C" {
 #define READLINE(a) readline(a)
 #endif
 #endif
+#endif // ifdef DDROI else
 #include <cstdlib>
 #include <cstring>
 
@@ -297,7 +312,9 @@ void Test_engine::interactive()
   Adapter* current_adapter=&adapter;
   Model* current_model=heuristic.get_model();
 
+#ifndef DROI
   rl_outstream=stderr;
+#endif
 
   while (run) {
 

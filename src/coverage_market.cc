@@ -19,6 +19,7 @@
 
 #include "coverage_market.hh"
 #include "model.hh"
+#include <regex.h>
 
 Coverage_Market::Coverage_Market(Log& l, std::string& params) :
     Coverage(l)

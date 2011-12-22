@@ -24,7 +24,20 @@
 #include "helper.hh"
 #include <iostream>
 #include <unistd.h>
+#include <cstdlib>
+
+#ifndef DROI
 #include <error.h>
+#else
+void error(int exitval, int dontcare, const char* format, ...)
+{
+  va_list ap;
+  fprintf(stderr, "fMBT error: ");
+  vfprintf(stderr, format, ap);
+  exit(exitval);
+}
+#endif
+
 #include <cstdio>
 #include <getopt.h>
 
@@ -45,82 +58,76 @@ void print_usage()
 
 int main(int argc,char * const argv[])
 {
-  try {
-    FILE* logfile=stdout;
-    bool interactive=false;
-    bool debug_enabled=false;
-    bool E=false;
-    int c;
+  FILE* logfile=stdout;
+  bool interactive=false;
+  bool debug_enabled=false;
+  bool E=false;
+  int c;
 
-    static struct option long_opts[] = {
-        {"help", no_argument, 0, 'h'},
-        {0, 0, 0, 0}
-    };
+  static struct option long_opts[] = {
+    {"help", no_argument, 0, 'h'},
+    {0, 0, 0, 0}
+  };
 
-    while ((c = getopt_long (argc, argv, "DEL:heil:", long_opts, NULL)) != -1)
-         switch (c)
-           {
-	   case 'D': 
-	     debug_enabled=true;
-	     break;
-	   case 'E':
-	     human_readable=true;
-	     E=true;
-	     break;
-	   case 'L':
-	   case 'l':
-	     if (logfile!=stdout) {
-	       std::printf("Only one logfile\n");
-	       return 3;
-	     }
-	     logfile=fopen(optarg,c=='L'?"a":"w");
-	     if (!logfile) {
-	       std::printf("Can't open logfile \"%s\"\n",optarg);
-	       return 1;
-	     }
-	     break;
-	   case 'e':
-	     human_readable=false;
-	     E=true;
-	     break;
-	   case 'i':
-	     interactive=true;
-	     break;
-           case 'h':
-             print_usage();
-             return 0;
-           default:
-             return 2;
-           }
- 
-    if (optind == argc) {
+  while ((c = getopt_long (argc, argv, "DEL:heil:", long_opts, NULL)) != -1)
+    switch (c)
+    {
+    case 'D': 
+      debug_enabled=true;
+      break;
+    case 'E':
+      human_readable=true;
+      E=true;
+      break;
+    case 'L':
+    case 'l':
+      if (logfile!=stdout) {
+        std::printf("Only one logfile\n");
+        return 3;
+      }
+      logfile=fopen(optarg,c=='L'?"a":"w");
+      if (!logfile) {
+        std::printf("Can't open logfile \"%s\"\n",optarg);
+        return 1;
+      }
+      break;
+    case 'e':
+      human_readable=false;
+      E=true;
+      break;
+    case 'i':
+      interactive=true;
+      break;
+    case 'h':
       print_usage();
-      error(3, 0, "test configuration file missing.\n");
+      return 0;
+    default:
+      return 2;
     }
-    { 
-      Log log(logfile);
-      Conf c(log,debug_enabled);
-      std::string conffilename(argv[optind]);
-      c.load(conffilename);
+ 
+  if (optind == argc) {
+    print_usage();
+    error(3, 0, "test configuration file missing.\n");
+  }
+  { 
+    Log log(logfile);
+    Conf c(log,debug_enabled);
+    std::string conffilename(argv[optind]);
+    c.load(conffilename);
 
-      if (!c.status)
-        error(4, 0, "%s", c.stringify().c_str());
+    if (!c.status)
+      error(4, 0, "%s", c.stringify().c_str());
      
-      if (E) {
-	std::printf("%s\n",c.stringify().c_str());
-      } else {
-	c.execute(interactive);
-        if (!c.status) {
-          std::printf("%s\n",c.stringify().c_str());
-          return 5;
-        }
+    if (E) {
+      std::printf("%s\n",c.stringify().c_str());
+    } else {
+      c.execute(interactive);
+      if (!c.status) {
+        std::printf("%s\n",c.stringify().c_str());
+        return 5;
       }
     }
-  } catch (int i) {
-    print_usage();
-    std::printf("catched %i\n",i);
-    return 6;
   }
-  
+
   return 0;
 }

@@ -22,7 +22,19 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <cstdlib>
+
+#ifndef DROI
 #include <error.h>
+#else
+void error(int exitval, int dontcare, const char* format, ...)
+{
+  va_list ap;
+  fprintf(stderr, "remote_adapter_loader error: ");
+  vfprintf(stderr, format, ap);
+  exit(exitval);
+}
+#endif
 
 #include <string.h>
 #include <unistd.h>
