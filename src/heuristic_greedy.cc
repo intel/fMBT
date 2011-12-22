@@ -113,7 +113,7 @@ int Heuristic_greedy::getIAction()
       AlgPathToBestCoverage alg(m_search_depth);
       double score = alg.search(*model, *my_coverage, m_path);
       if (m_path.size() > 0) {
-        reverse(m_path.begin(), m_path.end());
+        std::reverse(m_path.begin(), m_path.end());
         log.debug("score: %f, path length: %d", score, m_path.size());
       }
     }

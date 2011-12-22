@@ -1,5 +1,6 @@
 if ANDROID
 bin_PROGRAMS = fmbt_droid
+ANDROID_NDK_BUILD = ndk-build
 else
 bin_PROGRAMS = fmbt remote_adapter_loader fmbt-aalc
 endif
@@ -11,13 +12,13 @@ endif
 
 LOCAL_ADAPTERS = adapter.cc awrapper.cc adapter_model.cc adapter_mapper.cc adapter_dummy.cc adapter_timer.cc
 
-LOCAL_HEURISTICS =  heuristic.cc heuristic_random.cc heuristic_mrandom.cc heuristic_minerror.cc heuristic_greedy.cc
+LOCAL_HEURISTICS =  heuristic.cc heuristic_random.cc heuristic_mrandom.cc heuristic_greedy.cc
 
-LOCAL_COVERAGES = coverage.cc coverage_market.cc coverage_mapper.cc coverage_tree.cc coverage_tema_seq.cc coverage_prop.cc
+LOCAL_COVERAGES = coverage.cc coverage_mapper.cc coverage_tree.cc coverage_prop.cc
 
-COMMON_SOURCES = fmbt.cc mwrapper.cc lts.cc lts_remote.cc lts_trace.cc xrules_remote.cc test_engine.cc log.cc helper.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc covlang.g.d_parser.cc model.cc $(LOCAL_ADAPTERS) $(LOCAL_HEURISTICS) $(LOCAL_COVERAGES) conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc alg_bdfs.cc history.cc history_remote.cc null.cc
+COMMON_SOURCES = fmbt.cc mwrapper.cc lts.cc test_engine.cc log.cc helper.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc model.cc $(LOCAL_ADAPTERS) $(LOCAL_HEURISTICS) $(LOCAL_COVERAGES) conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc alg_bdfs.cc history.cc null.cc
 
-fmbt_SOURCES                  = $(COMMON_SOURCES) adapter_dlopen.cc adapter_remote.cc adapter_lib.cc model_lib.cc 
+fmbt_SOURCES                  = $(COMMON_SOURCES) adapter_dlopen.cc adapter_remote.cc adapter_lib.cc model_lib.cc lts_remote.cc lts_trace.cc xrules_remote.cc covlang.g.d_parser.cc coverage_market.cc coverage_tema_seq.cc history_remote.cc
 
 fmbt_droid_SOURCES            = $(COMMON_SOURCES)
 
@@ -35,6 +36,7 @@ noinst_HEADERS += conf.g lts.g mrules.g covlang.g xrules.g lang.g
 
 fmbt_CPPFLAGS                  = -Wall -g -O0 -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0`
 fmbt_droid_CPPFLAGS            = -Wall -g -O0 -I d -I `pwd` `pkg-config --cflags libedit` -DDROI
+fmbt_android_CPPFLAGS          = -Wall -g -O0 -I jni/d -I `pwd` `pkg-config --cflags libedit` -DDROI
 remote_adapter_loader_CPPFLAGS = -Wall -g -I d -DDROI
 fmbt_cparsers_la_CPPFLAGS      = -Wall -g -O0 -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DCAPI
 fmbt_aalc_CPPFLAGS	       = -Wall -g -O0 -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0`
@@ -79,5 +81,29 @@ xrules_extended.g.d_parser.cc: xrules_extended.g d/make_dparser
 
 covlang.g.d_parser.cc: covlang.g d/make_dparser
 	d/make_dparser -o covlang.g.d_parser.cc -i covlang ./$(VPATH)/covlang.g
+
+fmbt_android:
+	bash -c 'mkdir -p android; cd android; [ -s jni ] || ln -s .. jni'
+	@echo 'APP_STL := stlport_static'			> Application.mk
+	@echo 'APP_MODULES := dparse_android fmbt_android'	>> Application.mk
+
+	@echo 'LOCAL_PATH := $$(call my-dir)'							> Android.mk
+	@echo 'include $$(CLEAR_VARS)'								>> Android.mk
+	@echo '############################## MODULE 1: dparse_android'				>> Android.mk
+	@echo 'LOCAL_MODULE := dparse_android'							>> Android.mk
+	@echo 'LOCAL_SRC_FILES := $$(wildcard d/*.c)'						>> Android.mk
+	@echo 'LOCAL_CFLAGS := -DD_MAJOR_VERSION=1 -DD_MINOR_VERSION=26 -DD_BUILD_VERSION=1'	>> Android.mk
+	@echo 'include $$(BUILD_STATIC_LIBRARY)'						>> Android.mk
+	@echo 'LOCAL_MODULE    := fmbt_android'							>> Android.mk
+	@echo 'include $$(CLEAR_VARS)'								>> Android.mk
+	@echo '############################## MODULE 2: fmbt_android'				>> Android.mk
+	@echo 'LOCAL_MODULE    := fmbt_android'							>> Android.mk
+	@echo 'LOCAL_SRC_FILES := $(fmbt_droid_SOURCES)'					>> Android.mk
+	@echo 'LOCAL_CPPFLAGS  := -Ijni/d $(fmbt_android_CPPFLAGS)'				>> Android.mk
+	@echo 'LOCAL_STATIC_LIBRARIES := dparse_android'					>> Android.mk
+	@echo 'LOCAL_CPP_EXTENSION := .cc'							>> Android.mk
+	@echo 'include $$(BUILD_EXECUTABLE)'							>> Android.mk
+	bash -c 'cd android; $(ANDROID_NDK_BUILD) V=1 && ln libs/*/fmbt_android .'
+
 
 # coverage_market.o: coverage_market.hh

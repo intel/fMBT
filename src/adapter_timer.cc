@@ -19,6 +19,8 @@
 #include "adapter_timer.hh"
 #include "helper.hh"
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <sstream>
 #include <time.h>
 #include <math.h>

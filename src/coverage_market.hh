@@ -29,8 +29,6 @@
 
 #include "coverage.hh"
 
-#include <regex.h>
-
 #include <map>
 #include <vector>
 

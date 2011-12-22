@@ -19,7 +19,8 @@
 
 #include "heuristic_mrandom.hh"
 #include "helper.hh"
-#include <stdlib.h>
+#include <cstdlib>
+#include <cstring>
 
 Heuristic_mrandom::Heuristic_mrandom(Log& l, std::string params) :
   Heuristic(l)

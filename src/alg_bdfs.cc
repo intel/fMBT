@@ -91,7 +91,7 @@ double AlgBDFS::path_to_best_evaluation(Model& model, std::vector<int>& path, in
     if (best_score > current_score) {
         // The real algorithm constructs the best path in the opposite
         // direction to the path vector, this wrapper reverses it.
-        reverse(path.begin(), path.end());
+        std::reverse(path.begin(), path.end());
     } else {
         path.resize(0);
     }
