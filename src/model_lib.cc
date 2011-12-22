@@ -35,8 +35,21 @@ namespace {
 
     if (!m) {
       std::string lib("lib"+model_name+".so");
-      if (dlopen(lib.c_str(),RTLD_LAZY)) {
+      void* handle=dlopen(lib.c_str(),RTLD_NOW);
+
+      if (!handle) {
+	lib="./"+lib;
+	handle=dlopen(lib.c_str(),RTLD_NOW);
+      }
+
+      if (handle) {
 	m = ModelFactory::create(l, model_name, model_param);
+      } else {
+	std::string d("null");
+	std::string em("");
+	m = ModelFactory::create(l, d, em);
+	m->status   = false;
+	m->errormsg = std::string("lib:Can't load model ") + params + ":" + dlerror();
       }
     }
 

@@ -16,7 +16,7 @@ LOCAL_HEURISTICS =  heuristic.cc heuristic_random.cc heuristic_mrandom.cc heuris
 
 LOCAL_COVERAGES = coverage.cc coverage_mapper.cc coverage_tree.cc coverage_prop.cc
 
-COMMON_SOURCES = fmbt.cc mwrapper.cc lts.cc test_engine.cc log.cc helper.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc model.cc $(LOCAL_ADAPTERS) $(LOCAL_HEURISTICS) $(LOCAL_COVERAGES) conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc alg_bdfs.cc history.cc
+COMMON_SOURCES = fmbt.cc mwrapper.cc lts.cc test_engine.cc log.cc helper.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc model.cc $(LOCAL_ADAPTERS) $(LOCAL_HEURISTICS) $(LOCAL_COVERAGES) conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc alg_bdfs.cc history.cc null.cc
 
 fmbt_SOURCES                  = $(COMMON_SOURCES) adapter_dlopen.cc adapter_remote.cc adapter_lib.cc model_lib.cc lts_remote.cc lts_trace.cc xrules_remote.cc covlang.g.d_parser.cc coverage_market.cc coverage_tema_seq.cc history_remote.cc
 
@@ -28,9 +28,9 @@ remote_adapter_loader_SOURCES = remote_adapter_loader.cc adapter.cc log.cc adapt
 
 fmbt_cparsers_la_SOURCES      = xrules.g.d_parser.cc lts.g.d_parser.cc helper.cc
 
-noinst_HEADERS = adapter_dlopen.hh adapter_dummy.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_v4l2.hh adapter_xrules.hh conf.hh coverage.hh coverage_mapper.hh coverage_market.hh coverage_tree.hh coverage_tema_seq.hh helper.hh heuristic_greedy.hh heuristic.hh heuristic_minerror.hh heuristic_random.hh log_null.hh lts.hh lts_remote.hh lts_xrules.hh xrules_remote.hh model.hh policy.hh rules.hh test_engine.hh alg_bdfs.hh
+noinst_HEADERS = adapter_dlopen.hh adapter_dummy.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_v4l2.hh adapter_xrules.hh conf.hh coverage.hh coverage_mapper.hh coverage_market.hh coverage_tree.hh coverage_tema_seq.hh helper.hh heuristic_greedy.hh heuristic.hh heuristic_minerror.hh heuristic_random.hh log_null.hh lts.hh lts_remote.hh lts_xrules.hh xrules_remote.hh model.hh policy.hh rules.hh test_engine.hh alg_bdfs.hh null.hh
 
-pkginclude_HEADERS = adapter.hh factory.hh writable.hh log.hh aal.hh model.hh awrapper.hh mwrapper.hh alphabet.hh
+pkginclude_HEADERS = adapter.hh factory.hh writable.hh log.hh aal.hh model.hh awrapper.hh mwrapper.hh alphabet.hh helper.hh
 
 noinst_HEADERS += conf.g lts.g mrules.g covlang.g xrules.g lang.g
 

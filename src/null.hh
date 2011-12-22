@@ -16,34 +16,28 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#ifndef __aal_hh__
-#define __aal_hh__
-
-#include "factory.hh"
-#include <vector>
-#include <string>
-
-class aal {
-public:
-  virtual int adapter_execute(int action)=0;
-  virtual int model_execute(int action)  =0;
-  virtual int getActions(int** act)      =0;
-  virtual bool reset() {
-    return true;
-  }
-  virtual std::vector<std::string>& getActionNames() {
-    return action_names;
-  }
-  virtual void push() {}
-  virtual void pop() {}
-protected:
-  std::vector<int> actions;
-  std::vector<std::string> action_names; /* action names.. */
-};
+#ifndef __null_hh__
+#define __null_hh__
 
 #include "model.hh"
-#include "adapter.hh"
-#include "awrapper.hh"
-#include "mwrapper.hh"
+#include "log.hh"
+
+class Null: public Model {
+public:
+  Null(Log&l, std::string params = ""): Model(l,params) {}
+  virtual int getActions(int** actions) { return 0;}
+  virtual int getIActions(int** actions) { return 0;}
+  virtual bool reset() { return false;}
+  virtual int getprops(int** props) { return 0;}
+  virtual int  execute(int action) { return 0;}
+  virtual void push() {}
+  virtual void pop() {}
+
+  virtual bool load(std::string& name) { return false; }
+
+  virtual void add_prop(std::string* name,std::vector<int>& pr)
+  {}
+
+};
 
 #endif

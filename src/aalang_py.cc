@@ -52,6 +52,18 @@ void aalang_py::set_guard(std::string* gua)
   s+="    def action"+acnt+"guard():"+*gua+"\n";
 }
 
+void aalang_py::set_push(std::string* p)
+{
+  push=*p;
+  delete p;
+}
+
+void aalang_py::set_pop(std::string* p)
+{
+  pop=*p;
+  delete p;
+}
+
 void aalang_py::set_body(std::string* bod)
 {
   s+="    def action"+acnt+"body():"+*bod+"\n";

@@ -64,6 +64,17 @@ void aalang_cpp::set_istate(std::string* ist)
   istate=ist;
 }
 
+void aalang_cpp::set_push(std::string* p)
+{
+  push=*p;
+  delete p;
+}
+
+void aalang_cpp::set_pop(std::string* p)
+{
+  pop=*p;
+  delete p;
+}
 
 void aalang_cpp::set_guard(std::string* gua)
 {
@@ -116,6 +127,11 @@ std::string aalang_cpp::stringify()
     "return true;\n}\n\n"
     "virtual int adapter_execute(int action) {\n"
     "\tswitch(action) {\n";
+
+  if (pop!="") {
+    s=s+"\nvirtual void pop(){\n"+pop+"\n}\n";
+    s=s+"\nvirtual void push(){\n"+push+"\n}\n";
+  }
 
   for(int i=1;i<action_cnt;i++) {
     s+="\t\tcase "+to_string(i)+":\n"

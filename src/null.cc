@@ -16,34 +16,7 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#ifndef __aal_hh__
-#define __aal_hh__
 
-#include "factory.hh"
-#include <vector>
-#include <string>
+#include "null.hh"
 
-class aal {
-public:
-  virtual int adapter_execute(int action)=0;
-  virtual int model_execute(int action)  =0;
-  virtual int getActions(int** act)      =0;
-  virtual bool reset() {
-    return true;
-  }
-  virtual std::vector<std::string>& getActionNames() {
-    return action_names;
-  }
-  virtual void push() {}
-  virtual void pop() {}
-protected:
-  std::vector<int> actions;
-  std::vector<std::string> action_names; /* action names.. */
-};
-
-#include "model.hh"
-#include "adapter.hh"
-#include "awrapper.hh"
-#include "mwrapper.hh"
-
-#endif
+FACTORY_DEFAULT_CREATOR(Model, Null, "null");

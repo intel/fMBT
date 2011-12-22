@@ -99,6 +99,12 @@ void Conf::load(std::string& name)
 
   adapter = AdapterFactory::create(log, adapter_name, adapter_param);
 
+  if (adapter && !adapter->status) {
+    status=false;
+    errormsg=adapter->errormsg;
+    return;
+  }
+
   /* handle history */
   for(unsigned i=0;i<history.size();i++) {
     std::string name,param;

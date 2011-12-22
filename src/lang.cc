@@ -23,9 +23,27 @@
 #include <glib.h>
 #include <errno.h>
 
+#include <sys/types.h>
+#include <sys/wait.h>
+
+#include <unistd.h>
+#include <fcntl.h>
+
 extern "C" {
 extern D_ParserTables parser_tables_lang;
 };
+
+void block(int fd)
+{
+  int flags = fcntl(fd, F_GETFL, 0);
+  fcntl(fd, F_SETFL, flags & (~O_NONBLOCK));
+}
+
+void nonblock(int fd)
+{
+  int flags = fcntl(fd, F_GETFL, 0);
+  fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+}
 
 void print_usage()
 {
@@ -92,23 +110,32 @@ int main(int argc,char** argv) {
   }
   dparse(p,s,std::strlen(s));
   if (lib) {
-    int _stdin; //,_stdout,_stder;
+    int _stdin,_stdout;//,_stder;
     GPid pid;
     int argc;
+    char b[512];
     gchar **argv=(gchar**)malloc(42*sizeof(gchar*));
     GError *gerr=NULL;
-    
+
     g_shell_parse_argv(compile_command.c_str(),
 		       &argc,&argv,&gerr);
 
-    g_spawn_async_with_pipes(NULL,argv,NULL,G_SPAWN_SEARCH_PATH,NULL,&pid,NULL,&_stdin,NULL,NULL,&gerr);
+    g_spawn_async_with_pipes(NULL,argv,NULL,G_SPAWN_SEARCH_PATH,NULL,&pid,NULL,&_stdin,&_stdout,NULL,&gerr);
+
+    nonblock(_stdout);
 
     unsigned int pos=0;
     unsigned int wrote=0;
     do {
       wrote=TEMP_FAILURE_RETRY(write(_stdin,result.c_str()+pos,result.length()-pos));
       pos+=wrote;
+      read(_stdout,b,512);
     } while (wrote>0 && pos<result.length());
+    close(_stdin);
+    block(_stdout);
+
+    while(read(_stdout,b,512)) {}
+
   } else {
     fprintf(outputfile,"%s",result.c_str());
   }

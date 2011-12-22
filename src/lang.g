@@ -39,12 +39,22 @@ std::string* nstr=NULL;
 
 lang: model* ;
 
-model: 'model' namestr '{' language { obj->set_namestr(nstr); } variables istate action* '}' {
+model: 'model' namestr '{' language { obj->set_namestr(nstr); } default_type variables pushpop istate action* '}' {
             result+=obj->stringify();
       };
 
+pushpop: push pop | ;
+
+push: 'push' '(' ')' '{' bstr '}' { obj->set_push($4.str); } ;
+pop:  'pop'  '(' ')' '{' bstr '}' { obj->set_pop ($4.str); } ;
+
 language: 'language:' 'C++' { obj=new aalang_cpp ; } starter ';' |
           'language:' python { obj=new aalang_py ; } starter ';' ;
+
+default_type: 'default' 'action' 'type' ':' input_type;
+
+input_type: 'input' { obj->set_default_action_input(true); }
+    | 'output' { obj->set_default_action_input(false); };
 
 starter: |
         '{' bstr '}' { obj->set_starter($1.str); };
