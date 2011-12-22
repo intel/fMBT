@@ -83,17 +83,27 @@ covlang.g.d_parser.cc: covlang.g d/make_dparser
 	d/make_dparser -o covlang.g.d_parser.cc -i covlang ./$(VPATH)/covlang.g
 
 fmbt_android:
-	bash -c 'rm -rf android; mkdir android; cd android; ln -s .. jni'
+	bash -c 'mkdir -p android; cd android; [ -s jni ] || ln -s .. jni'
 	@echo 'APP_STL := stlport_static'			> Application.mk
+	@echo 'APP_MODULES := dparse_android fmbt_android'	>> Application.mk
 
-	@echo 'LOCAL_PATH := $$(call my-dir)'			> Android.mk
-	@echo 'include $$(CLEAR_VARS)'				>> Android.mk
-	@echo 'LOCAL_MODULE    := fmbt_android'			>> Android.mk
-	@echo 'LOCAL_SRC_FILES := $(fmbt_droid_SOURCES)'	>> Android.mk
-	@echo 'LOCAL_CPPFLAGS  := $(fmbt_android_CPPFLAGS)'	>> Android.mk
-	@echo 'LOCAL_CPP_EXTENSION := .cc'			>> Android.mk
-	@echo 'include $$(BUILD_EXECUTABLE)'			>> Android.mk
-	bash -c 'cd android; $(ANDROID_NDK_BUILD) V=1'
+	@echo 'LOCAL_PATH := $$(call my-dir)'							> Android.mk
+	@echo 'include $$(CLEAR_VARS)'								>> Android.mk
+	@echo '############################## MODULE 1: dparse_android'				>> Android.mk
+	@echo 'LOCAL_MODULE := dparse_android'							>> Android.mk
+	@echo 'LOCAL_SRC_FILES := $$(wildcard d/*.c)'						>> Android.mk
+	@echo 'LOCAL_CFLAGS := -DD_MAJOR_VERSION=1 -DD_MINOR_VERSION=26 -DD_BUILD_VERSION=1'	>> Android.mk
+	@echo 'include $$(BUILD_STATIC_LIBRARY)'						>> Android.mk
+	@echo 'LOCAL_MODULE    := fmbt_android'							>> Android.mk
+	@echo 'include $$(CLEAR_VARS)'								>> Android.mk
+	@echo '############################## MODULE 2: fmbt_android'				>> Android.mk
+	@echo 'LOCAL_MODULE    := fmbt_android'							>> Android.mk
+	@echo 'LOCAL_SRC_FILES := $(fmbt_droid_SOURCES)'					>> Android.mk
+	@echo 'LOCAL_CPPFLAGS  := -Ijni/d $(fmbt_android_CPPFLAGS)'				>> Android.mk
+	@echo 'LOCAL_STATIC_LIBRARIES := dparse_android'					>> Android.mk
+	@echo 'LOCAL_CPP_EXTENSION := .cc'							>> Android.mk
+	@echo 'include $$(BUILD_EXECUTABLE)'							>> Android.mk
+	bash -c 'cd android; $(ANDROID_NDK_BUILD) V=1 && ln libs/*/fmbt_android .'
 
 
 # coverage_market.o: coverage_market.hh

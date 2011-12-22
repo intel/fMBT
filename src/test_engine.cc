@@ -26,7 +26,7 @@
 #include <algorithm>
 
 #ifdef DROI
-char* READLINE(char* prompt)
+char* READLINE(const char* prompt)
 {
     char *s = (char*)malloc(1024);
     int scanf_status;
