@@ -1,3 +1,11 @@
+fmbt (0.1-rc7) maverick; urgency=low
+
+  * Android makefile
+  * History data import
+  * Some bug fixes
+
+ -- Pablo Virolainen <pablo.virolainen@intel.com>  Fri, 23 Dec 2011 10:30:16 +0200
+
 fmbt (0.1-rc6) maverick; urgency=low
 
   * Some bug fixes (core dumping etc etc)
