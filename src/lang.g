@@ -76,13 +76,9 @@ namestr: unquoted_string {
             $$.str=$0.str; // I'm too lazy to figure out why this can't be returned in $0
         };
 
-name: 'name' ':' string ';' { obj->set_name($2.str); };
-
 variables: 'variables' '{' bstr '}' { obj->set_variables($2.str); };
 
 istate: 'initial_state' '{' bstr '}' { obj->set_istate($2.str); } ;
-
-action: 'action' '{' name guard body adapter '}' { obj->next_action(); };
 
 guard: 'guard' '()' '{' bstr '}' { obj->set_guard($3.str); }
     | { obj->empthy_guard(); } ;
