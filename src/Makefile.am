@@ -1,6 +1,5 @@
 if ANDROID
 bin_PROGRAMS = fmbt_droid
-ANDROID_NDK_BUILD = ndk-build
 else
 bin_PROGRAMS = fmbt remote_adapter_loader lang
 endif
@@ -34,15 +33,13 @@ pkginclude_HEADERS = adapter.hh factory.hh writable.hh log.hh aal.hh model.hh aw
 
 noinst_HEADERS += conf.g lts.g mrules.g covlang.g xrules.g lang.g
 
-fmbt_CPPFLAGS                  = -Wall -g -O0 -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0`
-fmbt_droid_CPPFLAGS            = -Wall -g -O0 -I d -I `pwd` `pkg-config --cflags libedit` -DDROI
-fmbt_android_CPPFLAGS          = -Wall -g -O0 -I jni/d -I `pwd` `pkg-config --cflags libedit` -DDROI
-remote_adapter_loader_CPPFLAGS = -Wall -g -I d -DDROI
-fmbt_cparsers_la_CPPFLAGS      = -Wall -g -O0 -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DCAPI
-lang_CPPFLAGS		       = -Wall -g -O0 -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0`
+fmbt_CPPFLAGS                  = -Wall -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0`
+fmbt_droid_CPPFLAGS            = -Wall -I d -I `pwd` `pkg-config --cflags libedit` -DDROI
+remote_adapter_loader_CPPFLAGS = -Wall -I d -DDROI
+fmbt_cparsers_la_CPPFLAGS      = -Wall -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DCAPI
+lang_CPPFLAGS		       = -Wall -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0`
 
 fmbt_LDFLAGS                   = -g `pkg-config --libs glib-2.0 gobject-2.0 libedit` -lboost_regex -Wl,-E -ldl
-fmbt_droid_LDFLAGS             = -g -ledit
 fmbt_cparsers_la_LDFLAGS       = -g `pkg-config --libs glib-2.0 gobject-2.0 libedit` -lboost_regex -Wl,-E -ldl -avoid-version -module -shared -export-dynamic
 remote_adapter_loader_LDFLAGS  = -g
 lang_LDFLAGS		       = -g `pkg-config --libs glib-2.0 gobject-2.0 libedit` -lboost_regex -Wl,-E -ldl
@@ -82,28 +79,31 @@ xrules_extended.g.d_parser.cc: xrules_extended.g d/make_dparser
 covlang.g.d_parser.cc: covlang.g d/make_dparser
 	d/make_dparser -o covlang.g.d_parser.cc -i covlang ./$(VPATH)/covlang.g
 
-fmbt_android:
+##########################################
+# Building fmbt_android with Android NDK
+
+Application.mk: Makefile
+	@echo 'APP_STL := stlport_static'		> $@
+	@echo 'APP_MODULES := dparse_droid fmbt_droid'	>> $@
+	@echo 'APP_OPTIM := debug'			>> $@
+
+Android.mk: Makefile
+	@echo 'LOCAL_PATH := $$(call my-dir)'				> $@
+	@echo '############################## MODULE 1: dparse_droid'	>> $@
+	@echo 'include $$(CLEAR_VARS)'					>> $@
+	@echo 'LOCAL_MODULE := dparse_droid'				>> $@
+	@echo 'LOCAL_SRC_FILES := $$(subst jni/,,$$(wildcard jni/d/*.c))'			>> $@
+	@echo 'LOCAL_CFLAGS := -DD_MAJOR_VERSION=1 -DD_MINOR_VERSION=26 -DD_BUILD_VERSION=1'	>> $@
+	@echo 'include $$(BUILD_STATIC_LIBRARY)'			>> $@
+	@echo '############################## MODULE 2: fmbt_droid'	>> $@
+	@echo 'include $$(CLEAR_VARS)'					>> $@
+	@echo 'LOCAL_MODULE    := fmbt_droid'				>> $@
+	@echo 'LOCAL_SRC_FILES := $(fmbt_droid_SOURCES)'		>> $@
+	@echo 'LOCAL_CPPFLAGS  := -Ijni/d $(fmbt_droid_CPPFLAGS)'	>> $@
+	@echo 'LOCAL_STATIC_LIBRARIES := dparse_droid'			>> $@
+	@echo 'LOCAL_CPP_EXTENSION := .cc'				>> $@
+	@echo 'include $$(BUILD_EXECUTABLE)'				>> $@
+
+android/fmbt_droid: Application.mk Android.mk $(fmbt_droid_SOURCES)
 	bash -c 'mkdir -p android; cd android; [ -s jni ] || ln -s .. jni'
-	@echo 'APP_STL := stlport_static'			> Application.mk
-	@echo 'APP_MODULES := dparse_android fmbt_android'	>> Application.mk
-
-	@echo 'LOCAL_PATH := $$(call my-dir)'							> Android.mk
-	@echo 'include $$(CLEAR_VARS)'								>> Android.mk
-	@echo '############################## MODULE 1: dparse_android'				>> Android.mk
-	@echo 'LOCAL_MODULE := dparse_android'							>> Android.mk
-	@echo 'LOCAL_SRC_FILES := $$(wildcard d/*.c)'						>> Android.mk
-	@echo 'LOCAL_CFLAGS := -DD_MAJOR_VERSION=1 -DD_MINOR_VERSION=26 -DD_BUILD_VERSION=1'	>> Android.mk
-	@echo 'include $$(BUILD_STATIC_LIBRARY)'						>> Android.mk
-	@echo 'LOCAL_MODULE    := fmbt_android'							>> Android.mk
-	@echo 'include $$(CLEAR_VARS)'								>> Android.mk
-	@echo '############################## MODULE 2: fmbt_android'				>> Android.mk
-	@echo 'LOCAL_MODULE    := fmbt_android'							>> Android.mk
-	@echo 'LOCAL_SRC_FILES := $(fmbt_droid_SOURCES)'					>> Android.mk
-	@echo 'LOCAL_CPPFLAGS  := -Ijni/d $(fmbt_android_CPPFLAGS)'				>> Android.mk
-	@echo 'LOCAL_STATIC_LIBRARIES := dparse_android'					>> Android.mk
-	@echo 'LOCAL_CPP_EXTENSION := .cc'							>> Android.mk
-	@echo 'include $$(BUILD_EXECUTABLE)'							>> Android.mk
-	bash -c 'cd android; $(ANDROID_NDK_BUILD) V=1 && ln libs/*/fmbt_android .'
-
-
-# coverage_market.o: coverage_market.hh
+	bash -c 'cd android; rm -f fmbt_droid; @NDK_BUILD@ -l=3 && ln libs/*/fmbt_droid .'
