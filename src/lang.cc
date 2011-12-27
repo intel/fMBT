@@ -48,7 +48,7 @@ void nonblock(int fd)
 void print_usage()
 {
   std::printf(
-    "Usage: lang [options] inputfile\n"
+    "Usage: fmbt-aalc [options] inputfile\n"
     "Options:\n"
     "    -h     print usage\n"
     "    -o     output to a file (defaults to stdout)\n"
