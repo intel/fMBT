@@ -29,6 +29,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#include "aalang.hh"
+
 extern "C" {
 extern D_ParserTables parser_tables_lang;
 };
@@ -57,7 +59,7 @@ void print_usage()
 }
 
 extern std::string result;
-
+extern aalang* obj;
 std::string compile_command("g++ -fPIC -shared -x c++  - -I /usr/include/fmbt -o ");
 
 int main(int argc,char** argv) {
@@ -101,7 +103,7 @@ int main(int argc,char** argv) {
   }
 
   char *s;
-  D_Parser *p = new_D_Parser(&parser_tables_lang, 512);
+  D_Parser *p = new_D_Parser(&parser_tables_lang, 5120);
 
   s=readfile(argv[optind],false);
   if (!s) {
@@ -109,6 +111,13 @@ int main(int argc,char** argv) {
     return 3;
   }
   dparse(p,s,std::strlen(s));
+  if (!obj) {
+    fprintf(stderr,"Failure...\n");
+    return 4;
+  }
+
+  result=obj->stringify();
+
   if (lib) {
     int _stdin,_stdout;//,_stder;
     GPid pid;

@@ -34,19 +34,30 @@ typedef struct _node {
 } node;
 #define D_ParseNode_User node
 std::vector<std::string> aname;
-std::string* nstr=NULL;
 }
 
-lang: model* ;
+aal: aal_start header+ act* '}' ;
 
-model: 'model' namestr '{' language { obj->set_namestr(nstr); } default_type variables pushpop istate action* '}' {
-            result+=obj->stringify();
-      };
+aal_start: 'aal' string '{' language {
+            obj->set_namestr($1.str);
+        } ;
 
-pushpop: push pop | ;
+header: default_type | variables | istate | push | pop;
 
-push: 'push' '(' ')' '{' bstr '}' { obj->set_push($4.str); } ;
-pop:  'pop'  '(' ')' '{' bstr '}' { obj->set_pop ($4.str); } ;
+act: 'action' astr '{' guard body adapter '}' { obj->next_action(); };
+
+astr:   string          {
+            obj->set_name($0.str);
+        } |
+        astr ',' string {
+            obj->set_name($2.str);
+        } ;
+
+push: 'push' '{' bstr '}' { 
+            obj->set_push($2.str); 
+        } ;
+
+pop:  'pop' '{' bstr '}' { obj->set_pop ($2.str); } ;
 
 language: 'language:' 'C++' { obj=new aalang_cpp ; } starter ';' |
           'language:' python { obj=new aalang_py ; } starter ';' ;
@@ -62,14 +73,14 @@ starter: |
 python: 'python' | 'py';
 
 namestr: unquoted_string {
-            nstr=$0.str; // I'm too lazy to figure out why this can't be returned in $0
+            $$.str=$0.str; // I'm too lazy to figure out why this can't be returned in $0
         };
 
 name: 'name' ':' string ';' { obj->set_name($2.str); };
 
-variables: 'variables' '{' bstr '}' { obj->set_variables($2.str); } |;
+variables: 'variables' '{' bstr '}' { obj->set_variables($2.str); };
 
-istate: 'initial_state' '{' bstr '}' { obj->set_istate($2.str); } | ;
+istate: 'initial_state' '{' bstr '}' { obj->set_istate($2.str); } ;
 
 action: 'action' '{' name guard body adapter '}' { obj->next_action(); };
 

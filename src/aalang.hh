@@ -20,6 +20,7 @@
 #define __aalang_hh__
 
 #include <string>
+#include <vector>
 
 class aalang {
 public:
@@ -51,6 +52,7 @@ protected:
   std::string default_guard;
   std::string default_body;
   bool default_action_input;
+  std::vector<int> map;
 };
 
 #endif
