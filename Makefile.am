@@ -7,3 +7,6 @@ EXTRA_DIST = \
 	doc/models.txt \
 	doc/overview.txt \
 	doc/tutorial.txt
+
+src/android/fmbt_droid:
+	$(MAKE) -C src android/fmbt_droid

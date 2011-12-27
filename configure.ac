@@ -18,6 +18,12 @@ AC_ARG_ENABLE(android, AC_HELP_STRING([--enable-android],
     [enable building fmbt_droid]), [enable_android=${enableval}])
 AM_CONDITIONAL(ANDROID, test "${enable_android}" = "yes")
 
+AC_ARG_WITH([ndk-build],
+            [AS_HELP_STRING([--with-ndk-build=/path/and/executable], [ndk-build for building Android binary])],
+            [NDK_BUILD="$withval"],
+            [NDK_BUILD="ndk-build"])
+AC_SUBST([NDK_BUILD])
+
 AS_IF([test "x$enable_android" != "xyes"],
     PKG_CHECK_MODULES([GLIB], [glib-2.0], [],
         AC_MSG_FAILURE([glib-2.0 required if not --enable-android]))

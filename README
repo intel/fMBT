@@ -16,15 +16,38 @@ From fMBT sources you can build a normal version as above, and a
 low-dependency "Android" version (./configure --enable-android): it
 needs only C and C++ runtimes.
 
-For fmbt-view, you need graphviz imagemagick
+For fmbt-view, you need graphviz imagemagick.
+
 
 Documentation
 -------------
 
 doc/tutorial.txt - hands on with fMBT using a tiny example
 
-doc/overview.txt - technical introduction on how fmbt works
+doc/overview.txt - technical introduction on how fMBT works
                    in a real-life example
+
+doc/models.txt   - how to create test models
+
+doc/adapters.txt - how to use generic adapters and implement new ones
+
+
+Building and using an Android version
+-------------------------------------
+
+1. Download and install Android NDK.
+
+2. Run "./configure --enable-android --with-ndk-build=/your/ndk-build"
+
+3. Run "make". This will build src/fmbt_droid targeted to your host.
+
+4. Run "make src/android/fmbt_droid". This will build
+   src/android/fmbt_droid targeted to Android.
+
+Note: At the moment fmbt_droid contains a subset features of
+fmbt. Most notably, it does not preprocess input files, handle regular
+expressions in configuration files or fork and execute child
+processes.
 
 
 Testing
