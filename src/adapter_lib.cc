@@ -34,13 +34,7 @@ namespace {
     a = AdapterFactory::create(log, adapter_name, adapter_param);
 
     if (!a) {
-      std::string lib("lib"+adapter_name+".so");
-      void* handle=dlopen(lib.c_str(),RTLD_NOW);
-
-      if (!handle) {
-	lib="./"+lib;
-	handle=dlopen(lib.c_str(),RTLD_NOW);
-      }
+      void* handle=load_lib(adapter_name);
 
       if (handle) {
 	a = AdapterFactory::create(log, adapter_name, adapter_param);
@@ -49,7 +43,7 @@ namespace {
 	std::string em("");
 	a = AdapterFactory::create(log, d, em);
 	a->status   = false;
-	a->errormsg = std::string("lib:Can't load adapter ") + params + ":" + dlerror();
+	a->errormsg = std::string("lib:Can't load adapter ") + params;
       }
     }
     return a;

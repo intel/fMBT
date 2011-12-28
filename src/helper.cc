@@ -34,6 +34,9 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <fstream>
+
+#include <dlfcn.h>
 
 bool human_readable=true;
 
@@ -44,6 +47,34 @@ void escape_free(const char* msg)
 #else
   g_free((void*)msg);
 #endif
+}
+
+void *load_lib(const std::string libname)
+{
+  std::string name_candidate(libname);
+  void* handle=dlopen(name_candidate.c_str(),RTLD_NOW);
+  if (!handle) {
+    name_candidate="./"+name_candidate;
+    handle=dlopen(name_candidate.c_str(),RTLD_NOW);
+    fprintf(stderr, "dlerror: %s\n", dlerror());
+  }
+  if (!handle) {
+    name_candidate=libname+".so";
+    handle=dlopen(name_candidate.c_str(),RTLD_NOW);    
+  }
+  if (!handle) {
+    name_candidate="./"+name_candidate;
+    handle=dlopen(name_candidate.c_str(),RTLD_NOW);
+  }
+  if (!handle) {
+    name_candidate="lib"+libname+".so";
+    handle=dlopen(name_candidate.c_str(),RTLD_NOW);    
+  }
+  if (!handle) {
+    name_candidate="./"+name_candidate;
+    handle=dlopen(name_candidate.c_str(),RTLD_NOW);
+  }
+  return handle;
 }
 
 int find(const std::vector<std::string> &v,const std::string s)
@@ -218,7 +249,25 @@ char* readfile(const char* filename,bool preprocess)
       return out;
     }
 #else
-  return NULL;
+    /* read file contents always without preprocessing when glib not
+     * available */
+    std::ifstream f;
+    int file_len;
+    f.open(filename, std::fstream::in | std::fstream::ate);
+    if (!f.is_open())
+      return NULL;
+//    f.seekg(0, std::ios::end);
+    file_len = f.tellg();
+    f.seekg(0, std::ios::beg);
+    char *contents = (char*)malloc(file_len);
+    if (!contents) {
+      f.close();
+      return NULL;
+    }
+    f.read(contents, file_len);
+    f.close();
+    return contents;
+
 #endif
   } else {
     return unescape_string(strdup(fn.substr(cutpos+1).c_str()));

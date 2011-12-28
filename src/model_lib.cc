@@ -21,7 +21,7 @@
 #include "model.hh"
 #include "conf.hh"
 #include "helper.hh"
-#include <dlfcn.h>
+#include <cstring>
 
 namespace {
   Model* lib_creator(Log& l, std::string params) {
@@ -34,13 +34,7 @@ namespace {
     m = ModelFactory::create(l, model_name, model_param);    
 
     if (!m) {
-      std::string lib("lib"+model_name+".so");
-      void* handle=dlopen(lib.c_str(),RTLD_NOW);
-
-      if (!handle) {
-	lib="./"+lib;
-	handle=dlopen(lib.c_str(),RTLD_NOW);
-      }
+      void* handle=load_lib(model_name);
 
       if (handle) {
 	m = ModelFactory::create(l, model_name, model_param);
@@ -49,11 +43,10 @@ namespace {
 	std::string em("");
 	m = ModelFactory::create(l, d, em);
 	m->status   = false;
-	m->errormsg = std::string("lib:Can't load model ") + params + ":" + dlerror();
+	m->errormsg = std::string("lib:Can't load model ") + params;
       }
     }
-
     return m;
   }
-  static ModelFactory::Register lib("lib", lib_creator);
+  static ModelFactory::Register me("lib", lib_creator);
 }
