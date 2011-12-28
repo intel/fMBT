@@ -1,4 +1,4 @@
-model brainfuck_memory {
+aal "brainfuck_memory" {
   language: C++ {
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -15,9 +15,7 @@ model brainfuck_memory {
     memset(memory,0,sizeof(memory));
   }
 
-  
-  action {
-    name: "inext";
+  action "inext" {
 
     adapter() {
       pos++;
@@ -25,8 +23,7 @@ model brainfuck_memory {
     }
   }
 
-  action {
-    name: "iprev";
+  action "iprev" {
 
     adapter() {
       pos--;
@@ -34,17 +31,14 @@ model brainfuck_memory {
     }
   }
 
-  action {
-    name: "iinc";
-
+  action "iinc" {
     adapter() {
       memory[pos]++;
       return find(action_names,"iinc");
     }
   }
 
-  action {
-    name: "idec";
+  action "idec" {
 
     adapter() {
       memory[pos]--;
@@ -52,8 +46,7 @@ model brainfuck_memory {
     }
   }
 
-  action {
-    name: "iprint";
+  action "iprint" {
 
     adapter() {
       fprintf(stdout,"%c",memory[pos]);
@@ -61,8 +54,8 @@ model brainfuck_memory {
     }
   }
 
-  action {
-    name: "imemz";
+  action "imemz", "imemnz" {
+
     adapter() {
        if (memory[pos]==0)
        	  return find(action_names,"imemz");
@@ -70,17 +63,7 @@ model brainfuck_memory {
     }
   }
 
-  action {
-    name: "imemnz";
-    adapter() {
-       if (memory[pos]==0)
-       	  return find(action_names,"imemz");
-       return find(action_names,"imemnz");
-    }
-  }
-
-  action {
-    name: "iinput";
+  action "iinput" {
 
     adapter() {
       memory[pos]=getc(stdin);

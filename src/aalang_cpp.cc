@@ -29,13 +29,15 @@ void aalang_cpp::set_starter(std::string* st)
 void aalang_cpp::set_name(std::string* name)
 {
   /*
-
     { printf("\n\t//action%i: ",action); }
 
     anames.push_back(*$2.str); printf("%s",$2.str->c_str()); delete $2.str; $2.str=NULL; } ;
   */
   s+="\n\t//action"+to_string(action_cnt)+": "+*name+"\n";
-  aname.push_back(*name);
+  aname.back().push_back(*name);
+  map.push_back(action_cnt);
+  name_cnt++;
+
 }
 
 void aalang_cpp::set_namestr(std::string* _name)
@@ -108,17 +110,23 @@ void aalang_cpp::set_adapter(std::string* ada)
 
 void aalang_cpp::next_action()
 {
-  action_cnt++;
+  std::vector<std::string> t;
+  aname.push_back(t);
+  action_cnt+=name_cnt;
+  name_cnt=0;
 }
 
 std::string aalang_cpp::stringify()
 {
+
   s=s+
     "public:\n"
     "\t_gen_"+*name+"() {\n\taction_names.push_back(\"\");\n";
 
-  for(unsigned i=0;i<aname.size();i++) {
-    s+="\taction_names.push_back(\""+aname[i]+"\");\n";
+  for(std::list<std::vector<std::string> >::iterator i=aname.begin();i!=aname.end();i++) {
+    for(std::vector<std::string>::iterator j=i->begin();j!=i->end();j++) {
+      s+="\taction_names.push_back(\""+*j+"\");\n";
+    }
   }
   
   s+=*istate+"}\n"
@@ -135,7 +143,7 @@ std::string aalang_cpp::stringify()
 
   for(int i=1;i<action_cnt;i++) {
     s+="\t\tcase "+to_string(i)+":\n"
-      "\t\treturn action"+to_string(i)+
+      "\t\treturn action"+to_string(map[i])+
       "_adapter();\n\t\tbreak;\n";
   }
   s=s+"\t\tdefault:\n"
@@ -147,7 +155,7 @@ std::string aalang_cpp::stringify()
 
   for(int i=1;i<action_cnt;i++) {
     s+="\t\tcase "+to_string(i)+":\n"
-      "\t\taction"+to_string(i)+"_body();\n\t\treturn "+
+      "\t\taction"+to_string(map[i])+"_body();\n\t\treturn "+
       to_string(i)+";\n\t\tbreak;\n";
   }
   s=s+"\t\tdefault:\n"
@@ -158,7 +166,7 @@ std::string aalang_cpp::stringify()
     "actions.clear();\n";
   
   for(int i=1;i<action_cnt;i++) {
-    s+="\tif (action"+to_string(i)+"_guard()) {\n"
+    s+="\tif (action"+to_string(map[i])+"_guard()) {\n"
       "\t\tactions.push_back("+to_string(i)+");\n"
       "\t}\n";
   }
