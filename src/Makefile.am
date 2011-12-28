@@ -36,7 +36,7 @@ pkginclude_HEADERS = adapter.hh factory.hh writable.hh log.hh aal.hh model.hh aw
 noinst_HEADERS += conf.g lts.g mrules.g covlang.g xrules.g lang.g
 
 fmbt_CPPFLAGS                  = -Wall -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0`
-fmbt_droid_CPPFLAGS            = -Wall -fPIC -I d -I `pwd` `pkg-config --cflags libedit` -DDROI
+fmbt_droid_CPPFLAGS            = -Wall -fPIC -I d -I `pwd` -DDROI
 remote_adapter_loader_CPPFLAGS = -Wall -I d -DDROI
 fmbt_cparsers_la_CPPFLAGS      = -Wall -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DCAPI
 fmbt_aalc_CPPFLAGS	       = -Wall -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0`
@@ -105,9 +105,25 @@ Android.mk: Makefile
 	@echo 'LOCAL_CPPFLAGS  := -Ijni/d $(fmbt_droid_CPPFLAGS)'	>> $@
 	@echo 'LOCAL_STATIC_LIBRARIES := dparse_droid'			>> $@
 	@echo 'LOCAL_LDLIBS := -ldl -llog'				>> $@
+	@echo 'LOCAL_LDFLAGS := -Wl,-E -Wl,--no-gc-sections'		>> $@
 	@echo 'LOCAL_CPP_EXTENSION := .cc'				>> $@
 	@echo 'include $$(BUILD_EXECUTABLE)'				>> $@
 
 android/fmbt_droid: Application.mk Android.mk $(fmbt_droid_SOURCES)
 	bash -c 'mkdir -p android; cd android; [ -s jni ] || ln -s .. jni; echo "target=android-5" > default.properties'
 	bash -c 'cd android; rm -f fmbt_droid; nice @NDK_BUILD@ -j4 && ln libs/*/fmbt_droid .'
+
+##########################################
+# How to build an AAL/C++ adapter/model (adel) for Android?
+# 1. Convert AAL to C++:
+#    fmbt-aalc adel.aal -o adel.cc
+# 2. Write Android.mk:
+# include $(CLEAR_VARS)
+# LOCAL_MODULE := adel
+# LOCAL_MODULE_FILENAME := adel
+# LOCAL_SRC_FILES := adel.cc
+# LOCAL_CPPFLAGS  := -Wall -DDROI
+# LOCAL_ALLOW_UNDEFINED_SYMBOLS := true
+# LOCAL_CPP_EXTENSION := .cc
+# include $(BUILD_SHARED_LIBRARY)
+# 3. ndk-build
