@@ -33,7 +33,9 @@ void error(int exitval, int dontcare, const char* format, ...)
 {
   va_list ap;
   fprintf(stderr, "fMBT error: ");
+  va_start (ap, format);
   vfprintf(stderr, format, ap);
+  va_end(ap);
   exit(exitval);
 }
 #endif
@@ -116,7 +118,7 @@ int main(int argc,char * const argv[])
     c.load(conffilename);
 
     if (!c.status)
-      error(4, 0, "%s", c.stringify().c_str());
+      error(4, 0, "%s\n", c.stringify().c_str());
      
     if (E) {
       std::printf("%s\n",c.stringify().c_str());
