@@ -33,7 +33,7 @@ class Conf:public Writable {
  public:
   Conf(Log& l, bool debug_enabled=false)
     :log(l),
-     heuristic_name("random"), coverage_name("tree"),
+     heuristic_name("random"), coverage_name("perm"),
      adapter_name("dummy"), engine_cov(1.0),
      engine_count(-1), on_error("interactive")
   {
@@ -45,7 +45,7 @@ class Conf:public Writable {
   }
 
   void set_model(std::string& s) {
-    model_name=s;
+    split(s, model_name, model_param);
   }
   void set_heuristic(std::string& s) {
     split(s, heuristic_name, heuristic_param);
@@ -88,6 +88,7 @@ class Conf:public Writable {
   std::string exit_tag;
   std::vector<std::string*> history;
   std::string model_name;
+  std::string model_param;
 
   std::string heuristic_name;
   std::string heuristic_param;
