@@ -34,14 +34,10 @@
 
 class Mwrapper: public Model {
 public:
-  Mwrapper(Log&l, std::string params, aal* _model):
-    Model(l, params), model(_model)  {
-    action_names=model->getActionNames();
-  }
+  Mwrapper(Log&l, std::string params, aal* _model);
 
-  virtual int getActions(int** actions); // vireessä olevat tapahtumat
-  virtual int getIActions(int** actions); // Vireessä olevat syöte tapahtumat. NULL ja 0 == DEADLOCK.
-  // NULL ja 1 == OUTPUTONLY
+  virtual int getActions(int** actions);
+  virtual int getIActions(int** actions);
   virtual bool reset();
   virtual int getprops(int** props);
   virtual int  execute(int action);

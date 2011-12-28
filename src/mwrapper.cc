@@ -19,6 +19,12 @@
 
 #include "mwrapper.hh"
 
+Mwrapper::Mwrapper(Log&l, std::string params, aal* _model):
+  Model(l, params), model(_model)  
+{
+  action_names=model->getActionNames();
+}
+
 int Mwrapper::getActions(int** actions) {
   return model->getActions(actions);
 }
