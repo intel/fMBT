@@ -23,7 +23,7 @@
 
 class Rules {
 public:
-
+  virtual ~Rules() {}
   virtual void add_file(unsigned index, std::string& adaptername)=0;
   virtual void add_result_action(std::string* name)=0;
   virtual void add_component(unsigned int index,std::string& name,bool tau=true)=0;
