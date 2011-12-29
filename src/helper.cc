@@ -56,7 +56,6 @@ void *load_lib(const std::string libname)
   if (!handle) {
     name_candidate="./"+name_candidate;
     handle=dlopen(name_candidate.c_str(),RTLD_NOW);
-    fprintf(stderr, "dlerror: %s\n", dlerror());
   }
   if (!handle) {
     name_candidate=libname+".so";
