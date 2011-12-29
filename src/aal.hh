@@ -25,6 +25,7 @@
 
 class aal {
 public:
+  virtual ~aal() {};
   virtual int adapter_execute(int action)=0;
   virtual int model_execute(int action)  =0;
   virtual int getActions(int** act)      =0;
