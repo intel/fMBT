@@ -65,7 +65,7 @@ extern "C" {
 #include <cstdlib>
 #include <cstring>
 
-Test_engine::Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p) : heuristic(h),adapter(a),log(l),policy(p),coverage_reached(false),step_limit_reached(false),tag_reached(false)
+Test_engine::Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p) : heuristic(h),adapter(a),log(l),policy(p),coverage_reached(false),step_limit_reached(false),tag_reached(false), test_time_reached(false)
 
  {
   p.set_model(h.get_model());
@@ -106,8 +106,10 @@ namespace {
 
 bool Test_engine::run(float _target_coverage,
 		      int   _max_step_count,
-		      int   _exit_tag)
+		      int   _exit_tag,
+		      time_t _end_time)
 {
+  end_time=_end_time;
   target_coverage=_target_coverage;
   max_step_count=_max_step_count;
   exit_tag=_exit_tag;
@@ -115,11 +117,7 @@ bool Test_engine::run(float _target_coverage,
   int action=0;
   std::vector<int> actions;
   int step_count=0;
-  /*
-  bool coverage_reached = false;
-  bool step_limit_reached = false;
-  bool tag_reached = false;
-  */
+
   log.push("test_engine");
   struct timeval start_time;
   struct timeval total_time;
@@ -569,6 +567,7 @@ bool Test_engine::coverage_status(int step_count)
   coverage_reached = heuristic.getCoverage() >= target_coverage;
   step_limit_reached = (max_step_count != -1 && 
 			step_count >= max_step_count);
+  test_time_reached;
 
   int* t;
   if (exit_tag>0) {
