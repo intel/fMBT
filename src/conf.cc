@@ -22,6 +22,13 @@
 #include "history.hh"
 #include <cstring>
 
+#ifndef DROI
+#include <glib.h>
+#else
+
+#endif
+
+
 extern "C" {
 extern D_ParserTables parser_tables_conf;
 };
@@ -181,7 +188,7 @@ void Conf::execute(bool interactive) {
   if (interactive) {
     engine.interactive();
   } else {
-    if (!engine.run(engine_cov,engine_count,engine_tag)) {
+    if (!engine.run(engine_cov,engine_count,engine_tag,end_time)) {
       // Test failed. Continue according to the on_error
       // configuration. In addition to the following it could at
       // somepoint specify a shell command (for instance, package and
@@ -196,3 +203,39 @@ void Conf::execute(bool interactive) {
   log.pop();
 }
 
+#ifndef DROI
+void Conf::set_end_time(std::string &s)
+{
+  char* out=NULL;
+  int stat;
+
+  std::string ss="date --date='"+s+"' +%s";
+
+  end_time=-1;
+
+  printf("spawning %s\n",ss.c_str());
+
+  if (g_spawn_command_line_sync(ss.c_str(),&out,NULL,&stat,NULL)) {
+    if (!stat) {
+      end_time=atoi(out);
+    } else {
+    }
+  } else {
+    status=false;
+  }
+}
+#else
+void Conf::set_end_time(std::string &s)
+{
+  char* endp;
+  long r=strtol(s.c_str(),&endp,10);
+
+  if (*endp==0) {
+    end_time=r;
+  } else {
+    // Error on str?
+    status=false;
+  }
+
+}
+#endif

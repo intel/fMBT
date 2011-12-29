@@ -19,6 +19,7 @@
 #ifndef __conf_h__
 #define __conf_h__
 
+#include <sys/time.h>
 #include <string>
 #include "log.hh"
 #include "model.hh"
@@ -35,7 +36,7 @@ class Conf:public Writable {
     :log(l),
      heuristic_name("random"), coverage_name("perm"),
      adapter_name("dummy"), engine_cov(1.0),
-     engine_count(-1), on_error("interactive")
+     engine_count(-1), end_time(-1), on_error("interactive")
   {
     log.push("fmbt_log");
     log.set_debug(debug_enabled);
@@ -68,6 +69,8 @@ class Conf:public Writable {
   void set_on_error(std::string &s) {
     on_error = s;
   }
+  void set_end_time(std::string &s);
+
   void add_history(std::string* s) {
     history.push_back(s);
   }
@@ -101,6 +104,7 @@ class Conf:public Writable {
 
   float engine_cov;
   int engine_count;
+  time_t end_time;
 
   std::string on_error;
 
