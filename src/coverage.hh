@@ -34,6 +34,7 @@ public:
 */
 
   Coverage(Log& l);
+  virtual ~Coverage();
   virtual void push()=0;
   virtual void pop()=0;
 

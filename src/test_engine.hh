@@ -26,6 +26,7 @@
 class Test_engine {
 public:
   Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p);
+  virtual ~Test_engine();
   bool run(float _target_coverage,int _max_step_count=-1,
 	   int _exit_tag=-1);
   void interactive();

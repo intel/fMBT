@@ -28,6 +28,10 @@ Model::Model(Log&l, std::string params):
 {
 }
 
+Model::~Model()
+{
+}
+
 std::vector<std::string>& Model::getActionNames()
 {
   return action_names;

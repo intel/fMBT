@@ -40,7 +40,7 @@ class Conf:public Writable {
     log.push("fmbt_log");
     log.set_debug(debug_enabled);
   }
-  ~Conf() {
+  virtual ~Conf() {
     log.pop();
   }
 

@@ -71,6 +71,10 @@ Test_engine::Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p) : heuristic(h
   p.set_model(h.get_model());
 }
 
+Test_engine::~Test_engine()
+{
+}
+
 namespace {
   void test_passed(bool pass, const char* reason, Log& log) {
     if (pass) log.print("<stop verdict=\"pass\" reason=\"%s\">\n", reason);

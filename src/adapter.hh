@@ -46,6 +46,7 @@ class Adapter: public Writable {
 public:
   static struct timeval current_time;
   Adapter(Log& l, std::string params = "");
+  virtual ~Adapter();
   virtual void set_actions(std::vector<std::string>* _actions);
   virtual bool init();
 

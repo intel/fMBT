@@ -24,6 +24,7 @@
 class Writable {
 public:
   Writable(): status(true), errormsg("") {}
+  virtual ~Writable() {}
   virtual std::string stringify() { if (!status) return errormsg; else return ""; }
   bool status;
   std::string errormsg;

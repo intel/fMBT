@@ -31,6 +31,10 @@ log(l), actions(NULL), parent(NULL)
 {
 }
 
+Adapter::~Adapter()
+{
+}
+
 void Adapter::set_actions(std::vector<std::string>* _actions)
 {
   actions = _actions;

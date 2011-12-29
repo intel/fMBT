@@ -37,6 +37,7 @@ class Writable;
 class Model: public Writable, public Alphabet {
 public:
   Model(Log&l, std::string params = "");
+  virtual ~Model();
 
   //! Returns names of all actions available.
   virtual std::vector<std::string>& getActionNames();

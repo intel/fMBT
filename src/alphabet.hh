@@ -23,6 +23,7 @@
 
 class Alphabet {
 public:
+  virtual ~Alphabet() {}
   //! Returns names of all actions available.
   virtual std::vector<std::string>& getActionNames() = 0;
 

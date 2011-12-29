@@ -28,6 +28,7 @@ class Log {
 public:
   Log(FILE* f,bool de=false): out(f), debug_enabled(de)  { }
   Log(): out(stderr)  { }
+  virtual ~Log() {}
   virtual void push(std::string&);
   virtual void push(const char*);
   virtual void pop();

@@ -29,6 +29,10 @@ Heuristic::Heuristic(Log& l, std::string params) :
 {
 }
 
+Heuristic::~Heuristic()
+{
+}
+
 bool Heuristic::execute(int action)
 {  
   if (!model->execute(action)) {
