@@ -52,26 +52,35 @@ void escape_free(const char* msg)
 void *load_lib(const std::string libname)
 {
   std::string name_candidate(libname);
+  std::string errormessages;
   void* handle=dlopen(name_candidate.c_str(),RTLD_NOW);
   if (!handle) {
+    errormessages += dlerror() + std::string("\n");
     name_candidate="./"+name_candidate;
     handle=dlopen(name_candidate.c_str(),RTLD_NOW);
   }
   if (!handle) {
+    errormessages += dlerror() + std::string("\n");
     name_candidate=libname+".so";
     handle=dlopen(name_candidate.c_str(),RTLD_NOW);    
   }
   if (!handle) {
+    errormessages += dlerror() + std::string("\n");
     name_candidate="./"+name_candidate;
     handle=dlopen(name_candidate.c_str(),RTLD_NOW);
   }
   if (!handle) {
+    errormessages += dlerror() + std::string("\n");
     name_candidate="lib"+libname+".so";
     handle=dlopen(name_candidate.c_str(),RTLD_NOW);    
   }
   if (!handle) {
+    errormessages += dlerror() + std::string("\n");
     name_candidate="./"+name_candidate;
     handle=dlopen(name_candidate.c_str(),RTLD_NOW);
+  }
+  if (!handle) {
+    fprintf(stderr, "%s", errormessages.c_str());
   }
   return handle;
 }
