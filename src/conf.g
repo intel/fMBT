@@ -38,6 +38,7 @@ conf_entry: model        |
             engine_cov   |
             engine_count |
             engine_tag   |
+            engine_time  |
             history      |
             on_error     ;
 
@@ -54,6 +55,8 @@ engine_cov: 'engine.cov' '=' float { conf_obj->set_engine_cov($2.f); } ;
 engine_count: 'engine.count' '=' int { conf_obj->set_engine_count($2.val); };
 
 engine_tag: 'engine.tag' '=' string { conf_obj->set_engine_tag(*$2.str); } ;
+
+engine_time: 'engine.endtime' '=' string { conf_obj->set_end_time(*$2.str); } ;
 
 history: 'history' '=' string { conf_obj->add_history($2.str); };
 

@@ -28,13 +28,14 @@ public:
   Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p);
   virtual ~Test_engine();
   bool run(float _target_coverage,int _max_step_count=-1,
-	   int _exit_tag=-1);
+	   int _exit_tag=-1,time_t _end_time=-1);
   void interactive();
   virtual bool coverage_status(int step_count);
 protected:
   int       max_step_count;
   float     target_coverage;
   int       exit_tag;
+  time_t    end_time;
   Heuristic &heuristic;
   Adapter   &adapter;
   Log       &log;
@@ -42,4 +43,5 @@ protected:
   bool      coverage_reached;
   bool      step_limit_reached;
   bool      tag_reached;
+  bool      test_time_reached;
 };
