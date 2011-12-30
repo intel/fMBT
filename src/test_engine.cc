@@ -84,19 +84,13 @@ namespace {
     log.print("<%s type=\"%s\" name=\"%s\">\n", tag, type, name);
   }
   void log_adapter_suggest(Log& log, Adapter& adapter, int action) {
-#ifndef DROI
     log_tag_type_name(log, "suggested_action", "input", adapter.getUActionName(action));
-#endif
   }
   void log_adapter_execute(Log& log, Adapter& adapter, int action) {
-#ifndef DROI
     log_tag_type_name(log, "action", "input", adapter.getUActionName(action));
-#endif
   }
   void log_adapter_output(Log& log, Adapter& adapter, int action) {
-#ifndef DROI
     log_tag_type_name(log, "action", "output", adapter.getUActionName(action));
-#endif
   }
   void log_status(Log& log, int step_count, float coverage) {
     log.print("<status steps=\"%d\" coverage=\"%f\"/>\n",

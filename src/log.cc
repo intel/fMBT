@@ -19,6 +19,7 @@
 #include "log.hh"
 #include <cstdio>
 #include <cstdlib>
+#include "helper.hh"
 
 #ifndef DROI
 #include <glib.h>
@@ -55,16 +56,14 @@ void Log::vprint(const char* format,va_list ap)
 
 void Log::vuprint(const char* format,va_list ap)
 {
-#ifndef DROI
   char* msg=NULL;
 
   if (vasprintf(&msg,format,ap)>0) {
-    char* m=g_uri_escape_string(msg,NULL,TRUE);
+    char* m=escape_string(msg);
     write(m);
-    g_free(m);
+    escape_free(m);
     std::free(msg);
   }
-#endif
 }
 
 void Log::print(const char* format,...)

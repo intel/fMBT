@@ -201,7 +201,7 @@ char* escape_string(const char* msg)
 {
 #ifdef DROI
   int len=std::strlen(msg);
-  char* endp=new char(3*len+1);
+  char* endp=new char[3*len+1];
   char* ret=endp;
   endp[0]=0;
   
