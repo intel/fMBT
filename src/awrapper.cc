@@ -50,7 +50,7 @@ void Awrapper::execute(std::vector<int>& action)
   action.resize(1);
 }
 
-bool Awrapper::observe(std::vector<int> &action,
+int  Awrapper::observe(std::vector<int> &action,
 		       bool block) {
   return false;
 }

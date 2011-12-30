@@ -23,7 +23,7 @@ class Adapter_v4l2: public Adapter {
 public:
   Adapter_v4l2(Log& l, std::string params = "");
   virtual void execute(std::vector<int>& action_list);
-  virtual bool observe(std::vector<int> &action,bool block=false);
+  virtual int  observe(std::vector<int> &action,bool block=false);
 private:
   int fd;
   std::string filename;

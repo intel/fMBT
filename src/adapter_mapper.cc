@@ -441,38 +441,63 @@ void Adapter_mapper::m1_convert(int index,
   }  
 }
 
-bool Adapter_mapper::observeRobin(std::vector<int> &action)
+int Adapter_mapper::observeRobin(std::vector<int> &action)
 {
   if (adapters.size()==0) {
     abort();
   }
 
   if (robin==adapters.size()) {
+    if (silence_cnt==adapters.size()) {
+      return SILENCE;
+    }
+
+    silence_cnt=0;
     robin=0;
-    /* Let's update the current time */
-    gettimeofday(&Adapter::current_time,NULL);    
+ 
+   /* Let's update the current time */
+    CHECK_TIMEOUT;
   }
 
   if (adapters[robin]==NULL) {
     robin++;
+    silence_cnt++;
     return observeRobin(action);
   }
-  bool ret = adapters[robin]->observe(action,false);
-  if (ret)
+
+  int ret = adapters[robin]->observe(action,false);
+
+  if (ret==SILENCE) {
+    silence_cnt++;
+  }
+
+  if (ret>0)
     m1_convert(robin,action);
+
   robin++;
   return ret;
 }
 
-bool Adapter_mapper::observe(std::vector<int> &action,bool block)
+int Adapter_mapper::observe(std::vector<int> &action,bool block)
 {
+  silence_cnt=0;
   /* Ok. This is a bit hairy */
   do {
-    if (observeRobin(action)) {
-      return true;
+    int r=observeRobin(action);
+    if (r>0) {
+      return r;
     }
+
+    if (r==TIMEOUT) {
+      return r;
+    }
+
+    if (silence_cnt==adapters.size()) {
+      return SILENCE;
+    }
+
   } while (block);
-  return false;
+  return SILENCE;
 }
 
 FACTORY_DEFAULT_CREATOR(Adapter, Adapter_mapper, "mapper");

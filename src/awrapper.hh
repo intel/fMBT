@@ -34,7 +34,7 @@ public:
   virtual void set_actions(std::vector<std::string>* _actions);
 
   virtual void execute(std::vector<int>& action);
-  virtual bool observe(std::vector<int> &action,bool block=false
+  virtual int  observe(std::vector<int> &action,bool block=false
 );
 protected:
   std::map<int,int> ada2aal;

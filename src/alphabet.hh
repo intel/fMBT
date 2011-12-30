@@ -21,6 +21,13 @@
 
 #include <string>
 
+enum values {
+  OUTPUT_ONLY =-1,
+  DEADLOCK = -2,
+  SILENCE = -3,
+  TIMEOUT = -4
+};
+
 class Alphabet {
 public:
   virtual ~Alphabet() {}
