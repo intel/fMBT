@@ -25,6 +25,8 @@
 #include <cstdio>
 #include <algorithm>
 
+time_t    Test_engine::end_time;
+
 #ifdef DROI
 char* READLINE(const char* prompt)
 {

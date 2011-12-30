@@ -23,6 +23,7 @@
 #include <string>
 #include <map>
 #include "writable.hh"
+#include "alphabet.hh"
 #include "factory.hh"
 #include "log.hh"
 #include <sys/time.h>
@@ -115,5 +116,13 @@ protected:
 };
 
 FACTORY_DECLARATION(Adapter);
+
+#define CHECK_TIMEOUT {                      \
+  gettimeofday(&Adapter::current_time,NULL); \
+  struct timeval tv { Test_engine::end_time,0  }; \
+  if (!timercmp(&current_time,&tv,<)) {       \
+    return TIMEOUT;                          \
+  }                                          \
+}
 
 #endif

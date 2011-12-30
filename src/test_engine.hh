@@ -31,11 +31,11 @@ public:
 	   int _exit_tag=-1,time_t _end_time=-1);
   void interactive();
   virtual bool coverage_status(int step_count);
+  static time_t    end_time;
 protected:
   int       max_step_count;
   float     target_coverage;
   int       exit_tag;
-  time_t    end_time;
   Heuristic &heuristic;
   Adapter   &adapter;
   Log       &log;
