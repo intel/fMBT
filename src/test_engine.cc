@@ -182,8 +182,20 @@ bool Test_engine::run(float _target_coverage,
       log.print("<state type=\"output only\"/>\n");
 
       int value = adapter.observe(actions,true);
-      if (value==TIMEOUT) {
 
+      log.print("<observe %i/>\n",value);
+
+      if (value==TIMEOUT) {
+	actions.resize(1);
+	actions[0] = TIMEOUT;
+	log.print("<TIMEOUT %i %i/>\n",Adapter::current_time.tv_sec,
+		  end_time);
+        test_passed(true, "test timeout", log);
+	timersub(&Adapter::current_time,&start_time,&total_time);
+	log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
+	      total_time.tv_usec);
+        log.pop();
+	return true; // Error: Unexpected output
       } else if (value==SILENCE) {
 	actions.resize(1);
 	actions[0] = SILENCE;
@@ -566,7 +578,7 @@ bool Test_engine::coverage_status(int step_count)
   coverage_reached = heuristic.getCoverage() >= target_coverage;
   step_limit_reached = (max_step_count != -1 && 
 			step_count >= max_step_count);
-  test_time_reached;
+  //test_time_reached;
 
   int* t;
   if (exit_tag>0) {

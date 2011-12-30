@@ -163,14 +163,13 @@ void Adapter_timer::execute(std::vector<int>& action)
 int  Adapter_timer::observe(std::vector<int> &action,
 			    bool block)
 {
-  if (enabled.size()==0) {
-    return SILENCE;
-  }
+  int ret=SILENCE;
 
   for(unsigned i=0;i<enabled.size();i++) {
     int timer_id=enabled[i];
     if (timer_id) {
       struct timeval* tv=&timeout[timer_id];
+      ret=0;
       if (!timercmp(&current_time,tv,<)) {
 	/* expire */
 	clear_timer(timer_id);
@@ -180,12 +179,12 @@ int  Adapter_timer::observe(std::vector<int> &action,
 		  timer_id,action[0],
 		  (*actions)[action[0]].c_str()
 		  );
-	return true;
+	return 1;
       }
     }
   }
 
-  return false;
+  return ret;
 }
 
 FACTORY_DEFAULT_CREATOR(Adapter, Adapter_timer, "timer");

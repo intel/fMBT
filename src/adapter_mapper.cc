@@ -456,7 +456,15 @@ int Adapter_mapper::observeRobin(std::vector<int> &action)
     robin=0;
  
    /* Let's update the current time */
-    CHECK_TIMEOUT;
+    {
+      gettimeofday(&Adapter::current_time,NULL);
+      if (Test_engine::end_time>0) {
+	struct timeval tv { Test_engine::end_time,0  }; 
+	if (!timercmp(&current_time,&tv,<)) {       
+	  return TIMEOUT;                          
+	}
+      }
+    }
   }
 
   if (adapters[robin]==NULL) {
