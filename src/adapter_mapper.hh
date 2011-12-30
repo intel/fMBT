@@ -35,7 +35,7 @@ public:
   virtual bool init();
 
   virtual void execute(std::vector<int>& action);
-  virtual bool observe(std::vector<int> &action, bool block=false);
+  virtual int  observe(std::vector<int> &action, bool block=false);
 
   bool load(std::string& name);
 
@@ -57,7 +57,7 @@ protected:
   int  adapter_action_execute(adapter_action& a);
   bool map_execute(int& action);
   int  map_execute(adapter_action& a);
-  bool observeRobin(std::vector<int> &action);
+  int  observeRobin(std::vector<int> &action);
   void m1_convert(int index,std::vector<int>&action);
 
   int anum_create(int index,std::string& n);
@@ -84,6 +84,7 @@ protected:
   std::vector<std::vector<std::string> > adapter_anames;
   std::vector<Adapter*> adapters;
 
+  unsigned silence_cnt;
 };
 
 #endif

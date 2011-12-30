@@ -27,10 +27,6 @@
 #include "model.hh"
 #include "log.hh"
 
-#define SILENCE      (-3)
-#define DEADLOCK     (-2)
-#define OUTPUT_ONLY  (-1)
-
 class Lts: public Model {
 public:
   Lts(Log&l, std::string params = ""):

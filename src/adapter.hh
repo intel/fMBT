@@ -85,7 +85,7 @@ public:
    * there is something to report or when there will not be anything
    * to report.
    */
-  virtual bool observe(std::vector<int> &action, bool block = false) = 0;
+  virtual int observe(std::vector<int> &action, bool block = false) = 0;
 
   /* Adapter stack / tree setup and browsing API */
   void setparent(Adapter* a);

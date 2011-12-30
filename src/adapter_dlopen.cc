@@ -99,7 +99,7 @@ void Adapter_dlopen::execute(std::vector<int>& action)
   else loaded_adapter->execute(action);
 }
 
-bool  Adapter_dlopen::observe(std::vector<int> &action,
+int  Adapter_dlopen::observe(std::vector<int> &action,
 				bool block)
 {
   return loaded_adapter->observe(action, block);

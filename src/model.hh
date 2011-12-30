@@ -27,10 +27,6 @@
 #include "factory.hh"
 #include "alphabet.hh"
 
-#define SILENCE      (-3)
-#define DEADLOCK     (-2)
-#define OUTPUT_ONLY  (-1)
-
 class Model;
 class Writable;
 

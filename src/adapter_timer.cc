@@ -160,9 +160,13 @@ void Adapter_timer::execute(std::vector<int>& action)
   log.pop();
 }
 
-bool Adapter_timer::observe(std::vector<int> &action,
+int  Adapter_timer::observe(std::vector<int> &action,
 			    bool block)
 {
+  if (enabled.size()==0) {
+    return SILENCE;
+  }
+
   for(unsigned i=0;i<enabled.size();i++) {
     int timer_id=enabled[i];
     if (timer_id) {
@@ -180,6 +184,7 @@ bool Adapter_timer::observe(std::vector<int> &action,
       }
     }
   }
+
   return false;
 }
 
