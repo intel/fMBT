@@ -182,7 +182,6 @@ bool Test_engine::run(float _target_coverage,
       log.print("<state type=\"output only\"/>\n");
 
       int value = adapter.observe(actions,true);
-
       log.print("<observe %i/>\n",value);
 
       if (value==TIMEOUT) {
@@ -195,7 +194,7 @@ bool Test_engine::run(float _target_coverage,
 	log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
 	      total_time.tv_usec);
         log.pop();
-	return true; // Error: Unexpected output
+	return true;
       } else if (value==SILENCE) {
 	actions.resize(1);
 	actions[0] = SILENCE;

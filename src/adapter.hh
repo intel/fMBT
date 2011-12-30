@@ -117,12 +117,14 @@ protected:
 
 FACTORY_DECLARATION(Adapter);
 
-#define CHECK_TIMEOUT {                      \
-  gettimeofday(&Adapter::current_time,NULL); \
-  struct timeval tv { Test_engine::end_time,0  }; \
-  if (!timercmp(&current_time,&tv,<)) {       \
-    return TIMEOUT;                          \
-  }                                          \
+#define CHECK_TIMEOUT {                             \
+  gettimeofday(&Adapter::current_time,NULL);        \
+  if (Test_engine::end_time != -1) {                \
+    struct timeval tv { Test_engine::end_time,0  }; \
+    if (!timercmp(&current_time,&tv,<)) {           \
+      return TIMEOUT;                               \
+    }                                               \
+  }                                                 \
 }
 
 #endif

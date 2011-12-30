@@ -336,7 +336,7 @@ public:
         }
     }
 
-    bool observe(std::vector<int> &action,bool block=false) {
+    int observe(std::vector<int> &action,bool block=false) {
         return false;
     }
 
@@ -397,9 +397,9 @@ $ fmbt-gt -o mysut.lsts 'P(s0,p)->T(s0,"iInstantiate",s1)T(s1,"iBar=0",s2)'
 $ LD_LIBRARY_PATH=. fmbt -Lplugin.log plugin-test.conf
 
 Alternatively, an adapter can be statically linked to fmbt by adding
-it to LOCAL_ADAPTERS in src/Makefile.am and rebuilding it.
+it to LOCAL_ADAPTERS in src/Sources.mk and rebuilding it.
 
-$ sed -i 's/^\(LOCAL_ADAPTERS =.*\)$/\1 mylocaladapter.cc/' Makefile.am
+$ sed -i 's/^\(LOCAL_ADAPTERS =.*\)$/\1 mylocaladapter.cc/' Sources.mk
 
 $ make fmbt
 

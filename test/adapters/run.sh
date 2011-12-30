@@ -126,7 +126,7 @@ testpassed
 
 teststep "modifying LOCAL_ADAPTERS for static linking..."
 source sed.1 >> $LOGFILE 2>&1
-grep -q mylocaladapter.cc Makefile.am || testfailed
+grep -q mylocaladapter.cc Sources.mk || testfailed
 testpassed
 
 teststep "rebuilding fmbt with new LOCAL_ADAPTERS..."
