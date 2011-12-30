@@ -50,6 +50,7 @@ aal "brainfuck_memory" {
 
     adapter() {
       fprintf(stdout,"%c",memory[pos]);
+      fflush(stdout);
       return find(action_names,"iprint");
     }
   }

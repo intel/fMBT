@@ -85,6 +85,7 @@ protected:
   std::vector<Adapter*> adapters;
 
   unsigned silence_cnt;
+  unsigned adapter_cnt;
 };
 
 #endif

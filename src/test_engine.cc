@@ -125,7 +125,7 @@ bool Test_engine::run(float _target_coverage,
     log.print("<current_time time=%i.%06i/>\n",Adapter::current_time.tv_sec,
 	      Adapter::current_time.tv_usec);
 
-    while (adapter.observe(actions)) {
+    while (adapter.observe(actions)>0) {
       step_count++;
       action = policy.choose(actions);
       log_adapter_output(log, adapter, action);
@@ -161,7 +161,8 @@ bool Test_engine::run(float _target_coverage,
     switch(action) {
     case DEADLOCK: {
       log.print("<state type=\"deadlock\"/>\n");
-      if (adapter.observe(actions,true)) {
+      int ret=adapter.observe(actions,true);
+      if (ret!=SILENCE && ret!=TIMEOUT) {
         test_passed(false, "response on deadlock", log);
 	timersub(&Adapter::current_time,&start_time,&total_time);
 	log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
@@ -180,11 +181,13 @@ bool Test_engine::run(float _target_coverage,
     case OUTPUT_ONLY: {
       log.print("<state type=\"output only\"/>\n");
 
-      bool value = adapter.observe(actions,true);
-      if (!value) {
+      int value = adapter.observe(actions,true);
+      if (value==TIMEOUT) {
+
+      } else if (value==SILENCE) {
 	actions.resize(1);
 	actions[0] = SILENCE;
-        log.debug("Test_engine::run: SUT remained silent (action %i).\n", action);
+        log.debug("Test_engine::run: SUT remained silent (action %i).\n", action);	
       } else {
         log.debug("Test_engine::run: SUT executed %i '%s'\n",
 		  actions[0],heuristic.getActionName(actions[0]).c_str());
@@ -316,7 +319,7 @@ void Test_engine::interactive()
 
   while (run) {
 
-    while (adapter.observe(actions_v)) {
+    while (adapter.observe(actions_v)>0) {
       fprintf(stderr,"Action %i:%s\n",action,heuristic.getActionName(action).c_str());
       actions_v.resize(0);
     }

@@ -213,8 +213,6 @@ void Conf::set_end_time(std::string &s)
 
   end_time=-1;
 
-  printf("spawning %s\n",ss.c_str());
-
   if (g_spawn_command_line_sync(ss.c_str(),&out,NULL,&stat,NULL)) {
     if (!stat) {
       end_time=atoi(out);

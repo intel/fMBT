@@ -199,7 +199,7 @@ bool Adapter_mapper::load(std::string& name)
       Adapter* a = AdapterFactory::create(log, adapter_class,
                                           adapter_params);
 
-      if (!a) {
+      if (!a || !a->status) {
 	status=false;
 	errormsg=std::string("Can't create adapter ")
 	  + adapter_class + ":"+adapter_params;
@@ -481,6 +481,7 @@ int Adapter_mapper::observeRobin(std::vector<int> &action)
 int Adapter_mapper::observe(std::vector<int> &action,bool block)
 {
   silence_cnt=0;
+  adapter_cnt=adapters.size()-1;
   /* Ok. This is a bit hairy */
   do {
     int r=observeRobin(action);
@@ -492,7 +493,7 @@ int Adapter_mapper::observe(std::vector<int> &action,bool block)
       return r;
     }
 
-    if (silence_cnt==adapters.size()) {
+    if (silence_cnt==adapter_cnt) {
       return SILENCE;
     }
 
