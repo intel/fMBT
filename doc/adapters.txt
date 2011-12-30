@@ -336,7 +336,7 @@ public:
         }
     }
 
-    bool observe(std::vector<int> &action,bool block=false) {
+    int observe(std::vector<int> &action,bool block=false) {
         return false;
     }
 
