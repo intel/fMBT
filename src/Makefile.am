@@ -9,25 +9,12 @@ dist_bin_SCRIPTS = remote_python
 pkgpyexec_LTLIBRARIES = fmbt_cparsers.la
 endif
 
-LOCAL_ADAPTERS = adapter.cc awrapper.cc adapter_model.cc adapter_mapper.cc adapter_dummy.cc adapter_timer.cc adapter_lib.cc
+##########################################
+# Define all sources in Sources.mk so that
+# the definitions can be shared between
+# Autotools and Android makefiles
 
-LOCAL_HEURISTICS =  heuristic.cc heuristic_random.cc heuristic_mrandom.cc heuristic_greedy.cc
-
-LOCAL_COVERAGES = coverage.cc coverage_mapper.cc coverage_tree.cc coverage_prop.cc
-
-LOCAL_MODELS = model.cc mwrapper.cc lts.cc model_lib.cc
-
-COMMON_SOURCES = fmbt.cc test_engine.cc log.cc helper.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc  $(LOCAL_ADAPTERS) $(LOCAL_HEURISTICS) $(LOCAL_COVERAGES) $(LOCAL_MODELS) conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc alg_bdfs.cc history.cc null.cc
-
-fmbt_SOURCES                  = $(COMMON_SOURCES) adapter_dlopen.cc adapter_remote.cc lts_remote.cc lts_trace.cc xrules_remote.cc covlang.g.d_parser.cc coverage_market.cc coverage_tema_seq.cc history_remote.cc
-
-fmbt_droid_SOURCES            = $(COMMON_SOURCES)
-
-fmbt_aalc_SOURCES = lang.g.d_parser.cc lang.cc helper.cc aalang_cpp.cc aalang_py.cc
-
-remote_adapter_loader_SOURCES = remote_adapter_loader.cc adapter.cc log.cc adapter_dummy.cc adapter_model.cc adapter_v4l2.cc helper.cc model.cc
-
-fmbt_cparsers_la_SOURCES      = xrules.g.d_parser.cc lts.g.d_parser.cc helper.cc
+include Sources.mk
 
 noinst_HEADERS = adapter_dlopen.hh adapter_dummy.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_v4l2.hh adapter_xrules.hh conf.hh coverage.hh coverage_mapper.hh coverage_market.hh coverage_tree.hh coverage_tema_seq.hh helper.hh heuristic_greedy.hh heuristic.hh heuristic_minerror.hh heuristic_random.hh log_null.hh lts.hh lts_remote.hh lts_xrules.hh xrules_remote.hh model.hh policy.hh rules.hh test_engine.hh alg_bdfs.hh null.hh
 
@@ -85,31 +72,35 @@ covlang.g.d_parser.cc: covlang.g d/make_dparser
 ##########################################
 # Building fmbt_android with Android NDK
 
-Application.mk: Makefile
-	@echo 'APP_STL := stlport_static'		> $@
-	@echo 'APP_MODULES := dparse_droid fmbt_droid'	>> $@
-	@echo 'APP_OPTIM := debug'			>> $@
+# Application.mk: Makefile
+# 	@echo 'APP_STL := stlport_static'		> $@
+# 	@echo 'APP_MODULES := dparse_droid fmbt_droid'	>> $@
+# 	@echo 'APP_OPTIM := debug'			>> $@
 
-Android.mk: Makefile
-	@echo 'LOCAL_PATH := $$(call my-dir)'				> $@
-	@echo '############################## MODULE 1: dparse_droid'	>> $@
-	@echo 'include $$(CLEAR_VARS)'					>> $@
-	@echo 'LOCAL_MODULE := dparse_droid'				>> $@
-	@echo 'LOCAL_SRC_FILES := $$(subst jni/,,$$(wildcard jni/d/*.c))'			>> $@
-	@echo 'LOCAL_CFLAGS := -DD_MAJOR_VERSION=1 -DD_MINOR_VERSION=26 -DD_BUILD_VERSION=\"\"'	>> $@
-	@echo 'include $$(BUILD_STATIC_LIBRARY)'			>> $@
-	@echo '############################## MODULE 2: fmbt_droid'	>> $@
-	@echo 'include $$(CLEAR_VARS)'					>> $@
-	@echo 'LOCAL_MODULE    := fmbt_droid'				>> $@
-	@echo 'LOCAL_SRC_FILES := $(fmbt_droid_SOURCES)'		>> $@
-	@echo 'LOCAL_CPPFLAGS  := -Ijni/d $(fmbt_droid_CPPFLAGS)'	>> $@
-	@echo 'LOCAL_STATIC_LIBRARIES := dparse_droid'			>> $@
-	@echo 'LOCAL_LDLIBS := -ldl -llog'				>> $@
-	@echo 'LOCAL_LDFLAGS := -Wl,-E -Wl,--no-gc-sections'		>> $@
-	@echo 'LOCAL_CPP_EXTENSION := .cc'				>> $@
-	@echo 'include $$(BUILD_EXECUTABLE)'				>> $@
+# Android.mk: Makefile
+# 	@echo 'LOCAL_PATH := $$(call my-dir)'				> $@
+# 	@echo '############################## MODULE 1: dparse_droid'	>> $@
+# 	@echo 'include $$(CLEAR_VARS)'					>> $@
+# 	@echo 'LOCAL_MODULE := dparse_droid'				>> $@
+# 	@echo 'LOCAL_SRC_FILES := $$(subst jni/,,$$(wildcard jni/d/*.c))'			>> $@
+# 	@echo 'LOCAL_CFLAGS := -DD_MAJOR_VERSION=1 -DD_MINOR_VERSION=26 -DD_BUILD_VERSION=\"\"'	>> $@
+# 	@echo 'include $$(BUILD_STATIC_LIBRARY)'			>> $@
+# 	@echo '############################## MODULE 2: fmbt_droid'	>> $@
+# 	@echo 'include $$(CLEAR_VARS)'					>> $@
+# 	@echo 'LOCAL_MODULE    := fmbt_droid'				>> $@
+# 	@echo 'LOCAL_SRC_FILES := $(fmbt_droid_SOURCES)'		>> $@
+# 	@echo 'LOCAL_CPPFLAGS  := -Ijni/d $(fmbt_droid_CPPFLAGS)'	>> $@
+# 	@echo 'LOCAL_STATIC_LIBRARIES := dparse_droid'			>> $@
+# 	@echo 'LOCAL_LDLIBS := -ldl -llog'				>> $@
+# 	@echo 'LOCAL_LDFLAGS := -Wl,-E -Wl,--no-gc-sections'		>> $@
+# 	@echo 'LOCAL_CPP_EXTENSION := .cc'				>> $@
+# 	@echo 'include $$(BUILD_EXECUTABLE)'				>> $@
 
-android/fmbt_droid: Application.mk Android.mk $(fmbt_droid_SOURCES)
+# android/fmbt_droid: Application.mk Android.mk $(fmbt_droid_SOURCES)
+# 	bash -c 'mkdir -p android; cd android; [ -s jni ] || ln -s .. jni; echo "target=android-5" > default.properties'
+# 	bash -c 'cd android; rm -f fmbt_droid; nice @NDK_BUILD@ -j4 && ln libs/*/fmbt_droid .'
+
+android/fmbt_droid: Android.mk $(fmbt_droid_SOURCES)
 	bash -c 'mkdir -p android; cd android; [ -s jni ] || ln -s .. jni; echo "target=android-5" > default.properties'
 	bash -c 'cd android; rm -f fmbt_droid; nice @NDK_BUILD@ -j4 && ln libs/*/fmbt_droid .'
 
