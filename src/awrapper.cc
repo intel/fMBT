@@ -23,12 +23,18 @@
 
 Awrapper::Awrapper(Log&l, std::string params, aal* _ada):
   Adapter(l, params), ada(_ada) {
-  
+  if (ada==NULL) {
+    status=false;
+  }  
 }
 
 void Awrapper::set_actions(std::vector<std::string>* _actions)
 {
   Adapter::set_actions(_actions);
+
+  if (!status) {
+    return;
+  }
 
   std::vector<std::string>& wn=ada->getActionNames();
 
