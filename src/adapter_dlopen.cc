@@ -105,4 +105,4 @@ int  Adapter_dlopen::observe(std::vector<int> &action,
   return loaded_adapter->observe(action, block);
 }
 
-FACTORY_DEFAULT_CREATOR(Adapter, Adapter_dlopen, "dlopen");
+FACTORY_DEFAULT_CREATOR(Adapter, Adapter_dlopen, "dlopen")

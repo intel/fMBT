@@ -26,11 +26,9 @@
 
 extern "C" {
 extern D_ParserTables parser_tables_xrules;
-};
+}
 
 extern Lts_xrules* xobj;
-
-#define debugprint(...)
 
 std::string Lts_xrules::stringify()
 {
@@ -118,7 +116,7 @@ void Lts_xrules::add_file(unsigned int index,std::string& filename)
     lts.resize(index+2);
   }
 
-  debugprint("Index %i, size %i, file %s",
+  log.debug("Index %i, size %i, file %s",
 	 index,model_names.size(),filename.c_str());
   
   
@@ -165,7 +163,7 @@ void Lts_xrules::add_result_action(std::string* name)
 
   cur_par->actions.push_back(action);
   
-  debugprint("%p added result %s (%i)\n",cur_par,name->c_str(),
+  log.debug("%p added result %s (%i)\n",cur_par,name->c_str(),
 	 cur_par->actions.size());
   
   res_nodes.resize(action_names.size()+2);
@@ -201,15 +199,15 @@ void Lts_xrules::add_component(unsigned int index,std::string& name)
   struct par* pa=cur_par->vmap[pos];
   
   if (pa==NULL) {
-    debugprint("New combination <%i,%s>\n",
+    log.debug("New combination <%i,%s>\n",
 	   index,name.c_str());
     pa = new struct par(cur_par);
 
     pa->me=pos;
     
-    debugprint("%p: vmap size %i:",cur_par,cur_par->vmap.size());
+    log.debug("%p: vmap size %i:",cur_par,cur_par->vmap.size());
     cur_par->vmap[pos]=pa;
-    debugprint("vmap size %i\n",cur_par->vmap.size());
+    log.debug("vmap size %i\n",cur_par->vmap.size());
 
     bob.insert(std::pair<comp,par*>(pos,pa));
 
@@ -325,7 +323,7 @@ void Lts_xrules::print_par(std::ostringstream& t,
 
 void Lts_xrules::print_par(struct par* pa)
 {
-  debugprint("%p:actions count %i\n"
+  log.debug("%p:actions count %i\n"
 	 "vmap size %i\n",
 	 pa,
 	 (int)pa->actions.size(),
@@ -352,10 +350,10 @@ int Lts_xrules::getActions(int** actions)
 
   for(size_t i=0;i<res_actions.size();i++) {
     _res_actions[i]=res_actions[i];
-    debugprint("%i ",res_actions[i]);
+    log.debug("%i ",res_actions[i]);
   }
 
-  debugprint("Actions.size() %i\n",res_actions.size());
+  log.debug("Actions.size() %i\n",res_actions.size());
   
   return res_actions.size();
 }
@@ -374,10 +372,10 @@ int Lts_xrules::getIActions(int** actions)
 
   for(size_t i=0;i<res_iactions.size();i++) {
     _res_iactions[i]=res_iactions[i];
-    debugprint("%i ",res_iactions[i]);
+    log.debug("%i ",res_iactions[i]);
   }
 
-  debugprint("iActions.size %i\n",res_iactions.size());
+  log.debug("iActions.size %i\n",res_iactions.size());
 
 
   return res_iactions.size();
@@ -386,7 +384,7 @@ int Lts_xrules::getIActions(int** actions)
 void Lts_xrules::compose()
 {
 
-  debugprint("Lts_xrules::compose()\n");
+  log.debug("Lts_xrules::compose()\n");
 
   if (valid) {
     /* No need to compose again.. */
@@ -469,4 +467,4 @@ bool Lts_xrules::parent_active_par(struct par* par)
   return ret;
 }
 
-FACTORY_DEFAULT_CREATOR(Model, Lts_xrules, "xrules");
+FACTORY_DEFAULT_CREATOR(Model, Lts_xrules, "xrules")

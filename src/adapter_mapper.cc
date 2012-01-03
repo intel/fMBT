@@ -31,11 +31,9 @@
 
 extern "C" {
 extern D_ParserTables parser_tables_mrules;
-};
+}
 
 extern Rules* amobj;
-
-#define debugprint(...)
 
 Adapter_mapper::Adapter_mapper(Log& log, std::string _params)
   : Adapter(log), Rules(), params(_params)
@@ -503,4 +501,4 @@ int Adapter_mapper::observe(std::vector<int> &action,bool block)
   return SILENCE;
 }
 
-FACTORY_DEFAULT_CREATOR(Adapter, Adapter_mapper, "mapper");
+FACTORY_DEFAULT_CREATOR(Adapter, Adapter_mapper, "mapper")

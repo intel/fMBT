@@ -33,7 +33,7 @@
 
 extern "C" {
 extern D_ParserTables parser_tables_lang;
-};
+}
 
 void block(int fd)
 {

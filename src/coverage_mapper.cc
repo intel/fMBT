@@ -25,6 +25,7 @@
 
 #include <sstream>
 #include <iostream>
+#include <vector>
 
 #ifndef DROI
 #include <boost/regex.hpp>
@@ -32,7 +33,7 @@
 
 extern "C" {
 extern D_ParserTables parser_tables_mrules;
-};
+}
 
 extern Rules* amobj;
 
@@ -110,9 +111,9 @@ int Coverage_Mapper::fitness(int* actions,int n, float* fitness)
 
   for(unsigned i=0;i<models.size();i++) {
     if (models[i]) {
-      int cn[models[i]->getActionNames().size()];
-      float fn[models[i]->getActionNames().size()];
-      int bm[models[i]->getActionNames().size()];
+      std::vector<int> cn(models[i]->getActionNames().size());
+      std::vector<float> fn(models[i]->getActionNames().size());
+      std::vector<int> bm(models[i]->getActionNames().size());
 
       int c = 0;
 
@@ -130,7 +131,7 @@ int Coverage_Mapper::fitness(int* actions,int n, float* fitness)
 	}
       }
 
-      coverages[i]->fitness(cn,c,fn);
+      coverages[i]->fitness(&cn[0],c,&fn[0]);
 
       for(int j=0;j<c;j++) {
 	if (bm[j]>0) {
@@ -347,4 +348,4 @@ void Coverage_Mapper::add_component(unsigned index,
 
 }
 
-FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Mapper, "mapper");
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Mapper, "mapper")

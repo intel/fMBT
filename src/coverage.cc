@@ -18,7 +18,7 @@
  */
 #include "coverage.hh"
 
-FACTORY_IMPLEMENTATION(Coverage);
+FACTORY_IMPLEMENTATION(Coverage)
 
 Coverage::Coverage(Log& l) :
   model(NULL), log(l)

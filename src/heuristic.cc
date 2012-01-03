@@ -22,7 +22,7 @@
 #include "model.hh"
 #include "log.hh"
 
-FACTORY_IMPLEMENTATION(Heuristic);
+FACTORY_IMPLEMENTATION(Heuristic)
 
 Heuristic::Heuristic(Log& l, std::string params) :
   none(""), log(l)

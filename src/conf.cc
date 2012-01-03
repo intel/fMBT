@@ -28,10 +28,9 @@
 
 #endif
 
-
 extern "C" {
 extern D_ParserTables parser_tables_conf;
-};
+}
 
 extern Conf* conf_obj;
 

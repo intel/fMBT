@@ -116,7 +116,7 @@ int Coverage_Market::fitness(int* action,int n,float* fitness)
 #include "dparse.h"
 extern "C" {
 extern D_ParserTables parser_tables_covlang;
-};
+}
 
 extern Coverage_Market* cobj;
 
@@ -184,4 +184,4 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const char* a
   return u;  
 }
 
-FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Market, "covlang");
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Market, "covlang")

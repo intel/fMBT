@@ -43,4 +43,4 @@ int   Adapter_dummy::observe(std::vector<int> &action,
   return false;
 }
 
-FACTORY_DEFAULT_CREATOR(Adapter, Adapter_dummy, "dummy");
+FACTORY_DEFAULT_CREATOR(Adapter, Adapter_dummy, "dummy")

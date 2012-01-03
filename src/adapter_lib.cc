@@ -49,4 +49,4 @@ namespace {
     return a;
   }
   static AdapterFactory::Register me("lib", creator_func);
-};
+}

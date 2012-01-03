@@ -22,11 +22,11 @@ pkginclude_HEADERS = adapter.hh factory.hh writable.hh log.hh aal.hh model.hh aw
 
 noinst_HEADERS += conf.g lts.g mrules.g covlang.g xrules.g lang.g
 
-fmbt_CPPFLAGS                  = -Wall -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0`
-fmbt_droid_CPPFLAGS            = -Wall -fPIC -I d -I `pwd` -DDROI
-remote_adapter_loader_CPPFLAGS = -Wall -I d -DDROI
-fmbt_cparsers_la_CPPFLAGS      = -Wall -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DCAPI
-fmbt_aalc_CPPFLAGS	       = -Wall -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0`
+fmbt_CPPFLAGS                  = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0`
+fmbt_droid_CPPFLAGS            = -Wall -pedantic -fPIC -I d -I `pwd` -DDROI
+remote_adapter_loader_CPPFLAGS = -Wall -pedantic -I d -DDROI
+fmbt_cparsers_la_CPPFLAGS      = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DCAPI
+fmbt_aalc_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0`
 
 fmbt_LDFLAGS                   = -g `pkg-config --libs glib-2.0 gobject-2.0 libedit` -lboost_regex -Wl,-E -ldl
 fmbt_droid_LDFLAGS             = -Wl,-E -ldl

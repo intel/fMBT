@@ -39,6 +39,6 @@ protected:
   Log log;
 };
 
-FACTORY_DECLARATION(History);
+FACTORY_DECLARATION(History)
 
 #endif

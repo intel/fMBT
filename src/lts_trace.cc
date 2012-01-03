@@ -113,4 +113,4 @@ std::string Lts_trace::trace2model(char* str)
   return ret;
 }
 
-FACTORY_DEFAULT_CREATOR(Model, Lts_trace, "lts_trace");
+FACTORY_DEFAULT_CREATOR(Model, Lts_trace, "lts_trace")

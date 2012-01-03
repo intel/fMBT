@@ -81,4 +81,4 @@ void Coverage_Prop::set_model(Model* _model) {
   props_total=model->getSPNames().size()-1; // let's ignore 0
 }
 
-FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Prop, "tag");
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Prop, "tag")

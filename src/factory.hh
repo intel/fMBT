@@ -102,6 +102,6 @@ namespace {                                                            \
     return new CLASSNAME(log, params);                                 \
   }                                                                    \
   static MODULETYPE##Factory::Register me(ID, creator_func);           \
-};
+}
 
 #endif

@@ -242,4 +242,4 @@ namespace {
   static AdapterFactory::Register with_enc("remote", adapter_creator);
 
   static AdapterFactory::Register without_enc("remote_noencode", adapter_creator_noencode);
-};
+}

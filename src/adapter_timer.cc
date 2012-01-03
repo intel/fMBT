@@ -187,4 +187,4 @@ int  Adapter_timer::observe(std::vector<int> &action,
   return ret;
 }
 
-FACTORY_DEFAULT_CREATOR(Adapter, Adapter_timer, "timer");
+FACTORY_DEFAULT_CREATOR(Adapter, Adapter_timer, "timer")
