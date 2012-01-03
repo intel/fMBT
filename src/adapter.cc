@@ -23,7 +23,7 @@
 #include "log.hh"
 
 struct timeval Adapter::current_time;
-
+int Adapter::sleeptime = 0;
 FACTORY_IMPLEMENTATION(Adapter)
 
 Adapter::Adapter(Log& l, std::string params) :
