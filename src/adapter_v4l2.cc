@@ -30,6 +30,7 @@
 #include <sys/ioctl.h>
 #include <linux/videodev2.h>
 #include <string.h>
+#include <vector>
 
 Adapter_v4l2::Adapter_v4l2(Log& l, std::string params)
   : Adapter::Adapter(l)
@@ -140,9 +141,9 @@ void Adapter_v4l2::execute(std::vector<int>& action_list)
       RETURN(0);
     }
     unsigned int r;
-    unsigned char buf[resolution.fmt.pix.sizeimage];
+    std::vector<unsigned char> buf(resolution.fmt.pix.sizeimage);
     
-    while (((r=read(fd,buf,resolution.fmt.pix.sizeimage))<0) &&
+    while (((r=read(fd,&buf[0],resolution.fmt.pix.sizeimage))<0) &&
 	   (errno==EINTR)) {}
     
     
@@ -175,4 +176,4 @@ int  Adapter_v4l2::observe(std::vector<int>& action, bool block)
   return false;
 }
 
-FACTORY_DEFAULT_CREATOR(Adapter, Adapter_v4l2, "v4l2");
+FACTORY_DEFAULT_CREATOR(Adapter, Adapter_v4l2, "v4l2")

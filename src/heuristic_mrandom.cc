@@ -110,4 +110,4 @@ void Heuristic_mrandom::set_coverage(Coverage* c)
   }
 }
 
-FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_mrandom, "mrandom");
+FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_mrandom, "mrandom")

@@ -84,4 +84,4 @@ int Heuristic_random::getIAction()
   return actions[pos]; // Quite bad random..
 }
 
-FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_random, "random");
+FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_random, "random")

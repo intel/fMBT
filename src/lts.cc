@@ -28,11 +28,9 @@
 #include <cstring>
 #include <sstream>
 
-#define debugprint(a ...) log.debug(a)
-
 extern "C" {
 extern D_ParserTables parser_tables_lts;
-};
+}
 
 int Lts::getprops(int** props) {
   int count=stateprops[current_state].size();
@@ -117,7 +115,7 @@ bool Lts::load(std::string& name)
   Lts* tmp=obj;
   bool ret;
 
-  debugprint("Lts::load %s",name.c_str());
+  log.debug("Lts::load %s",name.c_str());
 
   obj=this;
 
@@ -132,9 +130,9 @@ bool Lts::load(std::string& name)
   ret=dparse(p,s,std::strlen(s));
 
   if (ret) {
-    debugprint("Loading of %s ok\n",name.c_str());
+    log.debug("Loading of %s ok\n",name.c_str());
   } else {
-    debugprint("Loading of %s failed\n",name.c_str());
+    log.debug("Loading of %s failed\n",name.c_str());
     status=false;
   }
   free(s);
@@ -180,7 +178,7 @@ void Lts::add_transitions(int st,
 			  std::vector<int>& is)
 {
 
-  debugprint("Updating state %i",
+  log.debug("Updating state %i",
 	 st);
 
   state[st].first=actions.size();
@@ -198,22 +196,22 @@ int Lts::execute(int action)
 {
   struct _state* st=&state[current_state];
   
-  debugprint("Lts::execute: trying to execute action %i at state %i",action,current_state);
+  log.debug("Lts::execute: trying to execute action %i at state %i",action,current_state);
   
-  debugprint("%i %i",
+  log.debug("%i %i",
 	 st->first,
 	 st->transitions);
   
   for(int i=0;i<st->transitions;i++) {
-    debugprint("state[%i] action %i",
+    log.debug("state[%i] action %i",
 	   current_state,actions[st->first+i]);
     if (actions[st->first+i]==action) {
       current_state=dstate[st->first+i];
-      debugprint("Lts::execute: action found, continuing from state %i",current_state);
+      log.debug("Lts::execute: action found, continuing from state %i",current_state);
       return true;
     }
   }
-  debugprint("Lts::execute: can't execute");
+  log.debug("Lts::execute: can't execute");
   return false;
 }
 
@@ -233,4 +231,4 @@ namespace {
   }
   static ModelFactory::Register lts("lts", lts_creator);
   static ModelFactory::Register lsts("lsts", lts_creator);
-};
+}

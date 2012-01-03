@@ -61,6 +61,6 @@ protected:
   Log& log;
 };
 
-FACTORY_DECLARATION(Heuristic);
+FACTORY_DECLARATION(Heuristic)
 
 #endif

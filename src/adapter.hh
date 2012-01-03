@@ -115,16 +115,18 @@ protected:
   std::vector<std::string> adapter_names;
 };
 
-FACTORY_DECLARATION(Adapter);
+FACTORY_DECLARATION(Adapter)
 
-#define CHECK_TIMEOUT {                             \
-  gettimeofday(&Adapter::current_time,NULL);        \
-  if (Test_engine::end_time != -1) {                \
-    struct timeval tv { Test_engine::end_time,0  }; \
-    if (!timercmp(&current_time,&tv,<)) {           \
-      return TIMEOUT;                               \
-    }                                               \
-  }                                                 \
+#define CHECK_TIMEOUT {                      \
+  gettimeofday(&Adapter::current_time,NULL); \
+  if (Test_engine::end_time != -1) {         \
+    struct timeval tv;                       \
+    tv.tv_sec=Test_engine::end_time;         \
+    tv.tv_usec=0;                            \
+    if (!timercmp(&current_time,&tv,<)) {    \
+      return TIMEOUT;                        \
+    }                                        \
+  }                                          \
 }
 
 #endif

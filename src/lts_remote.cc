@@ -48,4 +48,4 @@ bool Lts_remote::load(std::string& name)
   return ret;
 }
 
-FACTORY_DEFAULT_CREATOR(Model, Lts_remote, "lts_remote");
+FACTORY_DEFAULT_CREATOR(Model, Lts_remote, "lts_remote")

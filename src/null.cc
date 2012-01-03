@@ -19,4 +19,4 @@
 
 #include "null.hh"
 
-FACTORY_DEFAULT_CREATOR(Model, Null, "null");
+FACTORY_DEFAULT_CREATOR(Model, Null, "null")

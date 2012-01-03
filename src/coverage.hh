@@ -66,7 +66,7 @@ protected:
   Log& log;
 };
 
-FACTORY_DECLARATION(Coverage);
+FACTORY_DECLARATION(Coverage)
 
 /*
 namespace {

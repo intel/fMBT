@@ -200,7 +200,5 @@ void aalang_cpp::factory_register()
     "\treturn new Awrapper(l,params,a);\n"
     "}\n"
     "static AdapterFactory::Register me2(\""+*name+"\", creator_func);\n"+
-    "};\n";
-  
-};
-
+    "};\n";  
+}

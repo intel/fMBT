@@ -31,11 +31,7 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
-
-extern "C" {
-  void abort();
-}
-
+#include <cstdlib>
 
 Coverage_Tema_seq::Coverage_Tema_seq(Log &l, std::string params)
   : Coverage(l), a_trace_file_name(params), a_trace_ptr(0) {
@@ -142,4 +138,4 @@ Coverage_Tema_seq::set_model(Model* _model){
   a_step_coverage = 1.0 / ( 4 * ceil(a_trace.size()/2.0) );
 }
 
-FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Tema_seq, "tema_seq");
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Tema_seq, "tema_seq")

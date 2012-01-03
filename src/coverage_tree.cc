@@ -166,4 +166,4 @@ void Coverage_Tree::set_max_depth(std::string&s)
   log.debug("%s(%s) -> %i\n",__PRETTY_FUNCTION__,s.c_str(),max_depth);
 }
 
-FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Tree, "perm");
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Tree, "perm")
