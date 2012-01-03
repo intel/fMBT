@@ -69,6 +69,9 @@ class Conf:public Writable {
   void set_on_error(std::string &s) {
     on_error = s;
   }
+
+  void set_observe_sleep(std::string &s);
+
   void set_end_time(std::string &s);
 
   void add_history(std::string* s) {

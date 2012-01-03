@@ -31,16 +31,17 @@ Conf* conf_obj;
 
 conf_file: conf_entry+;
 
-conf_entry: model        |
-            heuristic    |
-            coverage     |
-            adapter      |
-            engine_cov   |
-            engine_count |
-            engine_tag   |
-            engine_time  |
-            history      |
-            on_error     ;
+conf_entry: model         |
+            heuristic     |
+            coverage      |
+            adapter       |
+            engine_cov    |
+            engine_count  |
+            engine_tag    |
+            engine_time   |
+            adapter_sleep |
+            history       |
+            on_error      ;
 
 model: 'model' '=' string { conf_obj->set_model(*$2.str); } ;
 
@@ -57,6 +58,8 @@ engine_count: 'engine.count' '=' int { conf_obj->set_engine_count($2.val); };
 engine_tag: 'engine.tag' '=' string { conf_obj->set_engine_tag(*$2.str); } ;
 
 engine_time: 'engine.endtime' '=' string { conf_obj->set_end_time(*$2.str); } ;
+
+adapter_sleep: 'adapter.observesleep' '=' string { conf_obj->set_observe_sleep(*$2.str); } ;
 
 history: 'history' '=' string { conf_obj->add_history($2.str); };
 

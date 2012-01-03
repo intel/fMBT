@@ -455,6 +455,8 @@ int Adapter_mapper::observeRobin(std::vector<int> &action)
  
    /* Let's update the current time */
     CHECK_TIMEOUT;
+
+    usleep(sleeptime);
   }
 
   if (adapters[robin]==NULL) {

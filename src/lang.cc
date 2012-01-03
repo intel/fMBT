@@ -55,9 +55,12 @@ void print_usage()
     "    -h     print usage\n"
     "    -o     output to a file (defaults to stdout)\n"
     "    -c     compile (needs to have output file)\n"
+    "    -D     define preprocessor flag\n"
     );
 }
 
+std::vector<std::string> prep;
+std::string pstr;
 extern std::string result;
 extern aalang* obj;
 std::string compile_command("g++ -fPIC -shared -x c++  - -I /usr/include/fmbt -o ");
@@ -71,7 +74,7 @@ int main(int argc,char** argv) {
     {0, 0, 0, 0}
   };
 
-  while ((c = getopt_long (argc, argv, "b:hco:", long_opts, NULL)) != -1) {
+  while ((c = getopt_long (argc, argv, "b:hco:D:", long_opts, NULL)) != -1) {
     switch (c)
       {
       case 'b':
@@ -80,6 +83,10 @@ int main(int argc,char** argv) {
 	break;
       case 'c':
 	lib=true;
+	break;
+      case 'D':
+	prep.push_back(optarg);
+	pstr=pstr+" -D"+optarg+" ";
 	break;
       case 'o':
 	outputfile=fopen(optarg,"w");
@@ -105,6 +112,7 @@ int main(int argc,char** argv) {
   char *s;
   D_Parser *p = new_D_Parser(&parser_tables_lang, 5120);
 
+  p->loc.pathname = argv[optind];
   s=readfile(argv[optind],false);
   if (!s) {
     std::printf("Can't read input file \"%s\"\n",argv[optind]);
@@ -126,6 +134,8 @@ int main(int argc,char** argv) {
     gchar **argv=(gchar**)malloc(42*sizeof(gchar*));
     GError *gerr=NULL;
 
+    compile_command+=pstr;
+
     g_shell_parse_argv(compile_command.c_str(),
 		       &argc,&argv,&gerr);
 
@@ -136,9 +146,10 @@ int main(int argc,char** argv) {
     unsigned int pos=0;
     unsigned int wrote=0;
     do {
+      size_t ignore;
       wrote=TEMP_FAILURE_RETRY(write(_stdin,result.c_str()+pos,result.length()-pos));
       pos+=wrote;
-      read(_stdout,b,512);
+      ignore=read(_stdout,b,512);
     } while (wrote>0 && pos<result.length());
     close(_stdin);
     block(_stdout);

@@ -236,3 +236,8 @@ void Conf::set_end_time(std::string &s)
 
 }
 #endif
+
+void Conf::set_observe_sleep(std::string &s)
+{
+  Adapter::sleeptime=atoi(s.c_str());
+}
