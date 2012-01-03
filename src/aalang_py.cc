@@ -23,20 +23,21 @@
 
 void aalang_py::set_starter(std::string* st)
 {
-  s+=*st;
+  s+=*st+"\n";
 }
 
 
 void aalang_py::set_name(std::string* name)
 {
     s+="    action"+acnt+"name = \""+*name+"\"\n"
-      +"    action"+acnt+"type = \"input\"\n\n";
+      +"    action"+acnt+"type = \"input\"\n";
 }
 
 void aalang_py::set_namestr(std::string* _name)
 { 
   name=_name;
-  s+="class _gen_"+*name+"(AALModel):\n";
+  s+="import aalmodel\n"
+    "class _gen_"+*name+"(aalmodel.AALModel):\n";
 }
 
 void aalang_py::set_variables(std::string* var)
@@ -71,7 +72,12 @@ void aalang_py::set_body(std::string* bod)
 
 void aalang_py::set_adapter(std::string* ada)
 {
-  s+="    def action"+acnt+"adapter():"+*ada+"\n";
+  s+="    def action"+acnt+"adapter():\n"
+    "        try:\n" +
+    *ada+"\n"+
+    "        except Exception as _aalException:\n"
+    "            return 0 # i should log the exception...\n"
+    "        return " +acnt + "\n\n";
 }
 
 void aalang_py::next_action()

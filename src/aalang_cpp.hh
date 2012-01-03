@@ -30,6 +30,7 @@ public:
   aalang_cpp(): aalang(),action_cnt(1), istate(NULL), name(NULL) {
     default_guard="return true;"; 
     default_body="";
+    default_adapter="";
     std::vector<std::string> t;
     aname.push_back(t);
     map.push_back(0);

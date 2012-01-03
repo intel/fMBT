@@ -81,12 +81,13 @@ variables: 'variables' '{' bstr '}' { obj->set_variables($2.str); };
 istate: 'initial_state' '{' bstr '}' { obj->set_istate($2.str); } ;
 
 guard: 'guard' '()' '{' bstr '}' { obj->set_guard($3.str); }
-    | { obj->empthy_guard(); } ;
+    | { obj->empty_guard(); } ;
 
 body: 'body' '()' '{' bstr '}' { obj->set_body($3.str); }
-    | { obj->empthy_body(); };
+    | { obj->empty_body(); };
 
-adapter: 'adapter' '()' '{' bstr '}' { obj->set_adapter($3.str); }|;
+adapter: 'adapter' '()' '{' bstr '}' { obj->set_adapter($3.str); }
+    | { obj->empty_adapter(); };
 
 bstr: "[^\}\{]+" {
             char* start=d_ws_before(NULL,& $n0);

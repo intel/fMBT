@@ -33,7 +33,7 @@ void aalang_cpp::set_name(std::string* name)
 
     anames.push_back(*$2.str); printf("%s",$2.str->c_str()); delete $2.str; $2.str=NULL; } ;
   */
-  s+="\n\t//action"+to_string(action_cnt)+": "+*name+"\n";
+  s+="\n//action"+to_string(action_cnt)+": \""+*name+"\"\n";
   aname.back().push_back(*name);
   map.push_back(action_cnt);
   name_cnt++;
@@ -104,8 +104,12 @@ void aalang_cpp::set_adapter(std::string* ada)
   /*
   printf("int action%i_adapter() {\n%s}\n",action,$3.str->c_str()); }|;
   */
-  s+="int action"+to_string(action_cnt)+"_adapter() {\n"+*ada+"}\n";
-  delete ada;
+  s+="int action" + to_string(action_cnt) + "_adapter() {\n" +
+      *ada + "\n"
+      "\treturn " + to_string(action_cnt) + ";\n"
+      "}\n";
+  if (ada!=&default_adapter)
+      delete ada;
 }
 
 void aalang_cpp::next_action()
@@ -120,7 +124,7 @@ std::string aalang_cpp::stringify()
 {
 
   s=s+
-    "public:\n"
+    "\npublic:\n"
     "\t_gen_"+*name+"() {\n\taction_names.push_back(\"\");\n";
 
   for(std::list<std::vector<std::string> >::iterator i=aname.begin();i!=aname.end();i++) {
@@ -170,7 +174,7 @@ std::string aalang_cpp::stringify()
       "\t\tactions.push_back("+to_string(i)+");\n"
       "\t}\n";
   }
-  s=s+"\t*act=&actions[0];\n"
+  s=s+"\t*act = &actions[0];\n"
     "\treturn actions.size();\n"
     "}\n"
     "};\n";
@@ -185,20 +189,20 @@ void aalang_cpp::factory_register()
   s=s+"  /* factory register */\n\n"
     "namespace {\n"
     "static aal* a=NULL;\n\n"
-    "Model* mcreator(Log&l, std::string params) {\n"
+    "Model* model_creator(Log&l, std::string params) {\n"
     "\tif (!a) {\n"
     "\t  a=new _gen_"+*name+"();\n"
     "\t}\n"
     "\treturn new Mwrapper(l,params,a);\n"
     "}\n\n"
-    "static ModelFactory::Register me1(\""+*name+"\", mcreator);\n\n"
-    "Adapter* creator_func(Log&l, std::string params = \"\")\n"
+    "static ModelFactory::Register me1(\""+*name+"\", model_creator);\n\n"
+    "Adapter* adapter_creator(Log&l, std::string params = \"\")\n"
     "{\n"
     "\tif (!a) {\n"
     "\t  a=new _gen_"+*name+"();\n"
     "\t}\n"
     "\treturn new Awrapper(l,params,a);\n"
     "}\n"
-    "static AdapterFactory::Register me2(\""+*name+"\", creator_func);\n"+
+    "static AdapterFactory::Register me2(\""+*name+"\", adapter_creator);\n"+
     "};\n";  
 }

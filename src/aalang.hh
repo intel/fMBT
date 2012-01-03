@@ -34,14 +34,18 @@ public:
   virtual void set_push(std::string* p) = 0;
   virtual void set_pop(std::string* p) = 0;
 
-  virtual void empthy_guard() {
+  virtual void empty_guard() {
     set_guard(&default_guard);
   }
   virtual void set_body(std::string* bod) = 0;
-  virtual void empthy_body() {
+  virtual void empty_body() {
     set_body(&default_body);
   }
   virtual void set_adapter(std::string* ada) = 0;
+  virtual void empty_adapter() {
+    set_adapter(&default_adapter);
+  }
+  
   virtual void next_action() = 0;
   virtual std::string stringify() = 0;
   virtual void set_starter(std::string* st) = 0;
@@ -51,6 +55,7 @@ public:
 protected:
   std::string default_guard;
   std::string default_body;
+  std::string default_adapter;
   bool default_action_input;
   std::vector<int> map;
 };
