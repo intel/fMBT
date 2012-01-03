@@ -1,0 +1,56 @@
+aal "mycountertest" {
+    language: C++ {
+        #include "asserts.h"
+        #include "mycounter.h"
+    };
+
+    variables {
+        MyCounter* mycounter;
+        int value;
+    }
+
+    initial_state {
+        mycounter = NULL;
+        value = 0;
+    }
+
+    action "iCreate" {
+        guard() { return mycounter == NULL; }
+        adapter() {
+            value = 0;
+            mycounter = new MyCounter;
+            ASSERT_NEQ((long)mycounter, 0);
+        }
+    }
+
+    action "iDestroy" {
+        guard() { return mycounter != NULL; }
+        adapter() {
+            delete mycounter;
+            mycounter = NULL;
+        }
+    }
+
+    action "iIncrement" {
+        guard() { return mycounter != NULL; }
+        adapter() {
+            mycounter->inc();
+            value += 1;
+        }
+    }
+
+    action "iReset" {
+        guard() { return mycounter != NULL; }
+        adapter() {
+            mycounter->reset();
+            value = 0;
+        }
+    }
+
+    action "iCount" {
+        guard() { return mycounter != NULL; }
+        adapter() {
+            ASSERT_EQ(mycounter->count(), value);
+        }
+    }
+}

@@ -1,0 +1,7 @@
+Run test against faulty MyCounter:
+
+make clean; make FAULTY=1
+
+Run test against working MyCounter:
+
+make clean; make
