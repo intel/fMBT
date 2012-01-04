@@ -125,7 +125,7 @@ std::string aalang_cpp::stringify()
 
   s=s+
     "\npublic:\n"
-    "\t_gen_"+*name+"() {\n\taction_names.push_back(\"\");\n";
+    "\t_gen_"+*name+"(Log& l): aal(l) {\n\taction_names.push_back(\"\");\n";
 
   for(std::list<std::vector<std::string> >::iterator i=aname.begin();i!=aname.end();i++) {
     for(std::vector<std::string>::iterator j=i->begin();j!=i->end();j++) {
@@ -191,7 +191,7 @@ void aalang_cpp::factory_register()
     "static aal* a=NULL;\n\n"
     "Model* model_creator(Log&l, std::string params) {\n"
     "\tif (!a) {\n"
-    "\t  a=new _gen_"+*name+"();\n"
+    "\t  a=new _gen_"+*name+"(l);\n"
     "\t}\n"
     "\treturn new Mwrapper(l,params,a);\n"
     "}\n\n"
@@ -199,10 +199,10 @@ void aalang_cpp::factory_register()
     "Adapter* adapter_creator(Log&l, std::string params = \"\")\n"
     "{\n"
     "\tif (!a) {\n"
-    "\t  a=new _gen_"+*name+"();\n"
+    "\t  a=new _gen_"+*name+"(l);\n"
     "\t}\n"
     "\treturn new Awrapper(l,params,a);\n"
     "}\n"
     "static AdapterFactory::Register me2(\""+*name+"\", adapter_creator);\n"+
-    "};\n";  
+    "}\n";
 }

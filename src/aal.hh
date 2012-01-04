@@ -20,11 +20,13 @@
 #define __aal_hh__
 
 #include "factory.hh"
+#include "log.hh"
 #include <vector>
 #include <string>
 
 class aal {
 public:
+  aal(Log&l): log(l) {};
   virtual ~aal() {};
   virtual int adapter_execute(int action)=0;
   virtual int model_execute(int action)  =0;
@@ -40,6 +42,7 @@ public:
 protected:
   std::vector<int> actions;
   std::vector<std::string> action_names; /* action names.. */
+  Log& log;
 };
 
 #include "model.hh"
