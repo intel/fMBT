@@ -34,9 +34,47 @@ typedef struct _node {
 } node;
 #define D_ParseNode_User node
 std::vector<std::string> aname;
+
+int count=1;
+
+char *ops;
+void *ops_cache=&count;
+
+
+#include "d.h"
+
+int bstr_scan(char *ops, void *ops_cache, d_loc_t *loc,
+              unsigned char *op_assoc, int *op_priority)
+{
+    int count=1;
+    int pos=0;
+    while (count) {
+        switch (loc->s[pos]) {
+        case '{':
+            count++;
+            pos++;
+            break;
+        case '}':
+            count--;
+            if (count) pos++;
+            break;
+        default:
+            pos++;
+        }
+    }
+
+    loc->s+=pos;
+
+    return 1;
+}
 }
 
 aal: aal_start header+ act* '}' ;
+
+inc: '\n^include' {
+  char *name = strndup($n0.start_loc.s+1, $n0.end-1 - 
+                       ($n0.start_loc.s+1));
+} ;
 
 aal_start: 'aal' string '{' language {
             obj->set_namestr($1.str);
@@ -89,15 +127,11 @@ body: 'body' '()' '{' bstr '}' { obj->set_body($3.str); }
 adapter: 'adapter' '()' '{' bstr '}' { obj->set_adapter($3.str); }
     | { obj->empty_adapter(); };
 
-bstr: "[^\}\{]+" {
+bstr: (${scan bstr_scan(ops,ops_cache)})* {
             char* start=d_ws_before(NULL,& $n0);
             char* end=d_ws_after(NULL,& $n0);
             $$.str = new std::string(start,end-start);
-        }|'{' bstr '}' { 
-            $$.str = new std::string("{"+*$1.str+std::string("}")); 
-        }| { 
-            $$.str = new std::string(""); 
-        };
+            } ;
 
 string: "\"([^\"\\]|\\[^])*\"" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); };
 
