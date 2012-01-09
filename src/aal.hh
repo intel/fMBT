@@ -54,7 +54,7 @@ protected:
 #ifndef  ASSERT_EQ
 #define  ASSERT_EQ(x,v) \
     if (!((x)==(v))) {                                 \
-        log.print("<aal type=\"ASSERT_EQ\" msg=\"failed: %d != %d\">", x, v); \
+        _log.print("<aal type=\"ASSERT_EQ\" msg=\"failed: %d != %d\">", x, v); \
         return 0;                                      \
     }
 #endif
@@ -62,7 +62,7 @@ protected:
 #ifndef  ASSERT_NEQ
 #define  ASSERT_NEQ(x,v) \
     if ((x)==(v)) {                                     \
-        log.print("<aal type=\"ASSERT_NEQ\" msg=\"failed: %d != %d\">", x, v); \
+        _log.print("<aal type=\"ASSERT_NEQ\" msg=\"failed: %d != %d\">", x, v); \
         return 0;                                       \
     }
 #endif
