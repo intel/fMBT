@@ -40,7 +40,6 @@ int count=1;
 char *ops;
 void *ops_cache=&count;
 
-
 #include "d.h"
 
 int bstr_scan(char *ops, void *ops_cache, d_loc_t *loc,
@@ -70,11 +69,6 @@ int bstr_scan(char *ops, void *ops_cache, d_loc_t *loc,
 }
 
 aal: aal_start header+ act* '}' ;
-
-inc: '\n^include' {
-  char *name = strndup($n0.start_loc.s+1, $n0.end-1 - 
-                       ($n0.start_loc.s+1));
-} ;
 
 aal_start: 'aal' string '{' language {
             obj->set_namestr($1.str);
@@ -121,7 +115,7 @@ istate: 'initial_state' '{' bstr '}' { obj->set_istate($2.str); } ;
 guard: 'guard' '()' '{' bstr '}' { obj->set_guard($3.str); }
     | { obj->empty_guard(); } ;
 
-body: 'body' '()' '{' bstr '}' { obj->set_body($3.str); }
+body: ('body'|'model') '()' '{' bstr '}' { obj->set_body($3.str); }
     | { obj->empty_body(); };
 
 adapter: 'adapter' '()' '{' bstr '}' { obj->set_adapter($3.str); }
