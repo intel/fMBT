@@ -50,4 +50,20 @@ protected:
 #include "awrapper.hh"
 #include "mwrapper.hh"
 
+#ifndef  ASSERT_EQ
+#define  ASSERT_EQ(x,v) \
+    if (!((x)==(v))) {                                 \
+        log.print("ASSERT_EQ failed: %d != %d", x, v); \
+        return 0;                                      \
+    }
+#endif
+
+#ifndef  ASSERT_NEQ
+#define  ASSERT_NEQ(x,v) \
+    if ((x)==(v)) {                                     \
+        log.print("ASSERT_NEQ failed: %d != %d", x, v); \
+        return 0;                                       \
+    }
+#endif
+
 #endif
