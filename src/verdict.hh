@@ -17,19 +17,15 @@
  *
  */
 
-#ifndef __policy_h__
-#define __policy_h__
+#ifndef __verdict_hh__
+#define __verdict_hh__
 
-#include <vector>
-#include "model.hh"
+namespace Verdict {
 
-class Policy {
-public:
-  Policy() : m(NULL) {};
-  int choose(std::vector<int>&);
-  void set_model(Model*);
-private:
-  Model* m;
-};
+    typedef enum { FAIL = 0,
+                   PASS,
+                   INCONCLUSIVE } Verdict;
+
+}
 
 #endif

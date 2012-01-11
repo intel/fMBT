@@ -35,13 +35,14 @@ class Conf:public Writable {
   Conf(Log& l, bool debug_enabled=false)
     :log(l),
      heuristic_name("random"), coverage_name("perm"),
-     adapter_name("dummy"), engine_cov(1.0),
-     engine_count(-1), end_time(-1), on_error("interactive")
+     adapter_name("dummy"), end_time(-1), on_error("interactive")
   {
     log.push("fmbt_log");
     log.set_debug(debug_enabled);
   }
   virtual ~Conf() {
+    for (unsigned int i = 0; i < end_conditions.size(); i++)
+      delete end_conditions[i];
     log.pop();
   }
 
@@ -57,22 +58,14 @@ class Conf:public Writable {
   void set_adapter(std::string& s) {
     split(s, adapter_name, adapter_param);
   }
-  void set_engine_cov(float f) {
-    engine_cov = f;
-  }
-  void set_engine_count(int i) {
-    engine_count = i;
-  }
-  void set_engine_tag(std::string &s) {
-    exit_tag=s;
-  }
   void set_on_error(std::string &s) {
     on_error = s;
   }
+  void add_end_condition(End_condition *ec) {
+    end_conditions.push_back(ec);
+  }
 
   void set_observe_sleep(std::string &s);
-
-  void set_end_time(std::string &s);
 
   void add_history(std::string* s) {
     history.push_back(s);
@@ -91,7 +84,6 @@ class Conf:public Writable {
 
 
  protected:
-  std::string exit_tag;
   std::vector<std::string*> history;
   std::string model_name;
   std::string model_param;
@@ -105,8 +97,8 @@ class Conf:public Writable {
   std::string adapter_name;
   std::string adapter_param;
 
-  float engine_cov;
-  int engine_count;
+  std::vector<End_condition*> end_conditions;
+
   time_t end_time;
 
   std::string on_error;

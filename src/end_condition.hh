@@ -17,19 +17,33 @@
  *
  */
 
-#ifndef __policy_h__
-#define __policy_h__
+#ifndef __end_condition_hh__
+#define __end_condition_hh__
 
-#include <vector>
-#include "model.hh"
+#include "verdict.hh"
+#include "writable.hh"
+#include <string>
 
-class Policy {
-public:
-  Policy() : m(NULL) {};
-  int choose(std::vector<int>&);
-  void set_model(Model*);
-private:
-  Model* m;
+struct End_condition: public Writable {
+
+  typedef enum {
+    STEPS = 0,
+    COVERAGE,
+    STATETAG,
+    DURATION
+  } Counter;
+
+  End_condition(Verdict::Verdict v, Counter c, std::string* p);
+  ~End_condition();
+
+  Verdict::Verdict verdict;
+  Counter counter;
+  std::string* param;
+
+  float param_float;
+  long param_long;
+  time_t param_time;
+
 };
 
 #endif

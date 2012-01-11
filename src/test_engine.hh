@@ -16,21 +16,31 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+#ifndef __test_engine_h__
+#define __test_engine_h__
+
 #include "heuristic.hh"
 #include "adapter.hh"
 #include "log.hh"
 #include "policy.hh"
+#include "end_condition.hh"
 
 #include <list>
+#include <vector>
 
 class Test_engine {
 public:
-  Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p);
+  Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p, std::vector<End_condition*>& ecs);
   virtual ~Test_engine();
-  bool run(float _target_coverage,int _max_step_count=-1,
-	   int _exit_tag=-1,time_t _end_time=-1);
+  Verdict::Verdict run(time_t _end_time=-1);
   void interactive();
-  virtual bool coverage_status(int step_count);
+
+  /*
+    matching_end_condition returns the index of the first end
+    condition that evaluates to true in the current setting, or -1 if
+    all end conditions are false.
+  */
+  virtual int matching_end_condition(int step_count);
   static time_t    end_time;
 protected:
   int       max_step_count;
@@ -40,8 +50,7 @@ protected:
   Adapter   &adapter;
   Log       &log;
   Policy    &policy;
-  bool      coverage_reached;
-  bool      step_limit_reached;
-  bool      tag_reached;
-  bool      test_time_reached;
+  std::vector<End_condition*> &end_conditions;
 };
+
+#endif

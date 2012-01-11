@@ -67,9 +67,13 @@ extern "C" {
 #include <cstdlib>
 #include <cstring>
 
-Test_engine::Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p) : heuristic(h),adapter(a),log(l),policy(p),coverage_reached(false),step_limit_reached(false),tag_reached(false), test_time_reached(false)
-
- {
+Test_engine::Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p,std::vector<End_condition*>& ecs)
+  : heuristic(h),
+    adapter(a),
+    log(l),
+    policy(p),
+    end_conditions(ecs)
+{
   p.set_model(h.get_model());
 }
 
@@ -78,9 +82,28 @@ Test_engine::~Test_engine()
 }
 
 namespace {
-  void test_passed(bool pass, const char* reason, Log& log) {
-    if (pass) log.print("<stop verdict=\"pass\" reason=\"%s\">\n", reason);
-    else log.print("<stop verdict=\"fail\" reason=\"%s\">\n", reason);
+  /* logging helpers */
+  void test_stopped(bool pass, const char* reason, Log& log) {
+    if (pass) log.print("<stop verdict=\"pass\" reason=\"%s\"/>\n", reason);
+    else log.print("<stop verdict=\"fail\" reason=\"%s\"/>\n", reason);
+  }
+  void test_stopped(End_condition* ec, Log& log) {
+    std::string verdict;
+    std::string reason;
+    switch (ec->verdict) {
+    case Verdict::PASS: verdict = "pass"; break;
+    case Verdict::FAIL: verdict = "fail"; break;
+    case Verdict::INCONCLUSIVE: verdict = "inconclusive"; break;
+    default: verdict = "unknown";
+    }
+    switch (ec->counter) {
+    case End_condition::STEPS: reason = "step limit reached"; break;
+    case End_condition::COVERAGE: reason = "coverage reached"; break;
+    case End_condition::STATETAG: reason = "tag reached"; break;
+    case End_condition::DURATION: reason = ""; break;
+    default: reason = "unknown";
+    }
+    log.print("<stop verdict=\"%s\" reason=\"%s\"/>\n", verdict.c_str(), reason.c_str());
   }
   void log_tag_type_name(Log& log, const char *tag, const char *type, const char *name) {
     log.print("<%s type=\"%s\" name=\"%s\">\n", tag, type, name);
@@ -100,15 +123,12 @@ namespace {
   }
 }
 
-bool Test_engine::run(float _target_coverage,
-		      int   _max_step_count,
-		      int   _exit_tag,
-		      time_t _end_time)
+Verdict::Verdict Test_engine::run(time_t _end_time)
 {
   end_time=_end_time;
-  target_coverage=_target_coverage;
-  max_step_count=_max_step_count;
-  exit_tag=_exit_tag;
+
+  int condition_i = -1; /* index of end condition that is stopping the run */
+
 
   int action=0;
   std::vector<int> actions;
@@ -134,17 +154,17 @@ bool Test_engine::run(float _target_coverage,
         log.debug("Test_engine::run: Error: unexpected output from the SUT: %i '%s'\n",
 		  action, heuristic.getActionName(action).c_str());
 
-        test_passed(false, "unexpected output", log);
+        test_stopped(false, "unexpected output", log);
 
 	timersub(&Adapter::current_time,&start_time,&total_time);
 	log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
 	      total_time.tv_usec);
 	log.pop();
-	return false; // Error: Unexpected output
+	return Verdict::FAIL; // Error: Unexpected output
       }
       log_status(log, step_count, heuristic.getCoverage());
       gettimeofday(&Adapter::current_time,NULL);
-      if (!coverage_status(step_count)) {
+      if (-1 != (condition_i = matching_end_condition(step_count))) {
 	goto out;
       }
     }
@@ -163,19 +183,19 @@ bool Test_engine::run(float _target_coverage,
       log.print("<state type=\"deadlock\"/>\n");
       int ret=adapter.observe(actions,true);
       if (ret!=SILENCE && ret!=TIMEOUT) {
-        test_passed(false, "response on deadlock", log);
+        test_stopped(false, "response on deadlock", log);
 	timersub(&Adapter::current_time,&start_time,&total_time);
 	log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
 	      total_time.tv_usec);
 	log.pop();
-	return false; // Error: Unexpected output
+	return Verdict::FAIL; // Error: Unexpected output
       }
-      test_passed(true, "model cannot continue", log);
+      test_stopped(true, "model cannot continue", log);
       timersub(&Adapter::current_time,&start_time,&total_time);
       log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
 		total_time.tv_usec);
       log.pop(); // test_engine
-      return true;
+      return Verdict::PASS;
       break;
     }
     case OUTPUT_ONLY: {
@@ -189,12 +209,14 @@ bool Test_engine::run(float _target_coverage,
 	actions[0] = TIMEOUT;
 	log.print("<TIMEOUT %i %i/>\n",Adapter::current_time.tv_sec,
 		  end_time);
-        test_passed(true, "test timeout", log);
+        if (-1 != (condition_i = matching_end_condition(step_count)))
+          goto out;
+        test_stopped(false, "adapter timeout", log);
 	timersub(&Adapter::current_time,&start_time,&total_time);
 	log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
 	      total_time.tv_usec);
         log.pop();
-	return true;
+	return Verdict::FAIL;
       } else if (value==SILENCE) {
 	actions.resize(1);
 	actions[0] = SILENCE;
@@ -208,12 +230,12 @@ bool Test_engine::run(float _target_coverage,
       if (!heuristic.execute(action)) {
         log.debug("Test_engine::run: ERROR: action %i not possible in the model.\n", action);
 	log.write(action,heuristic.getActionName(action).c_str(),"broken response");
-        test_passed(false, "unexpected output", log);
+        test_stopped(false, "unexpected output", log);
 	timersub(&Adapter::current_time,&start_time,&total_time);
 	log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
 	      total_time.tv_usec);
         log.pop();
-	return false; // Error: Unexpected output
+	return Verdict::FAIL; // Error: Unexpected output
       }
       break;
     }
@@ -224,12 +246,12 @@ bool Test_engine::run(float _target_coverage,
       log_adapter_suggest(log, adapter, actions[0]);
       adapter.execute(actions);
       if (actions.size()==0) {
-        test_passed(false, "adapter communication failure", log);
+        test_stopped(false, "adapter communication failure", log);
 	timersub(&Adapter::current_time,&start_time,&total_time);
 	log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
 		  total_time.tv_usec);
         log.pop();
-        return false;
+        return Verdict::FAIL;
       }
       int adapter_response = policy.choose(actions);
       log_adapter_execute(log, adapter, adapter_response);
@@ -242,23 +264,26 @@ bool Test_engine::run(float _target_coverage,
 	log.debug("Test_engine::run: ERROR: SUT executed %i '%s', not allowed in the model.\n",
 		  action, heuristic.getActionName(action).c_str());
 	log.write(action,heuristic.getActionName(action).c_str(),"broken input acceptance");
-        test_passed(false, "unexpected input", log);
+        test_stopped(false, "unexpected input", log);
         log.pop(); // test_engine
-	return false; // Error: Unexpected input
+	return Verdict::FAIL; // Error: Unexpected input
       }
     }
     } // switch
     log_status(log, step_count, heuristic.getCoverage());
 
-  } while (coverage_status(step_count));
+  } while (-1 == (condition_i = matching_end_condition(step_count)));
 
  out:
+
+  test_stopped(end_conditions[condition_i], log);
 
   timersub(&Adapter::current_time,&start_time,&total_time);
   log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
 	    total_time.tv_usec);
   log.pop();
-  return true;
+
+  return end_conditions[condition_i]->verdict;
 }
 
 namespace interactive {
@@ -572,35 +597,33 @@ void Test_engine::interactive()
   }
 }
 
-bool Test_engine::coverage_status(int step_count)
+int Test_engine::matching_end_condition(int step_count)
 {
-  coverage_reached = heuristic.getCoverage() >= target_coverage;
-  step_limit_reached = (max_step_count != -1 && 
-			step_count >= max_step_count);
-  //test_time_reached;
+  for (unsigned int cond_i = 0; cond_i < end_conditions.size(); cond_i++) {
 
-  int* t;
-  if (exit_tag>0) {
-    int s=heuristic.get_model()->getprops(&t);
+    End_condition* e = end_conditions[cond_i];
 
-    for(int i=0;i<s&&!tag_reached;i++) {
-      tag_reached=(t[i]==exit_tag);
-    }
-  }
-
-  if (coverage_reached) {
-    test_passed(true, "coverage reached", log);
-  } else {
-    if (step_limit_reached) {
-      test_passed(true, "step limit reached", log); 
-    } else {
-      if (tag_reached) {
-	test_passed(true,"tag reached", log);
+    switch (e->counter)
+    {
+    case End_condition::STEPS:
+      if (e->param_long > -1 && step_count >= e->param_long) return cond_i;
+      break;
+    case End_condition::COVERAGE:
+      if (heuristic.getCoverage() >= e->param_float) return cond_i;
+      break;
+    case End_condition::STATETAG:
+    {
+      int *t;
+      int s = heuristic.get_model()->getprops(&t);
+      for(int i=0; i<s; i++) {
+        if (t[i] == e->param_long) return cond_i;
       }
+      break;
+    }
+    case End_condition::DURATION:
+      if (Adapter::current_time.tv_sec >= e->param_time) return cond_i;
+      break;
     }
   }
-
-  return !coverage_reached && !step_limit_reached 
-    && !tag_reached;
-
+  return -1;
 }

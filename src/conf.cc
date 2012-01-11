@@ -159,8 +159,7 @@ std::string Conf::stringify() {
     << removehash(adapter_param)
     << capsulate(adapter->stringify()) << std::endl;
 
-  t << "engine.cov = " << engine_cov << std::endl;
-  t << "engine.count = " << engine_count << std::endl;
+  /* TODO: stringify end conditions */
 
   return t.str();
 }
@@ -168,7 +167,6 @@ std::string Conf::stringify() {
 void Conf::execute(bool interactive) {
 
   Policy policy;
-  int engine_tag=-1;
   log.push("conf_execute");
 
   if (!status) {
@@ -178,16 +176,38 @@ void Conf::execute(bool interactive) {
   if (!adapter->init())
     RETURN_ERROR("Initialising adapter failed: " + adapter->stringify());
 
-  Test_engine engine(*heuristic,*adapter,log,policy);
-
-  if (status && model && exit_tag!="") {
-    engine_tag=find(model->getSPNames(),exit_tag);
+  // Validate and finish existing end_conditions
+  {
+    bool end_by_coverage = false;
+    for (unsigned int i = 0; i < end_conditions.size(); i++) {
+      End_condition* e = end_conditions[i];
+      if (e->status == false)
+        RETURN_ERROR("Error in end condition: " + e->stringify());
+      if (e->counter == End_condition::STATETAG) {
+        // avoid string comparisons, fetch the index of the tag
+        e->param_long = find(model->getSPNames(), *(e->param));
+      }
+      if (e->counter == End_condition::COVERAGE) {
+        end_by_coverage = true;
+      }
+      if (e->counter == End_condition::DURATION) {
+        end_time = e->param_time;
+      }
+    }
+    // Add default end conditions (if coverage is reached, test is passed)
+    if (!end_by_coverage) {
+      end_conditions.push_back(
+        new End_condition(Verdict::PASS, End_condition::COVERAGE, new std::string("1.0")));
+    }
   }
+
+  Test_engine engine(*heuristic,*adapter,log,policy,end_conditions);
 
   if (interactive) {
     engine.interactive();
   } else {
-    if (!engine.run(engine_cov,engine_count,engine_tag,end_time)) {
+    Verdict::Verdict v = engine.run(end_time);
+    if (v == Verdict::FAIL) {
       // Test failed. Continue according to the on_error
       // configuration. In addition to the following it could at
       // somepoint specify a shell command (for instance, package and
@@ -201,41 +221,6 @@ void Conf::execute(bool interactive) {
   }
   log.pop();
 }
-
-#ifndef DROI
-void Conf::set_end_time(std::string &s)
-{
-  char* out=NULL;
-  int stat;
-
-  std::string ss="date --date='"+s+"' +%s";
-
-  end_time=-1;
-
-  if (g_spawn_command_line_sync(ss.c_str(),&out,NULL,&stat,NULL)) {
-    if (!stat) {
-      end_time=atoi(out);
-    } else {
-    }
-  } else {
-    status=false;
-  }
-}
-#else
-void Conf::set_end_time(std::string &s)
-{
-  char* endp;
-  long r=strtol(s.c_str(),&endp,10);
-
-  if (*endp==0) {
-    end_time=r;
-  } else {
-    // Error on str?
-    status=false;
-  }
-
-}
-#endif
 
 void Conf::set_observe_sleep(std::string &s)
 {

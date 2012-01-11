@@ -16,7 +16,7 @@ endif
 
 include Sources.mk
 
-noinst_HEADERS = adapter_dlopen.hh adapter_dummy.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_v4l2.hh adapter_xrules.hh conf.hh coverage.hh coverage_mapper.hh coverage_market.hh coverage_tree.hh coverage_tema_seq.hh helper.hh heuristic_greedy.hh heuristic.hh heuristic_minerror.hh heuristic_random.hh log_null.hh lts.hh lts_remote.hh lts_xrules.hh xrules_remote.hh model.hh policy.hh rules.hh test_engine.hh alg_bdfs.hh null.hh
+noinst_HEADERS = adapter_dlopen.hh adapter_dummy.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_timer.hh adapter_v4l2.hh adapter_xrules.hh conf.hh coverage.hh coverage_mapper.hh coverage_market.hh coverage_tree.hh coverage_tema_seq.hh end_condition.hh helper.hh heuristic_greedy.hh heuristic.hh heuristic_minerror.hh heuristic_random.hh log_null.hh lts.hh lts_remote.hh lts_xrules.hh xrules_remote.hh model.hh policy.hh rules.hh test_engine.hh verdict.hh alg_bdfs.hh null.hh
 
 pkginclude_HEADERS = adapter.hh factory.hh writable.hh log.hh aal.hh model.hh awrapper.hh mwrapper.hh alphabet.hh helper.hh
 
