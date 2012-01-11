@@ -207,7 +207,7 @@ bool Test_engine::run(float _target_coverage,
       log_adapter_output(log, adapter, action);
       if (!heuristic.execute(action)) {
         log.debug("Test_engine::run: ERROR: action %i not possible in the model.\n", action);
-	log.write(action,heuristic.getActionName(action).c_str(),"broken response");
+	log.debug("%s %s",action,heuristic.getActionName(action).c_str(),"broken response");
         test_passed(false, "unexpected output", log);
 	timersub(&Adapter::current_time,&start_time,&total_time);
 	log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
@@ -241,7 +241,7 @@ bool Test_engine::run(float _target_coverage,
       if (!heuristic.execute(adapter_response)) {
 	log.debug("Test_engine::run: ERROR: SUT executed %i '%s', not allowed in the model.\n",
 		  action, heuristic.getActionName(action).c_str());
-	log.write(action,heuristic.getActionName(action).c_str(),"broken input acceptance");
+	log.debug("%s %s",action,heuristic.getActionName(action).c_str(),"broken input acceptance");
         test_passed(false, "unexpected input", log);
         log.pop(); // test_engine
 	return false; // Error: Unexpected input
