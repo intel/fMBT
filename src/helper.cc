@@ -233,6 +233,23 @@ std::string removehash(std::string& s)
   return "";
 }
 
+#ifndef DROI
+char* readfile(const char* filename,const char* preprocess)
+{
+  char* out=NULL;
+  int status;
+
+  if (preprocess==NULL) {
+    return readfile(filename,false);
+  }
+  
+  if (!g_spawn_command_line_sync(preprocess,&out,NULL,&status,NULL)) {
+    throw (int)(24);
+  }
+  return out;  
+ }
+#endif
+
 char* readfile(const char* filename,bool preprocess)
 {
   std::string fn(filename);
@@ -241,15 +258,13 @@ char* readfile(const char* filename,bool preprocess)
   if (cutpos == fn.npos) {
 #ifndef DROI
     if (preprocess) {
-      char* out=NULL;
-      int status;
       GString *gs=g_string_new("");
       
       g_string_printf(gs,"/bin/sh -c \"cpp '%s'|grep -v ^#\"",filename);
-      
-      if (!g_spawn_command_line_sync(gs->str,&out,NULL,&status,NULL)) {
-	throw (int)(24);
-      }
+
+      char* out=readfile(filename,gs->str);
+      //g_free(gs);
+
       return out;
     } else {
       char* out=NULL;

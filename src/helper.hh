@@ -33,6 +33,9 @@ void  clear_whitespace(std::string& s);
 void  clear_coding(std::string& s);
 bool  isxrules(std::string& s);
 std::string filetype(std::string& s);
+#ifndef DROI
+char* readfile(const char* filename,const char* preprocess);
+#endif
 char* readfile(const char* filename,bool preprocess=true);
 std::string capsulate(std::string s);
 char* escape_string(const char* msg);
