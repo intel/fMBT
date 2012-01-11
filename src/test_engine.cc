@@ -79,11 +79,11 @@ Test_engine::~Test_engine()
 
 namespace {
   void test_passed(bool pass, const char* reason, Log& log) {
-    if (pass) log.print("<stop verdict=\"pass\" reason=\"%s\">\n", reason);
-    else log.print("<stop verdict=\"fail\" reason=\"%s\">\n", reason);
+    if (pass) log.print("<stop verdict=\"pass\" reason=\"%s\"/>\n", reason);
+    else log.print("<stop verdict=\"fail\" reason=\"%s\"/>\n", reason);
   }
   void log_tag_type_name(Log& log, const char *tag, const char *type, const char *name) {
-    log.print("<%s type=\"%s\" name=\"%s\">\n", tag, type, name);
+    log.print("<%s type=\"%s\" name=\"%s\"/>\n", tag, type, name);
   }
   void log_adapter_suggest(Log& log, Adapter& adapter, int action) {
     log_tag_type_name(log, "suggested_action", "input", adapter.getUActionName(action));
@@ -122,7 +122,7 @@ bool Test_engine::run(float _target_coverage,
     action=0;
 
     gettimeofday(&Adapter::current_time,NULL);
-    log.print("<current_time time=%i.%06i/>\n",Adapter::current_time.tv_sec,
+    log.print("<current_time time=\"%i.%06i\"/>\n",Adapter::current_time.tv_sec,
 	      Adapter::current_time.tv_usec);
 
     while (adapter.observe(actions)>0) {
