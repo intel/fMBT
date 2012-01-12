@@ -368,11 +368,28 @@ void print_vector(std::vector<std::string>& s,const char* prefix,int add)
   }
 }
 
-std::string to_string (const int t)
+std::string to_string(const int t)
 {
   std::stringstream ss;
   ss << t;
   return ss.str();
+}
+
+std::string to_string(const int cnt, int* t, std::vector<std::string>& st)
+{
+  std::string ret;
+  
+  if (cnt==0) {
+    return ret;
+  }
+
+  ret=st[t[0]];
+  
+  for(int i=1;i<cnt;i++) {
+    ret+=" "+st[t[i]];
+  }
+
+  return ret;
 }
 
 void strvec(std::vector<std::string>& v,std::string& s,

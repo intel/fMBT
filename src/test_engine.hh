@@ -43,6 +43,8 @@ public:
   virtual int matching_end_condition(int step_count);
   static time_t    end_time;
 protected:
+  void log_tags();
+
   int       max_step_count;
   float     target_coverage;
   int       exit_tag;

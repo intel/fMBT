@@ -123,6 +123,16 @@ namespace {
   }
 }
 
+void Test_engine::log_tags()
+{
+  Model* model=heuristic.get_model();
+  int* tags;
+  int cnt=model->getprops(&tags);
+  std::string s=to_string(cnt,tags,model->getSPNames());
+
+  log.print("<tags enabled=\"%s\"/>\n",s.c_str());
+}
+
 Verdict::Verdict Test_engine::run(time_t _end_time)
 {
   end_time=_end_time;
@@ -162,6 +172,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 	log.pop();
 	return Verdict::FAIL; // Error: Unexpected output
       }
+      log_tags();
       log_status(log, step_count, heuristic.getCoverage());
       gettimeofday(&Adapter::current_time,NULL);
       if (-1 != (condition_i = matching_end_condition(step_count))) {
@@ -270,6 +281,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       }
     }
     } // switch
+    log_tags();
     log_status(log, step_count, heuristic.getCoverage());
 
   } while (-1 == (condition_i = matching_end_condition(step_count)));
