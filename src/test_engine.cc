@@ -106,7 +106,7 @@ namespace {
     log.print("<stop verdict=\"%s\" reason=\"%s\"/>\n", verdict.c_str(), reason.c_str());
   }
   void log_tag_type_name(Log& log, const char *tag, const char *type, const char *name) {
-    log.print("<%s type=\"%s\" name=\"%s\">\n", tag, type, name);
+    log.print("<%s type=\"%s\" name=\"%s\"/>\n", tag, type, name);
   }
   void log_adapter_suggest(Log& log, Adapter& adapter, int action) {
     log_tag_type_name(log, "suggested_action", "input", adapter.getUActionName(action));
@@ -142,7 +142,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
     action=0;
 
     gettimeofday(&Adapter::current_time,NULL);
-    log.print("<current_time time=%i.%06i/>\n",Adapter::current_time.tv_sec,
+    log.print("<current_time time=\"%i.%06i\"/>\n",Adapter::current_time.tv_sec,
 	      Adapter::current_time.tv_usec);
 
     while (adapter.observe(actions)>0) {
@@ -229,7 +229,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       log_adapter_output(log, adapter, action);
       if (!heuristic.execute(action)) {
         log.debug("Test_engine::run: ERROR: action %i not possible in the model.\n", action);
-	log.write(action,heuristic.getActionName(action).c_str(),"broken response");
+	log.debug("%s %s",action,heuristic.getActionName(action).c_str(),"broken response");
         test_stopped(false, "unexpected output", log);
 	timersub(&Adapter::current_time,&start_time,&total_time);
 	log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
@@ -263,7 +263,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       if (!heuristic.execute(adapter_response)) {
 	log.debug("Test_engine::run: ERROR: SUT executed %i '%s', not allowed in the model.\n",
 		  action, heuristic.getActionName(action).c_str());
-	log.write(action,heuristic.getActionName(action).c_str(),"broken input acceptance");
+	log.debug("%s %s",action,heuristic.getActionName(action).c_str(),"broken input acceptance");
         test_stopped(false, "unexpected input", log);
         log.pop(); // test_engine
 	return Verdict::FAIL; // Error: Unexpected input

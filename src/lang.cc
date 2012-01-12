@@ -64,6 +64,8 @@ std::string pstr;
 extern std::string result;
 extern aalang* obj;
 std::string compile_command("g++ -fPIC -shared -x c++  - -I /usr/include/fmbt -o ");
+std::string prep_command("fmbt-aalp");
+
 
 int main(int argc,char** argv) {
   int c;
@@ -74,9 +76,12 @@ int main(int argc,char** argv) {
     {0, 0, 0, 0}
   };
 
-  while ((c = getopt_long (argc, argv, "b:hco:D:", long_opts, NULL)) != -1) {
+  while ((c = getopt_long (argc, argv, "B:b:hco:D:", long_opts, NULL)) != -1) {
     switch (c)
       {
+      case 'B':
+	prep_command=optarg;
+	break;
       case 'b':
 	compile_command=optarg;
 	compile_command+=" ";
@@ -113,7 +118,12 @@ int main(int argc,char** argv) {
   D_Parser *p = new_D_Parser(&parser_tables_lang, 5120);
 
   p->loc.pathname = argv[optind];
+
+  if (prep_command=="") {
   s=readfile(argv[optind],false);
+  } else {
+    s=readfile(argv[optind],prep_command.c_str());
+  }
   if (!s) {
     std::printf("Can't read input file \"%s\"\n",argv[optind]);
     return 3;

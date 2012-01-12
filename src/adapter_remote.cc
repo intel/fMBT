@@ -198,7 +198,7 @@ ssize_t Adapter_remote::agetline(char **lineptr, size_t *n, FILE *stream)
 	char* m=g_uri_escape_string(*lineptr+1,NULL,TRUE);
 	std::free(*lineptr);
         *lineptr = NULL;
-	log.print("<remote msg=\"%s\">\n",m);
+	log.print("<remote msg=\"%s\"/>\n",m);
 	g_free(m);
 	log_redirect=true;
       }
