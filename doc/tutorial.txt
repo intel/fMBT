@@ -77,8 +77,7 @@ model        = "mkrmdir.lsts"
 heuristic    = "lookahead:1"
 coverage     = "perm:1"
 adapter      = "remote:remote_python -L adapter.log"
-engine.cov   = 1.0
-engine.count = -1
+pass         = "coverage:1.0"
 EOF
 
 Lookahead test generation heuristic suggests executing an action that
@@ -91,9 +90,7 @@ run. With n = 1 this requires executing every action at least once.
 Remote adapter executes "remote_python -L adapter.log" to create an
 adapter.
 
-Test is finished if test coverage limit defined by engine.cov is
-reached. Test step count is not used as an end condition in this
-configuration.
+Test is finished with verdict "pass" if coverage 1.0 is reached.
 
 
 Running the test
@@ -193,7 +190,7 @@ Then set a limit for test steps because executing all permutations of
 any two actions is not possible. This limit guarantees that the test
 will eventually stop even if there would not be an error.
 
-$ sed -i 's/-1/100/' mkrmdir.conf
+$ echo 'pass = "steps:100"' >> mkrmdir.conf
 
 Now, rerun the test
 

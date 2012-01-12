@@ -279,7 +279,6 @@ char* readfile(const char* filename,bool preprocess)
     f.open(filename, std::fstream::in | std::fstream::ate);
     if (!f.is_open())
       return NULL;
-//    f.seekg(0, std::ios::end);
     file_len = f.tellg();
     f.seekg(0, std::ios::beg);
     char *contents = (char*)malloc(file_len);

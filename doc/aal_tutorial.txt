@@ -150,8 +150,8 @@ model        = "mkrmdir.lsts"
 heuristic    = "lookahead:1"
 coverage     = "perm:1"
 adapter      = "mapper:mlang.mrules"
-engine.cov   = 1.0
-engine.count = 100
+pass         = "coverage:1.0"
+pass         = "steps:100"
 EOF
 
 Writing a mapper file

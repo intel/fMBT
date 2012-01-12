@@ -255,8 +255,8 @@ model     = "all9reqs.lsts"
 adapter   = "remote:remote_python"
 coverage  = "perm:1"
 heuristic = "lookahead:3"
-engine.cov = 1.0
-engine.count = 50
+pass      = "coverage:1.0"
+pass      = "steps:50"
 on_error  = "exit"
 EOF
 
@@ -281,8 +281,8 @@ iCatch('rmdir(subd)')==Error('.*Permission denied.*')
 pass
 
 This is a good smoke test for the functions. We can generate long
-tests with a lot of variation by increasing the permutation coverage
-and engine.count.
+tests with a lot of variation by increasing permutations to be covered
+coverage and number of steps on the end condition.
 
 
 Testing all interleavings

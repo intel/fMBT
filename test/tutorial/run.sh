@@ -38,6 +38,7 @@ awk '/^\$ .*EOF/{p=1; k=1; $1=""; cn+=1; f="create."cn}
      /^\$ fmbt /{if (f) break; p=1; k=0; $1=""; rn+=1; f="fmbt."rn}
      /^\$ fmbt-log/{if (f) break; p=1; k=0; $1=""; ln+=1; f="log."ln}
      /^\$ sed/{if (f) break; p=1; k=0; $1=""; sn+=1; f="sed."sn}
+     /^\$ echo/{if (f) break; p=1; k=0; $1=""; en+=1; f="echo."en}
      /^EOF$/{k=0}
      {if (p) print >> f;
       if (!k) { p=0; f=""} }' ../../doc/tutorial.txt
@@ -52,7 +53,7 @@ testpassed
 
 teststep "create the configuration file (create.2)"
 source create.2
-check_minimum_num_of_lines mkrmdir.conf 6
+check_minimum_num_of_lines mkrmdir.conf 5
 testpassed
 
 teststep "run:$(cat fmbt.1)..."
@@ -71,14 +72,14 @@ check_minimum_num_of_lines mkrmdir.lsts 30
 testpassed
 
 teststep "modify perm and step limit in configuration..."
-if ! grep -q -- -1 mkrmdir.conf || ! grep -q perm:1 mkrmdir.conf; then
-    echo "-1 or perm:1 do not exist in original configuration" >> $LOGFILE
+if grep -q steps: mkrmdir.conf || ! grep -q perm:1 mkrmdir.conf; then
+    echo "steps does or perm:1 do not exist in original configuration" >> $LOGFILE
     testfailed
 fi
 source sed.1
-source sed.2
-if grep -q -- -1 mkrmdir.conf || grep -q perm:1 mkrmdir.conf; then
-    echo "-1 or perm:1 still exists in the configuration" >> $LOGFILE
+source echo.1
+if ! ( grep -q 100 mkrmdir.conf && grep -q perm:2 mkrmdir.conf ); then
+    echo "steps:100 or perm:2 is missing in the configuration" >> $LOGFILE
     testfailed
 fi
 testpassed
