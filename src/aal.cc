@@ -18,6 +18,7 @@
  */
 
 #include "aal.hh"
+#include "helper.hh"
 
 void aal::log(const char* format, ...)
 {
@@ -27,11 +28,11 @@ void aal::log(const char* format, ...)
   va_start(ap, format);
   if (vasprintf(&pre_msg,format,ap)>0) {
     char* msg=escape_string(pre_msg);
-    _log.write("<aal type=\"user\" msg=\"");
-    _log.write(msg);
+    _log.print("<aal type=\"user\" msg=\"");
+    _log.print("%s",msg);
     std::free(pre_msg);
     escape_free(msg);
-    _log.write("\">\n");
+    _log.print("\">\n");
   }
 
   va_end(ap);  
