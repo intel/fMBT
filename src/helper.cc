@@ -242,8 +242,12 @@ char* readfile(const char* filename,const char* preprocess)
   if (preprocess==NULL) {
     return readfile(filename,false);
   }
+
+  std::string s(preprocess);
+
+  s=s + " " + filename;
   
-  if (!g_spawn_command_line_sync(preprocess,&out,NULL,&status,NULL)) {
+  if (!g_spawn_command_line_sync(s.c_str(),&out,NULL,&status,NULL)) {
     throw (int)(24);
   }
   return out;  
