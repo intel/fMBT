@@ -1,6 +1,6 @@
 aal "mycountertest" {
     language: C++ {
-        #include "asserts.h"
+//        #include "asserts.h"
         #include "mycounter.h"
     };
 
