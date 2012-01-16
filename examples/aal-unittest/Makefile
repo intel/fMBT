@@ -7,7 +7,7 @@ ifdef FAULTY
 CXXFLAGS += -DFAULTY
 endif
 
-# Rule for running the test, that is, producing the log file. Because
+# Rule for running the test, that is, producing the log file.
 # fmbt exits with an error value in case the test fails, we use
 # "... || true" to suppress Make error message.
 mycountertest.log: mycountertest.conf mycountertest.so
@@ -24,7 +24,7 @@ mycountertest.so: mycounter.o mycountertest.o
 # to create it from mycountertest.cc.aal. PRECIOUS prevents deleting
 # the .cc file automatically. That's nice in case you need gdb, for
 # instance.
-%PRECIOUS: %.cc
+.PRECIOUS: %.cc
 %.cc: %.cc.aal
 	fmbt-aalc -o $@ $<
 
