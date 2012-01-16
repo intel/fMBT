@@ -1,3 +1,13 @@
+fmbt (0.1-rc8) maverick; urgency=low
+
+  * AAL improvements (preprocessor, 'better' syntax, etc)
+  * AAL example
+  * Logfile xml again
+  * Mapper adapter can be made sleep a while when waiting for input
+  * Android version should build again
+
+ -- Pablo Virolainen <pablo.virolainen@intel.com>  Mon, 16 Jan 2012 10:12:24 +0200
+
 fmbt (0.1-rc7) maverick; urgency=low
 
   * Android makefile
