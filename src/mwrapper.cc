@@ -23,6 +23,7 @@ Mwrapper::Mwrapper(Log&l, std::string params, aal* _model):
   Model(l, params), model(_model)  
 {
   action_names=model->getActionNames();
+  precalc_input_output();
 }
 
 int Mwrapper::getActions(int** actions) {
