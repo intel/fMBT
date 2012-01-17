@@ -133,6 +133,8 @@ bool Model_remote::load(std::string& name)
 
   int acount=getint();
 
+  action_names.push_back("\"TAU");
+
   for(int i=0;i<acount;i++) {
     char* line=NULL;
     size_t n;
@@ -141,12 +143,17 @@ bool Model_remote::load(std::string& name)
       status = false;
       return false;
     }
+    if (line[s-1]=='\n') {
+      line[s-1]=0;
+    }
     action_names.push_back(line);
   }
 
   precalc_input_output();
 
   int prop_count=getint();
+
+  prop_names.push_back("\"TAU");
 
   for(int i=0;i<prop_count;i++) {
     char* line=NULL;
@@ -155,6 +162,9 @@ bool Model_remote::load(std::string& name)
     if (!s) {
       status = false;
       return false;
+    }
+    if (line[s-1]=='\n') {
+      line[s-1]=0;
     }
     prop_names.push_back(line);    
   }
