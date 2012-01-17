@@ -22,7 +22,7 @@
 class Model_remote: public Model {
 public:
   Model_remote(Log& l, std::string& params) :
-    Model(l, params) {
+    Model(l, params), prm(params) {
   }
   virtual ~Model_remote() {
   }
