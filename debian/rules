@@ -5,5 +5,8 @@ build: configure
 configure:
 	./autogen.sh
 
+override_dh_python2:
+	dh_python2 --no-guessing-versions
+
 %:
 	dh $@ --with python2

@@ -53,7 +53,35 @@ import urllib
 import BaseHTTPServer
 import SimpleHTTPServer
 
-_html_basepage='''
+# fmbtweb_js is the JavaScript module that runs on browsers and
+# communicates with the fmbtweb HTTP server.
+
+fmbtweb_js = '''
+function send_to_server(response, callback) {
+    url = "/fMBTweb." + response;
+
+    var xmlHttp = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("MSXML2.XMLHTTP.3.0");
+
+    xmlHttp.onreadystatechange = function() {
+        if (xmlHttp.readyState == 4) callback(xmlHttp);
+    }
+    xmlHttp.open("GET", url, true);
+    xmlHttp.send();
+}
+
+function eval_response(xmlHttp) {
+    try {
+	eval_result = eval(xmlHttp.responseText);
+    } catch (err) {
+	eval_result = "fMBTweb error: " + err.description;
+    }
+    send_to_server(JSON.stringify(eval_result), eval_response);
+}
+
+send_to_server(null, eval_response);
+'''
+
+_defaultPage_html='''
 <html>
     <head>
         <script language="JavaScript" type="text/javascript">
@@ -66,13 +94,13 @@ _html_basepage='''
         </div>
     </body>
 </html>
-''' % (file("fmbtweb.js").read(),)
+''' % (fmbtweb_js,)
 
 class JS:
     _instance = None
 
     def __init__(self, port=None, host="localhost", browser=None, pollDelay=0.5,
-                 htmlString=_html_basepage, htmlFile=None):
+                 htmlString=_defaultPage_html, htmlFile=None):
         """Start HTTP server and optionally launch a browser that
         connects to it.
 
@@ -138,18 +166,22 @@ class JS:
             shell=True,
             stdin=None, stdout=None, stderr=None)
 
-    def eval(self, js):
-        # send attributes for MyRequestHandler to send to browser
+    def eval(self, js, waitForResult=True):
+        """Evaluates js in browser. If waitForResult == True
+        (default), waits for the result and returns it as a JSON
+        encoded string. If waitForResult == False, returns when js has
+        been sent to the browser and returns None.
+        """
+        # set attributes for MyRequestHandler to send to browser
         self._toEval = js
         self._fromEval = None
         self._waitingForEval = True
         self._jsSentForEval = False
-        # wait for the result
+        self._waitForResult = waitForResult
         self._evalReady.acquire()
-        response = self._fromEval
-        return response
+        return self._fromEval
 
-class _MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+class _fMBTwebRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
     def __init__(self, *args):
         SimpleHTTPServer.SimpleHTTPRequestHandler.__init__(self, *args)
 
@@ -159,9 +191,9 @@ class _MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
     def log_error(self, *args):
         pass # should log errors (like 404) some day
 
-    def send_ok(self, content):
+    def send_ok(self, content, contentType = "text/html"):
         self.send_response(200)
-        self.send_header("Content-type", "text/html")
+        self.send_header("Content-type", contentType)
         self.send_header("Content-length", str(len(content)))
         self.end_headers()
         self.wfile.write(content)
@@ -170,6 +202,9 @@ class _MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         jsInstance = JS._instance
         if self.path == '/':
             self.send_ok(jsInstance._html)
+            return
+        elif self.path == '/fmbtweb.js':
+            self.send_ok(fmbtweb_js, "text/javascript")
             return
         elif self.path.startswith('/fMBTweb.'):
             response = urllib.unquote(self.path[9:])
@@ -181,6 +216,9 @@ class _MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
                     # request being sent (_fromEval value).
                     jsInstance._jsSentForEval = True
                     self.send_ok(jsInstance._toEval)
+                    if not jsInstance._waitForResult:
+                        jsInstance._waitingForEval = False
+                        jsInstance._evalReady.release()
                     return
                 else:
                     # JS was already sent to the browser. Now deliver
@@ -188,10 +226,12 @@ class _MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
                     jsInstance._fromEval = response
                     jsInstance._waitingForEval = False
                     jsInstance._evalReady.release()
+                    self.send_ok("'fMBTweb poll'")
                     return
             time.sleep(jsInstance._pollDelay)
             self.send_ok("'fMBTweb poll'")
             return
+        # Base class serves a file according to self.path
         SimpleHTTPServer.SimpleHTTPRequestHandler.do_GET(self)
 
 def _run_server(server):
@@ -201,7 +241,7 @@ def _run_server(server):
         pass # log wanted someday...
 
 def _start_http_server(port):
-    server = BaseHTTPServer.HTTPServer(('', int(port)), _MyRequestHandler)
+    server = BaseHTTPServer.HTTPServer(('', int(port)), _fMBTwebRequestHandler)
     thread.start_new_thread(_run_server,(server,))
     return server
 
@@ -215,11 +255,11 @@ if __name__ == '__main__':
 
     verdict = 'fail'
     try:
-        # Start http server and " + browsercmd
+        # Start http server and browser
         iJS = JS(browser=browsercmd)
 
-        # Define a JavaScript function that returns an array"
-        iJS.eval('f = function () {return new Array("foo", "bar");};')
+        # Define a JavaScript function that returns an array
+        iJS.eval('f = function () {return new Array("foo", "bar")}')
 
         # Call the function and read the return value
         result = iJS.eval('f()')
@@ -227,9 +267,13 @@ if __name__ == '__main__':
         # Convert the result to Python using json.
         if json.loads(result) == ["foo", "bar"]:
             verdict = 'pass'
-            iJS.eval("divfMBTweb.innerHTML='fMBTweb self test: PASS.';")
+            iJS.eval("divfMBTweb.innerHTML='fMBTweb self test: PASS.'")
+            # Must not wait for result of window.close(), because the
+            # browser might not respond anymore. This would result in
+            # a deadlock.
+            iJS.eval("self.close()", waitForResult=False)
         else:
-            iJS.eval("divfMBTweb.innerHTML='fMBTweb self test: FAIL.';")
+            iJS.eval("divfMBTweb.innerHTML='fMBTweb self test: FAIL.'")
     finally:
         try: iJS.stop()
         except: pass
