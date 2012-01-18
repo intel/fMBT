@@ -1,0 +1,11 @@
+P(starting_state, p) ->
+
+T(starting_state, "iCatch('from teststeps import *') == None", no_counter)
+
+T(no_counter,     "iCreate()",      counter_exists)
+T(no_counter,     "iCreate42()",    counter_exists)
+
+T(counter_exists, "iTestInc()",     counter_exists)
+T(counter_exists, "iTestReset()",   counter_exists)
+T(counter_exists, "iTestDestroy()", no_counter)
+T(counter_exists, "iCatch('iTestCount()') == None", counter_exists)
