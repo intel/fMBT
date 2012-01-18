@@ -45,7 +45,7 @@ conf_entry: model         |
             adapter_sleep |
             end_condition |
             history       |
-            on_error      ;
+            on_fail       ;
 
 model: 'model' '=' string { conf_obj->set_model(*$2.str); } ;
 
@@ -106,7 +106,7 @@ end_condition: verdict '=' '"' end_type ':' string_woquotes '"'
 
 history: 'history' '=' string { conf_obj->add_history($2.str); };
 
-on_error: 'on_error' '=' string { conf_obj->set_on_error(*$2.str); };
+on_fail: ( 'on_fail' | 'on_error' ) '=' string { conf_obj->set_on_fail(*$2.str); };
 
 verdict: pass {          $$.val=Verdict::PASS; } 
         | fail {         $$.val=Verdict::FAIL; }

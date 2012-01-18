@@ -35,7 +35,7 @@ class Conf:public Writable {
   Conf(Log& l, bool debug_enabled=false)
     :log(l),
      heuristic_name("random"), coverage_name("perm"),
-     adapter_name("dummy"), end_time(-1), on_error("interactive")
+     adapter_name("dummy"), end_time(-1), on_fail("interactive")
   {
     log.push("fmbt_log");
     log.set_debug(debug_enabled);
@@ -58,8 +58,8 @@ class Conf:public Writable {
   void set_adapter(std::string& s) {
     split(s, adapter_name, adapter_param);
   }
-  void set_on_error(std::string &s) {
-    on_error = s;
+  void set_on_fail(std::string &s) {
+    on_fail = s;
   }
   void add_end_condition(End_condition *ec) {
     end_conditions.push_back(ec);
@@ -101,7 +101,7 @@ class Conf:public Writable {
 
   time_t end_time;
 
-  std::string on_error;
+  std::string on_fail;
 
   Heuristic* heuristic;
   Model* model;

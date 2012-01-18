@@ -212,7 +212,7 @@ void Conf::execute(bool interactive) {
       // configuration. In addition to the following it could at
       // somepoint specify a shell command (for instance, package and
       // send log files, etc.)
-      if (on_error == "interactive")
+      if (on_fail == "interactive")
         engine.interactive();
       else
         RETURN_ERROR("Test failed.");
