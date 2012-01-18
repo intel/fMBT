@@ -27,7 +27,10 @@ Options:
           seconds. By default there is no delay.
 
   -L, --log-file=<file>
-          write log to the file instead of /tmp/remote_python.log.
+          write (append) log to the file instead of /tmp/remote_python.log.
+
+  -l=<file>
+          write (overwrite) log to the file instead of /tmp/remote_python.log.
 
   -s, --shell
           start in shell mode, reads and executes Python expressions
@@ -719,7 +722,7 @@ if __name__ == "__main__":
     delay = 0
 
     opts, remainder = getopt.getopt(
-        sys.argv[1:], 'hsTd:L:',
+        sys.argv[1:], 'hsTd:L:l:',
         ['help', 'shell', 'self-test',
          'action-delay=', 'log-file='])
 
@@ -735,6 +738,9 @@ if __name__ == "__main__":
             delay = float(arg)
         elif opt in ['-L', '--log-file']:
             gLogFile = arg
+        elif opt == '-l':
+            gLogFile = arg
+            file(gLogFile, "w").close()
         else:
             print __doc__
             print 'Unknown option: "%s"' % (opt,)
