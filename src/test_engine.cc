@@ -276,6 +276,9 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 		  action, heuristic.getActionName(action).c_str());
 	log.debug("%s %s",action,heuristic.getActionName(action).c_str(),"broken input acceptance");
         test_stopped(false, "unexpected input", log);
+	timersub(&Adapter::current_time,&start_time,&total_time);
+	log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
+		  total_time.tv_usec);
         log.pop(); // test_engine
 	return Verdict::FAIL; // Error: Unexpected input
       }
