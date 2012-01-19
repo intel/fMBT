@@ -100,7 +100,7 @@ namespace {
     case End_condition::STEPS: reason = "step limit reached"; break;
     case End_condition::COVERAGE: reason = "coverage reached"; break;
     case End_condition::STATETAG: reason = "tag reached"; break;
-    case End_condition::DURATION: reason = ""; break;
+    case End_condition::DURATION: reason = "time limit reached"; break;
     default: reason = "unknown";
     }
     log.print("<stop verdict=\"%s\" reason=\"%s\"/>\n", verdict.c_str(), reason.c_str());
