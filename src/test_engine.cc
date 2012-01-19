@@ -636,7 +636,10 @@ int Test_engine::matching_end_condition(int step_count)
       break;
     }
     case End_condition::DURATION:
-      if (Adapter::current_time.tv_sec >= e->param_time) return cond_i;
+      if (Adapter::current_time.tv_sec > e->param_time + 1 ||
+          (Adapter::current_time.tv_sec == e->param_time
+           && Adapter::current_time.tv_usec >= e->param_long)
+          ) return cond_i;
       break;
     }
   }

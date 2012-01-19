@@ -56,11 +56,13 @@ End_condition::End_condition(Verdict::Verdict v, Counter c, std::string* p)
 #ifndef DROI
       char* out = NULL;
       int stat;
-      std::string ss = "date --date='" + *param + "' +%s";
+      std::string ss = "date --date='" + *param + "' +%s.%N";
 
       if (g_spawn_command_line_sync(ss.c_str(), &out, NULL, &stat, NULL)) {
         if (!stat) {
+          // Store seconds to param_time and microseconds to param_long
           param_time = atoi(out);
+          param_long = (strtod(out, NULL) - param_time) * 1000000;
           status = true;
         } else {
           errormsg = "Parsing 'duration' parameter '" + *param + "' failed.";
