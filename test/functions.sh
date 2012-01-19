@@ -18,17 +18,33 @@
 # This file includes test reporting functions for test scripts.
 
 teststep() {
+    TESTSTEP_DESCRIPTION=""
     printf "%-50s" "$1"
     echo "##########################################" >>$LOGFILE
     echo "# $1" >>$LOGFILE
 }
 
+teststep_quiet() {
+    # Quiet teststep is reported to stdout only if failed
+    TESTSTEP_DESCRIPTION=$(printf "%-50s" "$1")
+    echo "##########################################" >>$LOGFILE
+    echo "# $1" >>$LOGFILE
+}
+
 testpassed() {
-    printf "passed.\n"
+    if [ -z "$TESTSTEP_DESCRIPTION" ]; then
+        printf "passed.\n"
+    fi
     echo "# passed." >>$LOGFILE
 }
 
 testfailed() {
+    if [ -z "$TESTSTEP_DESCRIPTION" ]; then
+        printf "failed, see $LOGFILE\n"
+    else
+        printf "$TESTSTEP_DESCRIPTION"
+        printf "failed, see $LOGFILE\n"        
+    fi
     printf "failed, see $LOGFILE\n"
     echo "# failed." >>$LOGFILE
     exit 1
@@ -59,7 +75,7 @@ check_minimum_num_of_lines() {
 
 if [ -z "$SKIP_PATH_CHECKS" ]; then
 
-    teststep "check that utils/fmbt-gt is used..."
+    teststep_quiet "check that utils/fmbt-gt is used..."
     dirandfmbtgt=$(which fmbt-gt | sed 's:.*\(utils/.*\):\1:')
     echo "fmbt-gt: $dirandfmbtgt" >> $LOGFILE
     if [ "$dirandfmbtgt" != "utils/fmbt-gt" ]; then
@@ -67,7 +83,7 @@ if [ -z "$SKIP_PATH_CHECKS" ]; then
     fi
     testpassed
     
-    teststep "check that fmbt is used from source tree..."
+    teststep_quiet "check that fmbt is used from source tree..."
     dirandfmbt=$(which fmbt | sed 's:.*\(src/.*\):\1:')
     echo "using: $dirandfmbt" >> $LOGFILE
     echo "fmbt: $dirandfmbt" >> $LOGFILE
@@ -76,7 +92,7 @@ if [ -z "$SKIP_PATH_CHECKS" ]; then
     fi
     testpassed
     
-    teststep "check working python version..."
+    teststep_quiet "check working python version..."
     pyver=$(/usr/bin/env python --version 2>&1 | awk '{if ($2 >= "2.6") print "ok"}')
     if [ "$pyver" != "ok" ]; then
         echo "Python >= 2.6 required, you run $(/usr/bin/env python --version 2>&1)" >> $LOGFILE
