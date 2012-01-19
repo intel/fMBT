@@ -126,8 +126,8 @@ int main(int argc,char * const argv[])
       c.execute(interactive);
       if (!c.status) {
         std::printf("%s\n",c.stringify().c_str());
-        return 5;
       }
+      return c.exit_status;
     }
   }
 

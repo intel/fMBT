@@ -33,9 +33,9 @@
 class Conf:public Writable {
  public:
   Conf(Log& l, bool debug_enabled=false)
-    :log(l),
+    :log(l), exit_status(0),
      heuristic_name("random"), coverage_name("perm"),
-     adapter_name("dummy"), end_time(-1), on_fail("interactive")
+     adapter_name("dummy"), end_time(-1), on_fail("interactive"), on_pass(":exit:0"),on_inconc(":exit:1")
   {
     log.push("fmbt_log");
     log.set_debug(debug_enabled);
@@ -61,6 +61,13 @@ class Conf:public Writable {
   void set_on_fail(std::string &s) {
     on_fail = s;
   }
+  void set_on_pass(std::string &s) {
+    on_pass = s;
+  }
+  void set_on_inconc(std::string &s) {
+    on_inconc = s;
+  }
+
   void add_end_condition(End_condition *ec) {
     end_conditions.push_back(ec);
   }
@@ -82,8 +89,10 @@ class Conf:public Writable {
 
   virtual std::string stringify();
 
+  int exit_status;
 
  protected:
+  void set_exitvalue(std::string& s);
   std::vector<std::string*> history;
   std::string model_name;
   std::string model_param;
@@ -101,7 +110,7 @@ class Conf:public Writable {
 
   time_t end_time;
 
-  std::string on_fail;
+  std::string on_fail,on_pass,on_inconc;
 
   Heuristic* heuristic;
   Model* model;

@@ -207,7 +207,9 @@ void Conf::execute(bool interactive) {
     engine.interactive();
   } else {
     Verdict::Verdict v = engine.run(end_time);
-    if (v == Verdict::FAIL) {
+    switch (v) {
+    case Verdict::FAIL: {
+      set_exitvalue(on_fail);
       // Test failed. Continue according to the on_error
       // configuration. In addition to the following it could at
       // somepoint specify a shell command (for instance, package and
@@ -215,11 +217,32 @@ void Conf::execute(bool interactive) {
       if (on_fail == "interactive")
         engine.interactive();
       else
-        RETURN_ERROR("Test failed.");
+        RETURN_ERROR("Test failed.");      
+      break;
     }
-    // Test passed
+    case Verdict::PASS: { 
+      // Test passed      
+      set_exitvalue(on_pass);
+      break;
+    }
+    case Verdict::INCONCLUSIVE: {
+      set_exitvalue(on_inconc);
+      break;
+    }
+    default: {
+      // unknown verdict?
+    }
+    }      
   }
   log.pop();
+}
+
+void Conf::set_exitvalue(std::string& s)
+{
+  std::string cmd;
+  std::string value;
+  split(s,cmd,value);
+  exit_status=atoi(value.c_str());
 }
 
 void Conf::set_observe_sleep(std::string &s)
