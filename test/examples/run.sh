@@ -46,8 +46,8 @@ make clean >> $LOGFILE || {
 }
 
 [ $FAILED == 1 ] || {
-    if [ "$(fmbt-log mycountertest.log | tail -n 1)" != "pass" ]; then
-        echo "failed: fmbt-log mycountertest.log last line is not 'pass'" >> $LOGFILE
+    if [ "$(fmbt-log test.log | tail -n 1)" != "pass" ]; then
+        echo "failed: fmbt-log test.log last line is not 'pass'" >> $LOGFILE
         FAILED=1
     fi
 }
@@ -63,8 +63,8 @@ make clean >> $LOGFILE || {
 }
 
 [ $FAILED == 1 ] || {
-    if [ "$(fmbt-log mycountertest.log | tail -n 1)" != "fail" ]; then
-        echo "failed: fmbt-log mycountertest.log last line is not 'fail'" >> $LOGFILE
+    if [ "$(fmbt-log test.log | tail -n 1)" != "fail" ]; then
+        echo "failed: fmbt-log test.log last line is not 'fail'" >> $LOGFILE
         FAILED=1
     fi
 }

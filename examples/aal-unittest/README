@@ -1,38 +1,58 @@
---------------------------------
-Unit testing MyCounter C++ class
---------------------------------
+This is an example of a unit test for a C++ class.
+
+The unit to be tested is declared in mycounter.h and implemented in
+mycounter.cc.
+
+We tested it with the following recipe.
+
+1. Write AAL tests for the unit, see "mycountertest.cc.aal".
+
+   In this example the file contains actions (test steps) iCreate,
+   iDestroy, iIncrement, iReset and iCount. Each step has a guard()
+   which returns true whenever the test step can be executed. fMBT
+   test generator will choose one of enabled test steps and run the
+   corresponding adapter() code. It will continue doing so until any
+   of the end conditions in test configuration is met.
+
+2. Generate C++ code that will implement both test model and adapter
+   for mycounter.cc. The fMBT AAL compiler does this:
+
+$ fmbt-aalc -o mycountertest.cc mycountertest.cc.aal
+
+3. Build a library that includes both the generated code and the unit
+   under test:
+
+$ g++ -I/usr/include/fmbt -I../../src -fPIC mycounter.cc mycountertest.cc -shared -o mycountertest.so
+
+   If stubs are needed, you need to include them at this point, too.
+
+4. Create a configuration file for the test. In "test.conf" we use
+   mycountertest library both as a model and an adapter. We configured
+   a one-second test which aims to cover as many permutations of any
+   two actions in the model as it can.
+
+5. Run the test:
+
+$ fmbt -ltest.log test.conf
 
 
-Quick instructions for running the tests
-----------------------------------------
+This example enables building a faulty version of mycounter
+implementation, too. That version "forgets" to initialise its private
+"value" attribute. Try whether the bug is found when the unit is built
+as follows:
 
-1. Run test against faulty MyCounter:
+$ g++ -DFAULTY -I/usr/include/fmbt -I../../src -fPIC mycounter.cc mycountertest.cc -shared -o mycountertest.so
 
-   make clean; make FAULTY=1
+and run the test:
 
-2. Run test against working MyCounter:
-
-   make clean; make
+$ fmbt test.conf
 
 
-Files
------
+For convenience, we have included a Makefile which takes care of steps
+2, 3 and 5 with command
 
-mycounter.h
-mycounter.cc
-        implementation of MyCounter, the unit under test
+$ make
 
-mycountertest.cc.aal
-        unit test steps, tests are generated from these
+and tests the buggy implementation with command
 
-asserts.h
-        ASSERT-macros used in the unit tests
-
-mycountertest.conf
-        test configuration for running a unit test, defines test
-        generation parameters and end conditions for the test
-
-Makefile
-        rules for building the unit under test, generating the test
-        code (mycountertest.cc) from the AAL description, and running
-        the test.
+$ make FAULTY=1
