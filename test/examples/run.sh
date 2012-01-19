@@ -31,10 +31,10 @@ rm -f $LOGFILE
 ##########################################
 # Run the test
 
-teststep "testing example/aal-unittest..."
+teststep "testing example/c++-unittest..."
 FAILED=0
 MYDIR=$(pwd)
-cd ../../examples/aal-unittest
+cd ../../examples/c++-unittest
 make clean >> $LOGFILE || {
     echo "failed:the first 'make clean' failed in $(pwd)" >> $LOGFILE
     FAILED=1
