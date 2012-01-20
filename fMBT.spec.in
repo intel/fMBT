@@ -13,14 +13,10 @@ BuildRequires:  boost-devel
 BuildRequires:  ncurses-devel
 BuildRequires:  ncurses-libs
 BuildRequires:  libedit-devel
-BuildRequires:  gcc-c++
-BuildRequires:  pexpect
-BuildRequires:  dbus-python
 BuildRequires:  autoconf
 BuildRequires:  automake
 Requires:       dbus-python
-Requires:       pexpect
-  
+
 %description
 Free Model Based testing tool
 
