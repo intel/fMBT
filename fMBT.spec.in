@@ -1,11 +1,11 @@
-Name:           fMBT
-Version:        0.1rc9
+Name:           fmbt
+Version:        @FMBT_VERSION@
 Release:        1%{?dist}
-Summary:        free model based testing tool
+Summary:        free Model-Based Testing tool
 
 License:        lgpl
 URL:            https://github.com/pablovirolainen/fMBT
-Source:		fmbt.tar.gz
+Source:		fmbt-%{version}.tar.gz
 
 BuildRequires:  glibc-devel
 BuildRequires:  glib2-devel
@@ -13,23 +13,15 @@ BuildRequires:  boost-devel
 BuildRequires:  ncurses-devel
 BuildRequires:  ncurses-libs
 BuildRequires:  libedit-devel
-BuildRequires:  gcc-c++
-BuildRequires:  pexpect
-BuildRequires:  dbus-python
-BuildRequires:  autoconf
-BuildRequires:  automake
-Requires:       dbus-python
-Requires:       pexpect
 
 %description
-Free Model Based testing tool
+fMBT generates and runs tests automatically
 
 %prep
 %setup -q
 
 
 %build
-./autogen.sh
 %configure
 make %{?_smp_mflags}
 
@@ -44,7 +36,7 @@ make install DESTDIR=$RPM_BUILD_ROOT
 %{_includedir}
 %{_libdir}
 %doc
-
+%{_docdir}
 
 
 %changelog

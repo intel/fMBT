@@ -1,11 +1,12 @@
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = utils src test
+SUBDIRS = utils src test examples
 
-EXTRA_DIST = \
-	doc/adapters.txt \
-	doc/models.txt \
-	doc/overview.txt \
+dist_doc_DATA = \
+	README			\
+	doc/adapters.txt	\
+	doc/models.txt		\
+	doc/overview.txt	\
 	doc/tutorial.txt
 
 src/android/fmbt_droid:

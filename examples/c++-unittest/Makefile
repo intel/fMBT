@@ -10,7 +10,7 @@ endif
 # Rule for running the test, that is, producing the log file.
 # fmbt exits with an error value in case the test fails, we use
 # "... || true" to suppress Make error message.
-mycountertest.log: mycountertest.conf mycountertest.so
+test.log: test.conf mycountertest.so
 	fmbt -l$@ $< || true
 
 # Link the unit under test and test steps into a shared library. Make
@@ -29,4 +29,4 @@ mycountertest.so: mycounter.o mycountertest.o
 	fmbt-aalc -o $@ $<
 
 clean:
-	$(RM) *.o *.so mycountertest.cc mycountertest.log
+	$(RM) *.o *.so mycountertest.cc test.log
