@@ -1,5 +1,5 @@
 Name:           fMBT
-Version:        0.1rc8
+Version:        0.1rc9
 Release:        1%{?dist}
 Summary:        free model based testing tool
 
@@ -10,6 +10,8 @@ Source:		fmbt.tar.gz
 BuildRequires:  glibc-devel
 BuildRequires:  glib2-devel
 BuildRequires:  boost-devel
+BuildRequires:  ncurses-devel
+BuildRequires:  ncurses-libs
 BuildRequires:  libedit-devel
 BuildRequires:  gcc-c++
 BuildRequires:  pexpect

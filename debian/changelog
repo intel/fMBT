@@ -1,3 +1,10 @@
+fmbt (0.1-rc9) maverick; urgency=low
+
+  * Javascript adapter && example
+  * Rename on_error to on_fail in the configuration file
+
+ -- Pablo Virolainen <pablo.virolainen@intel.com>  Wed, 18 Jan 2012 13:33:18 +0200
+
 fmbt (0.1-rc8) maverick; urgency=low
 
   * AAL improvements (preprocessor, 'better' syntax, etc)
