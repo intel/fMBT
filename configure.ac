@@ -24,6 +24,7 @@ AC_ARG_WITH([ndk-build],
             [NDK_BUILD="$withval"],
             [NDK_BUILD="ndk-build"])
 AC_SUBST([NDK_BUILD])
+AC_SUBST([FMBT_VERSION], ['AC_PACKAGE_VERSION'])
 
 AS_IF([test "x$enable_android" != "xyes"],
     [PKG_CHECK_MODULES([GLIB], [glib-2.0], [],
@@ -40,7 +41,9 @@ AC_CONFIG_FILES([
         src/Makefile
         utils/Makefile
         test/Makefile
-        examples/Makefile])
+        examples/Makefile
+        fMBT.spec
+        ])
 
 AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
 AM_PATH_PYTHON([2.6],, [:])
