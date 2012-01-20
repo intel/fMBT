@@ -35,7 +35,12 @@ AS_IF([test "x$enable_android" != "xyes"],
 #    AC_LANG_POP([C++])
     )
 
-AC_CONFIG_FILES([Makefile src/Makefile utils/Makefile test/Makefile])
+AC_CONFIG_FILES([
+        Makefile
+        src/Makefile
+        utils/Makefile
+        test/Makefile
+        examples/Makefile])
 
 AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
 AM_PATH_PYTHON([2.6],, [:])
