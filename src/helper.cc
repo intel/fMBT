@@ -285,13 +285,14 @@ char* readfile(const char* filename,bool preprocess)
       return NULL;
     file_len = f.tellg();
     f.seekg(0, std::ios::beg);
-    char *contents = (char*)malloc(file_len);
+    char *contents = (char*)malloc(file_len+1);
     if (!contents) {
       f.close();
       return NULL;
     }
     f.read(contents, file_len);
     f.close();
+    contents[file_len] = '\0';
     return contents;
 
 #endif
