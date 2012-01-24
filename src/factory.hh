@@ -46,18 +46,30 @@
 #include <map>
 #include <string>
 
+#ifndef FACTORY_CREATE_PARAMS
+#define FACTORY_CREATE_PARAMS Log& log,                                \
+                       std::string name,                               \
+                       std::string params
+#endif
+
+#ifndef FACTORY_CREATE_DEFAULT_PARAMS
+#define FACTORY_CREATE_DEFAULT_PARAMS = ""
+#endif
+
+#ifndef FACTORY_CREATOR_PARAMS
+#define FACTORY_CREATOR_PARAMS Log& log, std::string params
+#define FACTORY_CREATOR_PARAMS2 log, params
+#endif
+
 #define FACTORY_DECLARATION(MODULETYPE)                                \
                                                                        \
 class MODULETYPE;                                                      \
-class Log;                                                             \
                                                                        \
 namespace MODULETYPE##Factory {                                        \
                                                                        \
-    typedef MODULETYPE*(*creator)(Log& log, std::string params);       \
+    typedef MODULETYPE*(*creator)(FACTORY_CREATOR_PARAMS);             \
                                                                        \
-    extern MODULETYPE* create(Log& log,                                \
-                             std::string name,                         \
-                             std::string params);                      \
+    extern MODULETYPE* create(FACTORY_CREATE_PARAMS);                  \
                                                                        \
     extern void add_factory(std::string name, creator c);              \
                                                                        \
@@ -83,13 +95,13 @@ void MODULETYPE##Factory::add_factory(std::string name, creator c)     \
 }                                                                      \
                                                                        \
 MODULETYPE* MODULETYPE##Factory::create(                               \
-    Log& log, std::string name, std::string params = "")               \
+    FACTORY_CREATE_PARAMS FACTORY_CREATE_DEFAULT_PARAMS)               \
 {                                                                      \
   if (!creators) return NULL;                                          \
                                                                        \
   creator c = (*creators)[name];                                       \
                                                                        \
-  if (c) return c(log, params);                                        \
+  if (c) return c(FACTORY_CREATOR_PARAMS2);                            \
                                                                        \
   return NULL;                                                         \
 }
@@ -97,9 +109,9 @@ MODULETYPE* MODULETYPE##Factory::create(                               \
 
 #define FACTORY_DEFAULT_CREATOR(MODULETYPE, CLASSNAME, ID)             \
 namespace {                                                            \
-  MODULETYPE* creator_func(Log& log, std::string params = "")          \
+  MODULETYPE* creator_func(FACTORY_CREATOR_PARAMS FACTORY_CREATE_DEFAULT_PARAMS)          \
   {                                                                    \
-    return new CLASSNAME(log, params);                                 \
+    return new CLASSNAME(FACTORY_CREATOR_PARAMS2);                     \
   }                                                                    \
   static MODULETYPE##Factory::Register me(ID, creator_func);           \
 }

@@ -68,7 +68,7 @@ int bstr_scan(char *ops, void *ops_cache, d_loc_t *loc,
 }
 }
 
-aal: aal_start header+ act* '}' ;
+aal: aal_start header+ ( act | tag )* '}' ;
 
 aal_start: 'aal' string '{' language {
             obj->set_namestr($1.str);
@@ -83,6 +83,15 @@ astr:   string          {
         } |
         astr ',' string {
             obj->set_name($2.str);
+        } ;
+
+tag: 'tag' tstr '{' guard '}' { obj->next_tag(); };
+
+tstr:   string          {
+            obj->set_tagname($0.str);
+        } |
+        tstr ',' string {
+            obj->set_tagname($2.str);
         } ;
 
 push: 'push' '{' bstr '}' { 

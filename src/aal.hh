@@ -37,12 +37,21 @@ public:
   virtual std::vector<std::string>& getActionNames() {
     return action_names;
   }
+  virtual std::vector<std::string>& getSPNames() {
+    return tag_names;
+  }
   virtual void push() {}
   virtual void pop() {}
+  virtual int getprops(int** props) {
+    return 0;
+  }
+
   virtual void log(const char* format, ...);
 protected:
   std::vector<int> actions;
+  std::vector<int> tags;
   std::vector<std::string> action_names; /* action names.. */
+  std::vector<std::string> tag_names; /* tag/state proposition names.. */
   Log& _log;
 };
 

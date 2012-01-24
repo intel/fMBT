@@ -1,7 +1,7 @@
 if ANDROID
 bin_PROGRAMS = fmbt_droid
 else
-bin_PROGRAMS = fmbt remote_adapter_loader fmbt-aalc fmbt-aalp
+bin_PROGRAMS = fmbt remote_adapter_loader fmbt-aalc fmbt-aalp fmbt-ucheck
 endif
 
 if HAVE_PYTHON
@@ -24,18 +24,21 @@ pkginclude_HEADERS = adapter.hh factory.hh writable.hh log.hh aal.hh model.hh aw
 noinst_HEADERS += conf.g lts.g mrules.g covlang.g xrules.g lang.g
 
 fmbt_CPPFLAGS                  = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0`
+fmbt_ucheck_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0`
 fmbt_droid_CPPFLAGS            = -Wall -pedantic -fPIC -I d -I `pwd` -DDROI
 remote_adapter_loader_CPPFLAGS = -Wall -pedantic -I d -DDROI
 fmbt_cparsers_la_CPPFLAGS      = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DCAPI
 fmbt_aalc_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0`
 
 fmbt_LDFLAGS                   = -g `pkg-config --libs glib-2.0 gobject-2.0 libedit` -lboost_regex -Wl,-E -ldl
+fmbt_ucheck_LDFLAGS            = -g `pkg-config --libs glib-2.0 gobject-2.0 libedit` -lboost_regex -Wl,-E -ldl
 fmbt_droid_LDFLAGS             = -Wl,-E -ldl
 fmbt_cparsers_la_LDFLAGS       = -g `pkg-config --libs glib-2.0 gobject-2.0 libedit` -lboost_regex -Wl,-E -ldl -avoid-version -module -shared -export-dynamic
 remote_adapter_loader_LDFLAGS  = -g -ldl
 fmbt_aalc_LDFLAGS	       = -g `pkg-config --libs glib-2.0 gobject-2.0 libedit` -lboost_regex -Wl,-E -ldl
 
 fmbt_LDADD                     = d/libdparse.a
+fmbt_ucheck_LDADD              = d/libdparse.a
 fmbt_droid_LDADD               = d/libdparse.a
 fmbt_cparsers_la_LIBADD        = d/libdparse.a
 remote_adapter_loader_LDADD    = d/libdparse.a

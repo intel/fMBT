@@ -25,11 +25,13 @@
 class aalang {
 public:
   aalang(): default_action_input(true) {}
-  virtual void set_name(std::string* name) = 0;
-  virtual void set_namestr(std::string* name) = 0;
+  virtual void set_name(std::string* name)     = 0;
+  virtual void set_namestr(std::string* name)  = 0;
+  virtual void set_tagname(std::string* name)  = 0;
+  virtual void next_tag()                      = 0;
   virtual void set_variables(std::string* var) = 0;
-  virtual void set_istate(std::string* ist) = 0;
-  virtual void set_guard(std::string* gua) = 0;
+  virtual void set_istate(std::string* ist)    = 0;
+  virtual void set_guard(std::string* gua)     = 0;
 
   virtual void set_push(std::string* p) = 0;
   virtual void set_pop(std::string* p) = 0;
@@ -57,7 +59,8 @@ protected:
   std::string default_body;
   std::string default_adapter;
   bool default_action_input;
-  std::vector<int> map;
+  std::vector<int> amap;
+  std::vector<int> tmap;
 };
 
 #endif

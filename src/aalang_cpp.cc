@@ -21,6 +21,19 @@
 #include "aalang_cpp.hh"
 #include "helper.hh"
 
+aalang_cpp::aalang_cpp(): aalang(),action_cnt(1), tag_cnt(1),
+			  istate(NULL), name(NULL), tag(false)
+{
+  default_guard="return true;"; 
+  default_body="";
+  default_adapter="";
+  std::vector<std::string> t;
+  aname.push_back(t);
+  tname.push_back(t);
+  amap.push_back(0);
+  tmap.push_back(0);
+}
+
 void aalang_cpp::set_starter(std::string* st)
 {
   s+=*st;
@@ -35,9 +48,8 @@ void aalang_cpp::set_name(std::string* name)
   */
   s+="\n//action"+to_string(action_cnt)+": \""+*name+"\"\n";
   aname.back().push_back(*name);
-  map.push_back(action_cnt);
+  amap.push_back(action_cnt);
   name_cnt++;
-
 }
 
 void aalang_cpp::set_namestr(std::string* _name)
@@ -78,13 +90,33 @@ void aalang_cpp::set_pop(std::string* p)
   delete p;
 }
 
+void aalang_cpp::set_tagname(std::string* name)
+{
+  s+="\n//tag"+to_string(tag_cnt)+": \""+*name+"\"\n";
+  tname.back().push_back(*name);
+  tmap.push_back(tag_cnt);
+  name_cnt++;
+  tag=true;
+}
+
+void aalang_cpp::next_tag()
+{
+  std::vector<std::string> t;
+  tname.push_back(t);
+  tag_cnt+=name_cnt;
+  name_cnt=0;
+  tag=false;
+}
+
 void aalang_cpp::set_guard(std::string* gua)
 {
-  /*
-    printf("bool action%i_guard() {\n%s}\n",action,$3.str->c_str()); } ;
-  */
-  s+="bool action"+to_string(action_cnt)+"_guard() {\n"+
-    *gua+"}\n";
+  if (tag) {
+    s+="bool tag"+to_string(tag_cnt)+"_guard() {\n"+
+      *gua+"}\n";
+  } else {
+    s+="bool action"+to_string(action_cnt)+"_guard() {\n"+
+      *gua+"}\n";
+  }
   if (gua!=&default_guard) 
     delete gua;
 }
@@ -132,6 +164,14 @@ std::string aalang_cpp::stringify()
       s+="\taction_names.push_back(\""+*j+"\");\n";
     }
   }
+  s=s+"\ttag_names.push_back(\"\");\n";
+
+  for(std::list<std::vector<std::string> >::iterator i=tname.begin();i!=tname.end();i++) {
+    for(std::vector<std::string>::iterator j=i->begin();j!=i->end();j++) {
+      s+="\ttag_names.push_back(\""+*j+"\");\n";
+    }
+  }
+  
   
   s+=*istate+"}\n"
     "virtual bool reset() {\n"+
@@ -147,7 +187,7 @@ std::string aalang_cpp::stringify()
 
   for(int i=1;i<action_cnt;i++) {
     s+="\t\tcase "+to_string(i)+":\n"
-      "\t\treturn action"+to_string(map[i])+
+      "\t\treturn action"+to_string(amap[i])+
       "_adapter();\n\t\tbreak;\n";
   }
   s=s+"\t\tdefault:\n"
@@ -159,7 +199,7 @@ std::string aalang_cpp::stringify()
 
   for(int i=1;i<action_cnt;i++) {
     s+="\t\tcase "+to_string(i)+":\n"
-      "\t\taction"+to_string(map[i])+"_body();\n\t\treturn "+
+      "\t\taction"+to_string(amap[i])+"_body();\n\t\treturn "+
       to_string(i)+";\n\t\tbreak;\n";
   }
   s=s+"\t\tdefault:\n"
@@ -170,12 +210,24 @@ std::string aalang_cpp::stringify()
     "actions.clear();\n";
   
   for(int i=1;i<action_cnt;i++) {
-    s+="\tif (action"+to_string(map[i])+"_guard()) {\n"
+    s+="\tif (action"+to_string(amap[i])+"_guard()) {\n"
       "\t\tactions.push_back("+to_string(i)+");\n"
       "\t}\n";
   }
   s=s+"\t*act = &actions[0];\n"
     "\treturn actions.size();\n"
+    "}\n";
+  
+  s=s+"virtual int getprops(int** props) {\n"
+    "tags.clear();\n";
+
+  for(int i=1;i<tag_cnt;i++) {
+    s+="\tif (tag"+to_string(tmap[i])+"_guard()) {\n"
+      "\t\ttags.push_back("+to_string(i)+");\n"
+      "\t}\n";
+  }
+  s=s+"\t*props = &tags[0];\n"
+    "\treturn tags.size();\n"
     "}\n"
     "};\n";
 

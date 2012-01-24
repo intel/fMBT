@@ -23,6 +23,7 @@ Mwrapper::Mwrapper(Log&l, std::string params, aal* _model):
   Model(l, params), model(_model)  
 {
   action_names=model->getActionNames();
+  prop_names=model->getSPNames();
   precalc_input_output();
 }
 
@@ -41,7 +42,7 @@ bool Mwrapper::reset() {
 /* No props */
 int Mwrapper::getprops(int** props)
 {
-  return 0;
+  return model->getprops(props);
 }
 
 int Mwrapper::execute(int action)

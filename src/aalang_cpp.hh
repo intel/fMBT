@@ -27,16 +27,11 @@
 
 class aalang_cpp: public aalang {
 public:
-  aalang_cpp(): aalang(),action_cnt(1), istate(NULL), name(NULL) {
-    default_guard="return true;"; 
-    default_body="";
-    default_adapter="";
-    std::vector<std::string> t;
-    aname.push_back(t);
-    map.push_back(0);
-  };
+  aalang_cpp();
   virtual void set_name(std::string* _name);
   virtual void set_namestr(std::string* name);
+  virtual void set_tagname(std::string* name);
+  virtual void next_tag();
   virtual void set_variables(std::string* var);
   virtual void set_istate(std::string* ist);
   virtual void set_guard(std::string* gua);
@@ -54,14 +49,17 @@ private:
 
 protected:
   std::list<std::vector<std::string> > aname;
+  std::list<std::vector<std::string> > tname;
   //std::vector<std::string> aname;
   std::string s;
   int action_cnt;
+  int tag_cnt;
   int name_cnt;
   std::string* istate;
   std::string* name;
   std::string push;
   std::string pop;
+  bool tag;
 };
 
 #endif

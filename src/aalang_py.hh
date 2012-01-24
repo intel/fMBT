@@ -36,6 +36,8 @@ public:
   virtual void set_name(std::string* name);
   virtual void set_namestr(std::string* name);
   virtual void set_variables(std::string* var);
+  virtual void set_tagname(std::string* name) {};
+  virtual void next_tag(){};
   virtual void set_istate(std::string* ist);
   virtual void set_guard(std::string* gua);
 
