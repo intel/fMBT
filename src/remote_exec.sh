@@ -1,4 +1,4 @@
-#!/bin/ash
+#!/bin/sh
 
 # fMBT, free Model Based Testing tool
 # Copyright (c) 2011, Intel Corporation.
