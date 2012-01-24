@@ -21,7 +21,7 @@
 #include <cstdlib>
 
 Coverage_Tree::Coverage_Tree(Log& l, std::string params) :
-  Coverage(l), max_depth(2)
+  Coverage(l), max_depth(2), push_depth(0)
 { 
   exec[0] = &root_node;
   set_max_depth(params);
