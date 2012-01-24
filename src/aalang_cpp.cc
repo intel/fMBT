@@ -21,7 +21,7 @@
 #include "aalang_cpp.hh"
 #include "helper.hh"
 
-aalang_cpp::aalang_cpp(): aalang(),action_cnt(1), tag_cnt(1),
+aalang_cpp::aalang_cpp(): aalang(),action_cnt(1), tag_cnt(1), name_cnt(0),
 			  istate(NULL), name(NULL), tag(false)
 {
   default_guard="return true;"; 
@@ -41,11 +41,6 @@ void aalang_cpp::set_starter(std::string* st)
 
 void aalang_cpp::set_name(std::string* name)
 {
-  /*
-    { printf("\n\t//action%i: ",action); }
-
-    anames.push_back(*$2.str); printf("%s",$2.str->c_str()); delete $2.str; $2.str=NULL; } ;
-  */
   s+="\n//action"+to_string(action_cnt)+": \""+*name+"\"\n";
   aname.back().push_back(*name);
   amap.push_back(action_cnt);
@@ -54,11 +49,6 @@ void aalang_cpp::set_name(std::string* name)
 
 void aalang_cpp::set_namestr(std::string* _name)
 { 
-  /*
-  printf("class _gen_"); 
-  printf("%s: public aal {\nprivate:\n\t", 
-	 $1.str->c_str()); };
-  */
   name=_name;
   s+="#include \"aal.hh\"\n\n";
   s+="class _gen_"+*name+":public aal {\nprivate:\n\t";
@@ -66,9 +56,6 @@ void aalang_cpp::set_namestr(std::string* _name)
 
 void aalang_cpp::set_variables(std::string* var)
 {
-  /*
-    printf("//variables\n%s\n",$2.str->c_str()); } ;
-  */
   s+="//variables\n"+*var+"\n";
   delete var;
 }
@@ -123,9 +110,6 @@ void aalang_cpp::set_guard(std::string* gua)
 
 void aalang_cpp::set_body(std::string* bod)
 {
-  /*
-    printf("void action%i_body() {\n%s}\n",action,$3.str->c_str()); } ;
-  */
   s+="void action"+to_string(action_cnt)+"_body() {\n"+*bod+"}\n";
   if (bod!=&default_body) 
     delete bod;
@@ -133,9 +117,6 @@ void aalang_cpp::set_body(std::string* bod)
 
 void aalang_cpp::set_adapter(std::string* ada)
 {
-  /*
-  printf("int action%i_adapter() {\n%s}\n",action,$3.str->c_str()); }|;
-  */
   s+="int action" + to_string(action_cnt) + "_adapter() {\n" +
       *ada + "\n"
       "\treturn " + to_string(action_cnt) + ";\n"
