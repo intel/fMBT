@@ -16,6 +16,8 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+#ifndef __helper_hh__
+#define __helper_hh__
 #include <string>
 #include <vector>
 
@@ -57,3 +59,5 @@ void  strvec(std::vector<std::string> & v,std::string& s,
 
 char* unescape_string(char* msg);
 void  unescape_string(std::string& msg);
+
+#endif
