@@ -35,7 +35,7 @@ Available types & parameters:
                 like parallel but reads standard output of <command>
                 instead of a file.
 
-        lib:<modelname>[,filename]
+        lib:<modelname>[,filename][:modelparams]
 
                 uses model "modelname". If the model is not already
                 registered (statically linked or LD_PRELOADed, for
