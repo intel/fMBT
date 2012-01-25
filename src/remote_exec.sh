@@ -16,6 +16,9 @@
 # this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
+# Shell commands sent to this adapter are executed with this shell:
+SHELL=/bin/sh
+
 LOGFILE=/tmp/remote_exec.log
 
 echo $(date +"%F %T") $0 adapter started > $LOGFILE
@@ -41,7 +44,7 @@ do
      echo "Evaluating s${a}" >> $LOGFILE
      eval run=\$s${a} >> $LOGFILE 2>&1
      echo "Executing $a: '$run'" >> $LOGFILE
-     /bin/ash -c "$run" >> $LOGFILE 2>&1
+     $SHELL -c "$run" >> $LOGFILE 2>&1
      echo $a 1>&2
      sync # flush stdout => echoed $a will be written to stderr
      echo "Reporting $a" >> $LOGFILE
