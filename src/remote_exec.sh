@@ -44,8 +44,6 @@ do
     read encodedAction
     # urldecode:
     eval s${var}=\"$( echo $encodedAction | eval $URLDECODER )\" 
-    echo "just got s${var}"
-    eval echo \$s${var}
     echo -n "s${var}: " >> $LOGFILE
     eval unencodedAction=\$s${var}
     echo $unencodedAction  >> $LOGFILE
