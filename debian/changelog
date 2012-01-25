@@ -1,3 +1,11 @@
+fmbt (0.1-rc10) maverick; urgency=low
+
+  * Bugfixes
+  * NEW: AAL tag support
+  * Documentation update
+
+ -- Pablo Virolainen <pablo.virolainen@intel.com>  Wed, 25 Jan 2012 13:58:21 +0200
+
 fmbt (0.1-rc9) maverick; urgency=low
 
   * Javascript adapter && example
