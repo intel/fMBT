@@ -25,6 +25,7 @@
 class aalang {
 public:
   aalang(): default_action_input(true) {}
+  virtual ~aalang() {};
   virtual void set_name(std::string* name)     = 0;
   virtual void set_namestr(std::string* name)  = 0;
   virtual void set_tagname(std::string* name)  = 0;

@@ -34,15 +34,24 @@ aalang_cpp::aalang_cpp(): aalang(),action_cnt(1), tag_cnt(1), name_cnt(0),
   tmap.push_back(0);
 }
 
+aalang_cpp::~aalang_cpp()
+{
+  delete istate;
+  delete name;
+}
+
+
 void aalang_cpp::set_starter(std::string* st)
 {
   s+=*st;
+  delete st;
 }
 
 void aalang_cpp::set_name(std::string* name)
 {
   s+="\n//action"+to_string(action_cnt)+": \""+*name+"\"\n";
   aname.back().push_back(*name);
+  delete name;
   amap.push_back(action_cnt);
   name_cnt++;
 }
@@ -81,6 +90,7 @@ void aalang_cpp::set_tagname(std::string* name)
 {
   s+="\n//tag"+to_string(tag_cnt)+": \""+*name+"\"\n";
   tname.back().push_back(*name);
+  delete name;
   tmap.push_back(tag_cnt);
   name_cnt++;
   tag=true;

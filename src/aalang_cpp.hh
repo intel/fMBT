@@ -24,10 +24,12 @@
 #include <string>
 #include <vector>
 #include <list>
+#include "helper.hh"
 
 class aalang_cpp: public aalang {
 public:
   aalang_cpp();
+  virtual ~aalang_cpp();
   virtual void set_name(std::string* _name);
   virtual void set_namestr(std::string* name);
   virtual void set_tagname(std::string* name);
@@ -50,7 +52,6 @@ private:
 protected:
   std::list<std::vector<std::string> > aname;
   std::list<std::vector<std::string> > tname;
-  //std::vector<std::string> aname;
   std::string s;
   int action_cnt;
   int tag_cnt;
