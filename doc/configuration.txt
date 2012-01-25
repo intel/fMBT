@@ -1,0 +1,286 @@
+============================
+fMBT test configuration file
+============================
+
+
+Model
+-----
+
+Defines test model type or format and how to load the model.
+
+Model must be defined in the configuration.
+
+Syntax:
+
+        model = "type:params"
+
+Available types & parameters:
+
+        lsts:<filename>
+
+                loads state machine in lsts from the given file.
+
+        lsts_remote:<command>
+
+                loads state machine in lsts format from the standard
+                output of <command>.
+
+        parallel:<filename>
+
+                loads state machine that is results in running state
+                machines defined in filename in parallel.
+
+        parallel_remote:<command>
+
+                like parallel but reads standard output of <command>
+                instead of a file.
+
+        lib:<modelname>[,filename]
+
+                uses model "modelname". If the model is not already
+                registered (statically linked or LD_PRELOADed, for
+                instance), shared library <filename> is loaded. If
+                <filename> is not given, fMBT tries to load
+                "modelname.so" and "libmodelname.so".
+
+Examples:
+
+        model = "lsts:models/mymodel.lsts"
+
+        model = "lsts_remote:fmbt-gt -f mymodel.gt"
+
+        model = "lsts_remote:wget -O- http://modelhost/mymodel.lsts"
+
+        model = "lsts_remote:./create_mymodel.sh --exclude negativecases"
+
+        model = "parallel_remote:fmbt-parallel a.lsts b.lsts"
+
+        model = "lib:myaaltest1,myaaltests.so"
+
+
+Adapter
+-------
+
+Defines the top level adapter.
+
+If not given, adapter defaults to "dummy".
+
+Syntax:
+
+        adapter = "type:params"
+
+Available types & parameters:
+
+        dummy
+
+                only logs actions that it should have executed and
+                reports successful executions. Can be used for offline
+                test generation.
+
+        mapper:<filename>
+
+                redirects and possibly renames actions in test model
+                to subadapters according to rules in filename.
+
+        lib:<adaptername>[,filename]
+
+                TODO
+
+        remote:<command>
+
+                launches a remote adapter process and forwards actions
+                to it for execution. fMBT comes with remote adapters
+                remote_python and remote_exec.sh (see adapters.txt).
+
+Examples:
+
+        adapter = "remote:remote_exec.sh"
+
+        adapter = "remote:ssh user@host ./remote_python"
+
+        adapter = "mapper:adapters.mrules"
+
+        adapter = "lib:myaaltest1,myaaltests.so"
+
+
+Heuristic
+---------
+
+Defines test generation heuristic that is used for choosing "the next
+action" to be tested.
+
+If not given, defaults to "random".
+
+Syntax:
+
+        heuristic = "type:params"
+
+Available types & parameters:
+
+        lookahead[:depth]
+
+                if depth is given, simulates execution of all possible
+                paths of length <depth> in the test model. Choose the
+                first action of a path that results in the best
+                coverage. If depth is not given, decision is made only
+                based on names of enabled actions in the current state
+                of the model. Execution on model is not simulated.
+
+        mrandom:TODO
+
+                TODO
+
+        random[:seed]
+
+                evenly distributed random choice among all enabled
+                input actions. If seed is given, that is used for
+                initialising the random number generator. Otherwise a
+                new seed is generated for each run (the generated seed
+                is logged).
+
+Examples:
+
+        heuristic = "lookahead:5"
+
+        heuristic = "random:42"
+
+
+Coverage
+--------
+
+Defines how coverage of test run is measured.
+
+Defaults to "perm"
+
+Syntax:
+
+        coverage = "type:params"
+
+Available types & parameters:
+
+        perm[:count]
+
+                measure coverage of all permutations of any <count>
+                actions in the test model. If count is not given, it
+                defaults to 1.
+
+        tag
+
+                TODO. See if the current implementation is what we
+                really want.
+
+        
+        covlang:<expression>
+
+                measure coverage of the given coverage language
+                expression. The expression is formed by combining "a
+                actionname", "e action-regexp" with "and", "or" and
+                "then" operators and parenthesis.
+
+Examples:
+
+        coverage = "perm:1"
+
+                 good for a smoke test, coverage reaches 1.0 when
+                 every action in the model has been executed at least
+                 once.
+
+        coverage = "perm:2"
+
+                if there are actions A, B and C in the model, coverage
+                of "perm:2" reaches 1.0 when AB, BA, AC, CA, BC and CB
+                have been executed. Suitable for regression
+                tests. Notice that not all permutations can be covered
+                because of test model. Therefore it's a good idea to
+                set a limit for number of steps, too. See End
+                conditions.
+
+        coverage = "covlang:a A then (a B or a C)"
+
+                coverage reaches 1.0 when action A has been executed
+                and at least either of actions B and C has been
+                executed after that.
+
+
+End conditions
+--------------
+
+Define in which conditions test must be stopped and the resulting
+verdict.
+
+If any verdict on coverage is not given, there is a default coverage
+end condition: pass = "coverage:1.0".
+
+Syntax:
+
+        <verdict> = "measure:value"
+
+Available verdict:
+
+        pass    test did not find any errors and tested what was wanted.
+
+        fail    test found an error.
+
+        inconc  test did not find an error but was not able to test
+                what was wanted.
+
+Available measures & values:
+
+        coverage:<decimal>
+
+                finish with the verdict if coverage reaches the given
+                level. coverage returns values from 0.0 to 1.0
+                (including 0.0 and 1.0).
+
+        duration:<timespec>
+
+                finish with the verdict if the time limit is reached.
+                <timespec> is anything accepted by
+
+                date --date='<timespec>'
+
+                for instance, "1.5 secs", "1 hour 30 minutes", "2
+                days", "1 week", or "2012-06-24 15:30".
+
+        tag:<name>
+
+                finish with the verdict when the current state of the
+                test model is tagged with <name>.
+
+        steps:<integer>
+
+                finish with the verdict when the number of test steps
+                reaches <integer>.
+
+Examples:
+
+        The following end conditions define that test is passed if 50
+        % coverage is achieved. But test is ended with "inconclusive"
+        verdict if test run has lasted longer than 7 seconds.
+
+        pass   = "coverage:0.5"
+
+        inconc = "duration:7 seconds"
+
+
+Exit hooks
+----------
+
+An exit hook defines how fmbt process behaves when test run is
+finished on given verdict.
+
+Syntax:
+
+        on_<verdict> = "type:params"
+
+Available types & parameters:
+
+        exit:status
+
+                exit with the given exit status.
+
+Examples:
+
+        on_fail   = "exit:1"
+
+        on_inconc = "exit:2"
