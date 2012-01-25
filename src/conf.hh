@@ -83,7 +83,7 @@ class Conf:public Writable {
   void load(std::string& name);
 
   static void split(std::string& val, std::string& name,
-		    std::string& param);
+		    std::string& param, const char* s=":");
   
   Log& log;
 
