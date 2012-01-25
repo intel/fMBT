@@ -49,10 +49,15 @@ void escape_free(const char* msg)
 #endif
 }
 
-void *load_lib(const std::string libname)
+void *load_lib(const std::string& libname,std::string& model_filename)
 {
   std::string name_candidate(libname);
   std::string errormessages;
+
+  if (model_filename!="") {
+    return dlopen(model_filename.c_str(),RTLD_NOW);
+  }
+
   void* handle=dlopen(name_candidate.c_str(),RTLD_NOW);
   if (!handle) {
     errormessages += dlerror() + std::string("\n");

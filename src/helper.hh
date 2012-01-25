@@ -27,7 +27,7 @@
 
 extern bool human_readable;
 
-void* load_lib(const std::string libname);
+void* load_lib(const std::string& libname,std::string& model_filename);
 int   find(const std::vector<std::string>&,const std::string);
 bool  isInputName(const std::string& name);
 bool  isOutputName(const std::string& name);

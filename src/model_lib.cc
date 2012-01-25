@@ -26,15 +26,16 @@
 namespace {
   Model* lib_creator(Log& l, std::string params) {
     Model* m;
-    std::string model_name,model_param;
+    std::string model_name,model_param,model_filename;
     std::string s(unescape_string(strdup(params.c_str())));
 
     Conf::split(s, model_name, model_param);
+    Conf::split(model_name,model_name,model_filename,",");
 
-    m = ModelFactory::create(l, model_name, model_param);    
+    m = ModelFactory::create(l, model_name, model_param);
 
     if (!m) {
-      void* handle=load_lib(model_name);
+      void* handle=load_lib(model_name,model_filename);
 
       if (handle) {
 	m = ModelFactory::create(l, model_name, model_param);

@@ -24,24 +24,25 @@
 #include <string.h>
 
 namespace {
-  Adapter* creator_func(Log& log, std::string params = "") {
+  Adapter* creator_func(Log& l, std::string params = "") {
     Adapter* a;
-    std::string adapter_name,adapter_param;
+    std::string adapter_name,adapter_param,adapter_filename;
     std::string s(unescape_string(strdup(params.c_str())));
 
     Conf::split(s, adapter_name, adapter_param);
+    Conf::split(adapter_name,adapter_name,adapter_filename,",");
 
-    a = AdapterFactory::create(log, adapter_name, adapter_param);
+    a = AdapterFactory::create(l, adapter_name, adapter_param);
 
     if (!a) {
-      void* handle=load_lib(adapter_name);
+      void* handle=load_lib(adapter_name,adapter_filename);
 
       if (handle) {
-	a = AdapterFactory::create(log, adapter_name, adapter_param);
+	a = AdapterFactory::create(l, adapter_name, adapter_param);
       } else {
 	std::string d("dummy");
 	std::string em("");
-	a = AdapterFactory::create(log, d, em);
+	a = AdapterFactory::create(l, d, em);
 	a->status   = false;
 	a->errormsg = std::string("lib:Can't load adapter ") + params;
       }

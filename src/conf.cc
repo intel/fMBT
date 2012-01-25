@@ -41,7 +41,7 @@ extern Conf* conf_obj;
   return;       \
   }
 
-void Conf::split(std::string& val,std::string& name,
+void Conf::split(std::string val,std::string& name,
 		 std::string& param, const char* s)
 {
   unsigned long cutpos = val.find_first_of(s);
