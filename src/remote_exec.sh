@@ -1,4 +1,4 @@
-#!/bin/ash
+#!/bin/sh
 
 # fMBT, free Model Based Testing tool
 # Copyright (c) 2011, Intel Corporation.
@@ -16,9 +16,25 @@
 # this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
+# Shell commands sent to this adapter are executed with this shell:
+SHELL=/bin/sh
+
 LOGFILE=/tmp/remote_exec.log
 
 echo $(date +"%F %T") $0 adapter started > $LOGFILE
+
+# This script should work on many environments, some of them providing
+# Python, some Perl, some only sed
+URLDECODER="python -c 'import sys; import urllib; sys.stdout.write(urllib.unquote(sys.stdin.read()))'"
+if [ "$(echo "1%2E5" | eval $URLDECODER)" != "1.5" ]; then
+    echo Warning: Python URL decoder does not work >> $LOGFILE
+    URLDECODER="perl -pe 's/%([0-9A-Fa-f][0-9A-Fa-f])/chr(hex(\$1))/eg'"
+    if [ "$(echo "1%2E5" | eval $URLDECODER)" != "1.5" ]; then
+        echo Warning: Even hackish Perl URL decoder does not work >> $LOGFILE
+        # TODO: this should be more complete:
+        URLDECODER="sed -e 's:%20: :g' -e 's:%24:$:g' -e 's:%2A:*:g' -e 's:%2C:,:g' -e 's:%2E:.:g' -e 's:%2F:/:g' -e 's:%3B:;:g' -e 's:%3C:<:g' -e 's:%3D:=:g' -e 's:%3E:>:g' -e s:%27:\':g -e 's:%5E:^:g'"
+    fi
+fi
 
 read count
 var=0
@@ -27,7 +43,7 @@ while [ "$var" -lt "$count" ]
 do
     read encodedAction
     # urldecode:
-    eval s${var}=\"$( echo $encodedAction | sed -e 's:%2F:/:g' -e 's:%20: :g' -e 's:%5E:^:g' -e 's:%3D:=:g' -e 's:%2A:*:g' -e 's:%24:$:g' -e 's:%2C:,:g' -e 's:%3B:;:g' -e s:%27:\':g )\"
+    eval s${var}=\"$( echo $encodedAction | eval $URLDECODER )\" 
     echo -n "s${var}: " >> $LOGFILE
     eval unencodedAction=\$s${var}
     echo $unencodedAction  >> $LOGFILE
@@ -41,7 +57,7 @@ do
      echo "Evaluating s${a}" >> $LOGFILE
      eval run=\$s${a} >> $LOGFILE 2>&1
      echo "Executing $a: '$run'" >> $LOGFILE
-     /bin/ash -c "$run" >> $LOGFILE 2>&1
+     $SHELL -c "$run" >> $LOGFILE 2>&1
      echo $a 1>&2
      sync # flush stdout => echoed $a will be written to stderr
      echo "Reporting $a" >> $LOGFILE

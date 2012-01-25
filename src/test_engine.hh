@@ -44,6 +44,8 @@ public:
   static time_t    end_time;
 protected:
   void log_tags();
+  void print_time(struct timeval& start_time,
+		  struct timeval& total_time);
 
   int       max_step_count;
   float     target_coverage;

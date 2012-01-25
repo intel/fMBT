@@ -67,6 +67,15 @@ extern "C" {
 #include <cstdlib>
 #include <cstring>
 
+void Test_engine::print_time(struct timeval& start_time,
+			     struct timeval& total_time)
+{
+  timersub(&Adapter::current_time,&start_time,&total_time);
+  log.print("<elapsed_time time=\"%i.%06i\"/>\n",total_time.tv_sec,
+	    total_time.tv_usec);
+
+}
+
 Test_engine::Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p,std::vector<End_condition*>& ecs)
   : heuristic(h),
     adapter(a),
@@ -165,10 +174,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 		  action, heuristic.getActionName(action).c_str());
 
         test_stopped(false, "unexpected output", log);
-
-	timersub(&Adapter::current_time,&start_time,&total_time);
-	log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
-	      total_time.tv_usec);
+	print_time(start_time,total_time);
 	log.pop();
 	return Verdict::FAIL; // Error: Unexpected output
       }
@@ -195,16 +201,12 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       int ret=adapter.observe(actions,true);
       if (ret!=SILENCE && ret!=TIMEOUT) {
         test_stopped(false, "response on deadlock", log);
-	timersub(&Adapter::current_time,&start_time,&total_time);
-	log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
-	      total_time.tv_usec);
+	print_time(start_time,total_time);
 	log.pop();
 	return Verdict::FAIL; // Error: Unexpected output
       }
       test_stopped(true, "model cannot continue", log);
-      timersub(&Adapter::current_time,&start_time,&total_time);
-      log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
-		total_time.tv_usec);
+      print_time(start_time,total_time);
       log.pop(); // test_engine
       return Verdict::PASS;
       break;
@@ -223,9 +225,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
         if (-1 != (condition_i = matching_end_condition(step_count)))
           goto out;
         test_stopped(false, "adapter timeout", log);
-	timersub(&Adapter::current_time,&start_time,&total_time);
-	log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
-	      total_time.tv_usec);
+	print_time(start_time,total_time);
         log.pop();
 	return Verdict::FAIL;
       } else if (value==SILENCE) {
@@ -242,9 +242,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
         log.debug("Test_engine::run: ERROR: action %i not possible in the model.\n", action);
 	log.debug("%s %s",action,heuristic.getActionName(action).c_str(),"broken response");
         test_stopped(false, "unexpected output", log);
-	timersub(&Adapter::current_time,&start_time,&total_time);
-	log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
-	      total_time.tv_usec);
+	print_time(start_time,total_time);
         log.pop();
 	return Verdict::FAIL; // Error: Unexpected output
       }
@@ -258,9 +256,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       adapter.execute(actions);
       if (actions.size()==0) {
         test_stopped(false, "adapter communication failure", log);
-	timersub(&Adapter::current_time,&start_time,&total_time);
-	log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
-		  total_time.tv_usec);
+	print_time(start_time,total_time);
         log.pop();
         return Verdict::FAIL;
       }
@@ -276,9 +272,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 		  action, heuristic.getActionName(action).c_str());
 	log.debug("%s %s",action,heuristic.getActionName(action).c_str(),"broken input acceptance");
         test_stopped(false, "unexpected input", log);
-	timersub(&Adapter::current_time,&start_time,&total_time);
-	log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
-		  total_time.tv_usec);
+	print_time(start_time,total_time);
         log.pop(); // test_engine
 	return Verdict::FAIL; // Error: Unexpected input
       }
@@ -293,9 +287,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 
   test_stopped(end_conditions[condition_i], log);
 
-  timersub(&Adapter::current_time,&start_time,&total_time);
-  log.print("<elapsed_time time=%i.%06i/>\n",total_time.tv_sec,
-	    total_time.tv_usec);
+  print_time(start_time,total_time);
   log.pop();
 
   return end_conditions[condition_i]->verdict;
