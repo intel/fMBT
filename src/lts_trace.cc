@@ -23,8 +23,9 @@
 #include <string.h>
 #include <stdlib.h>
 
-bool Lts_trace::load(std::string& name)
+bool Lts_trace::init()
 {
+  std::string& name = params;
   std::string model("trace.lts#");
   gchar* stdout=NULL;
   gchar* stderr=NULL;
@@ -45,7 +46,7 @@ bool Lts_trace::load(std::string& name)
     if (exit_status || m=="") {
       ret=false;
     } else {
-      ret=Lts::load(model);
+      ret=Lts::init();
     }
     g_free(stdout);
     g_free(stderr);

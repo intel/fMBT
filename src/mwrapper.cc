@@ -60,7 +60,7 @@ void Mwrapper::pop() {
   model->pop();
 }
 
-bool Mwrapper::load(std::string& name)
+bool Mwrapper::init()
 {
   return true;
 }

@@ -237,12 +237,12 @@ void Coverage_Mapper::add_file(unsigned index,
   if (cname=="") {
     models[index] = model;
   } else {
-    models[index] = ModelFactory::create(log,filetype(mname),"");
+    models[index] = ModelFactory::create(log,filetype(mname),mname);
     if (!models[index]) {
       status=false;
       return;
     }
-    models[index]->load(mname);
+    models[index]->init();
     models[index]->reset();
   }
   std::string cc;

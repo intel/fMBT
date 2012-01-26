@@ -23,8 +23,8 @@
 
 FACTORY_IMPLEMENTATION(Model)
 
-Model::Model(Log&l, std::string params):
-  log(l), parent(NULL)
+Model::Model(Log&l, std::string params_):
+log(l), parent(NULL), params(params_)
 {
 }
 

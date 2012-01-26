@@ -32,7 +32,7 @@ class Writable;
 
 class Model: public Writable, public Alphabet {
 public:
-  Model(Log&l, std::string params = "");
+  Model(Log&l, std::string params_ = "");
   virtual ~Model();
 
   //! Returns names of all actions available.
@@ -85,7 +85,7 @@ public:
    * Loads model based on the given name.
    * Returns false if loading failed.
    */
-  virtual bool load(std::string& name)  =0;
+  virtual bool init()  =0;
 
   void precalc_input_output();
 
@@ -105,9 +105,9 @@ protected:
   std::vector<int> outputs; /* all output action numbers */
   Model* parent;
   std::vector<std::string> model_names;
+  std::string params;
 };
 
 FACTORY_DECLARATION(Model)
 
 #endif
-

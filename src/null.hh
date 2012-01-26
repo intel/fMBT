@@ -33,7 +33,7 @@ public:
   virtual void push() {}
   virtual void pop() {}
 
-  virtual bool load(std::string& name) { return false; }
+  virtual bool init() { status=false; return false; }
 
   virtual void add_prop(std::string* name,std::vector<int>& pr)
   {}

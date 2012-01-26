@@ -98,7 +98,7 @@ void Model_remote::pop()
   std::fprintf(d_stdin, "o\n");
 }
 
-bool Model_remote::load(std::string& name)
+bool Model_remote::init()
 {
 
   int _stdin,_stdout,_stderr;

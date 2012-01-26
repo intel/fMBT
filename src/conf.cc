@@ -84,17 +84,20 @@ void Conf::load(std::string& name)
   if ((heuristic=HeuristicFactory::create(log, heuristic_name, heuristic_param)) == NULL)
     RETURN_ERROR("Creating heuristic \"" + heuristic_name + "\" failed.");
 
-  if ((model=ModelFactory::create(log,model_name,model_param)) == NULL)
-      if ((model=ModelFactory::create(log,filetype(model_name),"")) == NULL)
+  if ((model=ModelFactory::create(log, model_name, model_param)) == NULL) {
+      // Fallback to plain file loader for 'model = "filename.ext"'
+      // where "ext" defines the loader and filename.ext is loaded.
+      if ((model=ModelFactory::create(log, filetype(model_name), model_name)) == NULL)
           RETURN_ERROR("Creating model loader \"" + filetype(model_name)
                        + "\" failed.");
+  }
 
   Coverage* coverage = CoverageFactory::create(log,coverage_name,coverage_param);
   if (coverage == NULL)
     RETURN_ERROR("Creating coverage \"" + coverage_name + "\" failed.");
 
-  if (!model->load(model_name))
-    RETURN_ERROR("Loading model \"" + model_name + "\" failed: " + model->errormsg);
+  if (!model->status || !model->init())
+    RETURN_ERROR("Model error: " + model->stringify());
 
   model->reset();
 

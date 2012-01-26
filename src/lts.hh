@@ -32,16 +32,16 @@ public:
   Lts(Log&l, std::string params = ""):
     Model(l, params), state_cnt(0),action_cnt(0),transition_cnt(0),prop_cnt(0),init_state(0) {}
 
-  virtual int getActions(int** actions); // vireessä olevat tapahtumat
-  virtual int getIActions(int** actions); // Vireessä olevat syöte tapahtumat. NULL ja 0 == DEADLOCK.
-  // NULL ja 1 == OUTPUTONLY
+  virtual int getActions(int** actions);
+  virtual int getIActions(int** actions);
+
   virtual bool reset();
   virtual int getprops(int** props);
   virtual int  execute(int action);
   virtual void push();
   virtual void pop();
 
-  virtual bool load(std::string& name);
+  virtual bool init();
 
   virtual void add_prop(std::string* name,std::vector<int>& pr);
 

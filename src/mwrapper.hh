@@ -44,7 +44,7 @@ public:
   virtual void push();
   virtual void pop();
 
-  virtual bool load(std::string& name);
+  virtual bool init();
 
   virtual std::string stringify();
 

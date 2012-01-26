@@ -20,26 +20,35 @@
 #include "factory.hh"
 #include <glib.h>
 
-bool Lts_remote::load(std::string& name)
+bool Lts_remote::init()
 {
+  std::string &name = params;
   std::string model("remote.lts#");
   gchar* stdout=NULL;
   gchar* stderr=NULL;
   gint   exit_status=0;
   GError *ger=NULL;
   bool ret;
-  g_spawn_command_line_sync(name.c_str()+11,&stdout,&stderr,
+
+  // Backward compatibility: make lts_remote#command work,
+  // yet now lts_remote:command is preferred.
+  int offset = 0;
+  if (name.length() > 10 && name.c_str()[10] == '#') offset = 11;
+
+  g_spawn_command_line_sync(name.c_str() + offset,&stdout,&stderr,
 			    &exit_status,&ger);
   if (!stdout) {
-    errormsg = std::string("Lts_remote cannot execute \"") + (name.c_str()+11) + "\"";
+    errormsg = std::string("Lts_remote cannot execute \"") + (name.c_str()+offset) + "\"";
     status = false;
     ret = false;
   } else {
-    model+=stdout;
     if (exit_status) {
+      errormsg = std::string("lts_remote error returned from \"")
+        + (name.c_str()+offset) + "\"";
       ret=false;
     } else {
-      ret=Lts::load(model);
+      params = model + stdout;
+      ret=Lts::init();
     }
     g_free(stdout);
     g_free(stderr);

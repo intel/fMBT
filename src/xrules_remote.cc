@@ -20,26 +20,43 @@
 #include "factory.hh"
 #include <glib.h>
 
-bool Xrules_remote::load(std::string& name)
+bool Xrules_remote::init()
 {
+  std::string& name = params;
   std::string model("remote.xrules#");
   gchar* stdout=NULL;
   gchar* stderr=NULL;
   gint   exit_status=0;
   GError *ger=NULL;
   bool ret;
-  g_spawn_command_line_sync(name.c_str()+model.length(),
+
+  // Backward compatibility: "xrules_remote#command" should work, yet
+  // "xrules_remote:command" is preferred.
+  int offset = 0;
+  if (name.length() > 10 && name.c_str()[model.length()-1] == '#')
+      offset = model.length();
+
+  g_spawn_command_line_sync(name.c_str()+offset,
 			    &stdout,&stderr,
 			    &exit_status,&ger);
-  model+=stdout;
-  if (exit_status) {
-    ret=false;
+  if (!stdout) {
+    errormsg = std::string("xrules_remote cannot execute \"")
+      + (name.c_str()+offset) + "\"";
+    status = false;
+    ret = false;
   } else {
-    ret=Lts_xrules::load(model);
+    if (exit_status) {
+      errormsg = std::string("xrules_remote error returned from \"")
+        + (name.c_str()+offset) + "\"";
+      ret=false;
+    } else {
+      params = model + stdout;
+      ret=Lts_xrules::init();
+    }
+    g_free(stdout);
+    g_free(stderr);
+    g_free(ger);
   }
-  g_free(stdout);
-  g_free(stderr);
-  g_free(ger);
   return ret;
 }
 

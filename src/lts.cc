@@ -44,6 +44,8 @@ int Lts::getprops(int** props) {
 
 std::string Lts::stringify()
 {
+  if (!status) return errormsg;
+
   std::ostringstream t(std::ios::out | std::ios::binary);
 
   t << "Begin Lsts\nBegin Header\n";
@@ -108,8 +110,9 @@ void Lts::add_prop(std::string* name,std::vector<int>& pr)
   }
 }
 
-bool Lts::load(std::string& name)
+bool Lts::init()
 {
+  const std::string& name = params;
   D_Parser *p = new_D_Parser(&parser_tables_lts, 512);
   char *s;
   Lts* tmp=obj;
@@ -132,7 +135,8 @@ bool Lts::load(std::string& name)
   if (ret) {
     log.debug("Loading of %s ok\n",name.c_str());
   } else {
-    log.debug("Loading of %s failed\n",name.c_str());
+    log.debug("Error in parsing %s\n",name.c_str());
+    errormsg = "Parse error in LTS \"" + name + "\"";
     status=false;
   }
   free(s);

@@ -37,7 +37,7 @@ public:
   virtual int getActions(int** actions); // vireessä olevat tapahtumat
   virtual int getIActions(int** actions); // Vireessä olevat syöte tapahtumat. NULL ja 0 == DEADLOCK.
 
-  virtual bool load(std::string& name);
+  virtual bool init();
 
   void add_file(unsigned int index,std::string& filename);
   void add_result_action(std::string* name);

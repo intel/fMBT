@@ -65,8 +65,7 @@ void Lts_xrules::prop_create()
   }
 }
 
-
-bool Lts_xrules::load(std::string& name)
+bool Lts_xrules::init()
 {
   D_Parser *p = new_D_Parser(&parser_tables_xrules, 16);
   char *s;
@@ -85,12 +84,13 @@ bool Lts_xrules::load(std::string& name)
 
   cur_par=&root_par;
 
-  s=readfile(name.c_str());
+  s=readfile(params.c_str());
 
   bool ret=dparse(p,s,std::strlen(s));
 
   if (!ret) {
-    log.debug("Error in parsing %s\n",name.c_str());
+    log.debug("Error in parsing %s\n",params.c_str());
+    errormsg = "Parse error in xrules \"" + params + "\"";
     status=false;
   }
 
@@ -122,9 +122,9 @@ void Lts_xrules::add_file(unsigned int index,std::string& filename)
   
   model_names[index]=std::string(filename);
 
-  lts[index]=ModelFactory::create(log,filetype(filename),"");
+  lts[index]=ModelFactory::create(log,filetype(filename),filename);
   
-  if (!lts[index]->load(filename)) {
+  if (!lts[index]->init()) {
     status=false;    
   }
   lts[index]->setparent(this);

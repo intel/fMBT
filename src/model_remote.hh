@@ -37,7 +37,7 @@ public:
   virtual void push();
   virtual void pop();
 
-  virtual bool load(std::string& name);
+  virtual bool init();
 
 protected:
   int getact(int** actions,std::vector<int>& vec);
