@@ -269,7 +269,7 @@ char* readfile(const char* filename,bool preprocess)
     if (preprocess) {
       GString *gs=g_string_new("");
       
-      g_string_printf(gs,"/bin/sh -c \"cpp '%s'|grep -v ^#\"",filename);
+      g_string_printf(gs,"/bin/sh -c \"cat '%s'|grep -v ^#\"",filename);
 
       char* out=readfile(filename,gs->str);
       //g_free(gs);
