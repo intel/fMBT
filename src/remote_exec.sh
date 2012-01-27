@@ -20,8 +20,17 @@
 SHELL=/bin/sh
 
 LOGFILE=/tmp/remote_exec.log
+while getopts hl:L: opt
+do
+    case $opt in
+        l) LOGFILE=$OPTARG; echo -n "" > $LOGFILE ;;
+        L) LOGFILE=$OPTARG ;;
+        h | \?) echo "Usage: $0 [-l logfile (rewritten)] [-L logfile (append)]"; exit 1 ;;
+    esac
+done
+shift $(expr $OPTIND - 1)
 
-echo $(date +"%F %T") $0 adapter started > $LOGFILE
+echo $(date +"%F %T") $0 adapter started >> $LOGFILE
 
 # This script should work on many environments, some of them providing
 # Python, some Perl, some only sed
@@ -42,6 +51,9 @@ var=0
 while [ "$var" -lt "$count" ]
 do
     read encodedAction
+    # Shell command may be prefixed with "i:" to force it to be an
+    # input action in the test model. In this case remove the prefix.
+    encodedAction=${encodedAction#i:}
     # urldecode:
     eval s${var}=\"$( echo $encodedAction | eval $URLDECODER )\" 
     echo -n "s${var}: " >> $LOGFILE
@@ -57,8 +69,13 @@ do
      echo "Evaluating s${a}" >> $LOGFILE
      eval run=\$s${a} >> $LOGFILE 2>&1
      echo "Executing $a: '$run'" >> $LOGFILE
-     $SHELL -c "$run" >> $LOGFILE 2>&1
-     echo $a 1>&2
-     sync # flush stdout => echoed $a will be written to stderr
-     echo "Reporting $a" >> $LOGFILE
+     if $SHELL -c "$run" >> $LOGFILE 2>&1; then
+         echo "Reporting $a" >> $LOGFILE
+         echo $a 1>&2
+         sync # flush stdout => echoed $a will be written to stderr
+     else
+         echo "Returned exit status $?, reporting error" >> $LOGFILE
+         echo 0 1>&2
+         sync
+     fi
 done
