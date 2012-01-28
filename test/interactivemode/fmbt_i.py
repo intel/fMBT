@@ -62,8 +62,16 @@ def iStartGoodFmbt():
     global fmbt
     global fmbt_output
     fmbt = pexpect.spawn(FMBT_BINARY + ' -L' + FMBT_LOGFILE 
-                         + ' -i test.conf 2>' + FMBT_STDERRFILE)
-    fmbt_output = lambda: _output2list(fmbt.read_nonblocking(4096,1))
+                         + ' -i test.conf')
+    def output_reader():
+        s = ""
+        while 1:
+            try: s += fmbt.read_nonblocking(4096,0.1)
+            except pexpect.TIMEOUT: break
+            except pexpect.EOF: break
+        return _output2list(s)
+
+    fmbt_output = output_reader
     process_response_time()
     output=fmbt_output()
     _debug(output)
