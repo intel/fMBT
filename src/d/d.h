@@ -30,6 +30,7 @@
 #include <dirent.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdint.h>
 
 #ifdef LEAK_DETECT
 #define GC_DEBUG
@@ -77,12 +78,12 @@ D_BUILD_VERSION)
 
 typedef char int8;
 typedef unsigned char uint8;
-typedef int int32;
-typedef unsigned int uint32;
-typedef long long int64;
-typedef unsigned long long uint64;
-typedef short int16;
-typedef unsigned short uint16;
+typedef int32_t  int32;
+typedef uint32_t uint32;
+typedef int64_t  int64;
+typedef uint64_t uint64;
+typedef int16_t  int16;
+typedef uint16_t uint16;
 #ifdef __MINGW32__
 /* already part of most systems */
 typedef unsigned long ulong;

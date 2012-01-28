@@ -33,7 +33,7 @@ void error(int exitval, int dontcare, const char* format, ...)
 {
   va_list ap;
   fprintf(stderr, "fMBT error: ");
-  va_start (ap, format);
+  va_start(ap, format);
   vfprintf(stderr, format, ap);
   va_end(ap);
   exit(exitval);

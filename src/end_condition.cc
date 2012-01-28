@@ -82,7 +82,7 @@ End_condition::End_condition(Verdict::Verdict v, Counter c, std::string* p)
         status = true;
       } else {
         // Error on str?
-        errormsg = "Parsing duration '" + param + "' failed.";
+        errormsg = "Parsing duration '" + *param + "' failed.";
         status = false;
       }
 #endif

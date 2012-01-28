@@ -20,6 +20,7 @@
 #include "model.hh"
 #include "dparse.h"
 #include <cstring>
+#include <unistd.h>
 #include "helper.hh"
 #include "conf.hh"
 

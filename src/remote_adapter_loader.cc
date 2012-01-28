@@ -23,6 +23,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <cstdlib>
+#include <stdarg.h>
 
 #ifndef DROI
 #include <error.h>
@@ -31,7 +32,9 @@ void error(int exitval, int dontcare, const char* format, ...)
 {
   va_list ap;
   fprintf(stderr, "remote_adapter_loader error: ");
+  va_start(ap, format);
   vfprintf(stderr, format, ap);
+  va_end(ap);
   exit(exitval);
 }
 #endif

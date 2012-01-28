@@ -19,6 +19,7 @@
 
 #include "aal.hh"
 #include "helper.hh"
+#include <cstdlib>
 
 void aal::log(const char* format, ...)
 {
