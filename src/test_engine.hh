@@ -55,6 +55,7 @@ protected:
   Log       &log;
   Policy    &policy;
   std::vector<End_condition*> &end_conditions;
+  int       last_step_cov_growth;
 };
 
 #endif

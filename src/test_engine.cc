@@ -81,7 +81,8 @@ Test_engine::Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p,std::vector<En
     adapter(a),
     log(l),
     policy(p),
-    end_conditions(ecs)
+    end_conditions(ecs),
+    last_step_cov_growth(0)
 {
   p.set_model(h.get_model());
 }
@@ -110,6 +111,7 @@ namespace {
     case End_condition::COVERAGE: reason = "coverage reached"; break;
     case End_condition::STATETAG: reason = "tag reached"; break;
     case End_condition::DURATION: reason = "time limit reached"; break;
+    case End_condition::DEJAVU: reason = "step limit without coverage growth reached"; break;
     default: reason = "unknown";
     }
     log.print("<stop verdict=\"%s\" reason=\"%s\"/>\n", verdict.c_str(), reason.c_str());
@@ -130,6 +132,13 @@ namespace {
     log.print("<status steps=\"%d\" coverage=\"%f\"/>\n",
               step_count, coverage);
   }
+  void update_coverage(float curr_cov, int curr_step,
+                       float *last_cov, int *last_step_cov_growth) {
+    if (curr_cov > *last_cov) {
+      *last_cov = curr_cov;
+      *last_step_cov_growth = curr_step;
+    }
+  }
 }
 
 void Test_engine::log_tags()
@@ -144,6 +153,7 @@ void Test_engine::log_tags()
 
 Verdict::Verdict Test_engine::run(time_t _end_time)
 {
+  float last_coverage = 0.0;
   end_time=_end_time;
 
   int condition_i = -1; /* index of end condition that is stopping the run */
@@ -181,6 +191,8 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       log_tags();
       log_status(log, step_count, heuristic.getCoverage());
       gettimeofday(&Adapter::current_time,NULL);
+      update_coverage(heuristic.getCoverage(), step_count,
+                      &last_coverage, &last_step_cov_growth);
       if (-1 != (condition_i = matching_end_condition(step_count))) {
 	goto out;
       }
@@ -280,6 +292,8 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
     } // switch
     log_tags();
     log_status(log, step_count, heuristic.getCoverage());
+    update_coverage(heuristic.getCoverage(), step_count,
+                    &last_coverage, &last_step_cov_growth);
 
   } while (-1 == (condition_i = matching_end_condition(step_count)));
 
@@ -632,6 +646,9 @@ int Test_engine::matching_end_condition(int step_count)
           (Adapter::current_time.tv_sec == e->param_time
            && Adapter::current_time.tv_usec >= e->param_long)
           ) return cond_i;
+      break;
+    case End_condition::DEJAVU:
+      if (step_count - last_step_cov_growth >= e->param_long) return cond_i;
       break;
     }
   }

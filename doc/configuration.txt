@@ -232,6 +232,11 @@ Available measures & values:
                 level. coverage returns values from 0.0 to 1.0
                 (including 0.0 and 1.0).
 
+        dejavu:<integer>
+
+                finish with the verdict if <integer> test steps have
+                been executed in a row without coverage growth.
+
         duration:<timespec>
 
                 finish with the verdict if the time limit is reached.
