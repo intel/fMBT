@@ -111,7 +111,7 @@ namespace {
     case End_condition::COVERAGE: reason = "coverage reached"; break;
     case End_condition::STATETAG: reason = "tag reached"; break;
     case End_condition::DURATION: reason = "time limit reached"; break;
-    case End_condition::DEJAVU: reason = "step limit without coverage growth reached"; break;
+    case End_condition::NOPROGRESS: reason = "step limit without progress in coverage reached"; break;
     default: reason = "unknown";
     }
     log.print("<stop verdict=\"%s\" reason=\"%s\"/>\n", verdict.c_str(), reason.c_str());
@@ -647,7 +647,7 @@ int Test_engine::matching_end_condition(int step_count)
            && Adapter::current_time.tv_usec >= e->param_long)
           ) return cond_i;
       break;
-    case End_condition::DEJAVU:
+    case End_condition::NOPROGRESS:
       if (step_count - last_step_cov_growth >= e->param_long) return cond_i;
       break;
     }

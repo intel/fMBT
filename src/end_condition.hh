@@ -31,7 +31,7 @@ struct End_condition: public Writable {
     COVERAGE,
     STATETAG,
     DURATION,
-    DEJAVU
+    NOPROGRESS
   } Counter;
 
   End_condition(Verdict::Verdict v, Counter c, std::string* p);

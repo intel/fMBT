@@ -121,11 +121,11 @@ pass: 'pass' ;
 fail: 'fail' ;
 inconclusive: 'inconc' | 'inconclusive' | 'exit' ;
 
-end_type: 'steps' {    $$.val=End_condition::STEPS; }
-        | 'coverage' { $$.val=End_condition::COVERAGE; }
-        | 'statetag' { $$.val=End_condition::STATETAG; }
-        | 'duration' { $$.val=End_condition::DURATION; }
-        | 'dejavu'   { $$.val=End_condition::DEJAVU; } ;
+end_type: 'steps'       { $$.val=End_condition::STEPS; }
+        | 'coverage'    { $$.val=End_condition::COVERAGE; }
+        | 'statetag'    { $$.val=End_condition::STATETAG; }
+        | 'duration'    { $$.val=End_condition::DURATION; }
+        | 'no_progress' { $$.val=End_condition::NOPROGRESS; };
 
 string: "\"([^\"\\]|\\[^])*\"" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); } ;
 

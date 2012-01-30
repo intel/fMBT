@@ -88,7 +88,7 @@ End_condition::End_condition(Verdict::Verdict v, Counter c, std::string* p)
 #endif
     }
 
-    case DEJAVU:
+    case NOPROGRESS:
       param_long = atol(param->c_str());
       status = true;
       break;

@@ -55,7 +55,7 @@ cat > test.conf <<EOF
 model = "model.lsts"
 coverage = "perm:2"
 heuristic = "lookahead:2"
-pass = "dejavu:6"
+pass = "no_progress:6"
 fail = "steps:100"
 on_fail = "exit"
 EOF

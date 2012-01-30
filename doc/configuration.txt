@@ -232,11 +232,6 @@ Available measures & values:
                 level. coverage returns values from 0.0 to 1.0
                 (including 0.0 and 1.0).
 
-        dejavu:<integer>
-
-                finish with the verdict if <integer> test steps have
-                been executed in a row without coverage growth.
-
         duration:<timespec>
 
                 finish with the verdict if the time limit is reached.
@@ -246,6 +241,11 @@ Available measures & values:
 
                 for instance, "1.5 secs", "1 hour 30 minutes", "2
                 days", "1 week", or "2012-06-24 15:30".
+
+        no_progress:<integer>
+
+                finish with the verdict if <integer> test steps have
+                been executed in a row without progress in coverage.
 
         tag:<name>
 
