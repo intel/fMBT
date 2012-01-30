@@ -42,10 +42,16 @@ public:
   */
   virtual int matching_end_condition(int step_count);
   static time_t    end_time;
+
+  const std::string& verdict_msg();
+  const std::string& reason_msg();
+  Verdict::Verdict verdict();
 protected:
   void log_tags();
   void print_time(struct timeval& start_time,
 		  struct timeval& total_time);
+  Verdict::Verdict stop_test(End_condition* ec);
+  Verdict::Verdict stop_test(Verdict::Verdict v, const char* _reason);
 
   int       max_step_count;
   float     target_coverage;
@@ -56,6 +62,13 @@ protected:
   Policy    &policy;
   std::vector<End_condition*> &end_conditions;
   int       last_step_cov_growth;
+  Verdict::Verdict m_verdict;
+  std::string m_verdict_msg;
+  std::string m_reason_msg;
+
+  struct timeval start_time;
+  struct timeval total_time;
+
 };
 
 #endif

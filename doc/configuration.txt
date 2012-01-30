@@ -219,7 +219,7 @@ Available verdict:
 
         pass    test did not find any errors and tested what was wanted.
 
-        fail    test found an error.
+        fail    test found an error in the implementation under test.
 
         inconc  test did not find an error but was not able to test
                 what was wanted.
@@ -278,6 +278,14 @@ Syntax:
 
         on_<verdict> = "type:params"
 
+or
+
+        on_error = "type:params"
+
+        on_error hook is entered if an unexpected error prevents
+        continuing test run. For instance, if the connection to a
+        remote adapter is lost.
+
 Available types & parameters:
 
         exit:status
@@ -289,3 +297,5 @@ Examples:
         on_fail   = "exit:1"
 
         on_inconc = "exit:2"
+
+        on_error  = "exit:42"

@@ -55,6 +55,7 @@ void print_usage()
     "    -i     start in interactive mode\n"
     "    -L<f>  append log to file f (default: standard output)\n"
     "    -l<f>  overwrite log to file f (default: standard output)\n"
+    "    -q     quiet, do not print test verdict\n"
     );
 }
 
@@ -64,6 +65,7 @@ int main(int argc,char * const argv[])
   bool interactive=false;
   bool debug_enabled=false;
   bool E=false;
+  bool quiet=false;
   int c;
 
   static struct option long_opts[] = {
@@ -71,7 +73,7 @@ int main(int argc,char * const argv[])
     {0, 0, 0, 0}
   };
 
-  while ((c = getopt_long (argc, argv, "DEL:heil:", long_opts, NULL)) != -1)
+  while ((c = getopt_long (argc, argv, "DEL:heil:q", long_opts, NULL)) != -1)
     switch (c)
     {
     case 'D': 
@@ -100,6 +102,9 @@ int main(int argc,char * const argv[])
     case 'i':
       interactive=true;
       break;
+    case 'q':
+      quiet=true;
+      break;
     case 'h':
       print_usage();
       return 0;
@@ -126,6 +131,8 @@ int main(int argc,char * const argv[])
       c.execute(interactive);
       if (!c.status) {
         std::printf("%s\n",c.stringify().c_str());
+      } else if (!quiet) {
+        std::printf("%s\n",c.errormsg.c_str());
       }
       return c.exit_status;
     }

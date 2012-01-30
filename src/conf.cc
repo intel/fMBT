@@ -35,6 +35,7 @@ extern D_ParserTables parser_tables_conf;
 extern Conf* conf_obj;
 
 #define RETURN_ERROR(s) { \
+  set_exitvalue(on_error); \
   log.pop();    \
   status=false; \
   errormsg=s;   \
@@ -210,6 +211,7 @@ void Conf::execute(bool interactive) {
     engine.interactive();
   } else {
     Verdict::Verdict v = engine.run(end_time);
+    
     switch (v) {
     case Verdict::FAIL: {
       set_exitvalue(on_fail);
@@ -219,8 +221,6 @@ void Conf::execute(bool interactive) {
       // send log files, etc.)
       if (on_fail == "interactive")
         engine.interactive();
-      else
-        RETURN_ERROR("Test failed.");      
       break;
     }
     case Verdict::PASS: { 
@@ -232,12 +232,18 @@ void Conf::execute(bool interactive) {
       set_exitvalue(on_inconc);
       break;
     }
+    case Verdict::ERROR: {
+      RETURN_ERROR(engine.verdict_msg() + ": " + engine.reason_msg());
+      break;
+    }
     default: {
       // unknown verdict?
     }
     }      
   }
   log.pop();
+  status = true;
+  errormsg = engine.verdict_msg() + ": " + engine.reason_msg();
 }
 
 void Conf::set_exitvalue(std::string& s)

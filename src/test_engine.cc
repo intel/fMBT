@@ -82,7 +82,10 @@ Test_engine::Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p,std::vector<En
     log(l),
     policy(p),
     end_conditions(ecs),
-    last_step_cov_growth(0)
+    last_step_cov_growth(0),
+    m_verdict(Verdict::ERROR),
+    m_verdict_msg("undefined"),
+    m_reason_msg("undefined")
 {
   p.set_model(h.get_model());
 }
@@ -93,29 +96,6 @@ Test_engine::~Test_engine()
 
 namespace {
   /* logging helpers */
-  void test_stopped(bool pass, const char* reason, Log& log) {
-    if (pass) log.print("<stop verdict=\"pass\" reason=\"%s\"/>\n", reason);
-    else log.print("<stop verdict=\"fail\" reason=\"%s\"/>\n", reason);
-  }
-  void test_stopped(End_condition* ec, Log& log) {
-    std::string verdict;
-    std::string reason;
-    switch (ec->verdict) {
-    case Verdict::PASS: verdict = "pass"; break;
-    case Verdict::FAIL: verdict = "fail"; break;
-    case Verdict::INCONCLUSIVE: verdict = "inconclusive"; break;
-    default: verdict = "unknown";
-    }
-    switch (ec->counter) {
-    case End_condition::STEPS: reason = "step limit reached"; break;
-    case End_condition::COVERAGE: reason = "coverage reached"; break;
-    case End_condition::STATETAG: reason = "tag reached"; break;
-    case End_condition::DURATION: reason = "time limit reached"; break;
-    case End_condition::NOPROGRESS: reason = "step limit without progress in coverage reached"; break;
-    default: reason = "unknown";
-    }
-    log.print("<stop verdict=\"%s\" reason=\"%s\"/>\n", verdict.c_str(), reason.c_str());
-  }
   void log_tag_type_name(Log& log, const char *tag, const char *type, const char *name) {
     log.print("<%s type=\"%s\" name=\"%s\"/>\n", tag, type, name);
   }
@@ -138,6 +118,66 @@ namespace {
       *last_cov = curr_cov;
       *last_step_cov_growth = curr_step;
     }
+  }
+}
+
+const std::string& Test_engine::verdict_msg()
+{
+  return m_verdict_msg;
+}
+
+const std::string& Test_engine::reason_msg()
+{
+  return m_reason_msg;
+}
+
+Verdict::Verdict Test_engine::verdict()
+{
+  return m_verdict;
+}
+
+Verdict::Verdict Test_engine::stop_test(Verdict::Verdict v, const char* _reason)
+{
+  m_verdict = v;
+  m_reason_msg = _reason;
+  switch (m_verdict) {
+  case Verdict::PASS:
+    m_verdict_msg = "pass";
+    break;
+  case Verdict::FAIL:
+    m_verdict_msg = "fail";
+    break;
+  case Verdict::INCONCLUSIVE:
+    m_verdict_msg = "inconclusive";
+    break;
+  case Verdict::ERROR:
+    m_verdict_msg = "error";
+    break;
+  default:
+    m_verdict_msg = "unknown";
+  }
+  log.print("<stop verdict=\"%s\" reason=\"%s\"/>\n",
+            m_verdict_msg.c_str(), m_reason_msg.c_str());
+  print_time(start_time, total_time);
+  log.pop();
+  return m_verdict;
+}
+
+Verdict::Verdict Test_engine::stop_test(End_condition* ec)
+{
+  switch (ec->counter) {
+  case End_condition::STEPS:
+    return stop_test(ec->verdict, "step limit reached");
+  case End_condition::COVERAGE:
+    return stop_test(ec->verdict, "coverage reached");
+  case End_condition::STATETAG:
+    return stop_test(ec->verdict, "tag reached");
+  case End_condition::DURATION:
+    return stop_test(ec->verdict, "time limit reached");
+  case End_condition::NOPROGRESS:
+    return stop_test(ec->verdict, "no progress in coverage limit reached");
+  default:
+    return stop_test(ec->verdict, "unknown");
   }
 }
 
@@ -164,8 +204,6 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
   int step_count=0;
 
   log.push("test_engine");
-  struct timeval start_time;
-  struct timeval total_time;
   gettimeofday(&start_time,NULL);
   do {
     action=0;
@@ -183,10 +221,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
         log.debug("Test_engine::run: Error: unexpected output from the SUT: %i '%s'\n",
 		  action, heuristic.getActionName(action).c_str());
 
-        test_stopped(false, "unexpected output", log);
-	print_time(start_time,total_time);
-	log.pop();
-	return Verdict::FAIL; // Error: Unexpected output
+	return stop_test(Verdict::FAIL, "unexpected output");
       }
       log_tags();
       log_status(log, step_count, heuristic.getCoverage());
@@ -212,15 +247,9 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       log.print("<state type=\"deadlock\"/>\n");
       int ret=adapter.observe(actions,true);
       if (ret!=SILENCE && ret!=TIMEOUT) {
-        test_stopped(false, "response on deadlock", log);
-	print_time(start_time,total_time);
-	log.pop();
-	return Verdict::FAIL; // Error: Unexpected output
+	return stop_test(Verdict::FAIL, "response on deadlock");
       }
-      test_stopped(true, "model cannot continue", log);
-      print_time(start_time,total_time);
-      log.pop(); // test_engine
-      return Verdict::PASS;
+      return stop_test(Verdict::PASS, "end of model");
       break;
     }
     case OUTPUT_ONLY: {
@@ -236,10 +265,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 		  end_time);
         if (-1 != (condition_i = matching_end_condition(step_count)))
           goto out;
-        test_stopped(false, "adapter timeout", log);
-	print_time(start_time,total_time);
-        log.pop();
-	return Verdict::FAIL;
+        return stop_test(Verdict::FAIL, "adapter timeout");
       } else if (value==SILENCE) {
 	actions.resize(1);
 	actions[0] = SILENCE;
@@ -253,10 +279,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       if (!heuristic.execute(action)) {
         log.debug("Test_engine::run: ERROR: action %i not possible in the model.\n", action);
 	log.debug("%s %s",action,heuristic.getActionName(action).c_str(),"broken response");
-        test_stopped(false, "unexpected output", log);
-	print_time(start_time,total_time);
-        log.pop();
-	return Verdict::FAIL; // Error: Unexpected output
+        return stop_test(Verdict::FAIL, "unexpected output");
       }
       break;
     }
@@ -267,10 +290,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       log_adapter_suggest(log, adapter, actions[0]);
       adapter.execute(actions);
       if (actions.size()==0) {
-        test_stopped(false, "adapter communication failure", log);
-	print_time(start_time,total_time);
-        log.pop();
-        return Verdict::FAIL;
+        return stop_test(Verdict::ERROR, "adapter communication failure");
       }
       int adapter_response = policy.choose(actions);
       log_adapter_execute(log, adapter, adapter_response);
@@ -280,13 +300,10 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       log.pop(); // adapter_executed
 
       if (!heuristic.execute(adapter_response)) {
-	log.debug("Test_engine::run: ERROR: SUT executed %i '%s', not allowed in the model.\n",
-		  action, heuristic.getActionName(action).c_str());
-	log.debug("%s %s",action,heuristic.getActionName(action).c_str(),"broken input acceptance");
-        test_stopped(false, "unexpected input", log);
-	print_time(start_time,total_time);
-        log.pop(); // test_engine
-	return Verdict::FAIL; // Error: Unexpected input
+        log.debug("Test_engine::run: ERROR: SUT executed %i '%s', not allowed in the model.\n",
+                  action, heuristic.getActionName(action).c_str());
+        log.debug("%s %s",action,heuristic.getActionName(action).c_str(),"broken input acceptance");
+        return stop_test(Verdict::FAIL, "unexpected input");
       }
     }
     } // switch
@@ -298,13 +315,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
   } while (-1 == (condition_i = matching_end_condition(step_count)));
 
  out:
-
-  test_stopped(end_conditions[condition_i], log);
-
-  print_time(start_time,total_time);
-  log.pop();
-
-  return end_conditions[condition_i]->verdict;
+  return stop_test(end_conditions[condition_i]);
 }
 
 namespace interactive {

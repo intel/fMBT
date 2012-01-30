@@ -24,7 +24,8 @@ namespace Verdict {
 
     typedef enum { FAIL = 0,
                    PASS,
-                   INCONCLUSIVE } Verdict;
+                   INCONCLUSIVE,
+                   ERROR } Verdict;
 
 }
 
