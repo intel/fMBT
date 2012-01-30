@@ -83,7 +83,7 @@ class Conf:public Writable {
     history.push_back(s);
   }
 
-  void execute(bool interactive=false);
+  Verdict::Verdict execute(bool interactive=false);
 
   void load(std::string& name);
 

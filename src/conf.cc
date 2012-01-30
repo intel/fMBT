@@ -34,12 +34,20 @@ extern D_ParserTables parser_tables_conf;
 
 extern Conf* conf_obj;
 
-#define RETURN_ERROR(s) { \
+#define RETURN_ERROR_VOID(s) { \
   set_exitvalue(on_error); \
   log.pop();    \
   status=false; \
   errormsg=s;   \
-  return;       \
+  return; \
+  }
+
+#define RETURN_ERROR_VERDICT(s) { \
+  set_exitvalue(on_error); \
+  log.pop();    \
+  status=false; \
+  errormsg=s;   \
+  return Verdict::ERROR; \
   }
 
 void Conf::split(std::string val,std::string& name,
@@ -69,12 +77,12 @@ void Conf::load(std::string& name)
 
   s=readfile(name.c_str());
   if (s==NULL)
-    RETURN_ERROR("Loading \"" + name + "\" failed.");
+    RETURN_ERROR_VOID("Loading \"" + name + "\" failed.");
 
   bool ret=dparse(p,s,std::strlen(s));
 
   if (!ret)
-    RETURN_ERROR("Parsing \"" + name + "\" failed.");
+    RETURN_ERROR_VOID("Parsing \"" + name + "\" failed.");
 
   free(s);
 
@@ -83,22 +91,22 @@ void Conf::load(std::string& name)
   conf_obj=tmp;
 
   if ((heuristic=HeuristicFactory::create(log, heuristic_name, heuristic_param)) == NULL)
-    RETURN_ERROR("Creating heuristic \"" + heuristic_name + "\" failed.");
+    RETURN_ERROR_VOID("Creating heuristic \"" + heuristic_name + "\" failed.");
 
   if ((model=ModelFactory::create(log, model_name, model_param)) == NULL) {
       // Fallback to plain file loader for 'model = "filename.ext"'
       // where "ext" defines the loader and filename.ext is loaded.
       if ((model=ModelFactory::create(log, filetype(model_name), model_name)) == NULL)
-          RETURN_ERROR("Creating model loader \"" + filetype(model_name)
-                       + "\" failed.");
+          RETURN_ERROR_VOID("Creating model loader \"" + filetype(model_name)
+                            + "\" failed.");
   }
 
   Coverage* coverage = CoverageFactory::create(log,coverage_name,coverage_param);
   if (coverage == NULL)
-    RETURN_ERROR("Creating coverage \"" + coverage_name + "\" failed.");
+    RETURN_ERROR_VOID("Creating coverage \"" + coverage_name + "\" failed.");
 
   if (!model->status || !model->init())
-    RETURN_ERROR("Model error: " + model->stringify());
+    RETURN_ERROR_VOID("Model error: " + model->stringify());
 
   model->reset();
 
@@ -126,23 +134,23 @@ void Conf::load(std::string& name)
     if (h) {
       h->set_coverage(coverage,model);
       if (!h->status) {
-	RETURN_ERROR(h->errormsg);
+	RETURN_ERROR_VOID(h->errormsg);
       }
     } else {
-      RETURN_ERROR("Creating history \""+ *history[i] + "\" failed");
+      RETURN_ERROR_VOID("Creating history \""+ *history[i] + "\" failed");
     }
   }
 
   if (adapter == NULL)
-    RETURN_ERROR("Creating adapter \"" + adapter_name + "\" failed.");
+    RETURN_ERROR_VOID("Creating adapter \"" + adapter_name + "\" failed.");
 
   adapter->set_actions(&model->getActionNames());
 
   if (!coverage->status)
-    RETURN_ERROR("Coverage error: " + coverage->stringify());
+    RETURN_ERROR_VOID("Coverage error: " + coverage->stringify());
 
   if (!adapter->status)
-    RETURN_ERROR("Adapter error: " + adapter->stringify());
+    RETURN_ERROR_VOID("Adapter error: " + adapter->stringify());
 
   log.pop();
 }
@@ -168,17 +176,18 @@ std::string Conf::stringify() {
   return t.str();
 }
 
-void Conf::execute(bool interactive) {
+Verdict::Verdict Conf::execute(bool interactive) {
 
   Policy policy;
   log.push("conf_execute");
 
   if (!status) {
-    return;
+    errormsg = "cannot start executing test due to earlier errors: " + errormsg;
+    return Verdict::ERROR;
   }
 
   if (!adapter->init())
-    RETURN_ERROR("Initialising adapter failed: " + adapter->stringify());
+    RETURN_ERROR_VERDICT("Initialising adapter failed: " + adapter->stringify());
 
   // Validate and finish existing end_conditions
   {
@@ -186,7 +195,7 @@ void Conf::execute(bool interactive) {
     for (unsigned int i = 0; i < end_conditions.size(); i++) {
       End_condition* e = end_conditions[i];
       if (e->status == false)
-        RETURN_ERROR("Error in end condition: " + e->stringify());
+        RETURN_ERROR_VERDICT("Error in end condition: " + e->stringify());
       if (e->counter == End_condition::STATETAG) {
         // avoid string comparisons, fetch the index of the tag
         e->param_long = find(model->getSPNames(), *(e->param));
@@ -233,7 +242,7 @@ void Conf::execute(bool interactive) {
       break;
     }
     case Verdict::ERROR: {
-      RETURN_ERROR(engine.verdict_msg() + ": " + engine.reason_msg());
+      RETURN_ERROR_VERDICT(engine.verdict_msg() + ": " + engine.reason_msg());
       break;
     }
     default: {
@@ -244,6 +253,7 @@ void Conf::execute(bool interactive) {
   log.pop();
   status = true;
   errormsg = engine.verdict_msg() + ": " + engine.reason_msg();
+  return engine.verdict();
 }
 
 void Conf::set_exitvalue(std::string& s)

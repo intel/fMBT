@@ -26,6 +26,8 @@
 #include <unistd.h>
 #include <cstdlib>
 
+#include "verdict.hh"
+
 #ifndef DROI
 #include <error.h>
 #else
@@ -128,10 +130,10 @@ int main(int argc,char * const argv[])
     if (E) {
       std::printf("%s\n",c.stringify().c_str());
     } else {
-      c.execute(interactive);
+      Verdict::Verdict v = c.execute(interactive);
       if (!c.status) {
         std::printf("%s\n",c.stringify().c_str());
-      } else if (!quiet) {
+      } else if (!quiet && v != Verdict::UNDEFINED) {
         std::printf("%s\n",c.errormsg.c_str());
       }
       return c.exit_status;

@@ -83,7 +83,7 @@ Test_engine::Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p,std::vector<En
     policy(p),
     end_conditions(ecs),
     last_step_cov_growth(0),
-    m_verdict(Verdict::ERROR),
+    m_verdict(Verdict::UNDEFINED),
     m_verdict_msg("undefined"),
     m_reason_msg("undefined")
 {
