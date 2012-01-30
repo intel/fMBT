@@ -97,6 +97,8 @@ public:
 
   void setparent(Model* m);
 
+  static Model* create(Log& log, std::string& model_name,std::string& model_params);
+
 protected:
   Log &log;
   std::vector<std::string> prop_names; /* proposition names.. */

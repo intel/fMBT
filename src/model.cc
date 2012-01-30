@@ -109,3 +109,13 @@ void Model::setparent(Model* m)
 {
   parent = m;
 }
+
+Model* Model::create(Log& log, std::string& model_name,std::string& model_param) {
+    Model* model;
+    if ((model=ModelFactory::create(log, model_name, model_param)) == NULL) {
+      // Fallback to plain file loader for 'model = "filename.ext"'
+      // where "ext" defines the loader and filename.ext is loaded.
+      model=ModelFactory::create(log, filetype(model_name), model_name);
+    }
+    return model;
+  }
