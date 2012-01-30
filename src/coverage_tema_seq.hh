@@ -54,7 +54,7 @@ public:
   virtual void pop();
 
   virtual void history(int action, std::vector<int>& props, 
-		       bool verdict);
+		       Verdict::Verdict verdict);
   virtual bool execute(int action);
   virtual float getCoverage();
 

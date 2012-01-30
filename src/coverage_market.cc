@@ -29,7 +29,7 @@ Coverage_Market::Coverage_Market(Log& l, std::string& params) :
 
 void Coverage_Market::history(int action,
 			      std::vector<int>& props, 
-			      bool verdict)
+			      Verdict::Verdict verdict)
 {
   if (action) {
     execute(action);

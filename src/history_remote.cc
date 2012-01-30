@@ -73,15 +73,30 @@ bool History_remote::send_action(std::string& act,
 
   if (c&&a) {
     if (act=="pass") {
-      c->history(0,p,true);
+      c->history(0,p,Verdict::PASS);
       return true;
     } 
 
     if (act=="fail") {
-      c->history(0,p,false);
+      c->history(0,p,Verdict::FAIL);
       return true;
     }
 
+    if (act=="inconclusive") {
+      c->history(0,p,Verdict::INCONCLUSIVE);
+      return true;
+    }
+
+    if (act=="error") {
+      c->history(0,p,Verdict::ERROR);
+      return true;
+    }
+
+    if (act=="undefined") {
+      c->history(0,p,Verdict::UNDEFINED);
+      return true;
+    }
+    
     int action=find(a->getActionNames(),act);
 
     if (action>0) {
@@ -90,7 +105,7 @@ bool History_remote::send_action(std::string& act,
 	p.push_back(find(a->getSPNames(),props[i]));
       }
 
-      c->history(action,p,false);
+      c->history(action,p,Verdict::UNDEFINED);
       return true;
     } else {
       // Tau?

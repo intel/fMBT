@@ -76,7 +76,7 @@ void Coverage_Tree::set_model(Model* _model)
 }
 
 void Coverage_Tree::history(int action,std::vector<int>& props,
-			    bool verdict)
+			    Verdict::Verdict verdict)
 {
   if (action) {
     execute(action);

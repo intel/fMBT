@@ -67,8 +67,18 @@ std::string Coverage_Mapper::stringify()
 
 void Coverage_Mapper::history(int action,
                              std::vector<int>& props, 
-                             bool verdict)
+                             Verdict::Verdict verdict)
 {
+  std::pair<std::multimap<int,coverage_action>::iterator,
+    std::multimap<int,coverage_action>::iterator> p = 
+    m.equal_range(action);
+  
+  for (std::multimap<int,coverage_action>::iterator i = p.first;
+       i != p.second;
+       ++i) {
+    coverages[i->second.first]->history(i->second.second,
+					props,verdict);
+  }
 }
 
 bool Coverage_Mapper::execute(int action)

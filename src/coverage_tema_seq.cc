@@ -64,7 +64,7 @@ Coverage_Tema_seq::pop() {
 
 void Coverage_Tema_seq::history(int action,
 				std::vector<int>& props,
-				bool verdict)
+				Verdict::Verdict verdict)
 {
   if (action) {
     execute(action);
