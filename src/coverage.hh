@@ -72,15 +72,5 @@ protected:
 
 FACTORY_DECLARATION(Coverage)
 
-/*
-namespace {
-  class Coverage_Creator {
-  public:
-    Coverage_Creator(std::string name, Coverage::creator c) {
-      Coverage::add_factory(name,c);
-    }
-  };
-};
-*/
 #endif
 
