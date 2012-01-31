@@ -140,20 +140,64 @@ Adapter stack may contain the following building blocks.
 remote_python - a generic adapter
 ---------------------------------
 
-Testing a new SUT does not necessarily mean that you need a new
-adapter. Testing might be possible with a generic adapter with proper
-naming of actions, and possibly with a test-specific library.
-
 remote_python is a generic remote adapter implemented in Python. The
-adapter executes actions as expressions in Python interpreter. For
-example, action "iCatch('import mylib') == None" imports mylib and
-requires that importing did not raise any exceptions. Later actions
-can use whatever objects mylib makes available. For an example,
-test/interactivemode/fmbt_i.py is a library imported to the
-interactive mode test. Execution of almost any action in the model
-(see test/interactivemode/create-model.sh) causes calling the function
-of the same name in fmbt_i library, because of the translation done in
-fmbt-i.mrules.
+adapter executes actions as expressions in Python interpreter.
+
+remote_python can be run on local and remote hosts. To install
+remote_python on any host it is enough to copy remote_python script
+there.
+
+remote_python is able to import Python libraries. This allows, for
+instance, implementing test steps as Python functions into a library,
+importing the library with action "iCatch('from myteststeps import *')
+== None", and finally calling test step functions in following
+actions. For instance "iDeviceConfiguration() == 'product'" calls
+iDeviceConfiguration() function in myteststeps and expects the return
+value to be string 'product'.
+
+For convenience, the remote_python adapter adds some functions to the
+namespace where actions are evaluated. Input-actions are
+
+iCatch(statement)
+
+    executes the statement in the Python interpreter. The scope is the
+    same as outside "iCatch". If the execution raises an exception,
+    the exception is returned inside an Error object for easy
+    comparison. Otherwise, None is returned.
+
+    Example:
+
+    "iCatch('foo+=2') == Error('NameError:.*')"
+
+    is successfully executed if variable "foo" is not defined.
+
+iShell(command)
+
+    forks and lets shell execute the command in the child
+    process. Stdout and stderr of the child will be logged. Returns
+    Python subprocess instance.
+
+    Example:
+
+    "iShell('killall myd; sleep 1; killall -9 myd; myd >/tmp/myd.output 2>&1; sleep 1')"
+
+    terminates (and kills) existing instance of my daemon "myd", then
+    launches a new instance and directs its output to /tmp/myd.output.
+
+iDBus(bus, service, objpath, interface[, timeout = s])
+
+    returns D-Bus interface of the specified object. If the timeout
+    parameter is given, then the method call made through this
+    interface will timeout after given number of seconds.
+
+    Example:
+
+    "iDBus('system', 'net.connman', '/', 'net.connman.Manager').SetProperty('OfflineMode', False) == None"
+
+iDBusListen(bus, service, signalname)
+
+    registers a listener for the given signal, returns None.
+
 
 The rules for executing actions and reporting the results are the
 following:
@@ -206,37 +250,6 @@ following:
   value can be used in later action names, such as in
 
   iCatch('assert 1 <= helloSignalArg < 128') == None
-
-For convenience, the remote_python adapter adds some functions to the
-namespace where actions are evaluated. Input-action like functions are
-
-iDBus(bus, service, objpath, interface[, timeout = s])
-
-    returns D-Bus interface of the specified object. If the timeout
-    parameter is given, then the method call made through this
-    interface will timeout after given number of seconds.
-
-iDBusListen(bus, service, signalname)
-
-    registers a listener for the given signal, returns None.
-
-iShell(command)
-
-    forks and lets shell execute the command in the child
-    process. Stdout and stderr of the child will be logged. Returns
-    subprocess instance.
-
-iCatch(statement)
-
-    executes the Python statement. If an exception is raised, it is
-    returned inside an Error object for easy comparison. Otherwise,
-    None is returned.
-    Example: iCatch('foo+=2') == Error('NameError:.*') is True
-
-Remote_python adapter can be easily extended to provide similar
-convenience functions in other domains, too. The functions or classes
-can be written into a normal Python library, say myadapter.py. The
-module becomes available after executing iCatch('import myadapter').
 
 
 Remote adapters
