@@ -114,8 +114,14 @@ namespace {
   }
   void update_coverage(float curr_cov, int curr_step,
                        float *last_cov, int *last_step_cov_growth) {
-    if (curr_cov > *last_cov) {
-      *last_cov = curr_cov;
+    /* Compare volatiles instead of "curr_cov > *last_cov", because we
+     * want to compare actual values in memory instead of possibly
+     * more precise results that might have stayed in FPU register.
+     */
+    volatile float current = curr_cov;
+    volatile float previous = *last_cov;
+    if (current > previous) {
+      *last_cov = current;
       *last_step_cov_growth = curr_step;
     }
   }
