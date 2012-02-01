@@ -1,0 +1,66 @@
+This example demonstrates two things:
+
+1. configuration testing using fMBT
+
+2. "offline" test generation: fMBT only generates the test, we take care of
+   running the test steps.
+
+
+Configuration testing
+---------------------
+
+This example tests fmbt build options from two different source
+distributions.
+
+The test procedure is the following:
+
+1) choose sources from which to build fmbt:
+   - git tree or
+   - source distribution .tar.gz
+
+2) target to be built:
+   - fmbt
+   - debian package
+   - rpm package
+   - fmbt-droid for host
+   - fmbt-droid for Android
+
+After the target has been built and installed, it needs to be tested
+by executing suitable tests. The tests depend on the target:
+- fmbt, debian and rpm targets use the same test set
+- fmbt-droid on host another, and
+- fmbt-droid on Android the third test set.
+
+Once testing is finished, it's time for a clean-up and testing another
+configuration.
+
+This procedure is described in the test model (see test-configurations.sh).
+
+
+Which combinations to test
+--------------------------
+
+We want to test all combinations of configurations, so we define
+"perm:2" coverage in the test configuration file.
+
+In some cases we want to run shorter test:
+
+- Test building from git and from .tar.gz at least once.
+
+- Test building and testing every target at least once.
+
+But do not try to cover all combinations. Nothing else needs to be
+changed but "perm:2" into "perm:1" in the test configuration file.
+
+
+Offline testing
+---------------
+
+Offline testing means that fMBT only generates a test. It does not
+really execute a test step (like build fmbt), it does only a
+"dry-run". This happens when the top level adapter is not defined in
+the test configuration file.
+
+We execute the test steps by picking up the actions executed in the
+dry-run and executing them in Bash shell. See "Generate and run the
+test" in the bottom of the test-configurations.sh.
