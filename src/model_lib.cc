@@ -19,6 +19,7 @@
 
 #include "log.hh"
 #include "model.hh"
+#include "null.hh"
 #include "conf.hh"
 #include "helper.hh"
 #include <cstring>
@@ -40,11 +41,11 @@ namespace {
       if (handle) {
 	m = ModelFactory::create(l, model_name, model_param);
       } else {
-	std::string d("null");
-	std::string em("");
-	m = ModelFactory::create(l, d, em);
-	m->status   = false;
-	m->errormsg = std::string("lib:Can't load model ") + params;
+	m = new Null(l);
+	if (m) {
+	  m->status   = false;
+	  m->errormsg = std::string("lib:Can't load model ") + params;
+	}
       }
     }
     return m;
