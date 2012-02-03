@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2011, Intel Corporation.
+# Copyright (c) 2012, Intel Corporation.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU Lesser General Public License,
@@ -52,7 +52,7 @@ EOF
 
 ##########################################
 # Test steps. These shell functions will be called when the test is
-# executed.
+# executed. For this example they only print what would be done.
 
 iSourceTarGz() {
     echo -n "use fmbt.tar.gz...     "
@@ -101,20 +101,20 @@ iCleanup() {
 ##########################################
 # Test configuration.
 
-# As we want to test every combination of source and target, and
-# there's no third configuration parameter, perm:2 covers all of them.
-# Test generation is stopped after 5 steps being tested without
-# covering new configurations.
+# As we want to test every combination of 1) source and 2) target, and
+# there's no 3rd configuration parameter, perm:2 covers all of them.
+# no_progress end condition will top test generation after 4 generated
+# steps without covering any new configurations.
 
 cat > test.conf <<EOF
-model = "testmodel.lsts"
-coverage = "perm:2"
+model     = "testmodel.lsts"
+coverage  = "perm:2"
 heuristic = "lookahead:4"
-pass = "no_progress:4"
+pass      = "no_progress:4"
 # disable built-in coverage end condition:
-pass = "coverage:1.1"
-fail = "steps:100"
-on_fail = "exit"
+fail      = "coverage:1.1"
+fail      = "steps:100"
+on_fail   = "exit"
 EOF
 
 ##########################################
