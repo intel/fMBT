@@ -181,19 +181,19 @@ iMakeInstDebian() {
         exit 1
     }
 
-    $SSH_DEBIAN_ROOT "export http_proxy=$http_proxy; apt-get update; cd /home/debian/fmbt; eval \$(awk '/apt-get install/{\$1=\"\"; print}' < README ) -y " >> $LOGFILE 2>&1 || {
+    echo | $SSH_DEBIAN_ROOT "export http_proxy=$http_proxy; apt-get update; cd /home/debian/fmbt; eval \$(awk '/apt-get install/{\$1=\"\"; print}' < README ) -y " >> $LOGFILE 2>&1 || {
         echo "error on apt-get installing dependencies on Debian" >> $LOGFILE
         testfailed
         exit 1
     }
 
-    $SSH_DEBIAN_USER "cd fmbt; [ ! -f configure ] && ./autogen.sh; ./configure && make" >> $LOGFILE 2>&1 || {
+    echo | $SSH_DEBIAN_USER "cd fmbt; [ ! -f configure ] && ./autogen.sh; ./configure && make" >> $LOGFILE 2>&1 || {
         echo "error when building on Debian" >> $LOGFILE
         testfailed
         exit 1
     }
 
-    $SSH_DEBIAN_ROOT "cd /home/debian/fmbt; make install" >> $LOGFILE 2>&1 || {
+    echo | $SSH_DEBIAN_ROOT 'cd /home/debian/fmbt; make install' >> $LOGFILE 2>&1 || {
         echo "error when installing on Debian" >> $LOGFILE
         testfailed
         exit 1
@@ -251,11 +251,20 @@ iBuildInstRPMPkg() {
 
 iTestFmbt() {
     teststep "running fmbt tests"
-    $SSH_TESTSYSTEM_USER "fmbt/test/tutorial/run.sh installed 2>&1; cat /tmp/fmbt.test.tutorial.log" >> $LOGFILE || {
+    $SSH_TESTSYSTEM_USER "( fmbt/test/tutorial/run.sh installed 2>&1; cat /tmp/fmbt.test.tutorial.log ) | nl" >> $LOGFILE 2>&1 || {
         echo "running tutorial test on Debian failed" >> $LOGFILE
         testfailed
         exit 1
     }
+
+    LASTLINE=$(tail -n 1 $LOGFILE | sed 's/[ \t]*[0-9][0-9]*[ \t]*\# passed./ALL-OK/')
+
+    if [ "$LASTLINE" != "ALL-OK" ]; then
+        echo "unexpected last line of tutorial test results." >> $LOGFILE
+        testfailed
+        exit 1
+    fi
+
     testpassed
 }
 
@@ -300,11 +309,19 @@ EOF
 # We use fmbt-log to pick up the generated test from the log. Then we
 # call the corresponding test step (shell function) for each step:
 
-fmbt test.conf | fmbt-log -f '$as' | while read teststep; do
+# fmbt test.conf | fmbt-log -f '$as' | while read teststep; do
 
-    eval $teststep || {
+printf "iMakeInstDebian\niTestFmbt\n" | while read teststep; do
+
+    SSH_TESTSYSTEM_USER="$SSH_DEBIAN_USER"
+
+    echo teststep: $teststep
+
+    $teststep || {
         echo "test step $teststep failed" >> $LOGFILE
         exit 1
     }
+    
+    echo continue
 
 done
