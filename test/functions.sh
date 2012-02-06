@@ -14,7 +14,6 @@
 # this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
-
 # This file includes test reporting functions for test scripts.
 
 teststep() {
@@ -72,6 +71,17 @@ check_minimum_num_of_lines() {
         testfailed
     fi
 }
+
+if [ "$1" == "installed" ]; then
+    SKIP_PATH_CHECKS=1
+    teststep_quiet "check that PATH already includes fmbt..."
+    WHICH_FMBT="$(which fmbt)"
+    echo "using installed fmbt: $WHICH_FMBT" >> $LOGFILE
+    if [ "$(basename "$WHICH_FMBT")" != "fmbt" ]; then
+        testfailed
+    fi
+    testpassed
+fi
 
 if [ -z "$SKIP_PATH_CHECKS" ]; then
 

@@ -21,21 +21,26 @@
 # combinations of configurations.
 #
 
-# 
+# Commands for launching a virtual machine and logging in it. The
+# virtual machines should have ssh server installed. Launch command
+# should be such that when the process is killed nothing should be
+# saved. Install ssh-keys to the virtual machines.
+
+# To make this run faster:
+# - install caching http proxy (like squid) on your host
+# - set http_proxy=http://<your-ip>:<squid-port> when you run the tests
 
 DEBIAN_VM_LAUNCH="kvm -m 1024 -snapshot -hda $HOME/emu/debian/debian.hda -net nic -net user,hostfwd=tcp::55522-:22"
 SSH_DEBIAN_USER="ssh -p 55522 debian@localhost"
 SSH_DEBIAN_ROOT="ssh -p 55522 root@localhost"
 
-FEDORA_VM_LAUNCH="kvm -m 2048 -snapshot -hda ~/emu/fedora/fedora.hda -net nic -net user,hostfwd=tcp::55622-:22"
+FEDORA_VM_LAUNCH="kvm -m 2048 -snapshot -hda $HOME/emu/fedora/fedora.hda -net nic -net user,hostfwd=tcp::55622-:22"
 SSH_FEDORA_USER="ssh -p 55622 fedora@localhost"
 SSH_FEDORA_ROOT="ssh -p 55622 root@localhost"
 
 
 ##########################################
 # Setup test environment
-
-
 
 cd "$(dirname "$0")"
 THIS_TEST_DIR="$PWD"
@@ -170,13 +175,13 @@ iMakeInstDebian() {
     eval $DEBIAN_VM_LAUNCH &
     QEMU_PID=$!
     sleep 15
-    tar cf - . | $SSH_DEBIAN_USER "rm -rf fmbt; mkdir fmbt; tar xfv -" >> $LOGFILE 2>&1 || {
+    tar cf - . | $SSH_DEBIAN_USER "rm -rf fmbt; mkdir fmbt && cd fmbt && tar xfv -" >> $LOGFILE 2>&1 || {
         echo "error on copying files to Debian" >> $LOGFILE
         testfailed
         exit 1
     }
 
-    $SSH_DEBIAN_ROOT "export http_proxy=$http_proxy; apt-get update; cd /home/debian/fmbt; eval \"\$(awk '/apt-get install/{$1=""; print}' < README) -y\" " >> $LOGFILE 2>&1 || {
+    $SSH_DEBIAN_ROOT "export http_proxy=$http_proxy; apt-get update; cd /home/debian/fmbt; eval \$(awk '/apt-get install/{\$1=\"\"; print}' < README ) -y " >> $LOGFILE 2>&1 || {
         echo "error on apt-get installing dependencies on Debian" >> $LOGFILE
         testfailed
         exit 1
@@ -188,7 +193,7 @@ iMakeInstDebian() {
         exit 1
     }
 
-    $SSH_DEBIAN_ROOT "cd /home/debian/fmbt; make install" || {
+    $SSH_DEBIAN_ROOT "cd /home/debian/fmbt; make install" >> $LOGFILE 2>&1 || {
         echo "error when installing on Debian" >> $LOGFILE
         testfailed
         exit 1
@@ -225,6 +230,7 @@ iMakeInstFedora() {
     }
     
     SSH_TESTSYSTEM_USER="$SSH_FEDORA_USER"
+    testpassed
 }
 
 iMakeInstDroid() {
@@ -244,7 +250,13 @@ iBuildInstRPMPkg() {
 }
 
 iTestFmbt() {
-    echo -n "  - test fmbt...       "
+    teststep "running fmbt tests"
+    $SSH_TESTSYSTEM_USER "fmbt/test/tutorial/run.sh installed 2>&1; cat /tmp/fmbt.test.tutorial.log" >> $LOGFILE || {
+        echo "running tutorial test on Debian failed" >> $LOGFILE
+        testfailed
+        exit 1
+    }
+    testpassed
 }
 
 iTestFmbtDroid() {
@@ -290,10 +302,9 @@ EOF
 
 fmbt test.conf | fmbt-log -f '$as' | while read teststep; do
 
-    if eval "$teststep"; then
-        echo "pass"
-    else
-        echo "fail"
-    fi
+    eval $teststep || {
+        echo "test step $teststep failed" >> $LOGFILE
+        exit 1
+    }
 
 done
