@@ -21,8 +21,21 @@
 # combinations of configurations.
 #
 
+# 
+
+DEBIAN_VM_LAUNCH="kvm -m 1024 -snapshot -hda $HOME/emu/debian/debian.hda -net nic -net user,hostfwd=tcp::55522-:22"
+SSH_DEBIAN_USER="ssh -p 55522 debian@localhost"
+SSH_DEBIAN_ROOT="ssh -p 55522 root@localhost"
+
+FEDORA_VM_LAUNCH="kvm -m 2048 -snapshot -hda ~/emu/fedora/fedora.hda -net nic -net user,hostfwd=tcp::55622-:22"
+SSH_FEDORA_USER="ssh -p 55622 fedora@localhost"
+SSH_FEDORA_ROOT="ssh -p 55622 root@localhost"
+
+
 ##########################################
 # Setup test environment
+
+
 
 cd "$(dirname "$0")"
 THIS_TEST_DIR="$PWD"
@@ -154,49 +167,64 @@ iSourceGitClone() {
 
 iMakeInstDebian() {
     teststep "make install on Debian..."
-    kvm -m 1024 -snapshot -hda ~/emu/debian/debian.hda -net nic -net user,hostfwd=tcp::55522-:22 &
+    eval $DEBIAN_VM_LAUNCH &
     QEMU_PID=$!
     sleep 15
-    ssh -p 55522 debian@localhost "mkdir fmbt"
-    scp -r -P55522 . debian@localhost:fmbt/
+    tar cf - . | $SSH_DEBIAN_USER "rm -rf fmbt; mkdir fmbt; tar xfv -" >> $LOGFILE 2>&1 || {
+        echo "error on copying files to Debian" >> $LOGFILE
+        testfailed
+        exit 1
+    }
 
-    INSTALL_DEPENDS_COMMAND=$(awk '/apt-get install/{$1=""; print}' < README)
-    ssh -p 55522 root@localhost "apt-get update; $INSTALL_DEPENDS_COMMAND -y" | tee "$LOGFILE"
+    $SSH_DEBIAN_ROOT "export http_proxy=$http_proxy; apt-get update; cd /home/debian/fmbt; eval \"\$(awk '/apt-get install/{$1=""; print}' < README) -y\" " >> $LOGFILE 2>&1 || {
+        echo "error on apt-get installing dependencies on Debian" >> $LOGFILE
+        testfailed
+        exit 1
+    }
 
-    ssh -p 55522 debian@localhost "cd fmbt; [ ! -f configure ] && ./autogen.sh; ./configure && make" >> $LOGFILE 2>&1 || {
+    $SSH_DEBIAN_USER "cd fmbt; [ ! -f configure ] && ./autogen.sh; ./configure && make" >> $LOGFILE 2>&1 || {
         echo "error when building on Debian" >> $LOGFILE
         testfailed
         exit 1
     }
-    ssh -p 55522 root@localhost "cd /home/debian/fmbt; make install" || {
+
+    $SSH_DEBIAN_ROOT "cd /home/debian/fmbt; make install" || {
         echo "error when installing on Debian" >> $LOGFILE
         testfailed
         exit 1
     }
+
+    SSH_TESTSYSTEM_USER="$SSH_DEBIAN_USER"
     testpassed
 }
 
 iMakeInstFedora() {
     teststep "make install on Fedora..."
-    kvm -m 2048 -snapshot -hda ~/emu/fedora/fedora.hda -net nic -net user,hostfwd=tcp::55622-:22 &
+    eval $FEDORA_VM_LAUNCH &
     QEMU_PID=$!
     sleep 25
-    ssh -p 55622 fedora@localhost "mkdir fmbt"
-    scp -r -P55622 . fedora@localhost:fmbt/
+
+    tar cf - . | $SSH_FEDORA_USER "rm -rf fmbt; mkdir fmbt; tar xfv -" >> $LOGFILE 2>&1 || {
+        echo "error on copying files to Fedora" >> $LOGFILE
+        testfailed
+        exit 1
+    }
 
     INSTALL_DEPENDS_COMMAND=$(awk '/yum install/{print}' < README)
-    ssh -p 55622 fedora@localhost "$INSTALL_DEPENDS_COMMAND" | tee "$LOGFILE"
+    $SSH_FEDORA_ROOT "$INSTALL_DEPENDS_COMMAND" | tee "$LOGFILE"
 
-    ssh -p 55622 fedora@localhost "cd fmbt; [ ! -f configure ] && ./autogen.sh; ./configure && make" >> $LOGFILE 2>&1 || {
+    $SSH_FEDORA_USER "cd fmbt; [ ! -f configure ] && ./autogen.sh; ./configure && make" >> $LOGFILE 2>&1 || {
         echo "error when building on Fedora" >> $LOGFILE
         testfailed
         exit 1
     }
-    ssh -p 55622 root@localhost "cd /home/fedora/fmbt; make install"  || {
+    $SSH_FEDORA_ROOT "cd /home/fedora/fmbt; make install"  || {
         echo "error when installing on Fedora" >> $LOGFILE
         testfailed
         exit 1
     }
+    
+    SSH_TESTSYSTEM_USER="$SSH_FEDORA_USER"
 }
 
 iMakeInstDroid() {
