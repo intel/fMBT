@@ -181,7 +181,7 @@ iMakeInstDebian() {
         exit 1
     }
 
-    echo | $SSH_DEBIAN_ROOT "export http_proxy=$http_proxy; apt-get update; cd /home/debian/fmbt; eval \$(awk '/apt-get install/{\$1=\"\"; print}' < README ) -y " >> $LOGFILE 2>&1 || {
+    echo | $SSH_DEBIAN_ROOT "export http_proxy=$http_proxy; apt-get update; cd /home/debian/fmbt; eval \"\$(awk '/apt-get install/{\$1=\"\"; print}' < README ) -y\" " >> $LOGFILE 2>&1 || {
         echo "error on apt-get installing dependencies on Debian" >> $LOGFILE
         testfailed
         exit 1
@@ -216,14 +216,15 @@ iMakeInstFedora() {
     }
 
     INSTALL_DEPENDS_COMMAND=$(awk '/yum install/{print}' < README)
-    $SSH_FEDORA_ROOT "$INSTALL_DEPENDS_COMMAND" | tee "$LOGFILE"
+    echo | $SSH_FEDORA_ROOT "export http_proxy=$http_proxy; $INSTALL_DEPENDS_COMMAND" | tee "$LOGFILE"
 
-    $SSH_FEDORA_USER "cd fmbt; [ ! -f configure ] && ./autogen.sh; ./configure && make" >> $LOGFILE 2>&1 || {
+    echo | $SSH_FEDORA_USER "cd fmbt; [ ! -f configure ] && ./autogen.sh; ./configure && make" >> $LOGFILE 2>&1 || {
         echo "error when building on Fedora" >> $LOGFILE
         testfailed
         exit 1
     }
-    $SSH_FEDORA_ROOT "cd /home/fedora/fmbt; make install"  || {
+
+    echo | $SSH_FEDORA_ROOT "cd /home/fedora/fmbt; make install"  || {
         echo "error when installing on Fedora" >> $LOGFILE
         testfailed
         exit 1
@@ -314,8 +315,6 @@ EOF
 printf "iMakeInstDebian\niTestFmbt\n" | while read teststep; do
 
     SSH_TESTSYSTEM_USER="$SSH_DEBIAN_USER"
-
-    echo teststep: $teststep
 
     $teststep || {
         echo "test step $teststep failed" >> $LOGFILE

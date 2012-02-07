@@ -24,10 +24,13 @@
 
 cd "$(dirname "$0")"
 LOGFILE=/tmp/fmbt.test.tutorial.log
-export PATH=../../src:../../utils:$PATH
+rm -f $LOGFILE
+
+if [ "$1" != "installed" ]; then
+    export PATH=../../src:../../utils:$PATH
+fi
 
 source ../functions.sh
-rm -f $LOGFILE
 
 ##########################################
 # Run the test
