@@ -44,9 +44,18 @@ testfailed() {
         printf "$TESTSTEP_DESCRIPTION"
         printf "failed, see $LOGFILE\n"        
     fi
-    printf "failed, see $LOGFILE\n"
     echo "# failed." >>$LOGFILE
     exit 1
+}
+
+testskipped() {
+    if [ -z "$TESTSTEP_DESCRIPTION" ]; then
+        printf "skipped.\n"
+    else
+        printf "$TESTSTEP_DESCRIPTION"
+        printf "skipped.\n"
+    fi
+    echo "# skipped." >>$LOGFILE
 }
 
 check_file_exists() {

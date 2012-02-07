@@ -38,10 +38,10 @@ source ../functions.sh
 teststep "extract fmbt commands from tutorial..."
 rm -f create.* fmbt.* sed.* log.*
 awk '/^\$ .*EOF/{p=1; k=1; $1=""; cn+=1; f="create."cn}
-     /^\$ fmbt /{if (f) break; p=1; k=0; $1=""; rn+=1; f="fmbt."rn}
-     /^\$ fmbt-log/{if (f) break; p=1; k=0; $1=""; ln+=1; f="log."ln}
-     /^\$ sed/{if (f) break; p=1; k=0; $1=""; sn+=1; f="sed."sn}
-     /^\$ echo/{if (f) break; p=1; k=0; $1=""; en+=1; f="echo."en}
+     /^\$ fmbt /{if (f=="") { p=1; k=0; $1=""; rn+=1; f="fmbt."rn }}
+     /^\$ fmbt-log/{if (f=="") { p=1; k=0; $1=""; ln+=1; f="log."ln}}
+     /^\$ sed/{if (f=="") { p=1; k=0; $1=""; sn+=1; f="sed."sn}}
+     /^\$ echo/{if (f=="") { p=1; k=0; $1=""; en+=1; f="echo."en}}
      /^EOF$/{k=0}
      {if (p) print >> f;
       if (!k) { p=0; f=""} }' ../../doc/tutorial.txt
