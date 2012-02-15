@@ -91,7 +91,7 @@ std::string Lts_trace::trace2model(char* str)
   ret=std::string("Begin Lsts\nBegin History\nEnd History\nBegin Header\n");
   
   ret+="\n State_cnt = "+to_string(state_cnt);
-  ret+="\n Action_cnt = "+to_string(anames.size());
+  ret+="\n Action_cnt = "+to_string((unsigned)anames.size());
   ret+="\n Transition_cnt = "+to_string(state_cnt-1);
   ret+="\n State_prop_cnt = 0";
   ret+="\n Initial_states = 1;";

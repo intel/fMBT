@@ -53,6 +53,8 @@ std::string replace(boost::regex& expression,
 void  print_vectors(int* v,unsigned size,std::vector<std::string>& s,const char* prefix,int add);
 void  print_vector(std::vector<std::string>& s,const char* prefix,int add);
 std::string to_string(const int t);
+std::string to_string(const unsigned t);
+std::string to_string(const float f);
 std::string to_string(const int cnt, int* t, std::vector<std::string>& st);
 void  strvec(std::vector<std::string> & v,std::string& s,
 	    std::string& separator);
