@@ -29,10 +29,16 @@ typedef struct _node {
 OutputFormat* uconf_obj;
 }
 
-conf_file: model usecase+;
+conf_file: model (usecase|testcase)+;
 
 model: 'model' '=' string { uconf_obj->set_model(*$2.str); } ;
 
 usecase: string '=' string { uconf_obj->add_uc(*$0.str,*$2.str); } ;
+
+testcase: 'testcase' string ':' string opt_drop opt_completed { uconf_obj->add_start(*$1.str,*$3.str); };
+
+opt_drop: | 'drop' ':' string { uconf_obj->add_drop(*$2.str); };
+
+opt_completed: | 'completed' ':' string { uconf_obj->add_completed(*$2.str); };
 
 string: "\"([^\"\\]|\\[^])*\"" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); } ;

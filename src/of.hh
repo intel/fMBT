@@ -58,6 +58,11 @@ public:
   virtual std::string header() { return "";}
   virtual std::string footer() { return "";}
 
+  virtual void add_start    (std::string& name,
+			     std::string& tag) {}
+  virtual void add_drop     (std::string& tag) {}
+  virtual void add_completed(std::string& tag) {}
+
 protected:
   Model* model;
   std::string prefix;
