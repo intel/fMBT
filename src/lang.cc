@@ -128,13 +128,20 @@ int main(int argc,char** argv) {
     std::printf("Can't read input file \"%s\"\n",argv[optind]);
     return 3;
   }
+
   dparse(p,s,std::strlen(s));
+  free_D_Parser(p);
+  p=NULL;
+  g_free(s);
+  s=NULL;
+
   if (!obj) {
     fprintf(stderr,"Failure...\n");
     return 4;
   }
 
   result=obj->stringify();
+  delete obj;
 
   if (lib) {
     int _stdin,_stdout;//,_stder;
@@ -151,6 +158,13 @@ int main(int argc,char** argv) {
 
     g_spawn_async_with_pipes(NULL,argv,NULL,G_SPAWN_SEARCH_PATH,NULL,&pid,NULL,&_stdin,&_stdout,NULL,&gerr);
 
+    for(int i=0;i<42;i++) {
+      if (argv[i]) {
+	free(argv[i]);
+      }
+      free(argv);
+    }
+
     nonblock(_stdout);
 
     unsigned int pos=0;
@@ -165,12 +179,14 @@ int main(int argc,char** argv) {
     block(_stdout);
 
     while(read(_stdout,b,512)) {}
-
+    close(_stdout);
   } else {
     fprintf(outputfile,"%s",result.c_str());
   }
+  if (outputfile!=stdout) {
+    fclose(outputfile);
+  }
+  result="";
 
-  free_D_Parser(p);
-  free(s);
   return 0;
 }
