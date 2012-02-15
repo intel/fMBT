@@ -58,10 +58,13 @@ public:
   virtual std::string header() { return "";}
   virtual std::string footer() { return "";}
 
-  virtual void add_start    (std::string& name,
-			     std::string& tag) {}
-  virtual void add_drop     (std::string& tag) {}
-  virtual void add_completed(std::string& tag) {}
+  virtual void add_report(std::string& name,
+			  std::vector<std::string*>& from,
+			  std::vector<std::string*>& to,
+			  std::vector<std::string*>& drop)
+  {
+
+  }
 
 protected:
   Model* model;
@@ -73,6 +76,10 @@ protected:
   std::vector<std::string> testnames;
   Log_null l;
   virtual std::string format_covs()=0;
+  
+
+  std::string drop_tag;
+  std::string completed_tag;
 };
 
 #define FACTORY_CREATE_PARAMS std::string name, std::string params
