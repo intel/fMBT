@@ -23,32 +23,58 @@
 #include <string>
 #include <map>
 
+#include "writable.hh"
+#include "log_null.hh"
+
+class Coverage;
+class Model;
+class History;
+class Log;
+
+class OutputFormat: public Writable {
+public:
+  OutputFormat(std::string params) : Writable(),model(NULL) {}
+  virtual ~OutputFormat();
+  virtual void set_model(Model* m) {
+    model=m;
+  }
+  virtual void set_model(std::string m);
+
+  virtual void set_prefix(std::string& _prefix)
+  {
+    prefix=_prefix;
+  }
+  virtual void add_testrun(std::string& name,
+			   std::string& _model);
+
+  virtual void add_testrun(std::string& name,
+			   Model* _model);
+
+  virtual void add_uc(std::string& name,Coverage* c);
+  virtual void add_uc(std::string& name,std::string& c);
+
+  virtual std::string handle_history(Log&l,std::string& h);
+
+  virtual std::string header() { return "";}
+  virtual std::string footer() { return "";}
+
+protected:
+  Model* model;
+  std::string prefix;
+  std::vector<Coverage*> covs;
+  std::vector<std::string> covnames;
+
+  std::vector<Model*>      testruns;
+  std::vector<std::string> testnames;
+  Log_null l;
+  virtual std::string format_covs()=0;
+};
+
 #define FACTORY_CREATE_PARAMS std::string name, std::string params
 #define FACTORY_CREATOR_PARAMS std::string params
 #define FACTORY_CREATOR_PARAMS2 params
 
-#include "writable.hh"
 #include "factory.hh"
-#include "alphabet.hh"
-
-class Coverage;
-
-class OutputFormat: public Writable {
-public:
-  OutputFormat(std::string params) : Writable(),alpha(NULL) {}
-  virtual ~OutputFormat();
-  virtual void setalphabet(Alphabet* a) {
-    alpha=a;
-  }
-  virtual void set_prefix(std::string& prefix) =0;
-  virtual void add_testrun(std::string& name)  =0;
-  virtual void add_uc(std::string& name,Coverage* c);
-
-protected:
-  Alphabet* alpha;
-  std::vector<Coverage*> covs;
-  std::vector<std::string> covnames;
-};
 
 FACTORY_DECLARATION(OutputFormat)
 

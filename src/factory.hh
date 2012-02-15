@@ -61,6 +61,10 @@
 #define FACTORY_CREATOR_PARAMS2 log, params
 #endif
 
+#undef FACTORY_DECLARATION
+#undef FACTORY_IMPLEMENTATION
+#undef FACTORY_DEFAULT_CREATOR
+
 #define FACTORY_DECLARATION(MODULETYPE)                                \
                                                                        \
 class MODULETYPE;                                                      \
@@ -81,7 +85,6 @@ namespace MODULETYPE##Factory {                                        \
         }                                                              \
     };                                                                 \
 }
-
 
 #define FACTORY_IMPLEMENTATION(MODULETYPE)                             \
 std::map<std::string, MODULETYPE##Factory::creator>*                   \

@@ -17,11 +17,25 @@
  *
  */
 
-#include "of_null.hh"
+#include "of_html.hh"
+#include "coverage.hh"
+#include "helper.hh"
 
-std::string OutputFormat_Null::format_covs()
+std::string OutputFormat_Html::format_covs()
 {
-  return "";
+  std::string ret("<tr>\n");
+
+  //testname
+  ret=ret+"<td>"+testnames.back()+"</td>";
+
+  //verdict
+  ret=ret+"<td></td>\n";
+
+  for(unsigned i=0;i<covnames.size();i++) {
+    ret=ret+"<td>"+to_string(covs[i]->getCoverage())+
+      "</td>\n";
+  }
+  return ret+"</tr>\n";
 }
 
-FACTORY_DEFAULT_CREATOR(OutputFormat, OutputFormat_Null, "null")
+FACTORY_DEFAULT_CREATOR(OutputFormat, OutputFormat_Html, "html")

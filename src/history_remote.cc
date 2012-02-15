@@ -114,3 +114,5 @@ bool History_remote::send_action(std::string& act,
 
   return false;
 }
+
+FACTORY_DEFAULT_CREATOR(History, History_remote, "remote")

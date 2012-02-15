@@ -28,7 +28,8 @@ public:
   virtual void set_prefix(std::string& prefix) {}
   virtual void add_testrun(std::string& name)  {}
   virtual void add_uc(std::string& name,Coverage* c) {}
-  
+
+  virtual std::string format_covs();  
 };
 
 #endif

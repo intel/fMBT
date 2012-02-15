@@ -16,12 +16,34 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+#ifndef __of_csv_hh__
+#define __of_csv_hh__
 
-#include "of_null.hh"
+#include "of.hh"
 
-std::string OutputFormat_Null::format_covs()
-{
-  return "";
-}
+/* rfc4180 */
 
-FACTORY_DEFAULT_CREATOR(OutputFormat, OutputFormat_Null, "null")
+class OutputFormat_Csv: public OutputFormat {
+public:
+  OutputFormat_Csv(std::string params): OutputFormat(params) {}
+  virtual ~OutputFormat_Csv() {}
+  
+  virtual std::string header() {
+    std::string ret("\"UC\",\"verdict\"");
+
+    for(unsigned i=0;i<covnames.size();i++) {
+      ret=ret+","+csv_escape(covnames[i]);
+    }
+    ret=ret+CRLF;
+    return ret;
+  }
+  virtual std::string footer() {
+    return "";
+  }
+  virtual std::string format_covs();
+private:
+  std::string csv_escape(std::string&);
+  static std::string CRLF;
+};
+
+#endif

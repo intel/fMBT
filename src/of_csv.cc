@@ -17,11 +17,35 @@
  *
  */
 
-#include "of_null.hh"
+#include "of_csv.hh"
+#include "coverage.hh"
+#include "helper.hh"
 
-std::string OutputFormat_Null::format_covs()
+std::string OutputFormat_Csv::CRLF("\x0D\x0A");
+
+std::string OutputFormat_Csv::csv_escape(std::string& s)
 {
-  return "";
+  return s;
 }
 
-FACTORY_DEFAULT_CREATOR(OutputFormat, OutputFormat_Null, "null")
+
+std::string OutputFormat_Csv::format_covs()
+{
+  std::string ret;
+
+  //testname
+  ret=csv_escape(testnames.back());
+
+  //verdict
+  ret=ret+",";
+
+  for(unsigned i=0;i<covnames.size()-1;i++) {
+    ret=ret+","+to_string(covs[i]->getCoverage());
+  }
+  if (covnames.size()>0) {
+    ret=ret+","+to_string(covs[covnames.size()-1]->getCoverage());
+  }
+  return ret+CRLF;
+}
+
+FACTORY_DEFAULT_CREATOR(OutputFormat, OutputFormat_Csv, "csv")

@@ -19,12 +19,24 @@
 
 #include <stack>
 
+#include "log_null.hh"
+
+Log* l=NULL;
+
 #include "of.hh"
+#include "of_null.hh"
 
 #include "helper.hh"
 #include <iostream>
 #include <unistd.h>
 #include <cstdlib>
+#include "dparse.h"
+#include "history_log.hh"
+
+extern "C" {
+extern D_ParserTables parser_tables_uconf;
+}
+extern OutputFormat* uconf_obj;
 
 #ifndef DROI
 #include <error.h>
@@ -58,9 +70,12 @@ void print_usage()
 int main(int argc,char * const argv[])
 {
   FILE* outfile=stdout;
+  char* usecasefile=NULL;
   bool debug_enabled=false;
   int c;
   OutputFormat* of=NULL;
+
+  l=new Log_null();
 
   static struct option long_opts[] = {
     {"help", no_argument, 0, 'h'},
@@ -75,7 +90,11 @@ int main(int argc,char * const argv[])
       break;
     case 'u':
       // Usecase file
-
+      if (usecasefile) {
+	print_usage();
+	return 1;
+      }
+      usecasefile=optarg;
       break;
     case 'p':
       // prefix
@@ -86,7 +105,7 @@ int main(int argc,char * const argv[])
 	print_usage();
 	return 1;
       }
-      std::string s1;
+      std::string s1(optarg);
       std::string s2;
       of=OutputFormatFactory::create(s1,s2);
     }
@@ -109,14 +128,55 @@ int main(int argc,char * const argv[])
     default:
       return 4;
     }
- 
+
+  if (of==NULL) {
+    printf("of==NULL\n");
+    of=new OutputFormat_Null("");
+  }
+
+  if (!of->status) {
+    return -1;
+  }
+
+  if (usecasefile==NULL) {
+    print_usage();
+    return 5;    
+  }
+  
+  uconf_obj=of;
+
+  D_Parser *p = new_D_Parser(&parser_tables_uconf,5120);
+
+  char* s=readfile(usecasefile,false);
+  if (!s) {
+    std::printf("Can't read input file \"%s\"\n",usecasefile);
+    return 3;    
+  }
+  dparse(p,s,std::strlen(s));
+  free_D_Parser(p);
+  p=NULL;
+  //g_free(s);
+  s=NULL;
+
   if (optind == argc) {
     print_usage();
-    error(3, 0, "test configuration file missing.\n");
+    error(3, 0, "No logfile?\n");
   }
-  { 
 
+  l=new Log_null;
+
+  std::string o=of->header();
+  fwrite(o.c_str(),1,o.size(),outfile);  
+
+  for (int i=optind;i<argc;i++) {
+    fprintf(stderr,"Handling log %s\n",argv[i]);
+    std::string s(argv[i]);
+    o=of->handle_history(*l,s);
+    fwrite(o.c_str(),1,o.size(),outfile);
   }
+
+  o=of->footer();
+  fwrite(o.c_str(),1,o.size(),outfile);  
 
   return 0;
 }

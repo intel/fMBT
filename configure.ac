@@ -30,6 +30,10 @@ AS_IF([test "x$enable_android" != "xyes"],
     [PKG_CHECK_MODULES([GLIB], [glib-2.0], [],
         AC_MSG_FAILURE([glib-2.0 required if not --enable-android]))]
 
+    [PKG_CHECK_MODULES([XML2], [libxml-2.0], [],
+        AC_MSG_FAILURE([libxml-2.0 required if not --enable-android]))]
+
+
 #    AC_LANG_PUSH([C++])
 #    AC_CHECK_HEADERS([boost/regex.h], [],
 #        [AC_MSG_ERROR(libboost required.)])

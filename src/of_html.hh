@@ -16,12 +16,30 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+#ifndef __of_html_hh__
+#define __of_html_hh__
 
-#include "of_null.hh"
+#include "of.hh"
 
-std::string OutputFormat_Null::format_covs()
-{
-  return "";
-}
+class OutputFormat_Html: public OutputFormat {
+public:
+  OutputFormat_Html(std::string params): OutputFormat(params) {}
+  virtual ~OutputFormat_Html() {}
+  
+  virtual std::string header() {
+    std::string ret("<table border=\"1\">\n<tr><th>UC</th>\n<th>verdict</th>\n");
 
-FACTORY_DEFAULT_CREATOR(OutputFormat, OutputFormat_Null, "null")
+    for(unsigned i=0;i<covnames.size();i++) {
+      ret=ret+"<th>"+covnames[i]+"</th>\n";
+    }
+    ret=ret+"</tr>\n";
+    return ret;
+  }
+  virtual std::string footer() {
+    return "</table>";
+  }
+  virtual std::string format_covs();
+private:
+};
+
+#endif
