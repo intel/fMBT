@@ -38,6 +38,723 @@ import re
 import getopt
 import fmbtparsers
 
+########################################################################
+# The following code block originates from the TEMA toolset. It
+# enables calculating parallel composition of LSTS files and writing
+# output as a flat LSTS instead of parallel composition rules
+# (xrules).
+#
+# Copyright (c) 2006-2010 Tampere University of Technology.
+# Copyright (c) 2012, Intel Corporation.
+#
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to
+# the following conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+# LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+import lsts
+
+sps_DUMMY, sps_STICKY = range(2)
+
+class Actionmapper:
+    def __init__(self):
+        self.__act2int={}
+        self.__int2act=[]
+
+    def addActionToIndex(self,actionname):
+        self.__int2act.append(actionname)
+        self.__act2int[actionname]=len(self.__int2act)-1
+
+    def getActionCount(self):
+        return len(self.__int2act)
+
+    def act2int(self,act_name):
+        return self.__act2int[act_name]
+
+    def int2act(self,act_index):
+        return self.__int2act[act_index]
+
+class LstsList(list,Actionmapper):
+    """LstsList contains pairs (lsts number (integer), lsts (lsts
+    instance))"""
+    def __init__(self,*args):
+        list.__init__(self,*args)
+        Actionmapper.__init__(self)
+    def createActionIndex(self):
+        """Call this method only once! It will build a global action
+        dictionary and change the action numbers in the transitions of
+        the LSTSs to correspond to the number in the global index."""
+        for lsts_number,lsts in list.__iter__(self):
+            for act in lsts.get_actionnames():
+                global_actname="%s.%s" % (lsts_number,act)
+                self.addActionToIndex(global_actname)
+
+            a=lsts.get_actionnames()
+            new_transitions=[]
+            for i,tranlist in enumerate(lsts.get_transitions()):
+                new_tranlist=[]
+                for dest_state,act_num in tranlist:
+                    global_actname="%s.%s" % (lsts_number,a[act_num])
+                    new_tranlist.append( (dest_state,self.act2int(global_actname)) )
+                new_transitions.append(new_tranlist)
+            lsts.set_transitions(new_transitions)
+
+class ExtRulesParser:
+    def parseLstsFiles(self,rules_file_contents):
+        """Parse the lsts files in the given string. The string is
+        assumed to be in TVT extended rules format, that is
+        <lsts#1> = "<lstsfilename1>"
+        <lsts#2> = "<lstsfilename2>"
+        ...
+        Returns list of numbers and lsts filenames:
+        [ (lsts#1, "lstsfilename1"), (lsts#2, "lstsfilename2"), ... ]
+        """
+        procrowre = re.compile('\s*([-/_a-zA-Z0-9%]+)\s*=\s*"([^"]+)"')
+        lstss = []
+        for line in rules_file_contents.split('\n'):
+            s = line.strip()
+            m = procrowre.match(s)
+            if not m: continue # line is not a process row
+            lstss.append( (m.group(1),m.group(2)) )
+
+        return lstss
+
+    def parseRules(self,rules_file_contents):
+        """Parse the rules in the given string. Assumes that the
+        string is in TVT extended rules format with one rule per
+        row. That is,
+        (<lsts#1>,"<actname1>") (<lsts#2>,"<actname2>") ... -> "<resultname>"
+        Returns the rules in a list of lists:
+        [
+          [ (lsts#11,"actname11"), (lsts#12,"actname12"), ..., "resultname1" ],
+          [ (lsts#21,"actname21"), (lsts#22,"actname22"), ..., "resultname2" ],
+          ...
+         ]
+        """
+        rulerowre = re.compile('^\s*([0-9]*\(.*\))\s*->\s*"([^"]+)"\s*$')
+        # single syncronisating action on the left hand side of "->"
+        syncactre = re.compile('\(\s*([^,\s]*)\s*,\s*"([^"]+)"\s*\)')
+
+        allrules=[]
+
+        for line in rules_file_contents.split('\n'):
+            s = line.strip()
+            m = rulerowre.match(s)
+            if not m: continue # this line does not contain a rule
+            rule=[]
+            for lstsnum,actname in syncactre.findall(m.group(1)):
+                # find all actions in the left hand side of "->"
+                rule.append( (lstsnum,actname) )
+            rule.append(m.group(2))
+            allrules.append(rule)
+
+        return allrules
+
+class Rule:
+    """
+    Rule object holds actions and the resulting action of the
+    synchronous execution of the actions. Types of the actions can be
+    either unique identifiers (like unique integer id) or Action
+    objects of model.py library (where __eq__ is implemented so that
+    two actions are equal even if they are represented by two distinct
+    objects --- this is needed when _enabled method is used).
+    """
+
+    def __init__(self,list_of_acts,resulting_act):
+        """Initialise with list of actions that are executed
+        synchronously and an action that is the result of the
+        execution.
+        """
+        self.setSynchronousActions(list_of_acts)
+        self.setResult(resulting_act)
+
+    def __str__(self):
+        return str(self.__syncacts)+" -> "+str(self.__result)
+
+    def setSynchronousActions(self,list_of_acts):
+        self.__syncacts=list_of_acts
+
+    def setResult(self,resulting_act):
+        self.__result=resulting_act
+
+    def getSynchronousActions(self):
+        return self.__syncacts
+
+    def getResult(self):
+        return self.__result
+
+    def _enabled(self,list_of_acts):
+        """Assume that every action in the list_of_acts can be
+        executed. If the rule specifies a synchronous execution that
+        can be applied in this situation (that is, self.__syncacts is
+        a subset of list_of_acts), the function returns True. All
+        indexes in the pair are global acts. Otherwise False is
+        returned."""
+
+        # Types of items in self.__syncacts and list_of_acts is
+        # cruisal here! "(self.__syncacts[i] in list_of_acts)" must
+        # work!
+
+        for req_act in self.__syncacts:
+            if not req_act in list_of_acts:
+                return False
+        return True
+
+
+class RuleList(list):
+    """List of Rule objects (do not use for any other datatype)"""
+
+    def enabled(self,list_of_acts):
+        """Returns the list of Rule-objects that are enabled when all
+        actions in the list_of_acts can be executed."""
+        return [ rule
+                 for rule in list.__iter__(self)
+                 if rule._enabled(list_of_acts)
+                 ]
+
+class Action:
+    """
+    Action class contains the id and the name of an action.
+    """
+    def __init__(self,actionId,actionName=None):
+        self._id = actionId
+        if actionName != None:
+            self._actionName = actionName
+        else:
+            self._actionName = str(self._id)
+
+    def __hash__(self):
+        return hash(self._id)
+
+    def __str__(self):
+        return self._actionName
+
+    def __eq__(self,action):
+        try:
+            return self._id==action._id
+        except AttributeError,e:
+            return False
+
+    def toString(self):
+        return str(self)
+
+    def equals(self,action):
+        return self.__eq__(action)
+
+class model_State:
+    """
+    State class contains the id of a state and can generate the
+    transitions that leave the state.
+    """
+    def __init__(self,globalStateId,outTransitions):
+        """outTransitions is a list of Transition objects"""
+        self._id=globalStateId
+        self._outTransitions=outTransitions
+
+    def __str__(self):
+        return str(self._id)
+
+    def __hash__(self):
+        return hash(self._id)
+
+    def getOutTransitions(self):
+        """Returns list of transitions that leaves the state."""
+        return self._outTransitions
+
+    def execAction(self,action):
+        """Returns the destination state of the first transition that
+        leaves this state and is labelled by the action. If there is
+        no such transition, returns None."""
+        for t in self.getOutTransitions():
+            if action.equals( t.getAction() ):
+                return t.getDestState()
+        return None
+
+    def __eq__(self, other):
+        try:
+            return self._id==other._id
+        except AttributeError,e:
+            return False
+
+    def equals(self, other):
+        return self.__eq__(other)
+
+class lstsmodel_State(model_State):
+    """
+    State class is redefined to support on-the-fly generation of the
+    state space: not all State and Transition objects need to be
+    generated at once. If outTransitions list is None and
+    getOutTransitions method is called, the lsts model is asked to
+    generate outTransitions for the state. The result is stored so
+    next time the generation is not needed.
+    """
+    def __init__(self,globalStateId,outTransitions,lstsmodel=None):
+        """outTransitions is a list of Transition objects"""
+        model_State.__init__(self,globalStateId,outTransitions)
+        self._model=lstsmodel
+
+    def __str__(self):
+        return str(self._id)
+
+    def getOutTransitions(self):
+        """Returns list of transitions that leaves the state."""
+        if self._outTransitions==None:
+            # If the out transitions were not already given, ask the
+            # model to calculate them for us
+            self._outTransitions=self._model._getOutTransitions(self._id)
+        return self._outTransitions
+
+    def getStateProps(self):
+        """Returns list of state propositions with value true on the
+        state (that is, associated to the state)"""
+        return self._model._getStateProps(self._id)
+
+class parallelmodel_State(model_State):
+    """
+    ParallelModel state is a tuple of states of component models.
+    """
+    def __init__(self,globalStateId,outTransitions,parallelmodel=None):
+        model_State.__init__(self,globalStateId,outTransitions)
+        self._model=parallelmodel
+        self._str_representation=str(tuple([ int(str(s)) for s in self._id ]))
+    def __str__(self):
+        return self._str_representation
+
+    def getOutTransitions(self):
+        """Returns list of transitions that leaves the state."""
+        if self._outTransitions==None:
+            # If the out transitions were not already given, ask the
+            # model to calculate them for us
+            self._outTransitions=self._model._getOutTransitions(self._id)
+        return self._outTransitions
+
+    def getStateProps(self):
+        return self._model._getStateProps(self._id)
+
+    def clearCache(self):
+        self._outTransitions=None
+
+    def equals(self,state):
+        return str(self)==str(state)
+
+    def __eq__(self,state):
+        return self.equals(state)
+
+    def __hash__(self):
+        return hash(tuple(self._id))
+
+
+class Transition:
+    def __init__(self,sourceState,action,destState):
+        self._sourceState=sourceState
+        self._action=action
+        self._destState=destState
+
+    def __hash__(self):
+        # some subclasses of State may have a list as their _id.
+        # that's why the commented line below fails. (can't hash a list)
+        #return hash((self._sourceState._id,self._action._id,self._destState._id))
+        return hash((hash(self._sourceState),
+                     hash(self._action),
+                     hash(self._destState)))
+
+    def __eq__(self,other):
+        try:
+            return self._sourceState == other._sourceState and \
+                self._action == other._action and \
+                self._destState == other._destState
+        except AttributeError,e:
+            return False
+
+    def __str__(self):
+        return "(%s,%s,%s)" % (self._sourceState,self._action,self._destState)
+
+    def getAction(self): return self._action
+
+    def getSourceState(self): return self._sourceState
+
+    def getDestState(self): return self._destState
+
+    def equals(self,transition):
+        return self.__eq__(transition)
+
+class model_Model:
+    """
+    Model is abstract base class for models. The point here is to show
+    which methods should be implemented to a model. One load method is
+    enough.
+    """
+    def matchedActions(self, rex_set):
+        rval= set()
+        for a_name in [ alpha.toString() for alpha in self.getActions() ] :
+            for rex in rex_set:
+                if rex.match(a_name):
+                    rval.add(a_name)
+                    break
+        return rval
+
+class LstsModel(model_Model):
+    def __init__(self,lstsobject=None):
+        self._stateCache={}
+        self._actionCache={}
+        self._statepropCache={}
+        if isinstance(lstsobject,lsts.lsts):
+            self.loadFromObject(lstsobject)
+        elif lstsobject != None:
+            raise TypeError("the first constructor parameter should be an instance of lsts object")
+        else:
+            self._statepropnames=[]
+        self._int2act=lambda i: self._lsts.get_actionnames()[i]
+        self._int2sp=lambda i: self._statepropnames[i]
+
+    def useActionMapper(self,actionmapper):
+        """actionmapper implements functions int2act and act2int,
+        which convert global action numbers to strings. Use this to
+        get unique action names and numbers over LSTSs. LstsList can
+        be used as an action mapper after executing createActionIndex.
+        """
+        self._int2act=actionmapper.int2act
+
+    def loadFromObject(self,lsts_object):
+        self._lsts=lsts_object
+        self._statepropnames=self._lsts.get_stateprops().keys()
+        self._statepropnames.sort()
+        self._stateprops_by_state = None
+
+    def loadFromFile(self,file_like_object):
+        lsts_reader=lsts.reader()
+        lsts_reader.read(file_like_object)
+        self.loadFromObject(lsts_reader)
+
+    def getInitialState(self):
+        rv=self._newState(self._lsts.get_header().initial_states)
+        return rv
+
+    def getActions(self):
+        return [ self._newAction(i) for i,a in enumerate(self._lsts.get_actionnames()) ]
+
+    def getStatePropList(self):
+        return [ self._newStateProp(i) for i,sp in enumerate(self._statepropnames) ]
+
+    def _newState(self,stateid):
+        if stateid in self._stateCache:
+            return self._stateCache[stateid]
+        else:
+            s = lstsmodel_State(stateid,None,self)
+            self._stateCache[stateid] = s
+            return s
+
+    def _newAction(self,actionid):
+        if actionid in self._actionCache:
+            return self._actionCache[actionid]
+        else:
+            a = Action(actionid,self._int2act(actionid))
+            self._actionCache[actionid] = a
+            return a
+
+    def _newStateProp(self,statepropid):
+        if statepropid in self._statepropCache:
+            return self._statepropCache[statepropid]
+        else:
+            sp = StateProp(statepropid,self._int2sp(statepropid))
+            self._statepropCache[statepropid] = sp
+            return sp
+
+    def _getOutTransitions(self,state_id):
+        """This method is called from a state object."""
+        rv=[]
+        outtrans=self._lsts.get_transitions()[ state_id ]
+        for dest,act in outtrans:
+            rv.append(
+                Transition( self._newState(state_id),
+                            self._newAction(act),
+                            self._newState(dest) )
+                )
+        return rv
+
+    def _getStateProps(self,state_id):
+        """Returns the list of state proposition associated to the
+        given state, This method is called from a state proposition
+        object."""
+        if self._stateprops_by_state == None:
+            sp_by_st = lsts.props_by_states(self._lsts)
+            self._stateprops_by_state = {}
+            for st_id in range(len(sp_by_st)):
+                if len(sp_by_st[st_id]) > 0:
+                    self._stateprops_by_state[st_id] = [
+                        self._newStateProp(sp_id)
+                        for sp_id in sp_by_st[st_id]]
+        return self._stateprops_by_state.get(state_id,[])
+
+class ParallelModel(model_Model):
+    """
+    Generic parallel composer. Components that implement model
+    interface are composed in parallel.
+
+    To use methods implemented here, inherited object should set
+
+    self._modellist     - a list of Model objects
+    self._rulelist      - should be a RuleList object
+    self._actionmapper  - for int2act and act2int conversions
+    """
+    def __init__(self):
+        self._modellist=None
+        self._rulelist=None
+        self._stateCache={}
+        self._actionCache={}
+        self._statepropCache={}
+        self._stateprop_semantics = sps_STICKY
+
+    def getInitialState(self):
+        return parallelmodel_State([m.getInitialState() for m in self._modellist],None,self)
+
+    def clearCache(self):
+        for s in self._stateCache.itervalues():
+            s.clearCache()
+        self._stateCache={}
+
+    def _newState(self,stateid):
+        if str(stateid) in self._stateCache:
+            return self._stateCache[str(stateid)]
+        else:
+            s = parallelmodel_State(stateid,None,self)
+            self._stateCache[str(stateid)] = s
+            return s
+
+    def _newStateProp(self, submodel_number, submodel_statepropobj):
+        # stateprop_id is a pair (modelnumber, stateprop)
+        stateprop_id = (submodel_number, submodel_statepropobj)
+        if stateprop_id in self._statepropCache:
+            return self._statepropCache[stateprop_id]
+        else:
+            sp = StateProp(stateprop_id,
+                           "%s.%s" % (submodel_number, submodel_statepropobj))
+            self._statepropCache[stateprop_id] = sp
+            return sp
+
+    def _newAction(self,actionid):
+        if actionid in self._actionCache:
+            return self._actionCache[actionid]
+        else:
+            a = Action(actionid,self._actionmapper.int2act(actionid))
+            self._actionCache[actionid] = a
+            return a
+
+    def getStatePropList(self):
+        rv = []
+        for modelnum, m in enumerate(self._modellist):
+            for sp in m.getStatePropList():
+               rv.append(self._newStateProp(modelnum, sp))
+        return rv
+
+    def _getStateProps(self,state_id):
+        if self._stateprop_semantics == sps_STICKY:
+            # in STICKY state proposition semantics, the set of state
+            # propositions in a compound state is the union of sets of
+            # state propositions of the substates.
+            rv = []
+            for modelnum, state in enumerate(state_id):
+                for local_sp in state.getStateProps():
+                    global_sp = self._newStateProp(modelnum, local_sp)
+                    rv.append(global_sp)
+            return rv
+        elif self._stateprop_semantics == sps_DUMMY:
+            return []
+        else:
+            raise Exception("Unsupported state proposition semantics: %s"
+                            % (self._stateprop_semantics,))
+
+    def _getOutTransitions(self,state_id):
+        """This method is called from a state object."""
+        rv=[]
+
+        # 1. Find out the enabled transitions in all component states
+        avail_transitions=[]
+        for s in state_id: # state_id is a tuple of states
+            avail_transitions.extend([t for t in s.getOutTransitions()])
+
+        # 2. Find out which rules are enabled when these actions can
+        # be executed
+        #enabled_rules=self._rulelist.enabled(
+        #    [ t.getAction()._id for t in avail_transitions ])
+        enabled_rules=self._rulelist.enabled(
+            set([ t.getAction()._id for t in avail_transitions ]))
+
+        # 3. Find transitions corresponding to the enabled rules
+        source_state=self._newState(state_id)
+        for rule in enabled_rules:
+            # dest_states = list of state tuples
+            dest_states=[()]
+            syncacts=rule.getSynchronousActions()
+            for state in state_id:
+                ds=[]
+                for t in state.getOutTransitions():
+                    if t.getAction()._id in syncacts:
+                        ds.append(t.getDestState())
+                if ds==[]: ds.append(state)
+                for new_ds in ds:
+                    dest_states=[ odtuple+(new_ds,) for odtuple in dest_states ]
+            # generate new transitions based on dest_states
+            for ds in dest_states:
+                rv.append(
+                    Transition( source_state,
+                                self._newAction( rule.getResult() ),
+                                self._newState(ds) )
+                    )
+        return rv
+
+class ParallelLstsModel(ParallelModel):
+    def __init__(self):
+        ParallelModel.__init__(self)
+        self._lstslist=LstsList()
+        self._rulelist=RuleList()
+        self._dirprefix=""
+
+    def log(self,*args):
+        pass # this should be replaced by a true logger
+
+    def getActions(self):
+        return [self._newAction(i)
+                for i in range(self._first_result_action_index,
+                               self._last_result_action_index+1)]
+
+    def loadFromObject(self,rules_file_contents=None):
+        parser=ExtRulesParser()
+
+        # Load LSTSs mentioned in the rules to the lstslist
+        lstss=parser.parseLstsFiles(rules_file_contents)
+        for lstsnum,lstsfile in lstss:
+            lstsobj=lsts.reader()
+            if self._dirprefix:
+                filename=self._dirprefix+"/"+lstsfile
+            else:
+                filename=lstsfile
+            try:
+                lstsobj.read(file(filename))
+                self.log("Model component %s loaded from '%s'" % (len(self._lstslist),filename))
+            except Exception,(errno,errstr):
+                raise ValueError("Could not read lsts '%s':\n(%s) %s" % (filename,errno,errstr))
+            self._lstslist.append((lstsnum,lstsobj))
+
+        # Create global action numbering
+        self._lstslist.createActionIndex()
+
+        self._first_result_action_index=self._lstslist.getActionCount()
+
+        # Convert rules into global action numbers
+        # and append to rulelist
+        for rule in parser.parseRules(rules_file_contents):
+            syncact=[]
+            result=""
+            # go through syncronized actions (everything except the last field)
+            try:
+
+                for lstsnum,actname in rule[:-1]:
+                    syncact.append( self._lstslist.act2int("%s.%s" % (lstsnum,actname)) )
+
+                result=rule[-1]
+
+                self._lstslist.addActionToIndex(result)
+                self._rulelist.append(Rule(syncact,self._lstslist.act2int(result)))
+            except: # ??? catch the right exception only!!! (thrown by act2int)
+                # the rule may have referred to non-existing actions
+                pass
+
+        self._last_result_action_index=self._lstslist.getActionCount()-1
+
+        # LSTSs are handled through model interface, so store them to
+        # modellist.
+        self._modellist=[LstsModel(litem[1]) for litem in self._lstslist ]
+        for m in self._modellist: m.useActionMapper(self._lstslist)
+        self._actionmapper=self._lstslist
+
+    def loadFromFile(self,rules_file_object):
+        # Try to find out a directory for lsts files
+        if not self._dirprefix and os.sep in rules_file_object.name:
+            try: self._dirprefix=rules_file_object.name.rsplit(os.sep,1)[0]
+            except: pass
+        return self.loadFromObject(rules_file_object.read())
+
+    def setLSTSDirectory(self,dirname):
+        """Every LSTS mentioned in the rules file will be prefixed with dirname/"""
+        self._dirprefix=dirname
+
+
+class ConversionModel():
+    def __visit_state(self, state):
+        if state not in self.__visitted:
+            if len(self.__stateprops) > 0:
+                for prop in state.getStateProps():
+                    self.__stateprops[str(prop)].append(self.__next_state_num)
+            self.__unexpanded.add(state)
+            self.__visitted[state] = self.__next_state_num
+            self.__next_state_num += 1
+            self.__transitions.append([])
+
+    def __init__(self, action_map, stateprops, init_state):
+        self.__transitions = []
+        self.__stateprops = dict()
+        for prop in stateprops:
+            self.__stateprops[prop] = []
+        self.__visitted=dict()
+        self.__unexpanded = set()
+        self.__next_state_num = 0
+        self.__visit_state(init_state)
+        while self.__unexpanded:
+            this = self.__unexpanded.pop()
+            this_num = self.__visitted[this]
+            for alpha, dest in [(a.getAction(), a.getDestState()) for a in this.getOutTransitions()]:
+                self.__visit_state(dest)
+                dest_num = self.__visitted[dest]
+                alpha_num = action_map[str(alpha)]
+                self.__transitions[this_num].append((dest_num, alpha_num))
+
+    def getTransitions(self):
+        return self.__transitions
+
+    def getStateProps(self):
+        return self.__stateprops
+
+def convert_to_lsts(model, filelike_object):
+    action_map = dict()
+    visible_set = set([str(alpha) for alpha in model.getActions()])
+    visible_set.discard("tau")
+    action_vec = ["tau"] + [a for a in visible_set]
+    for alpha, idx in zip(action_vec, xrange(len(action_vec))):
+        action_map[alpha] = idx
+
+    try:
+        stateprops = [str(prop) for prop in model.getStatePropList()]
+    except AttributeError:
+        stateprops = []
+
+    conversionmodel = ConversionModel(action_map, stateprops, model.getInitialState())
+
+    w=lsts.writer(filelike_object)
+    w.set_actionnames(action_vec)
+    w.set_transitions(conversionmodel.getTransitions())
+    w.set_stateprops(conversionmodel.getStateProps())
+    w.write()
+
+
+#
+# End of TEMA-originated code
+########################################################################
+
 def parse_actions_in_files(list_of_files):
     """
     Returns a dictionary:
@@ -72,6 +789,7 @@ if __name__ == "__main__":
     # Default values for commandline arguments
     sync_regexps = []
     output_file = sys.stdout
+    output_file_format = "xrules"
 
     # Parse arguments
     opts, remainder = getopt.gnu_getopt(
@@ -88,6 +806,8 @@ if __name__ == "__main__":
                 print "Syntax error in regexp: '%s'" % (arg,)
                 sys.exit(1)
         elif opt in ["-o", "--output"]:
+            if arg.endswith(".lsts") or arg.endswith(".lts"):
+                output_file_format = "lsts"
             try: output_file = file(arg, "w")
             except Exception, e:
                 print "%s" % (e,)
@@ -119,10 +839,20 @@ if __name__ == "__main__":
             # action does not match in any regex, execute it independently in
             # every file:
             for fname in a2fl[action]:
-                output.append('(%s, "%s") -> "%s"' % 
+                output.append('(%s, "%s") -> "%s"' %
                               (remainder.index(fname) + 1, action, action))
 
     # Dump the output
-    for l in output:
-        output_file.write("%s\n" % (l,))
-    output_file.close()
+    if output_file_format == "xrules":
+        for l in output:
+            output_file.write("%s\n" % (l,))
+        output_file.close()
+    else:
+        tmp_file = os.tmpfile()
+        for l in output:
+            tmp_file.write("%s\n" % (l,))
+        tmp_file.seek(0)
+        parallel_model = ParallelLstsModel()
+        parallel_model.loadFromFile(tmp_file)
+        tmp_file.close()
+        convert_to_lsts(parallel_model, output_file)
