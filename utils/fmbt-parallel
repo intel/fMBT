@@ -293,6 +293,36 @@ class model_State:
     def equals(self, other):
         return self.__eq__(other)
 
+class StateProp(object):
+    """
+    Each StateProp object contains the information on a single state
+    proposition, usually a unique identifier (statepropId) and a
+    string (statepropName).
+    """
+    def __init__(self,statepropId,statepropName=None):
+        self._id = statepropId
+        if statepropName != None:
+            self._statepropName = statepropName
+        else:
+            self._statepropName = str(self._id)
+
+    def __hash__(self):
+        return hash(self._id)
+
+    def __str__(self):
+        return self._statepropName
+
+    def toString(self):
+        return str(self)
+
+    def __eq__(self,stateprop):
+        # The following type comparison requires that a new style
+        # class is used (inherited from the object).
+        return type(self)==type(stateprop) and self._id==stateprop._id
+
+    def equals(self,stateprop):
+        return self.__eq__(stateprop)
+
 class lstsmodel_State(model_State):
     """
     State class is redefined to support on-the-fly generation of the
@@ -606,8 +636,12 @@ class ParallelModel(model_Model):
                     if t.getAction()._id in syncacts:
                         ds.append(t.getDestState())
                 if ds==[]: ds.append(state)
-                for new_ds in ds:
-                    dest_states=[ odtuple+(new_ds,) for odtuple in dest_states ]
+                old_dest_states = dest_states
+                dest_states = []
+                for incomplete_dest_states_tuple in old_dest_states:
+                    for new_ds in ds:
+                        dest_states.append(incomplete_dest_states_tuple + (new_ds,))
+
             # generate new transitions based on dest_states
             for ds in dest_states:
                 rv.append(
