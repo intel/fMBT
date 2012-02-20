@@ -72,8 +72,12 @@ void OutputFormat::add_uc(std::string& name,
 std::string OutputFormat::handle_history(Log&l,std::string& h)
 {
   History* history = new History_log(l,h);
-  Coverage_of* cov=new Coverage_of(l,covs);
+  std::vector<Coverage*> c(covs);
+  std::copy(rcovs.begin(),rcovs.end(),c.begin());  
+  Coverage_of* cov=new Coverage_of(l,c);
+
   testnames.push_back(h);
+
   history->set_coverage(cov,model);
   return format_covs();
 }
@@ -92,6 +96,18 @@ void OutputFormat::add_uc(std::string& name,
     add_uc(name,coverage);
   }
 }
+
+void OutputFormat::add_report(std::string& name,
+			      std::vector<std::string*>& from,
+			      std::vector<std::string*>& to,
+			      std::vector<std::string*>& drop)
+{
+  reportnames.push_back(name);
+  Coverage_report* c=new Coverage_report(l,from,to,drop);
+  c->set_model(model);
+  rcovs.push_back(c);
+}
+
 
 void OutputFormat::add_testrun(std::string& name,
 			       std::string& _model)

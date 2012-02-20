@@ -10,7 +10,7 @@ COMMON_SOURCES = fmbt.cc test_engine.cc log.cc helper.cc lts.g.d_parser.cc xrule
 
 fmbt_SOURCES                  = $(COMMON_SOURCES) adapter_dlopen.cc adapter_remote.cc lts_remote.cc lts_trace.cc xrules_remote.cc covlang.g.d_parser.cc coverage_market.cc coverage_tema_seq.cc history_remote.cc model_remote.cc
 
-fmbt_ucheck_SOURCES	      = uc.cc helper.cc log.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc conf.cc end_condition.cc test_engine.cc adapter.cc history.cc heuristic.cc policy.cc alg_bdfs.cc conf.g.d_parser.cc uconf.g.d_parser.cc mrules.g.d_parser.cc of.cc of_null.cc awrapper.cc null.cc aal.cc history_log.cc $(LOCAL_COVERAGES) $(LOCAL_MODELS) coverage_of.cc of_html.cc of_csv.cc
+fmbt_ucheck_SOURCES	      = uc.cc helper.cc log.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc conf.cc end_condition.cc test_engine.cc adapter.cc history.cc heuristic.cc policy.cc alg_bdfs.cc conf.g.d_parser.cc uconf.g.d_parser.cc mrules.g.d_parser.cc of.cc of_null.cc awrapper.cc null.cc aal.cc history_log.cc $(LOCAL_COVERAGES) $(LOCAL_MODELS) coverage_of.cc of_html.cc of_csv.cc coverage_report.cc
 
 fmbt_droid_SOURCES            = $(COMMON_SOURCES)
 

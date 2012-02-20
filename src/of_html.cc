@@ -20,6 +20,7 @@
 #include "of_html.hh"
 #include "coverage.hh"
 #include "helper.hh"
+#include "model.hh"
 
 std::string OutputFormat_Html::format_covs()
 {
@@ -36,6 +37,30 @@ std::string OutputFormat_Html::format_covs()
       "</td>\n";
   }
   return ret+"</tr>\n";
+}
+
+std::string OutputFormat_Html::report()
+{
+  std::string ret("<table><tr>\n");
+  std::vector<std::string>& an(model->getActionNames());
+  for(unsigned i=0;i<reportnames.size();i++) {
+    ret=ret+"<td>"+reportnames[i]+"</td>";
+    printf("reportnames %s\n",reportnames[i].c_str());
+    std::vector<std::vector<int> >& traces(rcovs[i]->traces);
+    printf("vector size %i\n",(int)traces.size());
+    for(unsigned j=0;j<traces.size();j++) {
+      ret=ret+"<td>";
+      ret=ret+"\n<ol>\n";
+      std::vector<int>& t(traces[j]);
+      for(unsigned k=0; k<t.size();k++) {
+	ret=ret+"<li>"+an[t[k]];
+      }
+      ret=ret+"</ol>\n";
+      ret=ret+"</td>";
+    }
+  }
+  ret=ret+"</tr></table>";
+  return ret;
 }
 
 FACTORY_DEFAULT_CREATOR(OutputFormat, OutputFormat_Html, "html")

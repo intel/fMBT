@@ -30,6 +30,7 @@ public:
   virtual void add_uc(std::string& name,Coverage* c) {}
 
   virtual std::string format_covs();  
+  virtual std::string report() { return "";}
 };
 
 #endif
