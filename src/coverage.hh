@@ -51,17 +51,6 @@ public:
 
   virtual int fitness(int* actions,int n, float* fitness)=0;
   virtual void set_model(Model* _model); // for input alphabet
-  /*
-  virtual void addmodel(Model* model); // for coverage
-  */
-  //  virtual void addcoveragerequirement(); ??
-
-  /**
-   * coveragerequirement
-   *
-   * (a action1 or e action2) and action3
-   *
-   */
 
 private:
   static std::map<std::string,creator>* factory;

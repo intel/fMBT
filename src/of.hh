@@ -26,10 +26,11 @@
 #include "writable.hh"
 #include "log_null.hh"
 
-class Coverage;
 class Model;
 class History;
 class Log;
+
+#include "coverage_report.hh"
 
 class OutputFormat: public Writable {
 public:
@@ -61,16 +62,18 @@ public:
   virtual void add_report(std::string& name,
 			  std::vector<std::string*>& from,
 			  std::vector<std::string*>& to,
-			  std::vector<std::string*>& drop)
-  {
+			  std::vector<std::string*>& drop);
 
-  }
+  virtual std::string report()=0;
 
 protected:
   Model* model;
   std::string prefix;
-  std::vector<Coverage*> covs;
+  std::vector<Coverage*>   covs;
   std::vector<std::string> covnames;
+
+  std::vector<Coverage_report*>   rcovs;
+  std::vector<std::string>        reportnames;
 
   std::vector<Model*>      testruns;
   std::vector<std::string> testnames;
@@ -81,6 +84,10 @@ protected:
   std::string drop_tag;
   std::string completed_tag;
 };
+
+#undef  FACTORY_CREATE_PARAMS
+#undef  FACTORY_CREATOR_PARAMS
+#undef  FACTORY_CREATOR_PARAMS2
 
 #define FACTORY_CREATE_PARAMS std::string name, std::string params
 #define FACTORY_CREATOR_PARAMS std::string params

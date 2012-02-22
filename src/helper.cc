@@ -100,6 +100,16 @@ int find(const std::vector<std::string> &v,const std::string s)
   return 0;
 }
 
+int find(const std::vector<std::string*> &v,const std::string s)
+{
+  for(unsigned i=0;i<v.size();i++) {
+    if (*v[i]==s) {
+      return i;
+    }
+  }
+  return 0;
+}
+
 bool isOutputName(const std::string& name)
 {
   return (name.c_str()[0]=='o');

@@ -41,6 +41,7 @@ public:
     return "";
   }
   virtual std::string format_covs();
+  virtual std::string report() { return "";}
 private:
   std::string csv_escape(std::string&);
   static std::string CRLF;

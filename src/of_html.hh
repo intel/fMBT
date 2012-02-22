@@ -39,6 +39,7 @@ public:
     return "</table>";
   }
   virtual std::string format_covs();
+  virtual std::string report();
 private:
 };
 

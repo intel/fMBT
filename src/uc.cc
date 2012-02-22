@@ -178,5 +178,8 @@ int main(int argc,char * const argv[])
   o=of->footer();
   fwrite(o.c_str(),1,o.size(),outfile);  
 
+  o=of->report();
+  fwrite(o.c_str(),1,o.size(),outfile);  
+
   return 0;
 }
