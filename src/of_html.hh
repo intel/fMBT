@@ -26,18 +26,9 @@ public:
   OutputFormat_Html(std::string params): OutputFormat(params) {}
   virtual ~OutputFormat_Html() {}
   
-  virtual std::string header() {
-    std::string ret("<table border=\"1\">\n<tr><th>UC</th>\n<th>verdict</th>\n");
+  virtual std::string header();
 
-    for(unsigned i=0;i<covnames.size();i++) {
-      ret=ret+"<th>"+covnames[i]+"</th>\n";
-    }
-    ret=ret+"</tr>\n";
-    return ret;
-  }
-  virtual std::string footer() {
-    return "</table>";
-  }
+  virtual std::string footer();
   virtual std::string format_covs();
   virtual std::string report();
 private:

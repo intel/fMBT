@@ -22,6 +22,37 @@
 #include "helper.hh"
 #include "model.hh"
 
+#include <map>
+
+std::string OutputFormat_Html::header()
+{
+  std::string script(
+    "<SCRIPT LANGUAGE=\"JavaScript\">\n"
+    "<!--\n"
+    "function showHide(elementid){\n"
+    "if (document.getElementById(elementid).style.display == 'none'){\n"
+    "document.getElementById(elementid).style.display = '';\n"
+    "} else {\n"
+    "document.getElementById(elementid).style.display = 'none';\n"
+    "}\n"
+    "} \n"
+    "//-->\n"
+    "</SCRIPT>\n");
+  std::string ret("<html><header>"+script+"</header>");
+  ret+="<body>";
+  ret+="<table border=\"1\">\n<tr><th>UC</th>\n<th>verdict</th>\n";
+  for(unsigned i=0;i<covnames.size();i++) {
+    ret=ret+"<th>"+covnames[i]+"</th>\n";
+  }
+  ret=ret+"</tr>\n";
+  return ret;
+}
+
+std::string OutputFormat_Html::footer() {
+  return "</table>";
+}
+  
+
 std::string OutputFormat_Html::format_covs()
 {
   std::string ret("<tr>\n");
@@ -41,13 +72,45 @@ std::string OutputFormat_Html::format_covs()
 
 std::string OutputFormat_Html::report()
 {
-  std::string ret("<table><tr>\n");
+  std::string ret("<table border=\"2\"><tr><th>Name</th><th>trace</th></tr>\n");
   std::vector<std::string>& an(model->getActionNames());
+  
   for(unsigned i=0;i<reportnames.size();i++) {
-    ret=ret+"<td>"+reportnames[i]+"</td>";
-    printf("reportnames %s\n",reportnames[i].c_str());
     std::vector<std::vector<int> >& traces(rcovs[i]->traces);
+    /*
+    std::vector<std::vector<int> >& tradces_sorted(tracesorter(traces));
+    */
+
+    std::map<std::vector<int>,int> cnt;
+
+    for(unsigned j=0;j<traces.size();j++) {
+      cnt[traces[j]]++;
+    }
+
+    ret=ret+"<tr><td><a href=\"javascript:showHide('"+reportnames[i]+"')\"><table><tr><td>" + reportnames[i]+"</td></tr><tr><td>Number of executed tests:"+to_string((unsigned)traces.size())+"</td></tr><tr><td>unique tests:"+to_string(unsigned(cnt.size()))+"</td></tr></table></a></td>";
+    ret=ret+"<td>\n<div id=\""+reportnames[i]+"\">\n"+
+      "<table border=\"4\">";
+    
+    printf("reportnames %s\n",reportnames[i].c_str());
     printf("vector size %i\n",(int)traces.size());
+    printf("Unique traces %i\n",cnt.size());
+
+    for(std::map<std::vector<int>,int>::iterator j=cnt.begin();
+	j!=cnt.end();j++) {
+
+      ret=ret+"<td>\n"
+	"<table border=\"2\">\n"
+	"<tr><td>Count:"+to_string((unsigned)j->second)+"</td></tr><td>";
+      ret=ret+"\n<ol>\n";
+      const std::vector<int>& t(j->first);
+      for(unsigned k=0; k<t.size();k++) {
+	ret=ret+"<li>"+an[t[k]];
+      }
+      ret=ret+"</ol>\n";
+      ret=ret+"</td></tr></table></td>";
+    }
+
+    /*
     for(unsigned j=0;j<traces.size();j++) {
       ret=ret+"<td>";
       ret=ret+"\n<ol>\n";
@@ -58,8 +121,12 @@ std::string OutputFormat_Html::report()
       ret=ret+"</ol>\n";
       ret=ret+"</td>";
     }
+    */
+    ret=ret+"</table>\n"
+      "</div>\n</tr>";
+    
   }
-  ret=ret+"</tr></table>";
+  ret=ret+"</table>";
   return ret;
 }
 
