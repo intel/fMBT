@@ -58,3 +58,4 @@ bool Lts_remote::init()
 }
 
 FACTORY_DEFAULT_CREATOR(Model, Lts_remote, "lts_remote")
+FACTORY_DEFAULT_CREATOR(Model, Lts_remote, "lsts_remote")
