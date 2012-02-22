@@ -165,6 +165,11 @@ int main(int argc,char * const argv[])
 
   l=new Log_null;
 
+  if (!of->status) {
+    std::printf("Error %s\n",of->errormsg.c_str());
+    return -1;
+  }
+
   std::string o=of->header();
   fwrite(o.c_str(),1,o.size(),outfile);  
 

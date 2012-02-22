@@ -44,56 +44,72 @@ OutputFormat::~OutputFormat() {}
 
 void OutputFormat::set_model(std::string m)
 { 
-  std::string model_name;
-  std::string model_param;
-  
-  Conf::split(m, model_name, model_param);
-
-  if ((model=Model::create(l,model_name,model_param)) == NULL)
-    {
-      status=false;
-      return;
-    } else {
-    set_model(model);
+  if (status) {
+    std::string model_name;
+    std::string model_param;
+    
+    Conf::split(m, model_name, model_param);
+    
+    if ((model=Model::create(l,model_name,model_param)) == NULL)
+      {
+	errormsg="Can't create model \""+m+"\"";
+	status=false;
+	return;
+      } else {
+      if (model->status) {
+	set_model(model);
+      } else {
+	status=false;
+	errormsg="Model error "+model->errormsg;
+      }
+    }
   }
-  
 }
 
 
 void OutputFormat::add_uc(std::string& name,
 			  Coverage* c)
 {
-  covnames.push_back(name);
-  covs.push_back(c);
-  c->set_model(model);
+  if (status) {
+    covnames.push_back(name);
+    covs.push_back(c);
+    c->set_model(model);
+  }
 }
 
 
 std::string OutputFormat::handle_history(Log&l,std::string& h)
 {
-  History* history = new History_log(l,h);
-  std::vector<Coverage*> c(covs);
-  std::copy(rcovs.begin(),rcovs.end(),c.begin());  
-  Coverage_of* cov=new Coverage_of(l,c);
-
-  testnames.push_back(h);
-
-  history->set_coverage(cov,model);
-  return format_covs();
+  if (status) {
+    History* history = new History_log(l,h);
+    std::vector<Coverage*> c(covs);
+    std::copy(rcovs.begin(),rcovs.end(),c.begin());  
+    Coverage_of* cov=new Coverage_of(l,c);
+    
+    testnames.push_back(h);
+    
+    history->set_coverage(cov,model);
+    return format_covs();
+  } else {
+    return "";
+  }
 }
 
 void OutputFormat::add_uc(std::string& name,
 			  std::string& c)
 {
-  std::string coverage_name;
-  std::string coverage_param;
-  Conf::split(c, coverage_name, coverage_param);  
-
-  Coverage* coverage = CoverageFactory::create(l,coverage_name,coverage_param);
-  if (coverage == NULL) {
-    status=false;
-  } else {
-    add_uc(name,coverage);
+  if (status) {
+    std::string coverage_name;
+    std::string coverage_param;
+    Conf::split(c, coverage_name, coverage_param);  
+    
+    Coverage* coverage = CoverageFactory::create(l,coverage_name,coverage_param);
+    if (coverage == NULL) {
+      errormsg="Can't create coverage";
+      status=false;
+    } else {
+      add_uc(name,coverage);
+    }
   }
 }
 
@@ -102,30 +118,42 @@ void OutputFormat::add_report(std::string& name,
 			      std::vector<std::string*>& to,
 			      std::vector<std::string*>& drop)
 {
-  reportnames.push_back(name);
-  Coverage_report* c=new Coverage_report(l,from,to,drop);
-  c->set_model(model);
-  rcovs.push_back(c);
+  if (status) {
+    reportnames.push_back(name);
+    Coverage_report* c=new Coverage_report(l,from,to,drop);
+    c->set_model(model);
+    rcovs.push_back(c);
+  }
 }
 
 
 void OutputFormat::add_testrun(std::string& name,
 			       std::string& _model)
 {
-  std::string model_name,model_param;
-  Conf::split(_model, model_name, model_param);
+  if (status) {
+    std::string model_name,model_param;
+    Conf::split(_model, model_name, model_param);
 
-  Model* model;
-  if ((model=Model::create(l, model_name, model_param)) == NULL) {
-    status=false;
-  } else {
-    add_testrun(name,model);
+    Model* model;
+    if ((model=Model::create(l, model_name, model_param)) == NULL) {
+      errormsg="Can't create model \""+_model+"\"";
+      status=false;
+    } else {
+      if (model->status) {
+	add_testrun(name,model);
+      } else {
+	status=false;
+	errormsg="Model error "+model->errormsg;
+      }
+    }
   }
 }
 
 void OutputFormat::add_testrun(std::string& name,
 			       Model* _model)
 {
-  testruns.push_back(_model);
-  testnames.push_back(name);
+  if (status) {
+    testruns.push_back(_model);
+    testnames.push_back(name);
+  }
 }

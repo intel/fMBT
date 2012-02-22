@@ -31,10 +31,10 @@ void Coverage_report::set_model(Model* _model)
   Coverage::set_model(_model);
 
   std::vector<std::string>& sp(model->getSPNames());  
-  
+
   for(unsigned i=0;i<from.size();i++) {
     int pos=find(sp,*from[i]);
-    if (*from[i]!=sp[pos]) {
+    if (sp.size() && *from[i]!=sp[pos]) {
       pos=model->action_number(*from[i]);
       if (pos>0) {
 	start_action.push_back(pos);
@@ -48,7 +48,7 @@ void Coverage_report::set_model(Model* _model)
 
   for(unsigned i=0;i<to.size();i++) {
     int pos=find(sp,*to[i]);
-    if (*to[i]!=sp[pos]) {
+    if (sp.size() && *to[i]!=sp[pos]) {
       pos=model->action_number(*to[i]);
       if (pos>0) {
 	end_action.push_back(pos);
@@ -63,7 +63,7 @@ void Coverage_report::set_model(Model* _model)
 
   for(unsigned i=0;i<drop.size();i++) {
     int pos=find(sp,*drop[i]);
-    if (*drop[i]!=sp[pos]) {
+    if (sp.size() && *drop[i]!=sp[pos]) {
       pos=model->action_number(*drop[i]);
       if (pos>0) {
 	rollback_action.push_back(pos);
