@@ -31,6 +31,21 @@
 
 #include "aalang.hh"
 
+#ifndef DROI
+#include <error.h>
+#else
+void error(int exitval, int dontcare, const char* format, ...)
+{
+  va_list ap;
+  fprintf(stderr, "fmbt-aalc error: ");
+  va_start(ap, format);
+  vfprintf(stderr, format, ap);
+  va_end(ap);
+  fprintf(stderr, "\n");
+  exit(exitval);
+}
+#endif
+
 extern "C" {
 extern D_ParserTables parser_tables_lang;
 }
@@ -96,10 +111,8 @@ int main(int argc,char** argv) {
       case 'o':
 	outputfile=fopen(optarg,"w");
 	compile_command=compile_command+optarg;
-	if (!outputfile) {
-	  std::printf("Can't open output file \"%s\"\n",optarg);
-	  return 1;
-	}
+	if (!outputfile)
+          error(1,0,"cannot open output file \"%s\".",optarg);
 	break;
       case 'h':
 	print_usage();
@@ -124,10 +137,8 @@ int main(int argc,char** argv) {
   } else {
     s=readfile(argv[optind],prep_command.c_str());
   }
-  if (!s) {
-    std::printf("Can't read input file \"%s\"\n",argv[optind]);
-    return 3;
-  }
+  if (!s)
+    error(1,0,"cannot read input file \"%s\".",argv[optind]);
 
   dparse(p,s,std::strlen(s));
   free_D_Parser(p);
@@ -135,51 +146,53 @@ int main(int argc,char** argv) {
   g_free(s);
   s=NULL;
 
-  if (!obj) {
-    fprintf(stderr,"Failure...\n");
-    return 4;
-  }
+  if (!obj)
+    error(1,0,"parsing AAL failed.");
 
   result=obj->stringify();
   delete obj;
 
   if (lib) {
-    int _stdin,_stdout;//,_stder;
+    int _stdin;
     GPid pid;
     int argc;
-    char b[512];
-    gchar **argv=(gchar**)malloc(42*sizeof(gchar*));
+    gchar **argv=NULL;
     GError *gerr=NULL;
 
     compile_command+=pstr;
 
-    g_shell_parse_argv(compile_command.c_str(),
-		       &argc,&argv,&gerr);
+    if (!g_shell_parse_argv(compile_command.c_str(),
+                            &argc,&argv,&gerr) || argv==NULL)
+      error(1,0,"failed to parse compiler parameters in command\n    %s",
+            compile_command.c_str());
 
-    g_spawn_async_with_pipes(NULL,argv,NULL,G_SPAWN_SEARCH_PATH,NULL,&pid,NULL,&_stdin,&_stdout,NULL,&gerr);
+    g_spawn_async_with_pipes(
+      NULL,argv,NULL,
+      (GSpawnFlags)(G_SPAWN_SEARCH_PATH|G_SPAWN_DO_NOT_REAP_CHILD),
+      NULL,NULL,&pid,&_stdin,NULL,NULL,&gerr);
 
-    for(int i=0;i<42;i++) {
+    for(int i=0;i<argc;i++) {
       if (argv[i]) {
 	free(argv[i]);
       }
-      free(argv);
     }
-
-    nonblock(_stdout);
+    free(argv);
 
     unsigned int pos=0;
     unsigned int wrote=0;
     do {
-      size_t ignore;
       wrote=TEMP_FAILURE_RETRY(write(_stdin,result.c_str()+pos,result.length()-pos));
       pos+=wrote;
-      ignore=read(_stdout,b,512);
     } while (wrote>0 && pos<result.length());
     close(_stdin);
-    block(_stdout);
-
-    while(read(_stdout,b,512)) {}
-    close(_stdout);
+    
+    {
+      int status;
+      if (waitpid(pid, &status, 0)==-1)
+        error(1,0,"could not read compiler status.");
+      if (!WIFEXITED(status) || WEXITSTATUS(status)!=0)
+        error(1,0,"compiling failed.");
+    }
   } else {
     fprintf(outputfile,"%s",result.c_str());
   }
