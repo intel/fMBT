@@ -38,6 +38,8 @@
 
 #include <dlfcn.h>
 
+#include "helper.hh"
+
 bool human_readable=true;
 
 void escape_free(const char* msg)
@@ -255,7 +257,7 @@ char* readfile(const char* filename,const char* preprocess)
   int status;
 
   if (preprocess==NULL) {
-    return readfile(filename,false);
+    return readfile(filename);
   }
 
   std::string s(preprocess);
@@ -269,32 +271,16 @@ char* readfile(const char* filename,const char* preprocess)
  }
 #endif
 
-char* readfile(const char* filename,bool preprocess)
+char* readfile(const char* filename)
 {
   std::string fn(filename);
   unsigned long cutpos = fn.find_last_of("#");
 
   if (cutpos == fn.npos) {
-#ifndef DROI
-    if (preprocess) {
-      GString *gs=g_string_new("");
-      
-      g_string_printf(gs,"/bin/sh -c \"cat '%s'|grep -v ^#\"",filename);
-
-      char* out=readfile(filename,gs->str);
-      //g_free(gs);
-
-      return out;
-    } else {
-      char* out=NULL;
-      g_file_get_contents(filename,&out,NULL,NULL);
-      return out;
-    }
-#else
     /* read file contents always without preprocessing when glib not
      * available */
     std::ifstream f;
-    int file_len;
+    size_t file_len;
     f.open(filename, std::fstream::in | std::fstream::ate);
     if (!f.is_open())
       return NULL;
@@ -308,9 +294,32 @@ char* readfile(const char* filename,bool preprocess)
     f.read(contents, file_len);
     f.close();
     contents[file_len] = '\0';
-    return contents;
 
-#endif
+    /* drop all lines that start with # */
+    char *cleaned_up_contents = (char*)malloc(file_len+1);
+    if (!cleaned_up_contents) {
+        free(contents);
+        return NULL;
+    }
+    size_t clean_pos = 0; // position in "cleaned_up_contents"
+    size_t cont_pos = 0; // position in "contents"
+    char prev_char = '\n';
+    while (cont_pos < file_len)
+    {
+        if (contents[cont_pos] == '#' && prev_char == '\n') {
+            // skip comment line
+            while (cont_pos < file_len && contents[cont_pos] != '\n')
+                cont_pos++;
+            if (cont_pos < file_len) cont_pos++; // skip new line char
+        } else {
+            prev_char = cleaned_up_contents[clean_pos] = contents[cont_pos];
+            cont_pos++;
+            clean_pos++;
+        }
+    }
+    cleaned_up_contents[clean_pos] = '\0';
+    free(contents);
+    return cleaned_up_contents;
   } else {
     return unescape_string(strdup(fn.substr(cutpos+1).c_str()));
   }
