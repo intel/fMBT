@@ -17,7 +17,7 @@ endif
 
 include Sources.mk
 
-noinst_HEADERS = aalang_cpp.hh aalang.hh aalang_py.hh adapter_dlopen.hh adapter_dummy.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_timer.hh adapter_v4l2.hh alg_bdfs.hh conf.hh coverage.hh coverage_mapper.hh coverage_market.hh coverage_prop.hh coverage_tema_seq.hh coverage_tree.hh end_condition.hh helper.hh heuristic_greedy.hh heuristic.hh heuristic_minerror.hh heuristic_mrandom.hh heuristic_random.hh history.hh history_remote.hh log_null.hh lts.hh lts_remote.hh lts_trace.hh lts_xrules.hh model.hh model_remote.hh null.hh of.hh of_null.hh policy.hh rules.hh test_engine.hh verdict.hh xrules_remote.hh model_yes.hh
+noinst_HEADERS = aalang_cpp.hh aalang.hh aalang_py.hh adapter_dlopen.hh adapter_dummy.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_timer.hh adapter_v4l2.hh alg_bdfs.hh conf.hh coverage.hh coverage_mapper.hh coverage_market.hh coverage_prop.hh coverage_report.hh coverage_tema_seq.hh coverage_tree.hh end_condition.hh helper.hh heuristic_greedy.hh heuristic.hh heuristic_minerror.hh heuristic_mrandom.hh heuristic_random.hh history.hh history_remote.hh log_null.hh lts.hh lts_remote.hh lts_trace.hh lts_xrules.hh model.hh model_remote.hh null.hh of.hh of_null.hh policy.hh rules.hh test_engine.hh verdict.hh xrules_remote.hh model_yes.hh
 
 pkginclude_HEADERS = adapter.hh factory.hh writable.hh log.hh aal.hh model.hh awrapper.hh mwrapper.hh alphabet.hh helper.hh
 
