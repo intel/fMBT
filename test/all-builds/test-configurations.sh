@@ -30,11 +30,15 @@
 # - install caching http proxy (like squid) on your host
 # - set http_proxy=http://<your-ip>:<squid-port> when you run the tests
 
-DEBIAN_VM_LAUNCH="kvm -m 1024 -nographic -snapshot -hda $HOME/emu/debian/debian.hda -net nic,model=virtio -net user,hostfwd=tcp::55522-:22"
+DEBIAN_HDA=$HOME/emu/debian/debian.hda
+
+FEDORA_HDA=$HOME/emu/fedora/fedora.hda
+
+DEBIAN_VM_LAUNCH="kvm -m 1024 -nographic -snapshot -hda $DEBIAN_HDA -net nic,model=virtio -net user,hostfwd=tcp::55522-:22"
 SSH_DEBIAN_USER="ssh -p 55522 debian@localhost"
 SSH_DEBIAN_ROOT="ssh -p 55522 root@localhost"
 
-FEDORA_VM_LAUNCH="kvm -m 1024 -nographic -snapshot -hda $HOME/emu/fedora/fedora.hda -net nic,model=virtio -net user,hostfwd=tcp::55622-:22"
+FEDORA_VM_LAUNCH="kvm -m 1024 -nographic -snapshot -hda $FEDORA_HDA -net nic,model=virtio -net user,hostfwd=tcp::55622-:22"
 SSH_FEDORA_USER="ssh -p 55622 fedora@localhost"
 SSH_FEDORA_ROOT="ssh -p 55622 root@localhost"
 
@@ -45,7 +49,8 @@ cd "$(dirname "$0")"
 THIS_TEST_DIR="$PWD"
 LOGFILE=/tmp/fmbt.test.all-builds.log
 SOURCEDIR=/tmp/fmbt.test.all-builds/src
-CLEANGITDIR=/tmp/fmbt.test.all-builds/clean
+CLEANGITDIR=/tmp/fmbt.test.all-builds/clean-git
+CLEANSRCDIR=/tmp/fmbt.test.all-builds/clean-src
 INSTALLDIR=/tmp/fmbt.test.all-builds/install
 GITDIR=/tmp/fmbt.test.all-builds/git
 rm -rf "$LOGFILE"
@@ -59,6 +64,9 @@ mkdir -p "$GITDIR"
 
 rm -rf "$CLEANGITDIR"
 mkdir -p "$CLEANGITDIR"
+
+rm -rf "$CLEANSRCDIR"
+mkdir -p "$CLEANSRCDIR"
 
 rm -rf "$SOURCEDIR"
 mkdir -p "$SOURCEDIR"
@@ -119,6 +127,19 @@ iSourceTarGz() {
     rm -rf "$SOURCEDIR"
     mkdir -p "$SOURCEDIR"
 
+    [ -f "$CLEANSRCDIR"/*/configure ] && {
+        cp -r "$CLEANSRCDIR"/* "$SOURCEDIR"/ >> $LOGFILE 2>&1
+        cd "$SOURCEDIR"/fmbt*
+
+        if [ ! -f "configure" ] || [ -f Makefile ]; then
+            echo "configure exists or Makefile is missing in $SOURCEDIR" >> $LOGFILE
+            testfailed
+        fi
+
+        testpassed
+        return 0
+    }
+
     rm -rf "$GITDIR"
     mkdir -p "$GITDIR"
 
@@ -146,6 +167,9 @@ iSourceTarGz() {
         echo "README missing" >> $LOGFILE
         testfailed
     fi
+
+    cp -r "$SOURCEDIR"/* "$CLEANSRCDIR"/ >> $LOGFILE 2>&1
+
     testpassed
 }
 
@@ -180,6 +204,15 @@ helperMakeMakeInstall() {
 
 iMakeInstDebian() {
     teststep "make install on Debian..."
+
+    VM_PID=""
+
+    if [ ! -f "$DEBIAN_HDA" ]; then
+        echo "Debian VM image not found" >> $LOGFILE
+        testskipped
+        return 0
+    fi
+
     bash -c "$DEBIAN_VM_LAUNCH" >>$LOGFILE 2>&1 &
     VM_PID=$!
     sleep 15
@@ -204,6 +237,15 @@ iMakeInstDebian() {
 
 iMakeInstFedora() {
     teststep "make install on Fedora..."
+
+    VM_PID=""
+
+    if [ ! -f "$FEDORA_HDA" ]; then
+        echo "Fedora VM image not found" >> $LOGFILE
+        testskipped
+        return 0
+    fi
+
     bash -c "$FEDORA_VM_LAUNCH" >>$LOGFILE 2>&1 &
     VM_PID=$!
     sleep 20
@@ -301,6 +343,14 @@ iBuildInstDebPkg() {
 iBuildInstRPMPkg() {
     teststep "rpmbuild..."
 
+    VM_PID=""
+
+    if [ ! -f "$FEDORA_HDA" ]; then
+        echo "Fedora VM image not found" >> $LOGFILE
+        testskipped
+        return 0
+    fi
+
     bash -c "$FEDORA_VM_LAUNCH" >>$LOGFILE 2>&1 &
     VM_PID=$!
     sleep 20
@@ -339,7 +389,7 @@ iBuildInstRPMPkg() {
 iTestFmbt() {
     teststep "running fmbt tests"
     if [ -z "$VM_PID" ]; then
-        echo >> $LOGFILE
+        echo "virtual machine is not running" >> $LOGFILE
         testskipped
         return 0
     fi
