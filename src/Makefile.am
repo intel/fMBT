@@ -28,7 +28,7 @@ fmbt_ucheck_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pk
 fmbt_droid_CPPFLAGS            = -Wall -pedantic -fPIC -I d -I `pwd` -DDROI
 remote_adapter_loader_CPPFLAGS = -Wall -pedantic -I d -DDROI
 fmbt_cparsers_la_CPPFLAGS      = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DCAPI
-fmbt_aalc_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0`
+fmbt_aalc_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DINCDIR=\"${pkgincludedir}\"
 
 fmbt_LDFLAGS                   = -g `pkg-config --libs glib-2.0 gobject-2.0 libedit` -lboost_regex -Wl,-E -ldl
 fmbt_ucheck_LDFLAGS            = -g `pkg-config --libs glib-2.0 gobject-2.0 libedit libxml-2.0` -lboost_regex -Wl,-E -ldl

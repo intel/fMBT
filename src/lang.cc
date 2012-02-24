@@ -78,7 +78,10 @@ std::vector<std::string> prep;
 std::string pstr;
 extern std::string result;
 extern aalang* obj;
-std::string compile_command("g++ -fPIC -shared -x c++  - -I /usr/include/fmbt -o ");
+
+std::string compile_command("g++ -fPIC -shared -x c++  - -I " 
+			    INCDIR
+			    " -o ");
 std::string prep_command("fmbt-aalp");
 
 
@@ -86,6 +89,7 @@ int main(int argc,char** argv) {
   int c;
   bool lib=false;
   FILE* outputfile=stdout;
+  printf("%s\n",INCDIR);
   static struct option long_opts[] = {
     {"help", no_argument, 0, 'h'},
     {0, 0, 0, 0}
