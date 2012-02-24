@@ -39,7 +39,7 @@ std::string filetype(std::string& s);
 #ifndef DROI
 char* readfile(const char* filename,const char* preprocess);
 #endif
-char* readfile(const char* filename,bool preprocess=true);
+char* readfile(const char* filename);
 std::string capsulate(std::string s);
 char* escape_string(const char* msg);
 void escape_free(const char* msg);

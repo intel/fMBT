@@ -137,7 +137,7 @@ int main(int argc,char** argv) {
   p->loc.pathname = argv[optind];
 
   if (prep_command=="") {
-    s=readfile(argv[optind],false);
+    s=readfile(argv[optind]);
   } else {
     s=readfile(argv[optind],prep_command.c_str());
   }
