@@ -49,6 +49,8 @@ void OutputFormat::set_model(std::string m)
     std::string model_param;
     
     Conf::split(m, model_name, model_param);
+
+    printf("load model %s %s\n",model_name.c_str(),model_param.c_str());
     
     if ((model=Model::create(l,model_name,model_param)) == NULL)
       {

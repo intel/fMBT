@@ -38,6 +38,18 @@ void History_log::processNode(xmlTextReaderPtr reader)
   if (name==NULL) return;
 
   if ((xmlTextReaderDepth(reader)==3) &&
+      (strcmp((const char*)name,"current_time")==0)) {
+    char* time=(char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"time");
+    char* endp;
+    long sec = strtol(time, &endp, 10);
+    if (*endp=='.') {
+      long usec=strtol(endp, &endp, 10);
+      current_time.tv_sec=sec;
+      current_time.tv_usec=usec;
+    }
+  }
+
+  if ((xmlTextReaderDepth(reader)==3) &&
       (strcmp((const char*)name,"action")==0)) {
     // action
     if (act) {

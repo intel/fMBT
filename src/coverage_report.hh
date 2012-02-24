@@ -21,6 +21,8 @@
 
 #include "coverage.hh"
 
+#include <sys/time.h>
+
 class Coverage_report: public Coverage {
 public:
   Coverage_report(Log&l,std::vector<std::string*>& _from,
@@ -43,6 +45,10 @@ public:
   virtual void set_model(Model* _model);
 
   std::vector<std::vector<int> > traces;
+  std::vector<std::vector<struct timeval> >  step_time;
+  std::vector< struct timeval >  start_time;
+  std::vector< struct timeval >  duration;
+
 private:
 
   bool prop_set(std::vector<int> p,int npro,int* props);

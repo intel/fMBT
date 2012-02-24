@@ -70,18 +70,32 @@ std::string OutputFormat_Html::format_covs()
   return ret+"</tr>\n";
 }
 
+
+/* We might want to have more than one comparator for
+   different orders */
+
+bool vcmp (const std::vector<int>& lhs,
+	   const std::vector<int>& rhs)
+{
+  if (lhs.size()==rhs.size()) {
+    return lhs<rhs;
+  }
+  return lhs.size()<rhs.size();
+}
+
+
 std::string OutputFormat_Html::report()
 {
   std::string ret("<table border=\"2\"><tr><th>Name</th><th>trace</th></tr>\n");
   std::vector<std::string>& an(model->getActionNames());
   
   for(unsigned i=0;i<reportnames.size();i++) {
-    std::vector<std::vector<int> >& traces(rcovs[i]->traces);
-    /*
-    std::vector<std::vector<int> >& tradces_sorted(tracesorter(traces));
-    */
 
-    std::map<std::vector<int>,int> cnt;
+    bool(*cmprp)(const std::vector<int>&,
+		 const std::vector<int>&) = vcmp;
+
+    std::vector<std::vector<int> >& traces(rcovs[i]->traces);
+    std::map<std::vector<int> , int, bool(*)(const std::vector<int>&,const std::vector<int>&) > cnt(cmprp);
 
     for(unsigned j=0;j<traces.size();j++) {
       cnt[traces[j]]++;
@@ -98,9 +112,9 @@ std::string OutputFormat_Html::report()
     for(std::map<std::vector<int>,int>::iterator j=cnt.begin();
 	j!=cnt.end();j++) {
 
-      ret=ret+"<td>\n"
-	"<table border=\"2\">\n"
-	"<tr><td>Count:"+to_string((unsigned)j->second)+"</td></tr><td>";
+      ret=ret+"<td valign=\"top\">\n"
+	"<table border=\"0\">\n"
+	"<caption>Count:"+to_string((unsigned)j->second)+"</caption><td>";
       ret=ret+"\n<ol>\n";
       const std::vector<int>& t(j->first);
       for(unsigned k=0; k<t.size();k++) {
