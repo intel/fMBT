@@ -61,6 +61,8 @@ import compiler
 import ast
 import re
 
+import atexit
+
 MAX_LINE_LENGTH=1024*1024 # bytes
 
 gLogFile = "/tmp/remote_python.log"
@@ -395,14 +397,26 @@ class Exec:
 
 g_dbusEvalGlobals = {}
 
+_g_killList = []
+
+def _g_exitHandler():
+    for p in _g_killList:
+        if p.poll() == None: os.killpg(p.pid, 15)
+    time.sleep(0.1)
+    for p in _g_killList:
+        if p.poll() == None: os.killpg(p.pid, 9)
+
 class Shell:
     """
     Runs commands in shell.
     """
     def __init__(self):
         self._processList = []
+        self._exitHandlerRegistered = False
 
-    def __call__(self, args, stdinHandler=None, stdoutHandler=None, stderrHandler=None):
+    def __call__(self, args,
+                 stdinHandler=None, stdoutHandler=None, stderrHandler=None,
+                 killOnExit=False):
         """
         Run the command (given as args) in shell in child process.
 
@@ -414,14 +428,33 @@ class Shell:
         
         If handlers are not given, data read from stdout and stderr is
         logged.
+
+        If killOnExit==True, child process and all its children that
+        belong to the same process group will be terminated and killed
+        if remote_python quits normally.
         """
+
+        popen_kwargs = {}
+        if killOnExit:
+            if not self._exitHandlerRegistered:
+                atexit.register(_g_exitHandler)
+                self._exitHandlerRegistered = True
+            # In order to kill child and all its children they
+            # need to run in their own process group
+            popen_kwargs['preexec_fn'] = lambda: os.setpgid(0,0)
+
         p = subprocess.Popen(args, 
                              stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE,
                              close_fds=True,
-                             shell=True)
+                             shell=True,
+                             **popen_kwargs)
         self._processList.append(p)
+
+        if killOnExit:
+            _g_killList.append(p)
+
         p.childNumber = len(self._processList)-1
         log("  Child %4s pid=%s cmd='%s'" %
             (p.childNumber, p.pid, args))

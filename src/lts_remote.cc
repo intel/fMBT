@@ -57,4 +57,5 @@ bool Lts_remote::init()
   return ret;
 }
 
-FACTORY_DEFAULT_CREATOR(Model, Lts_remote, "lts_remote")
+namespace _lts_remote_1 { FACTORY_DEFAULT_CREATOR(Model, Lts_remote, "lts_remote") }
+namespace _lts_remote_2 { FACTORY_DEFAULT_CREATOR(Model, Lts_remote, "lsts_remote") }
