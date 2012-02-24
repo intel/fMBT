@@ -17,7 +17,6 @@
  *
  */
 #include "model.hh"
-#include <glib.h>
 
 class Model_yes: public Model {
 public:
