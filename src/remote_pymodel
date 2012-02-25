@@ -17,11 +17,11 @@
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
 """
-Usage: remote_model.py [options] modelfile
+Usage: remote_pymodel [options] modelfile
 
 Runs a remote model implemented in Python or AAL/Python. modelfile is
 a Python module that implements the model interface, or AAL/Python
-file. In the latter case remote_model.py runs fmbt-aalc to convert it
+file. In the latter case remote_pymodel runs fmbt-aalc to convert it
 into Python.
 
 Options:
@@ -41,7 +41,7 @@ def log(msg):
         file(log_filename,"a").write(msg + "\n")
 
 def error(msg):
-    msg = "remote_model.py error: " + msg + "\n"
+    msg = "remote_pymodel error: " + msg + "\n"
     log(msg)
     sys.stderr.write(msg)
     sys.exit(1)
