@@ -18,7 +18,9 @@ BuildRequires:  automake
 Requires:       dbus-python
 
 %description
-Free Model Based testing tool
+free Model-Based Testing tool automates both generating
+and executing tests.
+
 
 %prep
 %setup -q
@@ -37,7 +39,9 @@ make install DESTDIR=$RPM_BUILD_ROOT
 %files
 %{_bindir}/*
 %{_includedir}
-%{_libdir}
+%{_libdir}/python*
+
+
 %doc
 %{_docdir}
 

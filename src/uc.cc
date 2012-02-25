@@ -147,7 +147,7 @@ int main(int argc,char * const argv[])
 
   D_Parser *p = new_D_Parser(&parser_tables_uconf,5120);
 
-  char* s=readfile(usecasefile,false);
+  char* s=readfile(usecasefile);
   if (!s) {
     std::printf("Can't read input file \"%s\"\n",usecasefile);
     return 3;    

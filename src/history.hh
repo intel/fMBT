@@ -26,6 +26,7 @@
 #include "writable.hh"
 #include "coverage.hh"
 #include "alphabet.hh"
+#include <sys/time.h>
 
 class Log;
 
@@ -34,6 +35,8 @@ public:
   History(Log& l, std::string params = "") : log(l) {}
 
   virtual void set_coverage(Coverage*,Alphabet* alpha) =0;
+
+  static struct timeval current_time;
 
 protected:
   Log log;

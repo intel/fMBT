@@ -19,4 +19,6 @@
 
 #include "history.hh"
 
+struct timeval History::current_time;
+
 FACTORY_IMPLEMENTATION(History)

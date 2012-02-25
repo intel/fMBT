@@ -30,11 +30,15 @@
 # - install caching http proxy (like squid) on your host
 # - set http_proxy=http://<your-ip>:<squid-port> when you run the tests
 
-DEBIAN_VM_LAUNCH="kvm -m 1024 -nographic -snapshot -hda $HOME/emu/debian/debian.hda -net nic,model=virtio -net user,hostfwd=tcp::55522-:22"
+DEBIAN_HDA=$HOME/emu/debian/debian.hda
+
+FEDORA_HDA=$HOME/emu/fedora/fedora.hda
+
+DEBIAN_VM_LAUNCH="kvm -m 1024 -nographic -snapshot -hda $DEBIAN_HDA -net nic,model=virtio -net user,hostfwd=tcp::55522-:22"
 SSH_DEBIAN_USER="ssh -p 55522 debian@localhost"
 SSH_DEBIAN_ROOT="ssh -p 55522 root@localhost"
 
-FEDORA_VM_LAUNCH="kvm -m 1024 -nographic -snapshot -hda $HOME/emu/fedora/fedora.hda -net nic,model=virtio -net user,hostfwd=tcp::55622-:22"
+FEDORA_VM_LAUNCH="kvm -m 1024 -nographic -snapshot -hda $FEDORA_HDA -net nic,model=virtio -net user,hostfwd=tcp::55622-:22"
 SSH_FEDORA_USER="ssh -p 55622 fedora@localhost"
 SSH_FEDORA_ROOT="ssh -p 55622 root@localhost"
 
@@ -45,7 +49,9 @@ cd "$(dirname "$0")"
 THIS_TEST_DIR="$PWD"
 LOGFILE=/tmp/fmbt.test.all-builds.log
 SOURCEDIR=/tmp/fmbt.test.all-builds/src
-CLEANGITDIR=/tmp/fmbt.test.all-builds/clean
+CLEANGITDIR=/tmp/fmbt.test.all-builds/clean-git
+CLEANSRCDIR=/tmp/fmbt.test.all-builds/clean-src
+INSTALLDIR=/tmp/fmbt.test.all-builds/install
 GITDIR=/tmp/fmbt.test.all-builds/git
 rm -rf "$LOGFILE"
 FMBT_SOURCE_DIR="$PWD/../.."
@@ -58,6 +64,9 @@ mkdir -p "$GITDIR"
 
 rm -rf "$CLEANGITDIR"
 mkdir -p "$CLEANGITDIR"
+
+rm -rf "$CLEANSRCDIR"
+mkdir -p "$CLEANSRCDIR"
 
 rm -rf "$SOURCEDIR"
 mkdir -p "$SOURCEDIR"
@@ -118,6 +127,19 @@ iSourceTarGz() {
     rm -rf "$SOURCEDIR"
     mkdir -p "$SOURCEDIR"
 
+    [ -f "$CLEANSRCDIR"/*/configure ] && {
+        cp -r "$CLEANSRCDIR"/* "$SOURCEDIR"/ >> $LOGFILE 2>&1
+        cd "$SOURCEDIR"/fmbt*
+
+        if [ ! -f "configure" ] || [ -f Makefile ]; then
+            echo "configure exists or Makefile is missing in $SOURCEDIR" >> $LOGFILE
+            testfailed
+        fi
+
+        testpassed
+        return 0
+    }
+
     rm -rf "$GITDIR"
     mkdir -p "$GITDIR"
 
@@ -132,7 +154,6 @@ iSourceTarGz() {
 
     [ -f fmbt*.tar.gz ] || {
         testfailed
-        exit 1
     }
     echo "" >> $LOGFILE
     echo "2: unpacking " fmbt*.tar.gz " into $SOURCEDIR" >> $LOGFILE
@@ -141,13 +162,14 @@ iSourceTarGz() {
     if [ ! -f "configure" ]; then
         echo "configure missing" >> $LOGFILE
         testfailed
-        exit 1
     fi
     if [ ! -f "README" ]; then
         echo "README missing" >> $LOGFILE
         testfailed
-        exit 1
     fi
+
+    cp -r "$SOURCEDIR"/* "$CLEANSRCDIR"/ >> $LOGFILE 2>&1
+
     testpassed
 }
 
@@ -163,43 +185,45 @@ iSourceGitClone() {
     if [ ! -f "$GITDIR/autogen.sh" ] || [ -f "$GITDIR/configure" ]; then
         echo "$GITDIR/autogen.sh does not, or $GITDIR/configure exists in $GITDIR" >> $LOGFILE
         testfailed
-        exit 1
     fi
     cd "$GITDIR"
     testpassed
 }
 
 helperMakeMakeInstall() {
-
     echo | $SSH_VM_USER "cd fmbt; [ ! -f configure ] && ./autogen.sh; ./configure && make" >> $LOGFILE 2>&1 || {
         echo "error when building through $SSH_VM_USER" >> $LOGFILE
         testfailed
-        exit 1
     }
 
     echo | $SSH_VM_ROOT "cd /home/*/fmbt; make install" >> $LOGFILE 2>&1 || {
         echo "error when installing through $SSH_VM_ROOT" >> $LOGFILE
         testfailed
-        exit 1
     }
-
 }
 
 iMakeInstDebian() {
     teststep "make install on Debian..."
+
+    VM_PID=""
+
+    if [ ! -f "$DEBIAN_HDA" ]; then
+        echo "Debian VM image not found" >> $LOGFILE
+        testskipped
+        return 0
+    fi
+
     bash -c "$DEBIAN_VM_LAUNCH" >>$LOGFILE 2>&1 &
     VM_PID=$!
     sleep 15
     tar cf - . | $SSH_DEBIAN_USER "rm -rf fmbt; mkdir fmbt && cd fmbt && tar xfv -" >> $LOGFILE 2>&1 || {
         echo "error on copying files to Debian" >> $LOGFILE
         testfailed
-        exit 1
     }
 
     echo | $SSH_DEBIAN_ROOT "export http_proxy=$http_proxy; apt-get update; cd /home/debian/fmbt; eval \"\$(awk '/apt-get install/{\$1=\"\"; print}' < README ) -y\" " >> $LOGFILE 2>&1 || {
         echo "error on apt-get installing dependencies on Debian" >> $LOGFILE
         testfailed
-        exit 1
     }
 
     SSH_VM_USER="$SSH_DEBIAN_USER"
@@ -213,6 +237,15 @@ iMakeInstDebian() {
 
 iMakeInstFedora() {
     teststep "make install on Fedora..."
+
+    VM_PID=""
+
+    if [ ! -f "$FEDORA_HDA" ]; then
+        echo "Fedora VM image not found" >> $LOGFILE
+        testskipped
+        return 0
+    fi
+
     bash -c "$FEDORA_VM_LAUNCH" >>$LOGFILE 2>&1 &
     VM_PID=$!
     sleep 20
@@ -220,10 +253,13 @@ iMakeInstFedora() {
     tar cf - . | $SSH_FEDORA_USER "rm -rf fmbt; mkdir fmbt && cd fmbt && tar xfv -" >> $LOGFILE 2>&1 || {
         echo "error on copying files to Fedora" >> $LOGFILE
         testfailed
-        exit 1
     }
 
-    echo | $SSH_FEDORA_ROOT "echo proxy=$http_proxy >>/etc/yum.conf; cd /home/fedora/fmbt; eval \"\$(grep 'yum install' < README ) -y\" " >> $LOGFILE 2>&1
+    if [ ! -z "$http_proxy" ]; then
+        # take full advantage of caching proxy, don't use mirrors
+        echo | $SSH_FEDORA_ROOT "echo proxy=$http_proxy >>/etc/yum.conf; sed -i -e 's/^# baseurl/baseurl/g' -e 's/^mirrorlist/# mirrorlist/g' /etc/yum.repos.d/*"
+    fi
+    echo | $SSH_FEDORA_ROOT "cd /home/fedora/fmbt; eval \"\$(grep 'yum install' < README ) -y\" " >> $LOGFILE 2>&1
 
     SSH_VM_USER="$SSH_FEDORA_USER"
 
@@ -235,13 +271,68 @@ iMakeInstFedora() {
 }
 
 iMakeInstDroid() {
-    teststep "install fmbt-droid test not implemented"
-    testskipped
+    teststep "building and installing fmbt_droid..."
+    [ -f configure ] || ./autogen.sh >>$LOGFILE 2>&1 || {
+        echo "running ./autogen.sh failed"
+        testfailed
+    }
+
+    ./configure --enable-android --prefix=$INSTALLDIR >>$LOGFILE 2>&1 || {
+        echo "running ./configure --enable-android failed"
+        testfailed
+    }
+
+    nice make -j4 >>$LOGFILE 2>&1 || {
+        echo "building fmbt_droid failed"
+        testfailed
+    }
+
+    make install >>$LOGFILE 2>&1 || {
+        echo "make installing to $INSTALLDIR failed"
+        testfailed
+    }
+
+    [ -x $INSTALLDIR/bin/fmbt_droid ] || {
+        echo "$INSTALLDIR/bin/fmbt_droid not found"
+        testfailed
+    }
+    
+    testpassed
 }
 
 iAndroidBuild() {
     teststep "building an android version with ndk-build..."
-    testskipped
+
+    ANDROID_BINARY=src/android/fmbt_droid
+
+    if ! which ndk-build >>$LOGFILE 2>&1; then
+        echo "ndk-build not in PATH" >>$LOGFILE
+        testskipped
+        return 0
+    fi
+    [ -f configure ] || ./autogen.sh >>$LOGFILE 2>&1 || {
+        echo "running ./autogen.sh failed"
+        testfailed
+    }
+
+    ./configure --enable-android >>$LOGFILE 2>&1 || {
+        echo "running ./configure --enable-android failed"
+        testfailed
+    }
+
+    MAKE_ANDROID_COMMAND=$(awk -F\" '/make .*android/{print $2}' < README)
+    echo "running Android target make command: \"$MAKE_ANDROID_COMMAND\"" >> $LOGFILE
+    $MAKE_ANDROID_COMMAND >> $LOGFILE 2>&1 || {
+        echo "ndk-build failed." >> $LOGFILE
+        testfailed
+    }
+
+    [ -x $ANDROID_BINARY ] || {
+        echo "Could not find $ANDROID_BINARY"
+        testfailed
+    }
+
+    testpassed
 }
 
 iBuildInstDebPkg() {
@@ -250,22 +341,62 @@ iBuildInstDebPkg() {
 }
 
 iBuildInstRPMPkg() {
-    teststep "rpmbuild test not implemented"
-    testskipped
+    teststep "rpmbuild..."
+
+    VM_PID=""
+
+    if [ ! -f "$FEDORA_HDA" ]; then
+        echo "Fedora VM image not found" >> $LOGFILE
+        testskipped
+        return 0
+    fi
+
+    bash -c "$FEDORA_VM_LAUNCH" >>$LOGFILE 2>&1 &
+    VM_PID=$!
+    sleep 20
+
+    tar cf - . | $SSH_FEDORA_USER "rm -rf fmbt; mkdir fmbt && cd fmbt && tar xfv -" >> $LOGFILE 2>&1 || {
+        echo "error on copying files to Fedora" >> $LOGFILE
+        testfailed
+    }
+
+    # TODO: document RPM package building (like yum install @development-tools)
+
+    if [ ! -z "$http_proxy" ]; then
+        # take full advantage of caching proxy, don't use mirrors
+        echo | $SSH_FEDORA_ROOT "echo proxy=$http_proxy >>/etc/yum.conf; sed -i -e 's/^#[ ]*baseurl/baseurl/g' -e 's/^mirrorlist/# mirrorlist/g' /etc/yum.repos.d/*"
+    fi
+
+    echo | $SSH_FEDORA_ROOT "cd /home/fedora/fmbt; eval \"\$(grep 'yum install' < README ) -y\"; yum install @development-tools rpm-build -y" >> $LOGFILE 2>&1
+
+    SSH_VM_USER="$SSH_FEDORA_USER"
+
+    SSH_VM_ROOT="$SSH_FEDORA_ROOT"
+    
+    echo | $SSH_FEDORA_USER "mkdir -p rpmbuild/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}; cd fmbt; [ ! -f configure ] && ./autogen.sh; ./configure; make dist; cp fmbt*tar.gz ../rpmbuild/SOURCES/; rpmbuild -ba fMBT.spec" >> $LOGFILE 2>&1 || {
+        echo "error on building rpm package on Fedora" >> $LOGFILE
+        testfailed
+    }
+
+    echo | $SSH_FEDORA_ROOT "rpm -i /home/fedora/rpmbuild/RPMS/*/*.rpm" >> $LOGFILE 2>&1 || {
+        echo "error in installing rpms" >> $LOGFILE
+        testfailed
+    }
+
+    testpassed
 }
 
 iTestFmbt() {
     teststep "running fmbt tests"
     if [ -z "$VM_PID" ]; then
-        echo >> $LOGFILE
+        echo "virtual machine is not running" >> $LOGFILE
         testskipped
         return 0
     fi
 
     echo | $SSH_VM_USER "( fmbt/test/tutorial/run.sh installed 2>&1; cat /tmp/fmbt.test.tutorial.log ) | nl" >> $LOGFILE 2>&1 || {
-        echo "running tutorial test on Debian failed" >> $LOGFILE
+        echo "running tutorial test failed through $SSH_VM_USER" >> $LOGFILE
         testfailed
-        exit 1
     }
 
     LASTLINE=$(tail -n 1 $LOGFILE | sed 's/[ \t]*[0-9][0-9]*[ \t]*\# passed./ALL-OK/')
@@ -273,7 +404,6 @@ iTestFmbt() {
     if [ "$LASTLINE" != "ALL-OK" ]; then
         echo "unexpected last line of tutorial test results." >> $LOGFILE
         testfailed
-        exit 1
     fi
 
     testpassed

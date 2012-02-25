@@ -20,6 +20,7 @@
 #include "coverage_report.hh"
 #include "model.hh"
 #include "helper.hh"
+#include "history.hh"
 
 std::string Coverage_report::stringify()
 {
@@ -43,6 +44,7 @@ void Coverage_report::set_model(Model* _model)
       }
     } else {
       start_tag.push_back(pos);
+      start_time.push_back(History::current_time);
     }
   }
 
@@ -67,11 +69,13 @@ void Coverage_report::set_model(Model* _model)
       pos=model->action_number(*drop[i]);
       if (pos>0) {
 	rollback_action.push_back(pos);
+	start_time.pop_back();
       } else {
 	printf("\"%s\" not an tag or an action.\n",drop[i]->c_str());	
       }
     } else {
       rollback_tag.push_back(pos);
+      start_time.pop_back();
     }
 
   }
@@ -113,6 +117,8 @@ bool Coverage_report::execute(int action)
 	prop_set(rollback_action,1,&action)) {
       online=false;
       executed.clear();
+      start_time.pop_back();
+      step_time.pop_back();
     } else {
       /* No drop? Let's search for to */
       if (prop_set(end_tag,npro,props) || 
@@ -131,6 +137,8 @@ bool Coverage_report::execute(int action)
     if (prop_set(start_tag,npro,props) || 
 	prop_set(start_action,1,&action)) {
       online=true;
+      start_time.push_back(History::current_time);
+      step_time.resize(start_time.size());
     }
   }
 
