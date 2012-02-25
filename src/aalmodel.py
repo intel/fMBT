@@ -14,8 +14,7 @@ class AALModel:
 
     def _get_all(self, property_name, itemtype):
         plist = []
-        if itemtype == "action": i = 1 # special case tau is action 0
-        else: i = 0
+        i = 1
         while 1:
             try: plist.append(getattr(self, itemtype + str(i) + property_name))
             except: return plist

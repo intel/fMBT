@@ -21,20 +21,45 @@
 #include "aalang_py.hh"
 #include "helper.hh"
 
-std::string lstrip(const std::string &s)
-{
-  return s.substr(s.find_first_not_of(" \t"));
-}
-
 std::string indent(int depth, std::string &s)
 {
   std::string rv;
-  std::string row = lstrip(s);
-  for (int i=0; i<depth; i++) rv+=" ";
-  // TODO: do this properly.
-  // calculate white space offset on the first non-empty line
-  // apply the same offset to every line on the block.
-  rv += row;
+  
+  int offset = 0; // original indentation
+  int first_linebreak = s.find('\n');
+  int first_nonspace = s.find_first_not_of(" \t\n\r");
+  int line_start = 0;
+  int line_end = 0;
+  
+  /* search the first non-empty line, the indentation offset is
+   * calculated based on that. */
+  while (first_linebreak < first_nonspace) {
+    line_start = first_linebreak + 1;
+    first_linebreak = s.find('\n', first_linebreak + 1);
+    if (first_linebreak == (int)s.npos) first_linebreak = s.length() - 1;
+  }
+  offset = first_nonspace - line_start;
+
+  do {
+    line_end = s.find('\n', line_start);
+    if (line_end == (int)s.npos) line_end = s.length() - 1;
+    if (offset > depth) {
+      // orig indentation is too deep, cut off (depth - offset)
+      // spaces
+      if (line_end - line_start > offset - depth) {
+        rv += s.substr(line_start + offset - depth, line_end - line_start - offset + depth + 1);
+      } else {
+        // there is not enough spaces to cut
+        rv += "\n";
+      }
+    } else {
+      // orig indentation is too shallow, add (depth - offset) spaces
+      for (int i = 0; i < depth - offset; i++) rv += " ";
+      rv += s.substr(line_start, line_end - line_start + 1);
+    }
+    line_start = line_end + 1;
+  } while (line_end < (int)s.length() - 1);
+
   return rv;
 }
 
@@ -59,7 +84,7 @@ void aalang_py::set_namestr(std::string* _name)
 
 void aalang_py::set_variables(std::string* var)
 {
-  variables="        global " + *var + "\n";
+  variables="        global " + indent(0,*var) + "\n";
   delete var;
 }
 

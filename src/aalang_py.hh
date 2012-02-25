@@ -27,7 +27,7 @@
 class aalang_py: public aalang {
 public:
   aalang_py(): aalang(), name(NULL), action_cnt(1), 
-               tag_cnt(0), acnt("1"), tag(false) {
+               tag_cnt(1), acnt("1"), tag(false) {
         default_body   ="pass";
         default_guard  ="return 1";
         default_adapter="pass";
