@@ -89,7 +89,6 @@ int main(int argc,char** argv) {
   int c;
   bool lib=false;
   FILE* outputfile=stdout;
-  printf("%s\n",INCDIR);
   static struct option long_opts[] = {
     {"help", no_argument, 0, 'h'},
     {0, 0, 0, 0}
