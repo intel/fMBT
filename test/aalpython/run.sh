@@ -41,7 +41,7 @@ model="remote: remote_pymodel test1.py.aal"
 EOF
 
 # search for path to execute iDec in the model:
-( echo '?a2' | fmbt -i delme.conf -l/dev/null 2>&1 | tee output.txt )>>$LOGFILE 2>&1
+( echo '?a2' | fmbt -i test.conf -l/dev/null 2>&1 | tee output.txt )>>$LOGFILE 2>&1
 cat > correct.txt <<EOF
 Path to execute action iDec:
 iInc
@@ -62,7 +62,7 @@ model="remote: remote_pymodel test1.py.aal"
 EOF
 
 # search for path to execute iDec in the model:
-( ( echo oem1; echo iInc; echo iInc; echo iInc; echo iInc; echo mc ) | fmbt -i delme.conf -l/dev/null | tail -n 2 | tee output2.txt )>>$LOGFILE 2>&1
+( ( echo oem1; echo iInc; echo iInc; echo iInc; echo iInc; echo mc ) | fmbt -i test.conf -l/dev/null | tail -n 2 | tee output2.txt )>>$LOGFILE 2>&1
 cat > correct2.txt <<EOF
 t0:LargeValue
 t1:Growing
