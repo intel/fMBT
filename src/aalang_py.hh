@@ -26,18 +26,19 @@
 
 class aalang_py: public aalang {
 public:
-    aalang_py(): aalang(), name(NULL), action_cnt(1), acnt("1") {
-        default_body="\tpass";
-        default_guard="\treturn 1";
-        default_adapter="            pass";
+  aalang_py(): aalang(), name(NULL), action_cnt(1), 
+               tag_cnt(0), acnt("1"), tag(false) {
+        default_body   ="pass";
+        default_guard  ="return 1";
+        default_adapter="pass";
     };
 
   virtual void set_starter(std::string* st);
   virtual void set_name(std::string* name);
   virtual void set_namestr(std::string* name);
   virtual void set_variables(std::string* var);
-  virtual void set_tagname(std::string* name) {};
-  virtual void next_tag(){};
+  virtual void set_tagname(std::string* name);
+  virtual void next_tag();
   virtual void set_istate(std::string* ist);
   virtual void set_guard(std::string* gua);
 
@@ -51,10 +52,13 @@ public:
 protected:
   std::string* name;
   int action_cnt;
+  int tag_cnt;
   std::string acnt;
   std::string s;
   std::string push;
   std::string pop;
+  std::string variables;
+  bool tag;
 };
 
 #endif
