@@ -1,6 +1,8 @@
-TESTS = interactivemode/run.sh tutorial/run.sh adapters/run.sh examples/run.sh
+TESTS = interactivemode/run.sh tutorial/run.sh adapters/run.sh examples/run.sh aalpython/run.sh
 
-dist_noinst_SCRIPTS = adapters/run.sh
+dist_noinst_SCRIPTS = aalpython/run.sh aalpython/test1.py.aal
+
+dist_noinst_SCRIPTS += adapters/run.sh
 
 dist_noinst_SCRIPTS += examples/run.sh
 
