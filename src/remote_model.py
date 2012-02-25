@@ -1,11 +1,50 @@
 #!/usr/bin/env python
+#
+# fMBT, free Model Based Testing tool
+# Copyright (c) 2011, Intel Corporation.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU Lesser General Public License,
+# version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for
+# more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+"""
+Usage: remote_model.py [options] modelfile
+
+Runs a remote model implemented in Python or AAL/Python. modelfile is
+a Python module that implements the model interface, or AAL/Python
+file. In the latter case remote_model.py runs fmbt-aalc to convert it
+into Python.
+
+Options:
+    -l, -L filename
+        Write log to the given file. By default no log is written.
+        -l overwrites the file, -L appends.
+"""
 
 import sys
+import getopt
+import commands
 
+log_filename = None
 def log(msg):
-    file("/tmp/remote_model.py","a").write(msg + "\n")
+    global log_filename
+    if log_filename:
+        file(log_filename,"a").write(msg + "\n")
 
-log("*** remote_model.py started")
+def error(msg):
+    msg = "remote_model.py error: " + msg + "\n"
+    log(msg)
+    sys.stderr.write(msg)
+    sys.exit(1)
 
 def put(msg):
     log("sending: '%s'" % (msg,))
@@ -62,7 +101,55 @@ class RemoteModelBridge:
                 else:   put(action_number)
             cmd = get().rstrip()
 
-import mytest
-m = mytest.Model()
-b = RemoteModelBridge(m)
-b.communicate()
+if __name__ == "__main__":
+    # Default values for commandline arguments
+    sync_regexps = []
+    log_filename = None
+
+    # Parse arguments
+    opts, remainder = getopt.gnu_getopt(
+        sys.argv[1:], 'hlLf:',
+        ["help", "file="])
+
+    for opt, arg in opts:
+        if opt in ["-h", "--help"]:
+            print __doc__
+            sys.exit(0)
+        if opt in ["-l", "-L"]:
+            log_filename = arg
+            if opt == "-l": file(log_filename,"w") # overwrite
+
+    if len(remainder) != 1:
+        print __doc__
+        error("model filename missing")
+    
+    model_filename = remainder[0]
+
+    if model_filename.endswith(".aal"):
+        cmd = "fmbt-aalc '%s'" % (model_filename,)
+        status, model_code = commands.getstatusoutput(cmd)
+        if status != 0:
+            error("converting aal to python with command\n" +
+                  "    %s\nfailed. status=%s" % (cmd, status))
+    else:
+        try:
+            model_code = file(model_filename).read()
+        except Exception as e:
+            error("reading file '%s' failed: %s" % (model_filename, e))
+
+    try:
+        exec model_code
+    except Exception as e:
+        code_lines = model_code.split('\n')
+        code_with_line_nums = ['%4s: %s' % (num+1, line)
+                               for num,line in enumerate(code_lines)]
+        log('\n'.join(code_with_line_nums))
+        error("executing model code failed:\n%s" % (e,))
+    
+    try:
+        model = Model()
+    except Exception as e:
+        error("error when instantiating Model(): %s" % (e,))
+    
+    bridge = RemoteModelBridge(model)
+    bridge.communicate()
