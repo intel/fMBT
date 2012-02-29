@@ -260,13 +260,18 @@ Available measures & values:
 Examples:
 
         The following end conditions define that test is passed if 50
-        % coverage is achieved. But test is ended with "inconclusive"
-        verdict if test run has lasted longer than 7 seconds.
+        percent coverage is achieved, or if 1000 test steps have been
+        executed. Test ends with "inconclusive" verdict if test run
+        has lasted longer than 7 seconds. Test fails immediately if a
+        state with tag this_should_never_happen is reached.
 
         pass   = "coverage:0.5"
 
+        pass   = "steps:1000"
+
         inconc = "duration:7 seconds"
 
+        fail   = "tag:this_should_never_happen"
 
 Exit hooks
 ----------
