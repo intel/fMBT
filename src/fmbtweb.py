@@ -111,6 +111,16 @@ class JS:
                      Default host is 'localhost'.
 
         browser    - shell command to launch the browser (without url)
+                     if not given, browser is not launched. If you need
+                     to give special parameters to the browser, you can launch
+                     it separately. For instance:
+
+                     import fmbtweb
+                     import subprocess
+                     js = fmbtweb.JS()
+                     browser = subprocess.Popen("firefox http://localhost:" +
+                                                str(js.port()), shell=True)
+                     js.eval("1+1")
 
         pollDelay  - max delay between polling new javascript to be
                      evaluated.
