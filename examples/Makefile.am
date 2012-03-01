@@ -4,6 +4,8 @@ examplesjsdir = @docdir@/examples/javascript-apitest
 
 examplesshelldir = @docdir@/examples/shell-configurationtest
 
+examplesjavadir = @docdir@/examples/java-configurationtest
+
 dist_examplescpp_DATA = \
 	c++-unittest/Makefile			\
 	c++-unittest/mycounter.cc		\
@@ -25,3 +27,12 @@ dist_examplesjs_DATA = \
 dist_examplesshell_DATA = \
 	shell-configurationtest/README          \
 	shell-configurationtest/test-configurations.sh
+
+dist_examplesjava_DATA = \
+	java-unittest/Makefile				\
+	java-unittest/MyCounter.java			\
+	java-unittest/mycountertesttrue.java.aal	\
+	java-unittest/mycountertestfalse.java.aal	\
+	java-unittest/README				\
+	java-unittest/testtrue.conf			\
+	java-unittest/testfalse.conf
