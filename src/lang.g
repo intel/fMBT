@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include "aalang.hh"
 #include "aalang_cpp.hh"
+#include "aalang_java.hh"
 #include "aalang_py.hh"
 
 std::string result("");
@@ -100,8 +101,13 @@ push: 'push' '{' bstr '}' {
 
 pop:  'pop' '{' bstr '}' { obj->set_pop ($2.str); } ;
 
-language: 'language:' 'C++' { obj=new aalang_cpp ; } starter ';' |
-          'language:' python { obj=new aalang_py ; } starter ';' ;
+language: 'language:' cpp    { obj=new aalang_cpp  ; } starter ';' |
+          'language:' java   { obj=new aalang_java ; } starter ';' |
+          'language:' python { obj=new aalang_py   ; } starter ';' ;
+
+cpp: 'C++' | 'cpp' | 'c++';
+
+java: 'oak' | 'green' | 'java';
 
 default_type: 'default' 'action' 'type' ':' input_type;
 

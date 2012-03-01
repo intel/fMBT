@@ -24,9 +24,10 @@
 #include <vector>
 #include <string>
 
+
 class aal {
 public:
-  aal(Log&l): _log(l) {};
+  aal(Log&l): _log(l) {ok=true;};
   virtual ~aal() {};
   virtual int adapter_execute(int action)=0;
   virtual int model_execute(int action)  =0;
@@ -47,6 +48,7 @@ public:
   }
 
   virtual void log(const char* format, ...);
+  bool ok;
 protected:
   std::vector<int> actions;
   std::vector<int> tags;
