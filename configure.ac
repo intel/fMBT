@@ -36,7 +36,8 @@ AS_IF([test "x$enable_android" != "xyes"],
 
 AC_ARG_WITH([jvm-lib],
             [AS_HELP_STRING([--with-jvm-lib=-L/path/to/libjvm -ljvm], [libjvm path])],
-	    [JVMLDFLAGS="$withval",AC_DEFINE(WITH_JVM,1,[compile with libjvm])],
+	    [JVMLDFLAGS="$withval"
+	    AC_DEFINE(WITH_JVM,1,[compile with libjvm])],
 	    [JVMLDFLAGS=""])
 
 AC_SUBST([JVMLDFLAGS])
