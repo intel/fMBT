@@ -458,6 +458,12 @@ void nonblock(int fd)
   fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 
+void block(int fd)
+{
+  int flags = fcntl(fd, F_GETFL, 0);
+  fcntl(fd, F_SETFL, flags & (~O_NONBLOCK));
+}
+
 /*
  * nonblock_getline reads lines from the stream. Unlike with normal
  * getline, underlying fd can be non-blocking. The function returns
