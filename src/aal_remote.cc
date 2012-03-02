@@ -159,8 +159,8 @@ namespace {
     return NULL;
   }
 
-  static ModelFactory  ::Register Mo("remote", model_creator);
-  static AdapterFactory::Register Ad("remote", adapter_creator);
+  static ModelFactory  ::Register Mo("aalremote", model_creator);
+  static AdapterFactory::Register Ad("aalremote", adapter_creator);
 }
 
 #endif
