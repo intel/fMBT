@@ -31,13 +31,9 @@ public:
 
   virtual std::string stringify();
 protected:
-  ssize_t nonblock_getline(char **lineptr, size_t *n, FILE *stream,
-                           const char delimiter = '\n');
-  ssize_t agetline(char **lineptr, size_t *n, FILE *stream);
 
   char* read_buf;
   size_t read_buf_pos;
-
   FILE* d_stdin;
   FILE* d_stdout;
   FILE* d_stderr;
