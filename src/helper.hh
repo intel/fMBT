@@ -76,6 +76,9 @@ ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
 void block(int fd);
 void nonblock(int fd);
 
+int getint(FILE* out,FILE* in);
+
+int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in);
 
 #define MAX_LINE_LENGTH (1024*16)
 

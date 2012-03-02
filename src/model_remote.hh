@@ -40,8 +40,6 @@ public:
   virtual bool init();
 
 protected:
-  int getact(int** actions,std::vector<int>& vec);
-  int getint();
 
   FILE* d_stdin;
   FILE* d_stdout;
