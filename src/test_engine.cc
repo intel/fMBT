@@ -211,6 +211,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 
   log.push("test_engine");
   gettimeofday(&start_time,NULL);
+  log_tags();
   do {
     action=0;
 
