@@ -1,3 +1,10 @@
+fmbt (0.1-rc12) maverick; urgency=low
+
+  * NEW:aal remote
+  * NEW:fmbtweb support for cross orign resource sharing
+
+ -- Pablo Virolainen <pablo.virolainen@intel.com>  Fri, 02 Mar 2012 17:08:19 +0200
+
 fmbt (0.1-rc11) maverick; urgency=low
 
   * NEW: AAL java support
