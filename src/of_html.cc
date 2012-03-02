@@ -107,7 +107,7 @@ std::string OutputFormat_Html::report()
     
     printf("reportnames %s\n",reportnames[i].c_str());
     printf("vector size %i\n",(int)traces.size());
-    printf("Unique traces %i\n",cnt.size());
+    printf("Unique traces %i\n",(int)cnt.size());
 
     for(std::map<std::vector<int>,int>::iterator j=cnt.begin();
 	j!=cnt.end();j++) {
