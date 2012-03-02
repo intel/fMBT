@@ -25,6 +25,8 @@
 #include <boost/regex.hpp>
 #endif
 
+class Log;
+
 extern bool human_readable;
 
 void* load_lib(const std::string& libname,std::string& model_filename);
@@ -62,5 +64,18 @@ void  strvec(std::vector<std::string> & v,std::string& s,
 
 char* unescape_string(char* msg);
 void  unescape_string(std::string& msg);
+
+ssize_t nonblock_getline(char **lineptr, size_t *n,
+			 FILE *stream, char* &read_buf,
+			 size_t &read_buf_pos,
+			 const char delimiter = '\n');
+
+ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
+		 char* &read_buf,size_t &read_buf_pos,Log& log);
+
+void nonblock(int fd);
+
+
+#define MAX_LINE_LENGTH (1024*16)
 
 #endif
