@@ -1,6 +1,6 @@
 /*
  * fMBT, free Model Based Testing tool
- * Copyright (c) 2011, Intel Corporation.
+ * Copyright (c) 2011, 2012 Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU Lesser General Public License,
@@ -16,37 +16,49 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#include "model.hh"
-#include <glib.h>
 
-class Model_remote: public Model {
+#include "config.h"
+#ifdef WITH_JVM
+#ifndef __aal_java_hh__
+#define __aal_java_hh__
+
+#include "aal.hh"
+#include <jni.h>
+
+class aal_java: public aal {
 public:
-  Model_remote(Log& l, std::string& params) :
-    Model(l, params), prm(params) {
-  }
-  virtual ~Model_remote() {
-  }
+  aal_java(Log&l,std::string&);
+  virtual ~aal_java() {};
 
+  virtual int adapter_execute(int action);
+  virtual int model_execute(int action);
   virtual int getActions(int** act);
-  virtual int getIActions(int** act);
-
-  virtual int execute(int action);
-  virtual int getprops(int** pro);
   virtual bool reset();
 
   virtual void push();
   virtual void pop();
+  virtual int getprops(int** props);
+private:
+  JNIEnv *env;  
+  JavaVM *jvm;
 
-  virtual bool init();
+  JavaVMInitArgs vm_args;
+  JavaVMOption options;
 
-protected:
+  jclass wclass;
+  jobject obj;
 
-  FILE* d_stdin;
-  FILE* d_stdout;
-  FILE* d_stderr;
-
-  std::string prm;
-  
-  std::vector<int> actions;
-  std::vector<int> props;
+  jmethodID constructor;
+  jmethodID aexec;
+  jmethodID mexec;
+  jmethodID geta;
+  jmethodID Reset;
+  jmethodID Push;
+  jmethodID Pop;
+  jmethodID Getprops;
+  jmethodID gettnames;
 };
+
+
+#endif
+#endif

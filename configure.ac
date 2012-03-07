@@ -1,4 +1,4 @@
-AC_INIT([fmbt], [0.1rc10], [antti.kervinen@intel.com])
+AC_INIT([fmbt], [0.1rc11], [antti.kervinen@intel.com])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
 
 AC_CONFIG_MACRO_DIR([m4])
@@ -32,13 +32,15 @@ AS_IF([test "x$enable_android" != "xyes"],
 
     [PKG_CHECK_MODULES([XML2], [libxml-2.0], [],
         AC_MSG_FAILURE([libxml-2.0 required if not --enable-android]))]
-
-
-#    AC_LANG_PUSH([C++])
-#    AC_CHECK_HEADERS([boost/regex.h], [],
-#        [AC_MSG_ERROR(libboost required.)])
-#    AC_LANG_POP([C++])
     )
+
+AC_ARG_WITH([jvm-lib],
+            [AS_HELP_STRING([--with-jvm-lib=-L/path/to/libjvm -ljvm], [libjvm path])],
+	    [JVMLDFLAGS="$withval"
+	    AC_DEFINE(WITH_JVM,1,[compile with libjvm])],
+	    [JVMLDFLAGS=""])
+
+AC_SUBST([JVMLDFLAGS])
 
 AC_CONFIG_FILES([
         Makefile

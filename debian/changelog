@@ -1,3 +1,13 @@
+fmbt (0.1-rc11) maverick; urgency=low
+
+  * NEW: AAL java support
+  * NEW: AAL python support
+  * Reporting improvements
+  * Improved end conditions
+  * 'Normal' bugfixes and improvements
+
+ -- Pablo Virolainen <pablo.virolainen@intel.com>  Thu, 01 Mar 2012 17:03:43 +0200
+
 fmbt (0.1-rc10) maverick; urgency=low
 
   * Bugfixes

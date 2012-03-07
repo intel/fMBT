@@ -37,8 +37,10 @@
 #include <fstream>
 
 #include <dlfcn.h>
+#include <fcntl.h>
 
 #include "helper.hh"
+#include "log.hh"
 
 bool human_readable=true;
 
@@ -448,4 +450,140 @@ void strvec(std::vector<std::string>& v,std::string& s,
   }
 
   v.push_back(s);
+}
+
+void nonblock(int fd)
+{
+  int flags = fcntl(fd, F_GETFL, 0);
+  fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+}
+
+void block(int fd)
+{
+  int flags = fcntl(fd, F_GETFL, 0);
+  fcntl(fd, F_SETFL, flags & (~O_NONBLOCK));
+}
+
+/*
+ * nonblock_getline reads lines from the stream. Unlike with normal
+ * getline, underlying fd can be non-blocking. The function returns
+ * the number of bytes copied to lineptr, or -1 on error. If full line
+ * does not fit into internal read buffer (line is longer than
+ * MAX_LINE_LENGTH), the contents of the buffer is returned as a
+ * line.
+ */
+
+ssize_t nonblock_getline(char **lineptr, size_t *n, FILE *stream,char* &read_buf, size_t &read_buf_pos, const char delimiter)
+{
+    int fd = fileno(stream);
+    for (;;) {
+        /* look for line breaks in buffered string */
+        char *p = (char*)memchr(read_buf, delimiter, read_buf_pos);
+        /* if read buffer is full but contains no line breaks, return
+           contents of the buffer */
+        if (!p && read_buf_pos == MAX_LINE_LENGTH)
+            p = read_buf + read_buf_pos - 1;
+        if (p) {
+            size_t line_length = p - read_buf + 1;
+            size_t needed_space = line_length + 1; // include \0
+            if (*lineptr == NULL || *n < needed_space) {
+                if (*lineptr == NULL &&
+                    (*lineptr = (char*)std::malloc(needed_space)) == NULL) {
+                    return -1;
+                } else if ((*lineptr = (char*)std::realloc(*lineptr, needed_space)) == NULL) {
+                    return -1;
+                }
+                *n = needed_space;
+            }
+            memcpy(*lineptr, read_buf, line_length);
+            *((*lineptr) + line_length) = '\0';
+            memmove(read_buf, p + 1, read_buf_pos - (p - read_buf));
+            read_buf_pos -= line_length;
+            return line_length;
+        }
+        /* nothing found, try reading more content to the buffer */
+        ssize_t bytes_read = read(fd, read_buf + read_buf_pos, 
+                                  MAX_LINE_LENGTH - read_buf_pos);
+        if (bytes_read == -1) { 
+            return -1;
+        }
+        if (bytes_read == 0) {
+            return 0;
+        }
+        read_buf_pos += bytes_read;
+    }
+}
+
+ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
+		 char* &read_buf,size_t &read_buf_pos,Log& log)
+{
+  ssize_t ret;
+  bool log_redirect;
+  do {
+    log_redirect=false;
+    ret=nonblock_getline(lineptr,n,stream,
+			 read_buf,read_buf_pos);
+    if (ret>0) {
+      if (**lineptr=='d') {
+	log.debug(*lineptr+1);
+	std::free(*lineptr);
+	*lineptr = NULL;
+	log_redirect=true;
+      }
+      if (**lineptr=='l') {
+#ifndef DROI
+	char* m=g_uri_escape_string(*lineptr+1,NULL,TRUE);
+	std::free(*lineptr);
+        *lineptr = NULL;
+	log.print("<remote msg=\"%s\"/>\n",m);
+	g_free(m);
+#else
+	log.print("<remote msg=\"%s\"/>\n",*lineptr+1);
+	*lineptr = NULL;
+#endif
+	log_redirect=true;
+      }
+    }
+    
+  } while (ret>0 && log_redirect);
+  return ret;
+}
+
+
+int getint(FILE* out,FILE* in)
+{
+  if (out) {
+    fflush(out);
+  }
+  char* line=NULL;
+  size_t n;
+  int ret=-42;
+  size_t s=getdelim(&line,&n,'\n',in);
+  if (s) {
+    ret=atoi(line);
+  }
+  if (line) {
+    free(line);
+  }
+  return ret;
+}
+
+int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in)
+{
+  fflush(out);
+  vec.resize(0);
+  char* line=NULL;
+  size_t n;
+  int ret=0;
+  size_t s=getdelim(&line,&n,'\n',in);
+  if (s) {
+    string2vector(line,vec);
+    *act = &vec[0];
+    ret=vec.size();
+  }
+  if (line) {
+    free(line);
+  }
+
+  return ret;
 }

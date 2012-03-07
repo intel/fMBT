@@ -36,5 +36,20 @@ teststep "running configure..."
 testpassed
 
 teststep "building fmbt..."
-make -j2 >> $LOGFILE 2>&1 || testfailed
+nice make -j4 >> $LOGFILE 2>&1 || testfailed
+testpassed
+
+teststep "making source package..."
+make dist >> $LOGFILE 2>&1 || testfailed
+testpassed
+
+teststep "building from source package..."
+rm -rf fmbt.test.build                      >> $LOGFILE 2>&1 || testfailed
+mkdir fmbt.test.build && cd fmbt.test.build >> $LOGFILE 2>&1 || testfailed
+tar xzfv ../fmbt-*.tar.gz                   >> $LOGFILE 2>&1 || testfailed
+cd fmbt-*                                   >> $LOGFILE 2>&1 || testfailed
+./configure                                 >> $LOGFILE 2>&1 || testfailed
+nice make -j4                               >> $LOGFILE 2>&1 || testfailed
+cd ../..                                    >> $LOGFILE 2>&1 || testfailed
+rm -rf fmbt.test.build                      >> $LOGFILE 2>&1 || testfailed
 testpassed

@@ -1,6 +1,6 @@
 /*
  * fMBT, free Model Based Testing tool
- * Copyright (c) 2011, Intel Corporation.
+ * Copyright (c) 2011, 2012 Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU Lesser General Public License,
@@ -16,30 +16,38 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#include "adapter.hh"
+
+#include "config.h"
+#ifndef DROID
+#ifndef __aal_remote_hh__
+#define __aal_remote_hh__
+
+#include "aal.hh"
 #include <glib.h>
 
-class Adapter_remote: public Adapter {
+class aal_remote: public aal {
 public:
-  Adapter_remote(Log& l, std::string& params, bool encode=true);
-  ~Adapter_remote() {
-  }
-  virtual bool init();
+  aal_remote(Log&l,std::string&);
+  virtual ~aal_remote() {};
 
-  virtual void execute(std::vector<int>& action);
-  virtual int observe(std::vector<int> &action,bool block=false);
+  virtual int adapter_execute(int action);
+  virtual int model_execute(int action);
+  virtual int getActions(int** act);
+  virtual bool reset();
 
-  virtual std::string stringify();
-protected:
-
+  virtual void push();
+  virtual void pop();
+  virtual int getprops(int** props);
+private:
   char* read_buf;
   size_t read_buf_pos;
   FILE* d_stdin;
   FILE* d_stdout;
   FILE* d_stderr;
 
-  std::string prm;
-  
   GPid pid;
-  bool urlencode;
+
 };
+
+#endif
+#endif

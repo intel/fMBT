@@ -54,6 +54,7 @@ private:
   bool prop_set(std::vector<int> p,int npro,int* props);
 
   std::vector<int> executed;
+  std::vector<struct timeval > etime;
 
   std::vector<int> start_tag;
   std::vector<int> end_tag;

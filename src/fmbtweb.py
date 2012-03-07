@@ -58,7 +58,7 @@ import SimpleHTTPServer
 
 fmbtweb_js = '''
 function send_to_server(response, callback) {
-    url = "/fMBTweb." + response;
+    url = "%(server)s/fMBTweb." + response;
 
     var xmlHttp = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("MSXML2.XMLHTTP.3.0");
 
@@ -111,6 +111,16 @@ class JS:
                      Default host is 'localhost'.
 
         browser    - shell command to launch the browser (without url)
+                     if not given, browser is not launched. If you need
+                     to give special parameters to the browser, you can launch
+                     it separately. For instance:
+
+                     import fmbtweb
+                     import subprocess
+                     js = fmbtweb.JS()
+                     browser = subprocess.Popen("firefox http://localhost:" +
+                                                str(js.port()), shell=True)
+                     js.eval("1+1")
 
         pollDelay  - max delay between polling new javascript to be
                      evaluated.
@@ -127,7 +137,7 @@ class JS:
         if htmlFile:
             self._html = file(htmlFile).read()
         elif htmlString:
-            self._html = htmlString
+            self._html = htmlString % {"server": "http://" + str(self._host) + ":" + str(self._port)}
 
         self.startHTTPServer()
 
@@ -195,6 +205,7 @@ class _fMBTwebRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-type", contentType)
         self.send_header("Content-length", str(len(content)))
+        self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(content)
 
@@ -204,7 +215,7 @@ class _fMBTwebRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             self.send_ok(jsInstance._html)
             return
         elif self.path == '/fmbtweb.js':
-            self.send_ok(fmbtweb_js, "text/javascript")
+            self.send_ok(fmbtweb_js % {"server": "http://" + jsInstance._host + ":" + str(jsInstance._port)}, "text/javascript")
             return
         elif self.path.startswith('/fMBTweb.'):
             response = urllib.unquote(self.path[9:])
