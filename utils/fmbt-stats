@@ -97,8 +97,8 @@ def stats_times(arg, testlog_fileobj, output_fileobj, plot_filename):
              a))
     min_med_max_count_aname.sort(key=operator.itemgetter(sort_by_field, 4))
     header_format  = '#%8s %9s %9s %9s "%s"\n'
-    datarow_format = '%9.4f %9.4f %9.4f %9s "%s"\n'
-    header_row = ('min[ms]', 'median[ms]', 'max[ms]', 'count', 'action')
+    datarow_format = '%9.3f %9.3f %9.3f %9s "%s"\n'
+    header_row = ('min[ms]', 'med[ms]', 'max[ms]', 'count', 'action')
     output_table = [header_format % header_row]
     for datarow in min_med_max_count_aname:
         output_table.append(datarow_format % datarow)
