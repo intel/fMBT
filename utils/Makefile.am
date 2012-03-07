@@ -1,6 +1,6 @@
 if HAVE_PYTHON
 
-PYTHON_WRAPPERS = wrapperdir/fmbt-gt wrapperdir/fmbt-log wrapperdir/lsts2dot wrapperdir/fmbt-parallel
+PYTHON_WRAPPERS = wrapperdir/fmbt-gt wrapperdir/fmbt-log wrapperdir/lsts2dot wrapperdir/fmbt-parallel wrapperdir/fmbt-stats
 CLEANFILES = $(PYTHON_WRAPPERS)
 
 wrapperdir:
@@ -13,6 +13,6 @@ $(PYTHON_WRAPPERS): wrapperdir ../config.status
 
 dist_bin_SCRIPTS = $(PYTHON_WRAPPERS) fmbt-view
 
-pkgpython_PYTHON = lsts.py fmbtparsers.py fmbt-gt fmbt-log lsts2dot fmbt-parallel
+pkgpython_PYTHON = lsts.py fmbtparsers.py fmbt-gt fmbt-log fmbt-stats lsts2dot fmbt-parallel
 
 endif
