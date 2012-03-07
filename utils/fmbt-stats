@@ -38,7 +38,8 @@ Options:
 
   -p, --plot=<file>
           plot statistics into a diagram. Image will be written to the
-          given file. Requires Gnuplot. Available formats: svg, gif.
+          given file. Requires Gnuplot. File extension defines image
+          format. Supported formats: eps, gif, png, svg.
 
 Examples:
   fmbt-stats -f times:median -o stats.dat -p stats.png test.log
@@ -118,6 +119,12 @@ def stats_times(arg, testlog_fileobj, output_fileobj, plot_filename):
         plot_output_format = plot_filename.split('.')[-1] if '.' in plot_filename else plot_filename
         if plot_output_format in ['gif', 'png']:
             plot_output_format = plot_output_format + ' size 1024,768 10 xffffff'
+        elif plot_output_format in ['svg']:
+            plot_output_format = plot_output_format + ' size 1024,768 fsize 10'
+        elif plot_output_format in ['ps', 'eps']:
+            plot_output_format = 'postscript landscape "Helvetica" 10'
+        elif plot_output_format in ['pdf']:
+            plot_output_format = 'pdfcairo'
         gnuplot_commands = """
 reset
 set ylabel  "execution times [ms]"
