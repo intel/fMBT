@@ -238,6 +238,7 @@ print_re=re.compile("OUT\[([^]]+)\]",reflags)
 quant_re=re.compile("Q\[([a-zA-Z0-9_']+)\s+in\s+([^]]+)\]",reflags)
 break_re=re.compile("BREAK")
 apply_spec_re=re.compile("(once:|repeat until no match:)")
+commentline_re=re.compile("^[ \t]*#[^\n]*(\n|$)",reflags)
 separator=re.compile("(.*)->(.*)",reflags)
 re_variable_name=re.compile("[a-zA-Z0-9_']+")
 re_regexps=re.compile('\$\{([^}]+)\}')
@@ -448,7 +449,7 @@ def parse_rulestr(s):
     r=Rule()
 
     # remove comments
-    s=re.sub('^[ \t]*#[^\n]*(\n|$)','',s, flags=re.MULTILINE)
+    s=re.sub(commentline_re,'',s)
     s=s.replace('\\\n',' ').replace('\n',' ')
     s=s.lstrip()
 
