@@ -18,6 +18,7 @@
  */
 #include "lts_remote.hh"
 #include "factory.hh"
+#include "helper.hh"
 #include <glib.h>
 
 bool Lts_remote::init()
@@ -47,7 +48,7 @@ bool Lts_remote::init()
         + (name.c_str()+offset) + "\"";
       ret=false;
     } else {
-      params = model + stdout;
+      params = model + escape_string(stdout);
       ret=Lts::init();
     }
     g_free(stdout);
