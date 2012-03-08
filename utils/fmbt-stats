@@ -32,7 +32,8 @@ Options:
 
   -o, --output=<file>
           output will be written to given file. Defaults to the
-          standard output.
+          standard output. File extension defines output
+          format. Supported formats: html, csv, txt (default).
 
   -h, --help
           print this help.
@@ -43,7 +44,12 @@ Options:
           format. Supported formats: eps, gif, png, svg.
 
 Examples:
-  fmbt-stats -f times:median -o stats.dat -p stats.png test.log
+
+  fmbt-stats -f times:median -p median.png test.log
+  display median.png
+
+  fmbt-stats -f times:total -o total.html -p total.svg test.log
+  firefox total.html total.svg
 """
 
 import commands
@@ -58,6 +64,29 @@ def error(msg):
     sys.exit(1)
 
 def stats_times(arg, testlog_fileobj, output_fileobj, plot_filename):
+
+    def format_data(out_format, data_table):
+        header_format, datarow_format, footer_format = {}, {}, {}
+        header_format['plot'] = '#%8s %9s %9s %9s %9s "%s"\n'
+        datarow_format['plot'] = '%9.3f %9.3f %9.3f %9.0f %9s "%s"\n'
+        footer_format['plot'] = ''
+
+        header_format['csv'] = '%s;%s;%s;%s;%s;%s\n'
+        datarow_format['csv'] = '%.3f;%.3f;%.3f;%.0f;%s;"%s"\n'
+        footer_format['csv'] = ''
+
+        header_format['html'] = '<html><body>\n<table>\n<tr><th>%s</th><th>%s</th><th>%s</th><th>%s</th><th>%s</th><th>%s</th></tr>\n'
+        datarow_format['html'] = '<tr><td>%.3f</td><td>%.3f</td><td>%.3f</td><td>%.0f</td><td>%s</td><td>%s</td></tr>\n'
+        footer_format['html'] = '</table></body></html>\n'
+
+        header_row = ('min[ms]', 'med[ms]', 'max[ms]', 'total[ms]', 'count', 'action')
+
+        output_table = [header_format[out_format] % header_row]
+        for datarow in min_med_max_tot_count_aname:
+            output_table.append(datarow_format[out_format] % datarow)
+        output_table.append(footer_format[out_format])
+        return output_table
+
     action_field='$ax'
 
     possible_args = ['min', 'median', 'max', 'total', 'count', 'name']
@@ -99,25 +128,18 @@ def stats_times(arg, testlog_fileobj, output_fileobj, plot_filename):
              len(exectimes),
              a))
     min_med_max_tot_count_aname.sort(key=operator.itemgetter(sort_by_field, 4))
-    header_format  = '#%8s %9s %9s %9s %9s "%s"\n'
-    datarow_format = '%9.3f %9.3f %9.3f %9.0f %9s "%s"\n'
-    header_row = ('min[ms]', 'med[ms]', 'max[ms]', 'total[ms]', 'count', 'action')
-    output_table = [header_format % header_row]
-    for datarow in min_med_max_tot_count_aname:
-        output_table.append(datarow_format % datarow)
+
+    if '.' in output_fileobj.name: output_file_ext = output_fileobj.name.split('.')[-1].lower()
+    else: output_file_ext = ""
+
+    if output_file_ext in ['html', 'csv']: output_file_format = output_file_ext
+    else: output_file_format = 'plot'
+
+    output_table = format_data(output_file_format, min_med_max_tot_count_aname)
     output_fileobj.write("".join(output_table))
     output_fileobj.close()
 
     if plot_filename:
-        if output_fileobj.name.startswith('<'):
-            # output_fileobj is not a normal file, use a temporary
-            # file instead.
-            delete_outputfile = 1
-            output_filename = "/tmp/fmbt-stats.%s.dat" % (os.getpid(),)
-            file(output_filename, "w").write("".join(output_table))
-        else:
-            delete_outputfile = 0
-            output_filename = output_fileobj.name
         plot_output_format = plot_filename.split('.')[-1] if '.' in plot_filename else plot_filename
         if plot_output_format in ['gif', 'png']:
             plot_output_format = plot_output_format + ' size 1024,768 10 xffffff'
@@ -127,6 +149,9 @@ def stats_times(arg, testlog_fileobj, output_fileobj, plot_filename):
             plot_output_format = 'postscript landscape "Helvetica" 10'
         elif plot_output_format in ['pdf']:
             plot_output_format = 'pdfcairo'
+        output_filename = "/tmp/fmbt-stats.%s.dat" % (os.getpid(),)
+        plot_table = format_data('plot', min_med_max_tot_count_aname)
+        file(output_filename, "w").write("".join(plot_table))
         gnuplot_commands = """
 reset
 set ylabel  "execution times [ms]: min-median-max (red), total (blue)"
@@ -147,13 +172,12 @@ plot [-1:] '%(output_filename)s' using :5 with boxes fill solid 0.5 linecolor rg
         gnuplot_process = subprocess.Popen("gnuplot", shell=True, 
                                            stdin=subprocess.PIPE)
         gnuplot_process.communicate(gnuplot_commands)
-        if delete_outputfile:
-            os.remove(output_filename)
+        os.remove(output_filename)
 
 if __name__ == '__main__':
     testlog_fileobj = sys.stdin
     output_fileobj = sys.stdout
-    output_format = 'times:median'
+    output_format = 'times:total'
     plot_filename = None
 
     opts, remainder = getopt.getopt(
@@ -173,6 +197,9 @@ if __name__ == '__main__':
     if remainder and remainder[0] != "-":
         testlog_fileobj = file(remainder[0], "r")
 
-    if output_format.startswith('times:'):
-        t = stats_times(output_format.split(':',1)[1],
-                        testlog_fileobj, output_fileobj, plot_filename)
+    if output_format.startswith('times'):
+        if ':' in output_format:
+            param = output_format.split(':',1)[1]
+        else:
+            param = 'total'
+        t = stats_times(param, testlog_fileobj, output_fileobj, plot_filename)
