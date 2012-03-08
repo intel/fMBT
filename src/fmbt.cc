@@ -88,13 +88,11 @@ int main(int argc,char * const argv[])
     case 'L':
     case 'l':
       if (logfile!=stdout) {
-        std::printf("Only one logfile\n");
-        return 3;
+        error(33, 0, "too many logfiles given.\n");
       }
       logfile=fopen(optarg,c=='L'?"a":"w");
       if (!logfile) {
-        std::printf("Can't open logfile \"%s\"\n",optarg);
-        return 1;
+        error(34, 0, "cannot open logfile \"%s\"\n",optarg);
       }
       break;
     case 'e':
@@ -116,7 +114,7 @@ int main(int argc,char * const argv[])
  
   if (optind == argc) {
     print_usage();
-    error(3, 0, "test configuration file missing.\n");
+    error(32, 0, "test configuration file missing.\n");
   }
   { 
     Log log(logfile);
@@ -128,13 +126,13 @@ int main(int argc,char * const argv[])
       error(4, 0, "%s\n", c.stringify().c_str());
      
     if (E) {
-      std::printf("%s\n",c.stringify().c_str());
+      std::fprintf(stderr, "%s\n",c.stringify().c_str());
     } else {
       Verdict::Verdict v = c.execute(interactive);
       if (!c.status) {
-        std::printf("%s\n",c.stringify().c_str());
+        std::fprintf(stderr, "%s\n",c.stringify().c_str());
       } else if (!quiet && v != Verdict::UNDEFINED) {
-        std::printf("%s\n",c.errormsg.c_str());
+        std::fprintf(stderr, "%s\n",c.errormsg.c_str());
       }
       return c.exit_status;
     }
