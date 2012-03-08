@@ -26,8 +26,9 @@ Options:
           times:min    - execution times of actions, sort by min
           times:max    - execution times of actions, sort by max
           times:median - execution times of actions, sort by median
+          times:total  - execution times of actions, sort by total
           times:count  - execution times of actions, sort by exec count
-          times:name   - execution times of actions, sort by action
+          times:name   - execution times of actions, sort by action name
 
   -o, --output=<file>
           output will be written to given file. Defaults to the
@@ -59,7 +60,7 @@ def error(msg):
 def stats_times(arg, testlog_fileobj, output_fileobj, plot_filename):
     action_field='$ax'
 
-    possible_args = ['min', 'median', 'max', 'count', 'name']
+    possible_args = ['min', 'median', 'max', 'total', 'count', 'name']
     if not arg in possible_args:
         error("unknown timer argument: '%s'. Use one of '%s'." %
               (arg, "', '".join(possible_args)))
@@ -87,21 +88,22 @@ def stats_times(arg, testlog_fileobj, output_fileobj, plot_filename):
 
     for a in action_exectimes:
         action_exectimes[a].sort()
-    min_med_max_count_aname = []
+    min_med_max_tot_count_aname = []
     for a in action_exectimes:
         exectimes = action_exectimes[a]
-        min_med_max_count_aname.append(
+        min_med_max_tot_count_aname.append(
             (exectimes[0]*1000,
              exectimes[len(exectimes)/2]*1000,
              exectimes[-1]*1000,
+             sum(exectimes)*1000,
              len(exectimes),
              a))
-    min_med_max_count_aname.sort(key=operator.itemgetter(sort_by_field, 4))
-    header_format  = '#%8s %9s %9s %9s "%s"\n'
-    datarow_format = '%9.3f %9.3f %9.3f %9s "%s"\n'
-    header_row = ('min[ms]', 'med[ms]', 'max[ms]', 'count', 'action')
+    min_med_max_tot_count_aname.sort(key=operator.itemgetter(sort_by_field, 4))
+    header_format  = '#%8s %9s %9s %9s %9s "%s"\n'
+    datarow_format = '%9.3f %9.3f %9.3f %9.0f %9s "%s"\n'
+    header_row = ('min[ms]', 'med[ms]', 'max[ms]', 'total[ms]', 'count', 'action')
     output_table = [header_format % header_row]
-    for datarow in min_med_max_count_aname:
+    for datarow in min_med_max_tot_count_aname:
         output_table.append(datarow_format % datarow)
     output_fileobj.write("".join(output_table))
     output_fileobj.close()
@@ -127,8 +129,8 @@ def stats_times(arg, testlog_fileobj, output_fileobj, plot_filename):
             plot_output_format = 'pdfcairo'
         gnuplot_commands = """
 reset
-set ylabel  "execution times [ms]"
-set y2label "number of iterations"
+set ylabel  "execution times [ms]: min-median-max (red), total (blue)"
+set y2label "number of iterations (grey)"
 unset key
 set xtics rotate by -15
 set log y
@@ -138,7 +140,7 @@ set grid ytics mytics noxtics
 set term %(format)s
 set output "%(plot_filename)s"
 set boxwidth 0.2
-plot [-1:] '%(output_filename)s' using :4 with boxes fill solid 0.1 linecolor rgb "light-blue", '%(output_filename)s' using :2:1:3:xtic(5) with errorbar pointtype 7 linecolor rgb "red"
+plot [-1:] '%(output_filename)s' using :5 with boxes fill solid 0.5 linecolor rgb "light-grey", '%(output_filename)s' using :2:1:3:xtic(6) with errorbar pointtype 2 linecolor rgb "red", '%(output_filename)s' using :4 with points pointtype 6 linecolor rgb "blue"
 """ % {'plot_filename': plot_filename, 
        'output_filename': output_filename,
        'format': plot_output_format}
