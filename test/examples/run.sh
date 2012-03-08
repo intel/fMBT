@@ -40,7 +40,7 @@ make clean >> $LOGFILE || {
     FAILED=1
 }
 
-[ $FAILED == 1 ] || make >> $LOGFILE || {
+[ $FAILED == 1 ] || make >> $LOGFILE 2>&1 || {
     echo "failed: 'make' failed in $(pwd)" >> $LOGFILE
     FAILED=1
 }
@@ -57,7 +57,7 @@ make clean >> $LOGFILE || {
     FAILED=1
 }
 
-[ $FAILED == 1 ] || make FAULTY=1 >> $LOGFILE || {
+[ $FAILED == 1 ] || make FAULTY=1 >> $LOGFILE  2>&1 || {
     echo "failed: 'make FAULTY=1' exited with an error" >> $LOGFILE
     FAILED=1
 }
