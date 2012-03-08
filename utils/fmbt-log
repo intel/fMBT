@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2011, Intel Corporation.
+# Copyright (c) 2011-2012, Intel Corporation.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU Lesser General Public License,
@@ -37,8 +37,10 @@ Options:
           $ms - suggested action name after renaming in mapper adapter
           $sn - number of test step
           $sc - coverage after the test step
+          $st - time stamp of test step
           $tv - test verdict: pass or fail
           $tr - reason for the verdict
+          $tt - total test runtime [s]
 
   -r, --raw
           do not decode action names
@@ -59,8 +61,10 @@ fields = {
     '$mn' : ['<redirect id=', '"', 1],
     '$sc' : ['<status steps=', '"', 3],
     '$sn' : ['<status steps=', '"', 1],
+    '$st' : ['<current_time time=', '"', 1],
     '$tv' : ['<stop verdict=', '"', 1],
     '$tr' : ['<stop verdict=', '"', 3],
+    '$tt' : ['<elapsed_time', '"', 1]
 }
 
 def extract(input_file_obj, output_file_obj, output_format, raw):

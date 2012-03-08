@@ -73,8 +73,12 @@ ssize_t nonblock_getline(char **lineptr, size_t *n,
 ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
 		 char* &read_buf,size_t &read_buf_pos,Log& log);
 
+void block(int fd);
 void nonblock(int fd);
 
+int getint(FILE* out,FILE* in);
+
+int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in);
 
 #define MAX_LINE_LENGTH (1024*16)
 

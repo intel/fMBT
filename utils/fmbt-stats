@@ -1,0 +1,176 @@
+#!/usr/bin/env python
+#
+# fMBT, free Model Based Testing tool
+# Copyright (c) 2012, Intel Corporation.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU Lesser General Public License,
+# version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for
+# more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+"""fMBT stats tool - print statistics from test log
+
+Usage: fmbt-stats [options] [logfile]
+
+Options:
+  -f, --format=<fmt>
+          fmt defines statistics to present. Available formats:
+          times:min    - execution times of actions, sort by min
+          times:max    - execution times of actions, sort by max
+          times:median - execution times of actions, sort by median
+          times:count  - execution times of actions, sort by exec count
+          times:name   - execution times of actions, sort by action
+
+  -o, --output=<file>
+          output will be written to given file. Defaults to the
+          standard output.
+
+  -h, --help
+          print this help.
+
+  -p, --plot=<file>
+          plot statistics into a diagram. Image will be written to the
+          given file. Requires Gnuplot. File extension defines image
+          format. Supported formats: eps, gif, png, svg.
+
+Examples:
+  fmbt-stats -f times:median -o stats.dat -p stats.png test.log
+"""
+
+import commands
+import sys
+import operator
+import subprocess
+import getopt
+import os
+
+def error(msg):
+    sys.stderr.write(msg + '\n')
+    sys.exit(1)
+
+def stats_times(arg, testlog_fileobj, output_fileobj, plot_filename):
+    action_field='$ax'
+
+    possible_args = ['min', 'median', 'max', 'count', 'name']
+    if not arg in possible_args:
+        error("unknown timer argument: '%s'. Use one of '%s'." %
+              (arg, "', '".join(possible_args)))
+    sort_by_field = possible_args.index(arg)
+
+    cmd = "fmbt-log -f '$st " + action_field + "'"
+    p = subprocess.Popen(cmd, shell=True, stdin=testlog_fileobj.fileno(), stdout=subprocess.PIPE)
+    out = p.communicate()[0]
+    lines = out.split('\n')
+    if out == []: error("empty output from \"%s\"" % (cmd,))
+
+    action_exectimes = {} # map action name to list of exec time durations
+    prev_timestamp = None
+    for s_timestamp, actionname in [l.split(' ',1) for l in lines if l != '']:
+        if s_timestamp.strip() == "": continue
+        if actionname.strip() == "": continue
+        timestamp = float(s_timestamp)
+        if prev_timestamp != None:
+            timedelta = timestamp - prev_timestamp
+            if not prev_actionname in action_exectimes:
+                action_exectimes[prev_actionname] = []
+            action_exectimes[prev_actionname].append(timedelta)
+        prev_timestamp = timestamp
+        prev_actionname = actionname
+
+    for a in action_exectimes:
+        action_exectimes[a].sort()
+    min_med_max_count_aname = []
+    for a in action_exectimes:
+        exectimes = action_exectimes[a]
+        min_med_max_count_aname.append(
+            (exectimes[0]*1000,
+             exectimes[len(exectimes)/2]*1000,
+             exectimes[-1]*1000,
+             len(exectimes),
+             a))
+    min_med_max_count_aname.sort(key=operator.itemgetter(sort_by_field, 4))
+    header_format  = '#%8s %9s %9s %9s "%s"\n'
+    datarow_format = '%9.3f %9.3f %9.3f %9s "%s"\n'
+    header_row = ('min[ms]', 'med[ms]', 'max[ms]', 'count', 'action')
+    output_table = [header_format % header_row]
+    for datarow in min_med_max_count_aname:
+        output_table.append(datarow_format % datarow)
+    output_fileobj.write("".join(output_table))
+    output_fileobj.close()
+
+    if plot_filename:
+        if output_fileobj.name.startswith('<'):
+            # output_fileobj is not a normal file, use a temporary
+            # file instead.
+            delete_outputfile = 1
+            output_filename = "/tmp/fmbt-stats.%s.dat" % (os.getpid(),)
+            file(output_filename, "w").write("".join(output_table))
+        else:
+            delete_outputfile = 0
+            output_filename = output_fileobj.name
+        plot_output_format = plot_filename.split('.')[-1] if '.' in plot_filename else plot_filename
+        if plot_output_format in ['gif', 'png']:
+            plot_output_format = plot_output_format + ' size 1024,768 10 xffffff'
+        elif plot_output_format in ['svg']:
+            plot_output_format = plot_output_format + ' size 1024,768 fsize 10'
+        elif plot_output_format in ['ps', 'eps']:
+            plot_output_format = 'postscript landscape "Helvetica" 10'
+        elif plot_output_format in ['pdf']:
+            plot_output_format = 'pdfcairo'
+        gnuplot_commands = """
+reset
+set ylabel  "execution times [ms]"
+set y2label "number of iterations"
+unset key
+set xtics rotate by -15
+set log y
+set log y2
+set pointsize 1
+set grid ytics mytics noxtics
+set term %(format)s
+set output "%(plot_filename)s"
+set boxwidth 0.2
+plot [-1:] '%(output_filename)s' using :4 with boxes fill solid 0.1 linecolor rgb "light-blue", '%(output_filename)s' using :2:1:3:xtic(5) with errorbar pointtype 7 linecolor rgb "red"
+""" % {'plot_filename': plot_filename, 
+       'output_filename': output_filename,
+       'format': plot_output_format}
+        gnuplot_process = subprocess.Popen("gnuplot", shell=True, 
+                                           stdin=subprocess.PIPE)
+        gnuplot_process.communicate(gnuplot_commands)
+        if delete_outputfile:
+            os.remove(output_filename)
+
+if __name__ == '__main__':
+    testlog_fileobj = sys.stdin
+    output_fileobj = sys.stdout
+    output_format = 'times:median'
+    plot_filename = None
+
+    opts, remainder = getopt.getopt(
+        sys.argv[1:], 'hf:o:p:',
+        ['help', 'format=', 'output=', 'plot='])
+    for opt, arg in opts:
+        if opt in ['-h', '--help']:
+            print __doc__
+            sys.exit(0)
+        elif opt in ['-f', '--format']:
+            output_format = arg
+        elif opt in ['-o', '--output'] and not arg in ['', '-']:
+            output_fileobj = file(arg, 'w')
+        elif opt in ['-p', '--plot']:
+            plot_filename = arg
+
+    if remainder and remainder[0] != "-":
+        testlog_fileobj = file(remainder[0], "r")
+
+    if output_format.startswith('times:'):
+        t = stats_times(output_format.split(':',1)[1],
+                        testlog_fileobj, output_fileobj, plot_filename)

@@ -50,18 +50,6 @@ extern "C" {
 extern D_ParserTables parser_tables_lang;
 }
 
-void block(int fd)
-{
-  int flags = fcntl(fd, F_GETFL, 0);
-  fcntl(fd, F_SETFL, flags & (~O_NONBLOCK));
-}
-
-void nonblock(int fd)
-{
-  int flags = fcntl(fd, F_GETFL, 0);
-  fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-}
-
 void print_usage()
 {
   std::printf(

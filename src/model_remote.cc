@@ -21,71 +21,35 @@
 #include <cstdio>
 #include "helper.hh"
 
-int Model_remote::getact(int** act,std::vector<int>& vec)
-{
-  fflush(d_stdin);
-  vec.resize(0);
-  char* line=NULL;
-  size_t n;
-  int ret=0;
-  size_t s=getdelim(&line,&n,'\n',d_stdout);
-  if (s) {
-    string2vector(line,vec);
-    *act = &vec[0];
-    ret=vec.size();
-  }
-  if (line) {
-    free(line);
-  }
-
-  return ret;
-}
-
-
 int Model_remote::getActions(int** act)
 {
   std::fprintf(d_stdin, "a\n");
-  return getact(act,actions);
+  return getact(act,actions,d_stdin,d_stdout);
 }
 
 int Model_remote::getIActions(int** act)
 {
   std::fprintf(d_stdin, "i\n");
-  return getact(act,actions);
+  return getact(act,actions,d_stdin,d_stdout);
 }
 
-int Model_remote::getint()
-{
-  fflush(d_stdin);
-  char* line=NULL;
-  size_t n;
-  int ret=-42;
-  size_t s=getdelim(&line,&n,'\n',d_stdout);
-  if (s) {
-    ret=atoi(line);
-  }
-  if (line) {
-    free(line);
-  }
-  return ret;
-}
 
 int Model_remote::execute(int action)
 {
   std::fprintf(d_stdin, "%i\n", action);
-  return getint();
+  return getint(d_stdin,d_stdout);
 }
 
 int Model_remote::getprops(int** pro)
 {
   std::fprintf(d_stdin, "p\n");
-  return getact(pro,props);
+  return getact(pro,props,d_stdin,d_stdout);
 }
 
 bool Model_remote::reset()
 {
   std::fprintf(d_stdin, "r\n");
-  return getint();
+  return getint(d_stdin,d_stdout);
 }
 
 void Model_remote::push()
@@ -131,7 +95,7 @@ bool Model_remote::init()
   d_stdout=fdopen(_stdout,"r");
   d_stderr=fdopen(_stderr,"r");
 
-  int acount=getint();
+  int acount=getint(d_stdin,d_stdout);;
 
   action_names.push_back("\"TAU");
 
@@ -151,7 +115,7 @@ bool Model_remote::init()
 
   precalc_input_output();
 
-  int prop_count=getint();
+  int prop_count=getint(d_stdin,d_stdout);
 
   prop_names.push_back("\"TAU");
 

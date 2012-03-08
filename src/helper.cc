@@ -458,6 +458,12 @@ void nonblock(int fd)
   fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 
+void block(int fd)
+{
+  int flags = fcntl(fd, F_GETFL, 0);
+  fcntl(fd, F_SETFL, flags & (~O_NONBLOCK));
+}
+
 /*
  * nonblock_getline reads lines from the stream. Unlike with normal
  * getline, underlying fd can be non-blocking. The function returns
@@ -540,5 +546,44 @@ ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
     }
     
   } while (ret>0 && log_redirect);
+  return ret;
+}
+
+
+int getint(FILE* out,FILE* in)
+{
+  if (out) {
+    fflush(out);
+  }
+  char* line=NULL;
+  size_t n;
+  int ret=-42;
+  size_t s=getdelim(&line,&n,'\n',in);
+  if (s) {
+    ret=atoi(line);
+  }
+  if (line) {
+    free(line);
+  }
+  return ret;
+}
+
+int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in)
+{
+  fflush(out);
+  vec.resize(0);
+  char* line=NULL;
+  size_t n;
+  int ret=0;
+  size_t s=getdelim(&line,&n,'\n',in);
+  if (s) {
+    string2vector(line,vec);
+    *act = &vec[0];
+    ret=vec.size();
+  }
+  if (line) {
+    free(line);
+  }
+
   return ret;
 }

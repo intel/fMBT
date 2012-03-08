@@ -36,7 +36,7 @@ bool Adapter_remote::init()
   int _stdin,_stdout,_stderr;
   g_type_init ();
 
-  gchar **argv = (gchar**)malloc(42*sizeof(gchar*));
+  gchar **argv = NULL;
   gint argc;
   GError *gerr=NULL;
 
@@ -69,7 +69,7 @@ bool Adapter_remote::init()
     if (urlencode) {
       char* s=g_uri_escape_string((*actions)[i].c_str(),
 				  NULL,false);
-      
+
       std::fprintf(d_stdin,"%s\n",s);
       g_free(s);
     } else {
@@ -80,8 +80,8 @@ bool Adapter_remote::init()
 
   nonblock(_stdin);
   nonblock(_stdout);
+  fflush(d_stdin);
 
-  fflush(d_stdin);  
   return true;
 }
 
