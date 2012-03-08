@@ -25,7 +25,7 @@ noinst_HEADERS += conf.g lts.g mrules.g covlang.g xrules.g lang.g uconf.g
 
 noinst_HEADERS += Android.mk Application.mk
 
-fmbt_CPPFLAGS                  = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -I/usr/lib/jvm/java-6-openjdk/
+fmbt_CPPFLAGS                  = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` $(JVMCFLAGS)
 fmbt_ucheck_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0 libxml-2.0`
 fmbt_droid_CPPFLAGS            = -Wall -pedantic -fPIC -I d -I `pwd` -DDROI
 remote_adapter_loader_CPPFLAGS = -Wall -pedantic -I d -DDROI
