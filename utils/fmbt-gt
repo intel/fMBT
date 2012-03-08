@@ -447,7 +447,7 @@ def parse_rulestr(s):
     
     r=Rule()
 
-    s=re.sub('#[^\n]*(\n|$)','',s) # remove comments
+    s=re.sub('^[ \t]*#[^\n]*(\n|$)','',s) # remove comments
     s=s.replace('\\\n',' ').replace('\n',' ')
     s=s.lstrip()
 
