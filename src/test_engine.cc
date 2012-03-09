@@ -197,6 +197,21 @@ void Test_engine::log_tags()
   log.print("<tags enabled=\"%s\"/>\n",s.c_str());
 }
 
+void log_strarray(Log&l,
+		  const char* tag,
+		  std::vector<std::string>& array,
+		  unsigned first_element=1);
+
+void log_strarray(Log&l,
+		  const char* tag,
+		  std::vector<std::string>& array,
+		  unsigned first_element) {
+  for(unsigned i=first_element;i<array.size();i++) {
+    l.print("<%s\"%s\"/>\n",tag,array[i].c_str());
+  }
+}
+
+
 Verdict::Verdict Test_engine::run(time_t _end_time)
 {
   float last_coverage = 0.0;
@@ -208,6 +223,11 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
   int action=0;
   std::vector<int> actions;
   int step_count=0;
+
+  log_strarray(log,"action_name name=",
+	       heuristic.get_model()->getActionNames());
+  log_strarray(log,"tag_name name=",
+	       heuristic.get_model()->getSPNames());
 
   log.push("test_engine");
   gettimeofday(&start_time,NULL);
