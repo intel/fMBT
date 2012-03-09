@@ -27,6 +27,7 @@ public:
   virtual void set_coverage(Coverage*,Alphabet* alpha);
 
 protected:
+  int alphabet_done;
   char* act;
   char* tag;
   void processNode(xmlTextReaderPtr reader);
@@ -35,4 +36,6 @@ protected:
   void send_action();
   bool send_action(std::string& a,std::vector<std::string>& props);
   std::string file;
+  std::vector<std::string> anames;
+  std::vector<std::string> tnames;
 };

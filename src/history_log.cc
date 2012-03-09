@@ -27,7 +27,7 @@
 #include "helper.hh"
 
 History_log::History_log(Log& l, std::string params) :
-  History(l,params), act(NULL), tag(NULL), c(NULL), a(NULL), file(params)
+  History(l,params), alphabet_done(false), act(NULL), tag(NULL), c(NULL), a(NULL), file(params)
 {
 
 }
@@ -36,6 +36,31 @@ void History_log::processNode(xmlTextReaderPtr reader)
 {
   char* name =(char*) xmlTextReaderConstName(reader);
   if (name==NULL) return;
+
+  if (xmlTextReaderDepth(reader)>2) {
+    if (!alphabet_done) {
+      alphabet_done=true;
+    }
+  }
+  
+  if (!alphabet_done) {
+    if ((xmlTextReaderDepth(reader)==2) &&
+	(strcmp((const char*)name,"action_name")==0)) {
+      char* aname=(char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"name");
+      if (aname!=NULL) {
+	anames.push_back(aname);
+      }
+    }
+
+    if ((xmlTextReaderDepth(reader)==2) &&
+	(strcmp((const char*)name,"tag_name")==0)) {
+      char* tname=(char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"name");
+      if (tname!=NULL) {
+	tnames.push_back(tname);
+      }
+    }
+
+  }
 
   if ((xmlTextReaderDepth(reader)==3) &&
       (strcmp((const char*)name,"current_time")==0)) {
