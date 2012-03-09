@@ -18,6 +18,7 @@
  */
 #include "xrules_remote.hh"
 #include "factory.hh"
+#include "helper.hh"
 #include <glib.h>
 
 bool Xrules_remote::init()
@@ -50,7 +51,7 @@ bool Xrules_remote::init()
         + (name.c_str()+offset) + "\"";
       ret=false;
     } else {
-      params = model + stdout;
+      params = model + escape_string(stdout);
       ret=Lts_xrules::init();
     }
     g_free(stdout);

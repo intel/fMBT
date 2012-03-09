@@ -307,10 +307,15 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       log.pop(); // adapter_executed
 
       if (!heuristic.execute(adapter_response)) {
+        std::string msg = "unexpected response to input \"" +
+          heuristic.getActionName(action) + "\": ";
+        if (adapter_response == 0) msg += "unidentified result.";
+        else msg +="\"" + heuristic.getActionName(adapter_response) + "\".";
+
         log.debug("Test_engine::run: ERROR: SUT executed %i '%s', not allowed in the model.\n",
                   action, heuristic.getActionName(action).c_str());
         log.debug("%s %s",action,heuristic.getActionName(action).c_str(),"broken input acceptance");
-        return stop_test(Verdict::FAIL, "unexpected input");
+        return stop_test(Verdict::FAIL, msg.c_str());
       }
     }
     } // switch
