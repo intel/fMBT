@@ -41,12 +41,13 @@ AS_IF([test "x$enable_android" != "xyes"],
     )
 
 
+if test -z "$JVMLDFLAGS"; then
 AC_ARG_WITH([jvm-lib],
             [AS_HELP_STRING([--with-jvm-lib=/path/to/libjvm.so], [directory containing the JVM library, needed to enable AAL/Java support])],
 	    [JVMLDFLAGS="-L$withval -ljvm"
 	    AC_DEFINE(WITH_JVM,1,[compile with libjvm])],
 	    [JVMLDFLAGS=""])
-
+fi
 AC_SUBST([JVMLDFLAGS])
 
 
