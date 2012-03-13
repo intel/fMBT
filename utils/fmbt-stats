@@ -20,6 +20,9 @@
 
 Usage: fmbt-stats [options] [logfile]
 
+logfile is the XML log written by fmbt (fmbt -l logfile test.conf),
+adapter logs are not supported.
+
 Options:
   -f, --format=<fmt>
           fmt defines statistics to present. Available formats:
