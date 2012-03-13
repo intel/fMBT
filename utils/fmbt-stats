@@ -117,7 +117,7 @@ def stats_speed(arg, testlog_fileobj, output_fileobj, plot_filename):
     
     def format_data(out_format, data_speed_columns):
         if len(data_speed_columns) == 0: return []
-        title = 'Average execution speed [ms / test step]'
+        title = 'Average execution speed [test steps / s]'
 
         column_count = len(data_speed_columns[0])
         header_format, datarow_format, footer_format = {}, {}, {}
@@ -150,7 +150,7 @@ def stats_speed(arg, testlog_fileobj, output_fileobj, plot_filename):
         for avg in averages:
             if avg > i: avg = i
             prev_timestamp_avg = timestamp_action_list[i-avg][0]
-            data[-1].append( (this_timestamp-prev_timestamp_avg)*1000/avg )
+            data[-1].append( avg/(this_timestamp-prev_timestamp_avg) )
 
     output_file_format = check_output_format(output_fileobj)
 
@@ -167,7 +167,7 @@ def stats_speed(arg, testlog_fileobj, output_fileobj, plot_filename):
                 "'%s' using :%s title \"%s step(s)\"  with lines" % (
                     plot_datafilename, column + 1, averages[column]))
         gnuplot_commands = """
-set ylabel "Average execution speed [ms / test step]"
+set ylabel "Average execution speed [test steps / s]"
 set xlabel "Test step"
 set log y
 set term %(format)s
