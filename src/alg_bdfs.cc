@@ -24,6 +24,7 @@
 #include "model.hh"
 #include "coverage.hh"
 #include <algorithm>
+#include <cstdlib>
 
 double AlgPathToBestCoverage::search(Model& model, Coverage& coverage, std::vector<int>& path)
 {
@@ -41,8 +42,8 @@ void AlgPathToBestCoverage::doExecute(int action)
 {
     m_model->push();
     m_coverage->push();
-
-    m_model->execute(action);
+    
+    if (!m_model->execute(action)) abort();
     m_coverage->execute(action);
 }
 
@@ -85,13 +86,49 @@ void AlgPathToAction::undoExecute()
 
 double AlgBDFS::path_to_best_evaluation(Model& model, std::vector<int>& path, int depth)
 {
-    double current_score = evaluate();
-    double best_score = _path_to_best_evaluation(model, path, depth, current_score);
+    volatile double current_score = evaluate();
+    volatile double best_score = 0;
+    std::vector<int> hinted_path;
+    if (path.size() > 0) {
+        // Path includes a hint to look at this path at first before
+        // considering others.
+        //
+        // Evaluating the hinted options first has too effects:
+        // 
+        // - If one path has been chosen earlier, it's preferred to
+        //   continue execution that way instead of switching it to
+        //   another path that seems to be as good as the
+        //   original. This prevents oscillation between equally good
+        //   paths.
+        //
+        // - If maximal growth rate is known, search starting with a
+        //   good "so far best score" is able to drop unnecessary
+        //   lookups. (Not implemented)
+        for (int i = 0; i < path.size(); i++) doExecute(path[i]);
+
+        double hinted_score_without_new_steps = evaluate();
+
+        std::vector<int> additional_path;
+        best_score = _path_to_best_evaluation(model, additional_path, depth - path.size(), current_score);
+
+        for (int i = 0; i < path.size(); i++) undoExecute();
+
+        if (best_score > current_score) {
+            hinted_path = path;
+            for (int i = additional_path.size() - 1; i >= 0; i--)
+                hinted_path.push_back(additional_path[i]);
+            current_score = best_score;
+        }
+    }
+    
+    best_score = _path_to_best_evaluation(model, path, depth, current_score);
 
     if (best_score > current_score) {
         // The real algorithm constructs the best path in the opposite
         // direction to the path vector, this wrapper reverses it.
         std::reverse(path.begin(), path.end());
+    } else if (hinted_path.size() > 0) {
+        path = hinted_path;
     } else {
         path.resize(0);
     }
@@ -102,34 +139,43 @@ bool AlgBDFS::grows_first(std::vector<int>& first_path, int first_path_start,
                           std::vector<int>& second_path, int second_path_start)
 {
     if (first_path.size() != second_path.size()) abort();
-    
-    double path1eval;
-    double path2eval;
 
-    doExecute(first_path_start);
-    path1eval = evaluate();
-    undoExecute();
+    volatile double current_score = evaluate();
 
-    doExecute(second_path_start);
-    path2eval = evaluate();
-    undoExecute();
+    first_path.push_back(first_path_start);
+    second_path.push_back(second_path_start);
 
-    if (path1eval > path2eval) return true;
-    else if (path1eval < path2eval) return false;
-
-    if (first_path.size() == 0) return false;
-    else if (second_path.size() == 0) return false;
-    else
-    {
-        std::vector<int> new_first_rest = first_path;
-        std::vector<int> new_second_rest = second_path;
-        first_path_start = new_first_rest.back();
-        second_path_start = new_second_rest.back();
-        new_first_rest.pop_back();
-        new_second_rest.pop_back();
-        return grows_first(new_first_rest, first_path_start,
-                           new_second_rest, second_path_start);
+    int first_difference = first_path.size();
+    for (int i = first_path.size() - 1; i >= 0; i--) {
+        doExecute(first_path[i]);
+        volatile double score = evaluate();
+        if (score > current_score) {
+            first_difference = i;
+            break;
+        }
     }
+    if (first_difference == first_path.size()) abort();
+
+    for (int j = first_path.size() - 1; j >= first_difference; j--) undoExecute();
+
+    int second_difference = second_path.size();
+    for (int i = second_path.size() - 1; i >= 0; i--) {
+        doExecute(second_path[i]);
+        volatile double score = evaluate();
+        if (score > current_score) {
+            second_difference = i;
+            break;
+        }
+    }
+    if (second_difference == second_path.size()) abort();
+
+    for (int j = second_path.size() - 1; j >= second_difference; j--) undoExecute();
+
+    first_path.pop_back();
+    second_path.pop_back();
+
+    if (first_difference > second_difference) return true;
+    else return false;
 }
 
 double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, int depth,
@@ -138,18 +184,13 @@ double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, i
     int *input_actions = NULL;
     int input_action_count = 0;
 
-    double current_state_evaluation = evaluate();
+    volatile double current_state_evaluation = evaluate();
 
     if (current_state_evaluation > best_evaluation)
         best_evaluation = current_state_evaluation;
 
     /* Can we still continue the search? */
     if (depth <= 0)
-        return current_state_evaluation;
-
-    /* If maximum evaluation has been achieved, there is no need to
-     * continue. */
-    if (current_state_evaluation == 1.0)
         return current_state_evaluation;
 
     /* Recursive search for the best path */
@@ -164,21 +205,23 @@ double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, i
     for (int i = 0; i < input_action_count; i++)
     {
         std::vector<int> a_path;
-        double an_evaluation;
+        volatile double an_evaluation;
 
         doExecute(action_candidates[i]);
 
+        a_path.resize(0);
         an_evaluation = _path_to_best_evaluation(model, a_path, depth - 1, best_evaluation);
 
         undoExecute();
 
-        if (an_evaluation > best_evaluation ||
-            (an_evaluation == best_evaluation && 
-             (best_action == -1 ||
-              (best_action > -1 &&
-               (a_path.size() < best_path_length ||
-                (a_path.size() == best_path_length &&
-                 grows_first(a_path, action_candidates[i], best_path, best_action)))))))
+        if (an_evaluation > current_state_evaluation &&
+            (an_evaluation > best_evaluation ||
+             (an_evaluation == best_evaluation && 
+              (best_action == -1 ||
+               (best_action > -1 &&
+                (a_path.size() < best_path_length ||
+                 (a_path.size() == best_path_length &&
+                  grows_first(a_path, action_candidates[i], best_path, best_action))))))))
         {
             best_path_length = a_path.size();
             best_path = a_path;

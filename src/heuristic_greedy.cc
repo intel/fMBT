@@ -35,7 +35,7 @@ Heuristic_greedy::Heuristic_greedy(Log& l, std::string params) :
 
 bool Heuristic_greedy::execute(int action)
 {
-  if (m_burst && m_path.size() > 0) {
+  if (m_path.size() > 0) {
     int planned_action = m_path.back();
     if (planned_action != action) // invalidate planned path
       m_path.resize(0);
@@ -44,7 +44,6 @@ bool Heuristic_greedy::execute(int action)
   }
   return Heuristic::execute(action);
 }
-
 
 float Heuristic_greedy::getCoverage() {
   if (my_coverage==NULL) {
@@ -111,6 +110,8 @@ int Heuristic_greedy::getIAction()
     if (!m_burst || m_path.size() == 0) {
       /* Spend more time for better coverage */
       AlgPathToBestCoverage alg(m_search_depth);
+      /* Use precalculated path (m_path) as a hint. */
+      std::reverse(m_path.begin(), m_path.end());
       double score = alg.search(*model, *my_coverage, m_path);
       if (m_path.size() > 0) {
         std::reverse(m_path.begin(), m_path.end());
