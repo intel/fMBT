@@ -28,10 +28,6 @@
 #include "log.hh"
 #include "aal.hh"
 
-#define SILENCE      (-3)
-#define DEADLOCK     (-2)
-#define OUTPUT_ONLY  (-1)
-
 class Mwrapper: public Model {
 public:
   Mwrapper(Log&l, std::string params, aal* _model);
