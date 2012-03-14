@@ -20,7 +20,6 @@ model mymkdirrmdir {
 #include <sys/types.h>
 #include <helper.hh>
   } ;
-//  default action type: input;
 
   variables {
     int x;

@@ -24,7 +24,7 @@
 
 class aalang {
 public:
-  aalang(): default_action_input(true) {}
+  aalang() {}
   virtual ~aalang() {};
   virtual void set_name(std::string* name)     = 0;
   virtual void set_namestr(std::string* name)  = 0;
@@ -52,14 +52,10 @@ public:
   virtual void next_action() = 0;
   virtual std::string stringify() = 0;
   virtual void set_starter(std::string* st) = 0;
-  virtual void set_default_action_input(bool b) {
-    default_action_input=b;
-  }
 protected:
   std::string default_guard;
   std::string default_body;
   std::string default_adapter;
-  bool default_action_input;
   std::vector<int> amap;
   std::vector<int> tmap;
 };

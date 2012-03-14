@@ -75,7 +75,7 @@ aal_start: 'aal' string '{' language {
             obj->set_namestr($1.str);
         } ;
 
-header: default_type | variables | istate | push | pop;
+header: variables | istate | push | pop;
 
 act: 'action' astr '{' guard body adapter '}' { obj->next_action(); };
 
@@ -108,11 +108,6 @@ language: 'language:' cpp    { obj=new aalang_cpp  ; } starter ';' |
 cpp: 'C++' | 'cpp' | 'c++';
 
 java: 'oak' | 'green' | 'java';
-
-default_type: 'default' 'action' 'type' ':' input_type;
-
-input_type: 'input' { obj->set_default_action_input(true); }
-    | 'output' { obj->set_default_action_input(false); };
 
 starter: |
         '{' bstr '}' { obj->set_starter($1.str); };
