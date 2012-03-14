@@ -38,6 +38,7 @@ public:
   virtual void push();
   virtual void pop();
   virtual int getprops(int** props);
+  virtual int observe(std::vector<int> &action, bool block = false);
 private:
   JNIEnv *env;  
   JavaVM *jvm;
@@ -57,6 +58,7 @@ private:
   jmethodID Pop;
   jmethodID Getprops;
   jmethodID gettnames;
+  jmethodID obs;
 };
 
 

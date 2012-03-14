@@ -65,6 +65,7 @@ aal_java::aal_java(Log&l,std::string& s)
 	if (obj) {
 	  aexec=env->GetMethodID(wclass,"adapter_execute","(I)I");
 	  mexec=env->GetMethodID(wclass,"model_execute","(I)I");
+	  obs  =env->GetMethodID(wclass,"adapter_observe","()I");
 	  Reset=env->GetMethodID(wclass,"reset","()Z");
 	  Push =env->GetMethodID(wclass,"push","()V");
 	  Pop  =env->GetMethodID(wclass,"pop","()V");
@@ -105,6 +106,27 @@ int aal_java::adapter_execute(int action) {
 int aal_java::model_execute(int action) {
   return env->CallIntMethod(obj,mexec,action);
 }
+
+int  aal_java::observe(std::vector<int> &action,
+		       bool block) {
+  int ret=0;
+  if (obs) {
+    do {
+      ret=env->CallIntMethod(obj,obs);
+    } while (!ret && block);
+  } else {
+    return SILENCE;
+  }
+  if (ret) {
+    action.resize(1);
+    action[0]=ret;
+    return 1;
+  } else {
+    action.clear();
+    return 0;
+  }
+}
+
 
 void aal_java::push() {
   if (Push) {
