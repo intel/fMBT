@@ -167,14 +167,15 @@ std::string aalang_cpp::stringify()
   s+=*istate+"}\n"
     "virtual bool reset() {\n"+
     *istate +
-    "return true;\n}\n\n"
-    "virtual int adapter_execute(int action) {\n"
-    "\tswitch(action) {\n";
+    "return true;\n}\n\n";
 
   if (pop!="") {
     s=s+"\nvirtual void pop(){\n"+pop+"\n}\n";
     s=s+"\nvirtual void push(){\n"+push+"\n}\n";
   }
+
+  s=s+"virtual int adapter_execute(int action) {\n"
+    "\tswitch(action) {\n";
 
   for(int i=1;i<action_cnt;i++) {
     s+="\t\tcase "+to_string(i)+":\n"
