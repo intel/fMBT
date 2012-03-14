@@ -50,6 +50,7 @@ private:
   void factory_register();
 
 protected:
+  std::vector<std::string> anames;
   std::list<std::vector<std::string> > aname;
   std::list<std::vector<std::string> > tname;
   std::string s;

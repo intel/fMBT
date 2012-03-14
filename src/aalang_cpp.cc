@@ -32,6 +32,7 @@ aalang_cpp::aalang_cpp(): aalang(),action_cnt(1), tag_cnt(1), name_cnt(0),
   tname.push_back(t);
   amap.push_back(0);
   tmap.push_back(0);
+  anames.push_back(default_body);
 }
 
 aalang_cpp::~aalang_cpp()
@@ -50,6 +51,7 @@ void aalang_cpp::set_starter(std::string* st)
 void aalang_cpp::set_name(std::string* name)
 {
   s+="\n//action"+to_string(action_cnt)+": \""+*name+"\"\n";
+  anames.push_back(*name);
   aname.back().push_back(*name);
   delete name;
   amap.push_back(action_cnt);
@@ -174,13 +176,36 @@ std::string aalang_cpp::stringify()
     s=s+"\nvirtual void push(){\n"+push+"\n}\n";
   }
 
-  s=s+"virtual int adapter_execute(int action) {\n"
-    "\tswitch(action) {\n";
+  s=s+"virtual int observe(std::vector<int>&action, bool block){\n"
+    "\tint r;\n"
+    "\taction.clear();\n"
+    "\tdo {\n";    
+
+  int obsa=0;
 
   for(int i=1;i<action_cnt;i++) {
-    s+="\t\tcase "+to_string(i)+":\n"
-      "\t\treturn action"+to_string(amap[i])+
-      "_adapter();\n\t\tbreak;\n";
+    if (anames[i][0]=='o') {
+      obsa++;
+      s=s+"\tr=action"+to_string(amap[i])+"_adapter();\n"
+	"\tif (r) { action.push_back(r); return 1;}\n";
+    }
+  }
+  if (!obsa) {
+    s=s+"\treturn SILENCE;\n";
+  }
+  s=s+"\t} while(block);"
+    "\treturn 0;\n"
+    "}\n";
+  
+  s=s+"virtual int adapter_execute(int action) {\n"
+    "\tswitch(action) {\n";
+  
+  for(int i=1;i<action_cnt;i++) {
+    if (anames[i][0]=='i') {
+      s+="\t\tcase "+to_string(i)+":\n"
+	"\t\treturn action"+to_string(amap[i])+
+	"_adapter();\n\t\tbreak;\n";
+    }
   }
   s=s+"\t\tdefault:\n"
     "\t\treturn 0;\n"
