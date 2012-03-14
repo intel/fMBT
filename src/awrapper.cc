@@ -58,5 +58,9 @@ void Awrapper::execute(std::vector<int>& action)
 
 int  Awrapper::observe(std::vector<int> &action,
 		       bool block) {
-  return false;
+  int tmp=ada->observe(action,block);
+  for(int i=0;i<tmp;i++) {
+    action[i]=ada2aal[action[i]];
+  }
+  return tmp;
 }

@@ -47,6 +47,10 @@ public:
     return 0;
   }
 
+  virtual int  observe(std::vector<int> &action,bool block=false) {
+    return 0;
+  }
+
   virtual void log(const char* format, ...);
   bool ok;
 protected:
