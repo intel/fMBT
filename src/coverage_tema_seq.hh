@@ -31,7 +31,7 @@
  *
  * Usage:
  * fmbt -L logfile.log bughunt.conf
- * fmbt-log -f '$as' logfile.log > full_trace.tr
+ * fmbt-log -f '$ax#$as' logfile.log > full_trace.tr
  * fmbt -L minimizer.log minimizer.conf
  *
  * where the file minimizer.conf is same as bughunt.conf except for lines:
@@ -41,6 +41,7 @@
  * model , and
  *     coverage = "tema_seq:full_trace.tr"
  *
+ * NOTE: Initialization part should be removed from trace.
  */
 
 #include "coverage.hh"
@@ -66,6 +67,7 @@ private:
   std::string a_trace_file_name;
   int a_trace_ptr;
   std::vector<int> a_trace;
+  std::vector<int> a_executed;
   float a_step_coverage;
   std::vector<int> a_stack;
 };

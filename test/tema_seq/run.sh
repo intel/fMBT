@@ -35,7 +35,7 @@ export PATH=../../src:../../utils:$PATH
 source ../functions.sh
 
 cp mkrmdir.conf minimizer.conf
-sed -i -r -e 's/^(heuristic.*")[^"]*(".*)/\1greedy:6b\2/g' minimizer.conf
+sed -i -r -e 's/^(heuristic.*")[^"]*(".*)/\1lookahead:6b\2/g' minimizer.conf
 sed -i -r -e 's/^(coverage.*")[^"]*(".*)/\1tema_seq:org_error.tr\2/g' minimizer.conf
 
 rm -rf minimizer.log adapter.log /tmp/fmbt.mkrmdir
@@ -48,7 +48,7 @@ fmbt-log -f '$as' mkrmdir.log > org_error.tr 2>>$LOGFILE
 testpassed
 
 teststep "searching for shorter error trace..."
-fmbt -L minimizer.log minimizer.conf < /dev/null
+fmbt -L minimizer.log minimizer.conf < /dev/null > /dev/null
 ORIGLEN=$(wc -l < org_error.tr)
 NEWLEN=$(fmbt-log -f '$as' minimizer.log | wc -l)
 echo "Original error trace: $ORIGLEN"  >>$LOGFILE
