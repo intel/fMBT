@@ -18,6 +18,7 @@
  */
 
 #include "mwrapper.hh"
+#include <cstring>
 
 Mwrapper::Mwrapper(Log&l, std::string params, aal* _model):
   Model(l, params), model(_model)  
@@ -32,7 +33,16 @@ int Mwrapper::getActions(int** actions) {
 }
 
 int Mwrapper::getIActions(int** actions) {
-  return model->getActions(actions);  
+  int a=model->getActions(actions);
+  int ret=a;
+  for(int i=0;i<a;i++) {
+    if (is_output((*actions)[i])) {
+      ret--;
+      memmove(&(*actions)[i],&(*actions)[i+1],sizeof(int)*
+	      (a-i));
+    }
+  }
+  return ret;
 }
 
 bool Mwrapper::reset() {
