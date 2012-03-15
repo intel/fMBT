@@ -44,11 +44,11 @@ rm -rf minimizer.log adapter.log /tmp/fmbt.mkrmdir
 # Run the test
 
 teststep "preprocessing error log..."
-fmbt-log -f '$as' mkrmdir.log > org_error.tr 2>>$LOGFILE
+fmbt-log -f '$ax#$as' mkrmdir.log > org_error.tr 2>>$LOGFILE
 testpassed
 
 teststep "searching for shorter error trace..."
-fmbt -L minimizer.log minimizer.conf < /dev/null > /dev/null
+fmbt -L minimizer.log minimizer.conf < /dev/null > /dev/null 2>&1
 ORIGLEN=$(wc -l < org_error.tr)
 NEWLEN=$(fmbt-log -f '$as' minimizer.log | wc -l)
 echo "Original error trace: $ORIGLEN"  >>$LOGFILE
