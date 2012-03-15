@@ -63,6 +63,8 @@ import re
 
 import atexit
 
+import signal
+
 MAX_LINE_LENGTH=1024*1024 # bytes
 
 gLogFile = "/tmp/remote_python.log"
@@ -748,6 +750,10 @@ def self_test():
 
     return 0 # end of self_test
 
+def signal_handler(signal, frame):
+        log('User requested terminating with Ctrl-C')
+        sys.exit(0)
+
 if __name__ == "__main__":
 
     selfTest = False
@@ -812,6 +818,8 @@ if __name__ == "__main__":
         g_ioHandler = InteractiveShellIO()
     else:
         g_ioHandler = AdapterIO(delay)
+
+    signal.signal(signal.SIGINT, signal_handler)
 
     g_loop = gobject.MainLoop()
     log("entering main loop")
