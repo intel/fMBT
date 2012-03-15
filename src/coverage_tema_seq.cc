@@ -30,6 +30,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <cmath>
 #include <cstdlib>
 
@@ -84,7 +85,9 @@ Coverage_Tema_seq::execute(int action) {
   int idx = N+next_ptr-base;
   if( idx >= N ) return false;
 
-  if( action == a_trace[idx] ) {
+  if( action == a_trace[idx] ||
+      ( a_stack.size() == 0 && action == a_executed[idx]) ||
+      ( a_stack.size() == 0 && a_executed[idx] < 0 )) {
     advance_trace_ptr( a_trace_ptr, a_stack);
   }
   return true;
@@ -121,12 +124,29 @@ Coverage_Tema_seq::set_model(Model* _model){
   }
 
   a_trace.clear();
+  a_executed.clear();
   std::string cur_action;
+  std::string log_trace;
+  std::string exec_action;
   try {
     for( std::ifstream trace(a_trace_file_name.c_str());
-	 std::getline(trace, cur_action) ; ) {
+	 std::getline(trace, log_trace) ; ) {
+      std::istringstream compo(log_trace);
+      std::getline(compo, exec_action , '#');
+      std::getline(compo, cur_action);
+      if( exec_action == log_trace ) {
+	cur_action = exec_action;
+      }
       int action = conversion_table.at(cur_action);
       a_trace.push_back(action);
+      int exec_act;
+      try {
+	exec_act = conversion_table.at(exec_action);
+      } catch( std::out_of_range & ) {
+	// std::cerr << "Special action " << exec_action << std::endl;
+	exec_act = -1;
+      }
+      a_executed.push_back(exec_act);
     }
   } catch( std::out_of_range &) {
     std::cerr << "Alphabet mismatch at action " << cur_action << std::endl;
