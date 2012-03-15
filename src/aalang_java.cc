@@ -32,6 +32,7 @@ aalang_java::aalang_java(): aalang(),action_cnt(1), tag_cnt(1), name_cnt(0),
   tname.push_back(t);
   amap.push_back(0);
   tmap.push_back(0);
+  anames.push_back(default_adapter);
 }
 
 aalang_java::~aalang_java()
@@ -50,6 +51,7 @@ void aalang_java::set_starter(std::string* st)
 void aalang_java::set_name(std::string* name)
 {
   s+="\n//action"+to_string(action_cnt)+": \""+*name+"\"\n";
+  anames.push_back(*name);
   aname.back().push_back(*name);
   delete name;
   amap.push_back(action_cnt);
@@ -147,7 +149,6 @@ void aalang_java::next_action()
 std::string aalang_java::stringify()
 {
   s=s+"String [] action_names = { \"\",";
-  
   for(std::list<std::vector<std::string> >::iterator i=aname.begin();i!=aname.end();i++) {
     for(std::vector<std::string>::iterator j=i->begin();j!=i->end();j++) {
       s+="\t\""+ *j +"\"\n";
@@ -168,23 +169,43 @@ std::string aalang_java::stringify()
 
   s=s+"public " + *name + "() {\n" + *istate + "\t};\n";
 
-
-  s+=
-    " boolean reset() {\n"+
-    *istate +
-    "return true;\n}\n\n"
-    " int adapter_execute(int action) {\n"
-    "\tswitch(action) {\n";
-
   if (pop!="") {
     s=s+"\n void pop(){\n"+pop+"\n}\n";
     s=s+"\n void push(){\n"+push+"\n}\n";
   }
 
+  s+="public int adapter_observe() {\n";
+
+  int outputcount=0;
   for(int i=1;i<action_cnt;i++) {
-    s+="\t\tcase "+to_string(i)+":\n"
-      "\t\treturn action"+to_string(amap[i])+
-      "_adapter();\n";
+    if (anames[i][0]=='o') {
+      outputcount++;
+    }
+  }
+  if (outputcount) {
+    s=s+"\tint tmp;\n";
+    for(int i=1;i<action_cnt;i++) {
+      if (anames[i][0]=='o') {
+	s+="\ttmp=action"+to_string(amap[i])+"_adapter();\n"
+	  "\tif (tmp!=0) { return tmp; }\n";
+      }
+    }
+  }
+
+  s+="\treturn 0;\n"
+    "}\n"
+    " boolean reset() {\n"+
+    *istate +
+    "return true;\n}\n\n"
+    " int adapter_execute(int action) {\n"
+    "\tswitch(action) {\n";
+  
+  for(int i=1;i<action_cnt;i++) {
+    if (anames[i][0]=='i') {    
+      s+="\t\tcase "+to_string(i)+":\n"
+	"\t\treturn action"+to_string(amap[i])+
+	"_adapter();\n";
+    }
   }
   s=s+"\t\tdefault:\n"
     "\t\treturn 0;\n"
