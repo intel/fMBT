@@ -420,6 +420,7 @@ void Test_engine::interactive()
   while (run) {
 
     while (adapter.observe(actions_v)>0) {
+      action=actions_v[0];
       fprintf(stderr,"Action %i:%s\n",action,heuristic.getActionName(action).c_str());
       actions_v.resize(0);
     }
