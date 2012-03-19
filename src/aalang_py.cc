@@ -88,7 +88,9 @@ void aalang_py::set_namestr(std::string* _name)
 { 
   name=_name;
   s+="import aalmodel\n"
-    "class _gen_"+*name+"(aalmodel.AALModel):\n";
+    "class _gen_"+*name+"(aalmodel.AALModel):\n"
+    "    def __init__(self):\n"
+    "        aalmodel.AALModel.__init__(self, globals())\n";
 }
 
 void aalang_py::set_variables(std::string* var)
@@ -149,7 +151,7 @@ void aalang_py::set_body(std::string* bod)
   default_if_empty(*bod, "pass");
   s+="    def action"+acnt+"body():\n" + variables +
     "        try:\n" +
-    indent(12,*bod)+"\n"
+                 indent(12,*bod)+"\n"
     "        except Exception as _aalException:\n"
     "            raise _aalException\n";
 }
@@ -158,11 +160,8 @@ void aalang_py::set_adapter(std::string* ada)
 {
   default_if_empty(*ada, "pass");
   s+="    def action"+acnt+"adapter():\n" + variables +
-    "        try:\n" +
-    indent(12,*ada)+"\n"+
-    "        except Exception as _aalException:\n"
-    "            return 0 # i should log the exception...\n"
-    "        return " +acnt + "\n";
+              indent(8,*ada)+"\n"+
+     "        return " +acnt + "\n";
 }
 
 void aalang_py::next_action()
