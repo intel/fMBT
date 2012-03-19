@@ -60,12 +60,21 @@ std::string indent(int depth, std::string &s)
     line_start = line_end + 1;
   } while (line_end < (int)s.length() - 1);
 
+  // right-strip
+  rv.erase(rv.find_last_not_of(" \t\n\r")+1);
+
   return rv;
+}
+
+void default_if_empty(std::string& s, const std::string& default_value)
+{
+  size_t first_nonspace = s.find_first_not_of(" \t\n\r");
+  if (first_nonspace == std::string::npos) s = default_value;
 }
 
 void aalang_py::set_starter(std::string* st)
 {
-  s+=*st+"\n";
+  s+=indent(0, *st)+"\n";
 }
 
 
@@ -109,6 +118,7 @@ void aalang_py::next_tag()
 
 void aalang_py::set_guard(std::string* gua)
 {
+  default_if_empty(*gua, "return True");
   if (tag) {
     s+="    def tag"+to_string(tag_cnt)+"guard():\n"+ variables +
       indent(8,*gua)+"\n";
@@ -136,6 +146,7 @@ void aalang_py::set_pop(std::string* p)
 
 void aalang_py::set_body(std::string* bod)
 {
+  default_if_empty(*bod, "pass");
   s+="    def action"+acnt+"body():\n" + variables +
     "        try:\n" +
     indent(12,*bod)+"\n"
@@ -145,6 +156,7 @@ void aalang_py::set_body(std::string* bod)
 
 void aalang_py::set_adapter(std::string* ada)
 {
+  default_if_empty(*ada, "pass");
   s+="    def action"+acnt+"adapter():\n" + variables +
     "        try:\n" +
     indent(12,*ada)+"\n"+
