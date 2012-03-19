@@ -26,10 +26,10 @@ Options:
           set minimum delay between executed actions to <float>
           seconds. By default there is no delay.
 
-  -L, --log-file=<file>
+  -L=<file>
           write (append) log to the file instead of /tmp/remote_python.log.
 
-  -l=<file>
+  -l, --log-file=<file>
           write (overwrite) log to the file instead of /tmp/remote_python.log.
 
   -s, --shell
@@ -775,9 +775,9 @@ if __name__ == "__main__":
             selfTest = True
         elif opt in ['-d', '--action-delay']:
             delay = float(arg)
-        elif opt in ['-L', '--log-file']:
+        elif opt in ['-L']:
             gLogFile = arg
-        elif opt == '-l':
+        elif opt in ['-l', '--log-file']:
             gLogFile = arg
             file(gLogFile, "w").close()
         else:
