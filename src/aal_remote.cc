@@ -61,20 +61,23 @@ aal_remote::aal_remote(Log&l,std::string& s)
 
   ssize_t red=getline(&read_buf,&read_buf_pos,d_stdout);
 
+  action_names.push_back("TAU");
+
   while (red>1) {
+    read_buf[red-1]='\0'; // no not include linefeed
     action_names.push_back(read_buf);
     red=getline(&read_buf,&read_buf_pos,d_stdout);
   }
 
   red=getline(&read_buf,&read_buf_pos,d_stdout);
 
+  tag_names.push_back("TAU");
+
   while (red>1) {
+    read_buf[red-1]='\0'; // no not include linefeed
     tag_names.push_back(read_buf);
     red=getline(&read_buf,&read_buf_pos,d_stdout);
   }
-
-  nonblock(_stdin);
-  nonblock(_stdout);
 
   fflush(d_stdin);  
 }
@@ -159,8 +162,8 @@ namespace {
     return NULL;
   }
 
-  static ModelFactory  ::Register Mo("aalremote", model_creator);
-  static AdapterFactory::Register Ad("aalremote", adapter_creator);
+  static ModelFactory  ::Register Mo("aal_remote", model_creator);
+  static AdapterFactory::Register Ad("aal_remote", adapter_creator);
 }
 
 #endif
