@@ -97,7 +97,7 @@ bool Model_remote::init()
 
   int acount=getint(d_stdin,d_stdout);;
 
-  action_names.push_back("\"TAU");
+  action_names.push_back("TAU");
 
   for(int i=0;i<acount;i++) {
     char* line=NULL;
@@ -117,7 +117,7 @@ bool Model_remote::init()
 
   int prop_count=getint(d_stdin,d_stdout);
 
-  prop_names.push_back("\"TAU");
+  prop_names.push_back("TAU");
 
   for(int i=0;i<prop_count;i++) {
     char* line=NULL;
