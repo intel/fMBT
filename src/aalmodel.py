@@ -1,7 +1,8 @@
 import copy
+import types
 
 class AALModel:
-    def __init__(self):
+    def __init__(self, model_globals):
         self._all_guards = self._get_all("guard", "action")
         self._all_bodies = self._get_all("body", "action")
         self._all_adapters = self._get_all("adapter", "action")
@@ -9,7 +10,7 @@ class AALModel:
         self._all_types = self._get_all("type", "action")
         self._all_tagnames = self._get_all("name", "tag")
         self._all_tagguards = self._get_all("guard", "tag")
-        self._variables = globals()
+        self._variables = model_globals
         self._stack = []
 
     def _get_all(self, property_name, itemtype):
@@ -24,7 +25,11 @@ class AALModel:
         return eval(func.func_code, self._variables)
 
     def reset(self):
-        self.call(self.initial_state)
+        rv = self.call(self.initial_state)
+        self._push_variables = [v for v in self.initial_state.func_code.co_names
+                                if v in self._variables and type(eval(v, self._variables)) not in [
+                types.ModuleType, types.FunctionType, types.ClassType]]
+        return rv
 
     def adapter_execute(self, i):
         return self.call(self._all_adapters[i-1])
@@ -61,7 +66,7 @@ class AALModel:
         # initial state must reset all variables.
         # automatic push saves only their states
         stack_element = {}
-        for varname in self.initial_state.func_code.co_names:
+        for varname in self._push_variables:
             stack_element[varname] = copy.deepcopy(self._variables[varname])
         self._stack.append(stack_element)
 
