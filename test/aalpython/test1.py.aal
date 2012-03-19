@@ -1,6 +1,6 @@
 aal "test1" {
 
-    language: python;
+    language: python { import mycounter };
 
     variables {
         i, dir
@@ -9,6 +9,9 @@ aal "test1" {
     initial_state {
         i = 0
         dir = 0
+        mycounter.dec_called = 0
+        mycounter.last_thing = 'started'
+        mycounter.log("aal initial_state executed")
     }
 
     action "iInc" {
@@ -18,11 +21,19 @@ aal "test1" {
         model() {
         i += 1
         }
+        adapter(){}
     }
 
     action "iDec" {
-        guard() { return dir == 1 and i > 0 }
-        model() { i -= 1 }
+        guard()   { return dir == 1 and i > 0 }
+        model()   { i -= 1 }
+        adapter() {
+                    mycounter.dec_called=1
+
+                    if mycounter.last_thing == 'change':
+
+                        mycounter.last_thing = 'dec'
+                  }
     }
 
     action "iChangeDirection" {
@@ -34,9 +45,25 @@ aal "test1" {
             if dir == 0: dir = 1
             else:
                 dir = 0 }
+        adapter() {
+if mycounter.last_thing == 'dec':
+    mycounter.dec_called += 1
+    mycounter.direction_changed(i)
+        }
     }
 
     action "iDefaults" {
+    }
+
+    action "iEmptyDefaults" {
+    guard(){}
+    model(){}
+    adapter(){}
+    }
+
+    action "iFail" {
+    guard(){return 0}
+        adapter(){assert(0==1)}
     }
 
     tag "SmallValue" {
