@@ -1,10 +1,12 @@
+log_filename="/tmp/fmbt.test.aal-python.mycounter.log"
+file(log_filename, "w").close()
 def log(msg):
-    file("/tmp/fmbt.test.aal-python.mycounter.log", "w").write(msg + '\n')
+    file(log_filename, "a").write(msg + "\n")
 
 def foo():
     pass
 
 def direction_changed(i):
-    log('change %s' % (i,))
+    log('change direction on value %s' % (i,))
     log('    dec called: %s' % (dec_called,))
 

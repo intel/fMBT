@@ -35,10 +35,13 @@ source ../functions.sh
 ##########################################
 # Run the test
 
-teststep "remote_pyaal search (push/pop)"
+teststep "remote_pyaal model search (push/pop)..."
 cat > test.conf <<EOF
-model="aal_remote: remote_pyaal -l pyaal.log test1.py.aal"
-adapter="aal_remote: remote_pyaal -l pyaal.log test1.py.aal"
+model     = "aal_remote: remote_pyaal test1.py.aal"
+adapter   = "aal_remote: remote_pyaal test1.py.aal"
+heuristic = "lookahead:3"
+coverage  = "perm:2"
+pass      = "coverage:.5"
 EOF
 
 # search for path to execute iDec in the model:
@@ -55,13 +58,20 @@ if ! diff -u output.txt correct.txt >> $LOGFILE 2>&1; then
 fi
 testpassed
 
+teststep "remote_pyaal adapter in test execution..."
+MYCOUNTERLOG=$(python -c 'import mycounter; print mycounter.log_filename')
+rm -f "$MYCOUNTERLOG"
+fmbt test.conf 2>test.verdict | tee test.log >> $LOGFILE
+if [ "$(cat test.verdict)" == "pass: coverage reached" ] &&
+    ( tail -n1 "$MYCOUNTERLOG" | grep -q "dec called" ) >>$LOGFILE 2>&1; then
+    testpassed
+else
+    testfailed
+fi
 
-
-teststep "remote_pyaal state tags"
-testskipped # FIXME: dummy adapter does not work correctly
-exit 0
+teststep "remote_pyaal state tags..."
 cat > test.conf <<EOF
-model="remote: remote_pyaal test1.py.aal"
+model="aal_remote: remote_pyaal test1.py.aal"
 EOF
 
 # search for path to execute iDec in the model:
