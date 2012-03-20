@@ -5,8 +5,8 @@ bin_PROGRAMS = fmbt remote_adapter_loader fmbt-aalc fmbt-aalp fmbt-ucheck
 endif
 
 if HAVE_PYTHON
-dist_bin_SCRIPTS = remote_python remote_pymodel remote_pyaal
-python_PYTHON = fmbtweb.py
+dist_bin_SCRIPTS = remote_python remote_pyaal
+python_PYTHON = fmbtweb.py aalmodel.py
 pkgpyexec_LTLIBRARIES = fmbt_cparsers.la
 endif
 
