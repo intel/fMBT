@@ -25,6 +25,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <cstdlib>
+#include <signal.h>
 
 #include "verdict.hh"
 
@@ -59,6 +60,10 @@ void print_usage()
     "    -l<f>  overwrite log to file f (default: standard output)\n"
     "    -q     quiet, do not print test verdict\n"
     );
+}
+
+void nop_signal_handler(int signum)
+{
 }
 
 int main(int argc,char * const argv[])
@@ -116,6 +121,9 @@ int main(int argc,char * const argv[])
     print_usage();
     error(32, 0, "test configuration file missing.\n");
   }
+
+  signal(SIGPIPE, nop_signal_handler);
+
   { 
     Log log(logfile);
     Conf c(log,debug_enabled);
