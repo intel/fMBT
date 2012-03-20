@@ -558,8 +558,8 @@ int getint(FILE* out,FILE* in)
   char* line=NULL;
   size_t n;
   int ret=-42;
-  size_t s=getdelim(&line,&n,'\n',in);
-  if (s) {
+  ssize_t s=getdelim(&line,&n,'\n',in);
+  if (s && s != -1) {
     ret=atoi(line);
   }
   if (line) {

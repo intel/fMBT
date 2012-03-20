@@ -47,7 +47,7 @@ void jobjectArraytovector(JNIEnv *env,jobjectArray array,
 }
 
 aal_java::aal_java(Log&l,std::string& s) 
-  : aal(l), env(NULL),jvm(NULL) {
+  : aal(l, s), env(NULL),jvm(NULL) {
   vm_args.version = JNI_VERSION_1_6;
   vm_args.nOptions = 0;
   vm_args.ignoreUnrecognized = 0;
@@ -55,7 +55,8 @@ aal_java::aal_java(Log&l,std::string& s)
   int ret = JNI_CreateJavaVM(&jvm, (void**)&env, &vm_args);
   if (ret<0) {
     env=NULL;
-    ok=false;
+    status=false;
+    errormsg="creating Java VM failed.";
   } else {
     wclass = env->FindClass(s.c_str());
     if (wclass) {
@@ -70,31 +71,35 @@ aal_java::aal_java(Log&l,std::string& s)
 	  Push =env->GetMethodID(wclass,"push","()V");
 	  Pop  =env->GetMethodID(wclass,"pop","()V");
 	  geta =env->GetMethodID(wclass,"getActions","()[I");
-	  if (!aexec || !mexec || !geta) {
-	    ok=false;
-	  } else {
-	    Getprops=env->GetMethodID(wclass,"getprops","()[I");
-	    
-	    jfieldID field=env->GetFieldID(wclass,"action_names",
-					   "[Ljava/lang/String;");
-	    jobjectArray array=(jobjectArray)
-	      env->GetObjectField(obj, field);
-	    
-	    jobjectArraytovector(env,array,action_names);
-	    
-	    field=env->GetFieldID(wclass,"tag_names",
-				  "[Ljava/lang/String;");
-	    array=(jobjectArray)env->GetObjectField(obj, field);
-	    jobjectArraytovector(env,array,tag_names);
-	  }
-	} else {
-	  ok=false;
-	}
+          if (!aexec || !mexec || !geta) {
+            status=false;
+            errormsg="required methods missing: adapter_execute, model_execute or getActions.";
+          } else {
+            Getprops=env->GetMethodID(wclass,"getprops","()[I");
+            
+            jfieldID field=env->GetFieldID(wclass,"action_names",
+                                           "[Ljava/lang/String;");
+            jobjectArray array=(jobjectArray)
+              env->GetObjectField(obj, field);
+            
+            jobjectArraytovector(env,array,action_names);
+            
+            field=env->GetFieldID(wclass,"tag_names",
+                                  "[Ljava/lang/String;");
+            array=(jobjectArray)env->GetObjectField(obj, field);
+            jobjectArraytovector(env,array,tag_names);
+          }
+        } else {
+          status=false;
+          errormsg="instantiating " + s + " failed.";
+        }
       } else {
-	ok=false;
+        status=false;
+        errormsg="class " + s + " constructor not found.";
       }
     } else {
-      ok=false;
+      status=false;
+      errormsg="class \"" + s + "\" not found.";
     }
   }
 }
@@ -183,7 +188,7 @@ namespace {
     aal_java* al=storage[classname];
     if (!al) {
       al=new aal_java(l,classname);
-      if (al->ok) {
+      if (al->status) {
 	storage[classname]=al;
       } else {
 	delete al;
@@ -202,7 +207,7 @@ namespace {
     aal_java* al=storage[classname];
     if (!al) {
       al=new aal_java(l,classname);
-      if (al->ok) {
+      if (al->status) {
 	storage[classname]=al;
       } else {
 	delete al;

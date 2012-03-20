@@ -109,6 +109,8 @@ class RemoteAALBridge:
                     log("Error on executing %s on adapter: %s", action_number, e)
                     put(0)
                 else:   put(rv)
+            else:
+                error("Unexpected command: \"" + cmd + "\". remote_pyaal works with \"aal_remote\" model.")
             cmd = get().rstrip()
 
 if __name__ == "__main__":

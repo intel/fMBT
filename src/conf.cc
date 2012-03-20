@@ -103,10 +103,8 @@ void Conf::load(std::string& name)
   if (coverage == NULL)
     RETURN_ERROR_VOID("Creating coverage \"" + coverage_name + "\" failed.");
 
-  if (!model->status || !model->init())
+  if (!model->status || !model->init() || !model->reset())
     RETURN_ERROR_VOID("Model error: " + model->stringify());
-
-  model->reset();
 
   heuristic->set_coverage(coverage);
 

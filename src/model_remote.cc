@@ -49,7 +49,13 @@ int Model_remote::getprops(int** pro)
 bool Model_remote::reset()
 {
   std::fprintf(d_stdin, "r\n");
-  return getint(d_stdin,d_stdout);
+  bool rv = (getint(d_stdin,d_stdout) == 1);
+  if (!rv) {
+    errormsg = "remote model failed to reset \"" + params + "\".\n"
+      "      (try executing: echo r | " + params + ")";
+    status = false;
+  }
+  return rv;
 }
 
 void Model_remote::push()

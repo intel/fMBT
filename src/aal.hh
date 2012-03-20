@@ -24,10 +24,9 @@
 #include <vector>
 #include <string>
 
-
 class aal {
 public:
-  aal(Log&l): _log(l) {ok=true;};
+  aal(Log&l, std::string& _params): _log(l), params(_params) {status=true;};
   virtual ~aal() {};
   virtual int adapter_execute(int action)=0;
   virtual int model_execute(int action)  =0;
@@ -52,13 +51,17 @@ public:
   }
 
   virtual void log(const char* format, ...);
-  bool ok;
 protected:
   std::vector<int> actions;
   std::vector<int> tags;
   std::vector<std::string> action_names; /* action names.. */
   std::vector<std::string> tag_names; /* tag/state proposition names.. */
   Log& _log;
+  std::string params;
+
+public:
+  std::string errormsg;
+  bool status;
 };
 
 #include "model.hh"

@@ -26,6 +26,8 @@ Mwrapper::Mwrapper(Log&l, std::string params, aal* _model):
   action_names=model->getActionNames();
   prop_names=model->getSPNames();
   precalc_input_output();
+  status = model->status;
+  errormsg = model->errormsg;
 }
 
 int Mwrapper::getActions(int** actions) {
@@ -46,7 +48,9 @@ int Mwrapper::getIActions(int** actions) {
 }
 
 bool Mwrapper::reset() {
-  return model->reset();
+  status = model->reset();
+  errormsg = model->errormsg;
+  return status;
 }
 
 /* No props */
@@ -77,6 +81,7 @@ bool Mwrapper::init()
 
 std::string Mwrapper::stringify()
 {
+  if (!status) return errormsg;
   return std::string("");
 }
 

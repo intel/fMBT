@@ -25,7 +25,7 @@
 #include "helper.hh"
 
 aal_remote::aal_remote(Log&l,std::string& s) 
-  : aal(l) {
+  : aal(l,s) {
 
   int _stdin,_stdout,_stderr;
   g_type_init ();
@@ -34,24 +34,22 @@ aal_remote::aal_remote(Log&l,std::string& s)
   gint argc;
   GError *gerr=NULL;
 
-  std::string errormsg;
-
   g_shell_parse_argv(s.c_str(),&argc,&argv,&gerr);
 
   if (gerr) {
     errormsg = "aal_remote: g_shell_parse_argv error: " + std::string(gerr->message)
       + " when parsing " + s;
     _log.debug(errormsg.c_str());
-    ok = false;
+    status = false;
     return;
   }
 
   g_spawn_async_with_pipes(NULL,argv,NULL,G_SPAWN_SEARCH_PATH,NULL,&pid,NULL,&_stdin,&_stdout,&_stderr,&gerr);
 
   if (gerr) {
-    errormsg = "aal_remote g_spawn_async_with_pipes error: " + std::string(gerr->message);
+    errormsg = "aal_remote: g_spawn_async_with_pipes error: " + std::string(gerr->message);
     _log.debug(errormsg.c_str());
-    ok=false;
+    status = false;
     return;
   }
 
@@ -104,7 +102,13 @@ void aal_remote::pop() {
 
 bool aal_remote::reset() {
   std::fprintf(d_stdin, "mr\n");
-  return getint(d_stdin,d_stdout);
+  bool rv = (getint(d_stdin,d_stdout) == 1);
+  if (!rv) {
+    errormsg = "aal_remote model failed to reset \"" + params + "\".\n"
+      "      (try executing: echo mr | " + params + ")";
+    status = false;
+  }
+  return rv;
 }
 
 int aal_remote::getActions(int** act) {
@@ -129,39 +133,29 @@ namespace {
     aal_remote* al=storage[remotename];
     if (!al) {
       al=new aal_remote(l,remotename);
-      if (al->ok) {
-	storage[remotename]=al;
-      } else {
-	delete al;
-	al=NULL;
-      }
+      storage[remotename]=al;
     }
-
+    
     if (al) {
       return new Awrapper(l,params,al);
     }
     return NULL;
   }
-
+  
   Model* model_creator(Log& l, std::string params) {
     std::string remotename(unescape_string(strdup(params.c_str())));
     aal_remote* al=storage[remotename];
     if (!al) {
       al=new aal_remote(l,remotename);
-      if (al->ok) {
-	storage[remotename]=al;
-      } else {
-	delete al;
-	al=NULL;
-      }
+      storage[remotename]=al;
     }
-
+    
     if (al) {
       return new Mwrapper(l,params,al);
     }
     return NULL;
   }
-
+  
   static ModelFactory  ::Register Mo("aal_remote", model_creator);
   static AdapterFactory::Register Ad("aal_remote", adapter_creator);
 }

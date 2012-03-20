@@ -150,7 +150,7 @@ std::string aalang_cpp::stringify()
 
   s=s+
     "\npublic:\n"
-    "\t_gen_"+*name+"(Log& l): aal(l) {\n\taction_names.push_back(\"\");\n";
+    "\t_gen_"+*name+"(Log& l, std::string& params): aal(l, params) {\n\taction_names.push_back(\"\");\n";
 
   for(std::list<std::vector<std::string> >::iterator i=aname.begin();i!=aname.end();i++) {
     for(std::vector<std::string>::iterator j=i->begin();j!=i->end();j++) {
@@ -177,7 +177,6 @@ std::string aalang_cpp::stringify()
   }
 
   s=s+"virtual int observe(std::vector<int>&action, bool block){\n"
-    "\tint r;\n"
     "\taction.clear();\n"
     "\tdo {\n";    
 
@@ -260,7 +259,7 @@ void aalang_cpp::factory_register()
     "static aal* a=NULL;\n\n"
     "Model* model_creator(Log&l, std::string params) {\n"
     "\tif (!a) {\n"
-    "\t  a=new _gen_"+*name+"(l);\n"
+    "\t  a=new _gen_"+*name+"(l, params);\n"
     "\t}\n"
     "\treturn new Mwrapper(l,params,a);\n"
     "}\n\n"
@@ -268,7 +267,7 @@ void aalang_cpp::factory_register()
     "Adapter* adapter_creator(Log&l, std::string params = \"\")\n"
     "{\n"
     "\tif (!a) {\n"
-    "\t  a=new _gen_"+*name+"(l);\n"
+    "\t  a=new _gen_"+*name+"(l, params);\n"
     "\t}\n"
     "\treturn new Awrapper(l,params,a);\n"
     "}\n"
