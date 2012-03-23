@@ -178,7 +178,8 @@ std::string aalang_cpp::stringify()
 
   s=s+"virtual int observe(std::vector<int>&action, bool block){\n"
     "\taction.clear();\n"
-    "\tdo {\n";    
+    "\tdo {\n"
+    "\tint r;\n";
 
   int obsa=0;
 
