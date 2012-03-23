@@ -17,11 +17,16 @@
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
 """
-remote_python adapter
+remote_python adapter for fMBT
 
 Usage: remote_python [options]
 
 Options:
+  -c <string>
+          execute the given string in Python interpreter before
+          starting executing actions. Example:
+          remote_python -c 'from myteststeps import *'
+
   -d, --action-delay=<float>
           set minimum delay between executed actions to <float>
           seconds. By default there is no delay.
@@ -333,7 +338,7 @@ oDBusSignal('HelloSignal',StoreAs(var1),StoreAs(var2),'valueOfArg3')
 
 class Error:
     """
-    Allows comparing cought and wanted exceptions. Example:
+    Allows comparing cought and expected exceptions. Example:
 
 iDBus('system','net.connman','/','net.connman.Manager').SetProperty('foobar',2)==Error(DBusException,'Invalid property')
     """
@@ -384,14 +389,17 @@ iDBus('system','net.connman','/','net.connman.Manager').SetProperty('foobar',2)=
         return "Error('''%s: %s''')" % (self._exceptionClass.__name__,
                                         self._strException.replace("'","\\'"))
 
-class Exec:
+class iCatch:
     """
-    Executes arbitrary Python code.
-    __call__ returns None, but exceptions are passed through.
+    Executes Python statements and returns exceptions or None.
+
+    Example: iCatch('first_time += 1') == Error(NameError)
     """
     def __init__(self, _globals):
         self._globals = _globals
     def __call__(self, codeString):
+        """returns None if the statement was executed without exceptions,
+        otherwise returns the exception as an Error object."""
         try:
             exec codeString.strip() in self._globals
         except Exception, e:
@@ -759,14 +767,17 @@ if __name__ == "__main__":
     selfTest = False
     shellMode = False
     delay = 0
+    pre_exec_statements = []
 
     opts, remainder = getopt.getopt(
-        sys.argv[1:], 'hsTd:L:l:',
+        sys.argv[1:], 'c:hsTd:L:l:',
         ['help', 'shell', 'self-test',
          'action-delay=', 'log-file='])
 
     for opt, arg in opts:
-        if opt in ['-h', '--help']:
+        if opt in ['-c']:
+            pre_exec_statements.append(arg)
+        elif opt in ['-h', '--help']:
             print __doc__
             sys.exit(0)
         elif opt in ['-s', '--shell']:
@@ -802,18 +813,20 @@ if __name__ == "__main__":
         '_fuzzlog': [],
         'log': lambda msg: log("  " + str(msg))
         }
-    g_dbusEvalGlobals['iCatch'] = Exec(g_dbusEvalGlobals)
+    g_dbusEvalGlobals['iCatch'] = iCatch(g_dbusEvalGlobals)
     exec fuzzing_helpers in g_dbusEvalGlobals
     exec "sys.path.append(''); sys.path.append(os.getcwd())" in g_dbusEvalGlobals
 
     if selfTest:
         sys.exit(self_test())
 
+    for statement in pre_exec_statements:
+        exec statement in g_dbusEvalGlobals
+
     if shellMode:
-        print "Dropping into the DBus-adapter shell. Available commands:"
-        print ""
-        print DBusObjGetter.__doc__
-        print DBusSignalReceiver.__doc__
+        print "fMBT remote_python adapter interactive shell."
+        print "Docs on built-in helpers:"
+        print "help(iShell), help(iDBus), help(iDBusListen)"
         sys.stdout.flush()
         g_ioHandler = InteractiveShellIO()
     else:
