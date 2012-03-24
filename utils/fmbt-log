@@ -30,11 +30,12 @@ Options:
           fmt defines output format. Default format is '$ax'.
           Available fields:
           $al - adapter log messages
-          $as - action name suggested to top-level adapter
-          $ax - action name actually executed in top-level adapter
+          $am - actions recognised by the model
+          $as - action suggested to top-level adapter
+          $ax - action actually executed in top-level adapter
           $mc - mapper adapter configuration
           $mn - mapper adapter number
-          $ms - suggested action name after renaming in mapper adapter
+          $ms - suggested action after renaming in mapper adapter
           $sn - number of test step
           $sc - coverage after the test step
           $st - time stamp of test step
@@ -43,7 +44,7 @@ Options:
           $tt - total test runtime [s]
 
   -r, --raw
-          do not decode action names
+          do not decode actions
 
 If logfile is not given, log is read from standard input.
 """
@@ -55,6 +56,7 @@ import urllib2
 fields = {
     '$ax' : ['<action type=', '"', 3],
     '$as' : ['<suggested_action type=', '"', 3],
+    '$am' : ['<action_name name=', '"', 1],
     '$al' : ['<remote msg=', '"', 1],
     '$ms' : ['<redirect id=', '"', 5],
     '$mc' : ['<redirect id=', '"', 3],
@@ -98,14 +100,17 @@ def extract(input_file_obj, output_file_obj, output_format, raw):
                 printable_data[field] = '; '.join(parsed_data[field])
             ppoutput = output_format % printable_data
             parsed_data = clean_data()
-        elif parsed_data['$al'] != [] and '%($al)' in output_format:
+        elif ((parsed_data['$al'] != [] and '%($al)' in output_format) or
+              (parsed_data['$am'] != [] and '%($am)' in output_format)):
             # print immediately and only this
             printable_data = {}
             for field in parsed_data:
-                if field == '$al': printable_data[field] = parsed_data['$al'][0]
+                if field == '$al' and parsed_data['$al']: printable_data[field] = parsed_data['$al'][0]
+                elif field == '$am' and parsed_data['$am']: printable_data[field] = parsed_data['$am'][0]
                 else: printable_data[field] = ''
             ppoutput = output_format % printable_data
             parsed_data['$al'] = []
+            parsed_data['$am'] = []
         if ppoutput.strip(): output_file_obj.write(ppoutput)
 
 if __name__ == '__main__':
