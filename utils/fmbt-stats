@@ -32,11 +32,16 @@ Options:
               "total", "count" or "name").
 
           speed[:n[,n2...]] - test step execution speed
-              average execution speed of previous n (n2, ...) actions.
+              average execution speed of previous n (n2, ...) steps.
 
-          count[:split]     - number of executions of test steps
-              split ("next", "prev") shows the number of next or previous
-              steps. TODO
+          dist[:steps[,"uniq"][,"sort"]] - number of executed steps
+              If the steps is "next" or "prev", shows the distribution
+              of next or previous steps. "simple" shows only total
+              number of executed steps.
+              If "uniq" is given, only unique next or previous steps
+              are counted. By default all executions are counted.
+              If "sort" is given, data is sorted by counted steps.
+              The default is sort by names.
 
   -o, --output=<file>
           output will be written to given file. Defaults to the
@@ -110,6 +115,11 @@ def check_output_format(output_fileobj):
     else: output_file_format = 'plot'
     return output_file_format
 
+def write_output_file(output_fileobj, data_formatter, data):
+    output_file_format = check_output_format(output_fileobj)
+
+    output_table = data_formatter(output_file_format, data)
+    output_fileobj.write("".join(output_table))
 
 def init_plotting(plot_filename, plot_data_table):
     """return set term parameter and plot data filename"""
@@ -175,11 +185,8 @@ def stats_speed(arg, testlog_fileobj, output_fileobj, plot_filename):
             prev_timestamp_avg = timestamp_action_list[i-avg][0]
             data[-1].append( avg/(this_timestamp-prev_timestamp_avg) )
 
-    output_file_format = check_output_format(output_fileobj)
 
-    output_table = format_data(output_file_format, data)
-    output_fileobj.write("".join(output_table))
-    output_fileobj.close()
+    write_output_file(output_fileobj, format_data, data)
 
     if plot_filename:
         plot_term, plot_datafilename = init_plotting(plot_filename,
@@ -260,11 +267,7 @@ def stats_times(arg, testlog_fileobj, output_fileobj, plot_filename):
              a))
     min_med_max_tot_count_aname.sort(key=operator.itemgetter(sort_by_field, 4))
 
-    output_file_format = check_output_format(output_fileobj)
-
-    output_table = format_data(output_file_format, min_med_max_tot_count_aname)
-    output_fileobj.write("".join(output_table))
-    output_fileobj.close()
+    write_output_file(output_fileobj, format_data, min_med_max_tot_count_aname)
 
     if plot_filename:
 
@@ -291,25 +294,57 @@ plot [-1:] '%(plot_datafilename)s' using :5 with boxes fill solid 0.5 linecolor 
         finish_plotting(plot_datafilename, gnuplot_commands)
 
 
-def stats_count(arg, testlog_fileobj, output_fileobj, plot_filename):
+def stats_dist(arg, testlog_fileobj, output_fileobj, plot_filename):
     possible_actions, executed_actions = read_from_log_possible_executed(testlog_fileobj)
 
     def format_data(out_format, data_dict):
-        action_columns = sorted(data_dict.keys())
-        header_format, datarow_format, footer_format = {}, {}, {}
+        # Uses title from stats_dist
+        if not opt_sort: # sort actions in alphabetical order
+            action_columns = sorted(data_dict.keys())
+        else: # sort actions by counted steps
+            action_sum_name = [ (sum(data_dict[a].values()), a) for a in data_dict.keys() ]
+            action_sum_name.sort()
+            action_columns = [a for (s, a) in action_sum_name]
 
-        if out_format != "plot": raise NotImplemented
-        output_table = [""]
+        column_count = len(action_columns)
+        header_format, datarow_format, footer_format = {}, {}, {}
+        header_format['plot'] = '# ' + title + '\n' + (' '.join(['"%s"' for _ in xrange(column_count)])) + '\n'
+        datarow_format['plot'] = ('%6d ' * column_count) + '"%s"\n'
+        footer_format['plot'] = ''
+
+        header_format['csv'] = '"' + title + '"\n' + (';'.join(['"%s"' for _ in xrange(column_count)])) + '\n'
+        datarow_format['csv'] = ('%d;' * column_count) + '"%s"\n'
+        footer_format['csv'] = ''
+
+        header_format['html'] = '<html><body>\n<h2>' + title + '</h2>\n<table>\n<tr><th>' + '</th><th>'.join(['%s' for _ in xrange(column_count)]) + '</th></tr>\n'
+        datarow_format['html'] = '<tr>' + ('<td>%d</td>' * column_count) + '<td>%s</td></tr>\n'
+        footer_format['html'] = '</table></body></html>\n'
+
+        output_table = [header_format[out_format] % tuple(action_columns)]
         for a in action_columns:
-            output_table[0] += '"' + a + '" '
-        output_table[0] += "\n"
-        for prev in action_columns:
-            data_row = []
-            for next in action_columns:
-                data_row.append(data_dict[prev].get(next, 0))
-            data_row.append('"' + prev + '"\n')
-            output_table.append(" ".join([str(i) for i in data_row]))
+            datarow = []
+            for a_distrib in action_columns:
+                datarow.append(data_dict[a].get(a_distrib, 0))
+            datarow.append(a)
+            output_table.append(datarow_format[out_format] % tuple(datarow))
         return output_table
+
+    arg_list = arg.split(",")
+    opt_uniq = (arg_list.count('uniq') > 0)
+    opt_sort = (arg_list.count('sort') > 0)
+    opt_next = (arg_list[0] == 'next')
+    opt_prev = (arg_list[0] == 'prev')
+    opt_simple = (arg_list[0] == 'simple')
+
+    if opt_simple:
+        title = "Number of steps"
+    elif not opt_uniq:
+        if opt_next and not opt_uniq: title = "Number of next steps"
+        elif opt_prev and not opt_uniq: title = "Number of previous steps"
+    else:
+        if opt_next: title = "Number of unique next steps"
+        elif opt_prev: title = "Number of unique previous steps"
+
     # Create data dictionary:
     # { possible action_1 -> { next_action_1: count_1,
     #                          next_action_2: count_2,
@@ -321,42 +356,54 @@ def stats_count(arg, testlog_fileobj, output_fileobj, plot_filename):
         data[a] = {}
     if executed_actions:
         prev = executed_actions[0]
-        if arg == "next":
+        if opt_next:
             for next in executed_actions[1:]:
-                data[prev][next] = data[prev].get(next, 0) + 1
+                if opt_uniq: data[prev][next] = 1
+                else: data[prev][next] = data[prev].get(next, 0) + 1
                 prev = next
-        elif arg == "prev":
+        elif opt_prev:
             for next in executed_actions[1:]:
-                data[next][prev] = data[next].get(prev, 0) + 1
+                if opt_uniq: data[next][prev] = 1
+                else: data[next][prev] = data[next].get(prev, 0) + 1
                 prev = next
-        elif arg == "":
+        elif opt_simple:
             for act in executed_actions:
                 data[act][act] = data[act].get(act, 0) + 1
         else:
-            error('unknown count argument "%s".' % (arg,))
+            error('unknown dist argument "%s".' % (arg,))
+
+    write_output_file(output_fileobj, format_data, data)
 
     if plot_filename:
         plot_term, plot_datafilename = init_plotting(plot_filename,
                                                      format_data('plot', data))
+        if opt_simple: keyspec = "set nokey"
+        else: keyspec = "set key outside right top vertical Left reverse noenhanced autotitles columnhead nobox"
         gnuplot_commands = """
 set term %(format)s
 set output "%(plot_filename)s"
 
+set ylabel "%(ylabel)s"
+
+set grid ytics
+
 set boxwidth .8
 set style fill solid 1.00 border lt -1
-set key outside right top vertical Left reverse noenhanced autotitles columnhead nobox
 set key samplen 4 spacing 1 width 0 height 0
+%(keyspec)s
 set style histogram rowstacked title offset character 0, 0, 0
 
-set xtics border in scale 0,0 nomirror rotate by -25  offset character 0, 0, 0
+set xtics border in scale 0,0 nomirror rotate by -15  offset character 0, 0, 0
 set xtics  norangelimit font ",8"
 set style data histograms
 plot '%(plot_datafilename)s' using 1:xtic(%(actioncol)s), for[i=2:%(lastdatacol)s] '' using i
 """ % {'plot_filename': plot_filename, 
        'plot_datafilename': plot_datafilename,
        'format': plot_term,
-       'lastdatacol': len(possible_actions),
-       'actioncol': len(possible_actions)+1
+       'lastdatacol': len(data.keys()),
+       'actioncol': len(data.keys())+1,
+       'ylabel': title,
+       'keyspec': keyspec
        }
 
         finish_plotting(plot_datafilename, gnuplot_commands)
@@ -365,6 +412,7 @@ plot '%(plot_datafilename)s' using 1:xtic(%(actioncol)s), for[i=2:%(lastdatacol)
 if __name__ == '__main__':
     testlog_fileobj = sys.stdin
     output_fileobj = sys.stdout
+    output_fileobj_close = 0
     output_format = 'times:total'
     plot_filename = None
 
@@ -379,6 +427,7 @@ if __name__ == '__main__':
             output_format = arg
         elif opt in ['-o', '--output'] and not arg in ['', '-']:
             output_fileobj = file(arg, 'w')
+            output_fileobj_close = 1
         elif opt in ['-p', '--plot']:
             plot_filename = arg
 
@@ -399,12 +448,15 @@ if __name__ == '__main__':
             param = '1'
         t = stats_speed(param, testlog_fileobj, output_fileobj, plot_filename)
     
-    elif output_format.startswith('count'):
+    elif output_format.startswith('dist'):
         if ':' in output_format:
             param = output_format.split(':',1)[1]
         else:
-            param = '2'
-        t = stats_count(param, testlog_fileobj, output_fileobj, plot_filename)
+            param = 'next'
+        t = stats_dist(param, testlog_fileobj, output_fileobj, plot_filename)
         
     else:
         error('unknown format: %s' % (output_format,))
+
+    if output_fileobj_close:
+        output_fileobj.close()
