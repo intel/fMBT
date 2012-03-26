@@ -181,7 +181,7 @@ Verdict::Verdict Test_engine::stop_test(End_condition* ec)
   case End_condition::DURATION:
     return stop_test(ec->verdict, "time limit reached");
   case End_condition::NOPROGRESS:
-    return stop_test(ec->verdict, "no progress in coverage limit reached");
+    return stop_test(ec->verdict, "no progress limit reached");
   default:
     return stop_test(ec->verdict, "unknown");
   }

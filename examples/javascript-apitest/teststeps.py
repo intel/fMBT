@@ -1,7 +1,7 @@
 import fmbtweb
 import json
 
-js = fmbtweb.JS(browser='firefox', htmlFile="test.html", pollDelay=0)
+js = fmbtweb.JS(browser='iceweasel', htmlFile="test.html", pollDelay=0)
 
 _expectedCounterValue = 0
 
