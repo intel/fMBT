@@ -51,10 +51,11 @@ Options:
   -h, --help
           print this help.
 
-  -p, --plot=<file>
+  -p, --plot=<file>[,options]
           plot statistics into a diagram. Image will be written to the
           given file. Requires Gnuplot. File extension defines image
           format. Supported formats: eps, gif, png, svg.
+          Possible options are: "width=<int>" (default: 1024).
 
 Examples:
   fmbt-stats -f times:median -p median.png test.log
@@ -63,7 +64,9 @@ Examples:
   fmbt-stats -f times:total -o total.html -p total.svg test.log
   firefox total.html total.svg
 
-  fmbt-stats -f speed:1,5 -o speed.csv -p speed.gif test.log
+  fmbt-stats -f speed:1,50 -o speed.csv -p speed.gif test.log
+
+  fmbt-stats -f dist:next,sort -p dist.gif,width=2048 -o /dev/null test.log
 """
 
 import commands
@@ -122,17 +125,27 @@ def write_output_file(output_fileobj, data_formatter, data):
     output_fileobj.write("".join(output_table))
 
 def init_plotting(plot_filename, plot_data_table):
-    """return set term parameter and plot data filename"""
+    """returns gnuplot term and output definitions, and plot data filename"""
+    if "," in plot_filename:
+        plot_filename, plot_args = plot_filename.split(',',1)
+        plot_args = plot_args.split(',')
+    else: plot_args = []
+    plot_opt_width=1024
+    for a in plot_args:
+        if a.startswith('width='): plot_opt_width = int(a.split('=')[1])
+
     plot_output_format = plot_filename.split('.')[-1] if '.' in plot_filename else plot_filename
     if plot_output_format in ['gif', 'png']:
-        plot_output_format = plot_output_format + ' size 1024,768 10 xffffff'
+        plot_output_format = 'set term ' + plot_output_format + (' size %d,768 10 xffffff' % (plot_opt_width,))
     elif plot_output_format in ['svg']:
-        plot_output_format = plot_output_format + ' size 1024,768 fsize 10'
+        plot_output_format = 'set term ' + plot_output_format + (' size %d,768 fsize 10' % (plot_opt_width,))
     elif plot_output_format in ['ps', 'eps']:
-        plot_output_format = 'postscript landscape "Helvetica" 10'
+        plot_output_format = 'set term postscript landscape "Helvetica" 10'
     elif plot_output_format in ['pdf']:
-        plot_output_format = 'pdfcairo'
+        plot_output_format = 'set term pdfcairo'
     output_filename = "/tmp/fmbt-stats.%s.dat" % (os.getpid(),)
+
+    plot_output_format += '\nset output "%s"' % (plot_filename,)
 
     file(output_filename, "w").write("".join(plot_data_table))
     return plot_output_format, output_filename
@@ -200,11 +213,10 @@ def stats_speed(arg, testlog_fileobj, output_fileobj, plot_filename):
 set ylabel "Average execution speed [test steps / s]"
 set xlabel "Test step"
 set log y
-set term %(format)s
+%(plot_term)s
 set grid ytics noxtics
-set output "%(plot_filename)s"
 plot %(plot_columns)s
-""" % { 'format': plot_term,
+""" % { 'plot_term': plot_term,
         'plot_filename': plot_filename,
         'plot_columns' : ','.join(plot_columns) }
 
@@ -283,13 +295,12 @@ set log y
 set log y2
 set pointsize 1
 set grid ytics mytics noxtics
-set term %(format)s
-set output "%(plot_filename)s"
+%(plot_term)s
 set boxwidth 0.2
 plot [-1:] '%(plot_datafilename)s' using :5 with boxes fill solid 0.5 linecolor rgb "light-grey", '%(plot_datafilename)s' using :2:1:3:xtic(6) with errorbar pointtype 2 linecolor rgb "red", '%(plot_datafilename)s' using :4 with points pointtype 6 linecolor rgb "blue"
 """ % {'plot_filename': plot_filename, 
        'plot_datafilename': plot_datafilename,
-       'format': plot_term}
+       'plot_term': plot_term}
 
         finish_plotting(plot_datafilename, gnuplot_commands)
 
@@ -380,8 +391,7 @@ def stats_dist(arg, testlog_fileobj, output_fileobj, plot_filename):
         if opt_simple: keyspec = "set nokey"
         else: keyspec = "set key outside right top vertical Left reverse noenhanced autotitles columnhead nobox"
         gnuplot_commands = """
-set term %(format)s
-set output "%(plot_filename)s"
+%(plot_term)s
 
 set ylabel "%(ylabel)s"
 
@@ -399,7 +409,7 @@ set style data histograms
 plot '%(plot_datafilename)s' using 1:xtic(%(actioncol)s), for[i=2:%(lastdatacol)s] '' using i
 """ % {'plot_filename': plot_filename, 
        'plot_datafilename': plot_datafilename,
-       'format': plot_term,
+       'plot_term': plot_term,
        'lastdatacol': len(data.keys()),
        'actioncol': len(data.keys())+1,
        'ylabel': title,
