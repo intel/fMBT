@@ -1,0 +1,52 @@
+aal "mycountertest" {
+    language: python {
+        import mycounter
+    };
+
+    variables { mcobject, value }
+
+    initial_state {
+        mcobject = None
+        value = 0
+    }
+
+    action "iCreate" {
+        guard() { return mcobject == None }
+        adapter() {
+            mcobject = mycounter.MyCounter()
+            value = 0
+            assert mcobject.count() == 0
+        }
+    }
+
+    action "iDestroy" {
+        guard() { return mcobject != None; }
+        adapter() {
+            del mcobject
+            mcobject = None
+        }
+    }
+
+    action "iIncrement" {
+        guard() { return mcobject != None }
+        adapter() {
+            mcobject.inc();
+            value += 1;
+        }
+    }
+
+    action "iReset" {
+        guard() { return mcobject != None }
+        adapter() {
+            mcobject.reset()
+            value = 0
+        }
+    }
+
+    action "iCount" {
+        guard() { return mcobject != None }
+        adapter() {
+            assert mcobject.count() == value
+        }
+    }
+}
