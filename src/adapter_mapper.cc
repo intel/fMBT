@@ -485,7 +485,7 @@ int Adapter_mapper::observeRobin(std::vector<int> &action)
 int Adapter_mapper::observe(std::vector<int> &action,bool block)
 {
   silence_cnt=0;
-  adapter_cnt=adapters.size()-1;
+  adapter_cnt=adapters.size();
   /* Ok. This is a bit hairy */
   do {
     int r=observeRobin(action);
