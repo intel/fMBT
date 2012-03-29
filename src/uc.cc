@@ -146,6 +146,7 @@ int main(int argc,char * const argv[])
   uconf_obj=of;
 
   D_Parser *p = new_D_Parser(&parser_tables_uconf,5120);
+  p->loc.pathname = usecasefile;
 
   char* s=readfile(usecasefile);
   if (!s) {

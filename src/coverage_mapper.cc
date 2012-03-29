@@ -173,6 +173,7 @@ bool Coverage_Mapper::load(std::string& name)
 bool Coverage_Mapper::pload(std::string& name)
 {
   D_Parser *p = new_D_Parser(&parser_tables_mrules, 16);
+  p->loc.pathname = name.c_str();
   char *s;
 
   log.debug("%s called\n",__func__);
@@ -184,6 +185,8 @@ bool Coverage_Mapper::pload(std::string& name)
   s=readfile(name.c_str());
 
   bool ret=dparse(p,s,std::strlen(s));
+
+  ret=p->syntax_errors==0 && ret;
 
   free(s);
   free_D_Parser(p);

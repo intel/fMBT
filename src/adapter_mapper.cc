@@ -149,6 +149,7 @@ void Adapter_mapper::add_map(std::vector<int>& index,std::vector<std::string>& n
 bool Adapter_mapper::load(std::string& name)
 {
   D_Parser *p = new_D_Parser(&parser_tables_mrules, 16);
+  p->loc.pathname = name.c_str();
   char *s;
 
   log.debug("%s called",__func__);
@@ -162,6 +163,8 @@ bool Adapter_mapper::load(std::string& name)
   s=readfile(name.c_str());
 
   bool ret=dparse(p,s,std::strlen(s));
+
+  ret=p->syntax_errors==0 && ret;
 
   if (ret && status) {
     log.debug("loading %s ok",name.c_str());

@@ -68,6 +68,7 @@ void Lts_xrules::prop_create()
 bool Lts_xrules::init()
 {
   D_Parser *p = new_D_Parser(&parser_tables_xrules, 16);
+  p->loc.pathname = params.c_str();
   char *s;
 
   valid=false;
@@ -87,6 +88,8 @@ bool Lts_xrules::init()
   s=readfile(params.c_str());
 
   bool ret=dparse(p,s,std::strlen(s));
+
+  ret=p->syntax_errors==0 && ret;
 
   if (!ret) {
     log.debug("Error in parsing %s\n",params.c_str());

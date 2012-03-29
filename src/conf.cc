@@ -68,6 +68,7 @@ void Conf::split(std::string val,std::string& name,
 void Conf::load(std::string& name)
 {
   D_Parser *p = new_D_Parser(&parser_tables_conf, 512);
+  p->loc.pathname = name.c_str();
   char *s;
   
   Conf* tmp=conf_obj;
@@ -80,6 +81,8 @@ void Conf::load(std::string& name)
     RETURN_ERROR_VOID("Loading \"" + name + "\" failed.");
 
   bool ret=dparse(p,s,std::strlen(s));
+
+  ret=p->syntax_errors==0 && ret;
 
   if (!ret)
     RETURN_ERROR_VOID("Parsing \"" + name + "\" failed.");

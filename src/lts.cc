@@ -114,6 +114,7 @@ bool Lts::init()
 {
   const std::string& name = params;
   D_Parser *p = new_D_Parser(&parser_tables_lts, 512);
+  p->loc.pathname = name.c_str();
   char *s;
   Lts* tmp=obj;
   bool ret;
@@ -131,6 +132,8 @@ bool Lts::init()
   }
 
   ret=dparse(p,s,std::strlen(s));
+
+  ret=p->syntax_errors==0 && ret;
 
   if (ret) {
     log.debug("Loading of %s ok\n",name.c_str());
