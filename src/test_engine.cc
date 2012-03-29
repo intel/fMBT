@@ -272,6 +272,11 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
     switch(action) {
     case DEADLOCK: {
       log.print("<state type=\"deadlock\"/>\n");
+
+      if (-1 != (condition_i = matching_end_condition(step_count,DEADLOCK))) {
+	goto out;
+      }      
+
       int ret=adapter.observe(actions,true);
       if (ret!=SILENCE && ret!=TIMEOUT) {
 	return stop_test(Verdict::FAIL, "response on deadlock");
@@ -298,9 +303,16 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 	actions[0] = SILENCE;
         log.debug("Test_engine::run: SUT remained silent (action %i).\n", action);	
       } else {
-        log.debug("Test_engine::run: SUT executed %i '%s'\n",
-		  actions[0],heuristic.getActionName(actions[0]).c_str());
+	if (actions.size()) {
+	  log.debug("Test_engine::run: SUT executed %i '%s'\n",
+		    actions[0],heuristic.getActionName(actions[0]).c_str());
+	}
       }
+
+      if (actions.size()==0) {
+        return stop_test(Verdict::ERROR, "adapter communication failure");
+      }
+
       action = actions[0]; // TODO: add policy here when it works
       log_adapter_output(log, adapter, action);
       if (!heuristic.execute(action)) {
@@ -662,7 +674,7 @@ void Test_engine::interactive()
   }
 }
 
-int Test_engine::matching_end_condition(int step_count)
+int Test_engine::matching_end_condition(int step_count,int state)
 {
   for (unsigned int cond_i = 0; cond_i < end_conditions.size(); cond_i++) {
 
@@ -670,6 +682,9 @@ int Test_engine::matching_end_condition(int step_count)
 
     switch (e->counter)
     {
+    case End_condition::DEADLOCK:
+      if (state==DEADLOCK) return cond_i;
+      break;
     case End_condition::STEPS:
       if (e->param_long > -1 && step_count >= e->param_long) return cond_i;
       break;

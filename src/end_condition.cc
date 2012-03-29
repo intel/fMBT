@@ -94,6 +94,9 @@ End_condition::End_condition(Verdict::Verdict v, Counter c, std::string* p)
       status = true;
       break;
 
+    case DEADLOCK:
+      status = true;
+      break;
     } /* switch (counter) ... */    
 }
 
