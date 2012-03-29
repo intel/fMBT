@@ -1,6 +1,6 @@
 examplescppdir = @docdir@/examples/c++-unittest
 
-examplesjsdir = @docdir@/examples/javascript-apitest
+examplesjsdir = @docdir@/examples/javascript-unittest
 
 examplesshelldir = @docdir@/examples/shell-configurationtest
 
@@ -15,14 +15,14 @@ dist_examplescpp_DATA = \
 	c++-unittest/test.conf
 
 dist_examplesjs_DATA = \
-	javascript-apitest/mycounter.js		\
-	javascript-apitest/README		\
-	javascript-apitest/regressiontest.conf	\
-	javascript-apitest/reliabilitytest.conf \
-	javascript-apitest/smoketest.conf	\
-	javascript-apitest/test.html		\
-	javascript-apitest/testmodel.gt		\
-	javascript-apitest/teststeps.py
+	javascript-unittest/mycounter.js		\
+	javascript-unittest/README		\
+	javascript-unittest/regressiontest.conf	\
+	javascript-unittest/reliabilitytest.conf \
+	javascript-unittest/smoketest.conf	\
+	javascript-unittest/test.html		\
+	javascript-unittest/testmodel.gt		\
+	javascript-unittest/teststeps.py
 
 dist_examplesshell_DATA = \
 	shell-configurationtest/README          \
