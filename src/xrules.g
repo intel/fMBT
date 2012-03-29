@@ -52,11 +52,13 @@ extern "C" {
         add_component_cb = f; return f != NULL;}
     int xrules_load(const char* filename) {
         D_Parser* p = new_D_Parser(&parser_tables_xrules, 16);
+        p->loc.pathname = filename;
         char* s = readfile(filename);
         dparse(p, s, strlen(s));
+        int ret=p->syntax_errors;
         free(s);
         free_D_Parser(p);
-        return 0;
+        return ret;
     }
 }
 

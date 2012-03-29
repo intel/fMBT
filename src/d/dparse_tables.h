@@ -16,7 +16,9 @@ struct D_ShiftTable;
 #define D_PN(_x, _o) ((D_ParseNode*)((char*)(_x) + _o))
 
 typedef struct d_loc_t {
-  char *s, *pathname, *ws;
+  char *s;
+  const char *pathname;
+  char *ws;
   int col, line;
 } d_loc_t;
 

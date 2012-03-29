@@ -131,13 +131,14 @@ int main(int argc,char** argv) {
   if (!s)
     error(1,0,"cannot read input file \"%s\".",argv[optind]);
 
-  dparse(p,s,std::strlen(s));
+  bool ret=dparse(p,s,std::strlen(s));
+  ret=p->syntax_errors==0 && ret;
   free_D_Parser(p);
   p=NULL;
   g_free(s);
   s=NULL;
 
-  if (!obj)
+  if (!ret||!obj)
     error(1,0,"parsing AAL failed.");
 
   result=obj->stringify();

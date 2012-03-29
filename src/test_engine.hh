@@ -40,7 +40,7 @@ public:
     condition that evaluates to true in the current setting, or -1 if
     all end conditions are false.
   */
-  virtual int matching_end_condition(int step_count);
+  virtual int matching_end_condition(int step_count,int state=0);
   static time_t    end_time;
 
   const std::string& verdict_msg();
