@@ -32,7 +32,16 @@ Options:
               "total", "count" or "name").
 
           speed[:n[,n2...]] - test step execution speed
-              average execution speed of previous n (n2, ...) actions.
+              average execution speed of previous n (n2, ...) steps.
+
+          dist[:steps[,"uniq"][,"sort"]] - number of executed steps
+              If the steps is "next" or "prev", shows the distribution
+              of next or previous steps. "simple" shows only total
+              number of executed steps.
+              If "uniq" is given, only unique next or previous steps
+              are counted. By default all executions are counted.
+              If "sort" is given, data is sorted by counted steps.
+              The default is sort by names.
 
   -o, --output=<file>
           output will be written to given file. Defaults to the
@@ -42,10 +51,11 @@ Options:
   -h, --help
           print this help.
 
-  -p, --plot=<file>
+  -p, --plot=<file>[,options]
           plot statistics into a diagram. Image will be written to the
           given file. Requires Gnuplot. File extension defines image
           format. Supported formats: eps, gif, png, svg.
+          Possible options are: "width=<int>" (default: 1024).
 
 Examples:
   fmbt-stats -f times:median -p median.png test.log
@@ -54,7 +64,9 @@ Examples:
   fmbt-stats -f times:total -o total.html -p total.svg test.log
   firefox total.html total.svg
 
-  fmbt-stats -f speed:1,5 -o speed.csv -p speed.gif test.log
+  fmbt-stats -f speed:1,50 -o speed.csv -p speed.gif test.log
+
+  fmbt-stats -f dist:next,sort -p dist.gif,width=2048 -o /dev/null test.log
 """
 
 import commands
@@ -65,7 +77,7 @@ import getopt
 import os
 
 def error(msg):
-    sys.stderr.write(msg + '\n')
+    sys.stderr.write('fmbt-stats: ' + msg + '\n')
     sys.exit(1)
 
 def read_from_log_timestamp_execaction(testlog_fileobj):
@@ -81,6 +93,22 @@ def read_from_log_timestamp_execaction(testlog_fileobj):
         timestamp_actionname_list.append((float(s_timestamp), s_actionname))
     return timestamp_actionname_list
 
+def read_from_log_possible_executed(testlog_fileobj):
+    cmd = "fmbt-log -f 'p:$am\nx:$ax'"
+    p = subprocess.Popen(cmd, shell=True, stdin=testlog_fileobj.fileno(), stdout=subprocess.PIPE)
+
+    possible_actions = []
+    executed_actions = []
+    line = p.stdout.readline()
+    while line:
+        if line[0]=='x' and len(line) > 3:
+            executed_actions.append(line[2:-1])
+        elif line[0]=='p' and len(line) > 3:
+            possible_actions.append(line[2:-1])
+        line = p.stdout.readline()
+    if possible_actions == []: error("empty output from \"%s\"" % (cmd,))
+    return possible_actions, executed_actions
+
 def check_output_format(output_fileobj):
     """return csv, html or plot"""
     if '.' in output_fileobj.name: output_file_ext = output_fileobj.name.split('.')[-1].lower()
@@ -90,19 +118,34 @@ def check_output_format(output_fileobj):
     else: output_file_format = 'plot'
     return output_file_format
 
+def write_output_file(output_fileobj, data_formatter, data):
+    output_file_format = check_output_format(output_fileobj)
+
+    output_table = data_formatter(output_file_format, data)
+    output_fileobj.write("".join(output_table))
 
 def init_plotting(plot_filename, plot_data_table):
-    """return set term parameter and plot data filename"""
+    """returns gnuplot term and output definitions, and plot data filename"""
+    if "," in plot_filename:
+        plot_filename, plot_args = plot_filename.split(',',1)
+        plot_args = plot_args.split(',')
+    else: plot_args = []
+    plot_opt_width=1024
+    for a in plot_args:
+        if a.startswith('width='): plot_opt_width = int(a.split('=')[1])
+
     plot_output_format = plot_filename.split('.')[-1] if '.' in plot_filename else plot_filename
     if plot_output_format in ['gif', 'png']:
-        plot_output_format = plot_output_format + ' size 1024,768 10 xffffff'
+        plot_output_format = 'set term ' + plot_output_format + (' size %d,768 10 xffffff' % (plot_opt_width,))
     elif plot_output_format in ['svg']:
-        plot_output_format = plot_output_format + ' size 1024,768 fsize 10'
+        plot_output_format = 'set term ' + plot_output_format + (' size %d,768 fsize 10' % (plot_opt_width,))
     elif plot_output_format in ['ps', 'eps']:
-        plot_output_format = 'postscript landscape "Helvetica" 10'
+        plot_output_format = 'set term postscript landscape "Helvetica" 10'
     elif plot_output_format in ['pdf']:
-        plot_output_format = 'pdfcairo'
+        plot_output_format = 'set term pdfcairo'
     output_filename = "/tmp/fmbt-stats.%s.dat" % (os.getpid(),)
+
+    plot_output_format += '\nset output "%s"' % (plot_filename,)
 
     file(output_filename, "w").write("".join(plot_data_table))
     return plot_output_format, output_filename
@@ -155,11 +198,8 @@ def stats_speed(arg, testlog_fileobj, output_fileobj, plot_filename):
             prev_timestamp_avg = timestamp_action_list[i-avg][0]
             data[-1].append( avg/(this_timestamp-prev_timestamp_avg) )
 
-    output_file_format = check_output_format(output_fileobj)
 
-    output_table = format_data(output_file_format, data)
-    output_fileobj.write("".join(output_table))
-    output_fileobj.close()
+    write_output_file(output_fileobj, format_data, data)
 
     if plot_filename:
         plot_term, plot_datafilename = init_plotting(plot_filename,
@@ -173,11 +213,10 @@ def stats_speed(arg, testlog_fileobj, output_fileobj, plot_filename):
 set ylabel "Average execution speed [test steps / s]"
 set xlabel "Test step"
 set log y
-set term %(format)s
+%(plot_term)s
 set grid ytics noxtics
-set output "%(plot_filename)s"
 plot %(plot_columns)s
-""" % { 'format': plot_term,
+""" % { 'plot_term': plot_term,
         'plot_filename': plot_filename,
         'plot_columns' : ','.join(plot_columns) }
 
@@ -240,11 +279,7 @@ def stats_times(arg, testlog_fileobj, output_fileobj, plot_filename):
              a))
     min_med_max_tot_count_aname.sort(key=operator.itemgetter(sort_by_field, 4))
 
-    output_file_format = check_output_format(output_fileobj)
-
-    output_table = format_data(output_file_format, min_med_max_tot_count_aname)
-    output_fileobj.write("".join(output_table))
-    output_fileobj.close()
+    write_output_file(output_fileobj, format_data, min_med_max_tot_count_aname)
 
     if plot_filename:
 
@@ -260,19 +295,134 @@ set log y
 set log y2
 set pointsize 1
 set grid ytics mytics noxtics
-set term %(format)s
-set output "%(plot_filename)s"
+%(plot_term)s
 set boxwidth 0.2
 plot [-1:] '%(plot_datafilename)s' using :5 with boxes fill solid 0.5 linecolor rgb "light-grey", '%(plot_datafilename)s' using :2:1:3:xtic(6) with errorbar pointtype 2 linecolor rgb "red", '%(plot_datafilename)s' using :4 with points pointtype 6 linecolor rgb "blue"
 """ % {'plot_filename': plot_filename, 
        'plot_datafilename': plot_datafilename,
-       'format': plot_term}
+       'plot_term': plot_term}
 
         finish_plotting(plot_datafilename, gnuplot_commands)
+
+
+def stats_dist(arg, testlog_fileobj, output_fileobj, plot_filename):
+    possible_actions, executed_actions = read_from_log_possible_executed(testlog_fileobj)
+
+    def format_data(out_format, data_dict):
+        # Uses title from stats_dist
+        if not opt_sort: # sort actions in alphabetical order
+            action_columns = sorted(data_dict.keys())
+        else: # sort actions by counted steps
+            action_sum_name = [ (sum(data_dict[a].values()), a) for a in data_dict.keys() ]
+            action_sum_name.sort()
+            action_columns = [a for (s, a) in action_sum_name]
+
+        column_count = len(action_columns)
+        header_format, datarow_format, footer_format = {}, {}, {}
+        header_format['plot'] = '# ' + title + '\n' + (' '.join(['"%s"' for _ in xrange(column_count)])) + '\n'
+        datarow_format['plot'] = ('%6d ' * column_count) + '"%s"\n'
+        footer_format['plot'] = ''
+
+        header_format['csv'] = '"' + title + '"\n' + (';'.join(['"%s"' for _ in xrange(column_count)])) + '\n'
+        datarow_format['csv'] = ('%d;' * column_count) + '"%s"\n'
+        footer_format['csv'] = ''
+
+        header_format['html'] = '<html><body>\n<h2>' + title + '</h2>\n<table>\n<tr><th>' + '</th><th>'.join(['%s' for _ in xrange(column_count)]) + '</th></tr>\n'
+        datarow_format['html'] = '<tr>' + ('<td>%d</td>' * column_count) + '<td>%s</td></tr>\n'
+        footer_format['html'] = '</table></body></html>\n'
+
+        output_table = [header_format[out_format] % tuple(action_columns)]
+        for a in action_columns:
+            datarow = []
+            for a_distrib in action_columns:
+                datarow.append(data_dict[a].get(a_distrib, 0))
+            datarow.append(a)
+            output_table.append(datarow_format[out_format] % tuple(datarow))
+        return output_table
+
+    arg_list = arg.split(",")
+    opt_uniq = (arg_list.count('uniq') > 0)
+    opt_sort = (arg_list.count('sort') > 0)
+    opt_next = (arg_list[0] == 'next')
+    opt_prev = (arg_list[0] == 'prev')
+    opt_simple = (arg_list[0] == 'simple')
+
+    if opt_simple:
+        title = "Number of steps"
+    elif not opt_uniq:
+        if opt_next and not opt_uniq: title = "Number of next steps"
+        elif opt_prev and not opt_uniq: title = "Number of previous steps"
+    else:
+        if opt_next: title = "Number of unique next steps"
+        elif opt_prev: title = "Number of unique previous steps"
+
+    # Create data dictionary:
+    # { possible action_1 -> { next_action_1: count_1,
+    #                          next_action_2: count_2,
+    #                          ... }
+    #   ...
+    # }
+    data = {}
+    for a in possible_actions:
+        data[a] = {}
+    if executed_actions:
+        prev = executed_actions[0]
+        if opt_next:
+            for next in executed_actions[1:]:
+                if opt_uniq: data[prev][next] = 1
+                else: data[prev][next] = data[prev].get(next, 0) + 1
+                prev = next
+        elif opt_prev:
+            for next in executed_actions[1:]:
+                if opt_uniq: data[next][prev] = 1
+                else: data[next][prev] = data[next].get(prev, 0) + 1
+                prev = next
+        elif opt_simple:
+            for act in executed_actions:
+                data[act][act] = data[act].get(act, 0) + 1
+        else:
+            error('unknown dist argument "%s".' % (arg,))
+
+    write_output_file(output_fileobj, format_data, data)
+
+    if plot_filename:
+        plot_term, plot_datafilename = init_plotting(plot_filename,
+                                                     format_data('plot', data))
+        if opt_simple: keyspec = "set nokey"
+        else: keyspec = "set key outside right top vertical Left reverse noenhanced autotitles columnhead nobox"
+        gnuplot_commands = """
+%(plot_term)s
+
+set ylabel "%(ylabel)s"
+
+set grid ytics
+
+set boxwidth .8
+set style fill solid 1.00 border lt -1
+set key samplen 4 spacing 1 width 0 height 0
+%(keyspec)s
+set style histogram rowstacked title offset character 0, 0, 0
+
+set xtics border in scale 0,0 nomirror rotate by -15  offset character 0, 0, 0
+set xtics  norangelimit font ",8"
+set style data histograms
+plot '%(plot_datafilename)s' using 1:xtic(%(actioncol)s), for[i=2:%(lastdatacol)s] '' using i
+""" % {'plot_filename': plot_filename, 
+       'plot_datafilename': plot_datafilename,
+       'plot_term': plot_term,
+       'lastdatacol': len(data.keys()),
+       'actioncol': len(data.keys())+1,
+       'ylabel': title,
+       'keyspec': keyspec
+       }
+
+        finish_plotting(plot_datafilename, gnuplot_commands)
+    
 
 if __name__ == '__main__':
     testlog_fileobj = sys.stdin
     output_fileobj = sys.stdout
+    output_fileobj_close = 0
     output_format = 'times:total'
     plot_filename = None
 
@@ -287,6 +437,7 @@ if __name__ == '__main__':
             output_format = arg
         elif opt in ['-o', '--output'] and not arg in ['', '-']:
             output_fileobj = file(arg, 'w')
+            output_fileobj_close = 1
         elif opt in ['-p', '--plot']:
             plot_filename = arg
 
@@ -306,3 +457,16 @@ if __name__ == '__main__':
         else:
             param = '1'
         t = stats_speed(param, testlog_fileobj, output_fileobj, plot_filename)
+    
+    elif output_format.startswith('dist'):
+        if ':' in output_format:
+            param = output_format.split(':',1)[1]
+        else:
+            param = 'next'
+        t = stats_dist(param, testlog_fileobj, output_fileobj, plot_filename)
+        
+    else:
+        error('unknown format: %s' % (output_format,))
+
+    if output_fileobj_close:
+        output_fileobj.close()

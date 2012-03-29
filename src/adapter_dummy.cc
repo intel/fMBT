@@ -40,7 +40,7 @@ void Adapter_dummy::execute(std::vector<int>& action)
 int   Adapter_dummy::observe(std::vector<int> &action,
 				bool block)
 {
-  return false;
+  return SILENCE;
 }
 
 FACTORY_DEFAULT_CREATOR(Adapter, Adapter_dummy, "dummy")

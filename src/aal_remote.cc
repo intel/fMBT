@@ -25,7 +25,9 @@
 #include "helper.hh"
 
 aal_remote::aal_remote(Log&l,std::string& s) 
-  : aal(l,s) {
+  : aal(l,s), read_buf(NULL), read_buf_pos(0),
+    d_stdin(NULL), d_stdout(NULL), d_stderr(NULL)
+{
 
   int _stdin,_stdout,_stderr;
   g_type_init ();

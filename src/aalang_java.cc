@@ -182,10 +182,12 @@ std::string aalang_java::stringify()
       outputcount++;
     }
   }
+  int preva=-1;
   if (outputcount) {
     s=s+"\tint tmp;\n";
     for(int i=1;i<action_cnt;i++) {
-      if (anames[i][0]=='o') {
+      if (anames[i][0]=='o' && preva!=amap[i]) {
+	preva=amap[i];
 	s+="\ttmp=action"+to_string(amap[i])+"_adapter();\n"
 	  "\tif (tmp!=0) { return tmp; }\n";
       }

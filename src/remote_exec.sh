@@ -16,16 +16,37 @@
 # this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
+LOGFILE=/tmp/remote_exec.log
+
+usage() {
+    echo "remote_exec.sh adapter for fMBT"
+    echo ""
+    echo "Usage: remote_exec.sh [options]"
+    echo ""
+    echo "Options:"
+    echo "  -c <string>"
+    echo "          execute the given string before starting executing"
+    echo "          actions. Example: remote_exec.sh -c '. ./myteststeps.sh\'"
+    echo ""
+    echo "  -h      print this help"
+    echo ""
+    echo "  -l <filename>"
+    echo "          write (overwrite) log to the file instead of $LOGFILE"
+    echo ""
+    echo "  -L <filename>"
+    echo "          write (append) log to the file instead of $LOGFILE"
+}
+
 # Shell commands sent to this adapter are executed with this shell:
 SHELL=/bin/sh
 
-LOGFILE=/tmp/remote_exec.log
-while getopts hl:L: opt
+while getopts c:hl:L: opt
 do
     case $opt in
+        c) eval $OPTARG >> $LOGFILE 2>&1 ;;
         l) LOGFILE=$OPTARG; echo -n "" > $LOGFILE ;;
         L) LOGFILE=$OPTARG ;;
-        h | \?) echo "Usage: $0 [-l logfile (rewritten)] [-L logfile (append)]"; exit 1 ;;
+        h | \?) usage; exit 1 ;;
     esac
 done
 shift $(expr $OPTIND - 1)
@@ -53,7 +74,7 @@ do
     read encodedAction
     # Shell command may be prefixed with "i:" to force it to be an
     # input action in the test model. In this case remove the prefix.
-    encodedAction=${encodedAction#i:}
+    encodedAction=${encodedAction#i%3A}
     # urldecode:
     eval s${var}=\"$( echo $encodedAction | eval $URLDECODER )\" 
     echo -n "s${var}: " >> $LOGFILE
@@ -69,7 +90,7 @@ do
      echo "Evaluating s${a}" >> $LOGFILE
      eval run=\$s${a} >> $LOGFILE 2>&1
      echo "Executing $a: '$run'" >> $LOGFILE
-     if $SHELL -c "$run" >> $LOGFILE 2>&1; then
+     if ( eval "$run" >> $LOGFILE 2>&1 ); then
          echo "Reporting $a" >> $LOGFILE
          echo $a 1>&2
          sync # flush stdout => echoed $a will be written to stderr

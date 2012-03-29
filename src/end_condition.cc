@@ -86,6 +86,7 @@ End_condition::End_condition(Verdict::Verdict v, Counter c, std::string* p)
         status = false;
       }
 #endif
+      break;
     }
 
     case NOPROGRESS:

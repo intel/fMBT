@@ -99,14 +99,14 @@ class RemoteAALBridge:
                 action_number = int(cmd[1:])
                 try:    self._aal.model_execute(action_number)
                 except Exception, e:
-                    log("Error on executing %s on model: %s", action_number, e)
+                    log("Error on executing %s on model: %s" % (action_number, e))
                     put(0)
                 else:   put(action_number)
             elif cmd[0] == "a":
                 action_number = int(cmd[1:])
                 try:    rv = self._aal.adapter_execute(action_number)
                 except Exception, e:
-                    log("Error on executing %s on adapter: %s", action_number, e)
+                    log("Error on executing %s on adapter: %s" % (action_number, e))
                     put(0)
                 else:   put(rv)
             else:
