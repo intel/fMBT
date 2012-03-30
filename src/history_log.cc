@@ -99,6 +99,9 @@ void History_log::processNode(xmlTextReaderPtr reader)
     }
     // verdict
     char* ver=(char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"verdict");
+    std::vector<std::string> p;
+    std::string a(ver);
+    send_action(a,p,true);
   }
 }
 
@@ -139,36 +142,39 @@ void History_log::send_action()
 }
 
 bool History_log::send_action(std::string& act,
-			      std::vector<std::string>& props)
+			      std::vector<std::string>& props,
+			      bool verdict)
 {
  std::vector<int> p;
 
   if (c&&a) {
-    if (act=="pass") {
-      c->history(0,p,Verdict::PASS);
-      return true;
-    } 
-
-    if (act=="fail") {
-      c->history(0,p,Verdict::FAIL);
-      return true;
+    if (verdict) {
+      if (act=="pass") {
+	c->history(0,p,Verdict::PASS);
+	return true;
+      } 
+      
+      if (act=="fail") {
+	c->history(0,p,Verdict::FAIL);
+	return true;
+      }
+      
+      if (act=="inconclusive") {
+	c->history(0,p,Verdict::INCONCLUSIVE);
+	return true;
+      }
+      
+      if (act=="error") {
+	c->history(0,p,Verdict::ERROR);
+	return true;
+      }
+      
+      if (act=="undefined") {
+	c->history(0,p,Verdict::UNDEFINED);
+	return true;
+      }
+      return false;
     }
-
-    if (act=="inconclusive") {
-      c->history(0,p,Verdict::INCONCLUSIVE);
-      return true;
-    }
-
-    if (act=="error") {
-      c->history(0,p,Verdict::ERROR);
-      return true;
-    }
-
-    if (act=="undefined") {
-      c->history(0,p,Verdict::UNDEFINED);
-      return true;
-    }
-    
     int action=find(a->getActionNames(),act);
 
     if (action>0) {

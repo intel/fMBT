@@ -34,7 +34,8 @@ protected:
   Coverage* c;
   Alphabet* a;
   void send_action();
-  bool send_action(std::string& a,std::vector<std::string>& props);
+  bool send_action(std::string& a,std::vector<std::string>& props,
+		   bool verdict=false);
   std::string file;
   std::vector<std::string> anames;
   std::vector<std::string> tnames;
