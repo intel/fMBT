@@ -29,4 +29,13 @@ bool Coverage_of::execute(int action)
   for(unsigned i=0;i<covs.size();i++) {
     covs[i]->execute(action);
   }
+  return true;
+}
+
+void Coverage_of::history(int action,std::vector<int>& props,
+			  Verdict::Verdict verdict)
+{
+  for(unsigned i=0;i<covs.size();i++) {
+    covs[i]->history(action,props,verdict);
+  }
 }

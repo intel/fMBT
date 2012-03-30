@@ -36,6 +36,9 @@ public:
   virtual int fitness(int* actions,int n, float* fitness) {
     return 0;
   }
+  void history(int action,std::vector<int>& props,
+	       Verdict::Verdict verdict);
+
 private:
   std::vector<Coverage*>& covs;
 };
