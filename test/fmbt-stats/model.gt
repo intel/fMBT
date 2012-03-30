@@ -1,0 +1,50 @@
+P(istate, "gt:istate") ->
+
+T(istate, "iLogSteps(0)",       testdefaults)
+T(istate, "iLogSteps(1)",       testall)
+T(istate, "iLogSteps(2)",       testdefaults)
+T(istate, "iLogSteps(100)",     testall)
+T(istate, "iLogSteps(100000)",  testdefaults)
+
+# testdefaults is a lightweight test that checks that all formats work
+# properly with default settings on one text and plotting format.
+
+T(testdefaults,  "iFormatTimes(None)", testdefaults2)
+T(testdefaults,  "iFormatTimes('')", testdefaults2)
+T(testdefaults,  "iFormatSpeed('')", testdefaults2)
+T(testdefaults,  "iFormatDist('')",  testdefaults2)
+
+T(testdefaults2, "iOutput('csv')",   testdefaults3)
+
+T(testdefaults3, "iPlot('gif')",     execute)
+
+# testall goes through all format options with all output and plotting
+# configurations
+
+T(testall, "iFormatTimes('min')",      alloutputs)
+T(testall, "iFormatTimes('median')",   alloutputs)
+T(testall, "iFormatTimes('max')",      alloutputs)
+T(testall, "iFormatTimes('total')",    alloutputs)
+T(testall, "iFormatTimes('count')",    alloutputs)
+T(testall, "iFormatTimes('name')",     alloutputs)
+T(testall, "iFormatSpeed('1')",        alloutputs)
+T(testall, "iFormatSpeed('1,100,5000,2,100')", alloutputs)
+T(testall, "iFormatDist('next')",      alloutputs)
+T(testall, "iFormatDist('prev')",      alloutputs)
+T(testall, "iFormatDist('next,uniq')", alloutputs)
+T(testall, "iFormatDist('next,sort')", alloutputs)
+T(testall, "iFormatDist('next,uniq,sort')", alloutputs)
+
+T(alloutputs, "iOutput('stdout')", allplots)
+T(alloutputs, "iOutput('csv')",    allplots)
+T(alloutputs, "iOutput('html')",   allplots)
+T(alloutputs, "iOutput('txt')",    allplots)
+
+T(allplots, "iPlot('')",    execute)
+T(allplots, "iPlot('gif')", execute)
+T(allplots, "iPlot('gif,width=2048')", execute)
+T(allplots, "iPlot('eps')", execute)
+T(allplots, "iPlot('svg')", execute)
+T(allplots, "iPlot('svg,width=2048')", execute)
+
+T(execute,       "iExecute() == None", istate)
