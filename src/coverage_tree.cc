@@ -131,10 +131,11 @@ void Coverage_Tree::print_tree(struct node* node,int depth)
 int Coverage_Tree::fitness(int* action,int n,float* fitness)
 {
   int ret=0;
-
-  log.debug("Tree\n");
-
-  print_tree(&root_node,0);
+  
+  if (log.is_debug()) {
+    log.debug("Tree\n");
+    print_tree(&root_node,0);
+  }
 
   for(int pos=0;pos<n;pos++) {
     float f=0;

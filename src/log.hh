@@ -43,6 +43,11 @@ public:
   virtual void set_debug(bool d) {
     debug_enabled=d;
   }
+
+  virtual bool is_debug() {
+    return debug_enabled;
+  }
+
 protected:
   virtual void write(const char* msg);
   virtual void write(std::string& msg);
