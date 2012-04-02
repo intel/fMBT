@@ -4,7 +4,7 @@ T(istate, "iLogSteps(0)",       testdefaults)
 T(istate, "iLogSteps(1)",       testall)
 T(istate, "iLogSteps(2)",       testdefaults)
 T(istate, "iLogSteps(100)",     testall)
-T(istate, "iLogSteps(100000)",  testdefaults)
+T(istate, "iLogSteps(10000)",   testdefaults)
 
 # testdefaults is a lightweight test that checks that all formats work
 # properly with default settings on one text and plotting format.
