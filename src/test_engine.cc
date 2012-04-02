@@ -70,10 +70,12 @@ extern "C" {
 void Test_engine::print_time(struct timeval& start_time,
 			     struct timeval& total_time)
 {
+  gettimeofday(&Adapter::current_time,NULL);
+  log.print("<current_time time=\"%i.%06i\"/>\n",Adapter::current_time.tv_sec,
+            Adapter::current_time.tv_usec);
   timersub(&Adapter::current_time,&start_time,&total_time);
   log.print("<elapsed_time time=\"%i.%06i\"/>\n",total_time.tv_sec,
 	    total_time.tv_usec);
-
 }
 
 Test_engine::Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p,std::vector<End_condition*>& ecs)
@@ -252,9 +254,11 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       }
       log_tags();
       log_status(log, step_count, heuristic.getCoverage());
-      gettimeofday(&Adapter::current_time,NULL);
       update_coverage(heuristic.getCoverage(), step_count,
                       &last_coverage, &last_step_cov_growth);
+      gettimeofday(&Adapter::current_time,NULL);
+      log.print("<current_time time=\"%i.%06i\"/>\n",Adapter::current_time.tv_sec,
+                Adapter::current_time.tv_usec);
       if (-1 != (condition_i = matching_end_condition(step_count))) {
 	goto out;
       }
@@ -297,7 +301,10 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 		  end_time);
         if (-1 != (condition_i = matching_end_condition(step_count)))
           goto out;
-        return stop_test(Verdict::FAIL, "adapter timeout");
+        abort(); // TIMEOUT means that testing has run out of time
+                 // before adapter observed output. There should have
+                 // been a matching end condition that defines the
+                 // verdict for this case.
       } else if (value==SILENCE) {
 	actions.resize(1);
 	actions[0] = SILENCE;
