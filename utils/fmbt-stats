@@ -76,6 +76,8 @@ import subprocess
 import getopt
 import os
 
+MAXSPEED=100000
+
 def error(msg):
     sys.stderr.write('fmbt-stats: ' + msg + '\n')
     sys.exit(1)
@@ -83,30 +85,39 @@ def error(msg):
 def read_from_log_timestamp_execaction(testlog_fileobj):
     cmd = "fmbt-log -f '$st $ax'"
     p = subprocess.Popen(cmd, shell=True, stdin=testlog_fileobj.fileno(), stdout=subprocess.PIPE)
-    out = p.communicate()[0]
-    lines = out.split('\n')
-    if out == []: error("empty output from \"%s\"" % (cmd,))
 
     timestamp_actionname_list = []
-    for s_timestamp, s_actionname in [l.split(' ',1) for l in lines if l != '']:
-        if s_timestamp.strip() == "" or s_actionname.strip() == "": continue
-        timestamp_actionname_list.append((float(s_timestamp), s_actionname))
+    try:
+        line = p.stdout.readline()
+        while line:
+            # s_timestamp, s_actionname = line.split(' ',1)
+            space = line.find(" ")
+            timestamp_actionname_list.append((float(line[:space]), line[space+1:-1]))
+            # timestamp_actionname_list.append((float(s_timestamp), s_actionname.strip()))
+            line = p.stdout.readline()
+    except Exception, e:
+        error('invalid line in fmbt-log output: "%s"' % line[:-1])
+
+    if timestamp_actionname_list == []: error('no output from fmbt-log')
     return timestamp_actionname_list
 
 def read_from_log_possible_executed(testlog_fileobj):
-    cmd = "fmbt-log -f 'p:$am\nx:$ax'"
+    cmd = "fmbt-log -f 'p:$am\\nx:$ax'"
     p = subprocess.Popen(cmd, shell=True, stdin=testlog_fileobj.fileno(), stdout=subprocess.PIPE)
 
     possible_actions = []
     executed_actions = []
-    line = p.stdout.readline()
-    while line:
-        if line[0]=='x' and len(line) > 3:
-            executed_actions.append(line[2:-1])
-        elif line[0]=='p' and len(line) > 3:
-            possible_actions.append(line[2:-1])
+    try:
         line = p.stdout.readline()
-    if possible_actions == []: error("empty output from \"%s\"" % (cmd,))
+        while line:
+            if line[0]=='x' and len(line) > 3:
+                executed_actions.append(line[2:-1])
+            elif line[0]=='p' and len(line) > 3:
+                possible_actions.append(line[2:-1])
+            line = p.stdout.readline()
+    except Exception, e:
+        error('invalid line in fmbt-log output: "%s"' % line[:-1])
+    if possible_actions == []: error('no output from fmbt-log')
     return possible_actions, executed_actions
 
 def check_output_format(output_fileobj):
@@ -175,7 +186,7 @@ def stats_speed(arg, testlog_fileobj, output_fileobj, plot_filename):
         datarow_format['csv'] = ';'.join(['%.3f' for _ in xrange(column_count)]) + '\n'
         footer_format['csv'] = ''
 
-        header_format['html'] = '<html><body>\n<h2>' + title + ('</h2>\n<table>\n<tr><th>%s</th>' % ('</th><th>'.join(["%s" for _ in xrange(column_count)])))
+        header_format['html'] = '<html><body>\n<h2>' + title + ('</h2>\n<table>\n<tr><th>%s</th>' % ('</th><th>'.join(["%s" for _ in xrange(column_count)]))) + "\n"
         datarow_format['html'] = '<tr><td>%s</td></tr>\n' % ('</td><td>'.join(["%.3f" for _ in xrange(column_count)]),)
         footer_format['html'] = '</table></body></html>\n'
 
@@ -196,7 +207,10 @@ def stats_speed(arg, testlog_fileobj, output_fileobj, plot_filename):
         for avg in averages:
             if avg > i: avg = i
             prev_timestamp_avg = timestamp_action_list[i-avg][0]
-            data[-1].append( avg/(this_timestamp-prev_timestamp_avg) )
+            # if timestamps are equal, use MAX_SPEED instead of
+            # dividing by zero
+            if (this_timestamp-prev_timestamp_avg) == 0: data[-1].append(MAX_SPEED)
+            else: data[-1].append( avg/(this_timestamp-prev_timestamp_avg) )
 
 
     write_output_file(output_fileobj, format_data, data)
