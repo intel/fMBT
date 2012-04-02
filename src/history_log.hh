@@ -16,6 +16,9 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+#ifndef __history_log_hh__
+#define __history_log_hh__
+
 #include "history.hh"
 #include "alphabet.hh"
 #include <libxml/xmlreader.h>
@@ -34,8 +37,11 @@ protected:
   Coverage* c;
   Alphabet* a;
   void send_action();
-  bool send_action(std::string& a,std::vector<std::string>& props);
+  bool send_action(std::string& a,std::vector<std::string>& props,
+		   bool verdict=false);
   std::string file;
   std::vector<std::string> anames;
   std::vector<std::string> tnames;
 };
+
+#endif

@@ -20,7 +20,7 @@
 #include "model_yes.hh"
 #include "helper.hh"
 
-void Model_yes::set_model(Model* m) 
+void Model_yes::set_model(Alphabet* m) 
 {
   model=m;
   std::vector<std::string>& an=model->getActionNames();

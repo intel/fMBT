@@ -25,9 +25,12 @@ public:
   }
 
   virtual ~Model_yes() {
+    model=NULL;
+    /*
     if (model) {
       delete model;
     }
+    */
   }
 
   virtual int getActions(int** _act) {
@@ -58,7 +61,7 @@ public:
 
   virtual bool init() { return true; };
 
-  void set_model(Model* m);
+  void set_model(Alphabet* m);
   void set_props(std::string p);
 
 protected:
@@ -66,5 +69,5 @@ protected:
   std::vector<int> iact;
   std::vector<int> props;
 
-  Model* model;
+  Alphabet* model;
 };
