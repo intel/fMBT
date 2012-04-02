@@ -55,6 +55,7 @@ void Coverage_Tree::pop()
   exec_restore.pop_front();
   push_depth--;
 }
+
 void Coverage_Tree::precalc()
 {
   if (model) {
@@ -82,6 +83,8 @@ void Coverage_Tree::history(int action,std::vector<int>& props,
     execute(action);
   } else {
     // verdict. And now we should do ??
+    exec.clear();
+    exec[0] = &root_node;    
   }
 }
 
