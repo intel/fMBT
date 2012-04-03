@@ -46,7 +46,7 @@ void History_log::processNode(xmlTextReaderPtr reader)
   if (!alphabet_done) {
     if ((xmlTextReaderDepth(reader)==2) &&
 	(strcmp((const char*)name,"action_name")==0)) {
-      char* aname=(char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"name");
+      char* aname=unescape_string((char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"name"));
       if (aname!=NULL) {
 	anames.push_back(aname);
       }
@@ -54,7 +54,7 @@ void History_log::processNode(xmlTextReaderPtr reader)
 
     if ((xmlTextReaderDepth(reader)==2) &&
 	(strcmp((const char*)name,"tag_name")==0)) {
-      char* tname=(char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"name");
+      char* tname=unescape_string((char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"name"));
       if (tname!=NULL) {
 	tnames.push_back(tname);
       }
@@ -80,13 +80,13 @@ void History_log::processNode(xmlTextReaderPtr reader)
     if (act) {
       send_action();
     }
-    act=(char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"name");
+    act=unescape_string((char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"name"));
   }
   
   if ((xmlTextReaderDepth(reader)==3) &&
       (strcmp((const char*)name,"tags")==0)) {
     // tags
-    tag=(char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"enabled");
+    tag=unescape_string((char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"enabled"));
     if (act) {
       send_action();      
     }
