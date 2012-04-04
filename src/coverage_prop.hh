@@ -1,6 +1,6 @@
 /*
  * fMBT, free Model Based Testing tool
- * Copyright (c) 2011, Intel Corporation.
+ * Copyright (c) 2011,2012 Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU Lesser General Public License,
@@ -31,8 +31,9 @@
 
 #include <map>
 #include <vector>
-
+#include <bitset>
 #include <cstdlib>
+#include <list>
 
 class Model;
 
@@ -42,8 +43,8 @@ public:
   class unit;
   Coverage_Prop(Log& l, std::string& params);
 
-  virtual void push() {};
-  virtual void pop() {};
+  virtual void push();
+  virtual void pop();
 
   virtual void history(int action, std::vector<int>& props,
 		       Verdict::Verdict verdict);
@@ -55,8 +56,12 @@ public:
   virtual void set_model(Model* _model);
 
 protected:
+  std::string params;
   int props_total;
-
+  int props_seen;
+  std::vector<bool> data;
+  std::map<int,int> map;
+  std::list<std::pair<std::vector<bool>,int> > state_save;
 };
 
 
