@@ -209,7 +209,9 @@ void log_strarray(Log&l,
 		  std::vector<std::string>& array,
 		  unsigned first_element) {
   for(unsigned i=first_element;i<array.size();i++) {
-    l.print("<%s\"%s\"/>\n",tag,array[i].c_str());
+    char* s=escape_string(array[i].c_str());
+    l.print("<%s\"%s\"/>\n",tag,s);
+    escape_free(s);
   }
 }
 
@@ -234,6 +236,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
   log.push("test_engine");
   gettimeofday(&start_time,NULL);
   log_tags();
+  log_status(log, step_count, heuristic.getCoverage());
   do {
     action=0;
 
