@@ -60,7 +60,7 @@ std::string to_string(const unsigned t);
 std::string to_string(const float f);
 std::string to_string(const int cnt, int* t, std::vector<std::string>& st);
 void  strvec(std::vector<std::string> & v,std::string& s,
-	    std::string& separator);
+	     const std::string& separator);
 
 char* unescape_string(char* msg);
 void  unescape_string(std::string& msg);
