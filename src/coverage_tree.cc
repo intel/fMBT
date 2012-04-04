@@ -115,7 +115,7 @@ bool Coverage_Tree::execute(int action)
 
 float Coverage_Tree::getCoverage()
 {
-  return (float)node_count/max_count;
+  return (float)(node_count-1)/max_count;
 }
 
 void Coverage_Tree::print_tree(struct node* node,int depth)
