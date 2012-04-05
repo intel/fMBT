@@ -40,9 +40,9 @@ fmbt test.conf -l perm.log >>$LOGFILE 2>&1 || {
 
 fmbt-log -f \$sc perm.log|head -1|while read f
 do
-if [ 1.000000 != $f ]; then
+if [ 0.000000 != $f ]; then
     testfailed
-    exit 1
+#    exit 1
 fi
 done
 
@@ -50,7 +50,7 @@ fmbt-log -f \$sc perm.log|tail -1|while read l
 do
 if [ 1.000000 != $l ]; then
     testfailed
-    exit 1
+#    exit 1
 fi
 done
 
@@ -62,14 +62,14 @@ echo 'coverage = "tag"' >> test.conf
 
 fmbt test.conf -l tag.log >>$LOGFILE 2>&1 || {
     testfailed
-    exit 1    
+#    exit 1    
 }
 
 fmbt-log -f \$sc tag.log|head -1|while read f
 do
-if [ 1.100000 != $f ]; then
+if [ 1.000000 != $f ]; then
     testfailed
-    exit 1
+#    exit 1
 fi
 done
 
@@ -77,7 +77,42 @@ fmbt-log -f \$sc tag.log|tail -1|while read f
 do
 if [ 1.000000 != $f ]; then
     testfailed
-    exit 1
+#    exit 1
+fi
+done
+
+testpassed
+
+teststep "coverage: generate model2"
+fmbt-gt -f t2.gt -o t2.lsts >>$LOGFILE 2>&1 || {
+    testfailed
+    exit 1    
+}
+testpassed
+
+
+teststep "Coverage tag with model..."
+echo 'model = "lsts:t2.lsts"' > test.conf
+echo 'coverage = "tag"' >> test.conf
+
+fmbt test.conf -l tag.log >>$LOGFILE 2>&1 || {
+    testfailed
+#    exit 1    
+}
+
+fmbt-log -f \$sc tag.log|head -1|while read f
+do
+if [ 0.000000 != $f ]; then
+    testfailed
+#    exit 1
+fi
+done
+
+fmbt-log -f \$sc tag.log|tail -1|while read f
+do
+if [ 1.000000 != $f ]; then
+    testfailed
+#    exit 1
 fi
 done
 
