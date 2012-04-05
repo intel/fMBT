@@ -117,6 +117,9 @@ void Coverage_Prop::set_model(Model* _model) {
   */
   if (params=="") {
     props_total=model->getSPNames().size()-1; // let's ignore 0
+    if (props_total<0) {
+      props_total=0;
+    }
     for(unsigned i=1;i<model->getSPNames().size();i++) {
       map[i]=i;
     }
