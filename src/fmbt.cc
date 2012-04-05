@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <cstdlib>
 #include <signal.h>
+#include "coverage.hh"
 
 #include "verdict.hh"
 
@@ -80,9 +81,24 @@ int main(int argc,char * const argv[])
     {0, 0, 0, 0}
   };
 
-  while ((c = getopt_long (argc, argv, "DEL:heil:q", long_opts, NULL)) != -1)
+  while ((c = getopt_long (argc, argv, "DEL:heil:qC", long_opts, NULL)) != -1)
     switch (c)
     {
+    case 'C': {
+      /* For debugging. print coverage modules */
+      std::map<std::string, CoverageFactory::creator>::iterator i;
+      std::map<std::string, CoverageFactory::creator>::iterator e;
+      if (CoverageFactory::creators) {
+	i=CoverageFactory::creators->begin();
+	e=CoverageFactory::creators->end();
+	
+	for(;i!=e;i++) {
+	  printf("%s\n",i->first.c_str());
+	}
+      }
+    }
+      return 0;
+      break;
     case 'D': 
       debug_enabled=true;
       break;
