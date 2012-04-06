@@ -202,6 +202,16 @@ def stats_cov(arg, testlog_fileobj, output_fileobj, plot_filename):
         else: datarow_format['plot'] = '%17.6f %11.8f\n'
         footer_format['plot'] = ''
 
+        header_format['csv'] = '"%s"\n"%s";"coverage"\n' % (title, xaxis)
+        if xaxis == "steps": datarow_format['csv'] = '%s;%s\n'
+        else: datarow_format['csv'] = '%.6f;%s\n'
+        footer_format['csv'] = ''
+
+        header_format['html'] = '<html><body>\n<h2>%s</h2>\n<table>\n<tr><th>%s</th><th>coverage</th></tr>\n' % (title, xaxis)
+        if xaxis == "steps": datarow_format['html'] = '<tr><td>%s</td><td>%s</td></tr>\n'
+        else: datarow_format['html'] = '<tr><td>%.6f</td><td>%s</td></tr>\n'
+        footer_format['html'] = '</table></body></html>\n'
+
         output_table = [header_format[out_format]]
         for datarow in data_cov_xaxis:
             output_table.append(datarow_format[out_format] %
@@ -210,13 +220,41 @@ def stats_cov(arg, testlog_fileobj, output_fileobj, plot_filename):
         return output_table
 
     coverage_timestamp = read_from_log_coverage_timestamp(testlog_fileobj)
+    data_cov_xaxis = []
     if xaxis == "steps":
-        data_cov_xaxis = [(ct[0], i+1)
-                          for i, ct in enumerate(coverage_timestamp)]
+        last_coverage = -1
+        for i, ct in enumerate(coverage_timestamp):
+            if ct[0] != last_coverage:
+                data_cov_xaxis.append((ct[0], i+1))
+                last_coverage = ct[0]
     else:
-        data_cov_xaxis = coverage_timestamp
+        last_coverage = -1
+        start_time = coverage_timestamp[0][1]
+        for c, t in coverage_timestamp:
+            if c != last_coverage:
+                data_cov_xaxis.append((c, t - start_time))
+                last_coverage = c
 
     write_output_file(output_fileobj, format_data, data_cov_xaxis)
+
+    if plot_filename:
+        plot_term, plot_datafilename = init_plotting(plot_filename,
+                                                     format_data('plot', data_cov_xaxis))
+        if xaxis == "time": xaxis_label = "Time [s]"
+        else: xaxis_label = "Steps"
+        gnuplot_commands = """
+set ylabel "Coverage"
+set xlabel "%(xaxis)s"
+unset key
+%(plot_term)s
+set grid ytics noxtics
+plot [0:%(last_value)s] '%(plot_datafilename)s' using 1:2 with lines
+""" % { 'plot_term': plot_term,
+        'plot_datafilename': plot_datafilename,
+        'last_value': data_cov_xaxis[-1][1],
+        'xaxis' : xaxis_label }
+
+        finish_plotting(plot_datafilename, gnuplot_commands)
 
 def stats_speed(arg, testlog_fileobj, output_fileobj, plot_filename):
 
