@@ -1,8 +1,10 @@
-TESTS = interactivemode/run.sh tutorial/run.sh adapters/run.sh examples/run.sh aalpython/run.sh fmbt-stats/run.sh
+TESTS = interactivemode/run.sh tutorial/run.sh adapters/run.sh examples/run.sh aalpython/run.sh fmbt-stats/run.sh coverage/run.sh
 
 dist_noinst_SCRIPTS = aalpython/run.sh aalpython/test1.py.aal
 
 dist_noinst_SCRIPTS += adapters/run.sh
+
+dist_noinst_SCRIPTS += coverage/run.sh coverage/t1.gt coverage/t2.gt
 
 dist_noinst_SCRIPTS += examples/run.sh
 
