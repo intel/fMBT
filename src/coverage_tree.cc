@@ -61,7 +61,7 @@ void Coverage_Tree::precalc()
   if (model) {
     node_count=1;
     max_count=0;
-    int acount=model->getActionNames().size();
+    int acount=model->getActionNames().size()-1;
     long ccount=acount;
     for(int i=1;i<=max_depth;i++) {
       max_count+=ccount;

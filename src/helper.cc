@@ -439,7 +439,7 @@ std::string to_string(const int cnt, int* t, std::vector<std::string>& st)
 }
 
 void strvec(std::vector<std::string>& v,std::string& s,
-	    std::string& separator)
+	    const std::string& separator)
 {
   unsigned long cutpos;
 
