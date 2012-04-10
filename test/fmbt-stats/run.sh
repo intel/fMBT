@@ -78,6 +78,7 @@ cat > deep.conf <<EOF
 model     = "lsts:model.lsts"
 adapter   = "remote:remote_python -l adapter.log -c 'from teststeps import *'"
 heuristic = "lookahead:4"
+history   = "log:quick.log"
 coverage  = "perm:4"
 inconc    = "coverage:1.1"
 pass      = "no_progress:8"
@@ -89,3 +90,12 @@ fmbt deep.conf -l deep.log >>$LOGFILE 2>&1 || {
     exit 1
 }
 testpassed
+
+teststep "fmbt-stats/history: initial coverage on deep.log"
+DEEP_INITIAL_COV=$(fmbt-log -f '$sc' deep.log | head -n 1)
+QUICK_INITIAL_COV=$(fmbt-log -f '$sc' quick.log | head -n 1)
+if [[ $DEEP_INITIAL_COV > $QUICK_INITIAL_COV ]]; then
+    testpassed
+else
+    testfailed
+fi
