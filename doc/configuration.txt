@@ -202,10 +202,29 @@ Examples:
                 executed after that.
 
 
+History
+-------
+
+Fill coverage by reading test history from given log files before
+starting test generation. This can be used, for instance, to generate
+tests that have not been generated in previous test runs.
+
+Syntax:
+
+        history = "type:params"
+
+Available types & parameters:
+
+        log:filename
+
+                read log from filename
+
+
 End conditions
 --------------
 
 Define in which conditions test must be stopped and the resulting
+verdict. There can be many end conditions that result in the same
 verdict.
 
 If any verdict on coverage is not given, there is a default coverage

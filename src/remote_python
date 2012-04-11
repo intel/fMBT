@@ -793,8 +793,7 @@ if __name__ == "__main__":
             file(gLogFile, "w").close()
         else:
             print __doc__
-            print 'Unknown option: "%s"' % (opt,)
-            sys.exit(1)
+            error('Unknown option: "%s"' % (opt,))
 
     gobject.threads_init()
     g_dbusEvalGlobals = {
@@ -820,8 +819,14 @@ if __name__ == "__main__":
     if selfTest:
         sys.exit(self_test())
 
+    g_loop = gobject.MainLoop()
+
     for statement in pre_exec_statements:
-        exec statement in g_dbusEvalGlobals
+        try:
+            log("Executing command line argument '%s'" % statement)
+            exec statement in g_dbusEvalGlobals
+        except Exception, e:
+            error("No exceptions allowed, got '%s'" % (e,))
 
     if shellMode:
         print "fMBT remote_python adapter interactive shell."
@@ -834,6 +839,5 @@ if __name__ == "__main__":
 
     signal.signal(signal.SIGINT, signal_handler)
 
-    g_loop = gobject.MainLoop()
     log("entering main loop")
     g_loop.run()

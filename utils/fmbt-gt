@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2006-2010 Tampere University of Technology
-# Copyright (c) 2011 Intel Corporation
+# Copyright (c) 2011- Intel Corporation
 # 
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -557,16 +557,23 @@ def create_datastructures(l):
 
     return l
 
-def create_lsts(lstsdata, keep_actionnames=["tau"], keep_propositionnames=()):
+def create_lsts(lstsdata, keep_actionnames=None, keep_propositionnames=()):
     """
     Dual for create_datastructure: builds a new lsts object
     based on the given LstsData object.
     """
     newlsts=lsts.writer()
 
-    actionnames=keep_actionnames[:]
+    if keep_actionnames != None:
+        if keep_actionnames == [] or keep_actionnames[0] != "tau": 
+            actionnames = ["tau"] + keep_actionnames
+        else:
+            actionnames = keep_actionnames
+    else:
+        actionnames = ["tau"]
     transitions=[[]]
-    propositions=dict([(p,[]) for p in keep_propositionnames])
+    propositions=dict([(p,[]) for p in keep_propositionnames
+                       if p != "gt:istate"])
 
     # Change initial state if gt:istate is set in any state
     for st in lstsdata.pr_by_st:
@@ -1156,11 +1163,18 @@ def gt(input_fileobj,output_fileobj,keep_labels,rules):
             
     if outfile:
         if keep_labels == 1:
-            outlsts=create_lsts(lstsdata, 
-                                keep_actionnames=inlsts.get_actionnames(),
-                                keep_propositionnames=inlsts.get_stateprops().keys())
+            actionnames = []
+            if inlsts: actionnames = inlsts.get_actionnames()
+            actionnames += [ac[1:-1] for ac in lstsdata.ac]
+
+            stateprops = []
+            if inlsts: stateprops = inlsts.get_stateprops().keys()
+            stateprops += [pr[1:-1] for pr in lstsdata.pr_hash.keys()]
+            outlsts = create_lsts(lstsdata, 
+                                keep_actionnames = actionnames,
+                                keep_propositionnames = stateprops)
         else:
-            outlsts=create_lsts(lstsdata)
+            outlsts = create_lsts(lstsdata)
         outlsts.write(outfile)
 
 if __name__=='__main__':
