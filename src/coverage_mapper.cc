@@ -65,6 +65,23 @@ std::string Coverage_Mapper::stringify()
   return t.str();
 }
 
+void Coverage_Mapper::push() {
+  for(unsigned i=0;i<coverages.size();i++) {
+    if (coverages[i]) {
+      coverages[i]->push();
+    }
+  }
+}
+
+void Coverage_Mapper::pop() {
+  for(unsigned i=0;i<coverages.size();i++) {
+    if (coverages[i]) {
+      coverages[i]->pop();
+    }
+  }
+}
+
+
 void Coverage_Mapper::history(int action,
                              std::vector<int>& props, 
                              Verdict::Verdict verdict)
@@ -162,6 +179,12 @@ void Coverage_Mapper::set_model(Model* _model)
 {
   model=_model;
   pload(load_name);
+  if (status) {
+    for(int i=0;i<models.size();i++) {
+      if (coverages[i]) 
+	coverages[i]->set_model(models[i]);
+    }
+  }
 }
 
 bool Coverage_Mapper::load(std::string& name)
@@ -246,12 +269,20 @@ void Coverage_Mapper::add_file(unsigned index,
 
   Conf::split(coveragename,mname,cname);
 
+  unescape_string(cname);
   coverage_names[index]=std::string(cname);
+
   if (cname=="") {
     models[index] = model;
   } else {
-    models[index] = ModelFactory::create(log,filetype(mname),mname);
-    if (!models[index]) {
+    unescape_string(mname);
+    std::string model_name;
+    std::string model_param;
+
+    Conf::split(mname, model_name, model_param);
+
+    models[index] = ModelFactory::create(log,model_name,model_param);
+    if (!models[index] || models[index]->status==false) {
       status=false;
       return;
     }
@@ -262,14 +293,14 @@ void Coverage_Mapper::add_file(unsigned index,
   std::string cp;
 
   Conf::split(cname,cc,cp);
+
   log.debug("Trying to create coverage %s(%s)\n",cc.c_str(),cp.c_str());
   coverages[index] = CoverageFactory::create(log,cc,cp);
-  
+
   if (!coverages[index]) {
     status=false;
     return;
-  }  
-  coverages[index]->set_model(models[index]);
+  }
   status&=coverages[index]->status;
 }
 

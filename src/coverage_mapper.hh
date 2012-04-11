@@ -30,8 +30,8 @@ public:
 
   virtual std::string stringify();
 
-  virtual void push(){};
-  virtual void pop(){};
+  virtual void push();
+  virtual void pop();
 
   virtual void history(int action, std::vector<int>& props,
 		       Verdict::Verdict verdict);
