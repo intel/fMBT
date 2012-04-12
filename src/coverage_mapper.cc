@@ -108,6 +108,9 @@ bool Coverage_Mapper::execute(int action)
        i != p.second;
        ++i) {
     coverages[i->second.first]->execute(i->second.second);
+    if (models[i->second.first]!=model) {
+      models[i->second.first]->execute(i->second.second);
+    }
   }
   return true; 
 }
