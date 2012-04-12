@@ -1,3 +1,13 @@
+fmbt (0.1-rc13) natty; urgency=low
+
+  * Lots of bugs killed.
+  * fmbt-stats: eps, gif, svg, png, html, csv
+  * Documentation update for history
+  * Observe support for aal
+  * Added tests for coverage module
+
+ -- Pablo Virolainen <pablo.virolainen@intel.com>  Thu, 12 Apr 2012 07:58:10 +0300
+
 fmbt (0.1-rc12) maverick; urgency=low
 
   * NEW:aal remote
