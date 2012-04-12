@@ -21,13 +21,22 @@
 #include <cstdio>
 #include <sstream>
 #include <cstdlib>
+#include "conf.hh"
 
 Adapter_dummy::Adapter_dummy(Log& l, std::string params) :
-  Adapter::Adapter(l), tau(false)
+  Adapter::Adapter(l), tau(0), sil(0)
 {
-  if (params!="") {
-    tau=atoi(params.c_str());
+  std::string ex,obs;
+  split(params,ex,obs);
+  
+  if (ex!="") {
+    tau=atoi(ex.c_str());
   }
+  if (obs!="") {
+    sil=atoi(obs.c_str());
+  }
+  printf("ex %i, obs %i\n",
+	 tau,sil);
 }
 
 void Adapter_dummy::execute(std::vector<int>& action)
@@ -37,9 +46,19 @@ void Adapter_dummy::execute(std::vector<int>& action)
   log.print("<dummy_execute type=\"input\" name=\"%s\"/>\n",
 	    getUActionName(action[0]));
 
-  if (tau) {
+  switch(tau) {
+  case 1: {
     action.resize(1);
     action[0]=0;
+    break;
+  }
+  case 2: {
+    action.resize(0);
+    break;
+  }
+  default: {
+
+  }
   }
 
   log.pop();
@@ -48,6 +67,17 @@ void Adapter_dummy::execute(std::vector<int>& action)
 int   Adapter_dummy::observe(std::vector<int> &action,
 				bool block)
 {
+  switch (sil) {
+  case 1: {
+    action.resize(0);
+    return 0;
+    break;
+  }
+  default: {
+    
+  }
+  }
+
   return SILENCE;
 }
 

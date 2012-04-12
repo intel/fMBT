@@ -89,3 +89,47 @@ then
 else
     testpassed
 fi
+
+
+teststep "exitvalue on error (input action)"
+
+cat > test.conf<<EOF
+model="lts:model.lsts"
+adapter="dummy:2"
+on_fail   = "exit:1"
+on_pass   = "exit:2"
+on_inconc = "exit:3"
+on_error  = "exit:4"
+EOF
+
+fmbt test.conf  >>$LOGFILE 2>&1
+if [ $? -ne 4 ]
+then
+    testfailed
+else
+    testpassed
+fi
+
+teststep "exitvalue on error (output: communication error)"
+
+cat > test.conf<<EOF
+model="lts:model.lsts"
+adapter="dummy:2:1"
+on_fail   = "exit:1"
+on_pass   = "exit:2"
+on_inconc = "exit:3"
+on_error  = "exit:4"
+EOF
+
+fmbt-gt --keep-labels -o model.lsts -f - <<EOF
+P(first, p) ->
+T(first,       "o1",                a1)
+EOF
+
+fmbt test.conf  >>$LOGFILE 2>&1
+if [ $? -ne 4 ]
+then
+    testfailed
+else
+    testpassed
+fi
