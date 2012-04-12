@@ -52,32 +52,38 @@ dsources = d/baseline d/BUILD_VERSION d/calc d/CHANGES d/COPYRIGHT d/Makefile d/
 
 noinst_HEADERS += $(dsources)
 
-d/make_dparser d/libdparse.a:
+d/libdparse.a:
 	(mkdir d 2>/dev/null && cp -r $(VPATH)/d .) || true # qnd way to for VPATH build
 	cd d; $(MAKE) make_dparser libdparse.a
 
-lang.g.d_parser.cc: lang.g d/make_dparser
+# Building d/libdparse.a creates make_dparser, too. On the other hand,
+# building only d/make_dparser produces d/libdparse.a as well. Running
+# run two build processes (one for d/make_dparser, the other for
+# d/libdparse.a) concurrently may acuse errors. Therefore the
+# following rules depend on d/libdparse.a, yet they need
+# d/make_dparser.
+lang.g.d_parser.cc: lang.g d/libdparse.a
 	d/make_dparser -o lang.g.d_parser.cc -i lang ./$(VPATH)/lang.g
 
-mrules.g.d_parser.cc: mrules.g d/make_dparser
+mrules.g.d_parser.cc: mrules.g d/libdparse.a
 	d/make_dparser -o mrules.g.d_parser.cc -i mrules ./$(VPATH)/mrules.g
 
-conf.g.d_parser.cc: conf.g d/make_dparser
+conf.g.d_parser.cc: conf.g d/libdparse.a
 	d/make_dparser -o conf.g.d_parser.cc -i conf ./$(VPATH)/conf.g
 
-lts.g.d_parser.cc: lts.g d/make_dparser
+lts.g.d_parser.cc: lts.g d/libdparse.a
 	d/make_dparser -o lts.g.d_parser.cc -i lts ./$(VPATH)/lts.g
 
-xrules.g.d_parser.cc: xrules.g d/make_dparser
+xrules.g.d_parser.cc: xrules.g d/libdparse.a
 	d/make_dparser -o xrules.g.d_parser.cc -i xrules ./$(VPATH)/xrules.g
 
-xrules_extended.g.d_parser.cc: xrules_extended.g d/make_dparser
+xrules_extended.g.d_parser.cc: xrules_extended.g d/libdparse.a
 	d/make_dparser -o xrules_extended.g.d_parser.cc -i xrules_extended ./$(VPATH)/xrules_extended.g
 
-covlang.g.d_parser.cc: covlang.g d/make_dparser
+covlang.g.d_parser.cc: covlang.g d/libdparse.a
 	d/make_dparser -o covlang.g.d_parser.cc -i covlang ./$(VPATH)/covlang.g
 
-uconf.g.d_parser.cc: uconf.g d/make_dparser
+uconf.g.d_parser.cc: uconf.g d/libdparse.a
 	d/make_dparser -o uconf.g.d_parser.cc -i uconf ./$(VPATH)/uconf.g
 
 
