@@ -20,11 +20,14 @@
 #include "log.hh"
 #include <cstdio>
 #include <sstream>
-
+#include <cstdlib>
 
 Adapter_dummy::Adapter_dummy(Log& l, std::string params) :
-  Adapter::Adapter(l)
+  Adapter::Adapter(l), tau(false)
 {
+  if (params!="") {
+    tau=atoi(params.c_str());
+  }
 }
 
 void Adapter_dummy::execute(std::vector<int>& action)
@@ -33,6 +36,11 @@ void Adapter_dummy::execute(std::vector<int>& action)
 
   log.print("<dummy_execute type=\"input\" name=\"%s\"/>\n",
 	    getUActionName(action[0]));
+
+  if (tau) {
+    action.resize(1);
+    action[0]=0;
+  }
 
   log.pop();
 }
