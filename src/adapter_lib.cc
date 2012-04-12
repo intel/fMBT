@@ -29,8 +29,8 @@ namespace {
     std::string adapter_name,adapter_param,adapter_filename;
     std::string s(unescape_string(strdup(params.c_str())));
 
-    Conf::split(s, adapter_name, adapter_param);
-    Conf::split(adapter_name,adapter_name,adapter_filename,",");
+    split(s, adapter_name, adapter_param);
+    split(adapter_name,adapter_name,adapter_filename,",");
 
     a = AdapterFactory::create(l, adapter_name, adapter_param);
 

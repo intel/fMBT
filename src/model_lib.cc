@@ -30,8 +30,8 @@ namespace {
     std::string model_name,model_param,model_filename;
     std::string s(unescape_string(strdup(params.c_str())));
 
-    Conf::split(s, model_name, model_param);
-    Conf::split(model_name,model_name,model_filename,",");
+    split(s, model_name, model_param);
+    split(model_name,model_name,model_filename,",");
 
     m = ModelFactory::create(l, model_name, model_param);
 

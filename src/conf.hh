@@ -29,6 +29,7 @@
 #include "coverage.hh"
 
 #include "writable.hh"
+#include "helper.hh"
 
 class Conf:public Writable {
  public:
@@ -86,9 +87,6 @@ class Conf:public Writable {
   Verdict::Verdict execute(bool interactive=false);
 
   void load(std::string& name);
-
-  static void split(std::string val, std::string& name,
-		    std::string& param, const char* s=":");
   
   Log& log;
 

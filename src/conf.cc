@@ -50,21 +50,6 @@ extern Conf* conf_obj;
   return Verdict::ERROR; \
   }
 
-void Conf::split(std::string val,std::string& name,
-		 std::string& param, const char* s)
-{
-  unsigned long cutpos = val.find_first_of(s);
-
-  if (cutpos == val.npos) {
-    name  = val;
-    param = std::string("");
-  } else { 
-    name  = val.substr(0,cutpos);   
-    param = val.substr(cutpos+1);
-  }
-}
-
-
 void Conf::load(std::string& name)
 {
   D_Parser *p = new_D_Parser(&parser_tables_conf, 512);

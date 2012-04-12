@@ -80,6 +80,10 @@ int getint(FILE* out,FILE* in);
 
 int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in);
 
+void split(std::string val, std::string& name,
+	   std::string& param, const char* s=":");
+
+
 #define MAX_LINE_LENGTH (1024*16)
 
 #endif

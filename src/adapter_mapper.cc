@@ -192,7 +192,7 @@ bool Adapter_mapper::load(std::string& name)
       std::string adapter_class;
       std::string adapter_params;
       
-      Conf::split(adapter_names[i],adapter_class,adapter_params);
+      split(adapter_names[i],adapter_class,adapter_params);
 
       log.debug("class %s, params %i",
              adapter_class.c_str(),

@@ -587,3 +587,17 @@ int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in)
 
   return ret;
 }
+
+void split(std::string val,std::string& name,
+		 std::string& param, const char* s)
+{
+  unsigned long cutpos = val.find_first_of(s);
+
+  if (cutpos == val.npos) {
+    name  = val;
+    param = std::string("");
+  } else { 
+    name  = val.substr(0,cutpos);   
+    param = val.substr(cutpos+1);
+  }
+}

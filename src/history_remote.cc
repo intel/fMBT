@@ -55,7 +55,7 @@ void History_remote::set_coverage(Coverage* cov,
     std::string separator(" ");
     std::vector<std::string> props;
     
-    Conf::split(vec[i],act,tmp);
+    split(vec[i],act,tmp);
     unescape_string(act);
 
     strvec(props,tmp,separator);
