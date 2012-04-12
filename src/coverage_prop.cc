@@ -129,8 +129,8 @@ void Coverage_Prop::set_model(Model* _model) {
     static const std::string separator(":");
     std::vector<std::string>& sp=model->getSPNames();
     strvec(props,params,separator);
-    for(unsigned i=1;i<sp.size();i++) {
-      int pos=find(props,sp[i]);
+    for(unsigned i=0;i<props.size();i++) {
+      int pos=find(sp,props[i]);
       if (pos) 
 	map[i]=pos;
     }
