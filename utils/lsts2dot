@@ -53,45 +53,60 @@ def colors(lsts_obj, testlog_fileobj):
     COLOR_ST_INCONC = "#c0c0c0"
     COLOR_ST_VISITED = "#e0ffe0"
     COLOR_TR_FAIL = "#c00000"
+    COLOR_TR_SUGG = "#f000f0"
+    COLOR_TR_EXEC = "#00c020"
 
     actionnames = lsts_obj.get_actionnames()
-    cmd = "fmbt-log -f '$ax$tv'"
+    cmd = "fmbt-log -f '$as*LSTS2DOT*$ax*LSTS2DOT*$tv'"
     p = subprocess.Popen(cmd, shell=True, stdin=testlog_fileobj.fileno(), stdout=subprocess.PIPE)
 
     # tr_colors dictionary maps transitions, that is (src, act, dst)
     # triplets to rgb colors
     tr_colors = {}
-
     state_colors = {}
 
     # simulate traces found in the log file in the lsts
     initial_state = int(lsts_obj.get_header().initial_states)
     current_state = initial_state
-    prev_tr = (0, 0, 0)
+    state_colors[current_state] = COLOR_ST_VISITED
     try:
         line = p.stdout.readline()
         while line:
-            action = line.strip()
+            action_sugg, action_exec, tv = line.strip().split('*LSTS2DOT*')
+            if action_sugg == "":
+                if tv == "pass":
+                    state_colors[current_state] = COLOR_ST_PASS
+                    current_state = initial_state
+                elif tv == "inconclusive":
+                    state_colors[current_state] = COLOR_ST_INCONC                    
+                    current_state = initial_state
+                elif tv == "fail":
+                    tr_colors[sugg_tr] = COLOR_TR_FAIL
+                    state_colors[current_state] = COLOR_ST_FAIL
+                    current_state = initial_state
+                line = p.stdout.readline()
+                continue
             possible_transitions = lsts_obj.get_transitions()[current_state]
             next_state = None
+            exec_tr = (0,0,0)
+            sugg_tr = exec_tr
             for (dest_state, action_index) in possible_transitions:
-                if action == actionnames[action_index]:
+                curr_action = actionnames[action_index]
+                if action_exec == curr_action:
                     next_state = dest_state
-                    break
+                    exec_tr = (current_state, action_index, next_state)
+                    if action_sugg == action_exec:
+                        sugg_tr = exec_tr
+                        break
+                elif action_sugg == curr_action:
+                    sugg_tr = (current_state, action_index, dest_state)
+                    if not sugg_tr in tr_colors:
+                        tr_colors[sugg_tr] = COLOR_TR_SUGG
             if next_state == None:
-                if action == "pass":
-                    state_colors[current_state] = COLOR_ST_PASS
-                elif action == "inconclusive":
-                    state_colors[current_state] = COLOR_ST_INCONC                    
-                elif action == "fail":
-                    tr_colors[prev_tr] = COLOR_TR_FAIL
-                    state_colors[current_state] = COLOR_ST_FAIL
-                else:
-                    state_colors[current_state] = COLOR_ST_CANNOT_SIMULATE
+                state_colors[current_state] = COLOR_ST_CANNOT_SIMULATE
                 break
             else:
-                prev_tr = (current_state, action_index, next_state)
-                tr_colors[(current_state, action_index, next_state)] = "#00c020"
+                tr_colors[exec_tr] = COLOR_TR_EXEC
                 current_state = next_state
                 state_colors[next_state] = COLOR_ST_VISITED
             line = p.stdout.readline()
@@ -137,9 +152,10 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None):
                                  % (source,dest,a,colordata))
 
     states = state2props.keys()
+    states.extend(state_colors.keys())
     states.sort()
     for state in states:
-        props = state2props[state]
+        props = state2props.get(state, [])
         props.sort()
         if state_colors and state in state_colors:
             colordata = ' fillcolor="%s" style="filled"' % (state_colors[state],)
