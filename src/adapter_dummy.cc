@@ -35,8 +35,6 @@ Adapter_dummy::Adapter_dummy(Log& l, std::string params) :
   if (obs!="") {
     sil=atoi(obs.c_str());
   }
-  printf("ex %i, obs %i\n",
-	 tau,sil);
 }
 
 void Adapter_dummy::execute(std::vector<int>& action)
