@@ -124,7 +124,7 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None):
     if logfile != None:
         tr_colors, state_colors = colors(l, logfile)
     else:
-        tr_colors, state_colors = None, None
+        tr_colors, state_colors = {}, {}
 
     state2props = {int(l.get_header().initial_states): ["[initial state]"]}
     actionnames=l.get_actionnames()
