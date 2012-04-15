@@ -180,6 +180,7 @@ if __name__=='__main__':
             print __doc__
             sys.exit(0)
         elif opt in ['-i', '--input']:
+            if arg == "-": continue
             try: infile = file(arg, 'r')
             except Exception, e: error('cannot read file "%s": %s' % (arg, e))
         elif opt in ['-o', '--output'] and not arg in ['', '-']:
