@@ -186,7 +186,7 @@ if __name__=='__main__':
         elif opt in ['-o', '--output'] and not arg in ['', '-']:
             try: outfile = file(arg, 'w')
             except Exception, e: error('cannot open file for writing "%s": %s' % (arg, e))
-        elif opt == 'loops-in-states':
+        elif opt == '--loops-in-states':
             loops_as_props=True
         elif opt in ['-l', '--log']:
             try: logfile = file(arg, "r")
