@@ -47,16 +47,23 @@ def error(msg, exit_status=1):
     sys.exit(exit_status)
 
 def colors(lsts_obj, testlog_fileobj):
-    COLOR_ST_CANNOT_SIMULATE = "#ff00ff"
-    COLOR_ST_PASS = "#80ff80"
-    COLOR_ST_FAIL = "#ff8080"
-    COLOR_ST_INCONC = "#c0c0c0"
-    COLOR_ST_VISITED = "#e0ffe0"
-    COLOR_TR_FAIL = "#c00000"
-    COLOR_TR_SUGG = "#f000f0"
-    COLOR_TR_EXEC = "#00c020"
+    COLOR_ST_CANNOT_SIMULATE = "#a08000"
+    COLOR_ST_PASS            = "#00b000"
+    COLOR_ST_FAIL            = "#d00000"
+    COLOR_ST_INCONC          = "#c0c0c0"
+    COLOR_ST_VISITED         = "#a0ffa0"
+    COLOR_TR_FAIL            = "#c00000"
+    COLOR_TR_SUGG            = "#f000f0"
+    COLOR_TR_EXEC            = "#00c020"
 
     actionnames = lsts_obj.get_actionnames()
+
+    def find_transition(action_name, lsts_obj, current_state):
+        possible_transitions = lsts_obj.get_transitions()[current_state]
+        for (dest_state, action_index) in possible_transitions:
+            if action_name == actionnames[action_index]:
+                return (current_state, action_index, dest_state)
+
     cmd = "fmbt-log -f '$as*LSTS2DOT*$ax*LSTS2DOT*$tv'"
     p = subprocess.Popen(cmd, shell=True, stdin=testlog_fileobj.fileno(), stdout=subprocess.PIPE)
 
@@ -73,7 +80,7 @@ def colors(lsts_obj, testlog_fileobj):
         line = p.stdout.readline()
         while line:
             action_sugg, action_exec, tv = line.strip().split('*LSTS2DOT*')
-            if action_sugg == "":
+            if action_exec == "":
                 if tv == "pass":
                     state_colors[current_state] = COLOR_ST_PASS
                     current_state = initial_state
@@ -81,37 +88,34 @@ def colors(lsts_obj, testlog_fileobj):
                     state_colors[current_state] = COLOR_ST_INCONC                    
                     current_state = initial_state
                 elif tv == "fail":
-                    tr_colors[sugg_tr] = COLOR_TR_FAIL
+                    sys.stderr.write('failing... %s\n' % (action_sugg,))
+                    if action_sugg != "":
+                        sugg_tr = find_transition(action_sugg, lsts_obj, current_state)
+                        sys.stderr.write(str(sugg_tr) + '\n')
+                        if sugg_tr: tr_colors[sugg_tr] = COLOR_TR_FAIL
                     state_colors[current_state] = COLOR_ST_FAIL
                     current_state = initial_state
                 line = p.stdout.readline()
                 continue
-            possible_transitions = lsts_obj.get_transitions()[current_state]
             next_state = None
-            exec_tr = (0,0,0)
-            sugg_tr = exec_tr
-            for (dest_state, action_index) in possible_transitions:
-                curr_action = actionnames[action_index]
-                if action_exec == curr_action:
-                    next_state = dest_state
-                    exec_tr = (current_state, action_index, next_state)
-                    if action_sugg == action_exec:
-                        sugg_tr = exec_tr
-                        break
-                elif action_sugg == curr_action:
-                    sugg_tr = (current_state, action_index, dest_state)
-                    if not sugg_tr in tr_colors:
-                        tr_colors[sugg_tr] = COLOR_TR_SUGG
-            if next_state == None:
-                state_colors[current_state] = COLOR_ST_CANNOT_SIMULATE
-                break
-            else:
+
+            if action_sugg != action_exec:
+                sugg_tr = find_transition(action_sugg, lsts_obj, current_state)
+                if sugg_tr and not sugg_tr in tr_colors:
+                    tr_colors[sugg_tr] = COLOR_TR_SUGG
+
+            exec_tr = find_transition(action_exec, lsts_obj, current_state)
+            if exec_tr:
                 tr_colors[exec_tr] = COLOR_TR_EXEC
-                current_state = next_state
-                state_colors[next_state] = COLOR_ST_VISITED
+                current_state = exec_tr[2]
+                state_colors[current_state] = COLOR_ST_VISITED
+            else:
+               state_colors[current_state] = COLOR_ST_CANNOT_SIMULATE
+               break
+
             line = p.stdout.readline()
     except Exception, e:
-        error('invalid line in fmbt-log -f "$ax" output: "%s"' % line[:-1])
+        error('invalid line: "%s"' % (line[:-1],))
     try: p.stdout.close()
     except: pass
     return tr_colors, state_colors
