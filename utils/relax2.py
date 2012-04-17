@@ -33,13 +33,12 @@ class DFA_lsts:
               2. all stateprops considered accepting
               3. Initial state must be 0!!! """
     def __init__(self,L=None):
+        self.Sigma = []
+        self.dist = {}
         if L:
             self.addSigma(L.get_actionnames())
             self.addtrans(L.get_transitions())
             self.addprops(L.get_stateprops())
-        else:
-            self.Sigma = []
-            self.dist = {}
     def addtrans(self,tr):    
         self.Trans = []
         for i,tl in enumerate(tr):
@@ -542,8 +541,9 @@ class DFA_lsts:
         self.dist = dist
 
 class ErrorModel:
-    def __init__(self,inst=sys.stdin,outst=sys.stdout):
-        self.A = None
+    def __init__(self,input_lsts,inst=sys.stdin,outst=sys.stdout):
+        if input_lsts: self.A = DFA_lsts(input_lsts)
+        else: self.A = None
         self.B = None
         self.inp = inst
         self.out = outst
@@ -612,5 +612,9 @@ class ErrorModel:
         self.output()
 
 if __name__=="__main__":
-    X = ErrorModel()
+    if len(sys.argv) > 1:
+        input_lsts_file = file(sys.argv[1])
+        error_lsts = lsts.reader(input_lsts_file)
+    else: error_lsts = None
+    X = ErrorModel(error_lsts)
     X.go_online()
