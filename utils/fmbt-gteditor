@@ -68,8 +68,9 @@ class MainWindow(QtGui.QMainWindow):
     def saveFileAs(self):
         path = QtGui.QFileDialog.getSaveFileName(self, "Save File",
                                                  '', "fMBT GT files (*.gt)")
-        try: self._openedFileName = str(path) # PyQt4
-        except: self._openedFileName = path[0] # PySide
+        self._openedFileName = str(path) # PyQt4
+        if "(" in self._openedFileName and "'" in self._openedFileName:
+            self._openedFileName = path[0] # PySide
         if not self._openedFileName:
             delattr(self, '_openedFileName')
             raise Exception("not saved")
@@ -276,17 +277,12 @@ pass="steps:20"
 class Highlighter(QtGui.QSyntaxHighlighter):
 
     def __init__(self, parent=None):
-
         super(Highlighter, self).__init__(parent)
-
         keywordFormat = QtGui.QTextCharFormat()
-
         keywordFormat.setForeground(QtCore.Qt.darkBlue)
-
         keywordFormat.setFontWeight(QtGui.QFont.Bold)
 
         keywordPatterns = ["\\bT\\b", "\\bP\\b", "->"]
-
         self.highlightingRules = [(QtCore.QRegExp(pattern), keywordFormat)
                 for pattern in keywordPatterns]
 
@@ -321,18 +317,11 @@ class Highlighter(QtGui.QSyntaxHighlighter):
 
 
 if __name__ == '__main__':
-
-    import sys
-
     app = QtGui.QApplication(sys.argv)
-
     window = MainWindow()
-
     window.resize(640, 512)
-
     if len(sys.argv) > 1:
         window.openFile([sys.argv[1]])
         
     window.show()
-
     sys.exit(app.exec_())
