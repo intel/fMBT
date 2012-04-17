@@ -1,0 +1,338 @@
+#!/usr/bin/env python
+
+#
+# fMBT, free Model Based Testing tool
+# Copyright (c) 2012, Intel Corporation.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU Lesser General Public License,
+# version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for
+# more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+# This is a demo / prototype of an editor for fmbt-gt files.
+
+import sys
+
+def error(msg, exit_status = 1):
+    sys.stderr.write("%s: %s\n" % (sys.argv[0], msg))
+    sys.exit(exit_status)
+
+try: from PySide import QtCore, QtGui
+except:
+    try: from PyQt4 import QtCore, QtGui
+    except: error("PySide or PyQt4 required.")
+
+import subprocess
+import commands
+import re
+
+class MainWindow(QtGui.QMainWindow):
+
+    def __init__(self, parent=None):
+
+        super(MainWindow, self).__init__(parent)
+
+        self.setupFileMenu()
+        self.setupCommandsMenu()
+        self.setupHelpMenu()
+
+        self.setupEditor()
+
+        self.setCentralWidget(self.mainwidget)
+        self.setWindowTitle("fMBT GT editor")
+
+    def about(self):
+        QtGui.QMessageBox.about(self, "fMBT GT editor",
+                "<p>The <b>fMBT GT editor</b> demo<br>0.0 alpha")
+
+    def newFile(self):
+        self.editor.setPlainText("P(start, \"gt:istate\")\n->\n")
+        self.editor.moveCursor(QtGui.QTextCursor.End)
+        if hasattr(self, '_openedFileName'): delattr(self, '_openedFileName')
+
+    def saveFile(self):
+        if hasattr(self, "_openedFileName"):
+            print "saving", self._openedFileName
+            file(self._openedFileName, "w").write(self.editor.toPlainText())
+        else:
+            self.saveFileAs()
+
+    def saveFileAs(self):
+        path = QtGui.QFileDialog.getSaveFileName(self, "Save File",
+                                                 '', "fMBT GT files (*.gt)")
+        try: self._openedFileName = str(path) # PyQt4
+        except: self._openedFileName = path[0] # PySide
+        if not self._openedFileName:
+            delattr(self, '_openedFileName')
+            raise Exception("not saved")
+        self.saveFile()
+
+    def openFile(self, path=None):
+        if not path:
+            path = QtGui.QFileDialog.getOpenFileName(self, "Open File",
+                    '', "fMBT GT files (*.gt)")
+        if path:
+            self.editor.setPlainText(file(path[0]).read())
+            self._openedFileName = path[0]
+
+    def visualiseModel(self):
+        if not hasattr(self, "_openedFileName"): self.saveFileAs()
+        else: self.saveFile()
+        filename = self._openedFileName
+        imgname = filename + ".png"
+        try: file("delme.log")
+        except: logparam = ""
+        else: logparam = "-l delme.log"
+        s,o = commands.getstatusoutput("fmbt-gt -o model.lsts -f '%s' && fmbt-view -f png %s -o '%s' model.lsts" %
+                                       (filename, logparam, imgname))
+        if s != 0:
+            print "fmbt-view call returned != 0"
+            print o
+            return
+        self.preview_modelimage_pixmap = QtGui.QPixmap()
+        self.preview_modelimage_pixmap.load(imgname)
+        self.preview_modelimage.setPixmap(self.preview_modelimage_pixmap)
+        self.preview.setCurrentIndex(0)
+        print "visualise model"
+
+    def plotDistribution(self):
+        if not hasattr(self, "_openedFileName"): self.saveFileAs()
+        else: self.saveFile()
+        self._doGenerateTest()
+        p = subprocess.Popen("fmbt-stats -f dist:next,sort -p dist.png -o /dev/null delme.log", shell=True)
+        p.wait()
+        self.preview_modelimage_pixmap = QtGui.QPixmap()
+        self.preview_modelimage_pixmap.load("dist.png")
+        self.preview_modelimage.setPixmap(self.preview_modelimage_pixmap)
+        self.preview.setCurrentIndex(0)
+
+    def _doGenerateTest(self):
+        filename = self._openedFileName
+        file("delme.conf", "w").write("""
+model="lsts_remote:fmbt-gt -f '%s'"
+heuristic="lookahead:4"
+coverage="perm:2"
+pass="steps:20"
+""" % (filename,))
+        cmd = "fmbt -l delme.log delme.conf"
+        p = subprocess.Popen(cmd, shell=True)
+        return p.wait()
+
+    def generateTest(self):
+        if not hasattr(self, "_openedFileName"): self.saveFileAs()
+        else: self.saveFile()
+        if not hasattr(self, "_openedFileName"):
+            print "this gt file has no name"
+            return
+        filename = self._openedFileName
+        self._doGenerateTest()
+        p = subprocess.Popen("fmbt-log -f '$sn\t$ax' delme.log", shell=True, stdout=subprocess.PIPE)
+        o = p.stdout.read()
+        self.preview_test.setPlainText(o)
+        self.preview.setCurrentWidget(self.preview_test)
+
+    def setupEditor(self):
+        self.mainwidget = QtGui.QWidget()
+        self.layout = QtGui.QHBoxLayout()
+        self.mainwidget.setLayout(self.layout)
+
+        font = QtGui.QFont()
+        font.setFamily('Courier')
+        font.setFixedPitch(True)
+        font.setPointSize(12)
+        self.editor = QtGui.QTextEdit()
+        self.editor.setFont(font)
+        self.highlighter = Highlighter(self.editor.document())
+        self.layout.addWidget(self.editor)
+
+        self.preview = QtGui.QStackedWidget()
+        self.layout.addWidget(self.preview)
+        
+        self.preview_modelarea = QtGui.QScrollArea()
+        self.preview_modelimage = QtGui.QLabel()
+        self.preview_modelarea.setWidget(self.preview_modelimage)
+        self.preview.addWidget(self.preview_modelimage)
+        
+        self.preview_test = QtGui.QTextEdit()
+        self.preview.addWidget(self.preview_test)
+
+    def setupFileMenu(self):
+        fileMenu = QtGui.QMenu("&File", self)
+        self.menuBar().addMenu(fileMenu)
+        fileMenu.addAction("&New...", self.newFile, "Ctrl+N")
+        fileMenu.addAction("&Open...", self.openFile, "Ctrl+O")
+        fileMenu.addAction("&Save", self.saveFile, "Ctrl+S")
+        fileMenu.addAction("Save &As...", self.saveFileAs)
+        fileMenu.addAction("E&xit", QtGui.qApp.quit, "Ctrl+Q")
+
+    def setupCommandsMenu(self):
+        commandMenu = QtGui.QMenu("&Commands", self)
+        self.menuBar().addMenu(commandMenu)
+        commandMenu.addAction("&Visualise model", self.visualiseModel, "F5")
+        commandMenu.addAction("&Generate test", self.generateTest, "F6")
+        commandMenu.addAction("&Test step distribution", self.plotDistribution, "F7")
+
+    def setupHelpMenu(self):
+        helpMenu = QtGui.QMenu("&Help", self)
+        self.menuBar().addMenu(helpMenu)
+        helpMenu.addAction("&About", self.about)
+
+    def keyPressEvent(self, e):
+        tr_re = re.compile("([!]?)T\(\s*([^),]+)\s*,\s*([^\"),]+|\"[^\"]*\")\s*,\s*([^),]+)\s*\)")
+        sp_re = re.compile("([!]?)P\(\s*([^),]+)\s*,\s*([^)]+)\s*\)")
+        def stateActionTagNames(txt):
+            snames, anames, tnames = [], [], []
+            for line in txt.split('\n'):
+                for (m_neg, m_src, m_act, m_dst) in tr_re.findall(line):
+                    snames.append(m_src)
+                    snames.append(m_dst)
+                    anames.append(m_act)
+                for (m_neg, m_state, m_tag) in sp_re.findall(line):
+                    snames.append(m_state)
+                    tnames.append(m_tag)
+            return snames, anames, tnames
+        def cursorForReplacingFromStartOfLine():
+            c = self.editor.textCursor()
+            c.clearSelection()
+            c.movePosition(QtGui.QTextCursor.StartOfLine, QtGui.QTextCursor.KeepAnchor)
+            return c
+        if e.key() == 16777248: # shift
+            self._iterate_index = -1
+        if e.key() == 16777218: # tab - FIX MAGIC NUMBERS
+            self._iterate_index += 1
+            pt = str(self.editor.toPlainText())
+            pos = self.editor.textCursor().position()
+            if self._iterate_index == 0:
+                _, self._anames, self._tnames = stateActionTagNames(pt)
+                self._anames = list(set(self._anames))
+                self._anames.sort()
+                self._tnames = list(set(self._tnames))
+                self._tnames.sort()
+                states_above, _, _ = stateActionTagNames(pt[:pos])
+                states_below, _, _ = stateActionTagNames(pt[pos:])
+                states_above.reverse()
+                states = states_above[:5] + states_below[:7] + states_above[5:] + states_below[7:]
+                unused_states = set(states)
+                uniq_states = [s for s in states
+                               if s in unused_states and unused_states.remove(s) == None]
+                if not uniq_states:
+                    self._iterate_index = -1
+                    return
+                self._statenames = uniq_states
+            curr_line = pt[:pos].split('\n')[-1]
+            if curr_line.strip() == "" or (curr_line.strip().startswith("T") and not ',' in curr_line):
+                # Guess source state for T(X
+                if not self._statenames:
+                    self._iterate_index = -1
+                    return
+                if "T" in curr_line: prefix = curr_line[:curr_line.index('T')]
+                else: prefix = curr_line
+                c = cursorForReplacingFromStartOfLine()
+                c.insertText("%sT(%s" % (prefix, self._statenames[self._iterate_index % len(self._statenames)],))
+            elif curr_line.startswith("T") and curr_line.count(",") == 2 and ")" not in curr_line[curr_line.rindex(",")+1:]:
+                # Guess destination state for T(..., ..., X
+                if not self._statenames:
+                    self._iterate_index = -1
+                    return
+                prefix = curr_line[:curr_line.rindex(",")+1]
+                c = cursorForReplacingFromStartOfLine()
+                c.insertText("%s %s" % (prefix, self._statenames[self._iterate_index % len(self._statenames)],))
+            elif curr_line.startswith("T") and curr_line.count(",") == 1:
+                # Guess action for T(..., X
+                if not self._anames:
+                    self._iterate_index = -1
+                    return
+                prefix = curr_line[:curr_line.rindex(",")+1]
+                c = cursorForReplacingFromStartOfLine()
+                c.insertText("%s %s" % (prefix, self._anames[self._iterate_index % len(self._anames)],))
+            elif (curr_line.startswith("P") and not ',' in curr_line):
+                # Guess state for P(X
+                if not self._statenames:
+                    self._iterate_index = -1
+                    return
+                c = cursorForReplacingFromStartOfLine()
+                c.insertText("P(%s" % (self._statenames[self._iterate_index % len(self._statenames)],))
+            elif (curr_line.startswith("P") and curr_line.count(',') == 1 and not ")" in curr_line):
+                # Guess tag for P(..., X
+                if not self._tnames:
+                    self._iterate_index = -1
+                    return
+                prefix = curr_line[:curr_line.rindex(",")+1]
+                c = cursorForReplacingFromStartOfLine()
+                c.insertText("%s %s" % (prefix, self._tnames[self._iterate_index % len(self._tnames)]))
+
+    def keyReleaseEvent(self, e):
+        if e.key() == 16777248:
+            self._iterate_index = -1
+
+class Highlighter(QtGui.QSyntaxHighlighter):
+
+    def __init__(self, parent=None):
+
+        super(Highlighter, self).__init__(parent)
+
+        keywordFormat = QtGui.QTextCharFormat()
+
+        keywordFormat.setForeground(QtCore.Qt.darkBlue)
+
+        keywordFormat.setFontWeight(QtGui.QFont.Bold)
+
+        keywordPatterns = ["\\bT\\b", "\\bP\\b", "->"]
+
+        self.highlightingRules = [(QtCore.QRegExp(pattern), keywordFormat)
+                for pattern in keywordPatterns]
+
+        singleLineCommentFormat = QtGui.QTextCharFormat()
+        singleLineCommentFormat.setForeground(QtCore.Qt.red)
+        self.highlightingRules.append((QtCore.QRegExp("^#[^\n]*"),
+                singleLineCommentFormat))
+
+        quotationFormat = QtGui.QTextCharFormat()
+        quotationFormat.setForeground(QtCore.Qt.darkGreen)
+        self.highlightingRules.append((QtCore.QRegExp("\".*\""),
+                quotationFormat))
+
+        usualErrorsFormat = QtGui.QTextCharFormat()
+        usualErrorsFormat.setForeground(QtCore.Qt.red)
+        self.highlightingRules.append((QtCore.QRegExp("[TP]\(\""),
+                usualErrorsFormat))
+        
+
+    def highlightBlock(self, text):
+
+        for pattern, format in self.highlightingRules:
+            expression = QtCore.QRegExp(pattern)
+            index = expression.indexIn(text)
+
+            while index >= 0:
+                length = expression.matchedLength()
+                self.setFormat(index, length, format)
+                index = expression.indexIn(text, index + length)
+
+        self.setCurrentBlockState(0)
+
+
+if __name__ == '__main__':
+
+    import sys
+
+    app = QtGui.QApplication(sys.argv)
+
+    window = MainWindow()
+
+    window.resize(640, 512)
+
+    if len(sys.argv) > 1:
+        window.openFile([sys.argv[1]])
+        
+    window.show()
+
+    sys.exit(app.exec_())
