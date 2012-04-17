@@ -17,20 +17,30 @@
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
 if [ "x$1" == "x" ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
-    echo "Usage: $0 [-f format] [-l logfile] [-o outputfile] modelname.lsts"
-    echo "Default format is pdf. Other supported formats are:"
-    dot -Thelp 2>&1 | sed 's/.*://'
+    echo "Usage: fmbt-view [options] modelname.lsts"
+    echo "Options:"
+    echo "  -f <format>"
+    echo "          Default format is pdf. Other supported formats are:"
+    echo -n "         "; dot -Thelp 2>&1 | sed 's/.*://'
+    echo "  -h      Print help."
+    echo "  -l <logfile>"
+    echo "          Color states and transitions visited in the log."
+    echo "  -i      Invert coloring (highlights unvisited states)"
+    echo "  -o <outputfile>"
+    echo "          Write image to outputfile, do not display it."
     exit 1
 fi
 
 FORMAT=pdf
 LOGFILE=""
 OUTPUTFILE=""
+COLORING=""
 DISPLAY_IMAGE=1
-while getopts f:l:o: opt
+while getopts f:il:o: opt
 do
     case $opt in
         f) FORMAT=$OPTARG;;
+        i) COLORING="--invert-colors";;
         l) LOGFILE="-l $OPTARG";;
         o) OUTPUTFILE=$OPTARG; DISPLAY_IMAGE=0;;
     esac
@@ -42,7 +52,7 @@ if [ "$OUTPUTFILE" == "" ]; then
 	OUTPUTFILE="/tmp/$(basename "$1").$FORMAT"
 fi
 
-( eval $UTILPATH/lsts2dot --loops-in-states -i "$1" $LOGFILE | tee "$OUTPUTFILE.gv" | dot -T$FORMAT -o"$OUTPUTFILE" ) && {
+( eval $UTILPATH/lsts2dot --loops-in-states -i "$1" $COLORING $LOGFILE | tee "$OUTPUTFILE.gv" | dot -T$FORMAT -o"$OUTPUTFILE" ) && {
 
     if [ "$DISPLAY_IMAGE" == "1" ]; then
         echo "Graphviz source saved to $OUTPUTFILE.gv"

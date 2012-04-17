@@ -46,16 +46,18 @@ def error(msg, exit_status=1):
     sys.stderr.write("lsts2dot: %s\n" % (msg,))
     sys.exit(exit_status)
 
-def colors(lsts_obj, testlog_fileobj):
-    COLOR_ST_CANNOT_SIMULATE = "#a08000"
-    COLOR_ST_PASS            = "#00b000"
-    COLOR_ST_FAIL            = "#d00000"
-    COLOR_ST_INCONC          = "#c0c0c0"
-    COLOR_ST_VISITED         = "#a0ffa0"
-    COLOR_TR_FAIL            = "#c00000"
-    COLOR_TR_SUGG            = "#f000f0"
-    COLOR_TR_EXEC            = "#00c020"
+COLOR_ST_CANNOT_SIMULATE = "#a08000"
+COLOR_ST_PASS            = "#00b000"
+COLOR_ST_FAIL            = "#d00000"
+COLOR_ST_INCONC          = "#c0c0c0"
+COLOR_ST_VISITED         = "#a0ffa0"
+COLOR_ST_INVERTED        = "#a0c0ff" # not visited state
+COLOR_TR_FAIL            = "#c00000"
+COLOR_TR_SUGG            = "#f000f0"
+COLOR_TR_EXEC            = "#00c020"
+COLOR_TR_INVERTED        = "#00a0ff" # not exec'd transition
 
+def colors(lsts_obj, testlog_fileobj):
     actionnames = lsts_obj.get_actionnames()
 
     def find_transition(action_name, lsts_obj, current_state):
@@ -120,7 +122,7 @@ def colors(lsts_obj, testlog_fileobj):
     except: pass
     return tr_colors, state_colors
 
-def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None):
+def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert_colors = False):
     outfileobj.write('digraph g {\n')
     outfileobj.write('    node [shape=box]\n')
     l=lsts.reader(infileobj)
@@ -149,35 +151,50 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None):
                 else: state2props[source]=[a]
             else:
                 if tr_colors and (source, action, dest) in tr_colors:
-                    colordata = ' color="%s"' % (tr_colors[(source, action, dest)])
+                    normal_color = tr_colors[(source, action, dest)]
+                    if invert_colors:
+                        if normal_color == COLOR_TR_EXEC:
+                            colordata = ''
+                        else:
+                            colordata = ' color="%s"' % (COLOR_TR_INVERTED,)
+                    else:
+                        colordata = ' color="%s"' % (normal_color,)
+                elif tr_colors and invert_colors:
+                    colordata = ' color="%s"' % (COLOR_TR_INVERTED,)
                 else:
                     colordata = ''
                 outfileobj.write('    S%s -> S%s [label="%s"%s]\n'
                                  % (source,dest,a,colordata))
 
-    states = state2props.keys()
-    states.extend(state_colors.keys())
-    states.sort()
-    for state in states:
+    for state in xrange(l.get_header().state_cnt):
         props = state2props.get(state, [])
         props.sort()
-        if state_colors and state in state_colors:
-            colordata = ' fillcolor="%s" style="filled"' % (state_colors[state],)
-        else:
-            colordata = ''
+        if state_colors:
+            if state in state_colors:
+                normal_color = state_colors[state]
+                if invert_colors and normal_color == COLOR_ST_VISITED:
+                    colordata = ''
+                else:
+                    colordata = ' fillcolor="%s" style="filled"' % (normal_color,)
+            else:
+                if invert_colors:
+                    colordata = ' fillcolor="%s" style="filled"' % (COLOR_ST_INVERTED,)
+                else:
+                    colordata = ''
         outfileobj.write('    S%s [label="%s\\l"%s]\n'
                          % (state,"\\l".join(props),colordata))
     outfileobj.write('}\n')
 
 if __name__=='__main__':
     loops_as_props=False
+    invert_colors=False
     infile = sys.stdin
     outfile = sys.stdout
     logfile = None
 
     opts, remainder = getopt.getopt(
         sys.argv[1:], 'hi:o:l:',
-        ['help', 'input=', 'output=', 'loops-in-states', 'log='])
+        ['help', 'input=', 'invert-colors', 'output=', 'loops-in-states', 'log='])
 
     for opt, arg in opts:
         if opt in ['-h', '--help']:
@@ -195,8 +212,11 @@ if __name__=='__main__':
         elif opt in ['-l', '--log']:
             try: logfile = file(arg, "r")
             except Exception, e: error('cannot read file "%s": %s' % (arg, e))
+        elif opt in ['--invert-colors']:
+            invert_colors = True
+            
 
-    lsts2dot(infile, outfile, loops_as_props, logfile)
+    lsts2dot(infile, outfile, loops_as_props, logfile, invert_colors)
 
     try: outfile.close()
     except: pass
