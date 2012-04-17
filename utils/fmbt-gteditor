@@ -107,17 +107,18 @@ class MainWindow(QtGui.QMainWindow):
         self.preview_modelimage_pixmap.load(imgname)
         self.preview_modelimage.setPixmap(self.preview_modelimage_pixmap)
         self.preview.setCurrentIndex(0)
-        print "visualise model"
+        print "display '%s'" % (imgname,)
 
     def plotDistribution(self):
         if not hasattr(self, "_openedFileName"): self.saveFileAs()
         else: self.saveFile()
         self._doGenerateTest()
         s = self.runcmd("fmbt-stats -f dist:next,sort -p dist.png -o /dev/null delme.log")
-        self.preview_modelimage_pixmap = QtGui.QPixmap()
-        self.preview_modelimage_pixmap.load("dist.png")
-        self.preview_modelimage.setPixmap(self.preview_modelimage_pixmap)
+        self.preview_distimage_pixmap = QtGui.QPixmap()
+        self.preview_distimage_pixmap.load("dist.png")
+        self.preview_distimage.setPixmap(self.preview_distimage_pixmap)
         self.preview.setCurrentIndex(2)
+        print "display 'dist.png'"
 
     def _doGenerateTest(self):
         filename = self._openedFileName
@@ -173,10 +174,10 @@ pass="steps:20"
         self.editor.setFont(font)
         self.editor.installEventFilter(self._eventFilter)
         self.highlighter = Highlighter(self.editor.document())
-        self.layout.addWidget(self.editor)
+        self.layout.addWidget(self.editor, 1)
 
         self.preview = QtGui.QTabWidget()
-        self.layout.addWidget(self.preview)
+        self.layout.addWidget(self.preview, 1)
         
         self.preview_modelarea = QtGui.QScrollArea()
         self.preview_modelimage = QtGui.QLabel()
@@ -186,10 +187,10 @@ pass="steps:20"
         self.preview_test = QtGui.QTextEdit()
         self.preview.addTab(self.preview_test, "Test - F6")
 
-        self.preview_statsarea = QtGui.QScrollArea()
-        self.preview_statsimage = QtGui.QLabel()
+        self.preview_distarea = QtGui.QScrollArea()
+        self.preview_distimage = QtGui.QLabel()
         #self.preview_statsarea.setWidget(self.preview_modelimage)
-        self.preview.addTab(self.preview_statsimage, "Distrib - F7")
+        self.preview.addTab(self.preview_distimage, "Distrib - F7")
     
     def setupFileMenu(self):
         fileMenu = QtGui.QMenu("&File", self)
