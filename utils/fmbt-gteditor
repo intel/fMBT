@@ -84,6 +84,13 @@ class MainWindow(QtGui.QMainWindow):
             self.editor.setPlainText(file(path[0]).read())
             self._openedFileName = path[0]
 
+    def runcmd(self, cmd):
+        print cmd
+        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+        output = p.stdout.read()
+        print output
+        return p.wait()
+
     def visualiseModel(self):
         if not hasattr(self, "_openedFileName"): self.saveFileAs()
         else: self.saveFile()
@@ -92,11 +99,9 @@ class MainWindow(QtGui.QMainWindow):
         try: file("delme.log")
         except: logparam = ""
         else: logparam = "-l delme.log"
-        s,o = commands.getstatusoutput("fmbt-gt -o model.lsts -f '%s' && fmbt-view -f png %s -o '%s' model.lsts" %
-                                       (filename, logparam, imgname))
+        s = self.runcmd("fmbt-gt -o model.lsts -f '%s' && fmbt-view -f png %s -o '%s' model.lsts" % (filename, logparam, imgname))
         if s != 0:
             print "fmbt-view call returned != 0"
-            print o
             return
         self.preview_modelimage_pixmap = QtGui.QPixmap()
         self.preview_modelimage_pixmap.load(imgname)
@@ -108,12 +113,11 @@ class MainWindow(QtGui.QMainWindow):
         if not hasattr(self, "_openedFileName"): self.saveFileAs()
         else: self.saveFile()
         self._doGenerateTest()
-        p = subprocess.Popen("fmbt-stats -f dist:next,sort -p dist.png -o /dev/null delme.log", shell=True)
-        p.wait()
+        s = self.runcmd("fmbt-stats -f dist:next,sort -p dist.png -o /dev/null delme.log")
         self.preview_modelimage_pixmap = QtGui.QPixmap()
         self.preview_modelimage_pixmap.load("dist.png")
         self.preview_modelimage.setPixmap(self.preview_modelimage_pixmap)
-        self.preview.setCurrentIndex(0)
+        self.preview.setCurrentIndex(2)
 
     def _doGenerateTest(self):
         filename = self._openedFileName
@@ -145,26 +149,48 @@ pass="steps:20"
         self.layout = QtGui.QHBoxLayout()
         self.mainwidget.setLayout(self.layout)
 
+        class MyEventFilter(QtCore.QObject):
+            def __init__(self, parent):
+                QtCore.QObject.__init__(self, parent)
+                self.parent = parent
+                self.parent._iterate_index = -1
+            def eventFilter(self, obj, event):
+                if event.type() != QtCore.QEvent.KeyPress: return False
+                if event.key() == QtCore.Qt.Key_Tab:
+                    self.parent._iterate_index += 1
+                    self.parent.completion()
+                    return True
+                else:
+                    self.parent._iterate_index = -1
+                return False
+        self._eventFilter = MyEventFilter(self)
+
         font = QtGui.QFont()
         font.setFamily('Courier')
         font.setFixedPitch(True)
         font.setPointSize(12)
         self.editor = QtGui.QTextEdit()
         self.editor.setFont(font)
+        self.editor.installEventFilter(self._eventFilter)
         self.highlighter = Highlighter(self.editor.document())
         self.layout.addWidget(self.editor)
 
-        self.preview = QtGui.QStackedWidget()
+        self.preview = QtGui.QTabWidget()
         self.layout.addWidget(self.preview)
         
         self.preview_modelarea = QtGui.QScrollArea()
         self.preview_modelimage = QtGui.QLabel()
-        self.preview_modelarea.setWidget(self.preview_modelimage)
-        self.preview.addWidget(self.preview_modelimage)
+        #self.preview_modelarea.setWidget(self.preview_modelimage)
+        self.preview.addTab(self.preview_modelimage, "Model - F5")
         
         self.preview_test = QtGui.QTextEdit()
-        self.preview.addWidget(self.preview_test)
+        self.preview.addTab(self.preview_test, "Test - F6")
 
+        self.preview_statsarea = QtGui.QScrollArea()
+        self.preview_statsimage = QtGui.QLabel()
+        #self.preview_statsarea.setWidget(self.preview_modelimage)
+        self.preview.addTab(self.preview_statsimage, "Distrib - F7")
+    
     def setupFileMenu(self):
         fileMenu = QtGui.QMenu("&File", self)
         self.menuBar().addMenu(fileMenu)
@@ -180,13 +206,14 @@ pass="steps:20"
         commandMenu.addAction("&Visualise model", self.visualiseModel, "F5")
         commandMenu.addAction("&Generate test", self.generateTest, "F6")
         commandMenu.addAction("&Test step distribution", self.plotDistribution, "F7")
+        commandMenu.addAction("Auto&completion", self.completion, "Tab")
 
     def setupHelpMenu(self):
         helpMenu = QtGui.QMenu("&Help", self)
         self.menuBar().addMenu(helpMenu)
         helpMenu.addAction("&About", self.about)
 
-    def keyPressEvent(self, e):
+    def completion(self):
         tr_re = re.compile("([!]?)T\(\s*([^),]+)\s*,\s*([^\"),]+|\"[^\"]*\")\s*,\s*([^),]+)\s*\)")
         sp_re = re.compile("([!]?)P\(\s*([^),]+)\s*,\s*([^)]+)\s*\)")
         def stateActionTagNames(txt):
@@ -205,74 +232,67 @@ pass="steps:20"
             c.clearSelection()
             c.movePosition(QtGui.QTextCursor.StartOfLine, QtGui.QTextCursor.KeepAnchor)
             return c
-        if e.key() == 16777248: # shift
-            self._iterate_index = -1
-        if e.key() == 16777218: # tab - FIX MAGIC NUMBERS
-            self._iterate_index += 1
-            pt = str(self.editor.toPlainText())
-            pos = self.editor.textCursor().position()
-            if self._iterate_index == 0:
-                _, self._anames, self._tnames = stateActionTagNames(pt)
-                self._anames = list(set(self._anames))
-                self._anames.sort()
-                self._tnames = list(set(self._tnames))
-                self._tnames.sort()
-                states_above, _, _ = stateActionTagNames(pt[:pos])
-                states_below, _, _ = stateActionTagNames(pt[pos:])
-                states_above.reverse()
-                states = states_above[:5] + states_below[:7] + states_above[5:] + states_below[7:]
-                unused_states = set(states)
-                uniq_states = [s for s in states
-                               if s in unused_states and unused_states.remove(s) == None]
-                if not uniq_states:
-                    self._iterate_index = -1
-                    return
-                self._statenames = uniq_states
-            curr_line = pt[:pos].split('\n')[-1]
-            if curr_line.strip() == "" or (curr_line.strip().startswith("T") and not ',' in curr_line):
-                # Guess source state for T(X
-                if not self._statenames:
-                    self._iterate_index = -1
-                    return
-                if "T" in curr_line: prefix = curr_line[:curr_line.index('T')]
-                else: prefix = curr_line
-                c = cursorForReplacingFromStartOfLine()
-                c.insertText("%sT(%s" % (prefix, self._statenames[self._iterate_index % len(self._statenames)],))
-            elif curr_line.startswith("T") and curr_line.count(",") == 2 and ")" not in curr_line[curr_line.rindex(",")+1:]:
-                # Guess destination state for T(..., ..., X
-                if not self._statenames:
-                    self._iterate_index = -1
-                    return
-                prefix = curr_line[:curr_line.rindex(",")+1]
-                c = cursorForReplacingFromStartOfLine()
-                c.insertText("%s %s" % (prefix, self._statenames[self._iterate_index % len(self._statenames)],))
-            elif curr_line.startswith("T") and curr_line.count(",") == 1:
-                # Guess action for T(..., X
-                if not self._anames:
-                    self._iterate_index = -1
-                    return
-                prefix = curr_line[:curr_line.rindex(",")+1]
-                c = cursorForReplacingFromStartOfLine()
-                c.insertText("%s %s" % (prefix, self._anames[self._iterate_index % len(self._anames)],))
-            elif (curr_line.startswith("P") and not ',' in curr_line):
-                # Guess state for P(X
-                if not self._statenames:
-                    self._iterate_index = -1
-                    return
-                c = cursorForReplacingFromStartOfLine()
-                c.insertText("P(%s" % (self._statenames[self._iterate_index % len(self._statenames)],))
-            elif (curr_line.startswith("P") and curr_line.count(',') == 1 and not ")" in curr_line):
-                # Guess tag for P(..., X
-                if not self._tnames:
-                    self._iterate_index = -1
-                    return
-                prefix = curr_line[:curr_line.rindex(",")+1]
-                c = cursorForReplacingFromStartOfLine()
-                c.insertText("%s %s" % (prefix, self._tnames[self._iterate_index % len(self._tnames)]))
 
-    def keyReleaseEvent(self, e):
-        if e.key() == 16777248:
-            self._iterate_index = -1
+        pt = str(self.editor.toPlainText())
+        pos = self.editor.textCursor().position()
+        if self._iterate_index == 0:
+            _, self._anames, self._tnames = stateActionTagNames(pt)
+            self._anames = list(set(self._anames))
+            self._anames.sort()
+            self._tnames = list(set(self._tnames))
+            self._tnames.sort()
+            states_above, _, _ = stateActionTagNames(pt[:pos])
+            states_below, _, _ = stateActionTagNames(pt[pos:])
+            states_above.reverse()
+            states = states_above[:5] + states_below[:7] + states_above[5:] + states_below[7:]
+            unused_states = set(states)
+            uniq_states = [s for s in states
+                           if s in unused_states and unused_states.remove(s) == None]
+            if not uniq_states:
+                self._iterate_index = -1
+                return
+            self._statenames = uniq_states
+        curr_line = pt[:pos].split('\n')[-1]
+        if curr_line.strip() == "" or (curr_line.strip().startswith("T") and not ',' in curr_line):
+            # Guess source state for T(X
+            if not self._statenames:
+                self._iterate_index = -1
+                return
+            if "T" in curr_line: prefix = curr_line[:curr_line.index('T')]
+            else: prefix = curr_line
+            c = cursorForReplacingFromStartOfLine()
+            c.insertText("%sT(%s" % (prefix, self._statenames[self._iterate_index % len(self._statenames)],))
+        elif curr_line.startswith("T") and curr_line.count(",") == 2 and ")" not in curr_line[curr_line.rindex(",")+1:]:
+            # Guess destination state for T(..., ..., X
+            if not self._statenames:
+                self._iterate_index = -1
+                return
+            prefix = curr_line[:curr_line.rindex(",")+1]
+            c = cursorForReplacingFromStartOfLine()
+            c.insertText("%s %s" % (prefix, self._statenames[self._iterate_index % len(self._statenames)],))
+        elif curr_line.startswith("T") and curr_line.count(",") == 1:
+            # Guess action for T(..., X
+            if not self._anames:
+                self._iterate_index = -1
+                return
+            prefix = curr_line[:curr_line.rindex(",")+1]
+            c = cursorForReplacingFromStartOfLine()
+            c.insertText("%s %s" % (prefix, self._anames[self._iterate_index % len(self._anames)],))
+        elif (curr_line.startswith("P") and not ',' in curr_line):
+            # Guess state for P(X
+            if not self._statenames:
+                self._iterate_index = -1
+                return
+            c = cursorForReplacingFromStartOfLine()
+            c.insertText("P(%s" % (self._statenames[self._iterate_index % len(self._statenames)],))
+        elif (curr_line.startswith("P") and curr_line.count(',') == 1 and not ")" in curr_line):
+            # Guess tag for P(..., X
+            if not self._tnames:
+                self._iterate_index = -1
+                return
+            prefix = curr_line[:curr_line.rindex(",")+1]
+            c = cursorForReplacingFromStartOfLine()
+            c.insertText("%s %s" % (prefix, self._tnames[self._iterate_index % len(self._tnames)]))
 
 class Highlighter(QtGui.QSyntaxHighlighter):
 
