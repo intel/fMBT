@@ -1165,11 +1165,15 @@ def gt(input_fileobj,output_fileobj,keep_labels,rules):
         if keep_labels == 1:
             actionnames = []
             if inlsts: actionnames = inlsts.get_actionnames()
-            actionnames += [ac[1:-1] for ac in lstsdata.ac]
+            for ac in lstsdata.ac:
+                if not ac[1:-1] in actionnames:
+                    actionnames.append(ac[1:-1])
 
             stateprops = []
             if inlsts: stateprops = inlsts.get_stateprops().keys()
-            stateprops += [pr[1:-1] for pr in lstsdata.pr_hash.keys()]
+            for pr in lstsdata.pr_hash.keys():
+                if not pr[1:-1] in stateprops:
+                    stateprops.append(pr[1:-1])
             outlsts = create_lsts(lstsdata, 
                                 keep_actionnames = actionnames,
                                 keep_propositionnames = stateprops)

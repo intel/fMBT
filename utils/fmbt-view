@@ -17,21 +17,38 @@
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
 if [ "x$1" == "x" ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
-    echo "Usage: $0 modelname.lsts [format]"
+    echo "Usage: $0 [-f format] [-l logfile] [-o outputfile] modelname.lsts"
     echo "Default format is pdf. Other supported formats are:"
     dot -Thelp 2>&1 | sed 's/.*://'
     exit 1
 fi
 
+FORMAT=pdf
+LOGFILE=""
+OUTPUTFILE=""
+DISPLAY_IMAGE=1
+while getopts f:l:o: opt
+do
+    case $opt in
+        f) FORMAT=$OPTARG;;
+        l) LOGFILE="-l $OPTARG";;
+        o) OUTPUTFILE=$OPTARG; DISPLAY_IMAGE=0;;
+    esac
+done
+shift $(expr $OPTIND - 1)
+
 UTILPATH="$(dirname "$0")"
-FORMAT=${2-pdf}
-OUTPUTFILE="/tmp/$(basename "$1").$FORMAT"
+if [ "$OUTPUTFILE" == "" ]; then
+	OUTPUTFILE="/tmp/$(basename "$1").$FORMAT"
+fi
 
-( $UTILPATH/lsts2dot --loops-as-props "$1" - | tee "$OUTPUTFILE.gv" | dot -T$FORMAT -o"$OUTPUTFILE" ) && {
+( eval $UTILPATH/lsts2dot --loops-in-states -i "$1" $LOGFILE | tee "$OUTPUTFILE.gv" | dot -T$FORMAT -o"$OUTPUTFILE" ) && {
 
-    echo "Graphviz source saved to $OUTPUTFILE.gv"
-    echo "Graphviz output saved to $OUTPUTFILE"
-    echo "Displaying..."
-    display "$OUTPUTFILE"
+    if [ "$DISPLAY_IMAGE" == "1" ]; then
+        echo "Graphviz source saved to $OUTPUTFILE.gv"
+        echo "Graphviz output saved to $OUTPUTFILE"
+        echo "Displaying..."
+        display "$OUTPUTFILE"
+    fi
 
 }

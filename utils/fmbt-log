@@ -143,3 +143,9 @@ if __name__ == '__main__':
         input_file_obj = file(remainder[0], "r")
 
     extract(input_file_obj, output_file_obj, output_format, option_raw)
+
+    try: output_file_obj.close()
+    except: pass
+    
+    try: input_file_obj.close()
+    except: pass
