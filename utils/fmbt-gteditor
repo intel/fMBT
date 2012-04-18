@@ -25,19 +25,49 @@ def error(msg, exit_status = 1):
     sys.stderr.write("%s: %s\n" % (sys.argv[0], msg))
     sys.exit(exit_status)
 
-try: from PySide import QtCore, QtGui
+try:
+    from PySide import QtCore, QtGui
+    fallback_to_PyQt4 = False
 except:
-    try: from PyQt4 import QtCore, QtGui
-    except: error("PySide or PyQt4 required.")
+    try:
+        from PyQt4 import QtCore, QtGui
+        fallback_to_PyQt4 = True
+    except:
+        error("PySide or PyQt4 required.")
 
 import subprocess
 import commands
 import re
 
+PREVIEW_MODEL, PREVIEW_TEST, PREVIEW_DIST = range(3)
+
+class MyScaleEvents(QtCore.QObject):
+    def __init__(self, parent, attrowner, min_scale, max_scale):
+        QtCore.QObject.__init__(self, parent)
+        self.min_scale = min_scale
+        self.max_scale = max_scale
+        self.attrowner = attrowner
+    def changeScale(self, coefficient):
+        self.attrowner.wheel_scale *= coefficient
+        if self.attrowner.wheel_scale < self.min_scale: self.attrowner.wheel_scale = self.min_scale
+        elif self.attrowner.wheel_scale > self.max_scale: self.attrowner.wheel_scale = self.max_scale
+        self.attrowner.wheel_scale_changed()
+    def eventFilter(self, obj, event):
+        if event.type() == QtCore.QEvent.KeyPress and event.modifiers() == QtCore.Qt.ControlModifier:
+            if event.key() == QtCore.Qt.Key_Plus:
+                self.changeScale(1.1)
+                return True
+            elif event.key() == QtCore.Qt.Key_Minus:
+                self.changeScale(0.9)
+                return True
+        elif event.type() == QtCore.QEvent.Wheel and event.modifiers() == QtCore.Qt.ControlModifier:
+            coefficient = 1.0 + event.delta() / 1440.0
+            self.changeScale(coefficient)
+        return False
+
 class MainWindow(QtGui.QMainWindow):
 
     def __init__(self, parent=None):
-
         super(MainWindow, self).__init__(parent)
 
         self.setupFileMenu()
@@ -48,6 +78,9 @@ class MainWindow(QtGui.QMainWindow):
 
         self.setCentralWidget(self.mainwidget)
         self.setWindowTitle("fMBT GT editor")
+
+        self._refreshed_gt = ""
+        self._refreshed_conf = ""
 
     def about(self):
         QtGui.QMessageBox.about(self, "fMBT GT editor",
@@ -80,9 +113,11 @@ class MainWindow(QtGui.QMainWindow):
         if not path:
             path = QtGui.QFileDialog.getOpenFileName(self, "Open File",
                     '', "fMBT GT files (*.gt)")
+            print path
+            if not fallback_to_PyQt4 and path: path = path[0]
         if path:
-            self.editor.setPlainText(file(path[0]).read())
-            self._openedFileName = path[0]
+            self.editor.setPlainText(file(path).read())
+            self._openedFileName = path
 
     def runcmd(self, cmd):
         print cmd
@@ -103,10 +138,14 @@ class MainWindow(QtGui.QMainWindow):
         if s != 0:
             print "fmbt-view call returned != 0"
             return
+        self.preview_modelimage = self.preview_modelarea.takeWidget()
         self.preview_modelimage_pixmap = QtGui.QPixmap()
         self.preview_modelimage_pixmap.load(imgname)
         self.preview_modelimage.setPixmap(self.preview_modelimage_pixmap)
-        self.preview.setCurrentIndex(0)
+        self.preview_modelarea.setWidget(self.preview_modelimage)
+
+        self.preview_modelarea.wheel_scale_changed()
+        self.preview.setCurrentIndex(PREVIEW_MODEL)
         print "display '%s'" % (imgname,)
 
     def plotDistribution(self):
@@ -117,7 +156,10 @@ class MainWindow(QtGui.QMainWindow):
         self.preview_distimage_pixmap = QtGui.QPixmap()
         self.preview_distimage_pixmap.load("dist.png")
         self.preview_distimage.setPixmap(self.preview_distimage_pixmap)
-        self.preview.setCurrentIndex(2)
+        self.preview_distcont.area.setWidget(self.preview_distimage)
+        self.preview_distcont.area.wheel_scale_changed()
+
+        self.preview.setCurrentIndex(PREVIEW_DIST)
         print "display 'dist.png'"
 
     def _doGenerateTest(self):
@@ -127,6 +169,9 @@ model="lsts_remote:fmbt-gt -f '%s'"
 heuristic="lookahead:4"
 coverage="perm:2"
 pass="steps:20"
+on_pass="exit:0"
+on_fail="exit:1"
+on_inconc="exit:2"
 """ % (filename,))
         cmd = "fmbt -l delme.log delme.conf"
         p = subprocess.Popen(cmd, shell=True)
@@ -143,13 +188,9 @@ pass="steps:20"
         p = subprocess.Popen("fmbt-log -f '$sn\t$ax' delme.log", shell=True, stdout=subprocess.PIPE)
         o = p.stdout.read()
         self.preview_test.setPlainText(o)
-        self.preview.setCurrentWidget(self.preview_test)
+        self.preview.setCurrentIndex(PREVIEW_TEST)
 
     def setupEditor(self):
-        self.mainwidget = QtGui.QWidget()
-        self.layout = QtGui.QHBoxLayout()
-        self.mainwidget.setLayout(self.layout)
-
         class MyEventFilter(QtCore.QObject):
             def __init__(self, parent):
                 QtCore.QObject.__init__(self, parent)
@@ -166,31 +207,72 @@ pass="steps:20"
                 return False
         self._eventFilter = MyEventFilter(self)
 
-        font = QtGui.QFont()
-        font.setFamily('Courier')
-        font.setFixedPitch(True)
-        font.setPointSize(12)
+        self.mainwidget = QtGui.QWidget()
+        self.layout = QtGui.QHBoxLayout()
+        self.mainwidget.setLayout(self.layout)
+        self.editor_font = QtGui.QFont()
+        self.editor_font.setFamily('Courier')
+        self.editor_font.setFixedPitch(True)
+        self.editor_font.setPointSize(12)
         self.editor = QtGui.QTextEdit()
-        self.editor.setFont(font)
+        self.editor.setFont(self.editor_font)
         self.editor.installEventFilter(self._eventFilter)
+        self.editor_scaleevents = MyScaleEvents(self.editor, self.editor, 0.1, 2.0)
+        self.editor.wheel_scale = 1.0
+        self.editor.wheel_scale_changed = lambda: (self.editor_font.setPointSize(self.editor.wheel_scale * 12.0), self.editor.setFont(self.editor_font))
+        self.editor.installEventFilter(self.editor_scaleevents)
+
         self.highlighter = Highlighter(self.editor.document())
         self.layout.addWidget(self.editor, 1)
 
         self.preview = QtGui.QTabWidget()
         self.layout.addWidget(self.preview, 1)
-        
-        self.preview_modelarea = QtGui.QScrollArea()
-        self.preview_modelimage = QtGui.QLabel()
-        #self.preview_modelarea.setWidget(self.preview_modelimage)
-        self.preview.addTab(self.preview_modelimage, "Model - F5")
+
+        scaling_layouts = []
+        def makeScalableImage(parent, image):
+            container = QtGui.QWidget(parent)
+            layout = QtGui.QHBoxLayout()
+            container.setLayout(layout)
+
+            image.setSizePolicy(QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.Ignored)
+            image.setScaledContents(True)
+            image.resize(QtCore.QSize(0,0))
+
+            area = QtGui.QScrollArea(container)
+            area.setWidget(image)
+            area.scale_event_filter = MyScaleEvents(area, area, 0.1, 1.0)
+            area.wheel_scale = 1.0
+            area.wheel_scale_changed = lambda: image.resize(area.wheel_scale * image.pixmap().size())
+            area.installEventFilter(area.scale_event_filter)
+            layout.addWidget(area)
+            container.area = area # protect from garbage collector
+            container.Xlayout = layout # protect from garbage collector
+            return container
+            
+        self.preview_modelcont = QtGui.QWidget(self.preview) # container for model
+        self.preview_modelcont_layout = QtGui.QHBoxLayout()
+        self.preview_modelcont.setLayout(self.preview_modelcont_layout)
+        self.preview_modelarea = QtGui.QScrollArea(self.preview_modelcont)
+        self.preview_modelcont_layout.addWidget(self.preview_modelarea)
+        self.preview_modelimage = QtGui.QLabel(self.preview_modelarea)
+        self.preview_modelimage.setSizePolicy(QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.Ignored)
+        self.preview_modelimage.setScaledContents(True)
+        self.preview_modelimage.resize(QtCore.QSize(0,0))
+
+        self.preview_modelarea.setWidget(self.preview_modelimage)
+        self.preview_modelarea.wheel_scale = 1.0
+        self.preview_model_eventfilter = MyScaleEvents(self.preview_modelarea, self.preview_modelarea, 0.1, 1.0)
+        self.preview_modelarea.wheel_scale_changed = lambda: self.preview_modelimage.resize( self.preview_modelarea.wheel_scale * self.preview_modelimage_pixmap.size())
+        self.preview_modelarea.installEventFilter(self.preview_model_eventfilter)
+        self.preview.addTab(self.preview_modelcont, "Model - F5")
         
         self.preview_test = QtGui.QTextEdit()
         self.preview.addTab(self.preview_test, "Test - F6")
 
-        self.preview_distarea = QtGui.QScrollArea()
-        self.preview_distimage = QtGui.QLabel()
-        #self.preview_statsarea.setWidget(self.preview_modelimage)
-        self.preview.addTab(self.preview_distimage, "Distrib - F7")
+        self.preview_distimage = QtGui.QLabel(self.preview)
+        self.preview_distcont = makeScalableImage(self.preview, self.preview_distimage)
+
+        self.preview.addTab(self.preview_distcont, "Distrib - F7")
     
     def setupFileMenu(self):
         fileMenu = QtGui.QMenu("&File", self)
@@ -295,6 +377,15 @@ pass="steps:20"
             c = cursorForReplacingFromStartOfLine()
             c.insertText("%s %s" % (prefix, self._tnames[self._iterate_index % len(self._tnames)]))
 
+    def refreshImages(self):
+        if self.preview.currentIndex() == PREVIEW_MODEL:
+            if self._refreshed_gt != self.editor.toPlainText():
+                
+                self._doGenerateTest()
+                self.visualiseModel()
+                self._refreshed_gt = self.editor.toPlainText()
+        
+
 class Highlighter(QtGui.QSyntaxHighlighter):
 
     def __init__(self, parent=None):
@@ -342,7 +433,12 @@ if __name__ == '__main__':
     window = MainWindow()
     window.resize(640, 512)
     if len(sys.argv) > 1:
-        window.openFile([sys.argv[1]])
+        window.openFile(sys.argv[1])
         
     window.show()
+
+    timer = QtCore.QTimer()
+    timer.connect(timer, QtCore.SIGNAL("timeout()"), window.refreshImages)
+    timer.start(1000)
+
     sys.exit(app.exec_())
