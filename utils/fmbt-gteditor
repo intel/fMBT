@@ -306,7 +306,7 @@ on_inconc="exit:2"
         self.preview_modelcont = makeScalableImage(self.preview, self.preview_modelimage)
         self.preview.addTab(self.preview_modelcont, "Model - F5")
         
-        self.preview_test = QtGui.QTextEdit()
+        self.preview_test = makeScalableEditor(self.preview, self.editor_font)
         self.preview.addTab(self.preview_test, "Test - F6")
 
         self.preview_distimage = QtGui.QLabel(self.preview)
