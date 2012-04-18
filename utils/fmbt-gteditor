@@ -39,7 +39,7 @@ import subprocess
 import commands
 import re
 
-PREVIEW_MODEL, PREVIEW_TEST, PREVIEW_DIST = range(3)
+PREVIEW_MODEL, PREVIEW_TEST, PREVIEW_DIST, PREVIEW_COV = range(4)
 EDIT_GT, EDIT_CONF = range(2)
 
 class MyScaleEvents(QtCore.QObject):
@@ -72,6 +72,7 @@ class MainWindow(QtGui.QMainWindow):
         super(MainWindow, self).__init__(parent)
 
         self.setupFileMenu()
+        self.setupViewMenu()
         self.setupCommandsMenu()
         self.setupHelpMenu()
 
@@ -167,6 +168,7 @@ class MainWindow(QtGui.QMainWindow):
         self.preview_modelcont.area.wheel_scale_changed()
         if change_tab:
             self.preview.setCurrentIndex(PREVIEW_MODEL)
+            self.preview_modelimage.setFocus()
             print "display '%s'" % (imgname,)
 
     def plotDistribution(self, change_tab = True):
@@ -182,7 +184,24 @@ class MainWindow(QtGui.QMainWindow):
         self.preview_distcont.area.wheel_scale_changed()
         if change_tab:
             self.preview.setCurrentIndex(PREVIEW_DIST)
+            self.preview_distimage.setFocus()
             print "display '%s'" % (self._distFileName,)
+
+    def plotCoverage(self, change_tab = True):
+        self.autoSave()
+        self._doGenerateTest()
+        self._covFileName = self._gtFileName + ".gted.cov.png"
+        s = self.runcmd("fmbt-stats -f cov:steps -p '%s' -o /dev/null '%s'" %
+                        (self._covFileName, self._logFileName))
+        self.preview_covimage_pixmap = QtGui.QPixmap()
+        self.preview_covimage_pixmap.load(self._covFileName)
+        self.preview_covimage.setPixmap(self.preview_covimage_pixmap)
+        self.preview_covcont.area.setWidget(self.preview_covimage)
+        self.preview_covcont.area.wheel_scale_changed()
+        if change_tab:
+            self.preview.setCurrentIndex(PREVIEW_COV)
+            self.preview_covimage.setFocus()
+            print "display '%s'" % (self._covFileName,)
 
     def _doGenerateConf(self):
         filename = self._gtFileName
@@ -219,15 +238,18 @@ on_inconc="exit:2"
         self.preview_test.setPlainText(o)
         if change_tab:
             self.preview.setCurrentIndex(PREVIEW_TEST)
+            self.preview_test.setFocus()
 
     def editGT(self):
         self.edit.setCurrentIndex(EDIT_GT)
+        self.editor.setFocus()
 
     def editConf(self):
         if str(self.conf_editor.toPlainText()).strip() == "":
             self._doGenerateConf()
             self.conf_editor.setPlainText(file(self._confFileName).read())
         self.edit.setCurrentIndex(EDIT_CONF)
+        self.conf_editor.setFocus()
 
     def setupEditor(self):
         class MyEventFilter(QtCore.QObject):
@@ -275,7 +297,8 @@ on_inconc="exit:2"
         self.conf_editor = makeScalableEditor(self.edit, self.editor_font)
         self.edit.addTab(self.conf_editor, "Configuration - F2")
 
-        self.highlighter = Highlighter(self.editor.document())
+        self.gthighlighter = GTHighlighter(self.editor.document())
+        self.confhighlighter = ConfHighlighter(self.conf_editor.document())
         self.layout.addWidget(self.edit, 1)
 
         # Setup preview tabs
@@ -298,8 +321,8 @@ on_inconc="exit:2"
             area.wheel_scale_changed = lambda: image.resize(area.wheel_scale * image.pixmap().size())
             area.installEventFilter(area.scale_event_filter)
             layout.addWidget(area)
-            container.area = area # protect from garbage collector
-            container.Xlayout = layout # protect from garbage collector
+            container.area = area
+            container._layout = layout # protect from garbage collector
             return container
             
         self.preview_modelimage = QtGui.QLabel(self.preview)
@@ -312,6 +335,10 @@ on_inconc="exit:2"
         self.preview_distimage = QtGui.QLabel(self.preview)
         self.preview_distcont = makeScalableImage(self.preview, self.preview_distimage)
         self.preview.addTab(self.preview_distcont, "Distrib - F7")
+
+        self.preview_covimage = QtGui.QLabel(self.preview)
+        self.preview_covcont = makeScalableImage(self.preview, self.preview_covimage)
+        self.preview.addTab(self.preview_covcont, "Coverage - F8")
     
     def setupFileMenu(self):
         fileMenu = QtGui.QMenu("&File", self)
@@ -322,20 +349,33 @@ on_inconc="exit:2"
         fileMenu.addAction("Save &As...", self.saveFileAs)
         fileMenu.addAction("E&xit", QtGui.qApp.quit, "Ctrl+Q")
 
+    def setupViewMenu(self):
+        viewMenu = QtGui.QMenu("&View", self)
+        self.menuBar().addMenu(viewMenu)
+        viewMenu.addAction("Grow &left tabs", lambda: self.growTabs(0), "Shift+F8")
+        viewMenu.addAction("Grow &right tabs", lambda: self.growTabs(1), "Shift+F1")
+
     def setupCommandsMenu(self):
         commandMenu = QtGui.QMenu("&Commands", self)
         self.menuBar().addMenu(commandMenu)
-        commandMenu.addAction("&Edit GT", self.editGT, "F1")
-        commandMenu.addAction("Edit Configuration", self.editConf, "F2")
+        commandMenu.addAction("Edit &GT", self.editGT, "F1")
+        commandMenu.addAction("Edit &Configuration", self.editConf, "F2")
         commandMenu.addAction("&Visualise model", self.visualiseModel, "F5")
         commandMenu.addAction("&Generate test", self.generateTest, "F6")
         commandMenu.addAction("&Test step distribution", self.plotDistribution, "F7")
-        commandMenu.addAction("Auto&completion", self.completion, "Tab")
+        commandMenu.addAction("C&overage", self.plotCoverage, "F8")
 
     def setupHelpMenu(self):
         helpMenu = QtGui.QMenu("&Help", self)
         self.menuBar().addMenu(helpMenu)
         helpMenu.addAction("&About", self.about)
+
+    def growTabs(self, grow):
+        layout = self.mainwidget.layout()
+        if layout.stretch(1-grow) > 1:
+            layout.setStretch(1-grow, layout.stretch(1-grow)/2)
+        elif layout.stretch(grow) < 8:
+            layout.setStretch(grow, layout.stretch(grow) * 2)
 
     def completion(self):
         tr_re = re.compile("([!]?)T\(\s*([^),]+)\s*,\s*([^\"),]+|\"[^\"]*\")\s*,\s*([^),]+)\s*\)")
@@ -426,11 +466,12 @@ on_inconc="exit:2"
                 self.generateTest(change_tab = False)
             elif self.preview.currentIndex() == PREVIEW_DIST:
                 self.plotDistribution(change_tab = False)
+            elif self.preview.currentIndex() == PREVIEW_COV:
+                self.plotCoverage(change_tab = False)
 
-class Highlighter(QtGui.QSyntaxHighlighter):
-
+class GTHighlighter(QtGui.QSyntaxHighlighter):
     def __init__(self, parent=None):
-        super(Highlighter, self).__init__(parent)
+        super(GTHighlighter, self).__init__(parent)
         keywordFormat = QtGui.QTextCharFormat()
         keywordFormat.setForeground(QtCore.Qt.darkBlue)
         keywordFormat.setFontWeight(QtGui.QFont.Bold)
@@ -453,10 +494,48 @@ class Highlighter(QtGui.QSyntaxHighlighter):
         usualErrorsFormat.setForeground(QtCore.Qt.red)
         self.highlightingRules.append((QtCore.QRegExp("[TP]\(\""),
                 usualErrorsFormat))
-        
 
     def highlightBlock(self, text):
+        for pattern, format in self.highlightingRules:
+            expression = QtCore.QRegExp(pattern)
+            index = expression.indexIn(text)
 
+            while index >= 0:
+                length = expression.matchedLength()
+                self.setFormat(index, length, format)
+                index = expression.indexIn(text, index + length)
+
+        self.setCurrentBlockState(0)
+
+class ConfHighlighter(QtGui.QSyntaxHighlighter):
+    def __init__(self, parent=None):
+        super(ConfHighlighter, self).__init__(parent)
+        keywordFormat = QtGui.QTextCharFormat()
+        keywordFormat.setForeground(QtCore.Qt.darkBlue)
+        keywordFormat.setFontWeight(QtGui.QFont.Bold)
+
+        keywordPatterns = ["^model\\b", "^adapter\\b", "^heuristic\\b", "^coverage\\b",
+                           "^pass\\b", "^fail\\b", "^inconc\\b",
+                           "^on_pass\\b", "^on_fail\\b", "^on_inconc\\b"]
+        self.highlightingRules = [(QtCore.QRegExp(pattern), keywordFormat)
+                for pattern in keywordPatterns]
+
+        singleLineCommentFormat = QtGui.QTextCharFormat()
+        singleLineCommentFormat.setForeground(QtCore.Qt.red)
+        self.highlightingRules.append((QtCore.QRegExp("^#[^\n]*"),
+                singleLineCommentFormat))
+
+        quotationFormat = QtGui.QTextCharFormat()
+        quotationFormat.setForeground(QtCore.Qt.darkGreen)
+        self.highlightingRules.append((QtCore.QRegExp("\".*\""),
+                quotationFormat))
+
+        usualErrorsFormat = QtGui.QTextCharFormat()
+        usualErrorsFormat.setForeground(QtCore.Qt.red)
+        self.highlightingRules.append((QtCore.QRegExp("^[^\"]*\"[^\"]*$"),
+                usualErrorsFormat))
+
+    def highlightBlock(self, text):
         for pattern, format in self.highlightingRules:
             expression = QtCore.QRegExp(pattern)
             index = expression.indexIn(text)
