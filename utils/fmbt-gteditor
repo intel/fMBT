@@ -138,13 +138,11 @@ class MainWindow(QtGui.QMainWindow):
         if s != 0:
             print "fmbt-view call returned != 0"
             return
-        self.preview_modelimage = self.preview_modelarea.takeWidget()
         self.preview_modelimage_pixmap = QtGui.QPixmap()
         self.preview_modelimage_pixmap.load(imgname)
         self.preview_modelimage.setPixmap(self.preview_modelimage_pixmap)
-        self.preview_modelarea.setWidget(self.preview_modelimage)
-
-        self.preview_modelarea.wheel_scale_changed()
+        self.preview_modelcont.area.setWidget(self.preview_modelimage)
+        self.preview_modelcont.area.wheel_scale_changed()
         self.preview.setCurrentIndex(PREVIEW_MODEL)
         print "display '%s'" % (imgname,)
 
@@ -249,21 +247,8 @@ on_inconc="exit:2"
             container.Xlayout = layout # protect from garbage collector
             return container
             
-        self.preview_modelcont = QtGui.QWidget(self.preview) # container for model
-        self.preview_modelcont_layout = QtGui.QHBoxLayout()
-        self.preview_modelcont.setLayout(self.preview_modelcont_layout)
-        self.preview_modelarea = QtGui.QScrollArea(self.preview_modelcont)
-        self.preview_modelcont_layout.addWidget(self.preview_modelarea)
-        self.preview_modelimage = QtGui.QLabel(self.preview_modelarea)
-        self.preview_modelimage.setSizePolicy(QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.Ignored)
-        self.preview_modelimage.setScaledContents(True)
-        self.preview_modelimage.resize(QtCore.QSize(0,0))
-
-        self.preview_modelarea.setWidget(self.preview_modelimage)
-        self.preview_modelarea.wheel_scale = 1.0
-        self.preview_model_eventfilter = MyScaleEvents(self.preview_modelarea, self.preview_modelarea, 0.1, 1.0)
-        self.preview_modelarea.wheel_scale_changed = lambda: self.preview_modelimage.resize( self.preview_modelarea.wheel_scale * self.preview_modelimage_pixmap.size())
-        self.preview_modelarea.installEventFilter(self.preview_model_eventfilter)
+        self.preview_modelimage = QtGui.QLabel(self.preview)
+        self.preview_modelcont = makeScalableImage(self.preview, self.preview_modelimage)
         self.preview.addTab(self.preview_modelcont, "Model - F5")
         
         self.preview_test = QtGui.QTextEdit()
@@ -271,7 +256,6 @@ on_inconc="exit:2"
 
         self.preview_distimage = QtGui.QLabel(self.preview)
         self.preview_distcont = makeScalableImage(self.preview, self.preview_distimage)
-
         self.preview.addTab(self.preview_distcont, "Distrib - F7")
     
     def setupFileMenu(self):
