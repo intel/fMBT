@@ -40,6 +40,7 @@ import commands
 import re
 
 PREVIEW_MODEL, PREVIEW_TEST, PREVIEW_DIST = range(3)
+EDIT_GT, EDIT_CONF = range(2)
 
 class MyScaleEvents(QtCore.QObject):
     def __init__(self, parent, attrowner, min_scale, max_scale):
@@ -82,6 +83,10 @@ class MainWindow(QtGui.QMainWindow):
         self._refreshed_gt = ""
         self._refreshed_conf = ""
 
+        self._gtFileName = "noname.gt"
+        self._confFileName = "fmbt-gteditor.conf.tmp"
+        self._logFileName = None
+
     def about(self):
         QtGui.QMessageBox.about(self, "fMBT GT editor",
                 "<p>The <b>fMBT GT editor</b> demo<br>0.0 alpha")
@@ -89,35 +94,34 @@ class MainWindow(QtGui.QMainWindow):
     def newFile(self):
         self.editor.setPlainText("P(start, \"gt:istate\")\n->\n")
         self.editor.moveCursor(QtGui.QTextCursor.End)
-        if hasattr(self, '_openedFileName'): delattr(self, '_openedFileName')
+        self._gtFileName = "noname.gt"
 
     def saveFile(self):
-        if hasattr(self, "_openedFileName"):
-            print "saving", self._openedFileName
-            file(self._openedFileName, "w").write(self.editor.toPlainText())
-        else:
-            self.saveFileAs()
+        print "[saving '%s']" % (self._gtFileName,)
+        file(self._gtFileName, "w").write(self.editor.toPlainText())
 
     def saveFileAs(self):
         path = QtGui.QFileDialog.getSaveFileName(self, "Save File",
                                                  '', "fMBT GT files (*.gt)")
-        self._openedFileName = str(path) # PyQt4
-        if "(" in self._openedFileName and "'" in self._openedFileName:
-            self._openedFileName = path[0] # PySide
-        if not self._openedFileName:
-            delattr(self, '_openedFileName')
-            raise Exception("not saved")
+        if fallback_to_PyQt4:
+            self._gtFileName = str(path)
+        else:
+            self._gtFileName = path[0]
+
+        if not self._gtFileName:
+            self._gtFileName = "noname.gt"
         self.saveFile()
 
     def openFile(self, path=None):
         if not path:
             path = QtGui.QFileDialog.getOpenFileName(self, "Open File",
                     '', "fMBT GT files (*.gt)")
-            print path
             if not fallback_to_PyQt4 and path: path = path[0]
         if path:
             self.editor.setPlainText(file(path).read())
-            self._openedFileName = path
+            self.conf_editor.setPlainText("")
+            self._doGenerateConf()
+            self._gtFileName = path
 
     def runcmd(self, cmd):
         print cmd
@@ -126,15 +130,33 @@ class MainWindow(QtGui.QMainWindow):
         print output
         return p.wait()
 
-    def visualiseModel(self):
-        if not hasattr(self, "_openedFileName"): self.saveFileAs()
-        else: self.saveFile()
-        filename = self._openedFileName
+    def autoSave(self):
+        saved = 0
+        gt_contents = self.editor.toPlainText()
+        if self._refreshed_gt != gt_contents:
+            file(self._gtFileName, "w").write(gt_contents)
+            self._refreshed_gt = gt_contents
+            saved += 1
+        conf_contents = str(self.conf_editor.toPlainText()).strip()
+        if self._refreshed_conf != conf_contents:
+            if conf_contents == "":
+                self._doGenerateConf()
+            else:
+                file(self._confFileName, "w").write(conf_contents)
+            self._refreshed_conf = conf_contents
+            saved += 2
+        return saved
+
+    def visualiseModel(self, change_tab = True):
+        self.autoSave()
+        self._doGenerateTest()
+        filename = self._gtFileName
         imgname = filename + ".png"
-        try: file("delme.log")
+        self._lstsFileName = self._gtFileName + ".gted.lsts.tmp"
+        try: file(self._logFileName)
         except: logparam = ""
-        else: logparam = "-l delme.log"
-        s = self.runcmd("fmbt-gt -o model.lsts -f '%s' && fmbt-view -f png %s -o '%s' model.lsts" % (filename, logparam, imgname))
+        else: logparam = "-l '%s'" % (self._logFileName)
+        s = self.runcmd("fmbt-gt -o '%s' -f '%s' && fmbt-view -f png %s -o '%s' '%s'" % (self._lstsFileName, filename, logparam, imgname, self._lstsFileName))
         if s != 0:
             print "fmbt-view call returned != 0"
             return
@@ -143,26 +165,34 @@ class MainWindow(QtGui.QMainWindow):
         self.preview_modelimage.setPixmap(self.preview_modelimage_pixmap)
         self.preview_modelcont.area.setWidget(self.preview_modelimage)
         self.preview_modelcont.area.wheel_scale_changed()
-        self.preview.setCurrentIndex(PREVIEW_MODEL)
-        print "display '%s'" % (imgname,)
+        if change_tab:
+            self.preview.setCurrentIndex(PREVIEW_MODEL)
+            print "display '%s'" % (imgname,)
 
-    def plotDistribution(self):
-        if not hasattr(self, "_openedFileName"): self.saveFileAs()
-        else: self.saveFile()
+    def plotDistribution(self, change_tab = True):
+        self.autoSave()
         self._doGenerateTest()
-        s = self.runcmd("fmbt-stats -f dist:next,sort -p dist.png -o /dev/null delme.log")
+        self._distFileName = self._gtFileName + ".gted.dist.png"
+        s = self.runcmd("fmbt-stats -f dist:next,sort -p '%s' -o /dev/null '%s'" %
+                        (self._distFileName, self._logFileName))
         self.preview_distimage_pixmap = QtGui.QPixmap()
-        self.preview_distimage_pixmap.load("dist.png")
+        self.preview_distimage_pixmap.load(self._distFileName)
         self.preview_distimage.setPixmap(self.preview_distimage_pixmap)
         self.preview_distcont.area.setWidget(self.preview_distimage)
         self.preview_distcont.area.wheel_scale_changed()
+        if change_tab:
+            self.preview.setCurrentIndex(PREVIEW_DIST)
+            print "display '%s'" % (self._distFileName,)
 
-        self.preview.setCurrentIndex(PREVIEW_DIST)
-        print "display 'dist.png'"
-
-    def _doGenerateTest(self):
-        filename = self._openedFileName
-        file("delme.conf", "w").write("""
+    def _doGenerateConf(self):
+        filename = self._gtFileName
+        self._confFileName = self._gtFileName + ".gted.conf.tmp"
+        regenerate = False
+        try:
+            if file(self._confFileName).read().strip() == "": regenerate=True
+        except: regenerate=True
+        if regenerate:
+            file(self._confFileName, "w").write("""
 model="lsts_remote:fmbt-gt -f '%s'"
 heuristic="lookahead:4"
 coverage="perm:2"
@@ -170,23 +200,34 @@ pass="steps:20"
 on_pass="exit:0"
 on_fail="exit:1"
 on_inconc="exit:2"
-""" % (filename,))
-        cmd = "fmbt -l delme.log delme.conf"
-        p = subprocess.Popen(cmd, shell=True)
-        return p.wait()
+""" % (self._gtFileName,))
+            self.conf_editor.setPlainText(file(self._confFileName).read())
 
-    def generateTest(self):
-        if not hasattr(self, "_openedFileName"): self.saveFileAs()
-        else: self.saveFile()
-        if not hasattr(self, "_openedFileName"):
-            print "this gt file has no name"
-            return
-        filename = self._openedFileName
+    def _doGenerateTest(self):
+        self._doGenerateConf()
+        self._logFileName = self._gtFileName + ".gted.log.tmp"
+        cmd = "fmbt -l '%s' '%s'" % (self._logFileName, self._confFileName)
+        return self.runcmd(cmd)
+
+    def generateTest(self, change_tab = True):
+        self.autoSave()
+        filename = self._gtFileName
         self._doGenerateTest()
-        p = subprocess.Popen("fmbt-log -f '$sn\t$ax' delme.log", shell=True, stdout=subprocess.PIPE)
+        p = subprocess.Popen("fmbt-log -f '$sn$tv\t$ax$tr' '%s'"
+                             % (self._logFileName,), shell=True, stdout=subprocess.PIPE)
         o = p.stdout.read()
         self.preview_test.setPlainText(o)
-        self.preview.setCurrentIndex(PREVIEW_TEST)
+        if change_tab:
+            self.preview.setCurrentIndex(PREVIEW_TEST)
+
+    def editGT(self):
+        self.edit.setCurrentIndex(EDIT_GT)
+
+    def editConf(self):
+        if str(self.conf_editor.toPlainText()).strip() == "":
+            self._doGenerateConf()
+            self.conf_editor.setPlainText(file(self._confFileName).read())
+        self.edit.setCurrentIndex(EDIT_CONF)
 
     def setupEditor(self):
         class MyEventFilter(QtCore.QObject):
@@ -208,25 +249,39 @@ on_inconc="exit:2"
         self.mainwidget = QtGui.QWidget()
         self.layout = QtGui.QHBoxLayout()
         self.mainwidget.setLayout(self.layout)
+
+        # Setup editor tabs
+        self.edit = QtGui.QTabWidget()
+        
+        def makeScalableEditor(parent, font):
+            editor = QtGui.QTextEdit()
+            editor.setFont(font)
+            editor_scaleevents = MyScaleEvents(editor, editor, 0.1, 2.0)
+            editor.wheel_scale = 1.0
+            editor.wheel_scale_changed = lambda: (font.setPointSize(editor.wheel_scale * 12.0), editor.setFont(font))
+            editor.installEventFilter(editor_scaleevents)
+            return editor
+
         self.editor_font = QtGui.QFont()
         self.editor_font.setFamily('Courier')
         self.editor_font.setFixedPitch(True)
         self.editor_font.setPointSize(12)
-        self.editor = QtGui.QTextEdit()
-        self.editor.setFont(self.editor_font)
-        self.editor.installEventFilter(self._eventFilter)
-        self.editor_scaleevents = MyScaleEvents(self.editor, self.editor, 0.1, 2.0)
-        self.editor.wheel_scale = 1.0
-        self.editor.wheel_scale_changed = lambda: (self.editor_font.setPointSize(self.editor.wheel_scale * 12.0), self.editor.setFont(self.editor_font))
-        self.editor.installEventFilter(self.editor_scaleevents)
+
+        self.editor = makeScalableEditor(self.edit, self.editor_font)
+        self.editor_tabevents = MyEventFilter(self)
+        self.editor.installEventFilter(self.editor_tabevents)
+        self.edit.addTab(self.editor, "GT - F1")
+
+        self.conf_editor = makeScalableEditor(self.edit, self.editor_font)
+        self.edit.addTab(self.conf_editor, "Configuration - F2")
 
         self.highlighter = Highlighter(self.editor.document())
-        self.layout.addWidget(self.editor, 1)
+        self.layout.addWidget(self.edit, 1)
 
+        # Setup preview tabs
         self.preview = QtGui.QTabWidget()
         self.layout.addWidget(self.preview, 1)
 
-        scaling_layouts = []
         def makeScalableImage(parent, image):
             container = QtGui.QWidget(parent)
             layout = QtGui.QHBoxLayout()
@@ -270,6 +325,8 @@ on_inconc="exit:2"
     def setupCommandsMenu(self):
         commandMenu = QtGui.QMenu("&Commands", self)
         self.menuBar().addMenu(commandMenu)
+        commandMenu.addAction("&Edit GT", self.editGT, "F1")
+        commandMenu.addAction("Edit Configuration", self.editConf, "F2")
         commandMenu.addAction("&Visualise model", self.visualiseModel, "F5")
         commandMenu.addAction("&Generate test", self.generateTest, "F6")
         commandMenu.addAction("&Test step distribution", self.plotDistribution, "F7")
@@ -362,13 +419,13 @@ on_inconc="exit:2"
             c.insertText("%s %s" % (prefix, self._tnames[self._iterate_index % len(self._tnames)]))
 
     def refreshImages(self):
-        if self.preview.currentIndex() == PREVIEW_MODEL:
-            if self._refreshed_gt != self.editor.toPlainText():
-                
-                self._doGenerateTest()
-                self.visualiseModel()
-                self._refreshed_gt = self.editor.toPlainText()
-        
+        if self.autoSave() != 0:
+            if self.preview.currentIndex() == PREVIEW_MODEL:
+                self.visualiseModel(change_tab = False)
+            elif self.preview.currentIndex() == PREVIEW_TEST:
+                self.generateTest(change_tab = False)
+            elif self.preview.currentIndex() == PREVIEW_DIST:
+                self.plotDistribution(change_tab = False)
 
 class Highlighter(QtGui.QSyntaxHighlighter):
 
