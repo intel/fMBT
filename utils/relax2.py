@@ -50,8 +50,9 @@ class DFA_lsts:
                     self.Trans[i][act].add(dest)                    
     def addprops(self,pr):
         self.acc = set([])
-        for p in pr:
-            self.acc.update(pr[p])
+        if 'acc' in pr:
+            self.acc.update(pr['acc'])
+
     def addSigma(self,Sigma):
         if self.Sigma:
             toadd = set(Sigma)
