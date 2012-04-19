@@ -70,6 +70,9 @@ void Coverage_Mapper::push() {
     if (coverages[i]) {
       coverages[i]->push();
     }
+    if (models[i] && models[i]!=model) {
+      models[i]->push();
+    }
   }
 }
 
@@ -77,6 +80,9 @@ void Coverage_Mapper::pop() {
   for(unsigned i=0;i<coverages.size();i++) {
     if (coverages[i]) {
       coverages[i]->pop();
+    }
+    if (models[i] && models[i]!=model) {
+      models[i]->pop();
     }
   }
 }
@@ -103,7 +109,7 @@ bool Coverage_Mapper::execute(int action)
   std::pair<std::multimap<int,coverage_action>::iterator,
     std::multimap<int,coverage_action>::iterator> p = 
     m.equal_range(action);
-  
+
   for (std::multimap<int,coverage_action>::iterator i = p.first;
        i != p.second;
        ++i) {
@@ -139,6 +145,10 @@ int Coverage_Mapper::fitness(int* actions,int n, float* fitness)
 {
   int ret=0;
 
+  for(int i=0;i<n;i++) {
+    fitness[i]=0;
+  }
+
   for(unsigned i=0;i<models.size();i++) {
     if (models[i]) {
       std::vector<int> cn(models[i]->getActionNames().size());
@@ -153,10 +163,10 @@ int Coverage_Mapper::fitness(int* actions,int n, float* fitness)
 	  m.equal_range(actions[j]);
 	for (std::multimap<int,coverage_action>::iterator it
 	       = p.first;it != p.second;++it) {
-	  if ((unsigned)it->second.first == i) {
+	  if ((unsigned)it->second.first == i) { // current model
 	    cn[c]=it->second.second;
+	    bm[c]=j+1; // to which position we need to add
 	    c++;
-	    bm[c]=j;
 	  }
 	}
       }
@@ -166,15 +176,24 @@ int Coverage_Mapper::fitness(int* actions,int n, float* fitness)
       for(int j=0;j<c;j++) {
 	if (bm[j]>0) {
 	  fitness[bm[j]-1]+=fn[j];
+	  log.debug("<mapper from=\"%i\" to=\"%i\" pos=\"%i\"/>\n",
+		    cn[j],
+		    actions[bm[j]-1],
+		    bm[j]-1
+		    );
 	}
       }
     }
   }
+
   for(int i=0;i<n;i++) {
     if (fitness[i]>fitness[ret]) {
       ret=i;
     }
   }
+
+  log.debug("<mapper pos=\"%i\"/>\n",ret);
+  
   return ret;
 }
 
@@ -183,7 +202,7 @@ void Coverage_Mapper::set_model(Model* _model)
   model=_model;
   pload(load_name);
   if (status) {
-    for(int i=0;i<models.size();i++) {
+    for(unsigned i=0;i<models.size();i++) {
       if (coverages[i]) 
 	coverages[i]->set_model(models[i]);
     }
@@ -252,7 +271,6 @@ bool Coverage_Mapper::pload(std::string& name)
       coverages[i] = a;
     }
   }
-
   return ret;
 }
 
@@ -322,10 +340,11 @@ void Coverage_Mapper::add_map(unsigned int index,std::string& n,int action) {
 
   int an = models[index]->action_number(n);
 
-  if (an < 0) { 
+  if (an < 0) {
     /* No such action.. */
-    errormsg=std::string("(") + to_string(index) + std::string("\"") + n + std::string("\") no such action");
-    status=false;
+    //errormsg=std::string("(") + to_string(index) + std::string("\"") + n + std::string("\") no such action");
+    //printf("No such action %s\n",n.c_str());
+    //status=false;
     log.debug("No such action\n");
     return;
   }
