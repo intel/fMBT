@@ -1,0 +1,8 @@
+P(no_counter, p) ->
+
+T(no_counter,     "iCreate",      counter_exists)
+
+T(counter_exists, "iIncrement",   counter_exists)
+T(counter_exists, "iReset",       counter_exists)
+T(counter_exists, "iCount",       counter_exists)
+T(counter_exists, "iDestroy",     no_counter)
