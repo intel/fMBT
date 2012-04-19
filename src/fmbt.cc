@@ -75,15 +75,20 @@ int main(int argc,char * const argv[])
   bool E=false;
   bool quiet=false;
   int c;
+  std::string config_options;
 
   static struct option long_opts[] = {
     {"help", no_argument, 0, 'h'},
     {0, 0, 0, 0}
   };
 
-  while ((c = getopt_long (argc, argv, "DEL:heil:qC", long_opts, NULL)) != -1)
+  while ((c = getopt_long (argc, argv, "DEL:heil:qCo:", long_opts, NULL)) != -1)
     switch (c)
     {
+    case 'o': {
+      config_options=config_options+optarg+"\n";
+      break;
+    }
     case 'C': {
       /* For debugging. print coverage modules */
       std::map<std::string, CoverageFactory::creator>::iterator i;
@@ -144,7 +149,7 @@ int main(int argc,char * const argv[])
     Log log(logfile);
     Conf c(log,debug_enabled);
     std::string conffilename(argv[optind]);
-    c.load(conffilename);
+    c.load(conffilename,config_options);
 
     if (!c.status)
       error(4, 0, "%s\n", c.stringify().c_str());

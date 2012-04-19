@@ -86,7 +86,11 @@ class Conf:public Writable {
 
   Verdict::Verdict execute(bool interactive=false);
 
-  void load(std::string& name);
+  void load(std::string& name) {
+    std::string content("");
+    load(name,content);
+  }
+  void load(std::string& name,std::string& content);
   
   Log& log;
 

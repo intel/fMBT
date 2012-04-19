@@ -50,7 +50,7 @@ extern Conf* conf_obj;
   return Verdict::ERROR; \
   }
 
-void Conf::load(std::string& name)
+void Conf::load(std::string& name,std::string& content)
 {
   D_Parser *p = new_D_Parser(&parser_tables_conf, 512);
   p->loc.pathname = name.c_str();
@@ -62,10 +62,15 @@ void Conf::load(std::string& name)
   conf_obj=this;
 
   s=readfile(name.c_str());
-  if (s==NULL)
+  std::string ss(s);
+  ss=ss+"\n"+content;
+  if ((name!="" && s==NULL))
     RETURN_ERROR_VOID("Loading \"" + name + "\" failed.");
 
-  bool ret=dparse(p,s,std::strlen(s));
+  if (ss=="")
+    RETURN_ERROR_VOID("Empthy configuration");
+
+  bool ret=dparse(p,(char*)ss.c_str(),std::strlen(ss.c_str()));
 
   ret=p->syntax_errors==0 && ret;
 
@@ -88,6 +93,7 @@ void Conf::load(std::string& name)
   }
 
   Coverage* coverage = CoverageFactory::create(log,coverage_name,coverage_param);
+
   if (coverage == NULL)
     RETURN_ERROR_VOID("Creating coverage \"" + coverage_name + "\" failed.");
 
