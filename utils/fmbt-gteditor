@@ -38,6 +38,7 @@ except:
 import subprocess
 import commands
 import re
+import os
 
 PREVIEW_MODEL, PREVIEW_TEST, PREVIEW_DIST, PREVIEW_COV = range(4)
 EDIT_GT, EDIT_CONF = range(2)
@@ -88,14 +89,21 @@ class MainWindow(QtGui.QMainWindow):
         self._confFileName = "fmbt-gteditor.conf.tmp"
         self._logFileName = None
 
+        self._model_ok = False
+        self._test_ok = False
+
     def about(self):
         QtGui.QMessageBox.about(self, "fMBT GT editor",
                 "<p>The <b>fMBT GT editor</b> demo<br>0.0 alpha")
 
-    def newFile(self):
+    def newFile(self, path=None):
         self.editor.setPlainText("P(start, \"gt:istate\")\n->\n")
         self.editor.moveCursor(QtGui.QTextCursor.End)
-        self._gtFileName = "noname.gt"
+        self.editor.setFocus()
+        if not path:
+            self._gtFileName = "noname.gt"
+        else:
+            self._gtFileName = path
 
     def saveFile(self):
         print "[saving '%s']" % (self._gtFileName,)
@@ -103,11 +111,11 @@ class MainWindow(QtGui.QMainWindow):
 
     def saveFileAs(self):
         path = QtGui.QFileDialog.getSaveFileName(self, "Save File",
-                                                 '', "fMBT GT files (*.gt)")
+                                                 '', "fMBT GT commands (*.gt);;State machines (*.lsts)")
         if fallback_to_PyQt4:
             self._gtFileName = str(path)
         else:
-            self._gtFileName = path[0]
+            self._gtFileName = str(path[0])
 
         if not self._gtFileName:
             self._gtFileName = "noname.gt"
@@ -116,13 +124,14 @@ class MainWindow(QtGui.QMainWindow):
     def openFile(self, path=None):
         if not path:
             path = QtGui.QFileDialog.getOpenFileName(self, "Open File",
-                    '', "fMBT GT files (*.gt)")
+                    '', "fMBT GT commands (*.gt);;State machines (*.lsts)")
             if not fallback_to_PyQt4 and path: path = path[0]
         if path:
             self.editor.setPlainText(file(path).read())
+            self.editor.setFocus()
             self.conf_editor.setPlainText("")
             self._doGenerateConf()
-            self._gtFileName = path
+            self._gtFileName = str(path)
 
     def runcmd(self, cmd):
         print cmd
@@ -131,13 +140,32 @@ class MainWindow(QtGui.QMainWindow):
         print output
         return p.wait()
 
+    def _editingLSTS(self):
+        return self._gtFileName.endswith(".lsts") or self._gtFileName.endswith(".lts")
+
     def autoSave(self):
+        """
+        Save unsaved contents, convert gt to lsts if needed.
+        """
         saved = 0
         gt_contents = self.editor.toPlainText()
         if self._refreshed_gt != gt_contents:
             file(self._gtFileName, "w").write(gt_contents)
             self._refreshed_gt = gt_contents
             saved += 1
+            if not self._editingLSTS():
+                self._lstsFileName = self._gtFileName + ".gted.lsts.tmp"
+                gt2lsts_cmd = "fmbt-gt -o '%s' -f '%s'" % (self._lstsFileName, self._gtFileName)
+                if self.runcmd(gt2lsts_cmd) == 0:
+                    self.edit.setTabIcon(0, QtGui.QIcon())
+                    self._model_ok = True
+                else:
+                    self.edit.setTabIcon(0, QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_MessageBoxWarning))
+                    self._model_ok = False
+            else:
+                # LSTS model validation missing
+                self._lstsFileName = self._gtFileName
+                self._model_ok = True
         conf_contents = str(self.conf_editor.toPlainText()).strip()
         if self._refreshed_conf != conf_contents:
             if conf_contents == "":
@@ -151,21 +179,20 @@ class MainWindow(QtGui.QMainWindow):
     def visualiseModel(self, change_tab = True):
         self.autoSave()
         self._doGenerateTest()
-        filename = self._gtFileName
-        imgname = filename + ".png"
-        self._lstsFileName = self._gtFileName + ".gted.lsts.tmp"
+        imgname = self._gtFileName + ".png"
         try: file(self._logFileName)
         except: logparam = ""
         else: logparam = "-l '%s'" % (self._logFileName)
-        s = self.runcmd("fmbt-gt -o '%s' -f '%s' && fmbt-view -f png %s -o '%s' '%s'" % (self._lstsFileName, filename, logparam, imgname, self._lstsFileName))
-        if s != 0:
-            print "fmbt-view call returned != 0"
-            return
-        self.preview_modelimage_pixmap = QtGui.QPixmap()
-        self.preview_modelimage_pixmap.load(imgname)
-        self.preview_modelimage.setPixmap(self.preview_modelimage_pixmap)
-        self.preview_modelcont.area.setWidget(self.preview_modelimage)
-        self.preview_modelcont.area.wheel_scale_changed()
+        if self._model_ok and self._test_ok:
+            s = self.runcmd("fmbt-view -f png %s -o '%s' '%s'" % (logparam, imgname, self._lstsFileName))
+            if s != 0:
+                print "fmbt-view call returned != 0"
+                return
+            self.preview_modelimage_pixmap = QtGui.QPixmap()
+            self.preview_modelimage_pixmap.load(imgname)
+            self.preview_modelimage.setPixmap(self.preview_modelimage_pixmap)
+            self.preview_modelcont.area.setWidget(self.preview_modelimage)
+            self.preview_modelcont.area.wheel_scale_changed()
         if change_tab:
             self.preview.setCurrentIndex(PREVIEW_MODEL)
             self.preview_modelimage.setFocus()
@@ -174,14 +201,15 @@ class MainWindow(QtGui.QMainWindow):
     def plotDistribution(self, change_tab = True):
         self.autoSave()
         self._doGenerateTest()
-        self._distFileName = self._gtFileName + ".gted.dist.png"
-        s = self.runcmd("fmbt-stats -f dist:next,sort -p '%s' -o /dev/null '%s'" %
-                        (self._distFileName, self._logFileName))
-        self.preview_distimage_pixmap = QtGui.QPixmap()
-        self.preview_distimage_pixmap.load(self._distFileName)
-        self.preview_distimage.setPixmap(self.preview_distimage_pixmap)
-        self.preview_distcont.area.setWidget(self.preview_distimage)
-        self.preview_distcont.area.wheel_scale_changed()
+        if self._model_ok and self._test_ok:
+            self._distFileName = self._gtFileName + ".gted.dist.png"
+            s = self.runcmd("fmbt-stats -f dist:next,sort -p '%s' -o /dev/null '%s'" %
+                            (self._distFileName, self._logFileName))
+            self.preview_distimage_pixmap = QtGui.QPixmap()
+            self.preview_distimage_pixmap.load(self._distFileName)
+            self.preview_distimage.setPixmap(self.preview_distimage_pixmap)
+            self.preview_distcont.area.setWidget(self.preview_distimage)
+            self.preview_distcont.area.wheel_scale_changed()
         if change_tab:
             self.preview.setCurrentIndex(PREVIEW_DIST)
             self.preview_distimage.setFocus()
@@ -190,14 +218,15 @@ class MainWindow(QtGui.QMainWindow):
     def plotCoverage(self, change_tab = True):
         self.autoSave()
         self._doGenerateTest()
-        self._covFileName = self._gtFileName + ".gted.cov.png"
-        s = self.runcmd("fmbt-stats -f cov:steps -p '%s' -o /dev/null '%s'" %
-                        (self._covFileName, self._logFileName))
-        self.preview_covimage_pixmap = QtGui.QPixmap()
-        self.preview_covimage_pixmap.load(self._covFileName)
-        self.preview_covimage.setPixmap(self.preview_covimage_pixmap)
-        self.preview_covcont.area.setWidget(self.preview_covimage)
-        self.preview_covcont.area.wheel_scale_changed()
+        if self._model_ok and self._test_ok:
+            self._covFileName = self._gtFileName + ".gted.cov.png"
+            s = self.runcmd("fmbt-stats -f cov:steps -p '%s' -o /dev/null '%s'" %
+                            (self._covFileName, self._logFileName))
+            self.preview_covimage_pixmap = QtGui.QPixmap()
+            self.preview_covimage_pixmap.load(self._covFileName)
+            self.preview_covimage.setPixmap(self.preview_covimage_pixmap)
+            self.preview_covcont.area.setWidget(self.preview_covimage)
+            self.preview_covcont.area.wheel_scale_changed()
         if change_tab:
             self.preview.setCurrentIndex(PREVIEW_COV)
             self.preview_covimage.setFocus()
@@ -211,31 +240,43 @@ class MainWindow(QtGui.QMainWindow):
             if file(self._confFileName).read().strip() == "": regenerate=True
         except: regenerate=True
         if regenerate:
+            if self._editingLSTS():
+                modelspec="lsts:%s" % (self._lstsFileName,)
+            else:
+                modelspec="lsts_remote:fmbt-gt -f '%s'" % (self._gtFileName,)
             file(self._confFileName, "w").write("""
-model="lsts_remote:fmbt-gt -f '%s'"
-heuristic="lookahead:4"
-coverage="perm:2"
-pass="steps:20"
-on_pass="exit:0"
-on_fail="exit:1"
-on_inconc="exit:2"
-""" % (self._gtFileName,))
+model     = "%s"
+heuristic = "lookahead:4"
+coverage  = "perm:2"
+pass      = "steps:20"
+on_pass   = "exit:0"
+on_fail   = "exit:1"
+on_inconc = "exit:2"
+""" % (modelspec,))
             self.conf_editor.setPlainText(file(self._confFileName).read())
 
     def _doGenerateTest(self):
         self._doGenerateConf()
+        if not self._model_ok:
+            self._test_ok = False
+            return
         self._logFileName = self._gtFileName + ".gted.log.tmp"
         cmd = "fmbt -l '%s' '%s'" % (self._logFileName, self._confFileName)
-        return self.runcmd(cmd)
+        if self.runcmd(cmd) == 0:
+            self.edit.setTabIcon(1, QtGui.QIcon())
+            self._test_ok = True
+        else:
+            self.edit.setTabIcon(1, QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_MessageBoxWarning))
+            self._test_ok = False
 
     def generateTest(self, change_tab = True):
         self.autoSave()
-        filename = self._gtFileName
         self._doGenerateTest()
-        p = subprocess.Popen("fmbt-log -f '$sn$tv\t$ax$tr' '%s'"
+        if self._model_ok and self._test_ok:
+            p = subprocess.Popen("fmbt-log -f '$sn$tv\t$ax$tr' '%s'"
                              % (self._logFileName,), shell=True, stdout=subprocess.PIPE)
-        o = p.stdout.read()
-        self.preview_test.setPlainText(o)
+            o = p.stdout.read()
+            self.preview_test.setPlainText(o)
         if change_tab:
             self.preview.setCurrentIndex(PREVIEW_TEST)
             self.preview_test.setFocus()
@@ -352,8 +393,8 @@ on_inconc="exit:2"
     def setupViewMenu(self):
         viewMenu = QtGui.QMenu("&View", self)
         self.menuBar().addMenu(viewMenu)
-        viewMenu.addAction("Grow &left tabs", lambda: self.growTabs(0), "Shift+F8")
-        viewMenu.addAction("Grow &right tabs", lambda: self.growTabs(1), "Shift+F1")
+        viewMenu.addAction("Grow &editors", lambda: self.growTabs(0), "Shift+F5")
+        viewMenu.addAction("Grow &previews", lambda: self.growTabs(1), "Shift+F4")
 
     def setupCommandsMenu(self):
         commandMenu = QtGui.QMenu("&Commands", self)
@@ -372,10 +413,18 @@ on_inconc="exit:2"
 
     def growTabs(self, grow):
         layout = self.mainwidget.layout()
-        if layout.stretch(1-grow) > 1:
+        widgets = [self.edit, self.preview]
+        if widgets[grow].isVisible() == False:
+            widgets[grow].show()
+        elif grow == 1 and self.preview.isVisible() == False:
+            self.preview.show()
+            return
+        elif layout.stretch(1-grow) > 1:
             layout.setStretch(1-grow, layout.stretch(1-grow)/2)
         elif layout.stretch(grow) < 8:
             layout.setStretch(grow, layout.stretch(grow) * 2)
+        else:
+            widgets[1-grow].hide()
 
     def completion(self):
         tr_re = re.compile("([!]?)T\(\s*([^),]+)\s*,\s*([^\"),]+|\"[^\"]*\")\s*,\s*([^),]+)\s*\)")
@@ -553,7 +602,13 @@ if __name__ == '__main__':
     window = MainWindow()
     window.resize(640, 512)
     if len(sys.argv) > 1:
-        window.openFile(sys.argv[1])
+        open_with_file = sys.argv[1]
+        if not os.access(open_with_file, os.F_OK):
+            window.newFile(open_with_file)
+        elif os.access(open_with_file, os.R_OK):
+            window.openFile(sys.argv[1])
+        else:
+            error('cannot open file "%s"' % (open_with_file,))
         
     window.show()
 
