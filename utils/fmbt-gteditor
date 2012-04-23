@@ -19,10 +19,27 @@
 
 # This is a demo / prototype of an editor for fmbt-gt files.
 
+"""
+fmbt-gteditor - editor for gt, lsts and test configuration files
+
+Usage: fmbt-gteditor [options] [modelfile]
+
+modelfile is the gt or lsts file to be opened in the editor.
+
+Options:
+  -h    print this help
+
+  -p, --no-preview
+        do not show previews of model or generated tests. Required if
+        fMBT tools are not installed.
+"""
+
 import sys
 
-def error(msg, exit_status = 1):
+def error(msg, exit_status = 1, gui = False):
     sys.stderr.write("%s: %s\n" % (sys.argv[0], msg))
+    if gui:
+        QtGui.QMessageBox.critical(None, "fmbt-gteditor error", msg)
     sys.exit(exit_status)
 
 try:
@@ -39,11 +56,17 @@ import subprocess
 import commands
 import re
 import os
+import getopt
 
-PREVIEW_MODEL, PREVIEW_TEST, PREVIEW_DIST, PREVIEW_COV = range(4)
-EDIT_GT, EDIT_CONF = range(2)
+PREVIEWTAB_MODEL, PREVIEWTAB_TEST, PREVIEWTAB_DIST, PREVIEWTAB_COV = range(4)
+EDITTAB_GT, EDITTAB_CONF = range(2)
 
 class MyScaleEvents(QtCore.QObject):
+    """
+    Catch scaling events: Ctrl++, Ctrl+-, Ctrl+wheel. Change
+    attrowner's attribute "wheel_scale" accordingly. Finally call
+    attrowner's wheel_scale_changed().
+    """
     def __init__(self, parent, attrowner, min_scale, max_scale):
         QtCore.QObject.__init__(self, parent)
         self.min_scale = min_scale
@@ -72,16 +95,6 @@ class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
 
-        self.setupFileMenu()
-        self.setupViewMenu()
-        self.setupCommandsMenu()
-        self.setupHelpMenu()
-
-        self.setupEditor()
-
-        self.setCentralWidget(self.mainwidget)
-        self.setWindowTitle("fMBT GT editor")
-
         self._refreshed_gt = ""
         self._refreshed_conf = ""
 
@@ -91,6 +104,16 @@ class MainWindow(QtGui.QMainWindow):
 
         self._model_ok = False
         self._test_ok = False
+
+        self.setupFileMenu()
+        self.setupViewMenu()
+        self.setupCommandsMenu()
+        self.setupHelpMenu()
+
+        self.setupEditor()
+
+        self.setCentralWidget(self.mainwidget)
+        self.setWindowTitle("fMBT GT editor")
 
     def about(self):
         QtGui.QMessageBox.about(self, "fMBT GT editor",
@@ -156,9 +179,12 @@ class MainWindow(QtGui.QMainWindow):
             if not self._editingLSTS():
                 self._lstsFileName = self._gtFileName + ".gted.lsts.tmp"
                 gt2lsts_cmd = "fmbt-gt -o '%s' -f '%s'" % (self._lstsFileName, self._gtFileName)
-                if self.runcmd(gt2lsts_cmd) == 0:
+                fmbt_gt_exitstatus = self.runcmd(gt2lsts_cmd)
+                if fmbt_gt_exitstatus == 0:
                     self.edit.setTabIcon(0, QtGui.QIcon())
                     self._model_ok = True
+                elif fmbt_gt_exitstatus == 127:
+                    error('Cannot execute "fmbt-gt". Check your fMBT installation or PATH.', gui=1)
                 else:
                     self.edit.setTabIcon(0, QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_MessageBoxWarning))
                     self._model_ok = False
@@ -194,7 +220,7 @@ class MainWindow(QtGui.QMainWindow):
             self.preview_modelcont.area.setWidget(self.preview_modelimage)
             self.preview_modelcont.area.wheel_scale_changed()
         if change_tab:
-            self.preview.setCurrentIndex(PREVIEW_MODEL)
+            self.preview.setCurrentIndex(PREVIEWTAB_MODEL)
             self.preview_modelimage.setFocus()
             print "display '%s'" % (imgname,)
 
@@ -211,7 +237,7 @@ class MainWindow(QtGui.QMainWindow):
             self.preview_distcont.area.setWidget(self.preview_distimage)
             self.preview_distcont.area.wheel_scale_changed()
         if change_tab:
-            self.preview.setCurrentIndex(PREVIEW_DIST)
+            self.preview.setCurrentIndex(PREVIEWTAB_DIST)
             self.preview_distimage.setFocus()
             print "display '%s'" % (self._distFileName,)
 
@@ -228,7 +254,7 @@ class MainWindow(QtGui.QMainWindow):
             self.preview_covcont.area.setWidget(self.preview_covimage)
             self.preview_covcont.area.wheel_scale_changed()
         if change_tab:
-            self.preview.setCurrentIndex(PREVIEW_COV)
+            self.preview.setCurrentIndex(PREVIEWTAB_COV)
             self.preview_covimage.setFocus()
             print "display '%s'" % (self._covFileName,)
 
@@ -244,8 +270,7 @@ class MainWindow(QtGui.QMainWindow):
                 modelspec="lsts:%s" % (self._lstsFileName,)
             else:
                 modelspec="lsts_remote:fmbt-gt -f '%s'" % (self._gtFileName,)
-            file(self._confFileName, "w").write("""
-model     = "%s"
+            file(self._confFileName, "w").write("""model     = "%s"
 heuristic = "lookahead:4"
 coverage  = "perm:2"
 pass      = "steps:20"
@@ -262,9 +287,12 @@ on_inconc = "exit:2"
             return
         self._logFileName = self._gtFileName + ".gted.log.tmp"
         cmd = "fmbt -l '%s' '%s'" % (self._logFileName, self._confFileName)
-        if self.runcmd(cmd) == 0:
+        fmbt_exitstatus = self.runcmd(cmd)
+        if fmbt_exitstatus == 0:
             self.edit.setTabIcon(1, QtGui.QIcon())
             self._test_ok = True
+        elif fmbt_exitstatus == 127:
+            error('Cannot execute "fmbt". Check you fMBT installation and PATH.',gui=1)
         else:
             self.edit.setTabIcon(1, QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_MessageBoxWarning))
             self._test_ok = False
@@ -275,21 +303,21 @@ on_inconc = "exit:2"
         if self._model_ok and self._test_ok:
             p = subprocess.Popen("fmbt-log -f '$sn$tv\t$ax$tr' '%s'"
                              % (self._logFileName,), shell=True, stdout=subprocess.PIPE)
-            o = p.stdout.read()
-            self.preview_test.setPlainText(o)
+            o = p.stdout.readlines()
+            self.preview_test.setPlainText(''.join([l for l in o[1:]]))
         if change_tab:
-            self.preview.setCurrentIndex(PREVIEW_TEST)
+            self.preview.setCurrentIndex(PREVIEWTAB_TEST)
             self.preview_test.setFocus()
 
     def editGT(self):
-        self.edit.setCurrentIndex(EDIT_GT)
+        self.edit.setCurrentIndex(EDITTAB_GT)
         self.editor.setFocus()
 
     def editConf(self):
         if str(self.conf_editor.toPlainText()).strip() == "":
             self._doGenerateConf()
             self.conf_editor.setPlainText(file(self._confFileName).read())
-        self.edit.setCurrentIndex(EDIT_CONF)
+        self.edit.setCurrentIndex(EDITTAB_CONF)
         self.conf_editor.setFocus()
 
     def setupEditor(self):
@@ -315,6 +343,8 @@ on_inconc = "exit:2"
 
         # Setup editor tabs
         self.edit = QtGui.QTabWidget()
+        self.edit.connect(self.edit, QtCore.SIGNAL("currentChanged(int)"),
+                          self.editTabChanged)
         
         def makeScalableEditor(parent, font):
             editor = QtGui.QTextEdit()
@@ -344,6 +374,9 @@ on_inconc = "exit:2"
 
         # Setup preview tabs
         self.preview = QtGui.QTabWidget()
+        self.preview.connect(self.preview, QtCore.SIGNAL("currentChanged(int)"),
+                             self.previewTabChanged)
+
         self.layout.addWidget(self.preview, 1)
 
         def makeScalableImage(parent, image):
@@ -365,11 +398,11 @@ on_inconc = "exit:2"
             container.area = area
             container._layout = layout # protect from garbage collector
             return container
-            
+
         self.preview_modelimage = QtGui.QLabel(self.preview)
         self.preview_modelcont = makeScalableImage(self.preview, self.preview_modelimage)
         self.preview.addTab(self.preview_modelcont, "Model - F5")
-        
+
         self.preview_test = makeScalableEditor(self.preview, self.editor_font)
         self.preview.addTab(self.preview_test, "Test - F6")
 
@@ -380,7 +413,17 @@ on_inconc = "exit:2"
         self.preview_covimage = QtGui.QLabel(self.preview)
         self.preview_covcont = makeScalableImage(self.preview, self.preview_covimage)
         self.preview.addTab(self.preview_covcont, "Coverage - F8")
-    
+
+    def editTabChanged(self, tabIndex):
+        if tabIndex == EDITTAB_GT: self.editGT()
+        elif tabIndex == EDITTAB_CONF: self.editConf()
+
+    def previewTabChanged(self, tabIndex):
+        if tabIndex == PREVIEWTAB_MODEL: self.visualiseModel()
+        elif tabIndex == PREVIEWTAB_TEST: self.generateTest()
+        elif tabIndex == PREVIEWTAB_DIST: self.plotDistribution()
+        elif tabIndex == PREVIEWTAB_COV: self.plotCoverage()
+
     def setupFileMenu(self):
         fileMenu = QtGui.QMenu("&File", self)
         self.menuBar().addMenu(fileMenu)
@@ -399,12 +442,30 @@ on_inconc = "exit:2"
     def setupCommandsMenu(self):
         commandMenu = QtGui.QMenu("&Commands", self)
         self.menuBar().addMenu(commandMenu)
-        commandMenu.addAction("Edit &GT", self.editGT, "F1")
-        commandMenu.addAction("Edit &Configuration", self.editConf, "F2")
-        commandMenu.addAction("&Visualise model", self.visualiseModel, "F5")
-        commandMenu.addAction("&Generate test", self.generateTest, "F6")
-        commandMenu.addAction("&Test step distribution", self.plotDistribution, "F7")
-        commandMenu.addAction("C&overage", self.plotCoverage, "F8")
+        commandMenu.addAction("Edit &GT",
+                              lambda: (self.edit.setCurrentIndex(EDITTAB_GT),
+                                       self.editor.setFocus()),
+                              "F1")
+        commandMenu.addAction("Edit &Configuration",
+                              lambda: (self.edit.setCurrentIndex(EDITTAB_CONF),
+                                       self.conf_editor.setFocus()),
+                              "F2")
+        commandMenu.addAction("&Visualise model",
+                              lambda: (self.preview.setCurrentIndex(PREVIEWTAB_MODEL),
+                                       self.preview_modelimage.setFocus()),
+                              "F5")
+        commandMenu.addAction("&Generate test",
+                              lambda: (self.preview.setCurrentIndex(PREVIEWTAB_TEST),
+                                       self.preview_test.setFocus()),
+                              "F6")
+        commandMenu.addAction("&Test step distribution",
+                              lambda: (self.preview.setCurrentIndex(PREVIEWTAB_DIST),
+                                       self.preview_distimage.setFocus()),
+                              "F7")
+        commandMenu.addAction("C&overage",
+                              lambda: (self.preview.setCurrentIndex(PREVIEWTAB_COV),
+                                       self.preview_covimage.setFocus()),
+                              "F8")
 
     def setupHelpMenu(self):
         helpMenu = QtGui.QMenu("&Help", self)
@@ -416,9 +477,7 @@ on_inconc = "exit:2"
         widgets = [self.edit, self.preview]
         if widgets[grow].isVisible() == False:
             widgets[grow].show()
-        elif grow == 1 and self.preview.isVisible() == False:
-            self.preview.show()
-            return
+            if grow == 1: self.refreshImages()
         elif layout.stretch(1-grow) > 1:
             layout.setStretch(1-grow, layout.stretch(1-grow)/2)
         elif layout.stretch(grow) < 8:
@@ -508,14 +567,14 @@ on_inconc = "exit:2"
             c.insertText("%s %s" % (prefix, self._tnames[self._iterate_index % len(self._tnames)]))
 
     def refreshImages(self):
-        if self.autoSave() != 0:
-            if self.preview.currentIndex() == PREVIEW_MODEL:
+        if self.preview.isVisible() and self.autoSave() != 0:
+            if self.preview.currentIndex() == PREVIEWTAB_MODEL:
                 self.visualiseModel(change_tab = False)
-            elif self.preview.currentIndex() == PREVIEW_TEST:
+            elif self.preview.currentIndex() == PREVIEWTAB_TEST:
                 self.generateTest(change_tab = False)
-            elif self.preview.currentIndex() == PREVIEW_DIST:
+            elif self.preview.currentIndex() == PREVIEWTAB_DIST:
                 self.plotDistribution(change_tab = False)
-            elif self.preview.currentIndex() == PREVIEW_COV:
+            elif self.preview.currentIndex() == PREVIEWTAB_COV:
                 self.plotCoverage(change_tab = False)
 
 class GTHighlighter(QtGui.QSyntaxHighlighter):
@@ -598,18 +657,36 @@ class ConfHighlighter(QtGui.QSyntaxHighlighter):
 
 
 if __name__ == '__main__':
+    opt_hide_preview = False
+    opt_modelfile = None
+
+    opts, remainder = getopt.getopt(
+        sys.argv[1:], 'hp',
+        ["help", "no-preview",])
+
+    for opt, arg in opts:
+        if opt in ["-h", "--help"]:
+            print __doc__
+            sys.exit(0)
+        elif opt in ["-p", "--no-preview"]:
+            opt_hide_preview = True
+
+    if remainder: opt_modelfile = remainder[0]
+
     app = QtGui.QApplication(sys.argv)
     window = MainWindow()
     window.resize(640, 512)
-    if len(sys.argv) > 1:
-        open_with_file = sys.argv[1]
-        if not os.access(open_with_file, os.F_OK):
-            window.newFile(open_with_file)
-        elif os.access(open_with_file, os.R_OK):
-            window.openFile(sys.argv[1])
+
+    if opt_modelfile:
+        if not os.access(opt_modelfile, os.F_OK):
+            window.newFile(opt_modelfile)
+        elif os.access(opt_modelfile, os.R_OK):
+            window.openFile(opt_modelfile)
         else:
-            error('cannot open file "%s"' % (open_with_file,))
-        
+            error('cannot open file "%s"' % (opt_modelfile,))
+
+    if opt_hide_preview: window.preview.hide()
+
     window.show()
 
     timer = QtCore.QTimer()
