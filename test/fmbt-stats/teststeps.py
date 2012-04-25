@@ -1,6 +1,8 @@
 import subprocess
 import glob
 import os
+import math
+import random
 
 fmbt_stats_format = ""
 fmbt_stats_output = ""
@@ -8,10 +10,26 @@ fmbt_stats_plot = ""
 fmbt_stats_logfile = ""
 fmbt_stats_redirect = ""
 
+seeded_format = None
+seeded_output = None
+seeded_plot = None
+seeded_logfile = None
+
+def debug(msg):
+    file("/tmp/fmbt.test.fmbt-stats.teststeps.debug","a").write("%s\n" % (msg,))
+
 def iExecute():
     for f in glob.glob("stats-output-*"):
         try: os.remove(f)
         except: pass
+
+    # Check if this combination hits a seeded error
+    if ((seeded_logfile or seeded_format or seeded_output or seeded_plot) and
+        (not seeded_logfile or fmbt_stats_logfile in seeded_logfile) and
+        (not seeded_format or fmbt_stats_format in seeded_format) and
+        (not seeded_output or fmbt_stats_output in seeded_output) and
+        (not seeded_plot or fmbt_stats_plot in seeded_plot)):
+        raise Exception("Seeded error")
 
     stepslogfile = file("teststeps.log","w")
     cmd = "fmbt-stats %s %s %s %s %s" % (
@@ -106,6 +124,73 @@ def iExecute():
             plot_filename = fmbt_stats_plot[3:]
         if not os.stat(plot_filename).st_size > 0:
             raise Exception("zero-length plot file. Try: %s" % (cmd,))
+
+
+def iSeedErrors(log=0, format=0, output=0, plot=0, randomSeed=0):
+    """
+    Injects imaginary errors to given percentages of log, format,
+    output and plot definitions. If several percentages are given,
+    only the intersection of those cause a failure. If a non-zero
+    percentage value is given, there will be at least one failure.
+
+    Examples:
+
+    Simulate 50 percent of different format specifications to cause a
+    failure when they are combined with 25 percent of possible logs:
+
+    iSeededError(format=50, log=25)
+
+    There is only one failing combination of log, format and plot
+    type:
+
+    iSeededError(log=1, format=1, plot=1, randomSeed=42)
+
+    Try the same with a combination that is most likely different from
+    the previous one:
+
+    iSeededError(log=1, format=1, plot=1, randomSeed=43)
+    """
+    global seeded_logfile, seeded_format, seeded_output, seeded_plot
+    all_logfiles = ["stats-input-0.log",
+                    "stats-input-1.log",
+                    "stats-input-2.log",
+                    "stats-input-100.log"]
+    all_formats = ["-f times:min",
+                   "-f times:median",
+                   "-f times:max",
+                   "-f times:total",
+                   "-f times:count",
+                   "-f times:name",
+                   "-f speed:1",
+                   "-f speed:1,100,5000,2,100",
+                   "-f dist:next",
+                   "-f dist:prev",
+                   "-f dist:next,uniq",
+                   "-f dist:next,sort",
+                   "-f dist:next,uniq,sort"]
+    all_outputs = ["-o stats-output-text.txt",
+                   "-o stats-output-text.csv",
+                   "-o stats-output-text.html"]
+    all_plots = ["-p stats-output-plot.gif",
+                 "-p stats-output-plot.gif,width=2048",
+                 "-p stats-output-plot.eps",
+                 "-p stats-output-plot.svg",
+                 "-p stats-output-plot.svg,width=2048"]
+    random.seed(randomSeed)
+    for l in [all_logfiles, all_formats, all_outputs, all_plots]:
+        random.shuffle(l)
+
+    # convert percentage to last index
+    if log > 0: log = int(math.ceil(len(all_logfiles)*log/100.0))
+    if format > 0: format = int(math.ceil(len(all_formats)*format/100.0))
+    if output > 0: output = int(math.ceil(len(all_outputs)*output/100.0))
+    if plot > 0: plot = int(math.ceil(len(all_plots)*log/100.0))
+
+    # fill in global seeded_* sets with values that cause seeded failure
+    if log > 0: seeded_logfile = set(all_logfiles[:log])
+    if format > 0: seeded_format = set(all_formats[:format])
+    if output > 0: seeded_output = set(all_outputs[:output])
+    if plot > 0: seeded_plot = set(all_plots[:plot])
 
 def iLogSteps(x):
     global fmbt_stats_logfile
