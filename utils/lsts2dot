@@ -169,18 +169,15 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
     for state in xrange(l.get_header().state_cnt):
         props = state2props.get(state, [])
         props.sort()
+        colordata = ''
         if state_colors:
             if state in state_colors:
                 normal_color = state_colors[state]
-                if invert_colors and normal_color == COLOR_ST_VISITED:
-                    colordata = ''
-                else:
+                if not (invert_colors and normal_color == COLOR_ST_VISITED):
                     colordata = ' fillcolor="%s" style="filled"' % (normal_color,)
             else:
                 if invert_colors:
                     colordata = ' fillcolor="%s" style="filled"' % (COLOR_ST_INVERTED,)
-                else:
-                    colordata = ''
         outfileobj.write('    S%s [label="%s\\l"%s]\n'
                          % (state,"\\l".join(props),colordata))
     outfileobj.write('}\n')

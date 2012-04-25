@@ -256,7 +256,8 @@ Keyboard shortcuts:<br>
         try: file(self._logFileName)
         except: logparam = ""
         else: logparam = "-l '%s'" % (self._logFileName)
-        if self._model_ok and self._test_ok:
+        if self._model_ok:
+            if not self._test_ok: logparam = ""
             s = self.runcmd("fmbt-view -f png %s -o '%s' '%s'" % (logparam, imgname, self._lstsFileName))
             if s != 0:
                 print "fmbt-view call returned != 0"
