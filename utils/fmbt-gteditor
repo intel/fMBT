@@ -32,9 +32,18 @@ Options:
   -p, --no-preview
         do not show previews of model or generated tests. Required if
         fMBT tools are not installed.
+
+  -q, --qt-bindings=<Python Qt4 binding library>
+        import QtCore and QtGui from the given binding library instead
+        of PySide. Example: fmbt-gteditor -q PyQt4.
 """
 
 import sys
+import subprocess
+import commands
+import re
+import os
+import getopt
 
 def error(msg, exit_status = 1, gui = False):
     sys.stderr.write("%s: %s\n" % (sys.argv[0], msg))
@@ -42,24 +51,43 @@ def error(msg, exit_status = 1, gui = False):
         QtGui.QMessageBox.critical(None, "fmbt-gteditor error", msg)
     sys.exit(exit_status)
 
-try:
-    from PySide import QtCore, QtGui
-    fallback_to_PyQt4 = False
-except:
-    try:
-        from PyQt4 import QtCore, QtGui
-        fallback_to_PyQt4 = True
-    except:
-        error("PySide or PyQt4 required.")
-
-import subprocess
-import commands
-import re
-import os
-import getopt
-
 PREVIEWTAB_MODEL, PREVIEWTAB_TEST, PREVIEWTAB_DIST, PREVIEWTAB_COV = range(4)
 EDITTAB_GT, EDITTAB_CONF = range(2)
+TR_RE = re.compile("([!]?)T\(\s*([^),]+)\s*,\s*([^\"),]+|\"[^\"]*\")\s*,\s*([^),]+)\s*\)")
+SP_RE = re.compile("([!]?)P\(\s*([^),]+)\s*,\s*([^)]+)\s*\)")
+CF_RE = re.compile("^(model|adapter|heuristic|coverage|history|((on_)?(pass|fail|inconc)))\s*=\s*\"[^\"]+\"\s*$")
+
+# Parse command line, see which Python Qt4 bindings to import
+
+opt_hide_preview = False
+opt_modelfile    = None
+opt_qt_bindings  = "PySide"
+
+opts, remainder = getopt.getopt(
+    sys.argv[1:], 'hpq:',
+    ["help", "no-preview", "qt-bindings="])
+
+for opt, arg in opts:
+    if opt in ["-h", "--help"]:
+        print __doc__
+        sys.exit(0)
+    elif opt in ["-p", "--no-preview"]:
+        opt_hide_preview = True
+    elif opt in ["-q", "--qt-bindings"]:
+        opt_qt_bindings = arg
+
+if remainder: opt_modelfile = remainder[0]
+
+try:
+    QtCore = __import__(opt_qt_bindings + ".QtCore", fromlist=["QtCore"])
+    QtGui = __import__(opt_qt_bindings + ".QtGui", fromlist=["QtGui"])
+    if opt_qt_bindings == "PySide":
+        not_using_PySide = False
+    else:
+        not_using_PySide = True
+except Exception, e:
+    error('Error importing Qt4 bindings from "%s": %s\nInstall PySide Python bindings for Qt4 or try different -q parameter.' % (opt_qt_bindings, e))
+
 
 class MyScaleEvents(QtCore.QObject):
     """
@@ -116,8 +144,26 @@ class MainWindow(QtGui.QMainWindow):
         self.setWindowTitle("fMBT GT editor")
 
     def about(self):
-        QtGui.QMessageBox.about(self, "fMBT GT editor",
-                "<p>The <b>fMBT GT editor</b> demo<br>0.0 alpha")
+        QtGui.QMessageBox.about(self, "fMBT GT editor",'''
+<b>fMBT GT-editor</b><br>
+for editing GT files and adjusting test generation parameters<br><br>
+Keyboard shortcuts:<br>
+<table align="left" cellpadding="2">
+<tr><td>Editing</td></tr>
+<tr><td><i>Tab</i></td><td>Complete/rotate through states and actions in GT editor</td></tr>
+<tr><td><i>Ctrl + C</i></td><td>Copy</td></tr>
+<tr><td><i>Ctrl + X</i></td><td>Cut</td></tr>
+<tr><td><i>Ctrl + V</i></td><td>Paste</td></tr>
+<tr><td><i>Ctrl + Z and Y</i></td><td>Undo / Redo</td></tr>
+<tr></tr>
+<tr><td>Viewing</td></tr>
+<tr><td><i>Ctrl + +</i></td><td>Zoom in active view</td></tr>
+<tr><td><i>Ctrl + -</i></td><td>Zoom out active view</td></tr>
+<tr><td><i>Ctrl + wheel</i><td></td>Zoom in/out active view</td></tr>
+<tr><td><i>Shift + F4<i></td><td>Grow preview tabs on the right</td></tr>
+<tr><td><i>Shift + F5<i></td><td>Grow editor tabs on the left</td></tr>
+</table>
+''')
 
     def newFile(self, path=None):
         self.editor.setPlainText("P(start, \"gt:istate\")\n->\n")
@@ -135,7 +181,7 @@ class MainWindow(QtGui.QMainWindow):
     def saveFileAs(self):
         path = QtGui.QFileDialog.getSaveFileName(self, "Save File",
                                                  '', "fMBT GT commands (*.gt);;State machines (*.lsts)")
-        if fallback_to_PyQt4:
+        if not_using_PySide:
             self._gtFileName = str(path)
         else:
             self._gtFileName = str(path[0])
@@ -148,7 +194,7 @@ class MainWindow(QtGui.QMainWindow):
         if not path:
             path = QtGui.QFileDialog.getOpenFileName(self, "Open File",
                     '', "fMBT GT commands (*.gt);;State machines (*.lsts)")
-            if not fallback_to_PyQt4 and path: path = path[0]
+            if not not_using_PySide and path: path = path[0]
         if path:
             self.editor.setPlainText(file(path).read())
             self.editor.setFocus()
@@ -168,7 +214,8 @@ class MainWindow(QtGui.QMainWindow):
 
     def autoSave(self):
         """
-        Save unsaved contents, convert gt to lsts if needed.
+        Save unsaved contents, convert gt to lsts if possible.
+        Update self._model_ok (false iff conversion fails).
         """
         saved = 0
         gt_contents = self.editor.toPlainText()
@@ -348,6 +395,8 @@ on_inconc = "exit:2"
         
         def makeScalableEditor(parent, font):
             editor = QtGui.QTextEdit()
+            editor.setUndoRedoEnabled(True)
+            editor.setLineWrapMode(editor.NoWrap)
             editor.setFont(font)
             editor_scaleevents = MyScaleEvents(editor, editor, 0.1, 2.0)
             editor.wheel_scale = 1.0
@@ -486,16 +535,14 @@ on_inconc = "exit:2"
             widgets[1-grow].hide()
 
     def completion(self):
-        tr_re = re.compile("([!]?)T\(\s*([^),]+)\s*,\s*([^\"),]+|\"[^\"]*\")\s*,\s*([^),]+)\s*\)")
-        sp_re = re.compile("([!]?)P\(\s*([^),]+)\s*,\s*([^)]+)\s*\)")
         def stateActionTagNames(txt):
             snames, anames, tnames = [], [], []
             for line in txt.split('\n'):
-                for (m_neg, m_src, m_act, m_dst) in tr_re.findall(line):
+                for (m_neg, m_src, m_act, m_dst) in TR_RE.findall(line):
                     snames.append(m_src)
                     snames.append(m_dst)
                     anames.append(m_act)
-                for (m_neg, m_state, m_tag) in sp_re.findall(line):
+                for (m_neg, m_state, m_tag) in SP_RE.findall(line):
                     snames.append(m_state)
                     tnames.append(m_tag)
             return snames, anames, tnames
@@ -589,7 +636,7 @@ class GTHighlighter(QtGui.QSyntaxHighlighter):
                 for pattern in keywordPatterns]
 
         singleLineCommentFormat = QtGui.QTextCharFormat()
-        singleLineCommentFormat.setForeground(QtCore.Qt.red)
+        singleLineCommentFormat.setForeground(QtCore.Qt.darkMagenta)
         self.highlightingRules.append((QtCore.QRegExp("^#[^\n]*"),
                 singleLineCommentFormat))
 
@@ -602,8 +649,19 @@ class GTHighlighter(QtGui.QSyntaxHighlighter):
         usualErrorsFormat.setForeground(QtCore.Qt.red)
         self.highlightingRules.append((QtCore.QRegExp("[TP]\(\""),
                 usualErrorsFormat))
+        self._usualErrorsFormat = usualErrorsFormat
 
     def highlightBlock(self, text):
+        # Before coloring, check if this is a valid line
+        text = str(text)
+        if not TR_RE.findall(text):
+            if not SP_RE.findall(text):
+                if not text.startswith("#"):
+                    if not text.strip() == "->":
+                        self.setFormat(0, len(text), self._usualErrorsFormat)
+                        self.setCurrentBlockState(0)
+                        return
+        
         for pattern, format in self.highlightingRules:
             expression = QtCore.QRegExp(pattern)
             index = expression.indexIn(text)
@@ -622,14 +680,15 @@ class ConfHighlighter(QtGui.QSyntaxHighlighter):
         keywordFormat.setForeground(QtCore.Qt.darkBlue)
         keywordFormat.setFontWeight(QtGui.QFont.Bold)
 
-        keywordPatterns = ["^model\\b", "^adapter\\b", "^heuristic\\b", "^coverage\\b",
-                           "^pass\\b", "^fail\\b", "^inconc\\b",
-                           "^on_pass\\b", "^on_fail\\b", "^on_inconc\\b"]
+        keywordPatterns = ["^model\\b", "^adapter\\b", "^heuristic\\b",
+                           "^coverage\\b", "^history\\b",
+                           "^(on_)?(pass|fail|inconc)\\b"]
+
         self.highlightingRules = [(QtCore.QRegExp(pattern), keywordFormat)
                 for pattern in keywordPatterns]
 
         singleLineCommentFormat = QtGui.QTextCharFormat()
-        singleLineCommentFormat.setForeground(QtCore.Qt.red)
+        singleLineCommentFormat.setForeground(QtCore.Qt.darkMagenta)
         self.highlightingRules.append((QtCore.QRegExp("^#[^\n]*"),
                 singleLineCommentFormat))
 
@@ -638,12 +697,16 @@ class ConfHighlighter(QtGui.QSyntaxHighlighter):
         self.highlightingRules.append((QtCore.QRegExp("\".*\""),
                 quotationFormat))
 
-        usualErrorsFormat = QtGui.QTextCharFormat()
-        usualErrorsFormat.setForeground(QtCore.Qt.red)
-        self.highlightingRules.append((QtCore.QRegExp("^[^\"]*\"[^\"]*$"),
-                usualErrorsFormat))
+        self._usualErrorsFormat = QtGui.QTextCharFormat()
+        self._usualErrorsFormat.setForeground(QtCore.Qt.red)
 
     def highlightBlock(self, text):
+        text = str(text)
+        if not CF_RE.match(text):
+            if not text.startswith("#"):
+                self.setFormat(0, len(text), self._usualErrorsFormat)
+                self.setCurrentBlockState(0)
+                return
         for pattern, format in self.highlightingRules:
             expression = QtCore.QRegExp(pattern)
             index = expression.indexIn(text)
@@ -655,23 +718,7 @@ class ConfHighlighter(QtGui.QSyntaxHighlighter):
 
         self.setCurrentBlockState(0)
 
-
 if __name__ == '__main__':
-    opt_hide_preview = False
-    opt_modelfile = None
-
-    opts, remainder = getopt.getopt(
-        sys.argv[1:], 'hp',
-        ["help", "no-preview",])
-
-    for opt, arg in opts:
-        if opt in ["-h", "--help"]:
-            print __doc__
-            sys.exit(0)
-        elif opt in ["-p", "--no-preview"]:
-            opt_hide_preview = True
-
-    if remainder: opt_modelfile = remainder[0]
 
     app = QtGui.QApplication(sys.argv)
     window = MainWindow()
