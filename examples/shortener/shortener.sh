@@ -37,7 +37,7 @@ new_pass() {
 new_fail() {
     mv tmp.log fail.log
     touch pass
-    ( (fmbt-log -f '$ax--FMBT-SEP--$as--FMBT-SEP--$tv' fail.log | awk -F '--FMBT-SEP--' '{if ($1!="")print $1; else if ($2!="") print $2;verdict=$3}END{print verdict}') | tee fail ; cat pass) | relax2.py > out.lsts
+    ( (fmbt-log -f '$ax--FMBT-SEP--$as--FMBT-SEP--$tv' fail.log | awk -F '--FMBT-SEP--' '{if ($1!="" && $3=="")print $1; else if ($2!="") print $2;verdict=$3}END{print verdict}') | tee fail ; cat pass) | relax2.py > out.lsts
 }
 
 PATH=../../src:../../utils:../../../src:../../../utils:$PATH
