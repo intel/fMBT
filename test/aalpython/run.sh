@@ -85,3 +85,18 @@ if ! diff -u output2.txt correct2.txt >> $LOGFILE 2>&1; then
     testfailed
 fi
 testpassed
+
+teststep "remote_pyaal output actions..."
+cat > outputs.conf <<EOF
+model   = "aal_remote: remote_pyaal -l pyaal.log outputs.aal"
+adapter = "aal_remote: remote_pyaal -l pyaal.log outputs.aal"
+heuristic = "lookahead:2"
+pass = "steps:10"
+EOF
+fmbt outputs.conf 2>test.verdict | tee outputs.log >> $LOGFILE
+(   fmbt-log outputs.log | grep -q 'o:Txt changed' && \
+    fmbt-log outputs.log | grep -q 'o:Jpg changed' && \
+    fmbt-log outputs.log | grep -q 'o:Png changed' && \
+    fmbt-log outputs.log | grep -q 'o:Tmp changed' && 
+    testpassed
+) || testfailed

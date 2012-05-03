@@ -1,51 +1,73 @@
-aal "pyoutputtest" {
-    language: python { import os };
+aal "outputs" {
+    language: python { import os }
 
-    variables { inputteja, outputteja, files }
+    variables { found, exists, filenames, file_exists }
 
     initial_state {
-        inputteja = 0
-        outputteja = 0
-        files = {'txt': False, 'jpg': False, 'png': False, 'tmp': False}
+        pre   = "/tmp/fmbt.aalpython.file."
+        filenames = [pre+"txt", pre+"jpg", pre+"png", pre+"tmp"]
+        found = {'txt': False, 'jpg': False, 'png': False, 'tmp': False}
+        exists = {'txt': False, 'jpg': False, 'png': False, 'tmp': False}
+        file_exists = os.path.exists
+        for filename in filenames:
+            if file_exists(filename): os.remove(filename)
     }
 
-    action "iInputTapahtuma" {
-        guard() { return inputteja < 100 }
-        body()  { inputteja += 1 }
+    action "iChange:txt", "iChange:jpg", "iChange:png", "iChange:tmp" {
+        guard() {
+            # Enable iChange:X for non-existing file.X only -
+            # unless all files exist.
+            suffix = action_name.split(":")[1]
+            log("iChange" + suffix + " exists:" + str(exists[suffix]))
+            if not exists[suffix]: return True
+            if exists.values() == [True, True, True, True]: return True
+            return False
+        }
+        body()  {
+            suffix = action_name.split(":")[1]
+            log("iChange with file suffix %s" % (suffix,))
+            exists[suffix] = not exists[suffix]
+        }
+        adapter() {
+            if not file_exists(filenames[action_index]):
+                file(filenames[action_index],"w")
+            else: os.remove(filenames[action_index])
+        }
     }
 
-    action "oJokuTXT" {
+    action "o:Txt changed" {
+        guard() { return True }
+        body() {
+            found['txt'] = not found['txt']
+        }
+        adapter() {
+            if file_exists(filenames[0]) != found['txt']: return True
+        }
+    }
+
+    action "o:Jpg changed" {
+        body() { found['jpg'] = not found['jpg'] }
+    }
+    action "o:Png changed" {
         guard() { return 1 }
         body() {
-            log("oJokuTXT ihan oma loki")
-            outputteja += 1
-            files['txt'] = not files['txt']}
+            found['png'] = not found['png']
+        }
         adapter() {
-            if os.path.exists("/tmp/delme.txt") != files['txt']: return True
+            if file_exists(filenames[1]) != found['jpg']:
+                return action("o:Jpg changed")
+            elif file_exists(filenames[2]) != found['png']:
+                return action("o:Png changed")
         }
     }
 
-    action "oJokuJPG" {
-        body() { files['jpg'] = not files['jpg'] }
-    }
-    action "oJokuPNG" {
-        guard() { inputteja > 0 }
+    action "o:Tmp changed" {
         body() {
-            outputteja += 1
-            files['png'] = not files['png']
+            found['tmp'] = not found['tmp']
         }
         adapter() {
-            if os.path.exists("/tmp/delme.jpg") != files['jpg']: return action("oJokuJPG")
-            elif os.path.exists("/tmp/delme.png") != files['png']: return action("oJokuPNG")
-        }
-    }
-
-    action "oJokuTMP" {
-        body() {
-            files['tmp'] = not files['tmp']
-        }
-        adapter() {
-            if os.path.exists("/tmp/delme.tmp") != files['tmp']: return "oJokuTMP"
+            if file_exists(filenames[3]) != found['tmp']:
+                return "o:Tmp changed"
         }
     }
 }
