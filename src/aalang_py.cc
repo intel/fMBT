@@ -81,7 +81,14 @@ void aalang_py::set_starter(std::string* st)
 void aalang_py::set_name(std::string* name)
 {
   s+="\n    action"+acnt+"name = \""+*name+"\"\n"
-    +"    action"+acnt+"type = \"input\"\n";
+    +"    action"+acnt+"type = ";
+  if (name->size() > 0 && name->c_str()[0] == 'o') {
+    s += "\"output\"\n";
+    this_is_input = false;
+  } else {
+    s += "\"input\"\n";
+    this_is_input = true;
+  }
 }
 
 void aalang_py::set_namestr(std::string* _name)
@@ -160,8 +167,13 @@ void aalang_py::set_adapter(std::string* ada)
 {
   default_if_empty(*ada, "pass");
   s+="    def action"+acnt+"adapter():\n" + variables +
-              indent(8,*ada)+"\n"+
-     "        return " +acnt + "\n";
+    indent(8,*ada)+"\n";
+  
+  if (this_is_input) {
+    s+="        return " +acnt + "\n";
+  } else {
+    s+="        return False\n";
+  }
 }
 
 void aalang_py::next_action()

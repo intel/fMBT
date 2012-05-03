@@ -1,5 +1,8 @@
 import copy
 import types
+import time
+
+SILENCE = -3
 
 class AALModel:
     def __init__(self, model_globals):
@@ -11,6 +14,7 @@ class AALModel:
         self._all_tagnames = self._get_all("name", "tag")
         self._all_tagguards = self._get_all("guard", "tag")
         self._variables = model_globals
+        self._variables['action'] = lambda name: self._all_names.index(name)
         self._stack = []
 
     def _get_all(self, property_name, itemtype):
@@ -32,7 +36,12 @@ class AALModel:
         return rv
 
     def adapter_execute(self, i):
-        return self.call(self._all_adapters[i-1])
+        if self._all_types[i-1] == "input":
+            return self.call(self._all_adapters[i-1])
+        else:
+            self.log("Somebody called adapter_execute for an output action in AAL.\n")
+            self.log("Get that guy!\n")
+            return 0
 
     def model_execute(self, i):
         return self.call(self._all_bodies[i-1])
@@ -74,3 +83,32 @@ class AALModel:
         stack_element = self._stack.pop()
         for varname in stack_element:
             self._variables[varname] = stack_element[varname]
+
+    def observe(self, block):
+        poll_more = True
+        start_time = 0
+        while poll_more:
+            for index, adapter in enumerate(self._all_adapters):
+                if self._all_types[index] != "output": continue
+                output_action = self.call(adapter)
+                observed_action = None
+                if type(output_action) == str:
+                    observed_action = self._all_names.index(output_action)
+                elif type(output_action) == type(True) and output_action == True:
+                    observed_action = index
+                elif type(output_action) == int and output_action > 0:
+                    observed_action = output_action
+
+                if observed_action:
+                    self._log("%s" % (adapter.func_name,))
+                    self._log('observe: action %s (%s) adapter() returned %s. Reporting "%s"' % (
+                            index, self._all_names[index], output_action,
+                            self._all_names[observed_action]))
+                    return [observed_action + 1]
+            if block:
+                if not start_time: start_time = time.time()
+                elif time.time() - start_time > self.timeout:
+                    return [SILENCE]
+            else:
+                poll_more = False
+        return [SILENCE]

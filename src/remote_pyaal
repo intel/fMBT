@@ -26,12 +26,16 @@ Options:
     -l, -L filename
         Write log to the given file. By default no log is written.
         -l overwrites the file, -L appends.
+
+    -t, --timeout s
+        Event observation timeout in seconds.
 """
 
 import sys
 import os
 import getopt
 import commands
+import time
 
 sys.path.append(os.getcwd())
 
@@ -39,7 +43,7 @@ log_filename = None
 def log(msg):
     global log_filename
     if log_filename:
-        file(log_filename,"a").write(msg + "\n")
+        file(log_filename,"a").write("%.4f %s\n" % (time.time(), msg))
 
 def error(msg):
     msg = "remote_pyaal error: " + msg + "\n"
@@ -95,6 +99,10 @@ class RemoteAALBridge:
                 self._aal.push()
             elif cmd == "mo":
                 self._aal.pop()
+            elif cmd == "aop":
+                put_list(self._aal.observe(False))
+            elif cmd == "aob":
+                put_list(self._aal.observe(True))
             elif cmd[0] == "m":
                 action_number = int(cmd[1:])
                 try:    self._aal.model_execute(action_number)
@@ -116,19 +124,23 @@ class RemoteAALBridge:
 if __name__ == "__main__":
     # Default values for commandline arguments
     log_filename = None
+    opt_timeout = 1.0
 
     # Parse arguments
     opts, remainder = getopt.gnu_getopt(
-        sys.argv[1:], 'hl:L:',
-        ["help", "file="])
+        sys.argv[1:], 'hl:L:t:',
+        ["help", "timeout="])
 
     for opt, arg in opts:
         if opt in ["-h", "--help"]:
             print __doc__
             sys.exit(0)
-        if opt in ["-l", "-L"]:
+        elif opt in ["-l", "-L"]:
             log_filename = arg
             if opt == "-l": file(log_filename,"w") # overwrite
+        elif opt in ["-t", "--timeout"]:
+            opt_timeout = float(arg)
+            log("observe timeout: %2.6f" % (opt_timeout,))
 
     if len(remainder) != 1:
         print __doc__
@@ -163,6 +175,7 @@ if __name__ == "__main__":
         aal = Model()
     except Exception as e:
         error("error when instantiating Model(): %s" % (e,))
-    
+    aal._log = log
+    aal.timeout = opt_timeout
     bridge = RemoteAALBridge(aal)
     bridge.communicate()

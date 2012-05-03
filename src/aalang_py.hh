@@ -59,6 +59,7 @@ protected:
   std::string pop;
   std::string variables;
   bool tag;
+  bool this_is_input;
 };
 
 #endif
