@@ -125,14 +125,13 @@ int aal_remote::getprops(int** pro) {
 
 int aal_remote::observe(std::vector<int> &action, bool block)
 {
-  int *act = (int*) malloc(64);
   if (block) {
     std::fprintf(d_stdin, "aob\n"); // block
   } else {
     std::fprintf(d_stdin, "aop\n"); // poll
   }
-  int action_alternatives = getact(&act, action, d_stdin, d_stdout);
-  free(act);
+  int action_alternatives = getact(NULL, action, d_stdin, d_stdout);
+  
   if (action_alternatives > 0) {
     if (action[0] == SILENCE) {
       action.clear();

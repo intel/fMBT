@@ -578,7 +578,8 @@ int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in)
   size_t s=getdelim(&line,&n,'\n',in);
   if (s) {
     string2vector(line,vec);
-    *act = &vec[0];
+    if (act) 
+      *act = &vec[0];
     ret=vec.size();
   }
   if (line) {
@@ -596,8 +597,8 @@ void split(std::string val,std::string& name,
   if (cutpos == val.npos) {
     name  = val;
     param = std::string("");
-  } else { 
-    name  = val.substr(0,cutpos);   
+  } else {
+    name  = val.substr(0,cutpos);
     param = val.substr(cutpos+1);
   }
 }
