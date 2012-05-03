@@ -1,0 +1,51 @@
+aal "pyoutputtest" {
+    language: python { import os };
+
+    variables { inputteja, outputteja, files }
+
+    initial_state {
+        inputteja = 0
+        outputteja = 0
+        files = {'txt': False, 'jpg': False, 'png': False, 'tmp': False}
+    }
+
+    action "iInputTapahtuma" {
+        guard() { return inputteja < 100 }
+        body()  { inputteja += 1 }
+    }
+
+    action "oJokuTXT" {
+        guard() { return 1 }
+        body() {
+            log("oJokuTXT ihan oma loki")
+            outputteja += 1
+            files['txt'] = not files['txt']}
+        adapter() {
+            if os.path.exists("/tmp/delme.txt") != files['txt']: return True
+        }
+    }
+
+    action "oJokuJPG" {
+        body() { files['jpg'] = not files['jpg'] }
+    }
+    action "oJokuPNG" {
+        guard() { inputteja > 0 }
+        body() {
+            outputteja += 1
+            files['png'] = not files['png']
+        }
+        adapter() {
+            if os.path.exists("/tmp/delme.jpg") != files['jpg']: return action("oJokuJPG")
+            elif os.path.exists("/tmp/delme.png") != files['png']: return action("oJokuPNG")
+        }
+    }
+
+    action "oJokuTMP" {
+        body() {
+            files['tmp'] = not files['tmp']
+        }
+        adapter() {
+            if os.path.exists("/tmp/delme.tmp") != files['tmp']: return "oJokuTMP"
+        }
+    }
+}
