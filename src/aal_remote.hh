@@ -38,6 +38,8 @@ public:
   virtual void push();
   virtual void pop();
   virtual int getprops(int** props);
+
+  virtual int observe(std::vector<int> &action,bool block=false);
 private:
   char* read_buf;
   size_t read_buf_pos;
