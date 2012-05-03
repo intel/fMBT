@@ -101,9 +101,9 @@ push: 'push' '{' bstr '}' {
 
 pop:  'pop' '{' bstr '}' { obj->set_pop ($2.str); } ;
 
-language: 'language:' cpp    { obj=new aalang_cpp  ; } starter ';' |
-          'language:' java   { obj=new aalang_java ; } starter ';' |
-          'language:' python { obj=new aalang_py   ; } starter ';' ;
+language: 'language:' cpp    { obj=new aalang_cpp  ; } starter ';'? |
+          'language:' java   { obj=new aalang_java ; } starter ';'? |
+          'language:' python { obj=new aalang_py   ; } starter ';'? ;
 
 cpp: 'C++' | 'cpp' | 'c++';
 
