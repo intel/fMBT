@@ -80,15 +80,7 @@ void aalang_py::set_starter(std::string* st)
 
 void aalang_py::set_name(std::string* name)
 {
-  s+="\n    action"+acnt+"name = \""+*name+"\"\n"
-    +"    action"+acnt+"type = ";
-  if (name->size() > 0 && name->c_str()[0] == 'o') {
-    s += "\"output\"\n";
-    this_is_input = false;
-  } else {
-    s += "\"input\"\n";
-    this_is_input = true;
-  }
+  multiname.push_back(*name);
 }
 
 void aalang_py::set_namestr(std::string* _name)
@@ -133,11 +125,7 @@ void aalang_py::set_guard(std::string* gua)
       indent(8,*gua)+"\n";
   }
   else {
-    s+="    def action"+acnt+"guard():\n"+variables + 
-      "        try:\n" +
-      indent(12,*gua) + "\n" +
-      "        except Exception as _aalException:\n" +
-      "            raise _aalException\n";
+    m_guard = *gua;
   }
 }
 
@@ -156,30 +144,68 @@ void aalang_py::set_pop(std::string* p)
 void aalang_py::set_body(std::string* bod)
 {
   default_if_empty(*bod, "pass");
-  s+="    def action"+acnt+"body():\n" + variables +
-    "        try:\n" +
-                 indent(12,*bod)+"\n"
-    "        except Exception as _aalException:\n"
-    "            raise _aalException\n";
+  m_body = *bod;
 }
 
 void aalang_py::set_adapter(std::string* ada)
 {
   default_if_empty(*ada, "pass");
-  s+="    def action"+acnt+"adapter():\n" + variables +
-    indent(8,*ada)+"\n";
-  
-  if (this_is_input) {
-    s+="        return " +acnt + "\n";
-  } else {
-    s+="        return False\n";
-  }
+  m_adapter = *ada;
 }
 
 void aalang_py::next_action()
 {
-  action_cnt++;
-  acnt=to_string(action_cnt);
+  for (unsigned int i = 0; i < multiname.size(); i++) {
+    /* actionXname, actionXtype */
+    s+="\n    action" + acnt + "name = \"" + multiname[i] + "\"\n"
+      +"    action" + acnt + "type = ";
+    if (multiname[i].size() > 0 && multiname[i].c_str()[0] == 'o') {
+      s += "\"output\"\n";
+      this_is_input = false;
+    } else {
+      s += "\"input\"\n";
+      this_is_input = true;
+    }
+
+    /* actionXguard */
+    s+="    def action" + acnt + "guard():\n" + variables;
+    if (m_guard.find("action_name") != std::string::npos)
+      s+="        action_name = \"" + multiname[i] + "\"\n";
+    if (m_guard.find("action_index") != std::string::npos)
+      s+="        action_index = " + to_string(i) + "\n";
+    s+="        try:\n" +
+      indent(12,m_guard) + "\n" +
+      "        except Exception as _aalException:\n" +
+      "            raise _aalException\n";
+
+    /* actionXbody */
+    s+="    def action"+acnt+"body():\n" + variables;
+    if (m_body.find("action_name") != std::string::npos)
+      s+="        action_name = \"" + multiname[i] + "\"\n";
+    if (m_body.find("action_index") != std::string::npos)
+      s+="        action_index = " + to_string(i) + "\n";
+    s+="        try:\n" +
+      indent(12,m_body)+"\n"
+      "        except Exception as _aalException:\n"
+      "            raise _aalException\n";
+
+    /* actionXadapter */
+    s+="    def action"+acnt+"adapter():\n" + variables;
+    if (m_adapter.find("action_name") != std::string::npos)
+      s+="        action_name = \"" + multiname[i] + "\"\n";
+    if (m_adapter.find("action_index") != std::string::npos)
+      s+="        action_index = " + to_string(i) + "\n";
+    s+=indent(8,m_adapter)+"\n";
+    if (this_is_input) {
+      s+="        return " +acnt + "\n";
+    } else {
+      s+="        return False\n";
+    }
+
+    action_cnt++;
+    acnt=to_string(action_cnt);
+  }
+  multiname.clear();
 }
 
 std::string aalang_py::stringify()

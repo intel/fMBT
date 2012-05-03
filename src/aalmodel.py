@@ -15,6 +15,7 @@ class AALModel:
         self._all_tagguards = self._get_all("guard", "tag")
         self._variables = model_globals
         self._variables['action'] = lambda name: self._all_names.index(name)
+        self._variables['name'] = lambda name: self._all_names.index(name)
         self._stack = []
 
     def _get_all(self, property_name, itemtype):
@@ -26,7 +27,10 @@ class AALModel:
             i += 1
 
     def call(self, func):
-        return eval(func.func_code, self._variables)
+        try:
+            return eval(func.func_code, self._variables)
+        except Exception, e:
+            self._log("Exception %s in %s: %s" % (e.__class__, func.func_name, e))
 
     def reset(self):
         rv = self.call(self.initial_state)
@@ -39,8 +43,8 @@ class AALModel:
         if self._all_types[i-1] == "input":
             return self.call(self._all_adapters[i-1])
         else:
-            self.log("Somebody called adapter_execute for an output action in AAL.\n")
-            self.log("Get that guy!\n")
+            self._log("Somebody called adapter_execute for an output action in AAL.\n")
+            self._log("Get that guy!\n")
             return 0
 
     def model_execute(self, i):
@@ -100,9 +104,8 @@ class AALModel:
                     observed_action = output_action
 
                 if observed_action:
-                    self._log("%s" % (adapter.func_name,))
-                    self._log('observe: action %s (%s) adapter() returned %s. Reporting "%s"' % (
-                            index, self._all_names[index], output_action,
+                    self._log('observe: action "%s" adapter() returned %s. Reporting "%s"' % (
+                            self._all_names[index], output_action,
                             self._all_names[observed_action]))
                     return [observed_action + 1]
             if block:

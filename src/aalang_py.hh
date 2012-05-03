@@ -51,6 +51,10 @@ public:
   virtual std::string stringify();
 protected:
   std::string* name;
+  std::vector<std::string> multiname;
+  std::string m_guard;
+  std::string m_body;
+  std::string m_adapter;
   int action_cnt;
   int tag_cnt;
   std::string acnt;
