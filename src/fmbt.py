@@ -28,8 +28,9 @@
 # component such as remote_python or remote_pyaal.
 
 def fmbtlog(msg):
-    file("/tmp/fmbt.ERRORS.txt", "a").write("fmbtlog('%s')\n" % (msg,))
-    pass
+    try: file("/tmp/fmbt.fmbtlog", "a").write("%s\n" % (msg,))
+    except: pass
 
 def adapterlog(msg):
-    pass
+    try: file("/tmp/fmbt.adapterlog", "a").write("%s\n" % (msg,))
+    except: pass
