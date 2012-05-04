@@ -4,6 +4,8 @@ import os
 import math
 import random
 
+from fmbt import fmbtlog, adapterlog
+
 fmbt_stats_format = ""
 fmbt_stats_output = ""
 fmbt_stats_plot = ""
@@ -38,12 +40,14 @@ def iExecute():
         fmbt_stats_plot,
         fmbt_stats_logfile,
         fmbt_stats_redirect)
+    fmbtlog("Running '%s'" % (cmd,))
     p = subprocess.Popen(cmd, shell=True,
                          stdin  = subprocess.PIPE,
                          stdout = stepslogfile.fileno(),
                          stderr = stepslogfile.fileno())
     p.stdin.close()
     exit_status = p.wait()
+    adapterlog("'%s' exit status: %s" % (cmd, exit_status))
 
     # Check exit status
     if fmbt_stats_logfile.endswith("-0.log"):

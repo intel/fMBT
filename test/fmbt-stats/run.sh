@@ -72,6 +72,14 @@ fmbt quick.conf -l quick.log >>$LOGFILE 2>&1 || {
 }
 testpassed
 
+teststep "fmbt-stats: logging to fmbt/adapter log"
+(   fmbt-log -f '$al' quick.log | grep -q Running\ \'fmbt-stats &&
+    grep fmbt-stats adapter.log | grep -q 'exit status' ) || {
+    testfailed
+    exit 1
+}
+testpassed
+
 
 teststep "fmbt-stats: log and parameter combinations (deep)"
 cat > deep.conf <<EOF
