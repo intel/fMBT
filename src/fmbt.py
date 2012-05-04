@@ -34,3 +34,7 @@ def fmbtlog(msg):
 def adapterlog(msg):
     try: file("/tmp/fmbt.adapterlog", "a").write("%s\n" % (msg,))
     except: pass
+
+def reportOutput(msg):
+    try: file("/tmp/fmbt.reportOutput", "a").write("%s\n" % (msg,))
+    except: pass

@@ -710,6 +710,15 @@ class InteractiveShellIO:
         sys.stdout.flush()
         return True
 
+def reportOutput(action_name):
+    try: action_number = g_actions.index(action_name)
+    except:
+        action_number = 0
+        log('iReportOutput failed: unknown action "%s"')
+    sys.stdout.write("%s\n" % (action_number,))
+    sys.stdout.flush()
+    log('iReportOutput reported %s ("%s")' % (action_number, action_name))
+
 def self_test():
     global g_dbusEvalGlobals
     global g_actions
@@ -809,7 +818,8 @@ if __name__ == "__main__":
         'actions': g_actions,
         '_fuzzlog': [],
         'log': lambda msg: log(msg),
-        'fmbtlog': lambda msg: log(msg, writeToFile = 0, writeToStderr = 1)
+        'fmbtlog': lambda msg: log(msg, writeToFile = 0, writeToStderr = 1),
+        'iReportOutput': reportOutput
         }
     g_dbusEvalGlobals['iCatch'] = iCatch(g_dbusEvalGlobals)
     exec fuzzing_helpers in g_dbusEvalGlobals
@@ -820,6 +830,7 @@ if __name__ == "__main__":
     exec "import fmbt" in g_dbusEvalGlobals
     exec "fmbt.fmbtlog = fmbtlog" in g_dbusEvalGlobals
     exec "fmbt.adapterlog = log" in g_dbusEvalGlobals
+    exec "fmbt.reportOutput = iReportOutput" in g_dbusEvalGlobals
 
     if selfTest:
         sys.exit(self_test())
