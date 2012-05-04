@@ -36,6 +36,7 @@ import os
 import getopt
 import commands
 import time
+import fmbt
 
 sys.path.append(os.getcwd())
 
@@ -44,6 +45,7 @@ def log(msg):
     global log_filename
     if log_filename:
         file(log_filename,"a").write("%.4f %s\n" % (time.time(), msg))
+fmbt.adapterlog = log
 
 def error(msg):
     msg = "remote_pyaal error: " + msg + "\n"
@@ -85,6 +87,7 @@ class RemoteAALBridge:
         put("")
 
         # protocol loop
+        adapter_call_arguments = []
         cmd = get()
         while cmd != "":
             if cmd == "ma":
@@ -110,13 +113,18 @@ class RemoteAALBridge:
                     log("Error on executing %s on model: %s" % (action_number, e))
                     put(0)
                 else:   put(action_number)
+            elif cmd[:2] == "ap":
+                adapter_call_arguments.append(cmd[2:])
             elif cmd[0] == "a":
                 action_number = int(cmd[1:])
-                try:    rv = self._aal.adapter_execute(action_number)
+                try:
+                    rv = self._aal.adapter_execute(action_number,
+                                                   adapter_call_arguments)
                 except Exception, e:
                     log("Error on executing %s on adapter: %s" % (action_number, e))
                     put(0)
                 else:   put(rv)
+                adapter_call_arguments = []
             else:
                 error("Unexpected command: \"" + cmd + "\". remote_pyaal works with \"aal_remote\" model.")
             cmd = get().rstrip()

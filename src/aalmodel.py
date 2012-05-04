@@ -26,8 +26,11 @@ class AALModel:
             except: return plist
             i += 1
 
-    def call(self, func):
+    def call(self, func, call_arguments = ()):
         try:
+            if call_arguments:
+                self._log("Sorry, can't pass arguments %s to %s - yet." %
+                          (call_arguments, func.__name__))
             return eval(func.func_code, self._variables)
         except Exception, e:
             self._log("Exception %s in %s: %s" % (e.__class__, func.func_name, e))
@@ -39,9 +42,9 @@ class AALModel:
                 types.ModuleType, types.FunctionType, types.ClassType]]
         return rv
 
-    def adapter_execute(self, i):
+    def adapter_execute(self, i, adapter_call_arguments = ()):
         if self._all_types[i-1] == "input":
-            return self.call(self._all_adapters[i-1])
+            return self.call(self._all_adapters[i-1], adapter_call_arguments)
         else:
             self._log("Somebody called adapter_execute for an output action in AAL.\n")
             self._log("Get that guy!\n")
