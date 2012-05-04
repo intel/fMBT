@@ -8,7 +8,7 @@ dist_bin_SCRIPTS = remote_exec.sh
 
 if HAVE_PYTHON
 dist_bin_SCRIPTS += remote_python remote_pyaal
-python_PYTHON = fmbtweb.py aalmodel.py
+python_PYTHON = fmbtweb.py aalmodel.py fmbt.py
 pkgpyexec_LTLIBRARIES = fmbt_cparsers.la
 endif
 

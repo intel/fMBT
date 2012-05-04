@@ -112,10 +112,22 @@ void Adapter_remote::execute(std::vector<int>& action)
 
   fflush(d_stdin);
 
+readagain:
   if (getline(&s,&si,d_stderr) < 0) {
     log.debug("Adapter_remote::execute reading child processes execution status failed\n");
     action.resize(0);
     return;
+  }
+  if (strlen(s) > 0 && s[0] == 'l') {
+    // Remote log message. Protocol requires that it's already URL
+    // encoded (otherwise it could not contain linebreaks and other
+    // special characters worth logging) => no encoding needed when
+    // rewriting it to the log.
+    if (s[strlen(s)-1] = '\n') s[strlen(s)-1] = '\0';
+    log.print("<remote msg=\"%s\"/>\n",(s+1));
+    free(s);
+    s = NULL;
+    goto readagain;
   }
 
   string2vector(s,action);

@@ -531,16 +531,10 @@ ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
 	log_redirect=true;
       }
       if (**lineptr=='l') {
-#ifndef DROI
-	char* m=g_uri_escape_string(*lineptr+1,NULL,TRUE);
-	std::free(*lineptr);
-        *lineptr = NULL;
-	log.print("<remote msg=\"%s\"/>\n",m);
-	g_free(m);
-#else
+        // remote log messages must be url encoded when sent through
+        // the remote adapter protocol
 	log.print("<remote msg=\"%s\"/>\n",*lineptr+1);
 	*lineptr = NULL;
-#endif
 	log_redirect=true;
       }
     }

@@ -79,10 +79,10 @@ def log(msg, writeToFile=1, writeToStdout=0, writeToStderr=0):
     if writeToFile:
         file(gLogFile, "a").write(timestamped)
     if writeToStdout:
-        sys.stdout.write(timestamped)
+        sys.stdout.write(urllib.quote(timestamped[:-1]) + '\n')
         sys.stdout.flush()
     if writeToStderr:
-        sys.stderr.write(timestamped)
+        sys.stderr.write(urllib.quote(timestamped[:-1]) + '\n')
 
 def error(msg):
     global g_loop
@@ -675,8 +675,6 @@ class AdapterIO:
 
         try:
             executedActionIndex = g_actions.index(executedActionName)
-            log("Reporting %4s: '%s'" %
-                (executedActionIndex, g_actions[executedActionIndex]), writeToStdout=1)
             sys.stderr.write(str(executedActionIndex) + '\n')
         except ValueError:
             log("Cannot report execution: action '%s' not found." % (executedActionName,), writeToStdout=1)
@@ -810,11 +808,18 @@ if __name__ == "__main__":
         'random': random,
         'actions': g_actions,
         '_fuzzlog': [],
-        'log': lambda msg: log("  " + str(msg))
+        'log': lambda msg: log(msg),
+        'fmbtlog': lambda msg: log(msg, writeToStderr = 1)
         }
     g_dbusEvalGlobals['iCatch'] = iCatch(g_dbusEvalGlobals)
     exec fuzzing_helpers in g_dbusEvalGlobals
     exec "sys.path.append(''); sys.path.append(os.getcwd())" in g_dbusEvalGlobals
+
+    # If user code import fmbt library for logging, make sure it will
+    # use the logging functions provided in this module
+    exec "import fmbt" in g_dbusEvalGlobals
+    exec "fmbt.fmbtlog = fmbtlog" in g_dbusEvalGlobals
+    exec "fmbt.adapterlog = log" in g_dbusEvalGlobals
 
     if selfTest:
         sys.exit(self_test())
