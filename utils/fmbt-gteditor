@@ -334,7 +334,7 @@ on_inconc = "exit:2"
             self._test_ok = False
             return
         self._logFileName = self._gtFileName + ".gted.log.tmp"
-        cmd = "fmbt -l '%s' '%s'" % (self._logFileName, self._confFileName)
+        cmd = "fmbt -l '%s' -o 'adapter=\"dummy\"' '%s'" % (self._logFileName, self._confFileName)
         fmbt_exitstatus = self.runcmd(cmd)
         if fmbt_exitstatus == 0:
             self.edit.setTabIcon(1, QtGui.QIcon())
