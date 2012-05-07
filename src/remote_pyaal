@@ -29,6 +29,9 @@ Options:
 
     -t, --timeout s
         Event observation timeout in seconds.
+
+    -d, --debug
+        Run in debug mode.
 """
 
 import sys
@@ -37,15 +40,29 @@ import getopt
 import commands
 import time
 import fmbt
+import atexit
 
 sys.path.append(os.getcwd())
 
+opt_debug = False
+
 log_filename = None
-def log(msg):
+log_flush_interval = 1.0 # in seconds
+def log(msg, flush = False):
     global log_filename
-    if log_filename:
+    if opt_debug:
         file(log_filename,"a").write("%.4f %s\n" % (time.time(), msg))
+        return
+    current_time = time.time()
+    if log_filename:
+        log.messages.append("%.4f %s\n" % (current_time, msg))
+        if flush or current_time - log.last_flush > log_flush_interval:
+            file(log_filename,"a").write(''.join(log.messages))
+            log.last_flush = current_time
+            log.messages = []
 fmbt.adapterlog = log
+log.last_flush = time.time()
+log.messages = []
 
 def error(msg):
     msg = "remote_pyaal error: " + msg + "\n"
@@ -53,20 +70,24 @@ def error(msg):
     sys.stderr.write(msg)
     sys.exit(1)
 
+def bye():
+    log("quitting", flush=True)
+atexit.register(bye)
+
 def put(msg):
-    log("sending: '%s'" % (msg,))
+    if opt_debug: log("sending: '%s'" % (msg,))
     sys.stdout.write(str(msg) + "\n")
     sys.stdout.flush()
 
 def put_list(list_of_integers):
     msg = " ".join([str(i) for i in list_of_integers])
-    log("sending: '%s'" % (msg,))
+    if opt_debug: log("sending: '%s'" % (msg,))
     sys.stdout.write(msg + "\n")
     sys.stdout.flush()
 
 def get():
     cmd = sys.stdin.readline().rstrip()
-    log("received: '%s'" % (cmd,))
+    if opt_debug: log("received: '%s'" % (cmd,))
     return cmd
 
 class RemoteAALBridge:
@@ -138,11 +159,13 @@ if __name__ == "__main__":
 
     # Parse arguments
     opts, remainder = getopt.gnu_getopt(
-        sys.argv[1:], 'hl:L:t:',
-        ["help", "timeout="])
+        sys.argv[1:], 'dhl:L:t:',
+        ["debug", "help", "timeout="])
 
     for opt, arg in opts:
-        if opt in ["-h", "--help"]:
+        if opt in ["-d", "--debug"]:
+            opt_debug = True
+        elif opt in ["-h", "--help"]:
             print __doc__
             sys.exit(0)
         elif opt in ["-l", "-L"]:
@@ -188,4 +211,5 @@ if __name__ == "__main__":
     aal._log = log
     aal.timeout = opt_timeout
     bridge = RemoteAALBridge(aal)
+    log("starting")
     bridge.communicate()
