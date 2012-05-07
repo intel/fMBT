@@ -69,15 +69,19 @@ int bstr_scan(char *ops, void *ops_cache, d_loc_t *loc,
 }
 }
 
-aal: aal_start header+ ( act | tag )* '}' ;
+aal: aal_start header+ ( act | tag | itag | comment )* '}' ;
 
 aal_start: 'aal' string '{' language {
             obj->set_namestr($1.str);
         } ;
 
-header: variables | istate | push | pop;
+header: variables | istate | push | pop | comment;
 
-act: 'action' astr '{' guard body adapter '}' { obj->next_action(); };
+comment: '#' "[^\n]*" {} ;
+
+act: 'action' astr '{' comment* guard comment* body comment* adapter comment* '}' {
+            obj->next_action();
+        };
 
 astr:   string          {
             obj->set_name($0.str);
@@ -86,7 +90,9 @@ astr:   string          {
             obj->set_name($2.str);
         } ;
 
-tag: 'tag' tstr '{' guard '}' { obj->next_tag(); };
+tag: 'tag' tstr '{' comment* guard  comment* '}' { obj->next_tag(); };
+
+itag: 'new_tag' tstr '{' implicit_guard '}' { obj->next_tag(); };
 
 tstr:   string          {
             obj->set_tagname($0.str);
@@ -112,7 +118,7 @@ java: 'oak' | 'green' | 'java';
 starter: |
         '{' bstr '}' { obj->set_starter($1.str); };
 
-python: 'python' | 'py';
+python: 'Python' | 'python' | 'py';
 
 namestr: unquoted_string {
             $$.str=$0.str; // I'm too lazy to figure out why this can't be returned in $0
@@ -124,6 +130,8 @@ istate: 'initial_state' '{' bstr '}' { obj->set_istate($2.str); } ;
 
 guard: 'guard' '()' '{' bstr '}' { obj->set_guard($3.str); }
     | { obj->empty_guard(); } ;
+
+implicit_guard: bstr { obj->set_guard($0.str); };
 
 body: ('body'|'model') '()' '{' bstr '}' { obj->set_body($3.str); }
     | { obj->empty_body(); };
