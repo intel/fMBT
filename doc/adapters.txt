@@ -149,27 +149,53 @@ there.
 
 remote_python is able to import Python libraries. This allows, for
 instance, implementing test steps as Python functions into a library,
-importing the library with action "iCatch('from myteststeps import *')
-== None", and finally calling test step functions in following
-actions. For instance "iDeviceConfiguration() == 'product'" calls
-iDeviceConfiguration() function in myteststeps and expects the return
-value to be string 'product'.
+and importing the library for the test run. There are two ways to do
+this:
+
+1. remote_python command line parameter "-c" in the test configuration
+   file. Example:
+
+   adapter = "remote:remote_python -c 'from myteststeps import *'"
+
+2. action that executes import statement in the model. Example:
+   "iCatch('from myteststeps import *')"
+
+The difference is that (1) is configurable in the test configuration
+file and (2) is run dynamically during the test if necessary.
+
+Having the test step library imported, test step functions can be
+called directly from actions in the model. For instance, executing
+action "iDeviceConfiguration() == 'product'" calls
+iDeviceConfiguration() function and expects the return value
+'product'.
+
+Test steps can write entries to remote_python adapter log and fmbt
+main log with functions adapterlog and fmbtlog from the fmbt library.
+
+Test step libraries can report observed events (output actions) with
+the reportOutput function from the fmbt library. remote_python runs in
+gobject mainloop to enable reacting to asynchronous events.
 
 For convenience, the remote_python adapter adds some functions to the
-namespace where actions are evaluated. Input-actions are
+namespace where actions are evaluated. Input actions are
 
 iCatch(statement)
 
-    executes the statement in the Python interpreter. The scope is the
-    same as outside "iCatch". If the execution raises an exception,
-    the exception is returned inside an Error object for easy
-    comparison. Otherwise, None is returned.
+    executes the statement in the Python interpreter. The namespace is
+    the same as in ordinary expressions without "iCatch". If the
+    execution raises an exception, the exception is returned inside an
+    Error object for easy comparison. Otherwise, None is returned.
 
-    Example:
+    Examples:
 
     "iCatch('foo+=2') == Error('NameError:.*')"
 
     is successfully executed if variable "foo" is not defined.
+
+    "iCatch('foo=2')"
+
+    defines that variable foo has value 2. The variable can be used in
+    expressions in other actions.
 
 iShell(command)
 
@@ -204,11 +230,17 @@ following:
 
 - If an action does not include a top-level comparison, like
   
-  os.system("rm -rf /var/run/lock/sut.lock")
+  iRemoveDir("/var/run/lock/sut.lock")
 
-  it is executed and the execution is reported to be successful. The
-  return value and possible exceptions are logged but they do not
-  affect the reported result.
+  the expression is executed and execution of the action is reported
+  if it does not raise an exception. The return value is logged. If an
+  exception is raised, remote_python either reports execution of a
+  matching action, such as
+
+  iRemoveDir("/var/run/lock/sut.lock") == Error('.*No such file.*')
+
+  or execution of an unidentified action if there is no matching
+  action. This will cause test to fail.
 
 - If an action includes a top-level comparison operator, like
 
@@ -216,9 +248,9 @@ following:
   os.system("mkdir /var/run/lock/sut.lock 2>/dev/null") in range(1,255)
   os.system("mkdir /var/run/lock/sut.lock 2>/dev/null") > 254
 
-  the left hand side of the action is evaluated first. The result is
-  stored, and then the following evaluations are made until the
-  comparison returns True:
+  the left hand side is evaluated first. The result is stored, and
+  then the following evaluations are made until the comparison returns
+  True:
 
   result == 0
   result in range(1,255)

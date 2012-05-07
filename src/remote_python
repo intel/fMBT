@@ -71,6 +71,7 @@ import atexit
 import signal
 
 MAX_LINE_LENGTH=1024*1024 # bytes
+MAX_LOGGED_RETURN_VALUE_LENGTH = 142
 
 gLogFile = "/tmp/remote_python.log"
 
@@ -91,7 +92,7 @@ def error(msg):
     sys.exit(1)
 
 def warning(msg):
-    log("WARNING: %s" % (msg,))
+    log("WARNING: %s" % (msg,), writeToStderr=1)
 
 def debug(msg):
     log("DEBUG: %s" % (msg,))
@@ -336,7 +337,7 @@ oDBusSignal('HelloSignal',StoreAs(var1),StoreAs(var2),'valueOfArg3')
             dbus_interface = interfaceName,
             signal_name = signalName)
 
-class Error:
+class Error(object):
     """
     Allows comparing cought and expected exceptions. Example:
 
@@ -532,6 +533,25 @@ def safeEval(expression, globalsDict):
 
 def executeString(actionName):
     global g_dbusEvalGlobals
+
+    def findMatchingAction(actionName, left, result):
+        actionWithoutComparison = None
+        for otherAction in g_actions:
+            if otherAction == left:
+                actionWithoutComparison = otherAction
+                continue
+            if otherAction == actionName: continue
+            try: otherLeft, otherOp, otherRight = leftOpRight(otherAction)
+            except: continue
+            if otherLeft == left:
+                rv = safeEval(repr(result) + " " + otherOp + " " + otherRight, g_dbusEvalGlobals)
+                if rv == True:
+                    return otherAction
+                if rv != False:
+                    warning("    non-boolean evaluation output: %s" % (rv,))
+        if actionWithoutComparison and type(result) != Error:
+            return actionWithoutComparison
+        return None # no matching action found
     
     resultIncluded = 1
     try: left, op, right = leftOpRight(actionName)
@@ -545,24 +565,24 @@ def executeString(actionName):
         if safeEval(repr(result) + " " + op + " " + right, g_dbusEvalGlobals) == True:
             return actionName
         else:
-            for otherAction in g_actions:
-                if otherAction == actionName: continue
-                try: otherLeft, otherOp, otherRight = leftOpRight(otherAction)
-                except: continue
-                if otherLeft == left:
-                    rv = safeEval(repr(result) + " " + otherOp + " " + otherRight, g_dbusEvalGlobals)
-                    if rv == True:
-                        return otherAction
-                    if rv != False:
-                        warning("    non-boolean evaluation output: %s" % (rv,))
+            otherAction = findMatchingAction(actionName, left, result)
+            if otherAction:
+                return otherAction
             # There is no matching action in the list.
             # Return a new action name
             return left + ' == ' + str(result)
     else:
         # There's no constraint for the result in the action name
         result = safeEval(actionName, g_dbusEvalGlobals)
+        if type(result) == Error:
+            otherAction = findMatchingAction(actionName, actionName, result)
+            if otherAction:
+                return otherAction
+            else:
+                return actionName + ' == ' + str(result)
         if result != 'None':
-            log("    not reported return value: %s" % (result,))
+            log("    unreported return value: %s" % (
+                    str(result)[:MAX_LOGGED_RETURN_VALUE_LENGTH],))
         resultActionName = actionName
     return resultActionName
 
@@ -677,7 +697,7 @@ class AdapterIO:
             executedActionIndex = g_actions.index(executedActionName)
             sys.stderr.write(str(executedActionIndex) + '\n')
         except ValueError:
-            log("Cannot report execution: action '%s' not found." % (executedActionName,), writeToStdout=1)
+            warning("Cannot report execution: '%s'." % (executedActionName,))
             sys.stderr.write('0\n')
 
 class InteractiveShellIO:
