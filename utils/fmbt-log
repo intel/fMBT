@@ -39,6 +39,7 @@ Options:
           $sn - number of test step
           $sc - coverage after the test step
           $st - time stamp of test step
+          $tg - tags at state
           $tv - test verdict: pass or fail
           $tr - reason for the verdict
           $tt - total test runtime [s]
@@ -64,6 +65,7 @@ fields = {
     '$sc' : ['<status steps=', '"', 3],
     '$sn' : ['<status steps=', '"', 1],
     '$st' : ['<current_time time=', '"', 1],
+    '$tg' : ['<tags enabled=', '"', 1],
     '$tv' : ['<stop verdict=', '"', 1],
     '$tr' : ['<stop verdict=', '"', 3],
     '$tt' : ['<elapsed_time', '"', 1]
