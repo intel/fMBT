@@ -108,11 +108,13 @@ class RemoteAALBridge:
                 put_list(self._aal.observe(True))
             elif cmd[0] == "m":
                 action_number = int(cmd[1:])
-                try:    self._aal.model_execute(action_number)
+                try:
+                    rv = self._aal.model_execute(action_number)
                 except Exception, e:
                     log("Error on executing %s on model: %s" % (action_number, e))
                     put(0)
-                else:   put(action_number)
+                else:
+                    put(rv)
             elif cmd[:2] == "ap":
                 adapter_call_arguments.append(cmd[2:])
             elif cmd[0] == "a":

@@ -51,7 +51,11 @@ class AALModel:
             return 0
 
     def model_execute(self, i):
-        return self.call(self._all_bodies[i-1])
+        if self.call(self._all_guards[i-1]):
+            self.call(self._all_bodies[i-1])
+            return i
+        else:
+            return 0
 
     def getActions(self):
         enabled_actions = []
