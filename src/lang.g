@@ -69,7 +69,7 @@ int bstr_scan(char *ops, void *ops_cache, d_loc_t *loc,
 }
 }
 
-aal: aal_start header+ ( act | tag | itag | comment )* '}' ;
+aal: aal_start header+ ( act | tag | comment )* '}' ;
 
 aal_start: 'aal' string '{' language {
             obj->set_namestr($1.str);
@@ -91,8 +91,6 @@ astr:   string          {
         } ;
 
 tag: 'tag' tstr '{' comment* guard  comment* '}' { obj->next_tag(); };
-
-itag: 'new_tag' tstr '{' implicit_guard '}' { obj->next_tag(); };
 
 tstr:   string          {
             obj->set_tagname($0.str);
@@ -130,8 +128,6 @@ istate: 'initial_state' '{' bstr '}' { obj->set_istate($2.str); } ;
 
 guard: 'guard' '()' '{' bstr '}' { obj->set_guard($3.str); }
     | { obj->empty_guard(); } ;
-
-implicit_guard: bstr { obj->set_guard($0.str); };
 
 body: ('body'|'model') '()' '{' bstr '}' { obj->set_body($3.str); }
     | { obj->empty_body(); };
