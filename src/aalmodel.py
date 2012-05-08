@@ -95,6 +95,17 @@ class AALModel:
         for varname in stack_element:
             self._variables[varname] = stack_element[varname]
 
+    def state(self, discard_variables = set([])):
+        """
+        Return the current state of the model as a string.
+        By comparing strings one can check if the state is already seen.
+        """
+        rv_list = []
+        for varname in self._push_variables:
+            if varname in discard_variables: continue
+            rv_list.append("%s = %s" % (varname, repr(self._variables[varname])))
+        return '\n'.join(rv_list)
+
     def observe(self, block):
         poll_more = True
         start_time = 0

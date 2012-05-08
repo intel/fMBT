@@ -30,6 +30,20 @@ Options:
     -t, --timeout s
         Event observation timeout in seconds.
 
+    -o, --output filename
+        Convert AAL/Python model to LSTS and write output to given
+        file. If filename is "-", output is written to the standard
+        output.
+
+    --lsts-depth n
+        Stop AAL/Python to LSTS conversion to the given depth. The
+        depth is the number of test steps from the initial state.
+
+    --lsts-hide-var varname
+        Ignore value of varname when converting to LSTS. States which
+        differ only by ignored variables are considered the
+        same. --lsts-hide-var can be given several times.
+
     -d, --debug
         Run in debug mode.
 """
@@ -152,15 +166,73 @@ class RemoteAALBridge:
                 error("Unexpected command: \"" + cmd + "\". remote_pyaal works with \"aal_remote\" model.")
             cmd = get().rstrip()
 
+def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([])):
+    import lsts
+
+    generation_discontinued_tag = "AAL-depth:%s" % (depth,)
+
+    new_lsts = lsts.writer()
+    actionnames = ["tau"] + aal.getActionNames()
+    # actionname2int = dict([(action, num) for num, action in enumerate(actionnames)])
+    transitions = [[]]
+    tags = {generation_discontinued_tag: []}
+
+    aal.reset()
+    initial_state_hidden = aal.state(discard_variables)
+    initial_state_real = aal.state()
+    unhandled_states = {initial_state_real: []} # state to shortest path from istate
+    found_states_real = {initial_state_real: initial_state_hidden} # real to hidden states
+    lsts_states = {initial_state_hidden: 0} # state to LSTS state number
+    states = 1
+
+    while unhandled_states:
+        source_state, path = unhandled_states.popitem()
+        source_lsts_state = lsts_states[found_states_real[source_state]]
+
+        if len(path) >= depth:
+            if not source_lsts_state in tags[generation_discontinued_tag]:
+                tags[generation_discontinued_tag].append(lsts_states[found_states_real[source_state]])
+            continue
+
+        aal.push()
+        for action in path:
+            aal.model_execute(action)
+
+        for action in aal.getActions():
+            aal.push()
+            aal.model_execute(action)
+            next_state_real = aal.state()
+            next_state_hidden = aal.state(discard_variables)
+            # new state?
+            if not next_state_hidden in lsts_states:
+                transitions.append([])
+                lsts_states[next_state_hidden] = len(transitions) - 1
+            if not next_state_real in found_states_real:
+                unhandled_states[next_state_real] = path + [action]
+                found_states_real[next_state_real] = next_state_hidden
+            if (lsts_states[next_state_hidden],action) not in transitions[source_lsts_state]:
+                transitions[source_lsts_state].append((lsts_states[next_state_hidden],action))
+            aal.pop()
+        aal.pop()
+
+    new_lsts.set_actionnames(actionnames)
+    new_lsts.set_transitions(transitions)
+    new_lsts.set_stateprops(tags)
+    new_lsts.write(output_fileobj)
+
 if __name__ == "__main__":
     # Default values for commandline arguments
     log_filename = None
     opt_timeout = 1.0
+    opt_output_fileobj = None
+    opt_lsts_depth = 5
+    opt_lsts_hide_vars = []
 
     # Parse arguments
     opts, remainder = getopt.gnu_getopt(
-        sys.argv[1:], 'dhl:L:t:',
-        ["debug", "help", "timeout="])
+        sys.argv[1:], 'dhl:L:t:o:',
+        ["debug", "help", "timeout=", "output=", 
+         "lsts-depth=", "lsts-hide-var="])
 
     for opt, arg in opts:
         if opt in ["-d", "--debug"]:
@@ -170,10 +242,19 @@ if __name__ == "__main__":
             sys.exit(0)
         elif opt in ["-l", "-L"]:
             log_filename = arg
-            if opt == "-l": file(log_filename,"w") # overwrite
+            if opt == "-l": file(log_filename, "w") # overwrite
         elif opt in ["-t", "--timeout"]:
             opt_timeout = float(arg)
             log("observe timeout: %2.6f" % (opt_timeout,))
+        elif opt in ["-o", "--output"]:
+            if arg == "-":
+                opt_output_fileobj = sys.stdout
+            else:
+                opt_output_fileobj = file(arg, "w")
+        elif opt in ["--lsts-depth"]:
+            opt_lsts_depth = int(arg)
+        elif opt in ["--lsts-hide-var"]:
+            opt_lsts_hide_vars.append(arg)
 
     if len(remainder) != 1:
         print __doc__
@@ -210,6 +291,11 @@ if __name__ == "__main__":
         error("error when instantiating Model(): %s" % (e,))
     aal._log = log
     aal.timeout = opt_timeout
-    bridge = RemoteAALBridge(aal)
-    log("starting")
-    bridge.communicate()
+
+    if not opt_output_fileobj:
+        bridge = RemoteAALBridge(aal)
+        log("starting")
+        bridge.communicate()
+    else:
+        aal2lsts(aal, opt_output_fileobj, depth=opt_lsts_depth, discard_variables=set(opt_lsts_hide_vars))
+        opt_output_fileobj.close()
