@@ -641,15 +641,15 @@ class GTHighlighter(QtGui.QSyntaxHighlighter):
         self.highlightingRules = [(QtCore.QRegExp(pattern), keywordFormat)
                 for pattern in keywordPatterns]
 
-        singleLineCommentFormat = QtGui.QTextCharFormat()
-        singleLineCommentFormat.setForeground(QtCore.Qt.darkMagenta)
-        self.highlightingRules.append((QtCore.QRegExp("^#[^\n]*"),
-                singleLineCommentFormat))
-
         quotationFormat = QtGui.QTextCharFormat()
         quotationFormat.setForeground(QtCore.Qt.darkGreen)
         self.highlightingRules.append((QtCore.QRegExp("\".*\""),
                 quotationFormat))
+
+        singleLineCommentFormat = QtGui.QTextCharFormat()
+        singleLineCommentFormat.setForeground(QtCore.Qt.darkMagenta)
+        self.highlightingRules.append((QtCore.QRegExp("^#[^\n]*"),
+                singleLineCommentFormat))
 
         usualErrorsFormat = QtGui.QTextCharFormat()
         usualErrorsFormat.setForeground(QtCore.Qt.red)
@@ -693,15 +693,15 @@ class ConfHighlighter(QtGui.QSyntaxHighlighter):
         self.highlightingRules = [(QtCore.QRegExp(pattern), keywordFormat)
                 for pattern in keywordPatterns]
 
-        singleLineCommentFormat = QtGui.QTextCharFormat()
-        singleLineCommentFormat.setForeground(QtCore.Qt.darkMagenta)
-        self.highlightingRules.append((QtCore.QRegExp("^#[^\n]*"),
-                singleLineCommentFormat))
-
         quotationFormat = QtGui.QTextCharFormat()
         quotationFormat.setForeground(QtCore.Qt.darkGreen)
         self.highlightingRules.append((QtCore.QRegExp("\".*\""),
                 quotationFormat))
+
+        singleLineCommentFormat = QtGui.QTextCharFormat()
+        singleLineCommentFormat.setForeground(QtCore.Qt.darkMagenta)
+        self.highlightingRules.append((QtCore.QRegExp("^#[^\n]*"),
+                singleLineCommentFormat))
 
         self._usualErrorsFormat = QtGui.QTextCharFormat()
         self._usualErrorsFormat.setForeground(QtCore.Qt.red)
