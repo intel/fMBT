@@ -425,14 +425,17 @@ on_inconc = "exit:2"
 
         self.gthighlighter = GTHighlighter(self.editor.document())
         self.confhighlighter = ConfHighlighter(self.conf_editor.document())
-        self.layout.addWidget(self.edit, 1)
+
+        self.splitter = QtGui.QSplitter(self.mainwidget)
+        self.layout.addWidget(self.splitter,1)
+        self.splitter.addWidget(self.edit)
 
         # Setup preview tabs
         self.preview = QtGui.QTabWidget()
         self.preview.connect(self.preview, QtCore.SIGNAL("currentChanged(int)"),
                              self.previewTabChanged)
 
-        self.layout.addWidget(self.preview, 1)
+        self.splitter.addWidget(self.preview)
 
         def makeScalableImage(parent, image):
             container = QtGui.QWidget(parent)
@@ -528,17 +531,14 @@ on_inconc = "exit:2"
         helpMenu.addAction("&About", self.about)
 
     def growTabs(self, grow):
-        layout = self.mainwidget.layout()
-        widgets = [self.edit, self.preview]
-        if widgets[grow].isVisible() == False:
-            widgets[grow].show()
-            if grow == 1: self.refreshImages()
-        elif layout.stretch(1-grow) > 1:
-            layout.setStretch(1-grow, layout.stretch(1-grow)/2)
-        elif layout.stretch(grow) < 8:
-            layout.setStretch(grow, layout.stretch(grow) * 2)
-        else:
-            widgets[1-grow].hide()
+        sizes = self.splitter.sizes()
+        totalsizes = sum(sizes)
+        sizes[grow] += totalsizes / 8
+        sizes[1-grow] = totalsizes - sizes[grow]
+        if sizes[1-grow] < totalsizes * .17:
+            sizes[grow] += sizes[1-grow]
+            sizes[1-grow] = 0
+        self.splitter.setSizes(sizes)
 
     def completion(self):
         def stateActionTagNames(txt):
