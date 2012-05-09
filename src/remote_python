@@ -92,7 +92,7 @@ def error(msg):
     sys.exit(1)
 
 def warning(msg):
-    log("WARNING: %s" % (msg,), writeToStderr=1)
+    log("WARNING: %s" % (msg,))
 
 def debug(msg):
     log("DEBUG: %s" % (msg,))
