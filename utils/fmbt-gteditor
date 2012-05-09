@@ -139,6 +139,7 @@ class MainWindow(QtGui.QMainWindow):
         self.setupHelpMenu()
 
         self.setupEditor()
+        self._set_gtFileName("noname.gt")
 
         self.setCentralWidget(self.mainwidget)
         self.setWindowTitle("fMBT GT editor")
@@ -165,14 +166,18 @@ Keyboard shortcuts:<br>
 </table>
 ''')
 
+    def _set_gtFileName(self, newname):
+        self._gtFileName = str(newname)
+        self.edit.setTabText(0, os.path.basename(self._gtFileName) + " - F1")
+
     def newFile(self, path=None):
         self.editor.setPlainText("P(start, \"gt:istate\")\n->\n")
         self.editor.moveCursor(QtGui.QTextCursor.End)
         self.editor.setFocus()
         if not path:
-            self._gtFileName = "noname.gt"
+            self._set_gtFileName("noname.gt")
         else:
-            self._gtFileName = path
+            self._set_gtFileName(path)
 
     def saveFile(self):
         print "[saving '%s']" % (self._gtFileName,)
@@ -182,12 +187,12 @@ Keyboard shortcuts:<br>
         path = QtGui.QFileDialog.getSaveFileName(self, "Save File",
                                                  '', "fMBT GT commands (*.gt);;State machines (*.lsts)")
         if not_using_PySide:
-            self._gtFileName = str(path)
+            self._set_gtFileName(path)
         else:
-            self._gtFileName = str(path[0])
+            self._set_gtFileName(path[0])
 
         if not self._gtFileName:
-            self._gtFileName = "noname.gt"
+            self._set_gtFileName(path[0])
         self.saveFile()
 
     def openFile(self, path=None):
@@ -200,7 +205,7 @@ Keyboard shortcuts:<br>
             self.editor.setFocus()
             self.conf_editor.setPlainText("")
             self._doGenerateConf()
-            self._gtFileName = str(path)
+            self._set_gtFileName(path)
 
     def runcmd(self, cmd):
         print cmd
