@@ -497,7 +497,7 @@ on_inconc = "exit:2"
         self.menuBar().addMenu(viewMenu)
         viewMenu.addAction("Grow &editors", lambda: self.growTabs(0), "Shift+F5")
         viewMenu.addAction("Grow &previews", lambda: self.growTabs(1), "Shift+F4")
-        viewMenu.addAction("Toggle editors on left/&top", self.toggleEditorsLeft, "Ctrl+T")
+        viewMenu.addAction("Toggle editors on &top/left", self.toggleEditorsLeft, "Ctrl+T")
 
     def setupCommandsMenu(self):
         commandMenu = QtGui.QMenu("&Commands", self)
