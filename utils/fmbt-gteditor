@@ -118,6 +118,31 @@ class MyScaleEvents(QtCore.QObject):
             self.changeScale(coefficient)
         return False
 
+def asyncRuncmd(cmd, onThreadSuccess=lambda: None,onSuccess=lambda: None, onError=lambda: None):
+    class Async(QtCore.QThread):
+        def run(self):
+            sys.stdout.write(cmd)
+            sys.stdout.flush()
+            p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            output = p.stderr.read() + p.stdout.read()
+            sys.stdout.write('\n' + output + '\n')
+            sys.stdout.flush()
+            onThreadSuccess()
+            if p.wait() == 0:
+                self.emit(QtCore.SIGNAL("success()"))
+            else:
+                self.emit(QtCore.SIGNAL("error()"))
+    def cleanup():
+        del asyncRuncmd.running[cmd]
+    if cmd in asyncRuncmd.running: return "Command already running"
+    async = Async()
+    async.connect(async, QtCore.SIGNAL("success()"), onSuccess)
+    async.connect(async, QtCore.SIGNAL("error()"), onError)
+    async.connect(async, QtCore.SIGNAL("finished()"), cleanup)
+    asyncRuncmd.running[cmd] = async # hide from the garbage collector
+    async.start()
+asyncRuncmd.running = {}
+
 class MainWindow(QtGui.QMainWindow):
 
     def __init__(self, parent=None):
@@ -254,6 +279,42 @@ Keyboard shortcuts:<br>
             saved += 2
         return saved
 
+    def pixmapLoader(self, previewtab, filename):
+        # previewtab is one of 'model', 'dist', 'cov'
+        # returns function that can load an image in non-UI thread
+        def loader():
+            qimage_attr = 'preview_%sqimage' % (previewtab,)
+            if not hasattr(self, qimage_attr):
+                setattr(self, qimage_attr, QtGui.QImage())
+            getattr(self, qimage_attr).load(filename)
+        return loader
+
+    def pixmapViewer(self, previewtab):
+        # returns function that presents an image in a qlabel
+        # must be run in UI thread
+        self.preview.setTabIcon(eval("PREVIEWTAB_%s" % (previewtab.upper(),)),
+                                QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_BrowserReload))
+        def viewer():
+            # for instance, with 'model' this calls:
+            # self.preview_modelimage.setPixmap(fromImage(self.preview_modelqimage))
+            # self.preview_modelcont.area.setWidget(self.preview_modelimage)
+            # self.preview_modelcont.area.wheel_scale_changed()
+            # self.preview.setTabIcon(PREVIEWTAB_MODEL, QtGui.QIcon())
+            getattr(self, 'preview_%simage' % (previewtab,)).setPixmap(
+                QtGui.QPixmap.fromImage(getattr(self, 'preview_%sqimage' % (previewtab,))))
+            container = getattr(self, 'preview_%scont' % (previewtab,))
+            container.area.setWidget(getattr(self, 'preview_%simage' % (previewtab,)))
+            container.area.wheel_scale_changed()
+            self.preview.setTabIcon(eval("PREVIEWTAB_%s" % (previewtab.upper(),)),
+                                    QtGui.QIcon())
+        return viewer
+
+    def pixmapUnviewable(self, previewtab):
+        def errorhandler():
+            self.preview.setTabIcon(eval("PREVIEWTAB_%s" % (previewtab.upper(),)),
+                                    QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_MessageBoxWarning))
+        return errorhandler
+
     def visualiseModel(self, change_tab = True):
         self.autoSave()
         self._doGenerateTest()
@@ -263,15 +324,11 @@ Keyboard shortcuts:<br>
         else: logparam = "-l '%s'" % (self._logFileName)
         if self._model_ok:
             if not self._test_ok: logparam = ""
-            s = self.runcmd("fmbt-view -f png %s -o '%s' '%s'" % (logparam, imgname, self._lstsFileName))
-            if s != 0:
-                print "fmbt-view call returned != 0"
-                return
-            self.preview_modelimage_pixmap = QtGui.QPixmap()
-            self.preview_modelimage_pixmap.load(imgname)
-            self.preview_modelimage.setPixmap(self.preview_modelimage_pixmap)
-            self.preview_modelcont.area.setWidget(self.preview_modelimage)
-            self.preview_modelcont.area.wheel_scale_changed()
+            cmd = "fmbt-view -f png %s -o '%s' '%s'" % (logparam, imgname, self._lstsFileName)
+            asyncRuncmd(cmd,
+                        onThreadSuccess = self.pixmapLoader("model", imgname),
+                        onSuccess = self.pixmapViewer("model"),
+                        onError = self.pixmapUnviewable("model"))
         if change_tab:
             self.preview.setCurrentIndex(PREVIEWTAB_MODEL)
             self.preview_modelimage.setFocus()
@@ -282,13 +339,13 @@ Keyboard shortcuts:<br>
         self._doGenerateTest()
         if self._model_ok and self._test_ok:
             self._distFileName = self._gtFileName + ".gted.dist.png"
-            s = self.runcmd("fmbt-stats -f dist:next,sort -p '%s' -o /dev/null '%s'" %
-                            (self._distFileName, self._logFileName))
-            self.preview_distimage_pixmap = QtGui.QPixmap()
-            self.preview_distimage_pixmap.load(self._distFileName)
-            self.preview_distimage.setPixmap(self.preview_distimage_pixmap)
-            self.preview_distcont.area.setWidget(self.preview_distimage)
-            self.preview_distcont.area.wheel_scale_changed()
+            cmd = "fmbt-stats -f dist:next,sort -p '%s' -o /dev/null '%s'" % (
+                self._distFileName, self._logFileName)
+            asyncRuncmd(cmd,
+                        onThreadSuccess = self.pixmapLoader("dist", self._distFileName),
+                        onSuccess = self.pixmapViewer("dist"),
+                        onError = self.pixmapUnviewable("dist"))
+
         if change_tab:
             self.preview.setCurrentIndex(PREVIEWTAB_DIST)
             self.preview_distimage.setFocus()
@@ -299,13 +356,12 @@ Keyboard shortcuts:<br>
         self._doGenerateTest()
         if self._model_ok and self._test_ok:
             self._covFileName = self._gtFileName + ".gted.cov.png"
-            s = self.runcmd("fmbt-stats -f cov:steps -p '%s' -o /dev/null '%s'" %
-                            (self._covFileName, self._logFileName))
-            self.preview_covimage_pixmap = QtGui.QPixmap()
-            self.preview_covimage_pixmap.load(self._covFileName)
-            self.preview_covimage.setPixmap(self.preview_covimage_pixmap)
-            self.preview_covcont.area.setWidget(self.preview_covimage)
-            self.preview_covcont.area.wheel_scale_changed()
+            cmd = "fmbt-stats -f cov:steps -p '%s' -o /dev/null '%s'" % (
+                self._covFileName, self._logFileName)
+            asyncRuncmd(cmd,
+                        onThreadSuccess = self.pixmapLoader("cov", self._covFileName),
+                        onSuccess = self.pixmapViewer("cov"),
+                        onError = self.pixmapUnviewable("cov"))
         if change_tab:
             self.preview.setCurrentIndex(PREVIEWTAB_COV)
             self.preview_covimage.setFocus()
