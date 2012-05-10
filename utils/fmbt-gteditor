@@ -436,6 +436,7 @@ on_inconc = "exit:2"
                              self.previewTabChanged)
 
         self.splitter.addWidget(self.preview)
+        self._editorsOnLeft = True
 
         def makeScalableImage(parent, image):
             container = QtGui.QWidget(parent)
@@ -496,6 +497,7 @@ on_inconc = "exit:2"
         self.menuBar().addMenu(viewMenu)
         viewMenu.addAction("Grow &editors", lambda: self.growTabs(0), "Shift+F5")
         viewMenu.addAction("Grow &previews", lambda: self.growTabs(1), "Shift+F4")
+        viewMenu.addAction("Toggle editors on left/&top", self.toggleEditorsLeft, "Ctrl+T")
 
     def setupCommandsMenu(self):
         commandMenu = QtGui.QMenu("&Commands", self)
@@ -539,6 +541,13 @@ on_inconc = "exit:2"
             sizes[grow] += sizes[1-grow]
             sizes[1-grow] = 0
         self.splitter.setSizes(sizes)
+
+    def toggleEditorsLeft(self):
+        self._editorsOnLeft = not self._editorsOnLeft
+        if self._editorsOnLeft:
+            self.splitter.setOrientation(QtCore.Qt.Horizontal)
+        else:
+            self.splitter.setOrientation(QtCore.Qt.Vertical)
 
     def completion(self):
         def stateActionTagNames(txt):
