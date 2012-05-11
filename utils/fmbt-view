@@ -52,10 +52,9 @@ if [ "$OUTPUTFILE" == "" ]; then
 	OUTPUTFILE="/tmp/$(basename "$1").$FORMAT"
 fi
 
-( eval $UTILPATH/lsts2dot --loops-in-states -i "$1" $COLORING $LOGFILE | tee "$OUTPUTFILE.gv" | dot -T$FORMAT -o"$OUTPUTFILE" ) && {
+( eval $UTILPATH/lsts2dot --loops-in-states -i "$1" $COLORING $LOGFILE | dot -T$FORMAT -o"$OUTPUTFILE" ) && {
 
     if [ "$DISPLAY_IMAGE" == "1" ]; then
-        echo "Graphviz source saved to $OUTPUTFILE.gv"
         echo "Graphviz output saved to $OUTPUTFILE"
         echo "Displaying..."
         display "$OUTPUTFILE"
