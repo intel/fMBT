@@ -57,11 +57,11 @@ source $TESTDIR/test/functions.sh
 teststep "extract commands from adapters.txt..."
 rm -f cat.[0-9] sed.[0-9] log.[0-9] fmbt-gt.[0-9] fmbt.[0-9]
 awk '/^\$ cat.*EOF/{p=1; k=1; $1=""; cn+=1; f="cat."cn}
-     /^\$ sed/     {if (f) break; p=1; k=0; $1=""; sn+=1; f="sed."sn}
-     /^\$ g\+\+ /  {if (f) break; p=1; k=0; $1=""; rn+=1; f="g++."rn}
-     /^\$ make /   {if (f) break; p=1; k=0; $1=""; mn+=1; f="make."mn}
-     /^\$ fmbt-gt /{if (f) break; p=1; k=0; $1=""; gn+=1; f="fmbt-gt."gn}
-     /^\$.* fmbt / {if (f) break; p=1; k=0; $1=""; ln+=1; f="fmbt."ln}
+     /^\$ sed/     {if (f==""){ p=1; k=0; $1=""; sn+=1; f="sed."sn}}
+     /^\$ g\+\+ /  {if (f==""){ p=1; k=0; $1=""; rn+=1; f="g++."rn}}
+     /^\$ make /   {if (f==""){ p=1; k=0; $1=""; mn+=1; f="make."mn}}
+     /^\$ fmbt-gt /{if (f==""){ p=1; k=0; $1=""; gn+=1; f="fmbt-gt."gn}}
+     /^\$.* fmbt / {if (f==""){ p=1; k=0; $1=""; ln+=1; f="fmbt."ln}}
      /^EOF$/{k=0}
      {if (p) print >> f;
       if (!k) { p=0; f=""} }' $TESTDIR/doc/adapters.txt

@@ -38,6 +38,7 @@
 
 #include <dlfcn.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #include "helper.hh"
 #include "log.hh"

@@ -21,6 +21,7 @@
 
 #include "adapter_v4l2.hh"
 #include <cstdio>
+#include <unistd.h>
     
 #include <sys/types.h>
 #include <sys/stat.h>
