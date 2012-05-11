@@ -144,7 +144,8 @@ def asyncRuncmd(cmd, onThreadSuccess=lambda: None,onSuccess=lambda: None, onErro
 asyncRuncmd.running = {}
 
 def removeTemporaryFiles(basefilename):
-    for tmps in ["lsts", "conf", "states.png", "dist.png", "cov.png", "log"]:
+    for tmps in ["lsts", "conf", "states.png", "dist.png", "cov.png",
+                 "py", "log", "aal.log"]:
         tmpfilename = basefilename + ".gted-tmp." + tmps
         try: os.remove(tmpfilename)
         except: pass
@@ -201,13 +202,41 @@ Keyboard shortcuts:<br>
         removeTemporaryFiles(self._gtFileName)
         self._gtFileName = str(newname)
         self.edit.setTabText(0, os.path.basename(self._gtFileName) + " - F1")
+        if self._editingGT():
+            self.gthighlighter = GTHighlighter(self.editor.document())
+        elif self._editingAAL():
+            self.gthighlighter = AALHighlighter(self.editor.document())
+
 
     def newFile(self, path=None):
+        if path and path.endswith(".aal"):
+            return self.newFileAAL(path)
         self.editor.setPlainText("P(start, \"gt:istate\")\n->\n")
         self.editor.moveCursor(QtGui.QTextCursor.End)
         self.editor.setFocus()
         if not path:
             self._set_gtFileName("noname.gt")
+        else:
+            self._set_gtFileName(path)
+
+    def newFileAAL(self, path=None):
+        self.editor.setPlainText('aal "" {\n'
+                                 '    language: python {}\n'
+                                 '    variables { varname1, varname2 }\n'
+                                 '    initial_state {\n'
+                                 '        varname1 = 42      # comment1\n'
+                                 '        varname2 = \'hello\' # comment2\n'
+                                 '    }\n'
+                                 '    action "iTestStep1()" {\n'
+                                 '        guard() { return varname1 == 42 }\n'
+                                 '        body()  { varname2 = \'bye\' }\n'
+                                 '    }\n'
+                                 '}\n')
+        self.editor.moveCursor(QtGui.QTextCursor.NextWord)
+        self.editor.moveCursor(QtGui.QTextCursor.NextCharacter)
+        self.editor.setFocus()
+        if not path:
+            self._set_gtFileName("noname.py.aal")
         else:
             self._set_gtFileName(path)
 
@@ -217,7 +246,7 @@ Keyboard shortcuts:<br>
 
     def saveFileAs(self):
         path = QtGui.QFileDialog.getSaveFileName(self, "Save File",
-                                                 '', "fMBT GT commands (*.gt);;State machines (*.lsts)")
+                                                 '', "fMBT GT commands (*.gt);;fMBT AAL models (*.aal);;State machines (*.lsts)")
         if not_using_PySide:
             self._set_gtFileName(path)
         else:
@@ -230,7 +259,7 @@ Keyboard shortcuts:<br>
     def openFile(self, path=None):
         if not path:
             path = QtGui.QFileDialog.getOpenFileName(self, "Open File",
-                    '', "fMBT GT commands (*.gt);;State machines (*.lsts)")
+                    '', "fMBT GT commands (*.gt);;fMBT AAL models (*.aal);;State machines (*.lsts)")
             if not not_using_PySide and path: path = path[0]
         if path:
             self.editor.setPlainText(file(path).read())
@@ -249,6 +278,12 @@ Keyboard shortcuts:<br>
     def _editingLSTS(self):
         return self._gtFileName.endswith(".lsts") or self._gtFileName.endswith(".lts")
 
+    def _editingAAL(self):
+        return self._gtFileName.endswith(".aal")
+
+    def _editingGT(self):
+        return not self._editingLSTS() and not self._editingAAL()
+
     def autoSave(self):
         """
         Save unsaved contents, convert gt to lsts if possible.
@@ -260,22 +295,28 @@ Keyboard shortcuts:<br>
             file(self._gtFileName, "w").write(gt_contents)
             self._refreshed_gt = gt_contents
             saved += 1
-            if not self._editingLSTS():
+            if self._editingAAL(): # validate AAL
+                self._aalcFileName = self._gtFileName + ".gted-tmp.py"
+                aal2py_cmd = "fmbt-aalc -o '%s' %s" % (self._aalcFileName, self._gtFileName)
+                executed_program = "fmbt-aalc"
+                validation_exitstatus = self.runcmd(aal2py_cmd)
+            elif self._editingGT(): # validate GT
                 self._lstsFileName = self._gtFileName + ".gted-tmp.lsts"
                 gt2lsts_cmd = "fmbt-gt -o '%s' -f '%s'" % (self._lstsFileName, self._gtFileName)
-                fmbt_gt_exitstatus = self.runcmd(gt2lsts_cmd)
-                if fmbt_gt_exitstatus == 0:
-                    self.edit.setTabIcon(0, QtGui.QIcon())
-                    self._model_ok = True
-                elif fmbt_gt_exitstatus == 127:
-                    error('Cannot execute "fmbt-gt". Check your fMBT installation or PATH.', gui=1)
-                else:
-                    self.edit.setTabIcon(0, QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_MessageBoxWarning))
-                    self._model_ok = False
-            else:
-                # LSTS model validation missing
+                executed_program = "fmbt-gt"
+                validation_exitstatus = self.runcmd(gt2lsts_cmd)
+            else: # validate LSTS (missing)
                 self._lstsFileName = self._gtFileName
+                validation_exitstatus = 0
+
+            if validation_exitstatus == 0:
+                self.edit.setTabIcon(0, QtGui.QIcon())
                 self._model_ok = True
+            elif validation_exitstatus == 127:
+                error('Cannot execute "%s". Check your fMBT installation or PATH.' % (executed_program,), gui=1)
+            else:
+                self.edit.setTabIcon(0, QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_MessageBoxWarning))
+                self._model_ok = False
         conf_contents = str(self.conf_editor.toPlainText()).strip()
         if self._refreshed_conf != conf_contents:
             if conf_contents == "":
@@ -384,6 +425,9 @@ Keyboard shortcuts:<br>
         if regenerate:
             if self._editingLSTS():
                 modelspec="lsts:%s" % (self._lstsFileName,)
+            elif self._editingAAL():
+                modelspec="aal_remote:remote_pyaal -l %s.gted-tmp.aal.log '%s'" % (
+                    self._gtFileName, self._gtFileName)
             else:
                 modelspec="lsts_remote:fmbt-gt -f '%s'" % (self._gtFileName,)
             file(self._confFileName, "w").write("""model     = "%s"
@@ -549,7 +593,8 @@ on_inconc = "exit:2"
     def setupFileMenu(self):
         fileMenu = QtGui.QMenu("&File", self)
         self.menuBar().addMenu(fileMenu)
-        fileMenu.addAction("&New...", self.newFile, "Ctrl+N")
+        fileMenu.addAction("&New GT", self.newFile, "Ctrl+N")
+        fileMenu.addAction("New &AAL", self.newFileAAL)
         fileMenu.addAction("&Open...", self.openFile, "Ctrl+O")
         fileMenu.addAction("&Save", self.saveFile, "Ctrl+S")
         fileMenu.addAction("Save &As...", self.saveFileAs)
@@ -613,6 +658,10 @@ on_inconc = "exit:2"
             self.splitter.setOrientation(QtCore.Qt.Vertical)
 
     def completion(self):
+        if self._editingGT(): self.completionGT()
+        elif self._editingAAL(): self.completionAAL()
+
+    def completionGT(self):
         def stateActionTagNames(txt):
             snames, anames, tnames = [], [], []
             for line in txt.split('\n'):
@@ -691,6 +740,14 @@ on_inconc = "exit:2"
             c = cursorForReplacingFromStartOfLine()
             c.insertText("%s %s" % (prefix, self._tnames[self._iterate_index % len(self._tnames)]))
 
+    def completionAAL(self):
+        pt = str(self.editor.toPlainText())
+        pos = self.editor.textCursor().position()
+        
+        curr_block = pt[:pos].split('{')[-1]
+        if self._iterate_index == 0:
+            print "GT completion: hello world"
+
     def refreshImages(self):
         if self.preview.isVisible() and self.autoSave() != 0:
             if self.preview.currentIndex() == PREVIEWTAB_MODEL:
@@ -740,6 +797,41 @@ class GTHighlighter(QtGui.QSyntaxHighlighter):
                         self.setCurrentBlockState(0)
                         return
         
+        for pattern, format in self.highlightingRules:
+            expression = QtCore.QRegExp(pattern)
+            index = expression.indexIn(text)
+
+            while index >= 0:
+                length = expression.matchedLength()
+                self.setFormat(index, length, format)
+                index = expression.indexIn(text, index + length)
+
+        self.setCurrentBlockState(0)
+
+class AALHighlighter(QtGui.QSyntaxHighlighter):
+    def __init__(self, parent=None):
+        super(AALHighlighter, self).__init__(parent)
+        keywordFormat = QtGui.QTextCharFormat()
+        keywordFormat.setForeground(QtCore.Qt.darkBlue)
+        keywordFormat.setFontWeight(QtGui.QFont.Bold)
+
+        keywordPatterns = ["\\baal\\b", "\\bvariables\\b", "\\binitial_state\\b" "\\blanguage\\b",
+                           "\\baction\\b", "\\btag\\b",
+                           "\\bguard\\b", "\\bbody\\b", "\\badapter\\b"]
+        self.highlightingRules = [(QtCore.QRegExp(pattern), keywordFormat)
+                for pattern in keywordPatterns]
+
+        quotationFormat = QtGui.QTextCharFormat()
+        quotationFormat.setForeground(QtCore.Qt.darkGreen)
+        self.highlightingRules.append((QtCore.QRegExp("\".*\""),
+                quotationFormat))
+
+        singleLineCommentFormat = QtGui.QTextCharFormat()
+        singleLineCommentFormat.setForeground(QtCore.Qt.darkMagenta)
+        self.highlightingRules.append((QtCore.QRegExp("^#[^\n]*"),
+                singleLineCommentFormat))
+
+    def highlightBlock(self, text):
         for pattern, format in self.highlightingRules:
             expression = QtCore.QRegExp(pattern)
             index = expression.indexIn(text)
