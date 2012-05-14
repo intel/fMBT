@@ -184,17 +184,17 @@ Keyboard shortcuts:<br>
 <table align="left" cellpadding="2">
 <tr><td>Editing</td></tr>
 <tr><td><i>Tab</i></td><td>Complete/rotate through states and actions in GT editor</td></tr>
-<tr><td><i>Ctrl + C</i></td><td>Copy</td></tr>
-<tr><td><i>Ctrl + X</i></td><td>Cut</td></tr>
-<tr><td><i>Ctrl + V</i></td><td>Paste</td></tr>
-<tr><td><i>Ctrl + Z and Y</i></td><td>Undo / Redo</td></tr>
+<tr><td><i>Ctrl+C</i></td><td>Copy</td></tr>
+<tr><td><i>Ctrl+X</i></td><td>Cut</td></tr>
+<tr><td><i>Ctrl+V</i></td><td>Paste</td></tr>
+<tr><td><i>Ctrl+Z and Y</i></td><td>Undo / Redo</td></tr>
 <tr></tr>
 <tr><td>Viewing</td></tr>
-<tr><td><i>Ctrl + +</i></td><td>Zoom in active view</td></tr>
-<tr><td><i>Ctrl + -</i></td><td>Zoom out active view</td></tr>
-<tr><td><i>Ctrl + wheel</i><td></td>Zoom in/out active view</td></tr>
-<tr><td><i>Shift + F4<i></td><td>Grow preview tabs on the right</td></tr>
-<tr><td><i>Shift + F5<i></td><td>Grow editor tabs on the left</td></tr>
+<tr><td><i>Ctrl++</i></td><td>Zoom in active view</td></tr>
+<tr><td><i>Ctrl+-</i></td><td>Zoom out active view</td></tr>
+<tr><td><i>Ctrl+wheel</i><td></td>Zoom in/out active view</td></tr>
+<tr><td><i>Shift+F4<i></td><td>Grow preview tabs on the right</td></tr>
+<tr><td><i>Shift+F5<i></td><td>Grow editor tabs on the left</td></tr>
 </table>
 ''')
 
@@ -202,6 +202,9 @@ Keyboard shortcuts:<br>
         removeTemporaryFiles(self._gtFileName)
         self._gtFileName = str(newname)
         self.edit.setTabText(0, os.path.basename(self._gtFileName) + " - F1")
+        if self.gthighlighter:
+            self.gthighlighter.setDocument(None)
+            del self.gthighlighter
         if self._editingGT():
             self.gthighlighter = GTHighlighter(self.editor.document())
         elif self._editingAAL():
@@ -297,14 +300,20 @@ Keyboard shortcuts:<br>
             saved += 1
             if self._editingAAL(): # validate AAL
                 self._aalcFileName = self._gtFileName + ".gted-tmp.py"
+                self._lstsFileName = self._gtFileName + ".gted-tmp.lsts"
                 aal2py_cmd = "fmbt-aalc -o '%s' %s" % (self._aalcFileName, self._gtFileName)
                 executed_program = "fmbt-aalc"
                 validation_exitstatus = self.runcmd(aal2py_cmd)
+                if validation_exitstatus == 0:
+                    py2lsts_cmd = "remote_pyaal -o '%s' '%s'" % (self._lstsFileName, self._aalcFileName)
+                    validation_exitstatus = self.runcmd(py2lsts_cmd)
+
             elif self._editingGT(): # validate GT
                 self._lstsFileName = self._gtFileName + ".gted-tmp.lsts"
                 gt2lsts_cmd = "fmbt-gt -o '%s' -f '%s'" % (self._lstsFileName, self._gtFileName)
                 executed_program = "fmbt-gt"
                 validation_exitstatus = self.runcmd(gt2lsts_cmd)
+
             else: # validate LSTS (missing)
                 self._lstsFileName = self._gtFileName
                 validation_exitstatus = 0
@@ -815,7 +824,7 @@ class AALHighlighter(QtGui.QSyntaxHighlighter):
         keywordFormat.setForeground(QtCore.Qt.darkBlue)
         keywordFormat.setFontWeight(QtGui.QFont.Bold)
 
-        keywordPatterns = ["\\baal\\b", "\\bvariables\\b", "\\binitial_state\\b" "\\blanguage\\b",
+        keywordPatterns = ["\\baal\\b", "\\bvariables\\b", "\\binitial_state\\b", "\\blanguage\\b",
                            "\\baction\\b", "\\btag\\b",
                            "\\bguard\\b", "\\bbody\\b", "\\badapter\\b"]
         self.highlightingRules = [(QtCore.QRegExp(pattern), keywordFormat)
@@ -828,7 +837,7 @@ class AALHighlighter(QtGui.QSyntaxHighlighter):
 
         singleLineCommentFormat = QtGui.QTextCharFormat()
         singleLineCommentFormat.setForeground(QtCore.Qt.darkMagenta)
-        self.highlightingRules.append((QtCore.QRegExp("^#[^\n]*"),
+        self.highlightingRules.append((QtCore.QRegExp("#[^\n]*"),
                 singleLineCommentFormat))
 
     def highlightBlock(self, text):
