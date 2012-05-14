@@ -57,6 +57,16 @@ TR_RE = re.compile("([!]?)T\(\s*([^),]+)\s*,\s*([^\"),]+|\"[^\"]*\")\s*,\s*([^),
 SP_RE = re.compile("([!]?)P\(\s*([^),]+)\s*,\s*([^)]+)\s*\)")
 CF_RE = re.compile("^(model|adapter|heuristic|coverage|history|((on_)?(pass|fail|inconc)))\s*=\s*\"[^\"]+\"\s*$")
 
+AAL_AALRE     = re.compile('aal\s"[^"]*"\s*{')
+AAL_AALREI    = re.compile('{\s*"[^"]*"\s*laa')
+AAL_ACTIONRE  = re.compile('action\s"[^{]*"\s*{')
+AAL_ACTIONREI = re.compile('{\s*"[^}]*"\s*noitca')
+AAL_TAGRE     = re.compile('tag\s"[^{]*"\s*{')
+AAL_TAGREI    = re.compile('{\s*"[^"]*"\s*gat')
+AAL_GUARDRE   = re.compile('guard()\s*{')
+AAL_BODYRE    = re.compile('body()\s*{')
+AAL_ADAPTERRE = re.compile('adapter()\s*{')
+
 # Parse command line, see which Python Qt4 bindings to import
 
 opt_hide_preview = False
@@ -434,19 +444,22 @@ Keyboard shortcuts:<br>
         if regenerate:
             if self._editingLSTS():
                 modelspec="lsts:%s" % (self._lstsFileName,)
+                lookahead = 4
             elif self._editingAAL():
                 modelspec="aal_remote:remote_pyaal -l %s.gted-tmp.aal.log '%s'" % (
                     self._gtFileName, self._gtFileName)
+                lookahead = 3
             else:
                 modelspec="lsts_remote:fmbt-gt -f '%s'" % (self._gtFileName,)
+                lookahead = 4
             file(self._confFileName, "w").write("""model     = "%s"
-heuristic = "lookahead:4"
+heuristic = "lookahead:%s"
 coverage  = "perm:2"
 pass      = "steps:20"
 on_pass   = "exit:0"
 on_fail   = "exit:1"
 on_inconc = "exit:2"
-""" % (modelspec,))
+""" % (modelspec, lookahead))
             self.conf_editor.setPlainText(file(self._confFileName).read())
 
     def _doGenerateTest(self):
@@ -750,12 +763,76 @@ on_inconc = "exit:2"
             c.insertText("%s %s" % (prefix, self._tnames[self._iterate_index % len(self._tnames)]))
 
     def completionAAL(self):
+        def parserishAAL(text, cursor):
+            # search for the start of surrounding block
+            subblocks = 0
+            blockStartsAt = None
+            openBraces = 0
+            index = cursor
+            blockname = None
+            while blockStartsAt == None and openBraces > -1 and index > 0:
+                openBraces = text.rfind('{', 0, index)
+                closeBraces = text.rfind('}', 0, index)
+                if openBraces > closeBraces: # found '{'
+                    if subblocks == 0: blockStartsAt = openBraces
+                    else:
+                        subblocks -= 1
+                        index = openBraces
+                else: # found '}' or neither of {}
+                    subblocks += 1
+                    index = closeBraces
+            if blockStartsAt:
+                s = text[:blockStartsAt + 1]
+                s = s[::-1] # reverse string
+                print s
+                for name, regexp in [("aal", AAL_AALREI), ("action", AAL_ACTIONREI), ("tag", AAL_TAGREI)]:
+                    m = regexp.match(s)
+                    if m:
+                        blockname = name
+                        print "found", blockname
+                        print text[blockStartsAt - m.end():blockStartsAt]
+                        index = blockStartsAt - m.end() + 1
+                        break
+            return blockname, index
+        def moveCursor(suggestion):
+            for _ in xrange(suggestion[0][1]):
+                self.editor.moveCursor(QtGui.QTextCursor.Up)
+            self.editor.moveCursor(QtGui.QTextCursor.EndOfLine)
+            for _ in xrange(suggestion[0][2]):
+                self.editor.moveCursor(QtGui.QTextCursor.Left)
+            
         pt = str(self.editor.toPlainText())
         pos = self.editor.textCursor().position()
-        
-        curr_block = pt[:pos].split('{')[-1]
+
+        # if this is not a blank line, just adjust indentation
+        prev_lfeed = pt[:pos].rfind('\n')
+        next_lfeed = pt[pos:].find('\n') + pos
+        if pt[prev_lfeed:next_lfeed].strip() != "":
+            print "not a clean line: TODO adjust indentation"
+            return
+
         if self._iterate_index == 0:
-            print "GT completion: hello world"
+            currentBlock, blockStartIndex = parserishAAL(pt, pos)
+            suggestions = {
+                'aal': [('action "i" {\n}\n', 3, 3),
+                        ('tag "" {\nguard() {\nreturn \n}\n}\n', 2)],
+                'action': [('guard() { return }\n', 2, 1),
+                           ('body() {\n\n}\n', 2, 0),
+                           ('adapter() {\n\n}\n', 2)],
+                'tag': [('guard() {return }\n', 2, 1)]
+                }
+            print "currentBlock ==", currentBlock
+            if currentBlock in ['aal', 'action', 'tag']:
+                c = self.editor.textCursor()
+                print blockStartIndex, pt[:blockStartIndex].rfind('\n')
+                indentationDepth = blockStartIndex - pt[:blockStartIndex].rfind('\n') + 3
+                print "INDENTATION", indentationDepth
+                lines = suggestions[currentBlock][0][0].split('\n')
+                for line in lines:
+                    print "adding line", line
+                    c.insertText((' ' * indentationDepth) + (line + '\n'))
+            moveCursor(suggestions[currentBlock])
+                
 
     def refreshImages(self):
         if self.preview.isVisible() and self.autoSave() != 0:
