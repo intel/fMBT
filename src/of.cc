@@ -84,8 +84,9 @@ std::string OutputFormat::handle_history(Log&l,std::string& h)
 {
   if (status) {
     History* history = new History_log(l,h);
-    std::vector<Coverage*> c(covs);
-    std::copy(rcovs.begin(),rcovs.end(),c.begin());  
+    std::vector<Coverage*> c;
+    c.resize(rcovs.size());
+    std::copy(rcovs.begin(),rcovs.end(),c.begin());
     Coverage_of* cov=new Coverage_of(l,c);
     
     testnames.push_back(h);
