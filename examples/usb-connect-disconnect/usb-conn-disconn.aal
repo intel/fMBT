@@ -1,0 +1,31 @@
+aal "usb_options" {
+    language: python {}
+
+    variables {
+        keyb, mouse, printer, sound
+    }
+    initial_state {
+        keyb = mouse = printer = sound = False
+    }
+    
+    action "iConnect('keyb')", "iConnect('mouse')", "iConnect('printer')", "iConnect('sound')"
+    {
+        guard() {
+            return eval(action_name.split("'")[1]) == False
+        }
+        body() {
+            globals()[action_name.split("'")[1]] = True
+
+        }
+    }
+
+    action "iDisconnect('keyb')", "iDisconnect('mouse')", "iDisconnect('printer')", "iDisconnect('sound')"
+    {
+        guard() {
+            return eval(action_name.split("'")[1]) == True
+        }
+        body() {
+            globals()[action_name.split("'")[1]] = False
+        }
+    }
+}
