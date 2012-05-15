@@ -28,6 +28,7 @@ rm -f $LOGFILE
 
 if [ "$1" != "installed" ]; then
     export PATH=../../src:../../utils:$PATH
+    export PYTHONPATH=../../src
 fi
 
 source ../functions.sh
