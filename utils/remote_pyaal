@@ -35,14 +35,18 @@ Options:
         file. If filename is "-", output is written to the standard
         output.
 
-    --lsts-depth n
+    -D, --lsts-depth n
         Stop AAL/Python to LSTS conversion to the given depth. The
         depth is the number of test steps from the initial state.
 
-    --lsts-hide-var varname
+    -H, --lsts-hide-var varname
         Ignore value of varname when converting to LSTS. States which
         differ only by ignored variables are considered the
         same. --lsts-hide-var can be given several times.
+
+    -S, --lsts-show-var varname
+        Take variable varname into account when converting to
+        LSTS. --lsts-show-var can be given several times.
 
     -d, --debug
         Run in debug mode.
@@ -166,7 +170,7 @@ class RemoteAALBridge:
                 error("Unexpected command: \"" + cmd + "\". remote_pyaal works with \"aal_remote\" model.")
             cmd = get().rstrip()
 
-def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([])):
+def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]), include_variables=None):
     try:
         import lsts
     except:
@@ -181,7 +185,7 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([])):
     tags = {generation_discontinued_tag: []}
 
     aal.reset()
-    initial_state_hidden = aal.state(discard_variables)
+    initial_state_hidden = aal.state(discard_variables, include_variables)
     initial_state_real = aal.state()
     unhandled_states = {initial_state_real: []} # state to shortest path from istate
     found_states_real = {initial_state_real: initial_state_hidden} # real to hidden states
@@ -205,7 +209,7 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([])):
             aal.push()
             aal.model_execute(action)
             next_state_real = aal.state()
-            next_state_hidden = aal.state(discard_variables)
+            next_state_hidden = aal.state(discard_variables, include_variables)
             # new state?
             if not next_state_hidden in lsts_states:
                 transitions.append([])
@@ -230,12 +234,13 @@ if __name__ == "__main__":
     opt_output_fileobj = None
     opt_lsts_depth = 5
     opt_lsts_hide_vars = []
+    opt_lsts_show_vars = []
 
     # Parse arguments
     opts, remainder = getopt.gnu_getopt(
-        sys.argv[1:], 'dhl:L:t:o:',
+        sys.argv[1:], 'dhl:L:t:o:D:H:S:',
         ["debug", "help", "log-file=", "timeout=", "output=", 
-         "lsts-depth=", "lsts-hide-var="])
+         "lsts-depth=", "lsts-hide-var=", "lsts-show-var="])
 
     for opt, arg in opts:
         if opt in ["-d", "--debug"]:
@@ -254,10 +259,12 @@ if __name__ == "__main__":
                 opt_output_fileobj = sys.stdout
             else:
                 opt_output_fileobj = file(arg, "w")
-        elif opt in ["--lsts-depth"]:
+        elif opt in ["-D", "--lsts-depth"]:
             opt_lsts_depth = int(arg)
-        elif opt in ["--lsts-hide-var"]:
+        elif opt in ["-H", "--lsts-hide-var"]:
             opt_lsts_hide_vars.append(arg)
+        elif opt in ["-S", "--lsts-show-var"]:
+            opt_lsts_show_vars.append(arg)
 
     if len(remainder) != 1:
         print __doc__
@@ -300,5 +307,5 @@ if __name__ == "__main__":
         log("starting")
         bridge.communicate()
     else:
-        aal2lsts(aal, opt_output_fileobj, depth=opt_lsts_depth, discard_variables=set(opt_lsts_hide_vars))
+        aal2lsts(aal, opt_output_fileobj, depth=opt_lsts_depth, discard_variables=set(opt_lsts_hide_vars), include_variables=set(opt_lsts_show_vars))
         opt_output_fileobj.close()

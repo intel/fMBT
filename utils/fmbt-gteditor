@@ -308,7 +308,7 @@ Keyboard shortcuts:<br>
     def aalPreviewArguments(self):
         show_and_hide = [[], []]
         preview_depth = 5
-        pt = self.editor.toPlainText()
+        pt = str(self.editor.toPlainText())
         for show_or_hide, var in GT_HIDESHOWRE.findall(pt):
             correct_list = ['show', 'hide'].index(show_or_hide)
             for v in var.replace(',', ' ').split():
@@ -539,8 +539,11 @@ on_inconc = "exit:2"
                     self.parent._iterate_index += 1
                     self.parent.completion()
                     return True
-                else:
-                    self.parent._iterate_index = -1
+                self.parent._iterate_index = -1
+                if (event.key() == QtCore.Qt.Key_E and
+                      QtGui.QApplication.keyboardModifiers() & QtCore.Qt.ControlModifier):
+                    self.parent.editor.moveCursor(QtGui.QTextCursor.EndOfLine)
+                    return True
                 return False
         self._eventFilter = TabCompletionEventFilter(self)
 
