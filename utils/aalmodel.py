@@ -16,6 +16,8 @@ class AALModel:
         self._variables = model_globals
         self._variables['action'] = lambda name: self._all_names.index(name)
         self._variables['name'] = lambda name: self._all_names.index(name)
+        self._variables['variable'] = lambda varname: self._variables[varname]
+        self._variables['assign'] = lambda varname, v: self._variables.__setitem__(varname, v)
         self._stack = []
 
     def _get_all(self, property_name, itemtype):
@@ -95,14 +97,16 @@ class AALModel:
         for varname in stack_element:
             self._variables[varname] = stack_element[varname]
 
-    def state(self, discard_variables = set([])):
+    def state(self, discard_variables = set([]), include_variables=None):
         """
         Return the current state of the model as a string.
         By comparing strings one can check if the state is already seen.
         """
         rv_list = []
         for varname in self._push_variables:
-            if varname in discard_variables: continue
+            if ((include_variables and not varname in include_variables) or
+                (varname in discard_variables)):
+                continue
             rv_list.append("%s = %s" % (varname, repr(self._variables[varname])))
         return '\n'.join(rv_list)
 

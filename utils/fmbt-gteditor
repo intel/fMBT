@@ -67,6 +67,9 @@ AAL_GUARDRE   = re.compile('guard()\s*{')
 AAL_BODYRE    = re.compile('body()\s*{')
 AAL_ADAPTERRE = re.compile('adapter()\s*{')
 
+GT_HIDESHOWRE = re.compile('preview-(show|hide)-vars:(.*)')
+GT_DEPTHRE = re.compile('preview-depth:(.*)')
+
 # Parse command line, see which Python Qt4 bindings to import
 
 opt_hide_preview = False
@@ -235,7 +238,12 @@ Keyboard shortcuts:<br>
     def newFileAAL(self, path=None):
         self.editor.setPlainText('aal "" {\n'
                                  '    language: python {}\n'
-                                 '    variables { varname1, varname2 }\n'
+                                 '\n'
+                                 '    # preview-hide-vars: \n'
+                                 '    # preview-depth: 5\n'
+                                 '    variables {\n'
+                                 '        varname1, varname2\n'
+                                 '    }\n'
                                  '    initial_state {\n'
                                  '        varname1 = 42      # comment1\n'
                                  '        varname2 = \'hello\' # comment2\n'
@@ -297,6 +305,19 @@ Keyboard shortcuts:<br>
     def _editingGT(self):
         return not self._editingLSTS() and not self._editingAAL()
 
+    def aalPreviewArguments(self):
+        show_and_hide = [[], []]
+        preview_depth = 5
+        pt = self.editor.toPlainText()
+        for show_or_hide, var in GT_HIDESHOWRE.findall(pt):
+            correct_list = ['show', 'hide'].index(show_or_hide)
+            for v in var.replace(',', ' ').split():
+                show_and_hide[correct_list].append(v)
+        for depth in GT_DEPTHRE.findall(pt):
+            try: preview_depth = int(depth)
+            except: print 'Invalid preview depth: "%s" (integer expected).' % (preview_depth,)
+        return show_and_hide, preview_depth
+
     def autoSave(self):
         """
         Save unsaved contents, convert gt to lsts if possible.
@@ -315,7 +336,11 @@ Keyboard shortcuts:<br>
                 executed_program = "fmbt-aalc"
                 validation_exitstatus = self.runcmd(aal2py_cmd)
                 if validation_exitstatus == 0:
-                    py2lsts_cmd = "remote_pyaal -o '%s' '%s'" % (self._lstsFileName, self._aalcFileName)
+                    [show_vars, hide_vars], preview_depth = self.aalPreviewArguments()
+                    show_hide_args = ""
+                    for v in show_vars: show_hide_args += " -S '%s'" % (v,)
+                    for v in hide_vars: show_hide_args += " -H '%s'" % (v,)
+                    py2lsts_cmd = "remote_pyaal -o '%s'%s -D %s '%s'" % (self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
                     validation_exitstatus = self.runcmd(py2lsts_cmd)
 
             elif self._editingGT(): # validate GT
@@ -853,7 +878,7 @@ on_inconc = "exit:2"
                 self._iterate_index = -1
                 return
             depth = len(prev_line) - len(prev_line.lstrip())
-            if prev_line.rstrip()[-1] in ['{', ':']: depth += 4
+            if prev_line.rstrip()[-1] in ['{', ':', ',']: depth += 4
             if line_contents == '}': depth -= 4
             indentation_options = []
             for d in range(depth)[::4]:
