@@ -183,6 +183,8 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]), include_va
     # actionname2int = dict([(action, num) for num, action in enumerate(actionnames)])
     transitions = [[]]
     tags = {generation_discontinued_tag: []}
+    tags.update([(name, []) for name in aal.getSPNames()])
+    tagnum_to_name = dict([(num+1, name) for num, name in enumerate(aal.getSPNames())])
 
     aal.reset()
     initial_state_hidden = aal.state(discard_variables, include_variables)
@@ -191,6 +193,10 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]), include_va
     found_states_real = {initial_state_real: initial_state_hidden} # real to hidden states
     lsts_states = {initial_state_hidden: 0} # state to LSTS state number
     states = 1
+
+    # initial state tags
+    for tag in aal.getprops():
+        tags[tagnum_to_name[tag]].append(lsts_states[initial_state_hidden])
 
     while unhandled_states:
         source_state, path = unhandled_states.popitem()
@@ -217,6 +223,11 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]), include_va
             if not next_state_real in found_states_real:
                 unhandled_states[next_state_real] = path + [action]
                 found_states_real[next_state_real] = next_state_hidden
+                next_lsts_state_num = lsts_states[next_state_hidden]
+                for tag in aal.getprops():
+                    tagname = tagnum_to_name[tag]
+                    if not next_lsts_state_num in tags[tagname]:
+                        tags[tagname].append(next_lsts_state_num)
             if (lsts_states[next_state_hidden],action) not in transitions[source_lsts_state]:
                 transitions[source_lsts_state].append((lsts_states[next_state_hidden],action))
             aal.pop()

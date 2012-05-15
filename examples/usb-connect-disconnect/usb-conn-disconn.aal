@@ -1,31 +1,46 @@
 aal "usb_options" {
     language: python {}
 
+    # preview-show-vars: mouse, printer
+    # preview-depth: 5
     variables {
         keyb, mouse, printer, sound
     }
     initial_state {
         keyb = mouse = printer = sound = False
     }
-    
+
+    tag "mouse" {
+        guard() { return variable(tag_name) }
+    }
+
+    tag "printer_off" {
+        guard() { return not printer }
+    }
+
+    tag "printer_on" {
+        guard() { return printer }
+    }
+
     action "iConnect('keyb')", "iConnect('mouse')", "iConnect('printer')", "iConnect('sound')"
     {
         guard() {
-            return eval(action_name.split("'")[1]) == False
+            return variable(action_name.split("'")[1]) == False
         }
         body() {
-            globals()[action_name.split("'")[1]] = True
-
+            assign(action_name.split("'")[1], True)
         }
     }
 
-    action "iDisconnect('keyb')", "iDisconnect('mouse')", "iDisconnect('printer')", "iDisconnect('sound')"
+    action
+        "iDisconnect('keyb')", "iDisconnect('mouse')",
+        "iDisconnect('printer')", "iDisconnect('sound')"
     {
         guard() {
-            return eval(action_name.split("'")[1]) == True
+            return variable(action_name.split("'")[1]) == True
         }
         body() {
-            globals()[action_name.split("'")[1]] = False
+            assign(action_name.split("'")[1], False)
         }
     }
 }

@@ -107,6 +107,7 @@ void aalang_py::set_istate(std::string* ist)
 void aalang_py::set_tagname(std::string* name)
 {
   s+="\n    tag" + to_string(tag_cnt) + "name = \""+*name+"\"\n";
+  multiname.push_back(*name);
   delete name;
   tag = true;
 }
@@ -114,6 +115,7 @@ void aalang_py::set_tagname(std::string* name)
 void aalang_py::next_tag()
 {
   tag_cnt++;
+  multiname.clear();
   tag = false;
 }
 
@@ -121,8 +123,10 @@ void aalang_py::set_guard(std::string* gua)
 {
   default_if_empty(*gua, "return True");
   if (tag) {
-    s+="    def tag"+to_string(tag_cnt)+"guard():\n"+ variables +
-      indent(8,*gua)+"\n";
+    s+="    def tag"+to_string(tag_cnt)+"guard():\n"+ variables;
+    if (gua->find("tag_name") != std::string::npos)
+      s+="        tag_name = '" + multiname[0] + "'\n";
+    s+=indent(8,*gua)+"\n";
   }
   else {
     m_guard = *gua;
