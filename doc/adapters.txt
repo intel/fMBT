@@ -121,6 +121,21 @@ Adapter stack may contain the following building blocks.
   running on localhost. Obviously adapter_mapper makes the adapter
   stack actually a tree.
 
+  The mapper adapter can map single input actions to several inputs
+  for different subadapters. For instance,
+
+  "iReset" -> (1, "reset()") (2, "rm -rf /tmp/testdata")
+
+  If subadapter reports execution of other action than what it was
+  given in the multiaction case, the mapper adapter reports failed
+  execution. This can be avoided by giving possibly failing subadapter
+  actions in brackets instead of parenthesis. For instance,
+
+  "iReset" -> (1, "reset_all()") [2, "rm -rf /tmp/testdata"]
+
+  allows execution of "rm -rf /tmp/testadata" to fail, but requires
+  reset_all() to be executed without errors.
+
 - adapter_dlopen is a local adapter that loads a shared library
   containing local adapters and instantiates an adapter from
   there. For instance, test configuration
