@@ -228,7 +228,7 @@ class MainWindow(QtGui.QMainWindow):
         self.setCentralWidget(self.mainwidget)
         self.setWindowTitle("fMBT GT editor")
 
-        self._last_keypress = time.time()
+        self._last_keypress = time.time() - 10
 
     def about(self):
         QtGui.QMessageBox.about(self, "fMBT GT editor",'''
