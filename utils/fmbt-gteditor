@@ -46,6 +46,7 @@ import commands
 import re
 import os
 import getopt
+import time
 
 def error(msg, exit_status = 1, gui = False):
     sys.stderr.write("%s: %s\n" % (sys.argv[0], msg))
@@ -226,6 +227,8 @@ class MainWindow(QtGui.QMainWindow):
 
         self.setCentralWidget(self.mainwidget)
         self.setWindowTitle("fMBT GT editor")
+
+        self._last_keypress = time.time()
 
     def about(self):
         QtGui.QMessageBox.about(self, "fMBT GT editor",'''
@@ -627,6 +630,7 @@ on_inconc = "exit:2"
                 self.parent._iterate_index = -1
             def eventFilter(self, obj, event):
                 if event.type() != QtCore.QEvent.KeyPress: return False
+                self.parent._last_keypress = time.time()
                 if event.key() == QtCore.Qt.Key_Tab:
                     self.parent._iterate_index += 1
                     self.parent.completion()
@@ -994,6 +998,10 @@ on_inconc = "exit:2"
         self.editor.textCursor().endEditBlock()
 
     def refreshImages(self):
+        if time.time() - self._last_keypress < 2.0:
+            # Wait at least 2 secs from the last keypress event before
+            # refreshing.
+            return
         if self.preview.isVisible() and self.autoSave() != 0:
             if self.preview.currentIndex() == PREVIEWTAB_MODEL:
                 self.visualiseModel(change_tab = False)
