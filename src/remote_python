@@ -96,8 +96,8 @@ def error(msg):
     g_loop.quit()
     sys.exit(1)
 
-def warning(msg):
-    log("WARNING: %s" % (msg,))
+def warning(msg, writeToStderr=0):
+    log("WARNING: %s" % (msg,), writeToStderr=writeToStderr)
 
 def debug(msg):
     log("DEBUG: %s" % (msg,))
@@ -702,7 +702,7 @@ class AdapterIO:
             executedActionIndex = g_actions.index(executedActionName)
             sys.stderr.write(str(executedActionIndex) + '\n')
         except ValueError:
-            warning("Cannot report execution: '%s'." % (executedActionName,))
+            warning("Cannot report execution: '%s'." % (executedActionName,), writeToStderr=1)
             sys.stderr.write('0\n')
 
 class InteractiveShellIO:
