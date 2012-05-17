@@ -131,20 +131,37 @@ class MyScaleEvents(QtCore.QObject):
             self.changeScale(coefficient)
         return False
 
-def asyncRuncmd(cmd, onThreadSuccess=lambda: None,onSuccess=lambda: None, onError=lambda: None):
+def asyncRuncmd(cmd, onThreadSuccess=lambda: None, onSuccess=lambda: None, onError=lambda: None):
+    """
+    Runs cmd (a shell command or Python function) in a separate,
+    non-UI thread. onThreadSuccess function is called in the non-UI
+    thread, onSuccess and onError functions in the main
+    thread. Successful executions are commands with exit status 0 and
+    function calls that do not raise exceptions."""
     class Async(QtCore.QThread):
         def run(self):
-            sys.stdout.write(cmd)
-            sys.stdout.flush()
-            p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            output = p.stderr.read() + p.stdout.read()
-            sys.stdout.write('\n' + output + '\n')
-            sys.stdout.flush()
-            onThreadSuccess()
-            if p.wait() == 0:
-                self.emit(QtCore.SIGNAL("success()"))
+            if type(cmd) == str:
+                sys.stdout.write(cmd)
+                sys.stdout.flush()
+                p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                output = p.stderr.read() + p.stdout.read()
+                sys.stdout.write('\n' + output + '\n')
+                sys.stdout.flush()
+                if p.wait() == 0:
+                    onThreadSuccess()
+                    self.emit(QtCore.SIGNAL("success()"))
+                else:
+                    self.emit(QtCore.SIGNAL("error()"))
             else:
-                self.emit(QtCore.SIGNAL("error()"))
+                errors = 0
+                try: cmd()
+                except: errors = 1                
+                if errors == 0:
+                    onThreadSuccess()
+                    self.emit(QtCore.SIGNAL("success()"))
+                else:
+                    self.emit(QtCore.SIGNAL("error()"))
+
     def cleanup():
         del asyncRuncmd.running[cmd]
     if cmd in asyncRuncmd.running: return "Command already running"
@@ -408,8 +425,14 @@ Keyboard shortcuts:<br>
         return errorhandler
 
     def visualiseModel(self, change_tab = True):
+        if change_tab:
+            self.preview.setTabIcon(PREVIEWTAB_MODEL,
+                                    QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_BrowserReload))
         self.autoSave()
-        self._doGenerateTest()
+        asyncRuncmd(self._doGenerateTest,
+                    onSuccess=lambda: self.visualiseModel_havingTestGenerated(change_tab))
+
+    def visualiseModel_havingTestGenerated(self, change_tab):
         imgname = self._gtFileName + ".gted-tmp.states.png"
         try: file(self._logFileName)
         except: logparam = ""
@@ -460,6 +483,7 @@ Keyboard shortcuts:<br>
             print "display '%s'" % (self._covFileName,)
 
     def _doGenerateConf(self):
+        """ runnable in non-UI thread """
         filename = self._gtFileName
         self._confFileName = self._gtFileName + ".gted-tmp.conf"
         regenerate = False
@@ -485,9 +509,9 @@ on_pass   = "exit:0"
 on_fail   = "exit:1"
 on_inconc = "exit:2"
 """ % (modelspec, lookahead))
-            self.conf_editor.setPlainText(file(self._confFileName).read())
 
     def _doGenerateTest(self):
+        """ runnable in non-UI thread """
         self._doGenerateConf()
         if not self._model_ok:
             self._test_ok = False
@@ -505,13 +529,24 @@ on_inconc = "exit:2"
             self._test_ok = False
 
     def generateTest(self, change_tab = True):
+        if change_tab:
+            self.preview.setTabIcon(PREVIEWTAB_TEST,
+                                    QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_BrowserReload))
         self.autoSave()
-        self._doGenerateTest()
+        asyncRuncmd(self._doGenerateTest,
+                    onSuccess=lambda: self.generateTest_havingTestGenerated(change_tab))
+
+    def generateTest_havingTestGenerated(self, change_tab):
         if self._model_ok and self._test_ok:
+            self.preview.setTabIcon(PREVIEWTAB_TEST,
+                                    QtGui.QIcon())
             p = subprocess.Popen("fmbt-log -f '$sn$tv\t$ax$tr' '%s'"
                              % (self._logFileName,), shell=True, stdout=subprocess.PIPE)
             o = p.stdout.readlines()
             self.preview_test.setPlainText(''.join([l for l in o[1:]]))
+        else:
+            self.edit.setTabIcon(PREVIEWTAB_TEST, QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_MessageBoxWarning))
+
         if change_tab:
             self.preview.setCurrentIndex(PREVIEWTAB_TEST)
             self.preview_test.setFocus()
@@ -589,8 +624,6 @@ on_inconc = "exit:2"
 
         # Setup preview tabs
         self.preview = QtGui.QTabWidget()
-        self.preview.connect(self.preview, QtCore.SIGNAL("currentChanged(int)"),
-                             self.previewTabChanged)
 
         self.splitter.addWidget(self.preview)
         self._editorsOnLeft = True
@@ -629,6 +662,8 @@ on_inconc = "exit:2"
         self.preview_covimage = QtGui.QLabel(self.preview)
         self.preview_covcont = makeScalableImage(self.preview, self.preview_covimage)
         self.preview.addTab(self.preview_covcont, "Coverage - F8")
+        self.preview.connect(self.preview, QtCore.SIGNAL("currentChanged(int)"),
+                             self.previewTabChanged)
 
     def editTabChanged(self, tabIndex):
         if tabIndex == EDITTAB_GT: self.editGT()
@@ -812,13 +847,10 @@ on_inconc = "exit:2"
             if blockStartsAt:
                 s = text[:blockStartsAt + 1]
                 s = s[::-1] # reverse string
-                print s
                 for name, regexp in [("aal", AAL_AALREI), ("action", AAL_ACTIONREI), ("tag", AAL_TAGREI)]:
                     m = regexp.match(s)
                     if m:
                         blockname = name
-                        print "found", blockname
-                        print text[blockStartsAt - m.end():blockStartsAt]
                         index = blockStartsAt - m.end() + 1
                         break
             return blockname, index
@@ -844,7 +876,6 @@ on_inconc = "exit:2"
         prev_lfeed = pt[:pos].rfind('\n')
         next_lfeed = pt[pos:].find('\n') + pos
         line_contents = pt[prev_lfeed:next_lfeed].strip()
-        print "line_contents '%s'" % (line_contents,)
         if self._iterate_index == 0 and line_contents == "":
             self._iterate_options = []
             # Tab completion suggestions for an empty line inside
@@ -861,7 +892,6 @@ on_inconc = "exit:2"
                 }
 
             currentBlock, blockStartIndex = parserishAAL(pt, pos)
-            print "currentBlock ==", currentBlock
             if currentBlock in ['aal', 'action', 'tag', 'guard']:
                 indentation_depth = blockStartIndex - pt[:blockStartIndex].rfind('\n') + 3
                 for suggestion in suggestions[currentBlock]:
@@ -891,7 +921,6 @@ on_inconc = "exit:2"
                 self._iterate_options = indentation_options
             else:
                 self._iterate_options = indentation_options[:1] + self._iterate_options
-            for o in self._iterate_options: print "opt: '%s'" % (o,)
         if self._iterate_index > 0:
             # Undo previously added text.
             self.editor.document().undo()
