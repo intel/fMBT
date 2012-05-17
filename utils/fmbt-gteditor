@@ -22,9 +22,11 @@
 """
 fmbt-gteditor - editor for gt, lsts and test configuration files
 
-Usage: fmbt-gteditor [options] [modelfile]
+Usage: fmbt-gteditor [options] [model [configuration]]
 
-modelfile is the gt or lsts file to be opened in the editor.
+model is a *.gt, *.aal or *.lsts file to be opened in the editor.
+configuration is a *.conf file to be opened in the test configuration
+view.
 
 Options:
   -h    print this help
@@ -70,10 +72,20 @@ AAL_ADAPTERRE = re.compile('adapter()\s*{')
 GT_HIDESHOWRE = re.compile('preview-(show|hide)-vars:(.*)')
 GT_DEPTHRE = re.compile('preview-depth:(.*)')
 
+def isModelFile(filename):
+    if filename.lower().endswith(".conf"):
+        return False
+    elif (filename.lower().endswith(".aal") or
+          filename.lower().endswith(".gt") or
+          filename.lower().endswith(".lsts")):
+        return True
+    return True
+
 # Parse command line, see which Python Qt4 bindings to import
 
 opt_hide_preview = False
 opt_modelfile    = None
+opt_conffile     = None
 opt_qt_bindings  = "PySide"
 
 opts, remainder = getopt.getopt(
@@ -89,7 +101,17 @@ for opt, arg in opts:
     elif opt in ["-q", "--qt-bindings"]:
         opt_qt_bindings = arg
 
-if remainder: opt_modelfile = remainder[0]
+for filename in remainder:
+    if filename.lower().endswith(".conf") and opt_conffile == None:
+        opt_conffile = filename
+    elif (filename.lower().endswith(".aal") or
+          filename.lower().endswith(".gt") or
+          filename.lower().endswith(".lsts")) and opt_modelfile == None:
+        opt_modelfile = filename
+    else:
+        print __doc__
+        sys.stdout.flush()
+        error('unexpected parameter: "%s"' % (filename,))
 
 try:
     QtCore = __import__(opt_qt_bindings + ".QtCore", fromlist=["QtCore"])
@@ -100,7 +122,6 @@ try:
         not_using_PySide = True
 except Exception, e:
     error('Error importing Qt4 bindings from "%s": %s\nInstall PySide Python bindings for Qt4 or try different -q parameter.' % (opt_qt_bindings, e))
-
 
 class MyScaleEvents(QtCore.QObject):
     """
@@ -166,9 +187,9 @@ def asyncRuncmd(cmd, onThreadSuccess=lambda: None, onSuccess=lambda: None, onErr
         del asyncRuncmd.running[cmd]
     if cmd in asyncRuncmd.running: return "Command already running"
     async = Async()
-    async.connect(async, QtCore.SIGNAL("success()"), onSuccess)
-    async.connect(async, QtCore.SIGNAL("error()"), onError)
-    async.connect(async, QtCore.SIGNAL("finished()"), cleanup)
+    async.connect(async, QtCore.SIGNAL("success()"), onSuccess, QtCore.Qt.QueuedConnection)
+    async.connect(async, QtCore.SIGNAL("error()"), onError, QtCore.Qt.QueuedConnection)
+    async.connect(async, QtCore.SIGNAL("finished()"), cleanup, QtCore.Qt.QueuedConnection)
     asyncRuncmd.running[cmd] = async # hide from the garbage collector
     async.start()
 asyncRuncmd.running = {}
@@ -189,7 +210,7 @@ class MainWindow(QtGui.QMainWindow):
         self._refreshed_conf = ""
 
         self._gtFileName = "noname.gt"
-        self._confFileName = "fmbt-gteditor.conf.tmp"
+        self._confFileName = None
         self._logFileName = None
 
         self._model_ok = False
@@ -231,7 +252,7 @@ Keyboard shortcuts:<br>
     def _set_gtFileName(self, newname):
         removeTemporaryFiles(self._gtFileName)
         self._gtFileName = str(newname)
-        self.edit.setTabText(0, os.path.basename(self._gtFileName) + " - F1")
+        self.edit.setTabText(EDITTAB_GT, os.path.basename(self._gtFileName) + " - F1")
         if self.gthighlighter:
             self.gthighlighter.setDocument(None)
             del self.gthighlighter
@@ -240,6 +261,9 @@ Keyboard shortcuts:<br>
         elif self._editingAAL():
             self.gthighlighter = AALHighlighter(self.editor.document())
 
+    def _set_confFileName(self, newname):
+        self._confFileName = str(newname)
+        self.edit.setTabText(EDITTAB_CONF, os.path.basename(self._confFileName) + " - F2")
 
     def newFile(self, path=None):
         if path and path.endswith(".aal"):
@@ -278,33 +302,67 @@ Keyboard shortcuts:<br>
         else:
             self._set_gtFileName(path)
 
+    def newConfFile(self, path):
+        self.conf_editor.setPlainText("")
+        self.editor.setFocus()
+        self._set_confFileName(path)
+        self._doGenerateConf()
+
     def saveFile(self):
-        print "[saving '%s']" % (self._gtFileName,)
-        file(self._gtFileName, "w").write(self.editor.toPlainText())
+        if self.edit.currentIndex() == EDITTAB_GT:
+            print "[saving '%s']" % (self._gtFileName,)
+            file(self._gtFileName, "w").write(self.editor.toPlainText())
+        else:
+            if not self._confFileName or self._confFileName.startswith(self._gtFileName):
+                self.saveFileAs()
+            else:
+                print "[saving '%s']" % (self._confFileName,)
+                file(self._confFileName, "w").write(self.conf_editor.toPlainText())
 
     def saveFileAs(self):
-        path = QtGui.QFileDialog.getSaveFileName(self, "Save File",
-                                                 '', "fMBT GT commands (*.gt);;fMBT AAL models (*.aal);;State machines (*.lsts)")
-        if not_using_PySide:
-            self._set_gtFileName(path)
-        else:
-            self._set_gtFileName(path[0])
+        if self.edit.currentIndex() == EDITTAB_GT:
+            path = QtGui.QFileDialog.getSaveFileName(self, "Save model",
+                                                     '', "fMBT GT commands (*.gt);;fMBT AAL models (*.aal);;State machines (*.lsts)")
+            if not_using_PySide:
+                self._set_gtFileName(path)
+            else:
+                self._set_gtFileName(path[0])
 
-        if not self._gtFileName:
-            self._set_gtFileName(path[0])
+            if not self._gtFileName:
+                self._set_gtFileName(path[0])
+        else:
+            path = QtGui.QFileDialog.getSaveFileName(self, "Save configuration",
+                                                     '', "fMBT test configuration (*.conf)")
+            if not_using_PySide:
+                self._set_confFileName(path)
+            else:
+                self._set_confFileName(path[0])
         self.saveFile()
 
     def openFile(self, path=None):
         if not path:
-            path = QtGui.QFileDialog.getOpenFileName(self, "Open File",
-                    '', "fMBT GT commands (*.gt);;fMBT AAL models (*.aal);;State machines (*.lsts)")
+            if self.edit.currentIndex() == EDITTAB_GT:
+                path = QtGui.QFileDialog.getOpenFileName(self, "Open model",
+                                                         '', "fMBT GT commands (*.gt);;fMBT AAL models (*.aal);;State machines (*.lsts)")
+            else:
+                path = QtGui.QFileDialog.getOpenFileName(self, "Open configuration",
+                                                         '', "fMBT test configuration (*.conf)")
             if not not_using_PySide and path: path = path[0]
+            path = str(path)
         if path:
-            self.editor.setPlainText(file(path).read())
-            self.editor.setFocus()
-            self.conf_editor.setPlainText("")
-            self._doGenerateConf()
-            self._set_gtFileName(path)
+            if isModelFile(path):
+                self.editor.setPlainText(file(path).read())
+                self.editor.setFocus()
+                # If the configuration was not Saved As by user, generate new
+                if not self._confFileName or self._confFileName.startswith(self._gtFileName):
+                    self.conf_editor.setPlainText("")
+                    self._confFileName = None
+                    self._doGenerateConf()
+                self._set_gtFileName(path)
+            else:
+                self.conf_editor.setPlainText(file(path).read())
+                self.conf_editor.setFocus()
+                self._set_confFileName(path)
 
     def runcmd(self, cmd):
         print cmd
@@ -431,6 +489,7 @@ Keyboard shortcuts:<br>
         self.autoSave()
         asyncRuncmd(self._doGenerateTest,
                     onSuccess=lambda: self.visualiseModel_havingTestGenerated(change_tab))
+        
 
     def visualiseModel_havingTestGenerated(self, change_tab):
         imgname = self._gtFileName + ".gted-tmp.states.png"
@@ -485,7 +544,8 @@ Keyboard shortcuts:<br>
     def _doGenerateConf(self):
         """ runnable in non-UI thread """
         filename = self._gtFileName
-        self._confFileName = self._gtFileName + ".gted-tmp.conf"
+        if not self._confFileName:
+            self._confFileName = self._gtFileName + ".gted-tmp.conf"
         regenerate = False
         try:
             if file(self._confFileName).read().strip() == "": regenerate=True
@@ -520,12 +580,10 @@ on_inconc = "exit:2"
         cmd = "fmbt -l '%s' -o 'adapter=\"dummy\"' '%s'" % (self._logFileName, self._confFileName)
         fmbt_exitstatus = self.runcmd(cmd)
         if fmbt_exitstatus == 0:
-            self.edit.setTabIcon(1, QtGui.QIcon())
             self._test_ok = True
         elif fmbt_exitstatus == 127:
             error('Cannot execute "fmbt". Check you fMBT installation and PATH.',gui=1)
         else:
-            self.edit.setTabIcon(1, QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_MessageBoxWarning))
             self._test_ok = False
 
     def generateTest(self, change_tab = True):
@@ -534,7 +592,8 @@ on_inconc = "exit:2"
                                     QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_BrowserReload))
         self.autoSave()
         asyncRuncmd(self._doGenerateTest,
-                    onSuccess=lambda: self.generateTest_havingTestGenerated(change_tab))
+                    onSuccess=lambda: self.generateTest_havingTestGenerated(change_tab),
+                    onError = lambda: self.generateTest_havingTestGenerated(change_tab))
 
     def generateTest_havingTestGenerated(self, change_tab):
         if self._model_ok and self._test_ok:
@@ -1089,6 +1148,14 @@ if __name__ == '__main__':
             window.openFile(opt_modelfile)
         else:
             error('cannot open file "%s"' % (opt_modelfile,))
+
+    if opt_conffile:
+        if not os.access(opt_conffile, os.F_OK):
+            window.newConfFile(opt_conffile)
+        elif os.access(opt_modelfile, os.R_OK):
+            window.openFile(opt_conffile)
+        else:
+            error('cannot open file "%s"' % (opt_conffile,))
 
     if opt_hide_preview: window.preview.hide()
 
