@@ -982,7 +982,7 @@ class AALHighlighter(QtGui.QSyntaxHighlighter):
 
         quotationFormat = QtGui.QTextCharFormat()
         quotationFormat.setForeground(QtCore.Qt.darkGreen)
-        self.highlightingRules.append((QtCore.QRegExp("\".*\""),
+        self.highlightingRules.append((QtCore.QRegExp("\"[^\"]*\""),
                 quotationFormat))
 
         singleLineCommentFormat = QtGui.QTextCharFormat()
