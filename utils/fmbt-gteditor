@@ -20,7 +20,7 @@
 # This is a demo / prototype of an editor for fmbt-gt files.
 
 """
-fmbt-gteditor - editor for gt, lsts and test configuration files
+fmbt-gteditor - editor for gt, aal, lsts and test configuration files
 
 Usage: fmbt-gteditor [options] [model [configuration]]
 
@@ -489,7 +489,6 @@ Keyboard shortcuts:<br>
         self.autoSave()
         asyncRuncmd(self._doGenerateTest,
                     onSuccess=lambda: self.visualiseModel_havingTestGenerated(change_tab))
-        
 
     def visualiseModel_havingTestGenerated(self, change_tab):
         imgname = self._gtFileName + ".gted-tmp.states.png"
@@ -597,14 +596,13 @@ on_inconc = "exit:2"
 
     def generateTest_havingTestGenerated(self, change_tab):
         if self._model_ok and self._test_ok:
-            self.preview.setTabIcon(PREVIEWTAB_TEST,
-                                    QtGui.QIcon())
+            self.preview.setTabIcon(PREVIEWTAB_TEST, QtGui.QIcon())
             p = subprocess.Popen("fmbt-log -f '$sn$tv\t$ax$tr' '%s'"
                              % (self._logFileName,), shell=True, stdout=subprocess.PIPE)
             o = p.stdout.readlines()
             self.preview_test.setPlainText(''.join([l for l in o[1:]]))
         else:
-            self.edit.setTabIcon(PREVIEWTAB_TEST, QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_MessageBoxWarning))
+            self.preview.setTabIcon(PREVIEWTAB_TEST, QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_MessageBoxWarning))
 
         if change_tab:
             self.preview.setCurrentIndex(PREVIEWTAB_TEST)
