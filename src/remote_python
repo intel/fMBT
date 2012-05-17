@@ -31,6 +31,11 @@ Options:
           set minimum delay between executed actions to <float>
           seconds. By default there is no delay.
 
+  --ignore-unknown-outputs
+          observed outputs that do not match to any output actions are
+          not reported (but still logged). Otherwise execution of
+          unknown output action is reported.
+
   -L=<file>
           write (append) log to the file instead of /tmp/remote_python.log.
 
@@ -731,13 +736,18 @@ class InteractiveShellIO:
         return True
 
 def reportOutput(action_name):
-    try: action_number = g_actions.index(action_name)
+    try:
+        action_number = g_actions.index(action_name)
+        log('reporting output %s ("%s")' % (action_number, action_name))
     except:
         action_number = 0
-        log('iReportOutput failed: unknown action "%s"')
+        if opt_ignore_unknown_outputs:
+            log('ignoring unknown output "%s", nothing reported.' % (action_name,))
+            return
+        else:
+            log('reporting unknown output "%s"' % (action_name,))
     sys.stdout.write("%s\n" % (action_number,))
     sys.stdout.flush()
-    log('iReportOutput reported %s ("%s")' % (action_number, action_name))
 
 def self_test():
     global g_dbusEvalGlobals
@@ -795,11 +805,13 @@ if __name__ == "__main__":
     shellMode = False
     delay = 0
     pre_exec_statements = []
+    opt_ignore_unknown_outputs = False
 
     opts, remainder = getopt.getopt(
         sys.argv[1:], 'c:hsTd:L:l:',
         ['help', 'shell', 'self-test',
-         'action-delay=', 'log-file='])
+         'action-delay=', 'log-file=',
+         'ignore-unknown-outputs'])
 
     for opt, arg in opts:
         if opt in ['-c']:
@@ -818,6 +830,8 @@ if __name__ == "__main__":
         elif opt in ['-l', '--log-file']:
             gLogFile = arg
             file(gLogFile, "w").close()
+        elif opt == '--ignore-unknown-outputs':
+            opt_ignore_unknown_outputs = True
         else:
             print __doc__
             error('Unknown option: "%s"' % (opt,))
