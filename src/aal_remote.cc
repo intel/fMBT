@@ -82,7 +82,11 @@ aal_remote::aal_remote(Log&l,std::string& s)
   fflush(d_stdin);  
 }
 
-int aal_remote::adapter_execute(int action) {
+int aal_remote::adapter_execute(int action,const char* params) {
+
+  if (params)
+    std::fprintf(d_stdin, "ap%s\n",params);
+  
   std::fprintf(d_stdin, "a%i\n", action);
   return getint(d_stdin,d_stdout);
 }

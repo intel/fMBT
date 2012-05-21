@@ -23,7 +23,7 @@ noinst_HEADERS =  aalang.hh aalang_cpp.hh aalang_java.hh aalang_py.hh adapter_dl
 
 pkginclude_HEADERS = adapter.hh factory.hh writable.hh log.hh aal.hh model.hh awrapper.hh mwrapper.hh alphabet.hh helper.hh
 
-noinst_HEADERS += conf.g lts.g mrules.g covlang.g xrules.g lang.g uconf.g
+noinst_HEADERS += conf.g lts.g mrules.g covlang.g xrules.g lang.g uconf.g filter.g
 
 noinst_HEADERS += Android.mk Application.mk
 
@@ -85,6 +85,9 @@ covlang.g.d_parser.cc: covlang.g d/libdparse.a
 
 uconf.g.d_parser.cc: uconf.g d/libdparse.a
 	d/make_dparser -o uconf.g.d_parser.cc -i uconf ./$(VPATH)/uconf.g
+
+filter.g.d_parser.cc: filter.g d/libdparse.a
+	d/make_dparser -o filter.g.d_parser.cc -i filter ./$(VPATH)/filter.g
 
 
 ##########################################

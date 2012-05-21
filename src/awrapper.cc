@@ -38,8 +38,35 @@ void Awrapper::set_actions(std::vector<std::string>* _actions)
 
   std::vector<std::string>& wn=ada->getActionNames();
 
+  std::vector<std::string> splitted_actions;
+
+  splitted_actions.push_back(std::string(""));
+
+  for(unsigned i=1;i<actions->size();i++) {
+    std::string name,paramname;
+    split(wn[i],name,paramname,"(");
+    if (paramname!="") {
+      paramname=paramname.substr(0,paramname.length()-1);
+      parameters[i]=paramname;
+    }
+    splitted_actions.push_back(name);      
+  }
+
   for(unsigned i=1;i<wn.size();i++) {
     unsigned result=find(*actions,wn[i]);
+
+    if ((*actions)[result]!=wn[i]) {
+      /* With parameters? */
+      std::string adaname,adaparamname;
+      split(wn[i],adaname,adaparamname,"(");
+      adaparamname=adaparamname.substr(0,adaparamname.length()-1);
+      result=find(splitted_actions,adaname);
+      if (splitted_actions[result]==adaname) {
+	parameters[result]=adaparamname;
+	printf("action \"%s\" mapped to \"%s\" with parameter \"%s\"\n",
+	       (*actions)[result].c_str(),wn[i].c_str(),adaparamname.c_str());
+      }
+    }
 
     ada2aal[i]=result;
     aal2ada[result]=i;
@@ -51,7 +78,7 @@ void Awrapper::execute(std::vector<int>& action)
 {
   /* We need to map.. */
 
-  int tmp=ada->adapter_execute(aal2ada[action[0]]);
+  int tmp=ada->adapter_execute(aal2ada[action[0]],parameters[action[0]].c_str());
   action[0]=ada2aal[tmp];
   action.resize(1);
 }

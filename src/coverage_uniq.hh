@@ -1,6 +1,6 @@
 /*
  * fMBT, free Model Based Testing tool
- * Copyright (c) 2011, Intel Corporation.
+ * Copyright (c) 2012, Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU Lesser General Public License,
@@ -16,32 +16,37 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+#ifndef __coverage_uniq_hh__
+#define __coverage_uniq_hh__
 
-#ifndef __awrapper_hh__
-#define __awrapper_hh__
+#include "coverage.hh"
+#include "helper.hh"
+#include <list>
 
-#include <vector>
-#include <string>
-#include <fstream>
-
-#include "adapter.hh"
-#include "aal.hh"
-
-class Awrapper: public Adapter {
+class Coverage_uniq: public Coverage {
 public:
-  Awrapper(Log&l, std::string params, aal* _ada);
+  Coverage_uniq(Log& l, std::string params = "");
+  virtual ~Coverage_uniq();
+  virtual std::string stringify();
 
-  virtual void set_actions(std::vector<std::string>* _actions);
+  virtual void push(){};
+  virtual void pop(){};
 
-  virtual void execute(std::vector<int>& action);
-  virtual int  observe(std::vector<int> &action,bool block=false
-);
-protected:
-  std::map<int,int> ada2aal;
-  std::map<int,int> aal2ada;
-  aal* ada;
-  std::map<int,std::string> parameters;
+  virtual bool execute(int action);
+  virtual float getCoverage() { return 0.0; }
+
+  virtual int fitness(int* actions,int n, float* fitness) {
+    return 0;
+  }
+  virtual void history(int action,std::vector<int>& props,
+		       Verdict::Verdict verdict);
+
+  virtual void set_model(Model* _model);
+
+private:
+  std::vector<Coverage*> covs;
+  unsigned len;
+  std::list<int> v;
 };
 
 #endif
-

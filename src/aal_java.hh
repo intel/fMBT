@@ -30,7 +30,7 @@ public:
   aal_java(Log&l,std::string&);
   virtual ~aal_java() {};
 
-  virtual int adapter_execute(int action);
+  virtual int adapter_execute(int action,const char* params);
   virtual int model_execute(int action);
   virtual int getActions(int** act);
   virtual bool reset();

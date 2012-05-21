@@ -19,24 +19,24 @@
 #ifndef __coverage_report_hh__
 #define __coverage_report_hh__
 
-#include "coverage.hh"
+#include "coverage_exec_filter.hh"
 
 #include <sys/time.h>
+#include <stack>
 
-class Coverage_report: public Coverage {
+class Coverage_report: public Coverage_exec_filter {
 public:
   Coverage_report(Log&l,std::vector<std::string*>& _from,
 		  std::vector<std::string*>& _to,
 		  std::vector<std::string*>& _drop):
-    Coverage(l),from(_from),to(_to),drop(_drop),online(false),count(0)
+    Coverage_exec_filter(l,_from,_to,_drop),count(0)
   {}
 
   virtual std::string stringify();
 
-  virtual void push(){};
-  virtual void pop(){};
+  virtual void push(){ save.push(online); save.push(count); };
+  virtual void pop() { count=save.top(); save.pop(); online=save.top(); save.pop(); };
 
-  virtual bool execute(int action);
   virtual float getCoverage() { return count; }
 
   virtual int fitness(int* actions,int n, float* fitness) {
@@ -50,25 +50,15 @@ public:
   std::vector< struct timeval >  duration;
 
 private:
+  virtual void on_find();
 
   bool prop_set(std::vector<int> p,int npro,int* props);
 
   std::vector<int> executed;
   std::vector<struct timeval > etime;
 
-  std::vector<int> start_tag;
-  std::vector<int> end_tag;
-  std::vector<int> rollback_tag;
-
-  std::vector<int> start_action;
-  std::vector<int> end_action;
-  std::vector<int> rollback_action;
-
-  std::vector<std::string*> from;
-  std::vector<std::string*> to;
-  std::vector<std::string*> drop;
-  bool online;
   int count;
+  std::stack<int> save;
 };
 
 #endif

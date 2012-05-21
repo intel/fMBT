@@ -104,7 +104,7 @@ aal_java::aal_java(Log&l,std::string& s)
   }
 }
 
-int aal_java::adapter_execute(int action) {
+int aal_java::adapter_execute(int action,const char* params) {
   return env->CallIntMethod(obj,aexec,action);
 }
 

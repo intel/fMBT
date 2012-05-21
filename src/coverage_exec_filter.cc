@@ -1,6 +1,6 @@
 /*
  * fMBT, free Model Based Testing tool
- * Copyright (c) 2011, Intel Corporation.
+ * Copyright (c) 2012, Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU Lesser General Public License,
@@ -17,24 +17,41 @@
  *
  */
 
-#include "coverage_report.hh"
+#include "coverage_exec_filter.hh"
 #include "model.hh"
 #include "helper.hh"
 #include "history.hh"
 
-std::string Coverage_report::stringify()
+
+// Coverage_exec_filter::Coverage_exec_filter(Log& l, std::string params):
+//   Coverage(l),online(false) {
+//   // Ok. Se need to parse the parameters ? 
+//   // Or would it be better to do parsing in the factory create method?
+// }
+
+
+std::string Coverage_exec_filter::stringify()
 {
   return std::string("");
 }
 
-void Coverage_report::set_model(Model* _model)
+void Coverage_exec_filter::set_model(Model* _model)
 {
   Coverage::set_model(_model);
 
+  printf("%s\n",__func__);
+
   std::vector<std::string>& sp(model->getSPNames());  
+
+  printf("from size == %i\n",
+	 from.size());
 
   for(unsigned i=0;i<from.size();i++) {
     int pos=find(sp,*from[i]);
+
+    printf("Looking for %s (%i)\n",
+	   from[i]->c_str(),pos);
+
     if (sp.size() && *from[i]!=sp[pos]) {
       pos=model->action_number(*from[i]);
       if (pos>0) {
@@ -76,9 +93,68 @@ void Coverage_report::set_model(Model* _model)
     }
 
   }
+
+  
 }
 
+bool Coverage_exec_filter::prop_set(std::vector<int> p,int npro,
+			       int* props)
+{
+  for(unsigned i=0;i<p.size();i++) {
+    for(int j=0;j<npro;j++) {
+      if (p[i]==props[j]) {
+	return true;
+      }
+    }
+  }
+  return false;
+}
 
-void Coverage_report::on_find() {
-  traces.push_back(executed);
+bool Coverage_exec_filter::execute(int action)
+{
+  int* props;
+  int npro;
+
+  if (online) {
+    executed.push_back(action);
+    etime.push_back(History::current_time);    
+  }
+
+  npro=model->getprops(&props);
+
+  if (npro==0) {
+    return true;
+  }
+
+  if (online) {
+    /* Ok. Let's search for drop. */
+    if (prop_set(rollback_tag,npro,props) || 
+	prop_set(rollback_action,1,&action)) {
+      on_drop();
+      online=false;
+      executed.clear();
+      etime.clear();
+    } else {
+      /* No drop? Let's search for to */
+      if (prop_set(end_tag,npro,props) || 
+	  prop_set(end_action,1,&action)) {
+	on_find();
+	online=false;
+	executed.clear();
+	etime.clear();
+      }
+    }
+  } 
+
+  if (!online) {
+    /* Let's search for from */
+    if (prop_set(start_tag,npro,props) || 
+	prop_set(start_action,1,&action)) {
+      online=true;
+      etime.push_back(History::current_time);
+      on_start();
+    }
+  }
+
+  return true;
 }

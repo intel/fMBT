@@ -63,7 +63,8 @@ protected:
 
   // name of the coverage modules to be loaded.
   std::vector<std::string> coverage_names;
-
+  unsigned depth;
+  std::vector<int> trace;
 };
 
 #endif

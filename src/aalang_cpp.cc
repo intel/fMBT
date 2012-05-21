@@ -129,7 +129,7 @@ void aalang_cpp::set_body(std::string* bod)
 
 void aalang_cpp::set_adapter(std::string* ada)
 {
-  s+="int action" + to_string(action_cnt) + "_adapter() {\n" +
+  s+="int action" + to_string(action_cnt) + "_adapter(const char* param) {\n" +
       *ada + "\n"
       "\treturn " + to_string(action_cnt) + ";\n"
       "}\n";
@@ -186,7 +186,7 @@ std::string aalang_cpp::stringify()
   for(int i=1;i<action_cnt;i++) {
     if (anames[i][0]=='o') {
       obsa++;
-      s=s+"\tr=action"+to_string(amap[i])+"_adapter();\n"
+      s=s+"\tr=action"+to_string(amap[i])+"_adapter(NULL);\n"
 	"\tif (r) { action.push_back(r); return 1;}\n";
     }
   }
@@ -197,14 +197,14 @@ std::string aalang_cpp::stringify()
     "\treturn 0;\n"
     "}\n";
   
-  s=s+"virtual int adapter_execute(int action) {\n"
+  s=s+"virtual int adapter_execute(int action,const char* param) {\n"
     "\tswitch(action) {\n";
   
   for(int i=1;i<action_cnt;i++) {
     if (anames[i][0]=='i') {
       s+="\t\tcase "+to_string(i)+":\n"
 	"\t\treturn action"+to_string(amap[i])+
-	"_adapter();\n\t\tbreak;\n";
+	"_adapter(param);\n\t\tbreak;\n";
     }
   }
   s=s+"\t\tdefault:\n"
