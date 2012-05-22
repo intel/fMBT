@@ -364,7 +364,6 @@ Keyboard shortcuts:<br>
                 if self._fileDialogFilter:
                     dialog.selectNameFilter(self._fileDialogFilter)
                 dialog.exec_()
-                print "dialog path:", path
             else:
                 dialog.setWindowTitle("Open configuration")
                 dialog.setNameFilters(["fMBT test configuration (*.conf)"])
