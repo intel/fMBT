@@ -1,6 +1,6 @@
 if HAVE_PYTHON
 
-PYTHON_WRAPPERS = wrapperdir/fmbt-gt wrapperdir/fmbt-gteditor wrapperdir/fmbt-log wrapperdir/lsts2dot wrapperdir/fmbt-parallel wrapperdir/fmbt-stats wrapperdir/remote_pyaal
+PYTHON_WRAPPERS = wrapperdir/fmbt-gt wrapperdir/fmbt-editor wrapperdir/fmbt-gteditor wrapperdir/fmbt-log wrapperdir/lsts2dot wrapperdir/fmbt-parallel wrapperdir/fmbt-stats wrapperdir/remote_pyaal
 CLEANFILES = $(PYTHON_WRAPPERS)
 
 wrapperdir:
@@ -13,6 +13,6 @@ $(PYTHON_WRAPPERS): wrapperdir ../config.status
 
 dist_bin_SCRIPTS = $(PYTHON_WRAPPERS) fmbt-view
 
-pkgpython_PYTHON = aalmodel.py lsts.py fmbtparsers.py fmbt-gt fmbt-gteditor fmbt-log fmbt-stats lsts2dot fmbt-parallel remote_pyaal
+pkgpython_PYTHON = aalmodel.py lsts.py fmbtparsers.py fmbt-editor fmbt-gt fmbt-gteditor fmbt-log fmbt-stats lsts2dot fmbt-parallel remote_pyaal
 
 endif
