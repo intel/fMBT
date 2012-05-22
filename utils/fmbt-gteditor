@@ -171,29 +171,38 @@ def asyncRuncmd(cmd, onThreadSuccess=lambda: None, onSuccess=lambda: None, onErr
                 sys.stdout.flush()
                 if p.wait() == 0:
                     onThreadSuccess()
-                    self.emit(QtCore.SIGNAL("success()"))
+                    self.emit(Async.signal_success)
                 else:
-                    self.emit(QtCore.SIGNAL("error()"))
+                    self.emit(Async.signal_error)
             else:
                 errors = 0
                 try: cmd()
                 except: errors = 1                
                 if errors == 0:
                     onThreadSuccess()
-                    self.emit(QtCore.SIGNAL("success()"))
+                    self.emit(Async.signal_success)
                 else:
-                    self.emit(QtCore.SIGNAL("error()"))
+                    self.emit(Async.signal_error)
+        signal_success = QtCore.SIGNAL("success()")
+        signal_error = QtCore.SIGNAL("error()")
+        signal_finished = QtCore.SIGNAL("finished()")
 
     def cleanup():
+        # At the time of calling cleanup, onSuccess and onError
+        # functions might still be needed. Store them to "finished" in
+        # order to avoid the garbage collector releasing the memory
+        # too early.
+        asyncRuncmd.finished[cmd] = asyncRuncmd.running[cmd]
         del asyncRuncmd.running[cmd]
     if cmd in asyncRuncmd.running: return "Command already running"
     async = Async()
-    async.connect(async, QtCore.SIGNAL("success()"), onSuccess, QtCore.Qt.QueuedConnection)
-    async.connect(async, QtCore.SIGNAL("error()"), onError, QtCore.Qt.QueuedConnection)
-    async.connect(async, QtCore.SIGNAL("finished()"), cleanup, QtCore.Qt.QueuedConnection)
-    asyncRuncmd.running[cmd] = async # hide from the garbage collector
+    async.connect(async, Async.signal_success, onSuccess, QtCore.Qt.QueuedConnection)
+    async.connect(async, Async.signal_error, onError, QtCore.Qt.QueuedConnection)
+    async.connect(async, Async.signal_finished, cleanup, QtCore.Qt.QueuedConnection)
+    asyncRuncmd.running[cmd] = async # (async, onSuccess, onError, onThreadSuccess, cleanup) # hide from the garbage collector
     async.start()
 asyncRuncmd.running = {}
+asyncRuncmd.finished = {}
 
 def removeTemporaryFiles(basefilename):
     for tmps in ["lsts", "conf", "states.png", "dist.png", "cov.png",
@@ -226,9 +235,12 @@ class MainWindow(QtGui.QMainWindow):
         self._set_gtFileName("noname.gt")
 
         self.setCentralWidget(self.mainwidget)
-        self.setWindowTitle("fMBT GT editor")
+        self.setWindowTitle("fMBT editor")
 
         self._last_keypress = time.time() - 10
+
+        self._fileDialogDirectory = None
+        self._fileDialogFilter = None
 
     def about(self):
         QtGui.QMessageBox.about(self, "fMBT GT editor",'''
@@ -263,6 +275,7 @@ Keyboard shortcuts:<br>
             self.gthighlighter = GTHighlighter(self.editor.document())
         elif self._editingAAL():
             self.gthighlighter = AALHighlighter(self.editor.document())
+        self._confFileName = None
 
     def _set_confFileName(self, newname):
         self._confFileName = str(newname)
@@ -344,14 +357,26 @@ Keyboard shortcuts:<br>
 
     def openFile(self, path=None):
         if not path:
+            dialog = QtGui.QFileDialog()
+            if self._fileDialogDirectory:
+                dialog.setDirectory(self._fileDialogDirectory)
             if self.edit.currentIndex() == EDITTAB_GT:
-                path = QtGui.QFileDialog.getOpenFileName(self, "Open model",
-                                                         '', "fMBT GT commands (*.gt);;fMBT AAL models (*.aal);;State machines (*.lsts)")
+                dialog.setWindowTitle("Open model")
+                dialog.setNameFilters(["fMBT GT commands (*.gt)","fMBT AAL models (*.aal)","State machines (*.lsts)"])
+                if self._fileDialogFilter:
+                    dialog.selectNameFilter(self._fileDialogFilter)
+                dialog.exec_()
+                print "dialog path:", path
             else:
-                path = QtGui.QFileDialog.getOpenFileName(self, "Open configuration",
-                                                         '', "fMBT test configuration (*.conf)")
-            if not not_using_PySide and path: path = path[0]
-            path = str(path)
+                dialog.setWindowTitle("Open configuration")
+                dialog.setNameFilters(["fMBT test configuration (*.conf)"])
+                dialog.exec_()
+            if not dialog.result():
+                return
+            path = str(dialog.selectedFiles()[0])
+            self._fileDialogDirectory = dialog.directory()
+            self._fileDialogFilter = dialog.selectedNameFilter()
+            del dialog
         if path:
             if isModelFile(path):
                 self.editor.setPlainText(file(path).read())
@@ -631,17 +656,20 @@ on_inconc = "exit:2"
             def eventFilter(self, obj, event):
                 if event.type() != QtCore.QEvent.KeyPress: return False
                 self.parent._last_keypress = time.time()
-                if event.key() == QtCore.Qt.Key_Tab:
+                if event.key() == QtCore.Qt.Key_Tab and self.parent.edit.currentIndex() == EDITTAB_GT:
                     self.parent._iterate_index += 1
                     self.parent.completion()
                     return True
                 self.parent._iterate_index = -1
                 if (event.key() == QtCore.Qt.Key_E and
                       QtGui.QApplication.keyboardModifiers() & QtCore.Qt.ControlModifier):
-                    self.parent.editor.moveCursor(QtGui.QTextCursor.EndOfLine)
+                    if self.parent.edit.currentIndex() == EDITTAB_GT:
+                        self.parent.editor.moveCursor(QtGui.QTextCursor.EndOfLine)
+                    else:
+                        self.parent.conf_editor.moveCursor(QtGui.QTextCursor.EndOfLine)
                     return True
                 return False
-        self._eventFilter = TabCompletionEventFilter(self)
+        self._keypress_eventFilter = TabCompletionEventFilter(self)
 
         self.mainwidget = QtGui.QWidget()
         self.layout = QtGui.QHBoxLayout()
@@ -661,6 +689,7 @@ on_inconc = "exit:2"
             editor.wheel_scale = 1.0
             editor.wheel_scale_changed = lambda: (font.setPointSize(editor.wheel_scale * 12.0), editor.setFont(font))
             editor.installEventFilter(editor_scaleevents)
+            editor.installEventFilter(self._keypress_eventFilter)
             return editor
 
         self.editor_font = QtGui.QFont()
@@ -670,7 +699,6 @@ on_inconc = "exit:2"
 
         self.editor = makeScalableEditor(self.edit, self.editor_font)
         self.editor_tabevents = TabCompletionEventFilter(self)
-        self.editor.installEventFilter(self.editor_tabevents)
         self.edit.addTab(self.editor, "GT - F1")
 
         self.conf_editor = makeScalableEditor(self.edit, self.editor_font)
