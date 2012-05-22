@@ -28,7 +28,7 @@ public:
   Coverage_set(Log&l,std::vector<std::string*>& _from,
 	       std::vector<std::string*>& _to,
 	       std::vector<std::string*>& _drop):
-    Coverage_exec_filter(l,_from,_to,_drop) {}
+    Coverage_exec_filter(l,_from,_to,_drop), allowed_set_size(0,1),max_count(0) {}
 
   virtual ~Coverage_set();
   virtual std::string stringify();
@@ -48,6 +48,8 @@ protected:
   virtual void on_start();
 
 private:
+  bool filter();
+  bool range(int action,std::pair<int,int>& requirement);
   std::vector<Coverage*> covs;
   unsigned len;
 
@@ -56,7 +58,11 @@ private:
   // Negative numbers are tags.
   std::map<int,int> current_set;
 
+  // Maps action/tag to count requirement.
   std::map<int,std::pair<int, int> > set_filter;
+
+  std::pair<int,int> allowed_set_size;
+  int max_count;
 
   // Key is the set, value is count....
   std::map<std::map<int,int>,int > sets;

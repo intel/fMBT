@@ -26,16 +26,14 @@
 extern std::vector<std::string*> *ff,*tt,*dd;
 extern "C" {
   extern D_ParserTables parser_tables_filter;
-};
+}
 
 class Coverage_setw: public Coverage_set {
 public:
   Coverage_setw(Log& l,std::string params):
-    Coverage_set(l,_f,_t,_d) 
+    Coverage_set(l,_f,_t,_d)
   {
-    printf("%s\n",params.c_str());
     unescape_string(params);
-    printf("%s\n",params.c_str());
     ff=&_f;
     tt=&_t;
     dd=&_d;
@@ -43,10 +41,6 @@ public:
     bool ret=dparse(p,(char*)params.c_str(),std::strlen(params.c_str()));
     ret=p->syntax_errors==0 && ret;
     free_D_Parser(p);
-
-    printf("%i %i %i\n",ff->size(),_f.size(),from.size());
-
-    printf("ret %i\n",ret);
     from=_f;
     to=_t;
     drop=_d;
@@ -88,11 +82,62 @@ void Coverage_set::on_start()
   current_set.clear();
 }
 
+bool Coverage_set::range(int count,std::pair<int,int>& requirement)
+{
+  if (requirement.first<=count && requirement.second>=count) {
+    return true;
+  }
+
+  return false;
+}
+
+bool Coverage_set::filter()
+{
+
+  // check max_count
+  if (max_count>0 && sets[current_set]==max_count) 
+    return false;
+
+  // Check current_set size....
+
+  int set_size=0;
+  // Check that everything in the current_set belongs to our filter.
+  for(std::map<int,int>::iterator i=current_set.begin();
+      i!=current_set.end();i++) {
+    int action=i->first;
+    int count=i->second;
+    set_size+=count;
+    if (!range(count,set_filter[action])) {
+      return false;
+    }
+  }
+
+  if (!range(set_size,allowed_set_size)) {
+    return false;
+  }
+
+  // Check that every rule is covered
+  for(std::map<int,std::pair<int, int> >::iterator i=set_filter.begin();
+      i!=set_filter.end();i++) {
+
+    if (!range(current_set[i->first],i->second)) {
+      return false;
+    }    
+  }
+
+  // Now we know that there aren't too many current_sets, 
+  // current_set belongs to set_filter and set_filter belongs to current_set.
+  // So let's return true :)
+  return true;
+}
+
 void Coverage_set::on_find()
 {
   // Check that set_filter match current_set. I'll implement that later :D
   // Just because set_filter structure is not filled.
-  sets[current_set]++;
+  if (filter()) {
+    sets[current_set]++;
+  }
   current_set.clear();
 }
 
