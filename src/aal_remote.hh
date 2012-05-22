@@ -30,7 +30,7 @@ public:
   aal_remote(Log&l,std::string&);
   virtual ~aal_remote() {};
 
-  virtual int adapter_execute(int action);
+  virtual int adapter_execute(int action,const char* params);
   virtual int model_execute(int action);
   virtual int getActions(int** act);
   virtual bool reset();
@@ -48,7 +48,6 @@ private:
   FILE* d_stderr;
 
   GPid pid;
-
 };
 
 #endif

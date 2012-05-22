@@ -28,7 +28,7 @@ class aal {
 public:
   aal(Log&l, std::string& _params): _log(l), params(_params) {status=true;};
   virtual ~aal() {};
-  virtual int adapter_execute(int action)=0;
+  virtual int adapter_execute(int action,const char* params)=0;
   virtual int model_execute(int action)  =0;
   virtual int getActions(int** act)      =0;
   virtual bool reset() {

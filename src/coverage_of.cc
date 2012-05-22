@@ -19,6 +19,13 @@
 
 #include "coverage_of.hh"
 
+Coverage_of::~Coverage_of()
+{
+  for(unsigned i=0;i<covs.size();i++) {
+    delete covs[i];
+  }  
+}
+
 std::string Coverage_of::stringify()
 {
   return std::string("");
