@@ -30,9 +30,7 @@ class AALModel:
 
     def call(self, func, call_arguments = ()):
         try:
-            if call_arguments:
-                self._log("Sorry, can't pass arguments %s to %s - yet." %
-                          (call_arguments, func.__name__))
+            self._variables['args'] = call_arguments
             return eval(func.func_code, self._variables)
         except Exception, e:
             self._log("Exception %s in %s: %s" % (e.__class__, func.func_name, e))
