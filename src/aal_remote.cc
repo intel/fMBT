@@ -88,12 +88,12 @@ int aal_remote::adapter_execute(int action,const char* params) {
     std::fprintf(d_stdin, "ap%s\n",params);
   
   std::fprintf(d_stdin, "a%i\n", action);
-  return getint(d_stdin,d_stdout);
+  return getint(d_stdin,d_stdout,&_log);
 }
 
 int aal_remote::model_execute(int action) {
   std::fprintf(d_stdin, "m%i\n", action);
-  return getint(d_stdin,d_stdout);
+  return getint(d_stdin,d_stdout,&_log);
 }
 
 void aal_remote::push() {
@@ -108,7 +108,7 @@ void aal_remote::pop() {
 
 bool aal_remote::reset() {
   std::fprintf(d_stdin, "mr\n");
-  bool rv = (getint(d_stdin,d_stdout) == 1);
+  bool rv = (getint(d_stdin,d_stdout,&_log) == 1);
   if (!rv) {
     errormsg = "aal_remote model failed to reset \"" + params + "\".\n"
       "      (try executing: echo mr | " + params + ")";

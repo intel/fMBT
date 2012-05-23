@@ -545,7 +545,7 @@ ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
 }
 
 
-int getint(FILE* out,FILE* in)
+int getint(FILE* out,FILE* in,Log* log)
 {
   if (out) {
     fflush(out);
@@ -556,6 +556,15 @@ int getint(FILE* out,FILE* in)
   ssize_t s=getdelim(&line,&n,'\n',in);
   if (s && s != -1) {
     ret=atoi(line);
+    if (ret == 0 && line[0] != '0' && log) {
+      char *escaped_line = escape_string(line);
+      if (escaped_line) {
+        log->print("<remote error=\"I/O error: integer expected, got: %s\"/>\n", escaped_line);
+        escape_free(escaped_line);
+      }
+    }
+  } else if (log) {
+    log->print("<remote error=\"I/O error: integer expected, got nothing./>\n");
   }
   if (line) {
     free(line);
