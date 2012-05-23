@@ -1,0 +1,75 @@
+aal "editormodel" {
+    language: python {
+        import subprocess
+        from fmbt import adapterlog as log
+        from eyenfinger import *
+        import time
+    }
+
+    # preview-show-vars: focus
+    # preview-depth: 5
+
+    # variables: comma-separated list of variable names
+    variables {
+        focus, process, model_fn
+    }
+
+    initial_state {
+        # focus keeps track on the GUI element where
+        # keyboard focus should be. focus is None if
+        # fmbt-editor is not running and "undefined"
+        # if it can be anywhere.
+        focus = None
+
+        process = None
+
+        model_fn = "noname.gt" # model filename
+    }
+
+    action "iLaunchEditor" {
+        guard() { return focus == None }
+        body() {
+            focus = "modeleditor"
+        }
+        adapter() {
+            process = subprocess.Popen("fmbt-editor", shell=True)
+            time.sleep(1)
+            iRead("fMBT editor")
+        }
+    }
+
+    action "iQuitEditor('Ctrl+Q')", "iQuitEditor('File menu')" {
+        guard() { return focus != None }
+        body() {
+            focus = None
+        }
+        adapter() {
+            if args[0] == "Ctrl+Q":
+                log("Quitting with Ctrl+Q")
+                iType([("Control_L", "Q")])
+            elif args[0] == "File menu":
+                log("Quitting with File->Exit")
+                iClickWord("File")
+                time.sleep(0.2)
+                iRead()
+                iClickWord("Ctrl+Q")
+            else:
+                log("args[0] (%s) did not match to any of the known arguments" % (args,))
+        }
+    }
+
+    action "iFocusModelEditor('keyb')" {
+        guard() { return focus != None }
+        body() {
+            focus = "modeleditor"
+        }
+        adapter() {
+            if args[0] == "keyb":
+                iType(["F1"])
+            elif args[0] == "mouse":
+                iClickWord("F1")
+            iRead()
+        }
+    }
+
+}
