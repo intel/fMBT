@@ -30,10 +30,17 @@ class AALModel:
 
     def call(self, func, call_arguments = ()):
         try:
-            self._variables['args'] = call_arguments
+            args = []
+            for arg in call_arguments:
+                if arg == '':
+                    args.append('')
+                else:
+                    args.append(eval(arg, self._variables))
+            self._variables['args'] = args
             return eval(func.func_code, self._variables)
         except Exception, e:
             self._log("Exception %s in %s: %s" % (e.__class__, func.func_name, e))
+            raise e
 
     def reset(self):
         rv = self.call(self.initial_state)
