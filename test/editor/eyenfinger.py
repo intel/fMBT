@@ -35,7 +35,7 @@ g_windowOffsets = {}
 # windowsSizes maps window-id to (width, height) pair.
 g_windowSizes = {}
 
-SCREENSHOT_FILENAME = "/tmp/eyesnfinger.png"
+SCREENSHOT_FILENAME = "/tmp/eyenfinger.png"
 
 MOUSEEVENT_MOVE, MOUSEEVENT_CLICK, MOUSEEVENT_DOWN, MOUSEEVENT_UP = range(4)
 
@@ -72,13 +72,12 @@ def iRead(windowId = None):
             SCREENSHOT_FILENAME))
     
     # convert to text
-    _, g_hocr = runcmd("convert %s -sharpen 5 -filter Mitchell -resize 1920x1600 -level 40%%,70%%,5.0 -sharpen 5 %s && tesseract %s %s hocr && cat %s.html" % (
+    _, g_hocr = runcmd("convert %s -sharpen 5 -filter Mitchell -resize 1920x1600 -level 40%%,70%%,5.0 -sharpen 5 %s && tesseract %s %s hocr" % (
             SCREENSHOT_FILENAME, SCREENSHOT_FILENAME+"-big.png",
-            SCREENSHOT_FILENAME+"-big.png", SCREENSHOT_FILENAME,
-            SCREENSHOT_FILENAME))
+            SCREENSHOT_FILENAME+"-big.png", SCREENSHOT_FILENAME))
 
     # store every word and its coordinates
-    g_words = _hocr2words(g_hocr)
+    g_words = _hocr2words(file(SCREENSHOT_FILENAME + ".html").read())
     for w in sorted(g_words.keys()):
         _log("%20s %s %s" % (w, g_words[w][0][0], g_words[w][0][1]))
 
@@ -100,16 +99,21 @@ def iRead(windowId = None):
                   int(bbox[3]/scaled_height * orig_height)))
             _log(word + ': (' + str(bbox[0]) + ', ' + str(bbox[1]) + ')')
 
-def iClickWord(word, appearance=1, pos=(0,0), match=0.33, mousebutton=1, mouseevent=1):
+def iClickWord(word, appearance=1, pos=(0.5,0.5), match=0.33, mousebutton=1, mouseevent=1):
     """
     Parameters:
         word       - word that should be clicked
         appearance - if word appears many times, appearance to
                      be clicked. Defaults to the first one.
-        pos        - position of the word that should be clicked.
-                     (0,0) - middle, (-1,0) - left, (1,0) - right,
-                     (0,-1) - top, (0,1) - bottom, (-1,-1) - top-left...
-                     Defaults to the middle.
+
+        pos -        position of the word that should be clicked,
+                     relative to word top-left corner of the bounding
+                     box around the word. X and Y sizes are relative
+                     to width and height of the word.  (0,0) is the
+                     top-left corner, (1,1) is bottom-right corner,
+                     (0.5, 0.5) is the middle point (default). Use
+                     values below 0 or greater than 1 to click outside
+                     the bounding box.
     """
     windowId = g_lastWindow
     scored_words = []
@@ -126,16 +130,15 @@ def iClickWord(word, appearance=1, pos=(0,0), match=0.33, mousebutton=1, mouseev
                             (word, scored_words[-1][1], best_score, match))
     # Parameters should contain some hints on which appearance of the
     # word should be clicked. At the moment we'll use the first one.
-    middle_x, middle_y = g_words[scored_words[-1][1]][appearance-1][1]
-    _log('G_WORD ENTRY %s' % (g_words[scored_words[-1][1]][appearance-1],))
     left, top, right, bottom = g_words[scored_words[-1][1]][appearance-1][2]
 
-    _log('left=%s, top=%s, right=%s, bottom=%s, midx=%s, midy=%s' % (left, top, right, bottom, middle_x, middle_y))
-    click_x = middle_x + pos[0]*(right-middle_x) + g_windowOffsets[windowId][0]
-    click_y = middle_y + pos[1]*(bottom-middle_y) + g_windowOffsets[windowId][1]
+    click_x = int(left + pos[0]*(right-left) + g_windowOffsets[windowId][0])
+    click_y = int(top + pos[1]*(bottom-top) + g_windowOffsets[windowId][1])
     
-    _log('iClickWord("%s"): click "%s" (middle: %s, click: %s)' %
-        (word, scored_words[-1][1], (middle_x, middle_y), (click_x, click_y)))
+    _log('iClickWord("%s"): word "%s", match %.2f, bbox %s, window offset %s, click %s' %
+        (word, scored_words[-1][1], scored_words[-1][0],
+         (left, top, right, bottom), g_windowOffsets[windowId],
+         (click_x, click_y)))
 
     if mouseevent == MOUSEEVENT_CLICK:
         params = "'mouseclick %s'" % (mousebutton,)
@@ -150,7 +153,7 @@ def iClickWord(word, appearance=1, pos=(0,0), match=0.33, mousebutton=1, mouseev
     runcmd("xte 'mousemove %s %s' %s" % (click_x, click_y, params))
     return best_score
 
-def iType(word):
+def iType(word, delay=0.0):
     """
     Send keypress events.
     word can be
@@ -165,7 +168,9 @@ def iType(word):
         key1 press, key2 press, ..., keyn press
         keyn release, ..., key2 release, key1 release
 
-    Keynames are defined in keysymdef.h.
+      Keynames are defined in keysymdef.h.
+
+    delay is given as seconds between sent events
 
     Example:
     iType('hello')
@@ -188,7 +193,8 @@ def iType(word):
         else:
             # char is keyname or single letter/number
             args.append("'key %s'" % (char,))
-    runcmd("xte %s" % (' '.join(args),))
+    usdelay = " 'usdelay %s' " % (int(delay*1000000),)
+    runcmd("xte %s" % (usdelay.join(args),))
 
 def _score(w1, w2):
     # This is just a 10 minute hack without deep thought.

@@ -24,8 +24,27 @@
 cd "$(dirname "$0")"
 LOGFILE=/tmp/fmbt.test.editor.log
 export PATH=../../src:../../utils:$PATH
+export PYTHONPATH=../../src:../../utils:$PYTHONPATH
 
 source ../functions.sh
+
+##########################################
+# Check requirements
+
+REQUIRED_BINARIES="Xephyr xwininfo xprop xwd convert tesseract xte"
+
+for binary in $REQUIRED_BINARIES; do
+    which $binary >/dev/null 2>&1 || {
+        echo "This test requires binaries:"
+        echo "$REQUIRED_BINARIES"
+        echo ""
+        echo "Debian/Ubuntu users can install them with command:"
+        echo "sudo apt-get install xserver-xephyr x11-utils x11-apps imagemagick tesseract-ocr xautomation"
+        echo ""
+        echo "$binary missing"
+        exit 1
+    }
+done
 
 ##########################################
 # Start new X server for fmbt-editor
