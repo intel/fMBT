@@ -35,6 +35,8 @@ public:
   virtual float getCoverage();
   virtual int getAction();
   virtual int getIAction();
+private:
+  int select(int i,int* actions);
 };
 
 #endif

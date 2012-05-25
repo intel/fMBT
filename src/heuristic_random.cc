@@ -52,12 +52,14 @@ int Heuristic_random::getAction()
     return DEADLOCK;
   }
 
+  return select(i,actions);
+}
+
+int Heuristic_random::select(int i,int* actions)
+{
   int pos=(((float)random())/RAND_MAX)*i;
 
-  log.debug("Random selected %i (out of %i)\n",
-	 pos,i);
-
-  return actions[pos]; // Quite bad random..
+  return actions[pos];
 }
 
 int Heuristic_random::getIAction()
@@ -76,12 +78,7 @@ int Heuristic_random::getIAction()
     return OUTPUT_ONLY;
   }
 
-  int pos=(((float)random())/RAND_MAX)*i;
-
-  log.debug("Random selected %i (out of %i)\n",
-	 pos,i);
-
-  return actions[pos]; // Quite bad random..
+  return select(i,actions);
 }
 
 FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_random, "random")
