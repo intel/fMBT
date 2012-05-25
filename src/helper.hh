@@ -83,6 +83,9 @@ int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in);
 void split(std::string val, std::string& name,
 	   std::string& param, const char* s=":");
 
+void regexpmatch(std::string& regexp,std::vector<std::string>& f,
+		 std::vector<int>& result,bool clear=true,int a=1);
+
 
 #define MAX_LINE_LENGTH (1024*16)
 

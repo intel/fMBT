@@ -606,3 +606,29 @@ void split(std::string val,std::string& name,
     param = val.substr(cutpos+1);
   }
 }
+
+#ifndef DROI
+#include <boost/regex.hpp>
+#endif
+
+
+void regexpmatch(std::string& regexp,std::vector<std::string>& f,
+		 std::vector<int>& result,bool clear,int a)
+{
+#ifndef DROI
+
+  boost::regex expression(regexp);
+  boost::cmatch what;
+
+  if (clear) {
+    result.clear();
+  }
+
+  for(unsigned int i=0;i<f.size();i++) {
+    if(boost::regex_match(f[i].c_str(), what, expression)) {
+      result.push_back(a*i);
+    }
+  }
+
+#endif
+}
