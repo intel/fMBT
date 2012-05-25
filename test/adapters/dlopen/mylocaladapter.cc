@@ -15,17 +15,17 @@ void MyLocalAdapter::execute(std::vector<int>& action)
     log.pop();
 }
 
-bool MyLocalAdapter::readAction(std::vector<int> &action, bool block)
+int MyLocalAdapter::observe(std::vector<int> &action, bool block)
 {
     log.push("mylocal_reader");
     if (block) {
         action.resize(1);
         action[0] = 1;
         log.pop();
-        return true;
+        return 1;
     }
     log.pop();
-    return false;
+    return 0;
 }
 
 FACTORY_DEFAULT_CREATOR(Adapter, MyLocalAdapter, "mylocal");
