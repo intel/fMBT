@@ -16,6 +16,39 @@
 
 """
 eyenfinger - GUI testing library based on OCR and X event generation
+
+Configuring
+-----------
+
+autoconfigure() evaluates number of preprocessing filters to give the
+best result on finding given words from given image. Example:
+
+python -c '
+from eyenfinger import *
+autoconfigure("screenshot.png", ["Try", "to", "find", "these", "words"])
+'
+
+
+evaluatePreprocessFilter() highlights words detected on given image. Example:
+
+python -c '
+from eyenfinger import *
+evaluatePreprocessFilter("screenshot.png", "-sharpen 5 -resize 1600x", ["File", "View"])
+'
+
+setPreprocessFilter() sets given filter to be used when reading text from images.
+
+Debugging
+---------
+
+iClickWord() capture parameter visualises coordinates to be clicked. Example:
+
+python -c '
+from eyenfinger import *
+setPreprocessFilter("-sharpen 5 -filter Mitchell -resize 1600x -level 40%,50%,3.0")
+iRead(source="screenshot.png")
+iClickWord("[initial", clickPos=(-2,3), capture="highlight.png", dryRun=True)
+'
 """
 
 import time
@@ -23,6 +56,13 @@ import subprocess
 import re
 import math
 import htmlentitydefs
+import sys
+
+g_preprocess = "-sharpen 5 -filter Mitchell -resize 1920x1600 -level 40%%,70%%,5.0 -sharpen 5"
+
+g_readImage = None
+
+g_origImage = None
 
 g_hocr = ""
 
@@ -31,7 +71,7 @@ g_words = {}
 g_lastWindow = None
 
 # windowsOffsets maps window-id to (x, y) pair.
-g_windowOffsets = {}
+g_windowOffsets = {None: (0,0)}
 # windowsSizes maps window-id to (width, height) pair.
 g_windowSizes = {}
 
@@ -57,29 +97,39 @@ def runcmd(cmd):
     _log("stderr: " + p.stderr.read())
     return p.wait(), output
 
-def iRead(windowId = None):
+def setPreprocessFilter(preprocess):
+    global g_preprocess
+    g_preprocess = preprocess
+
+def iRead(windowId = None, source = None, preprocess = ""):
     global g_hocr
     global g_lastWindow
     global g_words
+    global g_readImage
+    global g_origImage
 
-    iUseWindow(windowId)
+    if not source:
+        iUseWindow(windowId)
 
-    # take a screenshot
-    runcmd("xwd -root -screen -out %s.xwd && convert %s.xwd -crop %sx%s+%s+%s '%s'" %
-           (SCREENSHOT_FILENAME, SCREENSHOT_FILENAME,
-            g_windowSizes[g_lastWindow][0], g_windowSizes[g_lastWindow][1],
-            g_windowOffsets[g_lastWindow][0], g_windowOffsets[g_lastWindow][1],
-            SCREENSHOT_FILENAME))
-    
+        # take a screenshot
+        runcmd("xwd -root -screen -out %s.xwd && convert %s.xwd -crop %sx%s+%s+%s '%s'" %
+               (SCREENSHOT_FILENAME, SCREENSHOT_FILENAME,
+                g_windowSizes[g_lastWindow][0], g_windowSizes[g_lastWindow][1],
+                g_windowOffsets[g_lastWindow][0], g_windowOffsets[g_lastWindow][1],
+                SCREENSHOT_FILENAME))
+        source = SCREENSHOT_FILENAME
+    else:
+        iUseImageAsWindow(source)
+    g_origImage = source
+
     # convert to text
-    _, g_hocr = runcmd("convert %s -sharpen 5 -filter Mitchell -resize 1920x1600 -level 40%%,70%%,5.0 -sharpen 5 %s && tesseract %s %s hocr" % (
-            SCREENSHOT_FILENAME, SCREENSHOT_FILENAME+"-big.png",
-            SCREENSHOT_FILENAME+"-big.png", SCREENSHOT_FILENAME))
+    g_readImage = g_origImage + "-pp.png"
+    _, g_hocr = runcmd("convert %s %s %s && tesseract %s %s -l eng hocr" % (
+            g_origImage, g_preprocess, g_readImage,
+            g_readImage, SCREENSHOT_FILENAME))
 
     # store every word and its coordinates
     g_words = _hocr2words(file(SCREENSHOT_FILENAME + ".html").read())
-    for w in sorted(g_words.keys()):
-        _log("%20s %s %s" % (w, g_words[w][0][0], g_words[w][0][1]))
 
     # convert word coordinates to the unscaled pixmap
     orig_width, orig_height = g_windowSizes[g_lastWindow][0], g_windowSizes[g_lastWindow][1]
@@ -87,7 +137,7 @@ def iRead(windowId = None):
     scaled_width, scaled_height = re.findall('bbox 0 0 ([0-9]+)\s*([0-9]+)', runcmd("grep ocr_page %s.html | head -n 1" % (SCREENSHOT_FILENAME,))[1])[0]
     scaled_width, scaled_height = float(scaled_width), float(scaled_height)
 
-    for word in g_words:
+    for word in sorted(g_words.keys()):
         for appearance, (wordid, middle, bbox) in enumerate(g_words[word]):
             g_words[word][appearance] = \
                 (wordid,
@@ -99,44 +149,40 @@ def iRead(windowId = None):
                   int(bbox[3]/scaled_height * orig_height)))
             _log(word + ': (' + str(bbox[0]) + ', ' + str(bbox[1]) + ')')
 
-def iClickWord(word, appearance=1, pos=(0.5,0.5), match=0.33, mousebutton=1, mouseevent=1):
+def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33, mousebutton=1, mouseevent=1, dryRun=False, capture=None):
     """
     Parameters:
         word       - word that should be clicked
         appearance - if word appears many times, appearance to
                      be clicked. Defaults to the first one.
-
-        pos -        position of the word that should be clicked,
+        clickPos -   position to be clicked,
                      relative to word top-left corner of the bounding
-                     box around the word. X and Y sizes are relative
-                     to width and height of the word.  (0,0) is the
+                     box around the word. X and Y units are relative
+                     to width and height of the box.  (0,0) is the
                      top-left corner, (1,1) is bottom-right corner,
-                     (0.5, 0.5) is the middle point (default). Use
-                     values below 0 or greater than 1 to click outside
+                     (0.5, 0.5) is the middle point (default).
+                     Values below 0 or greater than 1 click outside
                      the bounding box.
+        capture -    name of file where image of highlighted word and
+                     clicked point are saved.
     """
     windowId = g_lastWindow
-    scored_words = []
-    for w in g_words:
-        scored_words.append((_score(w, word) * _score(word, w), w))
-    scored_words.sort()
-    
-    assert len(scored_words) > 0, "No words found"
 
-    best_score =  math.sqrt(scored_words[-1][0])
+    score, matching_word =  findWord(word)
 
-    if best_score < match:
+    if score < match:
         raise BadMatch('No matching word for "%s". The best candidate "%s" with score %.2f, required %.2f' %
-                            (word, scored_words[-1][1], best_score, match))
+                            (word, matching_word, score, match))
+
     # Parameters should contain some hints on which appearance of the
     # word should be clicked. At the moment we'll use the first one.
-    left, top, right, bottom = g_words[scored_words[-1][1]][appearance-1][2]
+    left, top, right, bottom = g_words[matching_word][appearance-1][2]
 
-    click_x = int(left + pos[0]*(right-left) + g_windowOffsets[windowId][0])
-    click_y = int(top + pos[1]*(bottom-top) + g_windowOffsets[windowId][1])
+    click_x = int(left + clickPos[0]*(right-left) + g_windowOffsets[windowId][0])
+    click_y = int(top + clickPos[1]*(bottom-top) + g_windowOffsets[windowId][1])
     
     _log('iClickWord("%s"): word "%s", match %.2f, bbox %s, window offset %s, click %s' %
-        (word, scored_words[-1][1], scored_words[-1][0],
+        (word, matching_word, score,
          (left, top, right, bottom), g_windowOffsets[windowId],
          (click_x, click_y)))
 
@@ -149,9 +195,14 @@ def iClickWord(word, appearance=1, pos=(0.5,0.5), match=0.33, mousebutton=1, mou
     else:
         params = ""
 
-    # use xte from the xautomation package
-    runcmd("xte 'mousemove %s %s' %s" % (click_x, click_y, params))
-    return best_score
+    if capture:
+        drawWords(g_origImage, capture, [word], g_words)
+        drawClickedPoint(capture, capture, (click_x, click_y))
+
+    if not dryRun:
+        # use xte from the xautomation package
+        runcmd("xte 'mousemove %s %s' %s" % (click_x, click_y, params))
+    return score
 
 def iType(word, delay=0.0):
     """
@@ -196,9 +247,26 @@ def iType(word, delay=0.0):
     usdelay = " 'usdelay %s' " % (int(delay*1000000),)
     runcmd("xte %s" % (usdelay.join(args),))
 
+def findWord(word, detected_words = None, appearance=1):
+    """
+    Returns pair (score, corresponding-detected-word)
+    """
+    if not detected_words:
+        detected_words = g_words
+
+    scored_words = []
+    for w in detected_words:
+        scored_words.append((_score(w, word) * _score(word, w), w))
+    scored_words.sort()
+    
+    assert len(scored_words) > 0, "No words found"
+
+    return scored_words[-1]
+
 def _score(w1, w2):
     # This is just a 10 minute hack without deep thought.
     # Better scoring should be considered.
+    if len(w1) == 0 or len(w2) == 0: return 0.0
     positions = []
     for char in w1:
         positions.append([])
@@ -213,6 +281,7 @@ def _score(w1, w2):
         for p in positions[i]:
             if p in next_positions:
                 score += maxscore_per_char
+                break
         next_positions = [pos+1 for pos in positions[i]]
     return score
 
@@ -231,7 +300,8 @@ def _hocr2words(hocr):
             rv[word] = []
         middle_x = (bbox_right + bbox_left) / 2.0
         middle_y = (bbox_top + bbox_bottom) / 2.0
-        rv[word].append((word_id, (middle_x, middle_y), (bbox_left, bbox_top, bbox_right, bbox_bottom)))
+        rv[word].append((word_id, (middle_x, middle_y),
+                         (bbox_left, bbox_top, bbox_right, bbox_bottom)))
     return rv
 
 def iUseWindow(windowIdOrName = None):
@@ -254,6 +324,18 @@ def iUseWindow(windowIdOrName = None):
     g_windowSizes[g_lastWindow] = (int(width), int(height))
     return g_lastWindow
 
+def iUseImageAsWindow(imagefilename):
+    global g_lastWindow
+    g_lastWindow = imagefilename
+    _, output = runcmd("file '%s'" % (imagefilename,))
+    output = output.split()
+    image_width = int(output[output.index('x')-1])
+    image_height = int(output[output.index('x')+1][:-1])
+
+    g_windowOffsets[g_lastWindow] = (0, 0)
+    g_windowSizes[g_lastWindow] = (image_width, image_height)
+    return g_lastWindow
+
 def iActiveWindow(windowId = None):
     """ return id of active window, in '0x1d0f14' format """
     if windowId == None:
@@ -261,3 +343,121 @@ def iActiveWindow(windowId = None):
         windowId = output.strip()
 
     return windowId
+
+def drawWords(inputfilename, outputfilename, words, detected_words):
+    """
+    Draw boxes around words detected in inputfilename that match to
+    given words. Result is saved to outputfilename.
+    """
+    draw_commands = ""
+    for w in words:
+        score, dw = findWord(w, detected_words)
+        left, top, right, bottom = detected_words[dw][0][2]
+        if score < 0.33:
+            color = "red"
+        elif score < 0.5:
+            color = "brown"
+        else:
+            color = "green"
+        draw_commands += """ -stroke %s -fill blue -draw "fill-opacity 0.2 rectangle %s,%s %s,%s" """ % (
+            color, left, top, right, bottom)
+        draw_commands += """ -stroke none -fill %s -draw "text %s,%s '%s'" """ % (
+            color, left, top, w)
+        draw_commands += """ -stroke none -fill %s -draw "text %s,%s '%.2f'" """ % (
+            color, left, bottom+10, score)
+    runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))
+
+def drawClickedPoint(inputfilename, outputfilename, clickedXY):
+    x, y = clickedXY
+    draw_commands = """ -stroke red -fill blue -draw "fill-opacity 0.2 circle %s,%s %s,%s" """ % (
+        x, y, x + 20, y)
+    draw_commands += """ -stroke none -fill red -draw "point %s,%s" """ % (x, y)
+    runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))
+
+def evaluatePreprocessFilter(imagefilename, ppfilter, words):
+    """
+    Visualise how given words are detected from given image file when
+    using given preprocessing filter.
+    """
+    global g_preprocess
+    evaluatePreprocessFilter.count += 1
+    preprocessed_filename = '%s-pre%s.png' % (imagefilename, evaluatePreprocessFilter.count)
+    runcmd("convert '%s' %s '%s' && tesseract %s eyenfinger.autoconfigure hocr" %
+           (imagefilename, ppfilter, preprocessed_filename,
+            preprocessed_filename))
+    detected_words = _hocr2words(file("eyenfinger.autoconfigure.html").read())
+    scored_words = []
+    for w in words:
+        score, word = findWord(w, detected_words)
+        scored_words.append((score, word, w))
+    scored_words.sort()
+
+    avg_score = sum([s[0] for s in scored_words])/float(len(scored_words))
+    evaluatePreprocessFilter.scores.append( (scored_words[0][0] + avg_score, scored_words[0][0], avg_score, ppfilter) )
+    evaluatePreprocessFilter.scores.sort()
+    # set the best preprocess filter so far as a default
+    g_preprocess = evaluatePreprocessFilter.scores[-1][-1]
+    drawWords(preprocessed_filename, preprocessed_filename, words, detected_words)
+    sys.stdout.write("%.2f %s %s %s\n" % (sum([s[0] for s in scored_words])/float(len(scored_words)), scored_words[0], preprocessed_filename, ppfilter))
+    sys.stdout.flush()
+evaluatePreprocessFilter.count = 0
+evaluatePreprocessFilter.scores = []
+
+def autoconfigure(imagefilename, words):
+    """
+    Search for image preprocessing configuration that will maximise
+    the score of finding given words in the image.
+    Returns configuration as a string.
+    """
+    
+    # check image width
+    _, output = runcmd("file '%s'" % (imagefilename,))
+    output = output.split()
+    image_width = int(output[output.index('x')-1])
+
+    resize_filters = ['Mitchell', 'Catrom', 'Hermite', 'Gaussian']
+    levels = [(20, 30), (20, 40), (20, 50),
+              (30, 30), (30, 40), (30, 50),
+              (40, 40), (40, 50), (40, 60),
+              (50, 50), (50, 60), (50, 70),
+              (60, 60), (60, 70), (60, 80)]
+
+    zoom = [2]
+
+    for f in resize_filters:
+        for blevel, wlevel in levels:
+            for z in zoom:
+                evaluatePreprocessFilter(
+                    imagefilename,
+                    "-sharpen 5 -filter %s -resize %sx -sharpen 5 -level %s%%,%s%%,3.0 -sharpen 5" % (f, z * image_width, blevel, wlevel),
+                    words)
+
+                evaluatePreprocessFilter(
+                    imagefilename,
+                    "-sharpen 5 -filter %s -resize %sx -level %s%%,%s%%,3.0 -sharpen 5" % (
+                        f, z * image_width, blevel, wlevel),
+                    words)
+
+                evaluatePreprocessFilter(
+                    imagefilename,
+                    "-sharpen 5 -filter %s -resize %sx -level %s%%,%s%%,3.0" % (
+                        f, z * image_width, blevel, wlevel),
+                    words)
+
+                evaluatePreprocessFilter(
+                    imagefilename,
+                    "-sharpen 5 -level %s%%,%s%%,3.0 -filter %s -resize %sx -sharpen 5" % (
+                        blevel, wlevel, f, z * image_width),
+                    words)
+    
+                evaluatePreprocessFilter(
+                    imagefilename,
+                    "-sharpen 5 -level %s%%,%s%%,1.0 -filter %s -resize %sx" % (
+                        blevel, wlevel, f, z * image_width),
+                    words)
+
+                evaluatePreprocessFilter(
+                    imagefilename,
+                    "-sharpen 5 -level %s%%,%s%%,10.0 -filter %s -resize %sx" % (
+                        blevel, wlevel, f, z * image_width),
+                    words)
