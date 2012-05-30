@@ -117,14 +117,10 @@ bool Coverage_exec_filter::execute(int action)
 
   if (online) {
     executed.push_back(action);
-    etime.push_back(History::current_time);    
+    etime.push_back(History::current_time);
   }
 
   npro=model->getprops(&props);
-
-  if (npro==0) {
-    return true;
-  }
 
   if (online) {
     /* Ok. Let's search for drop. */
