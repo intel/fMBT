@@ -149,8 +149,34 @@ def iRead(windowId = None, source = None, preprocess = ""):
                   int(bbox[3]/scaled_height * orig_height)))
             _log(word + ': (' + str(bbox[0]) + ', ' + str(bbox[1]) + ')')
 
+def iVerifyWord(word, match=0.33, capture=None):
+    """
+    Verify that word can be found from previously iRead() image.
+
+    Parameters:
+        word       - word that should be checked
+        match      - minimum matching score
+        capture    - name of file where image of highlighted word and
+                     clicked point are saved.
+
+    Returns pair: score, matching_word
+
+    Throws BadMatch error if could not find a matching word.
+    """
+    score, matching_word = findWord(word)
+
+    if capture:
+        drawWords(g_origImage, capture, [word], g_words)
+
+    if score < match:
+        raise BadMatch('No matching word for "%s". The best candidate "%s" with score %.2f, required %.2f' %
+                            (word, matching_word, score, match))
+    return score, matching_word
+
 def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33, mousebutton=1, mouseevent=1, dryRun=False, capture=None):
     """
+    Click coordinates relative to the given word in previously iRead() image.
+
     Parameters:
         word       - word that should be clicked
         appearance - if word appears many times, appearance to
@@ -165,6 +191,10 @@ def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33, mousebutton=1
                      the bounding box.
         capture -    name of file where image of highlighted word and
                      clicked point are saved.
+
+    Returns pair: score, matching_word
+
+    Throws BadMatch error if could not find a matching word.
     """
     windowId = g_lastWindow
 
@@ -207,26 +237,27 @@ def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33, mousebutton=1
 def iType(word, delay=0.0):
     """
     Send keypress events.
-    word can be
-      - string containing letters and numbers
-        each letter/number is sent with press and release events
-      - list of keys and/or (key, event) pairs:
-        - each key is sent with press and release events
-        - for each (key, event), corresponding event is sent.
-          event is 'press' or 'release'.
-      - list of tuples (key1, key2, ..., keyn)
-        this will generate 2n events:
-        key1 press, key2 press, ..., keyn press
-        keyn release, ..., key2 release, key1 release
 
-      Keynames are defined in keysymdef.h.
+    Parameters:
+        word is either 
+            - a string containing letters and numbers.
+              Each letter/number is using press and release events.
+            - a list that contains
+              - keys: each key is sent using press and release events.
+              - (key, event)-pairs: the event (either "press" or "release")
+                is sent.
+              - (key1, key2, ..., keyn)-tuples. 2n events is sent:
+                key1 press, key2 press, ..., keyn press,
+                keyn release, ..., key2 release, key1 release.
+                
+            Keys are defined in keysymdef.h.
 
-    delay is given as seconds between sent events
+        delay is given as seconds between sent events
 
-    Example:
-    iType('hello')
-    iType([('Shift_L', 'press'), 'h', 'e', ('Shift_L', 'release'), 'l', 'l', 'o'])
-    iType([('Control_L', 'Alt_L', 'Delete')])
+    Examples:
+        iType('hello')
+        iType([('Shift_L', 'press'), 'h', 'e', ('Shift_L', 'release'), 'l', 'l', 'o'])
+        iType([('Control_L', 'Alt_L', 'Delete')])
     """
     args = []
     for char in word:
@@ -244,7 +275,7 @@ def iType(word, delay=0.0):
         else:
             # char is keyname or single letter/number
             args.append("'key %s'" % (char,))
-    usdelay = " 'usdelay %s' " % (int(delay*1000000),)
+    usdelay = " 'usleep %s' " % (int(delay*1000000),)
     runcmd("xte %s" % (usdelay.join(args),))
 
 def findWord(word, detected_words = None, appearance=1):
@@ -256,7 +287,7 @@ def findWord(word, detected_words = None, appearance=1):
 
     scored_words = []
     for w in detected_words:
-        scored_words.append((_score(w, word) * _score(word, w), w))
+        scored_words.append((_score(w, word), w))
     scored_words.sort()
     
     assert len(scored_words) > 0, "No words found"
@@ -264,26 +295,38 @@ def findWord(word, detected_words = None, appearance=1):
     return scored_words[-1]
 
 def _score(w1, w2):
-    # This is just a 10 minute hack without deep thought.
-    # Better scoring should be considered.
-    if len(w1) == 0 or len(w2) == 0: return 0.0
-    positions = []
-    for char in w1:
-        positions.append([])
-        pos = w2.find(char)
-        while pos > -1:
-            positions[-1].append(pos)
-            pos = w2.find(char, pos + 1)
-    score = 0.0
-    maxscore_per_char = 1.0 / len(w1)
-    next_positions = [0]
-    for i in xrange(len(w1)):
-        for p in positions[i]:
-            if p in next_positions:
-                score += maxscore_per_char
-                break
-        next_positions = [pos+1 for pos in positions[i]]
-    return score
+    closeMatch = {
+        '1l': 0.1,
+        '1I': 0.2,
+        'Il': 0.2
+        }
+    def levenshteinDistance(w1, w2):
+        m = [range(len(w1)+1)]
+        for j in xrange(len(w2)+1):
+            m.append([])
+            m[-1].append(j+1)
+        i, j = 0, 0
+        for j in xrange(1, len(w2)+1):
+            for i in xrange(1, len(w1)+1):
+                if w1[i-1] == w2[j-1]:
+                    m[j].append(m[j-1][i-1])
+                else:
+                    # This is not part of Levenshtein:
+                    # if characters often look similar,
+                    # don't add full edit distance (1.0),
+                    # use the value in closeMatch instead.
+                    chars = ''.join(sorted(w1[i-1] + w2[j-1]))
+                    if chars in closeMatch:
+                        m[j].append(m[j-1][i-1]+closeMatch[chars])
+                    else:
+                        # Standard Levenshtein continues...
+                        m[j].append(min(
+                                m[j-1][i] + 1,  # delete
+                                m[j][i-1] + 1,  # insert
+                                m[j-1][i-1] + 1 # substitute
+                                ))
+        return m[j][i]
+    return 1 - (levenshteinDistance(w1, w2) / float(max(len(w1),len(w2))))
 
 def _hocr2words(hocr):
     rv = {}

@@ -5,6 +5,7 @@ aal "editormodel" {
         from eyenfinger import *
         import time
         reRead = lambda: iRead("fMBT editor")
+        setPreprocessFilter("-sharpen 5 -filter Mitchell -resize 1600x -level 40%,50%,3.0")
     }
 
     # preview-show-vars: focus
@@ -32,10 +33,10 @@ aal "editormodel" {
         body()    { focus = "modeleditor" }
         adapter() {
             global devnull
-            output = file("fmbt-editor.output","w")
+            devnull = file("fmbt-editor.output","w")
             process = subprocess.Popen("fmbt-editor", shell=True,
-                                       output=devnull.fileno(),
-                                       output=devnull.fileno())
+                                       stdout=devnull.fileno(),
+                                       stderr=devnull.fileno())
             time.sleep(0.5)
             reRead()
         }
@@ -53,7 +54,7 @@ aal "editormodel" {
                 iClickWord("File")
                 time.sleep(0.2)
                 reRead()
-                iClickWord("Ctrl+Q")
+                iClickWord("Exit")
             else:
                 log("args[0] (%s) did not match to any of the known arguments" % (args,))
             time.sleep(0.5)
@@ -66,6 +67,14 @@ aal "editormodel" {
         adapter() {
             iClickWord("File")
             iType(["Down", "Down", "Return"], delay=0.5)
+            time.sleep(0.2)
+            reRead()
+            iType("modelname")
+            time.sleep(0.1)
+            reRead()
+            iVerifyWord('"modelname"', capture="modelname.gif")
+            iVerifyWord("[initial_", match=0.8, capture="initial.gif")
+            iClickWord("guard()", mouseevent=MOUSEEVENT_MOVE) # take mouse off the menu
             reRead()
         }
     }
