@@ -101,7 +101,7 @@ int Adapter_mapper::anum_create(int index,std::string& n) {
     }
   }
 
-  if (adapter_anames[index].size()==0) {
+  if (adapter_anames[index].empty()) {
     std::string tau("");
     adapter_anames[index].push_back(tau);
   }
@@ -445,7 +445,7 @@ void Adapter_mapper::m1_convert(int index,
 
 int Adapter_mapper::observeRobin(std::vector<int> &action)
 {
-  if (adapters.size()==0) {
+  if (adapters.empty()) {
     abort();
   }
 

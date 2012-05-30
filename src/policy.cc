@@ -22,7 +22,7 @@ int Policy::choose(std::vector<int>& actions)
 {
   int* act=NULL;
 
-  if (actions.size()>0) {
+  if (!actions.empty()) {
     int c=m->getActions(&act);
     for(unsigned i=0;i<actions.size();i++) {
       for(int j=0;j<c;j++) {
@@ -32,7 +32,7 @@ int Policy::choose(std::vector<int>& actions)
       }
     }
   }
-  if (actions.size()>0) {
+  if (!actions.empty()) {
     return actions[0];
   }
   return 0;

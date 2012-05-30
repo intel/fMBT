@@ -1,6 +1,6 @@
 /*
  * fMBT, free Model Based Testing tool
- * Copyright (c) 2011, Intel Corporation.
+ * Copyright (c) 2011,2012 Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU Lesser General Public License,
@@ -313,13 +313,13 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 	actions[0] = SILENCE;
         log.debug("Test_engine::run: SUT remained silent (action %i).\n", action);	
       } else {
-	if (actions.size()) {
+	if (!actions.empty()) {
 	  log.debug("Test_engine::run: SUT executed %i '%s'\n",
 		    actions[0],heuristic.getActionName(actions[0]).c_str());
 	}
       }
 
-      if (actions.size()==0) {
+      if (actions.empty()) {
         return stop_test(Verdict::ERROR, "adapter communication failure");
       }
 
@@ -338,7 +338,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       actions[0]=action;
       log_adapter_suggest(log, adapter, actions[0]);
       adapter.execute(actions);
-      if (actions.size()==0) {
+      if (actions.empty()) {
         return stop_test(Verdict::ERROR, "adapter communication failure");
       }
       int adapter_response = policy.choose(actions);
@@ -397,7 +397,7 @@ namespace interactive {
       actions_v[0] = action;
       log_adapter_suggest(log, adapter, actions_v[0]);
       adapter.execute(actions_v);
-      if (actions_v.size()==0) {
+      if (actions_v.empty()) {
         fprintf(stderr,"adapter:   [communication failure]\n");
       } else {
         if (skip_m) adapter_response = actions_v[0];
