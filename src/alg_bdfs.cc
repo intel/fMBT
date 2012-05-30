@@ -104,14 +104,12 @@ double AlgBDFS::path_to_best_evaluation(Model& model, std::vector<int>& path, in
         // - If maximal growth rate is known, search starting with a
         //   good "so far best score" is able to drop unnecessary
         //   lookups. (Not implemented)
-        for (int i = 0; i < path.size(); i++) doExecute(path[i]);
-
-        double hinted_score_without_new_steps = evaluate();
+        for (unsigned int i = 0; i < path.size(); i++) doExecute(path[i]);
 
         std::vector<int> additional_path;
         best_score = _path_to_best_evaluation(model, additional_path, depth - path.size(), current_score);
 
-        for (int i = 0; i < path.size(); i++) undoExecute();
+        for (unsigned int i = 0; i < path.size(); i++) undoExecute();
 
         if (best_score > current_score) {
             hinted_path = path;
@@ -154,7 +152,7 @@ bool AlgBDFS::grows_first(std::vector<int>& first_path, int first_path_start,
             break;
         }
     }
-    if (first_difference == first_path.size()) abort();
+    if (first_difference == (int)first_path.size()) abort();
 
     for (int j = first_path.size() - 1; j >= first_difference; j--) undoExecute();
 
@@ -167,7 +165,7 @@ bool AlgBDFS::grows_first(std::vector<int>& first_path, int first_path_start,
             break;
         }
     }
-    if (second_difference == second_path.size()) abort();
+    if (second_difference == (int)second_path.size()) abort();
 
     for (int j = second_path.size() - 1; j >= second_difference; j--) undoExecute();
 

@@ -123,7 +123,7 @@ readagain:
     // encoded (otherwise it could not contain linebreaks and other
     // special characters worth logging) => no encoding needed when
     // rewriting it to the log.
-    if (s[strlen(s)-1] = '\n') s[strlen(s)-1] = '\0';
+    if (s[strlen(s)-1] == '\n') s[strlen(s)-1] = '\0';
     log.print("<remote msg=\"%s\"/>\n",(s+1));
     free(s);
     s = NULL;
