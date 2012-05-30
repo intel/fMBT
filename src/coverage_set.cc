@@ -22,10 +22,13 @@
 #include <string>
 
 #include "dparse.h"
+#include "model.hh"
 
-extern std::vector<std::string*> *ff,*tt,*dd;
+extern std::vector<std::string*> *set_ff,*set_tt,*set_dd;
+extern std::vector<std::pair<std::string*,std::pair<int,int> > >* filtervec;
+
 extern "C" {
-  extern D_ParserTables parser_tables_filter;
+  extern D_ParserTables parser_tables_set;
 }
 
 class Coverage_setw: public Coverage_set {
@@ -34,12 +37,21 @@ public:
     Coverage_set(l,_f,_t,_d)
   {
     unescape_string(params);
-    ff=&_f;
-    tt=&_t;
-    dd=&_d;
-    D_Parser *p = new_D_Parser(&parser_tables_filter, 512);
+    printf("Coverage set! %s\n",params.c_str());
+    set_ff=&_f;
+    set_tt=&_t;
+    set_dd=&_d;
+    filtervec = &_fv;
+    D_Parser *p = new_D_Parser(&parser_tables_set, 512);
     bool ret=dparse(p,(char*)params.c_str(),std::strlen(params.c_str()));
     ret=p->syntax_errors==0 && ret;
+    status=ret;
+    if (p->syntax_errors>0) {
+      errormsg="Syntax error...";
+    }
+
+    printf("%i %i\n",p->syntax_errors,ret);
+
     free_D_Parser(p);
     from=_f;
     to=_t;
@@ -56,12 +68,46 @@ Coverage_set::~Coverage_set()
   }  
 }
 
+void Coverage_set::add_filter()
+{
+  for(unsigned i=0;i<_fv.size();i++) {
+    std::vector<int> r;
+    regexpmatch(*_fv[i].first,model->getActionNames(),r);
+    regexpmatch(*_fv[i].first,model->getSPNames(),r,false,-1);
+    // Free some memory...
+    delete _fv[i].first;
+
+    for(unsigned u=0;u<r.size();u++) {
+      if (set_filter.find(r[u])==set_filter.end()) {
+	int a=r[u];
+	action_alphabet[a]=true;
+	set_filter[a]=_fv[i].second;
+	printf("Action %i true\n",a);
+      }
+    }
+  }
+  _fv.clear();
+}
+
 bool Coverage_set::execute(int action) {
 
   Coverage_exec_filter::execute(action);
 
   if (online) {
-    current_set[action]++;
+    int* props,n;
+    if (action_alphabet[action]) {
+      current_set[action]++;
+    }
+    // Iterate stateprops
+    n=model->getprops(&props);
+    for(int i=0;i<n;i++) {
+      int pro=-props[i];
+      printf("Is pro %i\n",pro);
+      if (action_alphabet[pro]) {
+	current_set[pro]++;
+	printf("yes, it is. %i\n",current_set[pro]);
+      }
+    }
   }
 
   return true;
@@ -74,11 +120,13 @@ std::string Coverage_set::stringify()
 
 void Coverage_set::on_drop()
 {
+  printf("on_drop called\n");
   current_set.clear();
 }
 
 void Coverage_set::on_start()
 {
+  printf("on_start called\n");
   current_set.clear();
 }
 
@@ -133,6 +181,7 @@ bool Coverage_set::filter()
 
 void Coverage_set::on_find()
 {
+  printf("on_find called\n");
   // Check that set_filter match current_set. I'll implement that later :D
   // Just because set_filter structure is not filled.
   if (filter()) {
@@ -145,6 +194,10 @@ void Coverage_set::set_model(Model* _model) {
 
   Coverage_exec_filter::set_model(_model);
 
+  if (status) {
+    add_filter();
+  }
+  
 }
 
 void Coverage_set::push()
