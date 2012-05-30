@@ -1,0 +1,10 @@
+P(start, "gt:istate")
+->
+T(start, "iCleanArguments()", args)
+
+T(args, "iAddArgument('-h')", args)
+T(args, "iAddArgument('-p')", args)
+T(args, "iAddArgument('-q PySide')", args)
+
+T(args, "iRun('fmbt-editor')", start)
+

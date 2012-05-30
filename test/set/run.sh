@@ -23,20 +23,26 @@ export PATH=../../src:../../utils:$PATH
 
 source ../functions.sh
 
-teststep "coverage_set: generate model"
+teststep "coverage set: generate model"
 fmbt-gt -f t2.gt -o t2.lsts >>$LOGFILE 2>&1 || {
     testfailed
-    exit 1    
+    exit 1
 }
 testpassed
 
-teststep "Heuristic set"
+teststep "coverage set: cover tags"
 echo 'model = "lsts:t2.lsts"' > test.conf
 echo 'coverage = "set:1:2:3 from %22iFoo%22 to %22iFoo%22 -> %22tag%22:0:4"' >> test.conf
 echo 'pass = "steps:5"' >> test.conf
 
-fmbt test.conf -l set.log >>$LOGFILE 2>&1 || {
-    testfailed
-}
+fmbt test.conf -l set.log >>$LOGFILE 2>&1 \
+    && testpassed \
+    || testfailed
 
-testpassed
+
+teststep "coverage set: defaults, cover actions regexp"
+fmbt arguments.conf -l arguments.log >> $LOGFILE 2>&1
+echo -n 'Expecting 1.0 coverage, observed: ' >> $LOGFILE
+fmbt-log -f '$sc' arguments.log  | tail -n 1 | tee -a $LOGFILE | grep -q 1.000000 \
+    && testpassed \
+    || testfailed
