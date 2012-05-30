@@ -28,7 +28,7 @@ public:
   Coverage_set(Log&l,std::vector<std::string*>& _from,
 	       std::vector<std::string*>& _to,
 	       std::vector<std::string*>& _drop):
-    Coverage_exec_filter(l,_from,_to,_drop), allowed_set_size(0,1),max_count(0) {}
+    Coverage_exec_filter(l,_from,_to,_drop), allowed_set_size(0,1),max_count(1),current_count(0) {}
 
   virtual ~Coverage_set();
   virtual std::string stringify();
@@ -36,7 +36,7 @@ public:
   virtual void push();
   virtual void pop();
 
-  virtual float getCoverage() { return sets.size(); }
+  virtual float getCoverage();
 
   virtual void set_model(Model* _model);
 
@@ -65,15 +65,19 @@ private:
   // Maps action/tag to count requirement.
   std::map<int,std::pair<int, int> > set_filter;
 
+protected:
   std::pair<int,int> allowed_set_size;
   int max_count;
-
+  int current_count;
+  int total_count;
+private:
   // Key is the set, value is count....
   std::map<int,bool> action_alphabet;
 
   std::map<std::map<int,int>,int > sets;
   std::list<std::map<std::map<int,int> ,int> > save_sets;
   std::list<std::map<int,int> > save_current;
+  std::list<int> save_current_count;
 };
 
 #endif
