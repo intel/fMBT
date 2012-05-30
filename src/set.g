@@ -49,7 +49,6 @@ testcase: setspec 'from' strvec 'to' strvec opt_drop '->' filtervec {
         };
 
 setspec: oint ':' oint ':' oint {
-            printf("setspec\n");
             if ($0.val==-1) {
                 $$.setspec.a=0;
             } else {
@@ -64,7 +63,6 @@ setspec: oint ':' oint ':' oint {
                 $$.setspec.c=$4.val;
             }
         } | {
-            printf("setspec empthy\n");
             $$.setspec.a=0;
             $$.setspec.b=1;
             $$.setspec.c=1;
