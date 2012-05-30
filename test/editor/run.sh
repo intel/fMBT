@@ -49,9 +49,10 @@ done
 ##########################################
 # Start new X server for fmbt-editor
 
-# Using 100 dpi (800 pixels and 200 mm wide)
+# Using 128 dpi (1024 pixels and 200 mm wide)
+# to get a big font for OCR
 
-Xephyr -screen 800/200x600/150 :55 &
+Xephyr -screen 1024/200x768/150 :55 &
 export DISPLAY=:55
 sleep 1
 
