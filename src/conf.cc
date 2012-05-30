@@ -1,6 +1,6 @@
 /*
  * fMBT, free Model Based Testing tool
- * Copyright (c) 2011, Intel Corporation.
+ * Copyright (c) 2011,2012 Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU Lesser General Public License,
@@ -86,6 +86,10 @@ void Conf::load(std::string& name,std::string& content)
   if ((heuristic=HeuristicFactory::create(log, heuristic_name, heuristic_param)) == NULL)
     RETURN_ERROR_VOID("Creating heuristic \"" + heuristic_name + "\" failed.");
 
+  if (heuristic->status==false)
+    RETURN_ERROR_VOID("Error in heuristic \"" + heuristic_name + "\":" +
+		      heuristic->errormsg);
+
   if ((model=Model::create(log, model_name, model_param)) == NULL) {
     RETURN_ERROR_VOID("Creating model loader \"" +
 		      filetype(model_name)
@@ -96,6 +100,9 @@ void Conf::load(std::string& name,std::string& content)
 
   if (coverage == NULL)
     RETURN_ERROR_VOID("Creating coverage \"" + coverage_name + "\" failed.");
+
+  if (!coverage->status) 
+    RETURN_ERROR_VOID("Coverage error on \"" + coverage_name + "\":" + coverage->errormsg);
 
   if (!model->status || !model->init() || !model->reset())
     RETURN_ERROR_VOID("Model error: " + model->stringify());

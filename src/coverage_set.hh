@@ -42,10 +42,14 @@ public:
 
   virtual bool execute(int action);
 
+  void add_filter();
+
 protected:
   virtual void on_drop();
   virtual void on_find();
   virtual void on_start();
+
+  std::vector<std::pair<std::string*,std::pair<int,int> > > _fv;
 
 private:
   bool filter();
@@ -65,6 +69,8 @@ private:
   int max_count;
 
   // Key is the set, value is count....
+  std::map<int,bool> action_alphabet;
+
   std::map<std::map<int,int>,int > sets;
   std::list<std::map<std::map<int,int> ,int> > save_sets;
   std::list<std::map<int,int> > save_current;
