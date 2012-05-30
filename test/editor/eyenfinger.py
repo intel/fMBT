@@ -85,9 +85,15 @@ class BadMatch (Exception):
 class BadWindowName (Exception):
     pass
 
-def _log(msg):
-    file("/tmp/eyenfinger.log", "a").write("%13.2f %s\n" % 
-                                            (time.time(), msg))
+try:
+    import fmbt
+    def _log(msg):
+        fmbt.adapterlog("eyenfinger: %s" % (msg,))
+
+except ImportError:
+    def _log(msg):
+        file("/tmp/eyenfinger.log", "a").write("%13.2f %s\n" % 
+                                               (time.time(), msg))
 
 def runcmd(cmd):
     _log("runcmd: " + cmd)
@@ -147,7 +153,7 @@ def iRead(windowId = None, source = None, preprocess = ""):
                   int(bbox[1]/scaled_height * orig_height),
                   int(bbox[2]/scaled_width * orig_width),
                   int(bbox[3]/scaled_height * orig_height)))
-            _log(word + ': (' + str(bbox[0]) + ', ' + str(bbox[1]) + ')')
+            _log('found "' + word + '": (' + str(bbox[0]) + ', ' + str(bbox[1]) + ')')
 
 def iVerifyWord(word, match=0.33, capture=None):
     """
