@@ -8,12 +8,12 @@ aal "editormodel" {
         setPreprocessFilter("-sharpen 5 -filter Mitchell -resize 1600x -level 40%,50%,3.0")
     }
 
-    # preview-show-vars: focus
+    # preview-show-vars: test_generated
     # preview-depth: 5
 
     # variables: comma-separated list of variable names
     variables {
-        focus, process, model_fn
+        focus, process, test_generated
     }
 
     initial_state {
@@ -25,16 +25,19 @@ aal "editormodel" {
 
         process = None
 
-        model_fn = "noname.gt" # model filename
+        test_generated = False
     }
 
     action "iLaunchEditor" {
         guard()   { return focus == None }
-        body()    { focus = "modeleditor" }
+        body()    {
+            focus = "modeleditor"
+            test_generated = False
+        }
         adapter() {
             global devnull
             devnull = file("fmbt-editor.output","w")
-            process = subprocess.Popen("fmbt-editor", shell=True,
+            process = subprocess.Popen("fmbt-editor -Q-geometry -Q1024x768", shell=True,
                                        stdout=devnull.fileno(),
                                        stderr=devnull.fileno())
             time.sleep(0.5)
@@ -44,7 +47,10 @@ aal "editormodel" {
 
     action "iQuitEditor('Ctrl+Q')", "iQuitEditor('File menu')" {
         guard()  { return focus != None }
-        body()   { focus = None }
+        body()   {
+            focus = None
+            test_generated = False
+        }
         adapter() {
             if args[0] == "Ctrl+Q":
                 log("Quitting with Ctrl+Q")
@@ -63,32 +69,91 @@ aal "editormodel" {
 
     action "iNewAAL" {
         guard()   { return focus != None }
-        body()    { focus = "modeleditor" }
+        body()    {
+            focus = "modeleditor"
+            test_generated = True
+        }
         adapter() {
-            iClickWord("File")
-            iType(["Down", "Down", "Return"], delay=0.5)
+            try:
+                iClickWord("File", match=0.66)
+            except:
+                iType([("Alt_L", "f")])
+            iType("l")
             time.sleep(0.2)
             reRead()
             iType("modelname")
             time.sleep(0.1)
             reRead()
             iVerifyWord('"modelname"', capture="modelname.gif")
-            iVerifyWord("[initial_", match=0.8, capture="initial.gif")
             iClickWord("guard()", mouseevent=MOUSEEVENT_MOVE) # take mouse off the menu
             reRead()
         }
     }
 
-    action "iFocusModelEditor('keyb')" {
-        guard() { return focus not in [None, "modeleditor"] }
+    action "iNewGT" {
+        guard() { return focus != None }
         body() {
             focus = "modeleditor"
+            test_generated = True
         }
         adapter() {
-            if args[0] == "keyb":
-                iType(["F1"])
-            elif args[0] == "mouse":
-                iClickWord("F1")
+            iClickWord("File")
+            time.sleep(0.2)
+            iType("n")
+            time.sleep(0.2)
+            iType(["Tab", "comma", ("Shift_R", "quotedbl")], delay=0.1)
+            iType("iteststep1", delay=0.1)
+            iType([("Shift_R", "quotedbl"), "comma", "Tab", "2", ("Shift_R", "parenright"), "Return"], delay=0.1)
+            iType(["Tab", "comma", "Tab", "comma", "Tab", ("Shift_R", "parenright"), "Return"], delay=0.1)
+            time.sleep(3)
+            reRead()
+            iClickWord("start2", mouseevent=MOUSEEVENT_MOVE)
+            reRead()
+        }
+    }
+
+    action "iPreviewModel" {
+        guard() { return test_generated }
+        body()  { focus = "previewmodel" }
+        adapter() {
+            iType(["F5"])
+            time.sleep(1)
+            reRead()
+            iVerifyWord("[initial_", match=0.8, capture="initial.gif")
+        }
+    }
+
+    action "iPreviewTest" {
+        guard() { return test_generated }
+        body()  { focus = "previewtest" }
+        adapter() {
+            iClickWord("Commands")
+            time.sleep(0.2)
+            reRead()
+            iClickWord("Generate")
+            time.sleep(1)
+            reRead()
+            iVerifyWord("reached", match=0.8)
+            iVerifyWord("pass", match=0.8)
+        }
+    }
+
+    action "iPreviewDistrib" {
+        guard() { return test_generated }
+        body()  { focus = "previewdistrib" }
+        adapter() {
+            iClickWord("Distrib")
+            time.sleep(1)
+            reRead()
+        }
+    }
+
+    action "iPreviewCoverage" {
+        guard() { return test_generated }
+        body()  { focus = "previewcoverage" }
+        adapter() {
+            iClickWord("Coverage")
+            time.sleep(0.5)
             reRead()
         }
     }
