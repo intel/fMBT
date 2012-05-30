@@ -22,14 +22,6 @@
 #include "helper.hh"
 #include "history.hh"
 
-
-// Coverage_exec_filter::Coverage_exec_filter(Log& l, std::string params):
-//   Coverage(l),online(false) {
-//   // Ok. Se need to parse the parameters ? 
-//   // Or would it be better to do parsing in the factory create method?
-// }
-
-
 std::string Coverage_exec_filter::stringify()
 {
   return std::string("");
@@ -39,25 +31,17 @@ void Coverage_exec_filter::set_model(Model* _model)
 {
   Coverage::set_model(_model);
 
-  printf("%s\n",__func__);
-
   std::vector<std::string>& sp(model->getSPNames());  
 
-  printf("from size == %i\n",
-	 from.size());
 
   for(unsigned i=0;i<from.size();i++) {
     int pos=find(sp,*from[i]);
-
-    printf("Looking for %s (%i)\n",
-	   from[i]->c_str(),pos);
-
-    if (sp.size() && *from[i]!=sp[pos]) {
+    if (!sp.size() || *from[i]!=sp[pos]) {
       pos=model->action_number(*from[i]);
       if (pos>0) {
 	start_action.push_back(pos);
       } else {
-	printf("\"%s\" not an tag or an action.\n",from[i]->c_str());
+
       }
     } else {
       start_tag.push_back(pos);
@@ -66,12 +50,12 @@ void Coverage_exec_filter::set_model(Model* _model)
 
   for(unsigned i=0;i<to.size();i++) {
     int pos=find(sp,*to[i]);
-    if (sp.size() && *to[i]!=sp[pos]) {
+    if (!sp.size() || *to[i]!=sp[pos]) {
       pos=model->action_number(*to[i]);
       if (pos>0) {
 	end_action.push_back(pos);
       } else {
-	printf("\"%s\" not an tag or an action.\n",to[i]->c_str());
+
       }
     } else {
       end_tag.push_back(pos);
@@ -81,12 +65,12 @@ void Coverage_exec_filter::set_model(Model* _model)
 
   for(unsigned i=0;i<drop.size();i++) {
     int pos=find(sp,*drop[i]);
-    if (sp.size() && *drop[i]!=sp[pos]) {
+    if (!sp.size() && *drop[i]!=sp[pos]) {
       pos=model->action_number(*drop[i]);
       if (pos>0) {
 	rollback_action.push_back(pos);
       } else {
-	printf("\"%s\" not an tag or an action.\n",drop[i]->c_str());	
+
       }
     } else {
       rollback_tag.push_back(pos);
@@ -121,7 +105,7 @@ bool Coverage_exec_filter::execute(int action)
   }
 
   npro=model->getprops(&props);
-
+ 
   if (online) {
     /* Ok. Let's search for drop. */
     if (prop_set(rollback_tag,npro,props) || 

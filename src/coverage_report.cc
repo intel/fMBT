@@ -40,7 +40,7 @@ void Coverage_report::set_model(Model* _model)
       if (pos>0) {
 	start_action.push_back(pos);
       } else {
-	printf("\"%s\" not an tag or an action.\n",from[i]->c_str());
+	log.debug("\"%s\" not an tag or an action.\n",from[i]->c_str());
       }
     } else {
       start_tag.push_back(pos);
@@ -54,7 +54,7 @@ void Coverage_report::set_model(Model* _model)
       if (pos>0) {
 	end_action.push_back(pos);
       } else {
-	printf("\"%s\" not an tag or an action.\n",to[i]->c_str());
+	log.debug("\"%s\" not an tag or an action.\n",to[i]->c_str());
       }
     } else {
       end_tag.push_back(pos);
@@ -69,7 +69,7 @@ void Coverage_report::set_model(Model* _model)
       if (pos>0) {
 	rollback_action.push_back(pos);
       } else {
-	printf("\"%s\" not an tag or an action.\n",drop[i]->c_str());	
+	log.debug("\"%s\" not an tag or an action.\n",drop[i]->c_str());	
       }
     } else {
       rollback_tag.push_back(pos);

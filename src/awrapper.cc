@@ -63,8 +63,8 @@ void Awrapper::set_actions(std::vector<std::string>* _actions)
       result=find(splitted_actions,adaname);
       if (splitted_actions[result]==adaname) {
 	parameters[result]=adaparamname;
-	printf("action \"%s\" mapped to \"%s\" with parameter \"%s\"\n",
-	       (*actions)[result].c_str(),wn[i].c_str(),adaparamname.c_str());
+	log.debug("action \"%s\" mapped to \"%s\" with parameter \"%s\"\n",
+		  (*actions)[result].c_str(),wn[i].c_str(),adaparamname.c_str());
       }
     }
 

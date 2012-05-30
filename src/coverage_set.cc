@@ -26,6 +26,8 @@
 
 extern std::vector<std::string*> *set_ff,*set_tt,*set_dd;
 extern std::vector<std::pair<std::string*,std::pair<int,int> > >* filtervec;
+extern std::pair<int,int>* asize;
+extern int* mcount;
 
 extern "C" {
   extern D_ParserTables parser_tables_set;
@@ -37,11 +39,12 @@ public:
     Coverage_set(l,_f,_t,_d)
   {
     unescape_string(params);
-    printf("Coverage set! %s\n",params.c_str());
     set_ff=&_f;
     set_tt=&_t;
     set_dd=&_d;
     filtervec = &_fv;
+    asize=&allowed_set_size;
+    mcount=&max_count;
     D_Parser *p = new_D_Parser(&parser_tables_set, 512);
     bool ret=dparse(p,(char*)params.c_str(),std::strlen(params.c_str()));
     ret=p->syntax_errors==0 && ret;
@@ -49,9 +52,6 @@ public:
     if (p->syntax_errors>0) {
       errormsg="Syntax error...";
     }
-
-    printf("%i %i\n",p->syntax_errors,ret);
-
     free_D_Parser(p);
     from=_f;
     to=_t;
@@ -82,11 +82,15 @@ void Coverage_set::add_filter()
 	int a=r[u];
 	action_alphabet[a]=true;
 	set_filter[a]=_fv[i].second;
-	printf("Action %i true\n",a);
       }
     }
   }
   _fv.clear();
+}
+
+float Coverage_set::getCoverage()
+{
+  return (float)current_count / (float)total_count;
 }
 
 bool Coverage_set::execute(int action) {
@@ -102,10 +106,8 @@ bool Coverage_set::execute(int action) {
     n=model->getprops(&props);
     for(int i=0;i<n;i++) {
       int pro=-props[i];
-      printf("Is pro %i\n",pro);
       if (action_alphabet[pro]) {
 	current_set[pro]++;
-	printf("yes, it is. %i\n",current_set[pro]);
       }
     }
   }
@@ -120,13 +122,13 @@ std::string Coverage_set::stringify()
 
 void Coverage_set::on_drop()
 {
-  printf("on_drop called\n");
+  log.debug("on_drop called\n");
   current_set.clear();
 }
 
 void Coverage_set::on_start()
 {
-  printf("on_start called\n");
+  log.debug("on_start called\n");
   current_set.clear();
 }
 
@@ -181,12 +183,36 @@ bool Coverage_set::filter()
 
 void Coverage_set::on_find()
 {
-  printf("on_find called\n");
+  log.debug("on_find called %i %i\n",current_count,(int)sets.size());
   // Check that set_filter match current_set. I'll implement that later :D
   // Just because set_filter structure is not filled.
   if (filter()) {
     sets[current_set]++;
+    current_count++;
+    if (save_current_count.empty()) {
+      log.debug("current_count %i\n",current_count);
+    }
+    if (current_count!=(int)sets.size()) {
+      int tc=0;
+      for(std::map<std::map<int,int>,int >::iterator i=
+	    sets.begin();i!=sets.end();i++) {
+	log.debug("set ");
+
+	for(std::map<int,int>::const_iterator j=
+	      i->first.begin();
+	    j!=i->first.end();j++) {
+	  log.debug("(%i:%i)",j->first,j->second);
+	}
+
+	log.debug(": count %i\n",i->second);
+	tc+=i->second;
+      }
+      if (tc!=current_count) {
+	abort();
+      }
+    }
   }
+  log.debug("%i/%i\n",current_count,total_count);
   current_set.clear();
 }
 
@@ -196,6 +222,12 @@ void Coverage_set::set_model(Model* _model) {
 
   if (status) {
     add_filter();
+    if (allowed_set_size.second==-1) {
+      // Ok. Let's calc this.
+      allowed_set_size.second=set_filter.size();
+    }
+    total_count=(allowed_set_size.second-allowed_set_size.first+1)*max_count;
+    log.debug("total_count %i\n",total_count);
   }
   
 }
@@ -205,6 +237,8 @@ void Coverage_set::push()
   Coverage_exec_filter::push();
   save_sets.push_front(sets);
   save_current.push_front(current_set);
+  save_current_count.push_front(current_count);
+  log.debug("push sets_size %i %i\n",current_count,(int)sets.size());
 }
 
 void Coverage_set::pop()
@@ -214,6 +248,11 @@ void Coverage_set::pop()
   save_sets.pop_front();
   current_set=save_current.front();
   save_current.pop_front();
+
+  current_count=save_current_count.front();
+  save_current_count.pop_front();
+
+  log.debug("pop sets_size %i %i\n",current_count,sets.size());
 }
 
 
