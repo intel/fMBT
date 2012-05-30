@@ -36,6 +36,10 @@ Options:
   -q, --qt-bindings=<Python Qt4 binding library>
         import QtCore and QtGui from the given binding library instead
         of PySide. Example: fmbt-editor -q PyQt4.
+
+  -Q, --qt=arg
+        pass given argument to QApplication. Example:
+        fmbt-editor -Q-geometry -Q800x600
 """
 
 import sys
@@ -86,10 +90,11 @@ opt_hide_preview = False
 opt_modelfile    = None
 opt_conffile     = None
 opt_qt_bindings  = "PySide"
+opt_qt           = []
 
 opts, remainder = getopt.getopt(
-    sys.argv[1:], 'hpq:',
-    ["help", "no-preview", "qt-bindings="])
+    sys.argv[1:], 'hpq:Q:',
+    ["help", "no-preview", "qt-bindings=", "qt="])
 
 for opt, arg in opts:
     if opt in ["-h", "--help"]:
@@ -99,6 +104,8 @@ for opt, arg in opts:
         opt_hide_preview = True
     elif opt in ["-q", "--qt-bindings"]:
         opt_qt_bindings = arg
+    elif opt in ["-Q", "--qt"]:
+        opt_qt.append(arg)
 
 for filename in remainder:
     if filename.lower().endswith(".conf") and opt_conffile == None:
@@ -1168,7 +1175,7 @@ class ConfHighlighter(QtGui.QSyntaxHighlighter):
 
 if __name__ == '__main__':
 
-    app = QtGui.QApplication(sys.argv)
+    app = QtGui.QApplication(sys.argv[:1] + opt_qt)
     window = MainWindow()
     window.resize(640, 512)
 
