@@ -1,0 +1,7 @@
+P(s,p)->T(s,"iFoo",s2)
+
+P(s2,"tag")
+T(s2,"iFoo",s3)
+
+T(s3,"iBar",s2)
+
