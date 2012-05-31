@@ -72,6 +72,29 @@ std::string compile_command("g++ -fPIC -shared -x c++  - -I "
 			    " -o ");
 std::string prep_command("fmbt-aalp");
 
+/*
+ * Copy-paste and some editing from d/parse.c:1875 syntax_error_report_fn
+ **/
+#include "d/d.h"
+static void
+parse_syntax_error_report(struct D_Parser *ap) {
+  Parser *p = (Parser *)ap;
+ 
+  char *fn = d_dup_pathname_str(p->user.loc.pathname);
+
+  p->user.loc.ws++;
+  while (p->user.loc.ws && isspace(*p->user.loc.ws)) {
+    if (*p->user.loc.ws=='\n') {
+      p->user.loc.line++;
+    }
+    p->user.loc.ws++;
+  }
+
+  fprintf(stderr,"%s:%d: syntac error '%.8s'\n",fn,p->user.loc.line,
+	  p->user.loc.ws);
+
+  FREE(fn);
+}
 
 int main(int argc,char** argv) {
   int c;
@@ -130,6 +153,8 @@ int main(int argc,char** argv) {
   }
   if (!s)
     error(1,0,"cannot read input file \"%s\".",argv[optind]);
+
+  p->syntax_error_fn=parse_syntax_error_report;
 
   bool ret=dparse(p,s,std::strlen(s));
   ret=p->syntax_errors==0 && ret;

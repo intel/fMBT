@@ -48,23 +48,32 @@ int bstr_scan(char *ops, void *ops_cache, d_loc_t *loc,
 {
     int count=1;
     int pos=0;
+//    printf("%i %i (%s)\n",loc->line,loc->col,loc->s);
     while (count) {
         switch (loc->s[pos]) {
+        case '\n':
+            pos++;
+            loc->line++;
+            loc->col=0;
+            break;
         case '{':
+            loc->col++;
             count++;
             pos++;
             break;
         case '}':
+            loc->col++;
             count--;
             if (count) pos++;
             break;
         default:
+            loc->col++;
             pos++;
         }
     }
 
     loc->s+=pos;
-
+    loc->ws=loc->s;
     return 1;
 }
 }
