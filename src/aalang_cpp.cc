@@ -37,8 +37,10 @@ aalang_cpp::aalang_cpp(): aalang(),action_cnt(1), tag_cnt(1), name_cnt(0),
 
 aalang_cpp::~aalang_cpp()
 {
-  delete istate;
-  delete name;
+  if (istate)
+    delete istate;
+  if (name)
+    delete name;
 }
 
 
@@ -164,8 +166,11 @@ std::string aalang_cpp::stringify()
       s+="\ttag_names.push_back(\""+*j+"\");\n";
     }
   }
-  
-  
+
+  if (!istate) {
+    istate=new std::string("//default istate\n");
+  }
+
   s+=*istate+"}\n"
     "virtual bool reset() {\n"+
     *istate +
