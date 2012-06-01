@@ -8,7 +8,7 @@ dist_bin_SCRIPTS = remote_exec.sh
 
 if HAVE_PYTHON
 dist_bin_SCRIPTS += remote_python
-python_PYTHON = fmbtweb.py fmbt.py
+python_PYTHON = fmbtweb.py fmbt.py eyenfinger.py
 pkgpyexec_LTLIBRARIES = fmbt_cparsers.la
 endif
 
