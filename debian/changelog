@@ -1,3 +1,15 @@
+fmbt (0.1-rc14) natty; urgency=low
+
+  * Lots of bugs executed and buried.
+  * AAL function parameter support.
+  * fmbt-gteditor improved.
+  * Started OCR support
+  * New coverage set
+  * New heuristic weight
+  * Errortrace shortener stuff
+
+ -- Pablo Virolainen <pablo.virolainen@intel.com>  Fri, 01 Jun 2012 17:20:53 +0300
+
 fmbt (0.1-rc13) natty; urgency=low
 
   * Lots of bugs killed.
