@@ -79,6 +79,28 @@ SCREENSHOT_FILENAME = "/tmp/eyenfinger.png"
 
 MOUSEEVENT_MOVE, MOUSEEVENT_CLICK, MOUSEEVENT_DOWN, MOUSEEVENT_UP = range(4)
 
+# This is not complete list by any means.
+# See keysymdef.h.
+keys = [
+    "BackSpace", "Tab", "Linefeed", "Clear", "Return", "Pause",
+    "Scroll_Lock", "Sys_Req", "Escape", "Delete", "Home", "Left",
+    "Up", "Right", "Down", "Prior", "Page_Up", "Next", "Page_Down",
+    "End", "Begin", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8",
+    "F9", "F10", "F11", "F12", "Shift_L", "Shift_R", "Control_L",
+    "Control_R", "Caps_Lock", "Shift_Lock", "Meta_L", "Meta_R",
+    "Alt_L", "Alt_R", "space", "exclam", "quotedbl", "numbersign",
+    "dollar", "percent", "ampersand", "apostrophe", "quoteright",
+    "parenleft", "parenright", "asterisk", "plus", "comma", "minus",
+    "period", "slash", "0", "1", "2", "3", "4", "5", "6", "7", "8",
+    "9", "colon", "semicolon", "less", "equal", "greater", "question",
+    "at", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L",
+    "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y",
+    "Z", "bracketleft", "backslash", "bracketright", "asciicircum",
+    "underscore", "grave", "quoteleft", "a", "b", "c", "d", "e", "f",
+    "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s",
+    "t", "u", "v", "w", "x", "y", "z", "braceleft", "bar",
+    "braceright"]
+
 class BadMatch (Exception):
     pass
 
@@ -92,7 +114,7 @@ try:
 
 except ImportError:
     def _log(msg):
-        file("/tmp/eyenfinger.log", "a").write("%13.2f %s\n" % 
+        file("/tmp/eyenfinger.log", "a").write("%13.2f %s\n" %
                                                (time.time(), msg))
 
 def runcmd(cmd):
@@ -154,6 +176,7 @@ def iRead(windowId = None, source = None, preprocess = ""):
                   int(bbox[2]/scaled_width * orig_width),
                   int(bbox[3]/scaled_height * orig_height)))
             _log('found "' + word + '": (' + str(bbox[0]) + ', ' + str(bbox[1]) + ')')
+    return sorted(g_words.keys())
 
 def iVerifyWord(word, match=0.33, capture=None):
     """
@@ -216,7 +239,7 @@ def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33, mousebutton=1
 
     click_x = int(left + clickPos[0]*(right-left) + g_windowOffsets[windowId][0])
     click_y = int(top + clickPos[1]*(bottom-top) + g_windowOffsets[windowId][1])
-    
+
     _log('iClickWord("%s"): word "%s", match %.2f, bbox %s, window offset %s, click %s' %
         (word, matching_word, score,
          (left, top, right, bottom), g_windowOffsets[windowId],
@@ -245,7 +268,7 @@ def iType(word, delay=0.0):
     Send keypress events.
 
     Parameters:
-        word is either 
+        word is either
             - a string containing letters and numbers.
               Each letter/number is using press and release events.
             - a list that contains
@@ -255,7 +278,7 @@ def iType(word, delay=0.0):
               - (key1, key2, ..., keyn)-tuples. 2n events is sent:
                 key1 press, key2 press, ..., keyn press,
                 keyn release, ..., key2 release, key1 release.
-                
+
             Keys are defined in keysymdef.h.
 
         delay is given as seconds between sent events
@@ -295,7 +318,7 @@ def findWord(word, detected_words = None, appearance=1):
     for w in detected_words:
         scored_words.append((_score(w, word), w))
     scored_words.sort()
-    
+
     assert len(scored_words) > 0, "No words found"
 
     return scored_words[-1]
@@ -458,7 +481,7 @@ def autoconfigure(imagefilename, words):
     the score of finding given words in the image.
     Returns configuration as a string.
     """
-    
+
     # check image width
     _, output = runcmd("file '%s'" % (imagefilename,))
     output = output.split()
@@ -498,7 +521,7 @@ def autoconfigure(imagefilename, words):
                     "-sharpen 5 -level %s%%,%s%%,3.0 -filter %s -resize %sx -sharpen 5" % (
                         blevel, wlevel, f, z * image_width),
                     words)
-    
+
                 evaluatePreprocessFilter(
                     imagefilename,
                     "-sharpen 5 -level %s%%,%s%%,1.0 -filter %s -resize %sx" % (
