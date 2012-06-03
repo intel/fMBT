@@ -515,6 +515,7 @@ ssize_t nonblock_getline(char **lineptr, size_t *n, FILE *stream,char* &read_buf
     }
 }
 
+/* non-blocking getline, filter out log entries */
 ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
 		 char* &read_buf,size_t &read_buf_pos,Log& log)
 {
@@ -544,8 +545,28 @@ ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
   return ret;
 }
 
+/* blocking getline, filter out log entries */
+ssize_t bgetline(char **lineptr, size_t *n, FILE *stream, Log& log)
+{
+  ssize_t ret;
+  bool log_redirect;
+  do {
+    log_redirect = false;
+    ret = getdelim(lineptr, n, '\n', stream);
+    if (ret && ret != -1) {
+      if (**lineptr == 'l') {
+        // remote log messages must be url encoded when sent through
+        // the remote adapter protocol
+        *(*lineptr + ret - 1) = '\0';
+	log.print("<remote msg=\"%s\"/>\n",*lineptr+1);
+        log_redirect = true;
+      }
+    }
+  } while (log_redirect);
+  return ret;
+}
 
-int getint(FILE* out,FILE* in,Log* log)
+int getint(FILE* out,FILE* in,Log& log)
 {
   if (out) {
     fflush(out);
@@ -553,18 +574,18 @@ int getint(FILE* out,FILE* in,Log* log)
   char* line=NULL;
   size_t n;
   int ret=-42;
-  ssize_t s=getdelim(&line,&n,'\n',in);
+  ssize_t s=bgetline(&line,&n,in,log);
   if (s && s != -1) {
     ret=atoi(line);
-    if (ret == 0 && line[0] != '0' && log) {
+    if (ret == 0 && line[0] != '0') {
       char *escaped_line = escape_string(line);
       if (escaped_line) {
-        log->print("<remote error=\"I/O error: integer expected, got: %s\"/>\n", escaped_line);
+        log.print("<remote error=\"I/O error: integer expected, got: %s\"/>\n", escaped_line);
         escape_free(escaped_line);
       }
     }
-  } else if (log) {
-    log->print("<remote error=\"I/O error: integer expected, got nothing./>\n");
+  } else {
+    log.print("<remote error=\"I/O error: integer expected, got nothing./>\n");
   }
   if (line) {
     free(line);
@@ -572,14 +593,14 @@ int getint(FILE* out,FILE* in,Log* log)
   return ret;
 }
 
-int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in)
+int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in,Log& log)
 {
   fflush(out);
   vec.resize(0);
   char* line=NULL;
   size_t n;
   int ret=0;
-  size_t s=getdelim(&line,&n,'\n',in);
+  size_t s=bgetline(&line,&n,in,log);
   if (s) {
     string2vector(line,vec);
     if (act) 

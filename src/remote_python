@@ -852,7 +852,7 @@ if __name__ == "__main__":
         'actions': g_actions,
         '_fuzzlog': [],
         'log': lambda msg: log(msg),
-        'fmbtlog': lambda msg: log(msg, writeToFile = 0, writeToStderr = 1),
+        'fmbtlog': lambda msg, flush=True: log(msg, writeToFile = 0, writeToStderr = 1),
         'iReportOutput': reportOutput
         }
     g_dbusEvalGlobals['iCatch'] = iCatch(g_dbusEvalGlobals)

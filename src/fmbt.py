@@ -27,11 +27,11 @@
 # Log function implementations are provided by the adapter
 # component such as remote_python or remote_pyaal.
 
-def fmbtlog(msg):
+def fmbtlog(msg, flush=True):
     try: file("/tmp/fmbt.fmbtlog", "a").write("%s\n" % (msg,))
     except: pass
 
-def adapterlog(msg):
+def adapterlog(msg, flush=True):
     try: file("/tmp/fmbt.adapterlog", "a").write("%s\n" % (msg,))
     except: pass
 

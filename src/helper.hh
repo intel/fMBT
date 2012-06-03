@@ -76,9 +76,9 @@ ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
 void block(int fd);
 void nonblock(int fd);
 
-int getint(FILE* out,FILE* in,Log* log=NULL);
+int getint(FILE* out,FILE* in,Log& log);
 
-int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in);
+int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in,Log& log);
 
 void split(std::string val, std::string& name,
 	   std::string& param, const char* s=":");

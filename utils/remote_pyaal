@@ -59,6 +59,7 @@ import commands
 import time
 import fmbt
 import atexit
+import urllib
 
 sys.path.append(os.getcwd())
 
@@ -66,46 +67,51 @@ opt_debug = False
 
 log_filename = None
 log_flush_interval = 1.0 # in seconds
-def log(msg, flush = False):
+def _log(msg, flush=False):
     global log_filename
     if opt_debug:
         file(log_filename,"a").write("%.4f %s\n" % (time.time(), msg))
         return
     current_time = time.time()
     if log_filename:
-        log.messages.append("%.4f %s\n" % (current_time, msg))
-        if flush or current_time - log.last_flush > log_flush_interval:
-            file(log_filename,"a").write(''.join(log.messages))
-            log.last_flush = current_time
-            log.messages = []
-fmbt.adapterlog = log
-log.last_flush = time.time()
-log.messages = []
+        _log.messages.append("%.4f %s\n" % (current_time, msg))
+        if flush or current_time - _log.last_flush > log_flush_interval:
+            file(log_filename,"a").write(''.join(_log.messages))
+            _log.last_flush = current_time
+            _log.messages = []
+_log.messages = []
+_log.last_flush = time.time()
 
+def fmbtlog(msg, flush=True):
+    current_time = time.time()
+    timestamped = "l%.4f %s" % (current_time, msg)
+    sys.stdout.write(urllib.quote(timestamped)+"\n")
+fmbt.fmbtlog = fmbtlog
+    
 def error(msg):
     msg = "remote_pyaal error: " + msg + "\n"
-    log(msg)
+    _log(msg)
     sys.stderr.write(msg)
     sys.exit(1)
 
 def bye():
-    log("quitting", flush=True)
+    _log("quitting", flush=True)
 atexit.register(bye)
 
 def put(msg):
-    if opt_debug: log("sending: '%s'" % (msg,))
+    if opt_debug: _log("sending: '%s'" % (msg,))
     sys.stdout.write(str(msg) + "\n")
     sys.stdout.flush()
 
 def put_list(list_of_integers):
     msg = " ".join([str(i) for i in list_of_integers])
-    if opt_debug: log("sending: '%s'" % (msg,))
+    if opt_debug: _log("sending: '%s'" % (msg,))
     sys.stdout.write(msg + "\n")
     sys.stdout.flush()
 
 def get():
     cmd = sys.stdin.readline().rstrip()
-    if opt_debug: log("received: '%s'" % (cmd,))
+    if opt_debug: _log("received: '%s'" % (cmd,))
     return cmd
 
 class RemoteAALBridge:
@@ -136,7 +142,7 @@ class RemoteAALBridge:
             elif cmd == "mr":
                 try:    self._aal.reset()
                 except Exception, e:
-                    log('Error at initial_state(): %s: %s' % (type(e).__name__, e))
+                    _log('Error at initial_state(): %s: %s' % (type(e).__name__, e))
                     put(0)
                 else:   put(1)
             elif cmd == "mu":
@@ -152,7 +158,7 @@ class RemoteAALBridge:
                 try:
                     rv = self._aal.model_execute(action_number)
                 except Exception, e:
-                    log('Error at body() of "%s": %s: %s' % (action_names[action_number-1], type(e).__name__, e))
+                    _log('Error at body() of "%s": %s: %s' % (action_names[action_number-1], type(e).__name__, e))
                     put(0)
                 else:
                     put(rv)
@@ -164,7 +170,7 @@ class RemoteAALBridge:
                     rv = self._aal.adapter_execute(action_number,
                                                    adapter_call_arguments)
                 except Exception, e:
-                    log('Error at adapter() of "%s": %s: %s' % (action_names[action_number-1], type(e).__name__, e))
+                    _log('Error at adapter() of "%s": %s: %s' % (action_names[action_number-1], type(e).__name__, e))
                     put(0)
                 else:   put(rv)
                 adapter_call_arguments = []
@@ -266,7 +272,7 @@ if __name__ == "__main__":
             if opt != "-L": file(log_filename, "w") # overwrite
         elif opt in ["-t", "--timeout"]:
             opt_timeout = float(arg)
-            log("observe timeout: %2.6f" % (opt_timeout,))
+            _log("observe timeout: %2.6f" % (opt_timeout,))
         elif opt in ["-o", "--output"]:
             if arg == "-":
                 opt_output_fileobj = sys.stdout
@@ -303,21 +309,22 @@ if __name__ == "__main__":
         code_lines = aal_code.split('\n')
         code_with_line_nums = ['%4s: %s' % (num+1, line)
                                for num,line in enumerate(code_lines)]
-        log('\n'.join(code_with_line_nums))
+        _log('\n'.join(code_with_line_nums))
         error("executing aal code failed:\n%s" % (e,))
-    
+
     try:
         # Generated AAL code exports generated AAL class as "Model".
         # Model is inherited from AALModel in aalmodel.py.
         aal = Model()
     except Exception as e:
         error("error when instantiating Model(): %s" % (e,))
-    aal._log = log
+    aal._log = _log
     aal.timeout = opt_timeout
+    aal._variables['fmbtlog'] = fmbtlog
 
     if not opt_output_fileobj:
         bridge = RemoteAALBridge(aal)
-        log("starting")
+        _log("starting")
         bridge.communicate()
     else:
         aal2lsts(aal, opt_output_fileobj, depth=opt_lsts_depth, discard_variables=set(opt_lsts_hide_vars), include_variables=set(opt_lsts_show_vars))

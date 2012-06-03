@@ -24,32 +24,32 @@
 int Model_remote::getActions(int** act)
 {
   std::fprintf(d_stdin, "a\n");
-  return getact(act,actions,d_stdin,d_stdout);
+  return getact(act,actions,d_stdin,d_stdout,log);
 }
 
 int Model_remote::getIActions(int** act)
 {
   std::fprintf(d_stdin, "i\n");
-  return getact(act,actions,d_stdin,d_stdout);
+  return getact(act,actions,d_stdin,d_stdout,log);
 }
 
 
 int Model_remote::execute(int action)
 {
   std::fprintf(d_stdin, "%i\n", action);
-  return getint(d_stdin,d_stdout,&log);
+  return getint(d_stdin,d_stdout,log);
 }
 
 int Model_remote::getprops(int** pro)
 {
   std::fprintf(d_stdin, "p\n");
-  return getact(pro,props,d_stdin,d_stdout);
+  return getact(pro,props,d_stdin,d_stdout,log);
 }
 
 bool Model_remote::reset()
 {
   std::fprintf(d_stdin, "r\n");
-  bool rv = (getint(d_stdin,d_stdout,&log) == 1);
+  bool rv = (getint(d_stdin,d_stdout,log) == 1);
   if (!rv) {
     errormsg = "remote model failed to reset \"" + params + "\".\n"
       "      (try executing: echo r | " + params + ")";
@@ -101,7 +101,7 @@ bool Model_remote::init()
   d_stdout=fdopen(_stdout,"r");
   d_stderr=fdopen(_stderr,"r");
 
-  int acount=getint(d_stdin,d_stdout,&log);;
+  int acount=getint(d_stdin,d_stdout,log);;
 
   action_names.push_back("");
 
@@ -121,7 +121,7 @@ bool Model_remote::init()
 
   precalc_input_output();
 
-  int prop_count=getint(d_stdin,d_stdout,&log);
+  int prop_count=getint(d_stdin,d_stdout,log);
 
   prop_names.push_back("");
 

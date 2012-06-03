@@ -88,12 +88,12 @@ int aal_remote::adapter_execute(int action,const char* params) {
     std::fprintf(d_stdin, "ap%s\n",params);
   
   std::fprintf(d_stdin, "a%i\n", action);
-  return getint(d_stdin,d_stdout,&_log);
+  return getint(d_stdin,d_stdout,_log);
 }
 
 int aal_remote::model_execute(int action) {
   std::fprintf(d_stdin, "m%i\n", action);
-  return getint(d_stdin,d_stdout,&_log);
+  return getint(d_stdin,d_stdout,_log);
 }
 
 void aal_remote::push() {
@@ -108,7 +108,7 @@ void aal_remote::pop() {
 
 bool aal_remote::reset() {
   std::fprintf(d_stdin, "mr\n");
-  bool rv = (getint(d_stdin,d_stdout,&_log) == 1);
+  bool rv = (getint(d_stdin,d_stdout,_log) == 1);
   if (!rv) {
     errormsg = "aal_remote model failed to reset \"" + params + "\".\n"
       "      (try executing: echo mr | " + params + ")";
@@ -119,12 +119,12 @@ bool aal_remote::reset() {
 
 int aal_remote::getActions(int** act) {
   std::fprintf(d_stdin, "ma\n");
-  return getact(act,actions,d_stdin,d_stdout);
+  return getact(act,actions,d_stdin,d_stdout,_log);
 }
 
 int aal_remote::getprops(int** pro) {
   std::fprintf(d_stdin, "mp\n");
-  return getact(pro,tags,d_stdin,d_stdout);
+  return getact(pro,tags,d_stdin,d_stdout,_log);
 }
 
 int aal_remote::observe(std::vector<int> &action, bool block)
@@ -134,7 +134,7 @@ int aal_remote::observe(std::vector<int> &action, bool block)
   } else {
     std::fprintf(d_stdin, "aop\n"); // poll
   }
-  int action_alternatives = getact(NULL, action, d_stdin, d_stdout);
+  int action_alternatives = getact(NULL, action, d_stdin, d_stdout,_log);
   
   if (action_alternatives > 0) {
     if (action[0] == SILENCE) {
