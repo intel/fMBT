@@ -1034,7 +1034,9 @@ on_inconc = "exit:2"
             # Wait at least 2 secs from the last keypress event before
             # refreshing.
             return
-        if self.preview.isVisible() and self.autoSave() != 0:
+        if self.splitter.sizes()[1] == 0:
+            return
+        if self.autoSave() != 0:
             if self.preview.currentIndex() == PREVIEWTAB_MODEL:
                 self.visualiseModel(change_tab = False)
             elif self.preview.currentIndex() == PREVIEWTAB_TEST:
