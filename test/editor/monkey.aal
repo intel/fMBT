@@ -1,0 +1,29 @@
+aal "monkeyexample" {
+    language: python {
+        from eyenfinger import *
+        import random
+        from fmbt import fmbtlog
+    }
+
+    # preview-hide-vars: 
+    # preview-depth: 5
+    variables {
+        words
+    }
+
+    initial_state {
+        words = iRead("fMBT editor")
+    }
+
+    action "iClickAnyWord" {
+        guard() {
+            return words != []
+        }
+        adapter() {
+            word = random.choice(words)
+            fmbtlog("Clicking '%s'" % (word,))
+            iClickWord(word)
+            words = iRead("fMBT editor")
+        }
+    }
+}
