@@ -93,6 +93,7 @@ model   = "aal_remote: remote_pyaal -l pyaal.log outputs.aal"
 adapter = "aal_remote: remote_pyaal -l pyaal.log outputs.aal"
 heuristic = "lookahead:2"
 pass = "steps:10"
+on_fail = "exit:1"
 EOF
 fmbt outputs.conf 2>test.verdict | tee outputs.log >> $LOGFILE
 (   fmbt-log outputs.log | grep -q 'o:Txt changed' && \

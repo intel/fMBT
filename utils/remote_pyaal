@@ -86,8 +86,11 @@ def fmbtlog(msg, flush=True):
     current_time = time.time()
     timestamped = "l%.4f %s" % (current_time, msg)
     sys.stdout.write(urllib.quote(timestamped)+"\n")
+
 fmbt.fmbtlog = fmbtlog
-    
+fmbt.adapterlog = _log
+log = _log
+
 def error(msg):
     msg = "remote_pyaal error: " + msg + "\n"
     _log(msg)
