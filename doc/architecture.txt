@@ -1,0 +1,51 @@
+fMBT architecture for developers
+--------------------------------
+
+When fmbt is launched, Conf::load() (in src/conf.cc) sets up the
+following object structure for a test run:
+
++-------------+
+|             | Specifies which actions (test steps) are enabled.
+| Model       | See src/model.hh.
+|             |
++-------------+
+ |           ^
+ | all/next  | execute
+ | actions   | push/pop
+ V           |
++-------------+
+|             | Makes decision which action should be executed
+| Heuristic   | next. Uses Coverage module for evaluation.
+|             | See src/heuristic.hh, src/coverage.hh.
++-------------+
+ |           ^
+ | all/next  | execute
+ | actions   |
+ V           |
++-------------+
+|             | Test generation & execution mainloop is in
+| Test engine | Test_engine::run().
+|             | See src/test_engine.cc.
++-------------+
+ | all/      ^
+ | suggested | executed action
+ | action    | observed output action
+ V           |
++-------------+
+|             | Interacts with the system under test.
+| Adapter     | See src/adapter.hh.
+|             |
++-------------+
+
+Model and Adapter modules can be
+
+- local, that is, run in the same process as Test engine. These are
+  instantiated from ModelFactory or AdapterFactory, see
+  src/factory.hh.
+
+- remote, that is, run in separate process. fmbt communicates with
+  these via child process's pipes. See src/model_remote.cc,
+  src/adapter_remote.cc.
+
+  In case of AAL, remote model and adapter instances may run in the
+  same external process. See src/aal_remote.cc, utils/remote_pyaal.
