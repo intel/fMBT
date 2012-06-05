@@ -21,6 +21,8 @@
 #include <algorithm>
 #include "helper.hh"
 
+std::string Awrapper::es("");
+
 Awrapper::Awrapper(Log&l, std::string params, aal* _ada):
   Adapter(l, params), ada(_ada) {
   if (ada==NULL) {
@@ -44,50 +46,67 @@ void Awrapper::set_actions(std::vector<std::string>* _actions)
 
   for(unsigned i=1;i<actions->size();i++) {
     std::string name,paramname;
-    split(wn[i],name,paramname,"(");
+    split((*actions)[i],name,paramname,"(");
+
     if (paramname!="") {
       paramname=paramname.substr(0,paramname.length()-1);
       parameters[i]=paramname;
+      log.debug("action \"%s\" param %s\n",
+		(*actions)[i].c_str(),paramname.c_str());
+
     }
-    splitted_actions.push_back(name);      
-  }
+    splitted_actions.push_back(name);
+    
+    unsigned result=find(wn,(*actions)[i]);
 
-  for(unsigned i=1;i<wn.size();i++) {
-    unsigned result=find(*actions,wn[i]);
-
-    if ((*actions)[result]!=wn[i]) {
-      /* With parameters? */
-      std::string adaname,adaparamname;
-      split(wn[i],adaname,adaparamname,"(");
-      adaparamname=adaparamname.substr(0,adaparamname.length()-1);
-      result=find(splitted_actions,adaname);
-      if (splitted_actions[result]==adaname) {
-	parameters[result]=adaparamname;
-	log.debug("action \"%s\" mapped to \"%s\" with parameter \"%s\"\n",
-		  (*actions)[result].c_str(),wn[i].c_str(),adaparamname.c_str());
+    if ((*actions)[i]!=wn[result]) {
+      // Let's try it without parameters
+      result=find(wn,splitted_actions[i]);
+      if (splitted_actions[i]!=wn[result]) {
+	//Nope....
+	continue;
       }
+      // With parameters :)
+      std::pair<int,std::string&> ind(result,parameters[i]);
+      ada2aal[ind]=i;
     }
-
-    ada2aal[i]=result;
-    aal2ada[result]=i;
+    
+    ada2aal[std::pair<int,std::string&>(result,es)]=i;
+    aal2ada[i]=result;
   }
-
 }
 
 void Awrapper::execute(std::vector<int>& action)
 {
   /* We need to map.. */
 
+  log.debug("Executing action %i (%i(\"%s\"))\n",
+	    action[0],aal2ada[action[0]],
+	    parameters[action[0]].c_str());
+
+  std::string& prm=parameters[action[0]];
+
   int tmp=ada->adapter_execute(aal2ada[action[0]],parameters[action[0]].c_str());
-  action[0]=ada2aal[tmp];
+  log.debug("return %i\n",tmp);
+  int ret=0;
+  if (tmp) {
+    ret=ada2aal[std::pair<int,std::string&>(tmp,prm)];
+    if (!ret) {
+      // Let't try without parameter...
+      ret=ada2aal[std::pair<int,std::string&>(tmp,es)];
+    }
+  } else {
+    // debug message?
+  }
   action.resize(1);
+  action[0]=ret;
 }
 
 int  Awrapper::observe(std::vector<int> &action,
 		       bool block) {
   int tmp=ada->observe(action,block);
   for(int i=0;i<tmp;i++) {
-    action[i]=ada2aal[action[i]];
+    action[i]=ada2aal[action[i],std::pair<int,std::string&>(tmp,es)];
   }
   return tmp;
 }
