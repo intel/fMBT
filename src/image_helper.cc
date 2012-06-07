@@ -67,7 +67,10 @@ void img_search(std::vector<std::pair<int,int> >& res,Image& haystack,
 
 /*
  * g++ -o image_helper -O3 -Wall `pkg-config --cflags --libs Magick++` image_helper.cc
+ * image_helper x:'root' x:'root[300x400+879+122]'
+ * If you are lucky, it will print you "879 122"
  */
+#ifdef IMAGE_HELPER_MAIN
 
 int main(int argc,char** argv)
 {
@@ -81,7 +84,7 @@ int main(int argc,char** argv)
   for(unsigned i=0;i<r.size();i++) {
     printf("%i %i\n",r[i].first,r[i].second);
   }
-
   
   return 0;
 }
+#endif

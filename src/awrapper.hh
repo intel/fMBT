@@ -37,7 +37,8 @@ public:
   virtual int  observe(std::vector<int> &action,bool block=false
 );
 protected:
-  std::map<int,int> ada2aal;
+  static std::string es;
+  std::map<std::pair<int,std::string&>, int > ada2aal;
   std::map<int,int> aal2ada;
   aal* ada;
   std::map<int,std::string> parameters;

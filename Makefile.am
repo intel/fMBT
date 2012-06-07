@@ -5,6 +5,7 @@ SUBDIRS = utils src test examples
 dist_doc_DATA = \
 	README			\
 	doc/adapters.txt	\
+	doc/architecture.txt	\
 	doc/models.txt		\
 	doc/overview.txt	\
 	doc/tutorial.txt
