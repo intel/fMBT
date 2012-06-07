@@ -105,8 +105,11 @@ void Awrapper::execute(std::vector<int>& action)
 int  Awrapper::observe(std::vector<int> &action,
 		       bool block) {
   int tmp=ada->observe(action,block);
+  std::vector<std::string>& wn=ada->getActionNames();
   for(int i=0;i<tmp;i++) {
-    action[i]=ada2aal[action[i],std::pair<int,std::string&>(tmp,es)];
+    int t=ada2aal[action[i],std::pair<int,std::string&>(action[i],es)];
+    log.debug("observed %i (%s), converted %i (%s)\n",action[i],wn[action[i]].c_str(),t,(*actions)[t].c_str());
+    action[i]=t;
   }
   return tmp;
 }
