@@ -117,6 +117,22 @@ except ImportError:
         file("/tmp/eyenfinger.log", "a").write("%13.2f %s\n" %
                                                (time.time(), msg))
 
+
+try:
+    import ctypes
+    libeyenfinger = ctypes.CDLL("./iconeye.so")
+    class Bbox(ctypes.Structure):
+        _fields_ = [("left", ctypes.c_int32),
+                    ("top", ctypes.c_int32),
+                    ("right", ctypes.c_int32),
+                    ("bottom", ctypes.c_int32),
+                    ("error", ctypes.c_int32)]
+except Exception, e:
+    Bbox = None
+    libeyenfinger = None
+    _log('Icon recognition library loading failed: "%s".' % (e,))
+
+
 def runcmd(cmd):
     _log("runcmd: " + cmd)
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -201,6 +217,46 @@ def iVerifyWord(word, match=0.33, capture=None):
         raise BadMatch('No matching word for "%s". The best candidate "%s" with score %.2f, required %.2f' %
                             (word, matching_word, score, match))
     return score, matching_word
+
+def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=0.80, mousebutton=1, mouseevent=1, dryRun=False, capture=None):
+    if not libeyenfinger:
+        _log('ERROR: iClickIcon("%s") called, but eyenfinger.so not loaded.' % (iconFilename))
+        return False
+    struct_bbox = Bbox(0,0,0,0,0)
+    if match > 1.0:
+        _log('iClickIcon("%s"): invalid match value, must be below 1.0. ' % (iconFilename,))
+        return False
+    threshold = int(1.0-match)*20
+    err = libeyenfinger.findSingleIcon(ctypes.byref(struct_bbox), g_origImage, iconFilename, threshold)
+    if err != 0:
+        _log("findSingleIcon returned %s" % (err,))
+        return False
+    # TODO: pay attention to match and struct_bbox.error
+
+    left, top, right, bottom = int(struct_bbox.left), int(struct_bbox.top), int(struct_bbox.right), int(struct_bbox.bottom)
+
+    click_x = int(left + clickPos[0]*(right-left) + g_windowOffsets[g_lastWindow][0])
+    click_y = int(top + clickPos[1]*(bottom-top) + g_windowOffsets[g_lastWindow][1])
+
+    if mouseevent == MOUSEEVENT_CLICK:
+        params = "'mouseclick %s'" % (mousebutton,)
+    elif mouseevent == MOUSEEVENT_DOWN:
+        params = "'mousedown %s'" % (mousebutton,)
+    elif mouseevent == MOUSEEVENT_UP:
+        params = "'mouseup %s'" % (mousebutton,)
+    else:
+        params = ""
+
+    if capture:
+        # TODO, highlight clicked position and detected icon
+        # drawBbox(bbox)...
+        pass
+
+    if not dryRun:
+        # use xte from the xautomation package
+        runcmd("xte 'mousemove %s %s' %s" % (click_x, click_y, params))
+
+    return struct_bbox.error
 
 def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33, mousebutton=1, mouseevent=1, dryRun=False, capture=None):
     """
