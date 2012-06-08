@@ -145,7 +145,7 @@ def setPreprocessFilter(preprocess):
     global g_preprocess
     g_preprocess = preprocess
 
-def iRead(windowId = None, source = None, preprocess = ""):
+def iRead(windowId = None, source = None, preprocess = "", ocr=True):
     global g_hocr
     global g_lastWindow
     global g_words
@@ -165,6 +165,9 @@ def iRead(windowId = None, source = None, preprocess = ""):
     else:
         iUseImageAsWindow(source)
     g_origImage = source
+
+    if not ocr:
+        return []
 
     # convert to text
     g_readImage = g_origImage + "-pp.png"
@@ -226,7 +229,7 @@ def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=0.80, mousebutton=1, mous
     if match > 1.0:
         _log('iClickIcon("%s"): invalid match value, must be below 1.0. ' % (iconFilename,))
         return False
-    threshold = int(1.0-match)*20
+    threshold = int((1.0-match)*20)
     err = libeyenfinger.findSingleIcon(ctypes.byref(struct_bbox), g_origImage, iconFilename, threshold)
     if err != 0:
         _log("findSingleIcon returned %s" % (err,))
