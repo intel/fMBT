@@ -257,7 +257,7 @@ iMakeInstFedora() {
 
     if [ ! -z "$http_proxy" ]; then
         # take full advantage of caching proxy, don't use mirrors
-        echo | $SSH_FEDORA_ROOT "echo proxy=$http_proxy >>/etc/yum.conf; sed -i -e 's/^# baseurl/baseurl/g' -e 's/^mirrorlist/# mirrorlist/g' /etc/yum.repos.d/*"
+        echo | $SSH_FEDORA_ROOT "echo proxy=$http_proxy >>/etc/yum.conf; sed -i -e 's/^#[ ]*baseurl/baseurl/g' -e 's/^#[ ]*mirrorlist/mirrorlist/g' /etc/yum.repos.d/*"
     fi
     echo | $SSH_FEDORA_ROOT "cd /home/fedora/fmbt; eval \"\$(grep 'yum install' < README ) -y\" " >> $LOGFILE 2>&1
 
@@ -364,7 +364,7 @@ iBuildInstRPMPkg() {
 
     if [ ! -z "$http_proxy" ]; then
         # take full advantage of caching proxy, don't use mirrors
-        echo | $SSH_FEDORA_ROOT "echo proxy=$http_proxy >>/etc/yum.conf; sed -i -e 's/^#[ ]*baseurl/baseurl/g' -e 's/^mirrorlist/# mirrorlist/g' /etc/yum.repos.d/*"
+        echo | $SSH_FEDORA_ROOT "echo proxy=$http_proxy >>/etc/yum.conf; sed -i -e 's/^#[ ]*baseurl/baseurl/g' -e 's/^#[ ]*mirrorlist/mirrorlist/g' /etc/yum.repos.d/*"
     fi
 
     echo | $SSH_FEDORA_ROOT "cd /home/fedora/fmbt; eval \"\$(grep 'yum install' < README ) -y\"; yum install @development-tools rpm-build -y" >> $LOGFILE 2>&1

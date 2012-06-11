@@ -15,6 +15,7 @@ BuildRequires:  ncurses-libs
 BuildRequires:  libedit-devel
 BuildRequires:  autoconf
 BuildRequires:  automake
+BuildRequires:  ImageMagick-c++-devel
 Requires:       dbus-python
 
 %description
