@@ -73,5 +73,16 @@ AC_CONFIG_FILES([
 AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
 AM_PATH_PYTHON([2.6],, [:])
 
+AC_ARG_WITH([imagemagick],
+  [AS_HELP_STRING([--without-imagemagick],
+    [disable eyenfinger icon recognition])],
+  [],
+  [with_imagemagick="yes"])
+
+AS_IF([test "x$with_imagemagick" != "xno"],
+  [PKG_CHECK_MODULES([MAGICK], [Magick++], [],
+     [AC_MSG_FAILURE([ImageMagick not found.])])])
+
+AM_CONDITIONAL([HAVE_MAGICK], [test "x$with_imagemagick" != "xno"])
 
 AC_OUTPUT

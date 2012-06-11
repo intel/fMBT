@@ -57,6 +57,7 @@ import re
 import math
 import htmlentitydefs
 import sys
+import os
 
 g_preprocess = "-sharpen 5 -filter Mitchell -resize 1920x1600 -level 40%%,70%%,5.0 -sharpen 5"
 
@@ -120,7 +121,19 @@ except ImportError:
 
 try:
     import ctypes
-    libeyenfinger = ctypes.CDLL("./iconeye.so")
+    _libpath = ["",
+                "." + os.path.sep,
+                "." + os.path.sep + ".libs" + os.path.sep,
+                os.path.dirname(__file__) + os.path.sep,
+                os.path.dirname(__file__) + os.path.sep + ".libs" + os.path.sep]
+    for _dirname in _libpath:
+        try:
+            eye4graphics = ctypes.CDLL(_dirname + "eye4graphics.so")
+            break
+        except: pass
+    else:
+        raise ImportError("%s cannot load eye4graphics.so" % (__file__,))
+
     class Bbox(ctypes.Structure):
         _fields_ = [("left", ctypes.c_int32),
                     ("top", ctypes.c_int32),
@@ -129,8 +142,8 @@ try:
                     ("error", ctypes.c_int32)]
 except Exception, e:
     Bbox = None
-    libeyenfinger = None
-    _log('Icon recognition library loading failed: "%s".' % (e,))
+    eye4graphics = None
+    _log('Loading icon recognition library failed: "%s".' % (e,))
 
 
 def runcmd(cmd):
@@ -222,15 +235,15 @@ def iVerifyWord(word, match=0.33, capture=None):
     return score, matching_word
 
 def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=0.80, mousebutton=1, mouseevent=1, dryRun=False, capture=None):
-    if not libeyenfinger:
-        _log('ERROR: iClickIcon("%s") called, but eyenfinger.so not loaded.' % (iconFilename))
+    if not eye4graphics:
+        _log('ERROR: iClickIcon("%s") called, but eye4graphics not loaded.' % (iconFilename))
         return False
     struct_bbox = Bbox(0,0,0,0,0)
     if match > 1.0:
         _log('iClickIcon("%s"): invalid match value, must be below 1.0. ' % (iconFilename,))
         return False
     threshold = int((1.0-match)*20)
-    err = libeyenfinger.findSingleIcon(ctypes.byref(struct_bbox), g_origImage, iconFilename, threshold)
+    err = eye4graphics.findSingleIcon(ctypes.byref(struct_bbox), g_origImage, iconFilename, threshold)
     if err != 0:
         _log("findSingleIcon returned %s" % (err,))
         return False
