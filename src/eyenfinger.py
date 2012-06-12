@@ -217,12 +217,12 @@ def iVerifyWord(word, match=0.33, capture=None):
     Parameters:
         word       - word that should be checked
         match      - minimum matching score
-        capture    - name of file where image of highlighted word and
-                     clicked point are saved.
+        capture    - save image with verified word highlighted
+                     to this file. Default: None (nothing is saved).
 
     Returns pair: score, matching_word
 
-    Throws BadMatch error if could not find a matching word.
+    Throws BadMatch error matching word was not found.
     """
     score, matching_word = findWord(word)
 
@@ -233,6 +233,45 @@ def iVerifyWord(word, match=0.33, capture=None):
         raise BadMatch('No matching word for "%s". The best candidate "%s" with score %.2f, required %.2f' %
                             (word, matching_word, score, match))
     return score, matching_word
+
+def iVerifyIcon(iconFilename, match=1.0, capture=None):
+    """
+    Verify that icon can be found from previously iRead() image.
+    
+    Parameters:
+        iconFilename - name of the icon file to be searched for
+        match        - minimum matching score between 0 and 1.0,
+                       1.0 is perfect match (default)
+        capture      - save image with verified icon highlighted
+                       to this file. Default: None (nothing is saved).
+
+    Returns pair: score, bounding box of found icon
+
+    Throws BadMatch error given icon was not found.
+    """
+    if not eye4graphics:
+        _log('ERROR: iVerifyIcon("%s") called, but eye4graphics not loaded.' % (iconFilename))
+        raise Exception("eye4graphics not available")
+    struct_bbox = Bbox(0,0,0,0,0)
+    if match > 1.0:
+        _log('iClickIcon("%s"): invalid match value, must be below 1.0. ' % (iconFilename,))
+        raise ValueError("invalid match value: %s, should be 0 <= match <= 1.0" % (match,))
+    threshold = int((1.0-match)*20)
+    err = eye4graphics.findSingleIcon(ctypes.byref(struct_bbox), g_origImage, iconFilename, threshold)
+    if err != 0:
+        _log("findSingleIcon returned %s" % (err,))
+        raise BadMatch("%s not found, findSingleIcon returned %s." % (iconFilename, err))
+    if threshold > 0:
+        score = (threshold - int(struct_bbox.error)) / float(threshold)
+    else:
+        score = 1.0
+    bbox = (int(struct_bbox.left), int(struct_bbox.top),
+            int(struct_bbox.right), int(struct_bbox.bottom))
+
+    if capture:
+        drawIcon(g_origImage, capture, iconFilename, bbox)
+    
+    return score, bbox
 
 def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=1.0, mousebutton=1, mouseevent=1, dryRun=False, capture=None):
     if not eye4graphics:
@@ -264,9 +303,8 @@ def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=1.0, mousebutton=1, mouse
         params = ""
 
     if capture:
-        # TODO, highlight clicked position and detected icon
-        # drawBbox(bbox)...
-        pass
+        drawIcon(g_origImage, capture, iconFilename, (left, top, right, bottom))
+        drawClickedPoint(capture, capture, (click_x, click_y))
 
     if not dryRun:
         # use xte from the xautomation package
@@ -509,6 +547,13 @@ def drawWords(inputfilename, outputfilename, words, detected_words):
             color, left, top, w)
         draw_commands += """ -stroke none -fill %s -draw "text %s,%s '%.2f'" """ % (
             color, left, bottom+10, score)
+    runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))
+
+def drawIcon(inputfilename, outputfilename, iconFilename, bbox):
+    left, top, right, bottom = bbox[0], bbox[1], bbox[2], bbox[3]
+    draw_commands = """ -stroke green -fill blue -draw "fill-opacity 0.2 rectangle %s,%s %s,%s" """ % (left, top, right, bottom)
+    draw_commands += """ -stroke none -fill blue -draw "text %s,%s '%s'" """ % (
+        left, top, iconFilename)
     runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))
 
 def drawClickedPoint(inputfilename, outputfilename, clickedXY):
