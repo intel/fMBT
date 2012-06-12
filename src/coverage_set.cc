@@ -20,6 +20,7 @@
 #include "coverage_set.hh"
 #include "helper.hh"
 #include <string>
+#include <cstring>
 
 #include "dparse.h"
 #include "model.hh"
@@ -46,7 +47,7 @@ public:
     asize=&allowed_set_size;
     mcount=&max_count;
     D_Parser *p = new_D_Parser(&parser_tables_set, 512);
-    bool ret=dparse(p,(char*)params.c_str(),std::strlen(params.c_str()));
+    bool ret=dparse(p,(char*)params.c_str(),strlen(params.c_str()));
     ret=p->syntax_errors==0 && ret;
     status=ret;
     if (p->syntax_errors>0) {
