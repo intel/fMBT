@@ -234,7 +234,7 @@ def iVerifyWord(word, match=0.33, capture=None):
                             (word, matching_word, score, match))
     return score, matching_word
 
-def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=0.80, mousebutton=1, mouseevent=1, dryRun=False, capture=None):
+def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=1.0, mousebutton=1, mouseevent=1, dryRun=False, capture=None):
     if not eye4graphics:
         _log('ERROR: iClickIcon("%s") called, but eye4graphics not loaded.' % (iconFilename))
         return False

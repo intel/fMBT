@@ -205,7 +205,7 @@ int iconsearch(std::vector<BoundingBox>& retval,
     else return 0;
 }
 
-int findSingleIcon(BoundingBox* retval,
+int findSingleIcon(BoundingBox* bbox,
                    const char* imagefile,
                    const char* iconfile,
                    const int threshold)
@@ -213,19 +213,42 @@ int findSingleIcon(BoundingBox* retval,
     /* TODO: another version with multiple versions of the same
      * icon. Clear, blurred, etc.
      */
-    Image haystack(imagefile);
-    Image needle(iconfile);
-    std::vector<BoundingBox> found;
-    if (iconsearch(found, haystack, needle, threshold) > 0 && found.size() > 0) {
-        *retval = found[0];
-    } else {
-        retval->left   = -1;
-        retval->top    = -1;
-        retval->right  = -1;
-        retval->bottom = -1;
-        retval->error  = -1;
+    Image *haystack;
+    Image *needle;
+
+    int retval = 0;
+
+    bbox->left   = -1;
+    bbox->top    = -1;
+    bbox->right  = -1;
+    bbox->bottom = -1;
+    bbox->error  = -1;
+
+
+    try { haystack = new Image(imagefile); }
+    catch(ErrorFileOpen e) {
+        return -3;
     }
-    return retval->error != -1;
+
+    try { needle = new Image(iconfile); }
+    catch(ErrorFileOpen e) {
+        delete haystack;
+        return -4;
+    }
+
+    std::vector<BoundingBox> found;
+    if (iconsearch(found, *haystack, *needle, threshold) > 0 && found.size() > 0) {
+        *bbox = found[0];
+        if (bbox->error > threshold)
+            retval = -2;
+        else
+            retval = 0;
+    } else {
+        retval = -1;
+    }
+    delete needle;
+    delete haystack;
+    return retval;
 }
 
 // make library:
@@ -239,16 +262,11 @@ int findSingleIcon(BoundingBox* retval,
 /*
 int main(int argc,char** argv)
 {
-    Image i1(argv[1]);
-    Image i2(argv[2]);
+    BoundingBox box;
 
-    std::vector<BoundingBox> found;
+    int retval = findSingleIcon(&box, argv[1], argv[2], 4);
 
-    iconsearch(found,i1,i2,4);
-
-    BoundingBox box = found[0];
-
-    printf("%i %i %i %i %i\n", box.left, box.top, box.right, box.bottom, box.error);
+    printf("%i %i %i %i %i retval=%i\n", box.left, box.top, box.right, box.bottom, box.error, retval);
 
     return 0;
 }
