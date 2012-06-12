@@ -237,7 +237,7 @@ def iVerifyWord(word, match=0.33, capture=None):
 def iVerifyIcon(iconFilename, match=1.0, capture=None):
     """
     Verify that icon can be found from previously iRead() image.
-    
+
     Parameters:
         iconFilename - name of the icon file to be searched for
         match        - minimum matching score between 0 and 1.0,
@@ -257,20 +257,29 @@ def iVerifyIcon(iconFilename, match=1.0, capture=None):
         _log('iClickIcon("%s"): invalid match value, must be below 1.0. ' % (iconFilename,))
         raise ValueError("invalid match value: %s, should be 0 <= match <= 1.0" % (match,))
     threshold = int((1.0-match)*20)
-    err = eye4graphics.findSingleIcon(ctypes.byref(struct_bbox), g_origImage, iconFilename, threshold)
-    if err != 0:
-        _log("findSingleIcon returned %s" % (err,))
+    err = eye4graphics.findSingleIcon(ctypes.byref(struct_bbox),
+                                      g_origImage, iconFilename, threshold)
+    bbox = (int(struct_bbox.left), int(struct_bbox.top),
+            int(struct_bbox.right), int(struct_bbox.bottom))
+
+    if err == -1 or err == -2:
+        msg = 'iVerifyIcon: "%s" not found, match=%.2f, threshold=%s, closest threshold %s.' % (
+            iconFilename, match, threshold, int(struct_bbox.error))
+        if capture:
+            drawIcon(g_origImage, capture, iconFilename, bbox, 'red')
+        _log(msg)
+        raise BadMatch(msg)
+    elif err != 0:
+        _log("iVerifyIcon: findSingleIcon returned %s" % (err,))
         raise BadMatch("%s not found, findSingleIcon returned %s." % (iconFilename, err))
     if threshold > 0:
         score = (threshold - int(struct_bbox.error)) / float(threshold)
     else:
         score = 1.0
-    bbox = (int(struct_bbox.left), int(struct_bbox.top),
-            int(struct_bbox.right), int(struct_bbox.bottom))
 
     if capture:
         drawIcon(g_origImage, capture, iconFilename, bbox)
-    
+
     return score, bbox
 
 def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=1.0, mousebutton=1, mouseevent=1, dryRun=False, capture=None):
@@ -549,11 +558,11 @@ def drawWords(inputfilename, outputfilename, words, detected_words):
             color, left, bottom+10, score)
     runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))
 
-def drawIcon(inputfilename, outputfilename, iconFilename, bbox):
+def drawIcon(inputfilename, outputfilename, iconFilename, bbox, color='green'):
     left, top, right, bottom = bbox[0], bbox[1], bbox[2], bbox[3]
-    draw_commands = """ -stroke green -fill blue -draw "fill-opacity 0.2 rectangle %s,%s %s,%s" """ % (left, top, right, bottom)
-    draw_commands += """ -stroke none -fill blue -draw "text %s,%s '%s'" """ % (
-        left, top, iconFilename)
+    draw_commands = """ -stroke %s -fill blue -draw "fill-opacity 0.2 rectangle %s,%s %s,%s" """ % (color, left, top, right, bottom)
+    draw_commands += """ -stroke none -fill %s -draw "text %s,%s '%s'" """ % (
+        color, left, top, iconFilename)
     runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))
 
 def drawClickedPoint(inputfilename, outputfilename, clickedXY):
