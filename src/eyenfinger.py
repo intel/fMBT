@@ -234,7 +234,7 @@ def iVerifyWord(word, match=0.33, capture=None):
                             (word, matching_word, score, match))
     return score, matching_word
 
-def iVerifyIcon(iconFilename, match=1.0, capture=None):
+def iVerifyIcon(iconFilename, match=1.0, capture=None, _origin="iVerifyIcon"):
     """
     Verify that icon can be found from previously iRead() image.
 
@@ -250,11 +250,11 @@ def iVerifyIcon(iconFilename, match=1.0, capture=None):
     Throws BadMatch error given icon was not found.
     """
     if not eye4graphics:
-        _log('ERROR: iVerifyIcon("%s") called, but eye4graphics not loaded.' % (iconFilename))
+        _log('ERROR: %s("%s") called, but eye4graphics not loaded.' % (_origin, iconFilename))
         raise Exception("eye4graphics not available")
     struct_bbox = Bbox(0,0,0,0,0)
     if match > 1.0:
-        _log('iClickIcon("%s"): invalid match value, must be below 1.0. ' % (iconFilename,))
+        _log('%s("%s"): invalid match value, must be below 1.0. ' % (_origin, iconFilename,))
         raise ValueError("invalid match value: %s, should be 0 <= match <= 1.0" % (match,))
     threshold = int((1.0-match)*20)
     err = eye4graphics.findSingleIcon(ctypes.byref(struct_bbox),
@@ -263,14 +263,14 @@ def iVerifyIcon(iconFilename, match=1.0, capture=None):
             int(struct_bbox.right), int(struct_bbox.bottom))
 
     if err == -1 or err == -2:
-        msg = 'iVerifyIcon: "%s" not found, match=%.2f, threshold=%s, closest threshold %s.' % (
-            iconFilename, match, threshold, int(struct_bbox.error))
+        msg = '%s: "%s" not found, match=%.2f, threshold=%s, closest threshold %s.' % (
+            _origin, iconFilename, match, threshold, int(struct_bbox.error))
         if capture:
             drawIcon(g_origImage, capture, iconFilename, bbox, 'red')
         _log(msg)
         raise BadMatch(msg)
     elif err != 0:
-        _log("iVerifyIcon: findSingleIcon returned %s" % (err,))
+        _log("%s: findSingleIcon returned %s" % (_origin, err,))
         raise BadMatch("%s not found, findSingleIcon returned %s." % (iconFilename, err))
     if threshold > 0:
         score = (threshold - int(struct_bbox.error)) / float(threshold)
@@ -283,21 +283,7 @@ def iVerifyIcon(iconFilename, match=1.0, capture=None):
     return score, bbox
 
 def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=1.0, mousebutton=1, mouseevent=1, dryRun=False, capture=None):
-    if not eye4graphics:
-        _log('ERROR: iClickIcon("%s") called, but eye4graphics not loaded.' % (iconFilename))
-        return False
-    struct_bbox = Bbox(0,0,0,0,0)
-    if match > 1.0:
-        _log('iClickIcon("%s"): invalid match value, must be below 1.0. ' % (iconFilename,))
-        return False
-    threshold = int((1.0-match)*20)
-    err = eye4graphics.findSingleIcon(ctypes.byref(struct_bbox), g_origImage, iconFilename, threshold)
-    if err != 0:
-        _log("findSingleIcon returned %s" % (err,))
-        return False
-    # TODO: pay attention to match and struct_bbox.error
-
-    left, top, right, bottom = int(struct_bbox.left), int(struct_bbox.top), int(struct_bbox.right), int(struct_bbox.bottom)
+    score, (left, top, right, bottom) = iVerifyIcon(iconFilename, match=match, capture=capture, _origin="iClickIcon")
 
     click_x = int(left + clickPos[0]*(right-left) + g_windowOffsets[g_lastWindow][0])
     click_y = int(top + clickPos[1]*(bottom-top) + g_windowOffsets[g_lastWindow][1])
@@ -517,11 +503,19 @@ def iUseWindow(windowIdOrName = None):
 
 def iUseImageAsWindow(imagefilename):
     global g_lastWindow
+    try: import Image
+    except ImportError, e:
+        _log("iUseImageAsWindow: Python Imaging Library missing. eyenfinger requires PIL if images are used as windows.")
+        raise e
+        
     g_lastWindow = imagefilename
-    _, output = runcmd("file '%s'" % (imagefilename,))
-    output = output.split()
-    image_width = int(output[output.index('x')-1])
-    image_height = int(output[output.index('x')+1][:-1])
+
+    try:
+        image = Image.open(imagefilename)
+        image_width, image_height = image.size
+    except Exception, e:
+        _log('iUseImageAsWindow: Failed reading dimensions of image "%s": %s' % (imagefilename, e))
+        raise e
 
     g_windowOffsets[g_lastWindow] = (0, 0)
     g_windowSizes[g_lastWindow] = (image_width, image_height)
@@ -609,9 +603,8 @@ def autoconfigure(imagefilename, words):
     """
 
     # check image width
-    _, output = runcmd("file '%s'" % (imagefilename,))
-    output = output.split()
-    image_width = int(output[output.index('x')-1])
+    iUseImageAsWindow(imagefilename)
+    image_width = g_windowSizes[g_lastWindow][0]
 
     resize_filters = ['Mitchell', 'Catrom', 'Hermite', 'Gaussian']
     levels = [(20, 30), (20, 40), (20, 50),

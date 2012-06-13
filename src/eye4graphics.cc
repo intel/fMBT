@@ -68,8 +68,9 @@ long normdiag_error(int hayx,int neex,int neey,int x,int y,
     }
     // If color ranges are too different, bail out.
     if (hay_greatest - hay_smallest > (nee_greatest - nee_smallest) * 2 ||
-        nee_greatest - nee_smallest > (hay_greatest - hay_smallest) * 2)
+        nee_greatest - nee_smallest > (hay_greatest - hay_smallest) * 2) {
         return INCOMPARABLE;
+    }
 
     long delta = 0;
     for(int checkx=xstart+1, checky=ystart+1;
@@ -158,37 +159,28 @@ int iconsearch(std::vector<BoundingBox>& retval,
     }
 
     for (unsigned int ci=0; ci < candidates.size(); ci++) {
-        int thisdelta = candidates[ci].first;
-        int newdelta;
+        int thisdelta;
         int x = candidates[ci].second.first;
         int y = candidates[ci].second.second;
 
-        if ((newdelta = normdiag_error(hayx, neex, neey, x, y, hay_pixel, nee_pixel,
-                                       0, neey/2, 1, 0)) != INCOMPARABLE)
-            thisdelta += newdelta;
-        else {
-            candidates[ci].first = LONG_MAX;
-            break;
+        thisdelta = normdiag_error(hayx, neex, neey, x, y, hay_pixel, nee_pixel,
+                                  0, neey/2, 1, 0);
+        if (thisdelta == INCOMPARABLE) {
+            candidates[ci].first = LONG_MAX; continue;
         }
-
-        if ((newdelta = normdiag_error(hayx, neex, neey, x, y, hay_pixel, nee_pixel,
-                                       neex/2, 0, 0, 1)) != INCOMPARABLE)
-            thisdelta += newdelta;
-        else {
-            candidates[ci].first = LONG_MAX;
-            break;
+        candidates[ci].first += thisdelta;
+        thisdelta = normdiag_error(hayx, neex, neey, x, y, hay_pixel, nee_pixel,
+                                  neex/2, 0, 0, 1);
+        if (thisdelta == INCOMPARABLE) {
+            candidates[ci].first = LONG_MAX; continue;
         }
-
-
-        if ((newdelta = normdiag_error(hayx, neex, neey, x, y, hay_pixel, nee_pixel,
-                                       neex-1, 0, -1, 1)) != INCOMPARABLE)
-            thisdelta += newdelta;
-        else {
-            candidates[ci].first = LONG_MAX;
-            break;
+        candidates[ci].first += thisdelta;
+        thisdelta = normdiag_error(hayx, neex, neey, x, y, hay_pixel, nee_pixel,
+                                    neex-1, 0, -1, 1);
+        if (thisdelta == INCOMPARABLE) {
+            candidates[ci].first = LONG_MAX; continue;
         }
-
-        candidates[ci].first = thisdelta;
+        candidates[ci].first += thisdelta;
     }
 
     if (candidates.size() > 0) {
@@ -237,7 +229,8 @@ int findSingleIcon(BoundingBox* bbox,
     }
 
     std::vector<BoundingBox> found;
-    if (iconsearch(found, *haystack, *needle, threshold) > 0 && found.size() > 0) {
+    if (iconsearch(found, *haystack, *needle, threshold) > 0
+        && found.size() > 0) {
         *bbox = found[0];
         if (bbox->error > threshold)
             retval = -2;
