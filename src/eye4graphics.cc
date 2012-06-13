@@ -26,7 +26,6 @@
 #include <Magick++.h>
 using namespace Magick;
 
-#define MIN(a,b) (a<b?a:b)
 #define COLORS 64
 
 #define INCOMPARABLE -1
@@ -73,6 +72,7 @@ long normdiag_error(int hayx,int neex,int neey,int x,int y,
     }
 
     long delta = 0;
+    int checked_steps = 0;
     for(int checkx=xstart+1, checky=ystart+1;
         0 <= checkx && 0 <= checky &&
             0 <= checkx+xstep*2-1 && 0 <= checky+ystep*2-1 &&
@@ -104,9 +104,10 @@ long normdiag_error(int hayx,int neex,int neey,int x,int y,
             }
         }
         delta += bestdiff;
+        checked_steps += 1;
     }
 
-    return delta / MIN(neex, neey);
+    return delta / checked_steps;
 }
 
 /*
@@ -131,7 +132,7 @@ int iconsearch(std::vector<BoundingBox>& retval,
                Image& needle,
                const int threshold)
 {
-    const int color_threshold = COLORS * threshold; /* depends on the number of quantified colors */
+    const int color_threshold = COLORS * threshold;
     typedef std::pair<long, std::pair<int,int> > Candidate;
     std::vector< Candidate > candidates;
 
@@ -215,7 +216,6 @@ int findSingleIcon(BoundingBox* bbox,
     bbox->right  = -1;
     bbox->bottom = -1;
     bbox->error  = -1;
-
 
     try { haystack = new Image(imagefile); }
     catch(ErrorFileOpen e) {
