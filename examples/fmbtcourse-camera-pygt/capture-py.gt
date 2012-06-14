@@ -1,0 +1,9 @@
+P(not-capturing, "gt:istate") ->
+T(not-capturing, "iPreview() > 20",   not-capturing)
+T(not-capturing, "iCaptureImage()",   not-capturing)
+T(not-capturing, "iStartVideocapt()", capturing)
+T(not-capturing, "iStopVideocapt()",  not-capturing)
+
+T(capturing,     "iPreview() > 10",   capturing)
+T(capturing,     "iStopVideocapt()",  not-capturing)
+T(capturing,     "iCaptureImage() == Error('.*No file.')", capturing)
