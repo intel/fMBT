@@ -207,7 +207,7 @@ iDBus('session','org.freedesktop.NetworkManager','/org/freedesktop/NetworkManage
             try: obj = busObj.get_object(dest, objPath)
             except Exception, e:
                 error("could not get_object('%s', '%s'):\n    %s" % (dest, objPath, e))
-            
+
             retval = dbus.Interface(obj, interface)
             self.cache[busName + ' ' + dest + ' ' + objPath + ' ' + interface] = retval
 
@@ -302,7 +302,7 @@ oDBusSignal('HelloSignal',StoreAs(var1),StoreAs(var2),'valueOfArg3')
                             warning("Number of StoreAs(variable)'s and values does not match on action name '%s' and regexp '%s'" % (actionName, actionRegexp))
                         actionIndex = i
                         break
-                        
+
         if actionIndex >= 0:
             sys.stdout.write("%s\n" % (actionIndex,))
             sys.stdout.flush()
@@ -364,6 +364,7 @@ iDBus('system','net.connman','/','net.connman.Manager').SetProperty('foobar',2)=
             else:
                 self._exceptionClass = arg1
             self._strException = arg2
+
     def __eq__(self, other):
         if other == None:
             return False
@@ -388,6 +389,9 @@ iDBus('system','net.connman','/','net.connman.Manager').SetProperty('foobar',2)=
             return True
         else:
             return False
+
+    def __cmp__(self, other):
+        return False
 
     def __repr__(self):
         if not self._exceptionClass:
@@ -441,7 +445,7 @@ class Shell:
         functions are called with two parameters: corresponding file
         object and condition (see gobject.io_add_watch callback,
         gobject.IO_*).
-        
+
         If handlers are not given, data read from stdout and stderr is
         logged.
 
@@ -459,7 +463,7 @@ class Shell:
             # need to run in their own process group
             popen_kwargs['preexec_fn'] = lambda: os.setpgid(0,0)
 
-        p = subprocess.Popen(args, 
+        p = subprocess.Popen(args,
                              stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE,
@@ -557,7 +561,7 @@ def executeString(actionName):
         if actionWithoutComparison and type(result) != Error:
             return actionWithoutComparison
         return None # no matching action found
-    
+
     resultIncluded = 1
     try: left, op, right = leftOpRight(actionName)
     except: resultIncluded = 0
@@ -614,11 +618,11 @@ class AdapterIO:
         self._delayBetweenActions = delayBetweenActions
         self._state = self.stateReadNumberOfActions
         self._nonblock_buffer = ""
-        
+
         fl = fcntl.fcntl(sys.stdin, fcntl.F_GETFL)
         fcntl.fcntl(sys.stdin, fcntl.F_SETFL, fl | os.O_NONBLOCK)
 
-        gobject.io_add_watch(sys.stdin, 
+        gobject.io_add_watch(sys.stdin,
                              gobject.IO_IN | gobject.IO_ERR | gobject.IO_HUP,
                              self.readInput)
 
@@ -680,7 +684,7 @@ class AdapterIO:
     def stateExecute(self, inputline):
         global g_actions
         global g_loop
-        
+
         ignore = False
         try: actionIndex = int(inputline.strip())
         except: ignore = True
@@ -713,7 +717,7 @@ class InteractiveShellIO:
         self.interpreter.locals = g_dbusEvalGlobals
         self.promptReady = ">>> "
         self.promptNeedMore = "... "
-        gobject.io_add_watch(sys.stdin, 
+        gobject.io_add_watch(sys.stdin,
                              gobject.IO_IN | gobject.IO_ERR| gobject.IO_HUP,
                              self.readInput)
         self.printPrompt(self.promptReady)
