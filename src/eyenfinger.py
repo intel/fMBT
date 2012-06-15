@@ -222,7 +222,7 @@ def iVerifyWord(word, match=0.33, capture=None):
 
     Returns pair: score, matching_word
 
-    Throws BadMatch error matching word was not found.
+    Throws BadMatch error if word is not found.
     """
     score, matching_word = findWord(word)
 
@@ -247,7 +247,7 @@ def iVerifyIcon(iconFilename, match=1.0, capture=None, _origin="iVerifyIcon"):
 
     Returns pair: score, bounding box of found icon
 
-    Throws BadMatch error given icon was not found.
+    Throws BadMatch error if icon is not found.
     """
     if not eye4graphics:
         _log('ERROR: %s("%s") called, but eye4graphics not loaded.' % (_origin, iconFilename))
