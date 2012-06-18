@@ -16,10 +16,24 @@
 # this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
+##########################################
+# Setup test environment
+
+cd "$(dirname "$0")"
+LOGFILE=/tmp/fmbt.test.history.log
+rm -f $LOGFILE
+
+if [ "$1" != "installed" ]; then
+    export PATH=../../src:../../utils:$PATH
+    export PYTHONPATH=../../src
+fi
+
 source ../functions.sh
 
-teststep "creating a log"
-testpassed
+##########################################
+# Run the test
 
-teststep "reading the log"
-testpassed
+teststep "history: one-step tests, separate log files"
+./one-step-tests.sh >> $LOGFILE 2>&1 \
+    && testpassed \
+    || testfailed
