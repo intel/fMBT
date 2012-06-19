@@ -34,21 +34,22 @@ Conf* conf_obj;
 
 conf_file: conf_entry+;
 
-conf_entry: model         |
-            heuristic     |
-            coverage      |
-            adapter       |
-            engine_cov    |
-            engine_count  |
-            engine_tag    |
-            engine_time   |
-            adapter_sleep |
-            end_condition |
-            history       |
-            on_error      |
-            on_fail       |
-            on_pass       |
-            on_inconc     ;
+conf_entry: model               |
+            heuristic           |
+            coverage            |
+            adapter             |
+            engine_cov          |
+            engine_count        |
+            engine_tag          |
+            engine_time         |
+            adapter_sleep       |
+            end_condition       |
+            end_condition_noarg |
+            history             |
+            on_error            |
+            on_fail             |
+            on_pass             |
+            on_inconc           ;
 
 model: 'model' '=' string { conf_obj->set_model(*$2.str); } ;
 
@@ -107,6 +108,13 @@ end_condition: verdict '=' '"' end_type ':' string_woquotes '"'
                                   $5.str));
         } ;
 
+end_condition_noarg: verdict '=' '"' end_type_noarg '"'
+        { conf_obj->add_end_condition(
+                new End_condition((Verdict::Verdict)$0.val,
+                                  (End_condition::Counter)$3.val,
+                                  NULL));
+        } ;
+
 history: 'history' '=' string { conf_obj->add_history($2.str); };
 
 on_fail: 'on_fail' '=' string { conf_obj->set_on_fail(*$2.str); };
@@ -129,8 +137,9 @@ end_type: 'steps'       { $$.val=End_condition::STEPS; }
         | 'statetag'    { $$.val=End_condition::STATETAG; }
         | 'tag'         { $$.val=End_condition::STATETAG; }
         | 'duration'    { $$.val=End_condition::DURATION; }
-        | 'no_progress' { $$.val=End_condition::NOPROGRESS; }
-        | 'deadlock'    { $$.val=End_condition::DEADLOCK; };
+        | 'no_progress' { $$.val=End_condition::NOPROGRESS; };
+
+end_type_noarg: 'deadlock'    { $$.val=End_condition::DEADLOCK; };
 
 string: "\"([^\"\\]|\\[^])*\"" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); } ;
 

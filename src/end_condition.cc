@@ -102,5 +102,5 @@ End_condition::End_condition(Verdict::Verdict v, Counter c, std::string* p)
 
 End_condition::~End_condition()
 {
-  delete param;
+  if (param) delete param;
 }

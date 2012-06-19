@@ -234,6 +234,8 @@ Syntax:
 
         <verdict> = "measure:value"
 
+        <verdict> = "condition"
+
 Available verdict:
 
         pass    test did not find any errors and tested what was wanted.
@@ -243,13 +245,18 @@ Available verdict:
         inconc  test did not find an error but was not able to test
                 what was wanted.
 
-Available measures & values:
+Available measures, values and conditions:
 
         coverage:<decimal>
 
                 finish with the verdict if coverage reaches the given
                 level. coverage returns values from 0.0 to 1.0
                 (including 0.0 and 1.0).
+
+        deadlock
+
+                finish with the verdict if model is in a deadlock
+                state, that is, there are no enabled actions.
 
         duration:<timespec>
 
@@ -282,7 +289,8 @@ Examples:
         percent coverage is achieved, or if 1000 test steps have been
         executed. Test ends with "inconclusive" verdict if test run
         has lasted longer than 7 seconds. Test fails immediately if a
-        state with tag this_should_never_happen is reached.
+        state with tag this_should_never_happen is reached or model is
+        in deadlock.
 
         pass   = "coverage:0.5"
 
@@ -291,6 +299,8 @@ Examples:
         inconc = "duration:7 seconds"
 
         fail   = "tag:this_should_never_happen"
+
+        fail   = "deadlock"
 
 Exit hooks
 ----------
