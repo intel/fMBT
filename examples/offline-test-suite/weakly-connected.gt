@@ -1,0 +1,12 @@
+P(start, "gt:istate")
+->
+T(start, "iLoop", start)
+T(start, "iBranch1", branch1)
+T(start, "iBranch2", branch2)
+T(start, "iBranch3", branch3)
+
+T(branch1, "iLoop", branch1)
+
+T(branch2, "iLoop", branch2)
+T(branch2, "iBranch2.1", branch1)
+T(branch2, "iBranch2.2", branch2.2)
