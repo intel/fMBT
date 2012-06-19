@@ -8,6 +8,8 @@ examplesjavadir = @docdir@/examples/java-configurationtest
 
 examplescoursecamerapygtdir = @docdir@/examples/fmbtcourse-camera-pygt
 
+examplesofflinetestsuitedir = @docdir@/examples/offline-test-suite
+
 dist_examplescpp_DATA = \
 	c++-unittest/Makefile			\
 	c++-unittest/mycounter.cc		\
@@ -45,3 +47,9 @@ dist_examplescoursecamerapygt_DATA = \
 	fmbtcourse-camera-pygt/capture-py.conf	\
 	fmbtcourse-camera-pygt/README		\
 	fmbtcourse-camera-pygt/teststeps.py
+
+dist_examplesofflinetestsuite_DATA = \
+	offline-test-suite/generate-all-tests		\
+	offline-test-suite/weakly-connected.gt		\
+	offline-test-suite/weakly-connected.conf	\
+	offline-test-suite/README

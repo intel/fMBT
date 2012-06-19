@@ -95,3 +95,5 @@ while [ "$verdict" == "inconclusive" ]; do
         fi
     fi
 done
+
+rm -f next-test.conf
