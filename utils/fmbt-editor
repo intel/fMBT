@@ -613,7 +613,7 @@ on_inconc = "exit:2"
         if fmbt_exitstatus == 0:
             self._test_ok = True
         elif fmbt_exitstatus == 127:
-            error('Cannot execute "fmbt". Check you fMBT installation and PATH.',gui=1)
+            error('Cannot execute "fmbt". Check you fMBT installation and PATH.',gui=0)
         else:
             self._test_ok = False
 

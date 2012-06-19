@@ -19,7 +19,7 @@
 """
 fMBT log tool
 
-Usage: fmbt-log [options] [logfile]
+Usage: fmbt-log [options] [logfile...]
 
 Options:
   -o, --output=<file>
@@ -141,13 +141,23 @@ if __name__ == '__main__':
                                               '%(' + field + ')s')
     output_format += '\n'
 
-    if remainder and remainder[0] != "-":
-        input_file_obj = file(remainder[0], "r")
+    if not remainder:
+        extract(input_file_obj, output_file_obj, output_format, option_raw)
 
-    extract(input_file_obj, output_file_obj, output_format, option_raw)
+        try: input_file_obj.close()
+        except: pass
+
+    else:
+        for logfilename in remainder:
+            if logfilename != "-":
+                input_file_obj = file(logfilename, "r")
+            else:
+                input_file_obj = sys.stdin
+
+            extract(input_file_obj, output_file_obj, output_format, option_raw)
+
+            try: input_file_obj.close()
+            except: pass
 
     try: output_file_obj.close()
-    except: pass
-    
-    try: input_file_obj.close()
     except: pass

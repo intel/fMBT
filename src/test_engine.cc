@@ -184,6 +184,8 @@ Verdict::Verdict Test_engine::stop_test(End_condition* ec)
     return stop_test(ec->verdict, "time limit reached");
   case End_condition::NOPROGRESS:
     return stop_test(ec->verdict, "no progress limit reached");
+  case End_condition::DEADLOCK:
+    return stop_test(ec->verdict, "deadlock reached");
   default:
     return stop_test(ec->verdict, "unknown");
   }
@@ -218,7 +220,7 @@ void log_strarray(Log&l,
 
 Verdict::Verdict Test_engine::run(time_t _end_time)
 {
-  float last_coverage = 0.0;
+  float last_coverage = heuristic.getCoverage();
   end_time=_end_time;
 
   int condition_i = -1; /* index of end condition that is stopping the run */

@@ -1,0 +1,5 @@
+P(start, "gt:istate")
+->
+T(start, "iA", start)
+T(start, "iB", start)
+T(start, "iC", start)

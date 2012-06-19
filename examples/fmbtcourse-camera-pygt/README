@@ -1,0 +1,12 @@
+This example demonstrates testing a camera with a GT model and Python
+adapter.
+
+Files:
+
+capture-py.conf  test configuration file
+
+capture-py.gt    GT model
+
+teststeps.py     test step implementations
+
+camera.py        camera implementation

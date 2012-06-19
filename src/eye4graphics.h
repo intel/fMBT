@@ -26,7 +26,26 @@ extern "C" {
         int32_t error;
     } BoundingBox;
 
-    int findSingleIcon(BoundingBox* retval,
+    /*
+     * findSingleIcon
+     *
+     * Parameters:
+     *   - bbox for returning found icon's bounding box
+     *   - imagefile - name of image to be searched from (haystack)
+     *   - iconfile - name of icon to be search for (needle)
+     *   - threshold - max. acceptable error.
+     *       0: perfect match
+     *       9: big error allowed
+     *
+     * Return value:
+     *    0: success
+     *   -1: found an icon but it has too big error
+     *   -2: nothing like icon has been found
+     *   -3: cannot open imagefile
+     *   -4: cannot open iconfile
+     */
+
+    int findSingleIcon(BoundingBox* bbox,
                        const char* imagefile,
                        const char* iconfile,
                        const int threshold);

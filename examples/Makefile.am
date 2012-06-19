@@ -6,6 +6,10 @@ examplesshelldir = @docdir@/examples/shell-configurationtest
 
 examplesjavadir = @docdir@/examples/java-configurationtest
 
+examplescoursecamerapygtdir = @docdir@/examples/fmbtcourse-camera-pygt
+
+examplesofflinetestsuitedir = @docdir@/examples/offline-test-suite
+
 dist_examplescpp_DATA = \
 	c++-unittest/Makefile			\
 	c++-unittest/mycounter.cc		\
@@ -16,11 +20,11 @@ dist_examplescpp_DATA = \
 
 dist_examplesjs_DATA = \
 	javascript-unittest/mycounter.js		\
-	javascript-unittest/README		\
-	javascript-unittest/regressiontest.conf	\
-	javascript-unittest/reliabilitytest.conf \
-	javascript-unittest/smoketest.conf	\
-	javascript-unittest/test.html		\
+	javascript-unittest/README			\
+	javascript-unittest/regressiontest.conf		\
+	javascript-unittest/reliabilitytest.conf	\
+	javascript-unittest/smoketest.conf		\
+	javascript-unittest/test.html			\
 	javascript-unittest/testmodel.gt		\
 	javascript-unittest/teststeps.py
 
@@ -36,3 +40,16 @@ dist_examplesjava_DATA = \
 	java-unittest/README				\
 	java-unittest/testtrue.conf			\
 	java-unittest/testfalse.conf
+
+dist_examplescoursecamerapygt_DATA = \
+	fmbtcourse-camera-pygt/capture-py.gt	\
+	fmbtcourse-camera-pygt/camera.py	\
+	fmbtcourse-camera-pygt/capture-py.conf	\
+	fmbtcourse-camera-pygt/README		\
+	fmbtcourse-camera-pygt/teststeps.py
+
+dist_examplesofflinetestsuite_DATA = \
+	offline-test-suite/generate-all-tests		\
+	offline-test-suite/weakly-connected.gt		\
+	offline-test-suite/weakly-connected.conf	\
+	offline-test-suite/README

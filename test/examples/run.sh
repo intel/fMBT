@@ -22,6 +22,7 @@
 # Setup test environment
 
 cd "$(dirname "$0")"
+TESTDIR=$(pwd)
 LOGFILE=/tmp/fmbt.test.examples.log
 export PATH=../../src:../../utils:$PATH
 
@@ -31,7 +32,7 @@ rm -f $LOGFILE
 ##########################################
 # Run the test
 
-teststep "testing example/c++-unittest..."
+teststep "testing examples/c++-unittest..."
 FAILED=0
 MYDIR=$(pwd)
 cd ../../examples/c++-unittest
@@ -71,3 +72,26 @@ make clean >> $LOGFILE || {
 cd "$MYDIR"
 if [ $FAILED == 1 ]; then testfailed
 else testpassed; fi
+
+
+teststep "testing examples/offline-test-suite"
+cd "$TESTDIR"
+echo "# copy example to $TESTDIR" >>$LOGFILE 2>&1
+cp -v ../../examples/offline-test-suite/{weakly-connected.gt,weakly-connected.conf,generate-all-tests} . >>$LOGFILE 2>&1 || {
+    testfailed
+    exit 1
+}
+rm -f test*.log
+echo "# generate tests" >>$LOGFILE 2>&1
+./generate-all-tests weakly-connected.conf >>$LOGFILE 2>&1 || {
+    testfailed
+    exit 1
+}
+echo "# check generated files" >>$LOGFILE 2>&1
+if [ -f test6.log ] && [ ! -f test7.log ] && [ ! -f next-test.conf ]; then
+    testpassed
+else
+    testfailed
+    exit 1
+fi
+rm -f weakly-connected.conf weakly-connected.gt generate-all-tests test*log

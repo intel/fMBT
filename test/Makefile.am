@@ -1,4 +1,4 @@
-TESTS = interactivemode/run.sh tutorial/run.sh adapters/run.sh examples/run.sh aalpython/run.sh fmbt-stats/run.sh coverage/run.sh exitvalue/run.sh
+TESTS = interactivemode/run.sh tutorial/run.sh adapters/run.sh examples/run.sh aalpython/run.sh fmbt-stats/run.sh coverage/run.sh exitvalue/run.sh history/run.sh
 
 dist_noinst_SCRIPTS = aalpython/run.sh aalpython/test1.py.aal
 
@@ -9,6 +9,8 @@ dist_noinst_SCRIPTS += coverage/run.sh coverage/t1.gt coverage/t2.gt
 dist_noinst_SCRIPTS += examples/run.sh
 
 dist_noinst_SCRIPTS += exitvalue/run.sh
+
+dist_noinst_SCRIPTS += history/run.sh history/one-step-tests.sh history/one-step-tests.conf history/abc.gt
 
 dist_noinst_SCRIPTS += tutorial/run.sh
 

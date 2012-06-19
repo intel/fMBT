@@ -1,0 +1,99 @@
+#!/bin/bash
+
+# fMBT, free Model Based Testing tool
+# Copyright (c) 2011, Intel Corporation.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU Lesser General Public License,
+# version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for
+# more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+########################################################################
+# This script generates tests many tests based on given configuration
+# file. New tests are generated as long as
+#
+# 1. generated tests result in verdict "inconclusive", and
+#
+# 2. generated tests increase coverage.
+#
+# Generated tests are stored in test<NUMBER>.log files.
+
+if [ ! -f "$1" ] || ! grep -q '^model' "$1"; then
+    echo "Usage: $0 <test-configuration-file>"
+    exit 1
+fi
+TESTCONF="$1"
+
+# If test configuration contains a non-dummy adapter, this script will
+# both generate and execute tests. Otherwise, GENERATE_ONLY=yes.
+if ! grep -q ^adapter "$TESTCONF" || \
+    grep -q ^adapter "$TESTCONF" | grep \"dummy\"; then
+    GENERATE_ONLY=yes
+else
+    GENERATE_ONLY=no
+fi
+
+##########################################
+# Remove previously generated tests
+
+rm -f test*.log
+
+
+##########################################
+# Test generation loop
+
+verdict="inconclusive"
+testnumber=0
+
+while [ "$verdict" == "inconclusive" ]; do
+
+    # Configuration for the next test run (next-test.conf) is built as
+    # follows:
+    # 
+    # - Append following line to original configuration:
+    #
+    #   history = "log:test<NUM>.log"
+    #
+    #   for each previously generated test <NUM>.
+
+    cp "$TESTCONF" next-test.conf
+
+    for prevlog in test*.log; do
+        echo "history = \"log:$prevlog\"" >> next-test.conf
+    done
+
+    testnumber=$(( $testnumber + 1 ))
+
+    # Generate the test.
+
+    fmbt -l test$testnumber.log next-test.conf
+
+    verdict=$(fmbt-log -f '$tv' test$testnumber.log)
+
+    if [ "$verdict" == "inconclusive" ]; then
+        start_coverage=$(fmbt-log -f '$sc' test$testnumber.log | head -n 1)
+        end_coverage=$(fmbt-log -f '$sc' test$testnumber.log | tail -n 1)
+
+        if [ "$start_coverage" == "$end_coverage" ]; then
+
+            # Coverage did not grow in the last test, time to stop
+            # test generation.  If tests are only generated (not
+            # executed), remove the last test.
+
+            if [ "$GENERATE_ONLY" == "yes" ]; then
+                rm -f test$testnumber.log
+            fi
+            break;
+        fi
+    fi
+done
+
+rm -f next-test.conf

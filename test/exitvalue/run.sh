@@ -58,7 +58,7 @@ teststep "exitvalue on inconclusive deadlock"
 cat > test.conf<<EOF
 model="lts:model.lsts"
 adapter="dummy"
-inconc="deadlock:dead"
+inconc="deadlock"
 on_fail   = "exit:1"
 on_pass   = "exit:2"
 on_inconc = "exit:3"

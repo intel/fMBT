@@ -26,7 +26,6 @@
 #include <Magick++.h>
 using namespace Magick;
 
-#define MIN(a,b) (a<b?a:b)
 #define COLORS 64
 
 #define INCOMPARABLE -1
@@ -68,10 +67,12 @@ long normdiag_error(int hayx,int neex,int neey,int x,int y,
     }
     // If color ranges are too different, bail out.
     if (hay_greatest - hay_smallest > (nee_greatest - nee_smallest) * 2 ||
-        nee_greatest - nee_smallest > (hay_greatest - hay_smallest) * 2)
+        nee_greatest - nee_smallest > (hay_greatest - hay_smallest) * 2) {
         return INCOMPARABLE;
+    }
 
     long delta = 0;
+    int checked_steps = 0;
     for(int checkx=xstart+1, checky=ystart+1;
         0 <= checkx && 0 <= checky &&
             0 <= checkx+xstep*2-1 && 0 <= checky+ystep*2-1 &&
@@ -103,9 +104,10 @@ long normdiag_error(int hayx,int neex,int neey,int x,int y,
             }
         }
         delta += bestdiff;
+        checked_steps += 1;
     }
 
-    return delta / MIN(neex, neey);
+    return delta / checked_steps;
 }
 
 /*
@@ -130,7 +132,7 @@ int iconsearch(std::vector<BoundingBox>& retval,
                Image& needle,
                const int threshold)
 {
-    const int color_threshold = COLORS * threshold; /* depends on the number of quantified colors */
+    const int color_threshold = COLORS * threshold;
     typedef std::pair<long, std::pair<int,int> > Candidate;
     std::vector< Candidate > candidates;
 
@@ -158,37 +160,28 @@ int iconsearch(std::vector<BoundingBox>& retval,
     }
 
     for (unsigned int ci=0; ci < candidates.size(); ci++) {
-        int thisdelta = candidates[ci].first;
-        int newdelta;
+        int thisdelta;
         int x = candidates[ci].second.first;
         int y = candidates[ci].second.second;
 
-        if ((newdelta = normdiag_error(hayx, neex, neey, x, y, hay_pixel, nee_pixel,
-                                       0, neey/2, 1, 0)) != INCOMPARABLE)
-            thisdelta += newdelta;
-        else {
-            candidates[ci].first = LONG_MAX;
-            break;
+        thisdelta = normdiag_error(hayx, neex, neey, x, y, hay_pixel, nee_pixel,
+                                  0, neey/2, 1, 0);
+        if (thisdelta == INCOMPARABLE) {
+            candidates[ci].first = LONG_MAX; continue;
         }
-
-        if ((newdelta = normdiag_error(hayx, neex, neey, x, y, hay_pixel, nee_pixel,
-                                       neex/2, 0, 0, 1)) != INCOMPARABLE)
-            thisdelta += newdelta;
-        else {
-            candidates[ci].first = LONG_MAX;
-            break;
+        candidates[ci].first += thisdelta;
+        thisdelta = normdiag_error(hayx, neex, neey, x, y, hay_pixel, nee_pixel,
+                                  neex/2, 0, 0, 1);
+        if (thisdelta == INCOMPARABLE) {
+            candidates[ci].first = LONG_MAX; continue;
         }
-
-
-        if ((newdelta = normdiag_error(hayx, neex, neey, x, y, hay_pixel, nee_pixel,
-                                       neex-1, 0, -1, 1)) != INCOMPARABLE)
-            thisdelta += newdelta;
-        else {
-            candidates[ci].first = LONG_MAX;
-            break;
+        candidates[ci].first += thisdelta;
+        thisdelta = normdiag_error(hayx, neex, neey, x, y, hay_pixel, nee_pixel,
+                                    neex-1, 0, -1, 1);
+        if (thisdelta == INCOMPARABLE) {
+            candidates[ci].first = LONG_MAX; continue;
         }
-
-        candidates[ci].first = thisdelta;
+        candidates[ci].first += thisdelta;
     }
 
     if (candidates.size() > 0) {
@@ -205,7 +198,7 @@ int iconsearch(std::vector<BoundingBox>& retval,
     else return 0;
 }
 
-int findSingleIcon(BoundingBox* retval,
+int findSingleIcon(BoundingBox* bbox,
                    const char* imagefile,
                    const char* iconfile,
                    const int threshold)
@@ -213,19 +206,42 @@ int findSingleIcon(BoundingBox* retval,
     /* TODO: another version with multiple versions of the same
      * icon. Clear, blurred, etc.
      */
-    Image haystack(imagefile);
-    Image needle(iconfile);
-    std::vector<BoundingBox> found;
-    if (iconsearch(found, haystack, needle, threshold) > 0 && found.size() > 0) {
-        *retval = found[0];
-    } else {
-        retval->left   = -1;
-        retval->top    = -1;
-        retval->right  = -1;
-        retval->bottom = -1;
-        retval->error  = -1;
+    Image *haystack;
+    Image *needle;
+
+    int retval = 0;
+
+    bbox->left   = -1;
+    bbox->top    = -1;
+    bbox->right  = -1;
+    bbox->bottom = -1;
+    bbox->error  = -1;
+
+    try { haystack = new Image(imagefile); }
+    catch(ErrorFileOpen e) {
+        return -3;
     }
-    return retval->error != -1;
+
+    try { needle = new Image(iconfile); }
+    catch(ErrorFileOpen e) {
+        delete haystack;
+        return -4;
+    }
+
+    std::vector<BoundingBox> found;
+    if (iconsearch(found, *haystack, *needle, threshold) > 0
+        && found.size() > 0) {
+        *bbox = found[0];
+        if (bbox->error > threshold)
+            retval = -2;
+        else
+            retval = 0;
+    } else {
+        retval = -1;
+    }
+    delete needle;
+    delete haystack;
+    return retval;
 }
 
 // make library:
@@ -239,16 +255,11 @@ int findSingleIcon(BoundingBox* retval,
 /*
 int main(int argc,char** argv)
 {
-    Image i1(argv[1]);
-    Image i2(argv[2]);
+    BoundingBox box;
 
-    std::vector<BoundingBox> found;
+    int retval = findSingleIcon(&box, argv[1], argv[2], 4);
 
-    iconsearch(found,i1,i2,4);
-
-    BoundingBox box = found[0];
-
-    printf("%i %i %i %i %i\n", box.left, box.top, box.right, box.bottom, box.error);
+    printf("%i %i %i %i %i retval=%i\n", box.left, box.top, box.right, box.bottom, box.error, retval);
 
     return 0;
 }
