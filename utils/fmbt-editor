@@ -232,6 +232,7 @@ class MainWindow(QtGui.QMainWindow):
         self._test_ok = False
 
         self.setupFileMenu()
+        self.setupEditMenu()
         self.setupViewMenu()
         self.setupCommandsMenu()
         self.setupHelpMenu()
@@ -758,6 +759,54 @@ on_inconc = "exit:2"
         self.preview.connect(self.preview, QtCore.SIGNAL("currentChanged(int)"),
                              self.previewTabChanged)
 
+    def find(self, findFlags):
+        class FindKeybShortcuts (QtCore.QObject):
+            def eventFilter(_, obj, event):
+                if event.type() == QtCore.QEvent.KeyPress and event.modifiers() == QtCore.Qt.ControlModifier:
+                    if event.key() == QtCore.Qt.Key_F:
+                        self.findNext()
+                        return True
+                    elif event.key() == QtCore.Qt.Key_R:
+                        self.findPrev()
+                        return True
+                    else:
+                        return False
+                else:
+                    return False
+        if not hasattr(self, "findDialog"):
+            self.findDialog = QtGui.QDialog(self.mainwidget)
+            self.findKeybShortcuts = FindKeybShortcuts()
+            self.findDialog.installEventFilter(self.findKeybShortcuts)
+            self.findLayout = QtGui.QHBoxLayout(self)
+            self.findDialog.setLayout(self.findLayout)
+            self.findTextWidget = QtGui.QLineEdit(self.findDialog)
+            self.findLayout.addWidget(QtGui.QLabel(self.findDialog, text="Find:"))
+            self.findLayout.addWidget(self.findTextWidget)
+            self.findLayout.addWidget(QtGui.QLabel(self.findDialog, text="Ctrl+F: next, Ctrl+R: prev"))
+            self.findTextWidget.connect(self.findTextWidget, QtCore.SIGNAL("returnPressed()"),
+                                        self.findNext)
+        if not self.findDialog.isVisible():
+            if self.editor.hasFocus():
+                self.findFrom = self.editor
+            elif self.conf_editor.hasFocus():
+                self.findFrom = self.conf_editor
+            elif self.preview_test.hasFocus():
+                self.findFrom = self.preview_test
+            else:
+                self.findFrom = None
+
+            if self.findFrom:
+                self.findDialog.show()
+                self.findDialog.raise_()
+        if self.findFrom:
+            self.findFrom.find(self.findTextWidget.text(), findFlags)
+
+    def findNext(self):
+        self.find(0)
+
+    def findPrev(self):
+        self.find(QtGui.QTextDocument.FindBackward)
+
     def editTabChanged(self, tabIndex):
         if tabIndex == EDITTAB_GT: self.editGT()
         elif tabIndex == EDITTAB_CONF: self.editConf()
@@ -777,6 +826,12 @@ on_inconc = "exit:2"
         fileMenu.addAction("&Save", self.saveFile, "Ctrl+S")
         fileMenu.addAction("Save &As...", self.saveFileAs)
         fileMenu.addAction("E&xit", QtGui.qApp.quit, "Ctrl+Q")
+
+    def setupEditMenu(self):
+        editMenu = QtGui.QMenu("&Edit", self)
+        self.menuBar().addMenu(editMenu)
+        editMenu.addAction("Find (next)", self.findNext, "Ctrl+F")
+        editMenu.addAction("Find (previous)", self.findPrev, "Ctrl+R")
 
     def setupViewMenu(self):
         viewMenu = QtGui.QMenu("&View", self)
