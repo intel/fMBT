@@ -1028,6 +1028,7 @@ on_inconc = "exit:2"
         c.deletePreviousChar()
         moveCursor(self._iterate_options[suggindex])
         self.editor.textCursor().endEditBlock()
+        self.editor.ensureCursorVisible()
 
     def refreshImages(self):
         if time.time() - self._last_keypress < 2.0:
