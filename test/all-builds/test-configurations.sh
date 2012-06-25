@@ -267,6 +267,12 @@ iMakeInstFedora() {
     
     helperMakeMakeInstall
 
+    # Fedora does not include /usr/local/lib/pythonX.X/site-packages
+    # to PYTHONPATH by default. As the default prefix in "make install"
+    # is /usr/local, we'll do that by our selves.
+
+    echo | $SSH_FEDORA_USER '(echo -n "export PYTHONPATH="; echo /usr/local/lib/python*/site-packages) >> .bashrc'
+
     testpassed
 }
 
