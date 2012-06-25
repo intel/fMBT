@@ -759,6 +759,28 @@ on_inconc = "exit:2"
         self.preview.connect(self.preview, QtCore.SIGNAL("currentChanged(int)"),
                              self.previewTabChanged)
 
+    def activeEditor(self):
+        if self.editor.hasFocus():
+            return self.editor
+        elif self.conf_editor.hasFocus():
+            return self.conf_editor
+        elif self.preview_test.hasFocus():
+            return self.preview_test
+        else:
+            return None
+    
+    def cutInActiveEditor(self):
+        editor = self.activeEditor()
+        if editor: editor.cut()
+
+    def copyInActiveEditor(self):
+        editor = self.activeEditor()
+        if editor: editor.copy()
+
+    def pasteInActiveEditor(self):
+        editor = self.activeEditor()
+        if editor: editor.paste()
+
     def find(self, findFlags):
         class FindKeybShortcuts (QtCore.QObject):
             def eventFilter(_, obj, event):
@@ -801,14 +823,7 @@ on_inconc = "exit:2"
                                         QtCore.SIGNAL("textEdited(QString)"),
                                         self.findTextChanged)
         if not self.findDialog.isVisible():
-            if self.editor.hasFocus():
-                self.findFrom = self.editor
-            elif self.conf_editor.hasFocus():
-                self.findFrom = self.conf_editor
-            elif self.preview_test.hasFocus():
-                self.findFrom = self.preview_test
-            else:
-                self.findFrom = None
+            self.findFrom = self.activeEditor()
 
             self.findReplaceWith = None
             self.findReplaceWidget.setText("")
@@ -866,6 +881,10 @@ on_inconc = "exit:2"
     def setupEditMenu(self):
         editMenu = QtGui.QMenu("&Edit", self)
         self.menuBar().addMenu(editMenu)
+        editMenu.addAction("Cut", self.cutInActiveEditor, "Ctrl+X")
+        editMenu.addAction("Copy", self.copyInActiveEditor, "Ctrl+C")
+        editMenu.addAction("Paste", self.pasteInActiveEditor, "Ctrl+V")
+        editMenu.addSeparator()
         editMenu.addAction("Find (next)", self.findNext, "Ctrl+F")
         editMenu.addAction("Find (previous)", self.findPrev, "Ctrl+R")
 
