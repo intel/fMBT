@@ -146,14 +146,7 @@ class MyScaleEvents(QtCore.QObject):
         elif self.attrowner.wheel_scale > self.max_scale: self.attrowner.wheel_scale = self.max_scale
         self.attrowner.wheel_scale_changed()
     def eventFilter(self, obj, event):
-        if event.type() == QtCore.QEvent.KeyPress and event.modifiers() == QtCore.Qt.ControlModifier:
-            if event.key() == QtCore.Qt.Key_Plus:
-                self.changeScale(1.1)
-                return True
-            elif event.key() == QtCore.Qt.Key_Minus:
-                self.changeScale(0.9)
-                return True
-        elif event.type() == QtCore.QEvent.Wheel and event.modifiers() == QtCore.Qt.ControlModifier:
+        if event.type() == QtCore.QEvent.Wheel and event.modifiers() == QtCore.Qt.ControlModifier:
             coefficient = 1.0 + event.delta() / 1440.0
             self.changeScale(coefficient)
         return False
@@ -690,10 +683,10 @@ on_inconc = "exit:2"
             editor.setUndoRedoEnabled(True)
             editor.setLineWrapMode(editor.NoWrap)
             editor.setFont(font)
-            editor_scaleevents = MyScaleEvents(editor, editor, 0.1, 2.0)
+            editor._scaleevents = MyScaleEvents(editor, editor, 0.1, 2.0)
             editor.wheel_scale = 1.0
             editor.wheel_scale_changed = lambda: (font.setPointSize(editor.wheel_scale * 12.0), editor.setFont(font))
-            editor.installEventFilter(editor_scaleevents)
+            editor.installEventFilter(editor._scaleevents)
             editor.installEventFilter(self._keypress_eventFilter)
             return editor
 
@@ -733,10 +726,10 @@ on_inconc = "exit:2"
 
             area = QtGui.QScrollArea(container)
             area.setWidget(image)
-            area.scale_event_filter = MyScaleEvents(area, area, 0.1, 1.0)
+            image._scaleevents = MyScaleEvents(area, area, 0.1, 1.0)
             area.wheel_scale = 1.0
             area.wheel_scale_changed = lambda: image.resize(area.wheel_scale * image.pixmap().size())
-            area.installEventFilter(area.scale_event_filter)
+            area.installEventFilter(image._scaleevents)
             layout.addWidget(area)
             container.area = area
             container._layout = layout # protect from garbage collector
@@ -768,7 +761,20 @@ on_inconc = "exit:2"
             return self.preview_test
         else:
             return None
-    
+
+    def activeImage(self):
+        if (self.preview_modelimage.hasFocus()
+            or self.preview_modelcont.area.hasFocus()):
+            return self.preview_modelimage
+        elif (self.preview_distimage.hasFocus()
+              or self.preview_distcont.area.hasFocus()):
+            return self.preview_distimage
+        elif (self.preview_covimage.hasFocus()
+              or self.preview_covcont.area.hasFocus()):
+            return self.preview_covimage
+        else:
+            return None
+
     def cutInActiveEditor(self):
         editor = self.activeEditor()
         if editor: editor.cut()
@@ -780,6 +786,20 @@ on_inconc = "exit:2"
     def pasteInActiveEditor(self):
         editor = self.activeEditor()
         if editor: editor.paste()
+
+    def zoomIn(self):
+        scalable = self.activeEditor()
+        if not scalable:
+            scalable = self.activeImage()
+        if scalable:
+            scalable._scaleevents.changeScale(1.1)
+
+    def zoomOut(self):
+        scalable = self.activeEditor()
+        if not scalable:
+            scalable = self.activeImage()
+        if scalable:
+            scalable._scaleevents.changeScale(0.9)
 
     def find(self, findFlags):
         class FindKeybShortcuts (QtCore.QObject):
@@ -894,6 +914,9 @@ on_inconc = "exit:2"
         viewMenu.addAction("Grow &editors", lambda: self.growTabs(0), "Shift+F5")
         viewMenu.addAction("Grow &previews", lambda: self.growTabs(1), "Shift+F4")
         viewMenu.addAction("Toggle editors on &top/left", self.toggleEditorsLeft, "Ctrl+T")
+        viewMenu.addSeparator()
+        viewMenu.addAction("Zoom in", self.zoomIn, "Ctrl++")
+        viewMenu.addAction("Zoom out", self.zoomOut, "Ctrl+-")
 
     def setupCommandsMenu(self):
         commandMenu = QtGui.QMenu("&Commands", self)
