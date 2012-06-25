@@ -865,7 +865,7 @@ on_inconc = "exit:2"
                 self.findCanReplace = False
 
     def findNext(self):
-        self.find(0)
+        self.find(QtGui.QTextDocument.FindFlags(0))
 
     def findPrev(self):
         self.find(QtGui.QTextDocument.FindBackward)
