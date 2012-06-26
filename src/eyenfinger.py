@@ -464,7 +464,7 @@ def _score(w1, w2):
 
 def _hocr2words(hocr):
     rv = {}
-    hocr = hocr.replace("<strong>","").replace("</strong>","")
+    hocr = hocr.replace("<strong>","").replace("</strong>","").replace("<em>","").replace("</em>","")
     hocr.replace("&#39;", "'")
     for name, code in htmlentitydefs.name2codepoint.iteritems():
         if code < 128:

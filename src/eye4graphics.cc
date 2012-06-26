@@ -30,6 +30,49 @@ using namespace Magick;
 
 #define INCOMPARABLE -1
 
+inline bool same_color(const PixelPacket *p1, const PixelPacket *p2)
+{
+    /* FIXME: this should be able to execute with threshold ==
+       0. However, if ImageMagick is build with QuantumDepth > 8,
+       there seem to be slight differences. Also casting to unsigned
+       char is not architecture independent. Use ImageMagick to
+       quantify colors correctly!
+     */
+    const int threshold = 1;
+    if ((unsigned char)(p1->red) - threshold <= (unsigned char)(p2->red) &&
+        (unsigned char)(p1->red) + threshold >= (unsigned char)(p2->red) &&
+        (unsigned char)(p1->green) - threshold <= (unsigned char)(p2->green) &&
+        (unsigned char)(p1->green) + threshold >= (unsigned char)(p2->green) &&
+        (unsigned char)(p1->blue) - threshold <= (unsigned char)(p2->blue) &&
+        (unsigned char)(p1->blue) + threshold >= (unsigned char)(p2->blue)) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool pixelperfect_match(int hayx, int neex, int neey, int x, int y,
+                        const PixelPacket *hay_pixel,
+                        const PixelPacket *nee_pixel)
+{
+    for(int i=0; i<neey && i<neex; i++) {
+        if (!same_color((hay_pixel + hayx*(y+i) + x+i),
+                        (nee_pixel + neex*i     + i))) {
+            return false;
+        }
+    }
+    
+    for(int _y=0; _y<neey; _y++) {
+        for(int _x=0; _x<neex; _x++) {
+            if (!same_color((hay_pixel + hayx*(y+_y) + x+_x),
+                            (nee_pixel + neex*_y     + _x))) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 long normdiag_error(int hayx,int neex,int neey,int x,int y,
                     const PixelPacket *hay_pixel,
                     const PixelPacket *nee_pixel,
@@ -136,20 +179,46 @@ int iconsearch(std::vector<BoundingBox>& retval,
     typedef std::pair<long, std::pair<int,int> > Candidate;
     std::vector< Candidate > candidates;
 
-    int hayx=haystack.columns(),hayy=haystack.rows();
-
     haystack.modifyImage();
-    haystack.type(TrueColorType);
-    const PixelPacket *hay_pixel=haystack.getConstPixels(0,0,hayx,hayy);
-
-    int neex=needle.columns(),neey=needle.rows();
     needle.modifyImage();
-    needle.type(TrueColorType);
+
+    if (threshold == 0) {
+        haystack.type(TrueColorType);
+        needle.type(TrueColorType);
+    } else {
+        haystack.type(GrayscaleType);
+        needle.type(GrayscaleType);
+    }
+    int hayx = haystack.columns(), hayy = haystack.rows();
+    int neex = needle.columns(), neey = needle.rows();
+    const PixelPacket *hay_pixel=haystack.getConstPixels(0,0,hayx,hayy);
     const PixelPacket *nee_pixel=needle.getConstPixels(0,0,neex,neey);
 
+    if (threshold == 0) {
+        /* Pixel-perfect match */
+        int match_count = 0;
+        for (int y=0; y < hayy-neey; y++) {
+            for (int x=0; x < hayx-neex; x++) {
+                if (pixelperfect_match(hayx, neex, neey, x, y,
+                                       hay_pixel, nee_pixel)) {
+                    BoundingBox bbox;
+                    bbox.left = x;
+                    bbox.top = y;
+                    bbox.right = x + neex;
+                    bbox.bottom = y + neey;
+                    bbox.error = 0;
+                    retval.push_back(bbox);
+                    match_count++;
+                }
+            }
+        }
+        return match_count > 0 ? 1 : 0;
+    }
+    
+    /* Fuzzy match */
     /* sweep diagonal */
-    for(int y=0;y<hayy-neey;y++) {
-        for(int x=0;x<hayx-neex;x++) {
+    for (int y=0;y<hayy-neey;y++) {
+        for (int x=0;x<hayx-neex;x++) {
             long thisdelta = normdiag_error(hayx, neex, neey, x, y,
                                             hay_pixel, nee_pixel,
                                             0, 0, 1, 1);
@@ -159,6 +228,7 @@ int iconsearch(std::vector<BoundingBox>& retval,
         }
     }
 
+    /* sweep more lines */
     for (unsigned int ci=0; ci < candidates.size(); ci++) {
         int thisdelta;
         int x = candidates[ci].second.first;

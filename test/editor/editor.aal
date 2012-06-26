@@ -85,7 +85,7 @@ aal "editormodel" {
             time.sleep(0.1)
             reRead()
             iVerifyWord('"modelname"', capture="modelname.gif")
-            iClickWord("guard()", mouseevent=MOUSEEVENT_MOVE) # take mouse off the menu
+            iClickWord("guard()", mouseevent=MOUSEEVENT_MOVE, capture="moved.gif") # take mouse off the menu
             reRead()
         }
     }
@@ -97,7 +97,7 @@ aal "editormodel" {
             test_generated = True
         }
         adapter() {
-            iClickWord("File")
+            iClickWord("File", match=0.66)
             time.sleep(0.2)
             iType("n")
             time.sleep(0.2)
