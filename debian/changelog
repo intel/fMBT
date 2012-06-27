@@ -1,3 +1,13 @@
+fmbt (0.1) natty; urgency=low
+
+  * fmbt-editor cut/copy/paste/zoom in/zoom out.
+  * eyenfinger offers iClickIcon and iVerifyIcon.
+  * offline-test-suite test generation example.
+  * documentation on high-level architecture.
+  * bug fixes.
+
+ -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 27 Jun 2012 10:18:05 +0300
+
 fmbt (0.1-rc14) natty; urgency=low
 
   * Lots of bugs executed and buried.
