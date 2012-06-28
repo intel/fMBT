@@ -403,9 +403,8 @@ class BreakRule(object):
 
     def __str__(self):
         return "BREAK"
-    
 
-def parse_rulestr(s):
+def parse_rulestr(s, filename):
 
     def parse_string(s,result_rules):
         """
@@ -415,6 +414,11 @@ def parse_rulestr(s):
         """
         s=s.lstrip()
         while s:
+            lines_left = s.count('\n')
+            cm = commentline_re.match(s)
+            if cm:
+                s=s[cm.end():].lstrip()
+                continue
             trm=tr_re.match(s)
             spm=sp_re.match(s)
             reqm=req_re.match(s)
@@ -444,14 +448,12 @@ def parse_rulestr(s):
             else:
                 return len(s)
         return 0
-    # end of subfunction 
-    
+    # end of subfunction
+
     r=Rule()
 
-    # remove comments
-    s=re.sub(commentline_re,'',s)
-    s=s.replace('\\\n',' ').replace('\n',' ')
-    s=s.lstrip()
+    #s=s.replace('\\\n',' ').replace('\n',' ')
+    #s=s.lstrip()
 
     applym=apply_spec_re.match(s)
     if applym:
@@ -462,24 +464,33 @@ def parse_rulestr(s):
 
     o=separator.match(s)
     if not o:
-        raise GTError("Parse error: '->' missing in rule '%s'" % s)
+        bad_line = s[:s.find('\n')]
+        print >>sys.stderr, "%s:%s syntax error: '->' missing in rule '%s'" % (filename, 1, bad_line)
+        raise GTError("parsing GT failed.")
     slhs=o.group(1)
     srhs=o.group(2)
 
     # Parse the left-hand side of the rule
     n=parse_string(slhs,r.lhs)
     if n!=0:
-        print "Parse error on the left hand side:"
-        print slhs
-        print "%s^" % (" "*(len(slhs)-n))
-        sys.exit(2)
+        line_number = slhs[:len(slhs)-n].count('\n') + 1
+        if next_linefeed > 0:
+            bad_line = slhs[len(slhs)-n: len(slhs)-n + next_linefeed]
+        else:
+            bad_line = slhs[len(slhs)-n:].rstrip()
+        print >>sys.stderr, "%s:%s syntax error in '%s'" % (filename, line_number, bad_line)
+        raise GTError("parsing GT failed.")
     # Parse the right-hand side of the rule
     n=parse_string(srhs,r.rhs)
     if n!=0:
-        print "Parse error on the right hand side:"
-        print srhs
-        print "%s^" % (" "*(len(srhs)-n))
-        sys.exit(2)
+        line_number = slhs.count('\n') + srhs[:len(srhs)-n].count('\n') + 1
+        next_linefeed = srhs[len(srhs)-n:].find('\n')
+        if next_linefeed > 0:
+            bad_line = srhs[len(srhs)-n: len(srhs)-n + next_linefeed]
+        else:
+            bad_line = srhs[len(srhs)-n:].rstrip()
+        print >>sys.stderr, "%s:%s syntax error in '%s'" % (filename, line_number, bad_line)
+        raise GTError("parsing GT failed.")
     return r
 
 ### End of Parsing #######################
@@ -1094,9 +1105,13 @@ def parse_args(argv):
             print version
             sys.exit(1)
         elif opt in ["-f", "--file"]:
-            if arg == "-": rules = sys.stdin.read()
-            else: rules = file(arg).read()
-            arg_rules = [s.strip(" \n\t'") 
+            if arg == "-":
+                filename = "<stdin>"
+                rules = sys.stdin.read()
+            else:
+                filename = arg
+                rules = file(arg).read()
+            arg_rules = [(s.strip(" \n\t'"), filename)
                          for s in rules.split("'\n")
                          if s.strip(" \n\t'")]
         elif opt in ["-i", "--input"]:
@@ -1106,7 +1121,8 @@ def parse_args(argv):
 
     # transformation rules
     if arg_rules == []:
-        arg_rules = remainder
+        arg_rules = [(rule, "<command line rule #%s>" % (ruleindex + 1,))
+                     for (ruleindex , rule) in enumerate(remainder)]
         remainder = []
 
     if remainder != []:
@@ -1130,7 +1146,7 @@ def gt(input_fileobj,output_fileobj,keep_labels,rules):
     
     # the rest of command line arguments are handled as rules.
 
-    all_rules=[parse_rulestr(s) for s in rules]
+    all_rules=[parse_rulestr(s, filename) for (s, filename) in rules]
     
     next_lsts=inlsts
 
