@@ -474,6 +474,7 @@ def parse_rulestr(s, filename):
     n=parse_string(slhs,r.lhs)
     if n!=0:
         line_number = slhs[:len(slhs)-n].count('\n') + 1
+        next_linefeed = slhs[len(slhs)-n:].find('\n')
         if next_linefeed > 0:
             bad_line = slhs[len(slhs)-n: len(slhs)-n + next_linefeed]
         else:
