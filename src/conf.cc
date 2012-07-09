@@ -55,13 +55,21 @@ void Conf::load(std::string& name,std::string& content)
   D_Parser *p = new_D_Parser(&parser_tables_conf, 512);
   p->loc.pathname = name.c_str();
   char *s;
-  
-  Conf* tmp=conf_obj;
+
   log.push("conf_load");
   log.debug("Conf::load %s",name.c_str());
+  s=readfile(name.c_str());
+
+  if (s==NULL) {
+    status=false;
+    errormsg=std::string("Can't read configuration file \"")+name+"\"";
+    log.pop();
+    return;
+  }
+
+  Conf* tmp=conf_obj;
   conf_obj=this;
 
-  s=readfile(name.c_str());
   std::string ss(s);
   ss=ss+"\n"+content;
   if ((name!="" && s==NULL))
