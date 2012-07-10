@@ -32,6 +32,7 @@ Log* l=NULL;
 #include <cstdlib>
 #include "dparse.h"
 #include "history_log.hh"
+#include "config.h"
 
 extern "C" {
 extern D_ParserTables parser_tables_uconf;
@@ -79,12 +80,17 @@ int main(int argc,char * const argv[])
 
   static struct option long_opts[] = {
     {"help", no_argument, 0, 'h'},
+    {"version", no_argument, 0, 'v'},
     {0, 0, 0, 0}
   };
 
-  while ((c = getopt_long (argc, argv, "hu:p:f:o:", long_opts, NULL)) != -1)
+  while ((c = getopt_long (argc, argv, "hu:p:f:o:v", long_opts, NULL)) != -1)
     switch (c)
     {
+    case 'v':
+      printf("Version: "VERSION"\n");
+      return 0;
+      break;
     case 'D': 
       debug_enabled=true;
       break;
