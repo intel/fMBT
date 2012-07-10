@@ -62,6 +62,14 @@ void Conf::load(std::string& name,std::string& content)
   conf_obj=this;
 
   s=readfile(name.c_str());
+
+  if (s==NULL) {
+    status=false;
+    errormsg=std::string("Can't read configuration file \"")+name+"\"";
+    log.pop();
+    return;
+  }
+
   std::string ss(s);
   ss=ss+"\n"+content;
   if ((name!="" && s==NULL))
