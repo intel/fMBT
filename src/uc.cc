@@ -80,11 +80,11 @@ int main(int argc,char * const argv[])
 
   static struct option long_opts[] = {
     {"help", no_argument, 0, 'h'},
-    {"version", no_argument, 0, 'v'},
+    {"version", no_argument, 0, 'V'},
     {0, 0, 0, 0}
   };
 
-  while ((c = getopt_long (argc, argv, "hu:p:f:o:v", long_opts, NULL)) != -1)
+  while ((c = getopt_long (argc, argv, "hu:p:f:o:V", long_opts, NULL)) != -1)
     switch (c)
     {
     case 'v':

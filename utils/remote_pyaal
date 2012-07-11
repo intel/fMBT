@@ -260,13 +260,16 @@ if __name__ == "__main__":
 
     # Parse arguments
     opts, remainder = getopt.gnu_getopt(
-        sys.argv[1:], 'dhl:L:t:o:D:H:S:',
+        sys.argv[1:], 'dhl:L:t:o:D:H:S:V',
         ["debug", "help", "log-file=", "timeout=", "output=", 
-         "lsts-depth=", "lsts-hide-var=", "lsts-show-var="])
+         "lsts-depth=", "lsts-hide-var=", "lsts-show-var=", "version"])
 
     for opt, arg in opts:
         if opt in ["-d", "--debug"]:
             opt_debug = True
+        elif opt in ['-V', '--version']:
+            print "Version"
+            sys.exit(0)
         elif opt in ["-h", "--help"]:
             print __doc__
             sys.exit(0)

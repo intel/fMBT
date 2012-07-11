@@ -93,12 +93,15 @@ opt_qt_bindings  = "PySide"
 opt_qt           = []
 
 opts, remainder = getopt.getopt(
-    sys.argv[1:], 'hpq:Q:',
-    ["help", "no-preview", "qt-bindings=", "qt="])
+    sys.argv[1:], 'Vhpq:Q:',
+    ["version", "help", "no-preview", "qt-bindings=", "qt="])
 
 for opt, arg in opts:
     if opt in ["-h", "--help"]:
         print __doc__
+        sys.exit(0)
+    elif opt in ['-V', '--version']:
+        print "Version"
         sys.exit(0)
     elif opt in ["-p", "--no-preview"]:
         opt_hide_preview = True

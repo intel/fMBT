@@ -107,10 +107,13 @@ if __name__ == "__main__":
 
     # Parse arguments
     opts, remainder = getopt.gnu_getopt(
-        sys.argv[1:], 'hl:L:',
-        ["help", "log-file="])
+        sys.argv[1:], 'hl:L:V',
+        ["help", "log-file=", "version"])
 
     for opt, arg in opts:
+        if opt in ["-V", "--version"]:
+            print "Version"
+            sys.exit(0)
         if opt in ["-h", "--help"]:
             print __doc__
             sys.exit(0)

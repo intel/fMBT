@@ -827,12 +827,15 @@ if __name__ == "__main__":
 
     # Parse arguments
     opts, remainder = getopt.gnu_getopt(
-        sys.argv[1:], 'ho:s:',
-        ["help", "output=", "sync="])
+        sys.argv[1:], 'ho:s:V',
+        ["help", "output=", "sync=", "version"])
 
     for opt, arg in opts:
         if opt in ["-h", "--help"]:
             print __doc__
+            sys.exit(0)
+        elif opt in ['-V', '--version']:
+            print "Version"
             sys.exit(0)
         elif opt in ["-s", "--sync"]:
             try: sync_regexps.append(re.compile(arg))

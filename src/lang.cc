@@ -102,14 +102,14 @@ int main(int argc,char** argv) {
   FILE* outputfile=stdout;
   static struct option long_opts[] = {
     {"help", no_argument, 0, 'h'},
-    {"version", no_argument, 0, 'v'},
+    {"version", no_argument, 0, 'V'},
     {0, 0, 0, 0}
   };
 
-  while ((c = getopt_long (argc, argv, "B:b:hco:D:v", long_opts, NULL)) != -1) {
+  while ((c = getopt_long (argc, argv, "B:b:hco:D:V", long_opts, NULL)) != -1) {
     switch (c)
       {
-      case 'v':
+      case 'V':
 	printf("Version: "VERSION"\n");
 	return 0;
 	break;

@@ -530,11 +530,14 @@ if __name__ == '__main__':
     plot_filename = None
 
     opts, remainder = getopt.getopt(
-        sys.argv[1:], 'hf:o:p:',
-        ['help', 'format=', 'output=', 'plot='])
+        sys.argv[1:], 'hf:o:p:V',
+        ['help', 'format=', 'output=', 'plot=', 'version'])
     for opt, arg in opts:
         if opt in ['-h', '--help']:
             print __doc__
+            sys.exit(0)
+        elif opt in ['-V', '--version']:
+            print "Version"
             sys.exit(0)
         elif opt in ['-f', '--format']:
             output_format = arg

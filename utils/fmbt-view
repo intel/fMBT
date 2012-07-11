@@ -36,9 +36,10 @@ LOGFILE=""
 OUTPUTFILE=""
 COLORING=""
 DISPLAY_IMAGE=1
-while getopts f:il:o: opt
+while getopts f:il:o:v opt
 do
     case $opt in
+	v) echo "Version" exit 0;;
         f) FORMAT=$OPTARG;;
         i) COLORING="--invert-colors";;
         l) LOGFILE="-l $OPTARG";;
