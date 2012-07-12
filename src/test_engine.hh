@@ -40,7 +40,7 @@ public:
     condition that evaluates to true in the current setting, or -1 if
     all end conditions are false.
   */
-  virtual int matching_end_condition(int step_count,int state=0);
+  virtual int matching_end_condition(int step_count,int state=0,int action=-1);
   static time_t    end_time;
 
   const std::string& verdict_msg();
@@ -54,6 +54,7 @@ protected:
   Verdict::Verdict stop_test(Verdict::Verdict v, const char* _reason);
 
   int       max_step_count;
+  int       step_count;
   float     target_coverage;
   int       exit_tag;
   Heuristic &heuristic;

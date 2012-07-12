@@ -97,6 +97,12 @@ End_condition::End_condition(Verdict::Verdict v, Counter c, std::string* p)
     case DEADLOCK:
       status = true;
       break;
+    case ACTION:
+      // param already contains the action string, but it cannot be
+      // converted into index (param_long) because the model is not
+      // initialized
+      status = true;
+      break;
     } /* switch (counter) ... */    
 }
 

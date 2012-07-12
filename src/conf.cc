@@ -201,6 +201,10 @@ Verdict::Verdict Conf::execute(bool interactive) {
       End_condition* e = end_conditions[i];
       if (e->status == false)
         RETURN_ERROR_VERDICT("Error in end condition: " + e->stringify());
+      if (e->counter == End_condition::ACTION) {
+        // avoid string comparisons, fetch the index of the tag
+        e->param_long = find(model->getActionNames(), *(e->param));
+      }
       if (e->counter == End_condition::STATETAG) {
         // avoid string comparisons, fetch the index of the tag
         e->param_long = find(model->getSPNames(), *(e->param));

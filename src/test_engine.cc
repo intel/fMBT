@@ -79,7 +79,8 @@ void Test_engine::print_time(struct timeval& start_time,
 }
 
 Test_engine::Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p,std::vector<End_condition*>& ecs)
-  : heuristic(h),
+  : step_count(0),
+    heuristic(h),
     adapter(a),
     log(l),
     policy(p),
@@ -186,6 +187,8 @@ Verdict::Verdict Test_engine::stop_test(End_condition* ec)
     return stop_test(ec->verdict, "no progress limit reached");
   case End_condition::DEADLOCK:
     return stop_test(ec->verdict, "deadlock reached");
+  case End_condition::ACTION:
+    return stop_test(ec->verdict, "executed break action");
   default:
     return stop_test(ec->verdict, "unknown");
   }
@@ -228,7 +231,6 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 
   int action=0;
   std::vector<int> actions;
-  int step_count=0;
 
   log_strarray(log,"action_name name=",
 	       heuristic.get_model()->getActionNames());
@@ -264,7 +266,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       gettimeofday(&Adapter::current_time,NULL);
       log.print("<current_time time=\"%i.%06i\"/>\n",Adapter::current_time.tv_sec,
                 Adapter::current_time.tv_usec);
-      if (-1 != (condition_i = matching_end_condition(step_count))) {
+      if (-1 != (condition_i = matching_end_condition(step_count,0,action))) {
 	goto out;
       }
     }
@@ -361,6 +363,13 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
         log.debug("%s %s",action,heuristic.getActionName(action).c_str(),"broken input acceptance");
         return stop_test(Verdict::FAIL, msg.c_str());
       }
+
+      // This is here on purpose. We want to check break condition after 
+      // checking if the response is 'correct'
+      if (-1 != (condition_i = matching_end_condition(step_count,0,adapter_response))) {
+	goto out;
+      }
+
     }
     } // switch
     log_tags();
@@ -437,6 +446,9 @@ void Test_engine::interactive()
   Adapter* current_adapter=&adapter;
   Model* current_model=heuristic.get_model();
 
+  std::vector<End_condition*> etags;
+  std::vector<End_condition*> atags;
+  std::string breakstr("breakpoint");
 #ifndef DROI
   rl_outstream=stderr;
 #endif
@@ -457,6 +469,105 @@ void Test_engine::interactive()
       unsigned int num = 0;
 
       switch (*s) {
+
+      case 'c': {
+	// Feel free to improve.
+	End_condition* e=NULL;
+	size_t count=end_conditions.size();
+	end_conditions.insert(end_conditions.begin()+count,
+			      etags.begin(),etags.end());
+	end_conditions.insert(end_conditions.begin()+count+etags.size(),
+			      atags.begin(),atags.end());
+
+	num=atoi(s+1);
+	if (num>0) {
+	  e=new End_condition(Verdict::INCONCLUSIVE,
+			      End_condition::STEPS,&breakstr);
+	  e->param_long=step_count+num;
+	  end_conditions.push_back(e);
+	}
+
+	Verdict::Verdict v=this->run();
+
+	end_conditions.erase(end_conditions.begin()+count,end_conditions.end());
+	break;
+      }
+      case 'd': {
+	num=std::atoi(s+1);
+	if (num>0 && num<=atags.size()) {
+	  atags.erase(atags.begin()+num-1);
+	}
+	break;
+      }
+      case 'D': {
+	num=std::atoi(s+1);
+	if (num>0 && num<=etags.size()) {
+	  etags.erase(etags.begin()+num-1);
+	}
+      }
+      case 'b': {
+	std::vector<std::string>& ana=heuristic.get_model()->getActionNames();
+	num=std::atoi(s+1);
+	if (num>0 && num<=ana.size()) {
+	  // Add breakpoint
+	  End_condition* e=new End_condition(Verdict::INCONCLUSIVE,
+					     End_condition::ACTION,
+					     &breakstr);
+	  e->param_long=num;
+	  atags.push_back(e);
+	} else {
+	  // print action breakpoints
+	  if (s[1]=='b') {
+	    // print numbers
+	    printf("Action breakpoints (%i)\n",(int)atags.size());
+	    for(unsigned i=0;i<atags.size();i++) {
+	      if (atags[i]>0) 
+		printf(" %i: %i\n",i+1,(int)atags[i]->param_long);
+	    }
+	  } else {
+	    // print names
+	    printf("Action breakpoints (%i)\n",(int)atags.size());
+	    for(unsigned i=0;i<atags.size();i++) {
+	      if (atags[i]>0) 
+		printf(" %i: %s\n",i+1,ana[atags[i]->param_long].c_str());
+	    }
+	  }
+	}
+	break;
+      }
+
+      case 'B': {
+	num=std::atoi(s+1);
+	std::vector<std::string>& ana=heuristic.get_model()->getSPNames();
+	unsigned int tag_count=ana.size();
+	if (num>0 && num<=tag_count) {
+	  // Add breakpoint
+	  End_condition* e=new End_condition(Verdict::INCONCLUSIVE,
+					     End_condition::STATETAG,
+					     &breakstr);
+	  e->param_long=num;
+	  etags.push_back(e);
+	} else {
+	  // print tag breakpoints
+	  if (s[1]=='B') {
+	    // print numbers
+	    printf("Tag breakpoints (%i)\n",(int)etags.size());
+	    for(unsigned i=0;i<etags.size();i++) {
+	      if (etags[i]>0) 
+		printf(" %i: %i\n",i+1,(int)etags[i]->param_long);
+	    }
+	  } else {
+	    // print names
+	    printf("Tag breakpoints (%i)\n",(int)etags.size());
+	    for(unsigned i=0;i<etags.size();i++) {
+	      if (etags[i]>0) 
+		printf(" %i: %s\n",i+1,ana[etags[i]->param_long].c_str());
+	    }
+	  }
+	}
+	break;
+      }
+
       case 's': { // commands "s", "s<num>": execute action at current state
         int* actions = 0;
         unsigned int action_count=current_model->getActions(&actions);
@@ -661,6 +772,13 @@ void Test_engine::interactive()
                "    e       - list executable actions at current adapter\n"
                "    e<num>  - exec action <num> of current adapter\n"
                "    <iname> - exec input action iname (starts with \"i\")\n"
+	       "    b       - print break actions (bb for numerical)\n"
+	       "    b<num>  - break at action <num>\n"
+	       "    d<num>  - delete action break <num>\n"
+	       "    B       - print break tags (BB for numerical)\n"
+	       "    B<num>  - break at tag <num>\n"
+	       "    D<num>  - delete tag break <num>\n"
+	       "    c<num>  - run (max num iterations) until break or test exit\n"
                "Change adapters/models:\n"
                "    a      - list low-level adapters of current adapter\n"
                "    a<num> - move down to adapter <num>\n"
@@ -686,7 +804,7 @@ void Test_engine::interactive()
   }
 }
 
-int Test_engine::matching_end_condition(int step_count,int state)
+int Test_engine::matching_end_condition(int step_count,int state, int action)
 {
   for (unsigned int cond_i = 0; cond_i < end_conditions.size(); cond_i++) {
 
@@ -694,6 +812,9 @@ int Test_engine::matching_end_condition(int step_count,int state)
 
     switch (e->counter)
     {
+    case End_condition::ACTION:
+      if ((action>=0) && (action==e->param_long)) return cond_i;
+      break;
     case End_condition::DEADLOCK:
       if (state==DEADLOCK) return cond_i;
       break;
