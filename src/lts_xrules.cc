@@ -32,9 +32,12 @@ extern Lts_xrules* xobj;
 
 std::string Lts_xrules::stringify()
 {
+  if (!status) {
+    return Writable::stringify();
+  }
   std::ostringstream t(std::ios::out | std::ios::binary);
   std::string name;
-
+  
   for(unsigned i=1;i<model_names.size();i++) {
     if (lts[i]!=NULL) {
       std::string s=lts[i]->stringify();
