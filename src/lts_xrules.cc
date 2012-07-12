@@ -54,6 +54,9 @@ std::string Lts_xrules::stringify()
 
 void Lts_xrules::prop_create()
 {
+  if (!status) {
+    return;
+  }
   if (prop_names.size()==0) {
     prop_names.push_back("");
   }
@@ -117,6 +120,10 @@ void Lts_xrules::add_file(unsigned int index,std::string& filename)
 {
   log.debug("%s(%i,%s)",__PRETTY_FUNCTION__,index,filename.c_str());
 
+  if (!status) {
+    return;
+  }
+
   if (model_names.size()<=index) {
     model_names.resize(index+2);
     lts.resize(index+2);
@@ -128,13 +135,22 @@ void Lts_xrules::add_file(unsigned int index,std::string& filename)
   
   model_names[index]=std::string(filename);
 
-  lts[index]=ModelFactory::create(log,filetype(filename),filename);
-  
-  if (!lts[index]->init()) {
-    status=false;    
+  std::string model_name,model_param;
+
+  split(filename, model_name, model_param);  
+
+  lts[index]=ModelFactory::create(log,model_name,model_param);
+
+  if (!lts[index]) {
+    status=false;
+    errormsg=std::string("Can't load model ")+filename;
   }
-  lts[index]->setparent(this);
-  
+
+  if (!lts[index] || !lts[index]->status || !lts[index]->init()) {
+    status=false;
+  } else {
+    lts[index]->setparent(this);
+  }
 }
 
 /*
@@ -224,6 +240,9 @@ void Lts_xrules::add_component(unsigned int index,std::string& name)
 
 void Lts_xrules::print_root_par()
 {
+  if (!status) {
+    return;
+  }
   print_par(&root_par);
 }
 
