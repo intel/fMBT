@@ -497,6 +497,9 @@ void Test_engine::interactive()
 	if (num>0 && num<=atags.size()) {
 	  atags.erase(atags.begin()+num-1);
 	}
+	if (s[1]=='d') {
+	  atags.clear();
+	}
 	break;
       }
       case 'D': {
@@ -504,7 +507,10 @@ void Test_engine::interactive()
 	if (num>0 && num<=etags.size()) {
 	  etags.erase(etags.begin()+num-1);
 	}
-      }
+	if (s[1]=='D') {
+	  etags.clear();
+	} 
+     }
       case 'b': {
 	std::vector<std::string>& ana=heuristic.get_model()->getActionNames();
 	num=std::atoi(s+1);
@@ -775,9 +781,11 @@ void Test_engine::interactive()
 	       "    b       - print break actions (bb for numerical)\n"
 	       "    b<num>  - break at action <num>\n"
 	       "    d<num>  - delete action break <num>\n"
+	       "    dd      - delete all action breaks\n"
 	       "    B       - print break tags (BB for numerical)\n"
 	       "    B<num>  - break at tag <num>\n"
 	       "    D<num>  - delete tag break <num>\n"
+	       "    DD      - delete all tag breaks\n"
 	       "    c<num>  - run (max num iterations) until break or test exit\n"
                "Change adapters/models:\n"
                "    a      - list low-level adapters of current adapter\n"
