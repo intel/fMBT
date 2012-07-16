@@ -67,6 +67,7 @@ AC_CONFIG_FILES([
         test/Makefile
         examples/Makefile
         fMBT.spec
+	utils/fmbt_config.py
         ])
 
 

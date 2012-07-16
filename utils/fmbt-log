@@ -53,6 +53,7 @@ If logfile is not given, log is read from standard input.
 import sys
 import getopt
 import urllib2
+import fmbt_config
 
 fields = {
     '$ax' : ['<action type=', '"', 3],
@@ -129,7 +130,7 @@ if __name__ == '__main__':
             print __doc__
             sys.exit(0)
         elif opt in ['-V', '--version']:
-            print "Version"
+            print "Version " + fmbt_config.fmbt_version
             sys.exit(0)
         elif opt in ['-r', '--raw']:
             option_raw = 1

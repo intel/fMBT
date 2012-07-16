@@ -78,6 +78,7 @@ import operator
 import subprocess
 import getopt
 import os
+import fmbt_config
 
 MAXSPEED=100000
 
@@ -537,7 +538,7 @@ if __name__ == '__main__':
             print __doc__
             sys.exit(0)
         elif opt in ['-V', '--version']:
-            print "Version"
+            print "Version " + fmbt_config.fmbt_version
             sys.exit(0)
         elif opt in ['-f', '--format']:
             output_format = arg

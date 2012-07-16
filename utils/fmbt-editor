@@ -49,6 +49,7 @@ import re
 import os
 import getopt
 import time
+import fmbt_config
 
 def error(msg, exit_status = 1, gui = False):
     sys.stderr.write("%s: %s\n" % (sys.argv[0], msg))
@@ -101,7 +102,7 @@ for opt, arg in opts:
         print __doc__
         sys.exit(0)
     elif opt in ['-V', '--version']:
-        print "Version"
+        print "Version " + fmbt_config.fmbt_version
         sys.exit(0)
     elif opt in ["-p", "--no-preview"]:
         opt_hide_preview = True
