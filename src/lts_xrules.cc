@@ -140,17 +140,31 @@ void Lts_xrules::add_file(unsigned int index,std::string& filename)
   split(filename, model_name, model_param);  
 
   lts[index]=ModelFactory::create(log,model_name,model_param);
-
+  
   if (!lts[index]) {
-    status=false;
-    errormsg=std::string("Can't load model ")+filename;
+    // Let's try to load lsts/xrules..
+
+    lts[index]=ModelFactory::create(log,filetype(filename),filename);
+    if (!lts[index]) {
+      status=false;
+      errormsg=std::string("Can't load model ")+filename;
+      return;
+    }
   }
 
-  if (!lts[index] || !lts[index]->status || !lts[index]->init()) {
+  if (!lts[index]->status) {
     status=false;
-  } else {
-    lts[index]->setparent(this);
+    errormsg="Submodel error"+filename+" "+lts[index]->errormsg;
+    return;
   }
+  
+  if (!lts[index]->init()) {
+    status=false;
+    errormsg="Failed to init submodel "+filename+" "+lts[index]->errormsg;
+    return;
+  }
+
+  lts[index]->setparent(this);
 }
 
 /*
