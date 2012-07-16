@@ -69,7 +69,7 @@ protected:
 
   struct timeval start_time;
   struct timeval total_time;
-
+  bool break_check;
 };
 
 #endif

@@ -88,7 +88,8 @@ Test_engine::Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p,std::vector<En
     last_step_cov_growth(0),
     m_verdict(Verdict::UNDEFINED),
     m_verdict_msg("undefined"),
-    m_reason_msg("undefined")
+    m_reason_msg("undefined"),
+    break_check(false)
 {
   p.set_model(h.get_model());
 }
@@ -366,7 +367,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 
       // This is here on purpose. We want to check break condition after 
       // checking if the response is 'correct'
-      if (-1 != (condition_i = matching_end_condition(step_count,0,adapter_response))) {
+      if (break_check && -1 != (condition_i = matching_end_condition(step_count,0,adapter_response))) {
 	goto out;
       }
 
@@ -487,7 +488,9 @@ void Test_engine::interactive()
 	  end_conditions.push_back(e);
 	}
 
+	break_check=true;
 	Verdict::Verdict v=this->run();
+	break_check=false;
 
 	end_conditions.erase(end_conditions.begin()+count,end_conditions.end());
 	break;
