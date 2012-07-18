@@ -51,6 +51,7 @@ shift $(expr $OPTIND - 1)
 UTILPATH="$(dirname "$0")"
 if [ "$OUTPUTFILE" == "" ]; then
         OUTPUTFILE=$(mktemp --suffix ."$FORMAT") || { echo "Can't create temporary file:""$OUTPUTFILE"; exit 1;}
+	
 fi
 
 ( eval $UTILPATH/lsts2dot --loops-in-states -i "$1" $COLORING $LOGFILE | dot -T$FORMAT -o"$OUTPUTFILE" ) && {
@@ -61,5 +62,6 @@ fi
         display "$OUTPUTFILE"
     fi
 }
-
-rm "$OUTPUTFILE"
+if [ "$DISPLAY_IMAGE" == "1" ]; then
+    rm "$OUTPUTFILE"
+fi
