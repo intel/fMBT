@@ -1,4 +1,4 @@
-fmbt (0.1) natty; urgency=low
+fmbt (0.1.0) natty; urgency=low
 
   * fmbt-editor cut/copy/paste/zoom in/zoom out.
   * eyenfinger offers iClickIcon and iVerifyIcon.
