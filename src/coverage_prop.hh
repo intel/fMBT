@@ -42,7 +42,7 @@ class Coverage_Prop: public Coverage {
 public:
   class unit;
   Coverage_Prop(Log& l, std::string& params);
-
+  virtual ~Coverage_Prop() {}
   virtual void push();
   virtual void pop();
 

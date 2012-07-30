@@ -20,6 +20,12 @@
 #include "mwrapper.hh"
 #include <cstring>
 
+Mwrapper::~Mwrapper()
+{
+  
+}
+
+
 Mwrapper::Mwrapper(Log&l, std::string params, aal* _model):
   Model(l, params), model(_model)  
 {

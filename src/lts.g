@@ -149,7 +149,7 @@ state_prop: 'Begin' 'State_props'
             prop_line*
             'End' 'State_props';
 
-prop_line: string ':' intv ';' { PREFIX add_prop($0.str,intv); intv.clear(); } ;
+prop_line: string ':' intv ';' { PREFIX add_prop($0.str,intv); intv.clear(); delete $0.str; $0.str=NULL; } ;
 
 intv: ( int { intv.push_back($0.val); } )* ;
 

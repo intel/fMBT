@@ -22,6 +22,13 @@
 #include <cstdlib>
 #include <cstring>
 
+Heuristic_mrandom::~Heuristic_mrandom()
+{
+  for(unsigned i=0;i<h.size();i++) {
+    delete h[i].second;
+  }
+}
+
 Heuristic_mrandom::Heuristic_mrandom(Log& l, std::string params) :
   Heuristic(l)
 {
@@ -100,6 +107,18 @@ void Heuristic_mrandom::set_model(Model* _model)
   for(unsigned i=0;i<h.size();i++) {
     h[i].second->set_model(_model);
   }  
+}
+
+bool Heuristic_mrandom::execute(int action)
+{
+  bool ret=true;
+  for(unsigned i=0;i<h.size();i++) {
+    model->push();
+    ret&=h[i].second->execute(action);
+    model->pop();
+  }
+  ret&=Heuristic::execute(action);
+  return ret;
 }
 
 void Heuristic_mrandom::set_coverage(Coverage* c)

@@ -30,7 +30,7 @@
 class Awrapper: public Adapter {
 public:
   Awrapper(Log&l, std::string params, aal* _ada);
-
+  virtual ~Awrapper();
   virtual void set_actions(std::vector<std::string>* _actions);
 
   virtual void execute(std::vector<int>& action);
