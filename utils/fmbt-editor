@@ -339,23 +339,41 @@ Keyboard shortcuts:<br>
                 file(self._confFileName, "w").write(self.conf_editor.toPlainText())
 
     def saveFileAs(self):
+        fileFormats = {'gt': "fMBT GT commands (*.gt)",
+                       'aal': "fMBT AAL models (*.aal)",
+                       'lsts': "State machines (*.lsts)",
+                       'conf': "fMBT test configuration (*.conf)",
+                       '*': "All files (*.*)"}
         if self.edit.currentIndex() == EDITTAB_GT:
-            path = QtGui.QFileDialog.getSaveFileName(self, "Save model",
-                                                     '', "fMBT GT commands (*.gt);;fMBT AAL models (*.aal);;State machines (*.lsts)")
-            if not_using_PySide:
-                self._set_gtFileName(path)
+            dialogTitle = "Save model"
+            if self._editingAAL():
+                fileFormatFilters = ['aal','gt','lsts','*']
+            elif self._editingLSTS():
+                fileFormatFilters = ['lsts','gt','aal','*']
+            elif self._editingGT():
+                fileFormatFilters = ['gt','aal','lsts','*']
             else:
-                self._set_gtFileName(path[0])
-
-            if not self._gtFileName:
-                self._set_gtFileName(path[0])
+                fileFormatFilters = ['*']
         else:
-            path = QtGui.QFileDialog.getSaveFileName(self, "Save configuration",
-                                                     '', "fMBT test configuration (*.conf)")
-            if not_using_PySide:
-                self._set_confFileName(path)
-            else:
-                self._set_confFileName(path[0])
+            dialogTitle = "Save configuration"
+            fileFormatFilters = ['conf', '*']
+
+        path = QtGui.QFileDialog.getSaveFileName(self, dialogTitle, '',
+                                                 ";;".join([fileFormats[n] for n in fileFormatFilters]))
+
+        if not_using_PySide:
+            newName = path
+        else:
+            newName = path[0]
+
+        if str(newName) == "":
+            return
+        
+        if self.edit.currentIndex() == EDITTAB_GT:
+            self._set_gtFileName(newName)
+        else:
+            self._set_confFileName(newName)
+
         self.saveFile()
 
     def openFile(self, path=None):
