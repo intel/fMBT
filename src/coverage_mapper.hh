@@ -27,6 +27,19 @@
 class Coverage_Mapper: public Coverage, Rules {
 public:
   Coverage_Mapper(Log& l, std::string params = "");
+  virtual ~Coverage_Mapper() {
+    for(unsigned i=0;i<coverages.size();i++) {
+      if (coverages[i]) {
+	delete coverages[i];
+	coverages[i]=NULL;
+      }
+    }
+    for(unsigned i=0;i<models.size();i++) {
+      if (models[i]) {
+	delete models[i];
+      }
+    }
+  }
 
   virtual std::string stringify();
 

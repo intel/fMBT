@@ -124,33 +124,33 @@ bool Coverage_Mapper::execute(int action)
       trace.push_back(action);
     }
     
-    if (depth==0 && coverages[i->second.first]->getCoverage()==1.0) {
-      /* time to load a new lsts*/
-      std::string n("lts_remote");
-      std::string p("/home/pablo/MBT/mas/fMBT/examples/shortener/new_pass");
-      Model* m =Model::create(log,n,p);
-      if (m && m->init() && m->reset()) {
-	log.print("<model ok/>\n");
-	if (model!=models[i->second.first]) {
-	  delete models[i->second.first];
-	}
-	Coverage* c=coverages[i->second.first];
-	models[i->second.first]=m;
-	c->set_model(m);
-	for(unsigned i=0;i<trace.size();i++) {
-	  m->execute(trace[i]);
-	  /*
-	  printf("executing %i, cov %03f\n",trace[i],
-		 c->getCoverage()
-		 );
-	  */
-	}
-      } else {
-	/* model error... */
-	printf("model error %s\n",
-	       m->errormsg.c_str());
-      }
-    }
+    // if (depth==0 && coverages[i->second.first]->getCoverage()==1.0) {
+    //   /* time to load a new lsts*/
+    //   std::string n("lts_remote");
+    //   std::string p("/home/pablo/MBT/mas/fMBT/examples/shortener/new_pass");
+    //   Model* m =Model::create(log,n,p);
+    //   if (m && m->init() && m->reset()) {
+    // 	log.print("<model ok/>\n");
+    // 	if (model!=models[i->second.first]) {
+    // 	  delete models[i->second.first];
+    // 	}
+    // 	Coverage* c=coverages[i->second.first];
+    // 	models[i->second.first]=m;
+    // 	c->set_model(m);
+    // 	for(unsigned i=0;i<trace.size();i++) {
+    // 	  m->execute(trace[i]);
+    // 	  /*
+    // 	  printf("executing %i, cov %03f\n",trace[i],
+    // 		 c->getCoverage()
+    // 		 );
+    // 	  */
+    // 	}
+    //   } else {
+    // 	/* model error... */
+    // 	printf("model error %s\n",
+    // 	       m->errormsg.c_str());
+    //   }
+    // }
   }
   return true; 
 }
