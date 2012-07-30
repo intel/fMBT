@@ -130,7 +130,7 @@ int Heuristic_greedy::getIAction()
       bool broken=true;
       int ret=m_path.back();
       for(int j=0;j<i;j++) {
-	if (actions[j]=ret) {
+	if (actions[j]==ret) {
 	  broken=false;
 	}
       }
