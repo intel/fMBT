@@ -33,6 +33,12 @@ log(l), actions(NULL), parent(NULL)
 
 Adapter::~Adapter()
 {
+  for(unsigned i=0;i<unames.size();i++) {
+    if (unames[i]) {
+      escape_free(unames[i]);
+      unames[i]=NULL;
+    }
+  }
 }
 
 void Adapter::set_actions(std::vector<std::string>* _actions)
