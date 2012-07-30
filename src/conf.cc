@@ -104,7 +104,7 @@ void Conf::load(std::string& name,std::string& content)
 		      + "\" failed.");
   }
 
-  Coverage* coverage = CoverageFactory::create(log,coverage_name,coverage_param);
+  coverage = CoverageFactory::create(log,coverage_name,coverage_param);
 
   if (coverage == NULL)
     RETURN_ERROR_VOID("Creating coverage \"" + coverage_name + "\" failed.");
