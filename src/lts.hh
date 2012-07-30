@@ -31,6 +31,7 @@ class Lts: public Model {
 public:
   Lts(Log&l, std::string params = ""):
     Model(l, params), state_cnt(0),action_cnt(0),transition_cnt(0),prop_cnt(0),init_state(0) {}
+  virtual ~Lts();
 
   virtual int getActions(int** actions);
   virtual int getIActions(int** actions);
@@ -112,12 +113,11 @@ protected:
   int prop_cnt;
   int init_state;
 
-  std::string* cur_str;
-
   std::ifstream input;
 
   void update_cur();
   bool pair(std::string& start,std::string& end);
+  std::string lts_name;
 };
 
 #endif
