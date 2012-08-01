@@ -30,9 +30,6 @@ class Coverage: public Writable {
 
 public:
   typedef Coverage*(*creator)(Log& l,std::string&);
-/*  static void add_factory(std::string name, creator c);
-  static Coverage* create(Log&,std::string&,std::string&);
-*/
 
   Coverage(Log& l);
   virtual ~Coverage();
