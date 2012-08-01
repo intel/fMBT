@@ -72,7 +72,6 @@ int main(int argc,char * const argv[])
 {
   FILE* outfile=stdout;
   char* usecasefile=NULL;
-  bool debug_enabled=false;
   int c;
   OutputFormat* of=NULL;
 
@@ -90,9 +89,6 @@ int main(int argc,char * const argv[])
     case 'v':
       printf("Version: "VERSION"\n");
       return 0;
-      break;
-    case 'D': 
-      debug_enabled=true;
       break;
     case 'u':
       // Usecase file

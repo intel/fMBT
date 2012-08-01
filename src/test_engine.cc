@@ -488,9 +488,9 @@ void Test_engine::interactive()
 	  end_conditions.push_back(e);
 	}
 
-	break_check=true;
-	Verdict::Verdict v=this->run();
-	break_check=false;
+        break_check=true;
+        this->run();
+        break_check=false;
 
 	end_conditions.erase(end_conditions.begin()+count,end_conditions.end());
 	break;
