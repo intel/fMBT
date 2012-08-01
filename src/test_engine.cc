@@ -361,7 +361,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 
         log.debug("Test_engine::run: ERROR: SUT executed %i '%s', not allowed in the model.\n",
                   action, heuristic.getActionName(action).c_str());
-        log.debug("%s %s",action,heuristic.getActionName(action).c_str(),"broken input acceptance");
+        log.debug("%i %s %s",action,heuristic.getActionName(action).c_str(),"broken input acceptance");
         return stop_test(Verdict::FAIL, msg.c_str());
       }
 
