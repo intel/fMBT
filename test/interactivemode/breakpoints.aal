@@ -1,0 +1,113 @@
+aal "interactive_breakpoints" {
+    language: python {
+        import pexpect
+        import time
+        fmbt_launch_command = "fmbt -i simple.conf"
+
+        p = pexpect.spawn(fmbt_launch_command)
+
+        def requireOutput(s):
+            assert p.expect(s, 1) == 0
+    }
+
+    # preview-hide-vars: p
+    # preview-depth: 5
+    variables {
+        abs, tbs
+    }
+    initial_state {
+        abs = 0 # action breakpoints
+        tbs = 0 # tag breakpoints
+    }
+    action "iAddActionBp" {
+        guard() { return abs < 2 }
+        body()  { abs += 1 }
+        adapter() {
+            p.write('b%s\n' % (abs+2,))
+            requireOutput('fMBT>')
+            p.write('b\n')
+            requireOutput('Action breakpoints \(%s\).*' % (abs+1,))
+        }
+    }
+    action "iDelActionBp" {
+        guard() { return abs > 0 }
+        body()  { abs -= 1 }
+        adapter() {
+            p.write('d1\n')
+            requireOutput('fMBT>')
+            p.write('b\n')
+            requireOutput('Action breakpoints \(%s\)' % (abs-1,))
+        }
+    }
+    action "iDelActionBp:too big" {
+        adapter() {
+            p.write('d%s\n' % (abs+1,))
+            requireOutput('fMBT>')
+            p.write('b\n')
+            requireOutput('Action breakpoints \(%s\)' % (abs,))
+        }
+    }
+    action "iDelActionBp:too small" {
+        adapter() {
+            p.write('d0\n')
+            requireOutput('fMBT>')
+            p.write('bb\n')
+            requireOutput('Action breakpoints \(%s\)' % (abs,))            
+        }
+    }
+    action "iAddTagBp" {
+        guard() { return tbs < 2 }
+        body() { tbs += 1 }
+        adapter() {
+            p.write('B%s\n' % (tbs+1,))
+            requireOutput('fMBT>')
+            p.write('B\n')
+            requireOutput('Tag breakpoints \(%s\)' % (tbs+1,))
+        }
+    }
+    action "iDelTagBp" {
+        guard() { return tbs > 0 }
+        body() { tbs -= 1 }
+        adapter() {
+            p.write('D%s\n' % (tbs,))
+            requireOutput('fMBT>')
+            p.write('B\n')
+            requireOutput('Tag breakpoints \(%s\)' % (tbs-1,))
+        }
+    }
+    action "iDelTagBp:too big" {
+        adapter() {
+            p.write('D%s\n' % (tbs+1,))
+            requireOutput('fMBT>')
+            p.write('BB\n')
+            requireOutput('Tag breakpoints \(%s\)' % (tbs,))
+        }
+    }
+    action "iDelTagBp:too small" {
+        adapter() {
+            p.write('D-1\n')
+            requireOutput('fMBT>')
+            p.write('BB\n')
+            requireOutput('Tag breakpoints \(%s\)' % (tbs,))
+        }
+    }
+    action "iContinueUntilBreak" {
+        guard() { return abs > 0 or tbs > 0 }
+        adapter() {
+            p.write('c\n')
+            requireOutput('reason="(executed break action|tag reached)"')
+        }
+    }
+    action "iContinueForEver" {
+        guard() { return abs == 0 and tbs == 0 }
+        adapter() {
+            global p
+            p.write('c\n')
+            s = p.read_nonblocking(8192, 1)
+            assert not "executed break action" in s, "break action without reason"
+            assert not "tag reached" in s, "break on tag without reason"
+            assert p.terminate() == True, "terminate failed"
+            p = pexpect.spawn(fmbt_launch_command)
+        }
+    }
+}
