@@ -23,6 +23,7 @@
 #include "rules.hh"
 #include <map>
 #include <vector>
+#include "model.hh"
 
 class Coverage_Mapper: public Coverage, Rules {
 public:

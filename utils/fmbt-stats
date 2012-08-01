@@ -297,9 +297,9 @@ def stats_speed(arg, testlog_fileobj, output_fileobj, plot_filename):
         for avg in averages:
             if avg > i: avg = i
             prev_timestamp_avg = timestamp_action_list[i-avg][0]
-            # if timestamps are equal, use MAX_SPEED instead of
+            # if timestamps are equal, use MAXSPEED instead of
             # dividing by zero
-            if (this_timestamp-prev_timestamp_avg) == 0: data[-1].append(MAX_SPEED)
+            if (this_timestamp-prev_timestamp_avg) == 0: data[-1].append(MAXSPEED)
             else: data[-1].append( avg/(this_timestamp-prev_timestamp_avg) )
 
 
