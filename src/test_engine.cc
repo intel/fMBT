@@ -513,6 +513,7 @@ void Test_engine::interactive()
 	if (s[1]=='D') {
 	  etags.clear();
 	} 
+        break;
      }
       case 'b': {
 	std::vector<std::string>& ana=heuristic.get_model()->getActionNames();
