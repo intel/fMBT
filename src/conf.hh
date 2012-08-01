@@ -65,6 +65,13 @@ class Conf:public Writable {
     heuristic=NULL;
     model=NULL;
     coverage=NULL;
+
+    for(unsigned i=0;i<history.size();i++) {
+      if (history[i]) {
+	delete history[i];
+      }
+    }
+
   }
 
   void set_model(std::string& s) {
