@@ -124,33 +124,33 @@ bool Coverage_Mapper::execute(int action)
       trace.push_back(action);
     }
     
-    if (depth==0 && coverages[i->second.first]->getCoverage()==1.0) {
-      /* time to load a new lsts*/
-      std::string n("lts_remote");
-      std::string p("/home/pablo/MBT/mas/fMBT/examples/shortener/new_pass");
-      Model* m =Model::create(log,n,p);
-      if (m && m->init() && m->reset()) {
-	log.print("<model ok/>\n");
-	if (model!=models[i->second.first]) {
-	  delete models[i->second.first];
-	}
-	Coverage* c=coverages[i->second.first];
-	models[i->second.first]=m;
-	c->set_model(m);
-	for(unsigned i=0;i<trace.size();i++) {
-	  m->execute(trace[i]);
-	  /*
-	  printf("executing %i, cov %03f\n",trace[i],
-		 c->getCoverage()
-		 );
-	  */
-	}
-      } else {
-	/* model error... */
-	printf("model error %s\n",
-	       m->errormsg.c_str());
-      }
-    }
+    // if (depth==0 && coverages[i->second.first]->getCoverage()==1.0) {
+    //   /* time to load a new lsts*/
+    //   std::string n("lts_remote");
+    //   std::string p("/home/pablo/MBT/mas/fMBT/examples/shortener/new_pass");
+    //   Model* m =Model::create(log,n,p);
+    //   if (m && m->init() && m->reset()) {
+    // 	log.print("<model ok/>\n");
+    // 	if (model!=models[i->second.first]) {
+    // 	  delete models[i->second.first];
+    // 	}
+    // 	Coverage* c=coverages[i->second.first];
+    // 	models[i->second.first]=m;
+    // 	c->set_model(m);
+    // 	for(unsigned i=0;i<trace.size();i++) {
+    // 	  m->execute(trace[i]);
+    // 	  /*
+    // 	  printf("executing %i, cov %03f\n",trace[i],
+    // 		 c->getCoverage()
+    // 		 );
+    // 	  */
+    // 	}
+    //   } else {
+    // 	/* model error... */
+    // 	printf("model error %s\n",
+    // 	       m->errormsg.c_str());
+    //   }
+    // }
   }
   return true; 
 }
@@ -279,32 +279,6 @@ bool Coverage_Mapper::pload(std::string& name)
     return ret;
   }
 
-  /* Time to load adapters */
-
-  for(unsigned i=0;i<coverage_names.size();i++) {
-    if (coverage_names[i]!=std::string("")) {
-
-      log.debug("Loading coverage \"%s\"\n",
-	     coverage_names[i].c_str());
-
-      std::string coverage_class;
-      std::string coverage_params;
-      
-      split(coverage_names[i],coverage_class,coverage_params);
-
-      log.debug("class %s, params %i\n",
-	     coverage_class.c_str(),
-	     coverage_params.c_str());
-      
-      Coverage* a= CoverageFactory::create(log,coverage_class,
-				    coverage_params);
-      log.debug("Created coverage to %p\n",a);
-      if (!a || !a->status) {
-	status=false;
-      }
-      coverages[i] = a;
-    }
-  }
   return ret;
 }
 
@@ -313,7 +287,7 @@ void Coverage_Mapper::add_file(unsigned index,
 			       std::string& coveragename)
 {
   log.debug("%s(%i,%s)\n",__func__,index,coveragename.c_str());
-  if (coverage_names.capacity()<=index+1) {
+  if (coverage_names.size()<=index+1) {
     coverage_names.resize(index+2);
     coverages.resize(index+2);
     models.resize(index+2);
@@ -334,6 +308,7 @@ void Coverage_Mapper::add_file(unsigned index,
     std::string model_name;
     std::string model_param;
 
+
     split(mname, model_name, model_param);
 
     models[index] = ModelFactory::create(log,model_name,model_param);
@@ -350,6 +325,18 @@ void Coverage_Mapper::add_file(unsigned index,
   split(cname,cc,cp);
 
   log.debug("Trying to create coverage %s(%s)\n",cc.c_str(),cp.c_str());
+  if (coverages[index]) {
+    status=false;
+    errormsg=std::string("Coverage already at index ")+to_string(index);
+    return;
+  }
+
+  if (index>=coverages.size()) {
+    status=false;
+    errormsg=std::string("Index too large ")+to_string(index);
+    return;
+  }
+
   coverages[index] = CoverageFactory::create(log,cc,cp);
 
   if (!coverages[index]) {

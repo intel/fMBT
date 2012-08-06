@@ -26,6 +26,7 @@
 class Lts_xrules : public Model {
 public:
   Lts_xrules(Log&l, std::string params): Model(l, params) {}
+  virtual ~Lts_xrules() {} // leaks memory.
   virtual bool reset();
   virtual int  execute(int action);
 

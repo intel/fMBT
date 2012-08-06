@@ -1,3 +1,2 @@
 #!/bin/bash
-autoreconf -i
-
+autoreconf -i -f

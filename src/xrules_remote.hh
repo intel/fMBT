@@ -25,6 +25,7 @@
 class Xrules_remote: public Lts_xrules {
 public:
   Xrules_remote(Log&l, std::string params): Lts_xrules(l, params) {}
+  ~Xrules_remote() {}
   virtual bool init();
 
 };

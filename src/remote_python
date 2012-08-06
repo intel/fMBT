@@ -812,8 +812,8 @@ if __name__ == "__main__":
     opt_ignore_unknown_outputs = False
 
     opts, remainder = getopt.getopt(
-        sys.argv[1:], 'c:hsTd:L:l:',
-        ['help', 'shell', 'self-test',
+        sys.argv[1:], 'Vc:hsTd:L:l:',
+        ['version', 'help', 'shell', 'self-test',
          'action-delay=', 'log-file=',
          'ignore-unknown-outputs'])
 
@@ -822,6 +822,9 @@ if __name__ == "__main__":
             pre_exec_statements.append(arg)
         elif opt in ['-h', '--help']:
             print __doc__
+            sys.exit(0)
+        elif opt in ['-V', '--version']:
+            print "Version"
             sys.exit(0)
         elif opt in ['-s', '--shell']:
             shellMode = True

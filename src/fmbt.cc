@@ -29,6 +29,7 @@
 #include "coverage.hh"
 
 #include "verdict.hh"
+#include "config.h"
 
 #ifndef DROI
 #include <error.h>
@@ -79,12 +80,17 @@ int main(int argc,char * const argv[])
 
   static struct option long_opts[] = {
     {"help", no_argument, 0, 'h'},
+    {"version", no_argument, 0, 'V'},
     {0, 0, 0, 0}
   };
 
-  while ((c = getopt_long (argc, argv, "DEL:heil:qCo:", long_opts, NULL)) != -1)
+  while ((c = getopt_long (argc, argv, "DEL:heil:qCo:V", long_opts, NULL)) != -1)
     switch (c)
     {
+    case 'V':
+      printf("Version: "VERSION"\n");
+      return 0;
+      break;
     case 'o': {
       config_options=config_options+optarg+"\n";
       break;

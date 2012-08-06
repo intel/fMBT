@@ -133,3 +133,16 @@ then
 else
     testpassed
 fi
+
+
+teststep "exitvalue on nonexisting config file"
+
+fmbt no_such_file.conf  >>$LOGFILE 2>&1
+if [ $? -ne 4 ]
+then
+    testfailed
+else
+    testpassed
+fi
+
+

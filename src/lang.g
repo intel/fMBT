@@ -127,10 +127,6 @@ starter: |
 
 python: 'Python' | 'python' | 'py';
 
-namestr: unquoted_string {
-            $$.str=$0.str; // I'm too lazy to figure out why this can't be returned in $0
-        };
-
 variables: 'variables' '{' bstr '}' { obj->set_variables($2.str); };
 
 istate: 'initial_state' '{' bstr '}' { obj->set_istate($2.str); } ;
@@ -150,6 +146,5 @@ bstr: (${scan bstr_scan(ops,ops_cache)})* {
             $$.str = new std::string(start,end-start);
             } ;
 
-string: "\"([^\"\\]|\\[^])*\"" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); };
-
-unquoted_string: "([a-zA-Z_]*)" { $$.str = new std::string($n0.start_loc.s,$n0.end-$n0.start_loc.s); };
+string: "\"([^\"\\]|\\[^])*\"" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2);
+        };

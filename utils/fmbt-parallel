@@ -37,7 +37,7 @@ import os
 import re
 import getopt
 import fmbtparsers
-
+import fmbt_config
 ########################################################################
 # The following code block originates from the TEMA toolset. It
 # enables calculating parallel composition of LSTS files and writing
@@ -827,12 +827,15 @@ if __name__ == "__main__":
 
     # Parse arguments
     opts, remainder = getopt.gnu_getopt(
-        sys.argv[1:], 'ho:s:',
-        ["help", "output=", "sync="])
+        sys.argv[1:], 'ho:s:V',
+        ["help", "output=", "sync=", "version"])
 
     for opt, arg in opts:
         if opt in ["-h", "--help"]:
             print __doc__
+            sys.exit(0)
+        elif opt in ['-V', '--version']:
+            print "Version " + fmbt_config.fmbt_version
             sys.exit(0)
         elif opt in ["-s", "--sync"]:
             try: sync_regexps.append(re.compile(arg))

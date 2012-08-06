@@ -1,0 +1,8 @@
+1 = "lib:mycountertest1"
+2 = "lib:mycountertest2"
+
+(1,"iCreate") (2,"iCreate") -> "iCreate"
+(1,"iDestroy") (2,"iDestroy") -> "iDestroy"
+(1,"iIncrement") (2,"iIncrement") -> "iIncrement"
+(1,"iReset") (2,"iReset") -> "iReset"
+(1,"iCount") (2,"iCount") -> "iCount"

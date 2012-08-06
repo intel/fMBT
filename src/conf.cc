@@ -62,6 +62,14 @@ void Conf::load(std::string& name,std::string& content)
   conf_obj=this;
 
   s=readfile(name.c_str());
+
+  if (s==NULL) {
+    status=false;
+    errormsg=std::string("Can't read configuration file \"")+name+"\"";
+    log.pop();
+    return;
+  }
+
   std::string ss(s);
   ss=ss+"\n"+content;
   if ((name!="" && s==NULL))
@@ -96,7 +104,7 @@ void Conf::load(std::string& name,std::string& content)
 		      + "\" failed.");
   }
 
-  Coverage* coverage = CoverageFactory::create(log,coverage_name,coverage_param);
+  coverage = CoverageFactory::create(log,coverage_name,coverage_param);
 
   if (coverage == NULL)
     RETURN_ERROR_VOID("Creating coverage \"" + coverage_name + "\" failed.");
@@ -193,6 +201,10 @@ Verdict::Verdict Conf::execute(bool interactive) {
       End_condition* e = end_conditions[i];
       if (e->status == false)
         RETURN_ERROR_VERDICT("Error in end condition: " + e->stringify());
+      if (e->counter == End_condition::ACTION) {
+        // avoid string comparisons, fetch the index of the tag
+        e->param_long = find(model->getActionNames(), *(e->param));
+      }
       if (e->counter == End_condition::STATETAG) {
         // avoid string comparisons, fetch the index of the tag
         e->param_long = find(model->getSPNames(), *(e->param));

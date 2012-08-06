@@ -38,7 +38,9 @@ class Conf:public Writable {
      heuristic_name("random"), coverage_name("perm"),
      adapter_name("dummy"), end_time(-1),
      on_error("exit:1"), on_fail("interactive"),
-     on_pass("exit:0"), on_inconc("exit:1")
+     on_pass("exit:0"), on_inconc("exit:1"),
+     heuristic(NULL), model(NULL),
+     adapter(NULL),coverage(NULL)
   {
     log.push("fmbt_log");
     log.set_debug(debug_enabled);
@@ -47,6 +49,29 @@ class Conf:public Writable {
     for (unsigned int i = 0; i < end_conditions.size(); i++)
       delete end_conditions[i];
     log.pop();
+    if (heuristic) 
+      delete heuristic;
+
+    if (adapter)
+      delete adapter;
+
+    if (model)
+      delete model;
+
+    if (coverage)
+      delete coverage;
+
+    adapter=NULL;
+    heuristic=NULL;
+    model=NULL;
+    coverage=NULL;
+
+    for(unsigned i=0;i<history.size();i++) {
+      if (history[i]) {
+	delete history[i];
+      }
+    }
+
   }
 
   void set_model(std::string& s) {
@@ -122,6 +147,7 @@ class Conf:public Writable {
   Heuristic* heuristic;
   Model* model;
   Adapter* adapter;
+  Coverage* coverage;
 };
 
 #endif
