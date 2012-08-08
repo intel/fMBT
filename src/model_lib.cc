@@ -25,6 +25,15 @@
 #include <cstring>
 
 namespace {
+
+  std::vector<void*> mods;
+
+  void mods_atexit() {
+    for(unsigned i=0;i<mods.size();i++) {
+      dlclose(mods[i]);
+    }
+  }
+
   Model* lib_creator(Log& l, std::string params) {
     Model* m;
     std::string model_name,model_param,model_filename;
@@ -40,6 +49,10 @@ namespace {
 
       if (handle) {
 	m = ModelFactory::create(l, model_name, model_param);
+	if (mods.empty()) {
+	  atexit(mods_atexit);
+	}
+	mods.push_back(handle);
       } else {
 	m = new Null(l);
 	if (m) {
