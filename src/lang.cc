@@ -90,7 +90,7 @@ parse_syntax_error_report(struct D_Parser *ap) {
     p->user.loc.ws++;
   }
 
-  fprintf(stderr,"%s:%d: syntac error '%.8s'\n",fn,p->user.loc.line,
+  fprintf(stderr,"%s:%d: syntax error '%.8s'\n",fn,p->user.loc.line,
 	  p->user.loc.ws);
 
   FREE(fn);
