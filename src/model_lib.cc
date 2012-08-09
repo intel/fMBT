@@ -22,6 +22,7 @@
 #include "null.hh"
 #include "conf.hh"
 #include "helper.hh"
+#include <dlfcn.h>
 #include <cstring>
 
 namespace {
