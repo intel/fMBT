@@ -29,8 +29,6 @@ class Model;
 class Coverage: public Writable {
 
 public:
-  typedef Coverage*(*creator)(Log& l,std::string&);
-
   Coverage(Log& l);
   virtual ~Coverage();
   virtual void push()=0;
