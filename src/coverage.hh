@@ -49,8 +49,6 @@ public:
   virtual int fitness(int* actions,int n, float* fitness)=0;
   virtual void set_model(Model* _model); // for input alphabet
 
-private:
-  static std::map<std::string,creator>* factory;
 protected:
   Model* model;
   Log& log;
