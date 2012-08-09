@@ -59,7 +59,7 @@ Heuristic_mrandom::Heuristic_mrandom(Log& l, std::string params) :
     total+=f;
   }
 
-  if (h.size()==0) {
+  if (h.empty()) {
     status=false;
     errormsg=std::string("no subheuristics?");
   }

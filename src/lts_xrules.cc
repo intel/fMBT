@@ -57,7 +57,7 @@ void Lts_xrules::prop_create()
   if (!status) {
     return;
   }
-  if (prop_names.size()==0) {
+  if (prop_names.empty()) {
     prop_names.push_back("");
   }
   int count=0;
@@ -184,7 +184,7 @@ void Lts_xrules::add_result_action(std::string* name)
   /* action_number returns negative, if the name is unknown */
 
   if (action<0) {
-    if (action_names.size()==0) {
+    if (action_names.empty()) {
       /* Yeah.. Let's insert the tau.. */
       std::string n("tau");
       action_names.push_back(n);

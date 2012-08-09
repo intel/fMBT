@@ -104,7 +104,7 @@ extern Lts* obj;
 
 void Lts::add_prop(std::string* name,std::vector<int>& pr)
 {
-  if (prop_names.size()==0) {
+  if (prop_names.empty()) {
     prop_names.push_back("");
   }
   int pro=prop_names.size();
