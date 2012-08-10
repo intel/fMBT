@@ -54,5 +54,7 @@ protected:
 
 FACTORY_DECLARATION(Coverage)
 
+#include "model.hh"
+
 #endif
 
