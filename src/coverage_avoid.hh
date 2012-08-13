@@ -37,6 +37,7 @@ public:
   virtual std::string stringify() { return std::string(""); }
 
   virtual int fitness(int* actions,int n, float* fitness);
+  virtual void set_model(Model* _model);
 
 protected:
   std::vector<std::pair<float,Coverage*> > h;
