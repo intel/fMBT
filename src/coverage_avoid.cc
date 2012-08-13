@@ -30,7 +30,8 @@ Coverage_avoid::~Coverage_avoid()
 }
 
 Coverage_avoid::Coverage_avoid(Log& l, std::string& params) :
-  Coverage(l)
+  Coverage(l),
+  depth(0)
 {
   static std::string separator(":");
   char* tmp=strdup(params.c_str());
