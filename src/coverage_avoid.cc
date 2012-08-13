@@ -51,7 +51,7 @@ Coverage_avoid::Coverage_avoid(Log& l, std::string& params) :
     Coverage* cov=CoverageFactory::create(log, s[i+1], prm);
     if (cov==NULL) {
       status=false;
-      errormsg=std::string("Can't create coverage ")+s[i+1];
+      errormsg=std::string("Can't create coverage ")+s[i+1]+":"+prm;
       return;
     }
     h.push_back(std::pair<float,Coverage*>(f,cov));
@@ -102,6 +102,13 @@ bool Coverage_avoid::execute(int action)
 int Coverage_avoid::fitness(int* actions,int n, float* fitness)
 {
   return h[0].second->fitness(actions,n,fitness);
+}
+
+void Coverage_avoid::set_model(Model* _model) {
+  Coverage::set_model(_model);
+  for(unsigned i=0;i<h.size();i++) {
+    h[i].second->set_model(_model);
+  }
 }
 
 FACTORY_DEFAULT_CREATOR(Coverage, Coverage_avoid, "avoid")
