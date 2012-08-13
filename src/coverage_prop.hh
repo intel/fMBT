@@ -60,7 +60,7 @@ protected:
   int props_total;
   int props_seen;
   std::vector<bool> data;
-  std::map<int,int> map;
+  std::map<int,bool> prop_included;
   std::list<std::pair<std::vector<bool>,int> > state_save;
 };
 
