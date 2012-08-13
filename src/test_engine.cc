@@ -692,6 +692,14 @@ void Test_engine::interactive()
 			current_model->getSPNames(),"t",0);
 	  break;
 	} else
+	  if (strncmp(s,"mpush",5)==0) {
+	    current_model->push();
+	    break;
+	  } else 
+	  if (strncmp(s,"mpop",4)==0) {
+	    current_model->pop();
+	    break;
+	  } else 
         if (strncmp(s,"mup",3)==0) {
 	  /* up */
           if (!current_model->up()) {
@@ -802,6 +810,8 @@ void Test_engine::interactive()
                "    m      - list model subcomponents\n"
                "    m<num> - move down to model subcomponent <num>\n"
                "    mup    - move up to parent model\n"
+	       "    mpush  - push current model state to a stack\n"
+               "    mpop   - pop model state from a stack\n"
                "Properties of the current model:\n"
                "    ma     - list all actions\n"
                "    mc     - list tags at current state\n"
@@ -809,6 +819,8 @@ void Test_engine::interactive()
                "Options:\n"
                "    oea[0|1]- get/set executing action in adapter\n"
                "    oem[0|1]- get/set executing action in model\n"
+	       "Other:\n"
+	       "    C      - print coverage\n"
                "Search:\n"
                "    ?a<num>- search shortest path to execute action <num>\n"
                "    ?c<num>- search path of length <num> for maximal coverage\n"
