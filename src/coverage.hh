@@ -29,8 +29,6 @@ class Model;
 class Coverage: public Writable {
 
 public:
-  typedef Coverage*(*creator)(Log& l,std::string&);
-
   Coverage(Log& l);
   virtual ~Coverage();
   virtual void push()=0;
@@ -49,14 +47,14 @@ public:
   virtual int fitness(int* actions,int n, float* fitness)=0;
   virtual void set_model(Model* _model); // for input alphabet
 
-private:
-  static std::map<std::string,creator>* factory;
 protected:
   Model* model;
   Log& log;
 };
 
 FACTORY_DECLARATION(Coverage)
+
+#include "model.hh"
 
 #endif
 

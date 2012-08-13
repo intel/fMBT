@@ -199,7 +199,7 @@ int Heuristic_minerror::getAction()
 
 int Heuristic_minerror::getIAction()
 {
-    if (m_current_trace.size() == 0)
+    if (m_current_trace.empty())
     {
         suggest_new_path();
     }
@@ -213,7 +213,7 @@ void Heuristic_minerror::suggest_new_path()
          cand_iter != m_key_action_candidates.end();
          cand_iter++)
     {
-        if ((*cand_iter).size() == 0) continue;
+        if ((*cand_iter).empty()) continue;
         for (std::map<std::vector<int>, double>::iterator subtrace_iter = m_subtrace2prob.begin();
              subtrace_iter != m_subtrace2prob.end();
              subtrace_iter++)
@@ -260,7 +260,7 @@ void Heuristic_minerror::suggest_new_path()
         model->pop();
     }
 
-    if (m_key_action_candidates.size() == 0) return;
+    if (m_key_action_candidates.empty()) return;
     
     std::vector<int> chosen = *(++m_key_action_candidates.begin());
     

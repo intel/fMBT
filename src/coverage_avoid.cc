@@ -1,6 +1,6 @@
 /*
  * fMBT, free Model Based Testing tool
- * Copyright (c) 2011, Intel Corporation.
+ * Copyright (c) 2012, Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU Lesser General Public License,
@@ -17,23 +17,22 @@
  *
  */
 
-#include "heuristic_mrandom.hh"
+#include "coverage_avoid.hh"
 #include "helper.hh"
 #include <cstdlib>
 #include <cstring>
 
-Heuristic_mrandom::~Heuristic_mrandom()
+Coverage_avoid::~Coverage_avoid()
 {
   for(unsigned i=0;i<h.size();i++) {
     delete h[i].second;
   }
 }
 
-Heuristic_mrandom::Heuristic_mrandom(Log& l, std::string params) :
-  Heuristic(l)
+Coverage_avoid::Coverage_avoid(Log& l, std::string& params) :
+  Coverage(l)
 {
   static std::string separator(":");
-  float total=0;
   char* tmp=strdup(params.c_str());
   std::string m(unescape_string(tmp));
   std::vector<std::string> s;
@@ -49,84 +48,60 @@ Heuristic_mrandom::Heuristic_mrandom(Log& l, std::string params) :
       prm=s[i+2];
     }
 
-    Heuristic* heu=HeuristicFactory::create(log, s[i+1], prm);
-    if (heu==NULL) {
+    Coverage* cov=CoverageFactory::create(log, s[i+1], prm);
+    if (cov==NULL) {
       status=false;
-      errormsg=std::string("Can't create heuristic ")+s[i+1];
+      errormsg=std::string("Can't create coverage ")+s[i+1];
       return;
     }
-    h.push_back(std::pair<float,Heuristic*>(f,heu));
-    total+=f;
+    h.push_back(std::pair<float,Coverage*>(f,cov));
   }
 
   if (h.empty()) {
     status=false;
-    errormsg=std::string("no subheuristics?");
+    errormsg=std::string("no subcoverages?");
   }
-
-  for(unsigned i=0;i<h.size();i++) {
-    h[i].first=h[i].first/total;
-  }
-
 }
 
-float Heuristic_mrandom::getCoverage() {
-  if (my_coverage==NULL) {
-    return 0.0;
-  }
-  return my_coverage->getCoverage();  
-}
-
-int Heuristic_mrandom::getAction()
-{
-  float cut=drand48();
-
-  for(unsigned i=0;i<h.size();i++) {
-    if (cut<h[i].first) {
-      return h[i].second->getAction();
+float Coverage_avoid::getCoverage() {
+  if (depth) {
+    for(unsigned i=1;i<h.size();i++) {
+      if (h[i].second->getCoverage()>=h[i].first) {
+	return -1.0;
+      }
     }
   }
-  return h[0].second->getAction();
+  return h[0].second->getCoverage();
 }
 
-int Heuristic_mrandom::getIAction()
+void Coverage_avoid::push()
 {
-  float cut=drand48();
-
+  depth++;
   for(unsigned i=0;i<h.size();i++) {
-    if (cut<h[i].first) {
-      return h[i].second->getIAction();
-    }
+    h[i].second->push();
   }
-  return h[0].second->getIAction();
 }
 
-void Heuristic_mrandom::set_model(Model* _model)
+void Coverage_avoid::pop()
 {
-  Heuristic::set_model(_model);
+  depth--;
   for(unsigned i=0;i<h.size();i++) {
-    h[i].second->set_model(_model);
-  }  
+    h[i].second->pop();
+  }
 }
 
-bool Heuristic_mrandom::execute(int action)
+bool Coverage_avoid::execute(int action)
 {
   bool ret=true;
   for(unsigned i=0;i<h.size();i++) {
-    model->push();
     ret&=h[i].second->execute(action);
-    model->pop();
   }
-  ret&=Heuristic::execute(action);
   return ret;
 }
 
-void Heuristic_mrandom::set_coverage(Coverage* c)
+int Coverage_avoid::fitness(int* actions,int n, float* fitness)
 {
-  Heuristic::set_coverage(c);
-  for(unsigned i=0;i<h.size();i++) {
-    h[i].second->set_coverage(c);
-  }
+  return h[0].second->fitness(actions,n,fitness);
 }
 
-FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_mrandom, "mrandom")
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_avoid, "avoid")

@@ -113,7 +113,7 @@ int Heuristic_greedy::getIAction()
   } else {
     /* In burst mode new path is not searched before previosly found
      * path is fully consumed */
-    if (!m_burst || m_path.size() == 0) {
+    if (!m_burst || m_path.empty() ) {
       /* Spend more time for better coverage */
       AlgPathToBestCoverage alg(m_search_depth);
       /* Use precalculated path (m_path) as a hint. */

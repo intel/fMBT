@@ -56,10 +56,10 @@ void Heuristic_weight::add(std::vector<std::string*> p,
     regexpmatch(*(a[0]),model->getActionNames(),actions,false);
   }
 
-  if (props.size()==0) 
+  if (props.empty()) 
     props.push_back(0);
 
-  if (actions.size()==0) {
+  if (actions.empty()) {
     // Some warning?
     return;
   }
