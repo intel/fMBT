@@ -596,6 +596,10 @@ void Test_engine::interactive()
 		      current_model->getActionNames(),"s",1);
       }
         break;
+      case 'C': { // print coverage
+	printf("coverage %05f\n",heuristic.getCoverage());
+	break;
+      }
         
       case 'e': { // commands "e", "e<num>": execute any action at current adapter
         num=std::atoi(s+1);
