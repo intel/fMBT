@@ -72,6 +72,7 @@ ssize_t nonblock_getline(char **lineptr, size_t *n,
 
 ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
 		 char* &read_buf,size_t &read_buf_pos,Log& log);
+ssize_t bgetline(char **lineptr, size_t *n, FILE *stream, Log& log);
 
 void block(int fd);
 void nonblock(int fd);

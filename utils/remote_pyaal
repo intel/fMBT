@@ -310,6 +310,7 @@ if __name__ == "__main__":
         cmd = "fmbt-aalc '%s'" % (aal_filename,)
         status, aal_code = commands.getstatusoutput(cmd)
         if status != 0:
+            fmbtstderr("AAL to Python conversion failed:\n%s" % (aal_code,))
             error("converting aal to python with command\n" +
                   "    %s\nfailed. status=%s" % (cmd, status))
     else:
@@ -325,6 +326,7 @@ if __name__ == "__main__":
         code_with_line_nums = ['%4s: %s' % (num+1, line)
                                for num,line in enumerate(code_lines)]
         _log('\n'.join(code_with_line_nums))
+        fmbtstderr("Executing %s failed: %s: %s" % (aal_filename, type(e).__name__, e))
         error("executing aal code failed:\n%s" % (e,))
 
     try:
