@@ -87,6 +87,11 @@ def fmbtlog(msg, flush=True):
     timestamped = "l%.4f %s" % (current_time, msg)
     sys.stdout.write(urllib.quote(timestamped)+"\n")
 
+def fmbtstderr(msg):
+    to_fmbt = urllib.quote("e%s" % (msg,)) + '\n'
+    sys.stdout.write(to_fmbt)
+    _log(msg)
+
 fmbt.fmbtlog = fmbtlog
 fmbt.adapterlog = _log
 log = _log
@@ -139,13 +144,17 @@ class RemoteAALBridge:
         cmd = get()
         while cmd != "":
             if cmd == "ma":
-                put_list(self._aal.getActions())
+                try:
+                    put_list(self._aal.getActions())
+                except Exception, e:
+                    fmbtstderr(str(e))
+                    error(str(e))
             elif cmd == "mp":
                 put_list(self._aal.getprops())
             elif cmd == "mr":
                 try:    self._aal.reset()
                 except Exception, e:
-                    _log('Error at initial_state(): %s: %s' % (type(e).__name__, e))
+                    fmbtstderr('Error at initial_state(): %s: %s' % (type(e).__name__, e))
                     put(0)
                 else:   put(1)
             elif cmd == "mu":
@@ -161,7 +170,7 @@ class RemoteAALBridge:
                 try:
                     rv = self._aal.model_execute(action_number)
                 except Exception, e:
-                    _log('Error at body() of "%s": %s: %s' % (action_names[action_number-1], type(e).__name__, e))
+                    fmbtstderr('Error at body() of "%s": %s: %s' % (action_names[action_number-1], type(e).__name__, e))
                     put(0)
                 else:
                     put(rv)
@@ -173,7 +182,7 @@ class RemoteAALBridge:
                     rv = self._aal.adapter_execute(action_number,
                                                    adapter_call_arguments)
                 except Exception, e:
-                    _log('Error at adapter() of "%s": %s: %s' % (action_names[action_number-1], type(e).__name__, e))
+                    fmbtstderr('Error at adapter() of "%s": %s: %s' % (action_names[action_number-1], type(e).__name__, e))
                     put(0)
                 else:   put(rv)
                 adapter_call_arguments = []

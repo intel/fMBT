@@ -96,6 +96,11 @@ def error(msg):
     g_loop.quit()
     sys.exit(1)
 
+def fmbtstderr(msg):
+    to_fmbt = urllib.quote("e%s" % (msg,)) + '\n'
+    sys.stderr.write(to_fmbt)
+    log(msg)
+
 def warning(msg, writeToStderr=0):
     log("WARNING: %s" % (msg,), writeToStderr=writeToStderr)
 
@@ -706,7 +711,8 @@ class AdapterIO:
             executedActionIndex = g_actions.index(executedActionName)
             sys.stderr.write(str(executedActionIndex) + '\n')
         except ValueError:
-            warning("Cannot report execution: '%s'." % (executedActionName,), writeToStderr=1)
+            fmbtstderr('remote_python: no actions corresponding to observed execution:\n"%s"' %
+                        (executedActionName,))
             sys.stderr.write('0\n')
 
 class InteractiveShellIO:
