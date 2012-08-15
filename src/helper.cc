@@ -242,6 +242,13 @@ char* escape_string(const char* msg)
 #endif
 }
 
+void escape_string(std::string& msg)
+{
+  char* s=escape_string(msg.c_str());
+  msg=std::string(s);
+  escape_free(s);
+}
+
 std::string removehash(std::string& s)
 {
   unsigned long cutpos = s.find_last_of("#");

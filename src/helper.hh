@@ -44,6 +44,7 @@ char* readfile(const char* filename,const char* preprocess);
 char* readfile(const char* filename);
 std::string capsulate(std::string s);
 char* escape_string(const char* msg);
+void escape_string(std::string& msg);
 void escape_free(const char* msg);
 std::string removehash(std::string& s);
 void  string2vector(char* s,std::vector<int>& a);
