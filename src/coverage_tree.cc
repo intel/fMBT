@@ -25,6 +25,7 @@ Coverage_Tree::Coverage_Tree(Log& l, std::string params) :
 { 
   exec[0] = &root_node;
   set_max_depth(params);
+  push();
 }
 
 void Coverage_Tree::push()
@@ -86,6 +87,11 @@ void Coverage_Tree::history(int action,std::vector<int>& props,
     exec.clear();
     exec[0] = &root_node;    
   }
+}
+
+Coverage_Tree::~Coverage_Tree()
+{
+  pop();
 }
 
 bool Coverage_Tree::execute(int action)

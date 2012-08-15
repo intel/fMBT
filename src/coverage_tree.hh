@@ -34,6 +34,7 @@ class Coverage_Tree: public Coverage {
 
 public:
   Coverage_Tree(Log& l, std::string params);
+  virtual ~Coverage_Tree();
   virtual void push();
   virtual void pop();
 
