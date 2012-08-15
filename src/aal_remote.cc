@@ -59,7 +59,7 @@ aal_remote::aal_remote(Log&l,std::string& s)
   d_stdout=fdopen(_stdout,"r");
   d_stderr=fdopen(_stderr,"r");
 
-  ssize_t red=getline(&read_buf,&read_buf_pos,d_stdout);
+  ssize_t red=bgetline(&read_buf,&read_buf_pos,d_stdout,l);
 
   action_names.push_back("TAU");
 

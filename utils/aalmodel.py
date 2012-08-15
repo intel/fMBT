@@ -66,15 +66,23 @@ class AALModel:
 
     def getActions(self):
         enabled_actions = []
-        for index, guard in enumerate(self._all_guards):
-            if self.call(guard): enabled_actions.append(index + 1)
+        try:
+            for index, guard in enumerate(self._all_guards):
+                if self.call(guard): enabled_actions.append(index + 1)
+        except Exception, e:
+            raise Exception('Error at guard() of "%s": %s: %s' % (
+                self._all_names[index], type(e).__name__, e))
         return enabled_actions
     
     def getIActions(self):
         enabled_iactions = []
-        for index, guard in enumerate(self._all_guards):
-            if self._all_types[index] == "input" and self.call(guard):
-                enabled_iactions.append(index + 1)
+        try:
+            for index, guard in enumerate(self._all_guards):
+                if self._all_types[index] == "input" and self.call(guard):
+                    enabled_iactions.append(index + 1)
+        except Exception, e:
+            raise Exception('Error at guard() of "%s": %s: %s' % (
+                self._all_names[index], type(e).__name__, e))
         return enabled_iactions
 
     def getprops(self):

@@ -1,0 +1,25 @@
+aal "broken" {
+    language: python {
+    }
+
+    # preview-hide-vars: 
+    # preview-depth: 5
+    variables {
+        varname1, varname2
+    }
+    initial_state {
+        assert False, "this-is-an-error"
+        varname1 = 42      # comment1
+        varname2 = 'hello' # comment2
+    }
+    action "iTestStep1()" {
+        guard() {
+            return varname1 == 42
+        }
+        body()  {
+            varname2 = 'bye'
+        }
+        adapter() {
+        }
+    }
+}

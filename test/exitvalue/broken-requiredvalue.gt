@@ -1,0 +1,4 @@
+P(start, "gt:istate")
+->
+T(start, "iCatch('1/0') == Error('.*neveroccuring1.*')", start)
+T(start, "iCatch('1/0') == Error('.*neveroccuring2.*')", start)
