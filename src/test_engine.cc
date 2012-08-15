@@ -166,8 +166,16 @@ Verdict::Verdict Test_engine::stop_test(Verdict::Verdict v, const char* _reason)
   default:
     m_verdict_msg = "unknown";
   }
+
+  /*
+    Just remember to encode the strings...
+   */
+  std::string me_reason_msg=m_reason_msg;
+  escape_string(m_verdict_msg);
+  escape_string(me_reason_msg);
+
   log.print("<stop verdict=\"%s\" reason=\"%s\"/>\n",
-            m_verdict_msg.c_str(), m_reason_msg.c_str());
+            m_verdict_msg.c_str(), me_reason_msg.c_str());
   print_time(start_time, total_time);
   log.pop();
   return m_verdict;
