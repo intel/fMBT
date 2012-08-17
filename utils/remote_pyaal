@@ -60,6 +60,7 @@ import time
 import fmbt
 import atexit
 import urllib
+import fmbt_config
 
 sys.path.append(os.getcwd())
 
@@ -277,7 +278,7 @@ if __name__ == "__main__":
         if opt in ["-d", "--debug"]:
             opt_debug = True
         elif opt in ['-V', '--version']:
-            print "Version"
+            print "Version " + fmbt_config.fmbt_version
             sys.exit(0)
         elif opt in ["-h", "--help"]:
             print __doc__
