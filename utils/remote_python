@@ -349,9 +349,9 @@ oDBusSignal('HelloSignal',StoreAs(var1),StoreAs(var2),'valueOfArg3')
 
 class Error(object):
     """
-    Allows comparing cought and expected exceptions. Example:
+    Allows comparing raised and expected exceptions. Example:
 
-iDBus('system','net.connman','/','net.connman.Manager').SetProperty('foobar',2)==Error(DBusException,'Invalid property')
+iDBus('system','net.connman','/','net.connman.Manager').SetProperty('foobar',2) == Error('.*Invalid property.*')
     """
     def __init__(self, arg1, arg2 = None):
         """
@@ -408,13 +408,13 @@ class iCatch:
     """
     Executes Python statements and returns exceptions or None.
 
-    Example: iCatch('first_time += 1') == Error(NameError)
+    Example: iCatch('first_time += 1') == Error('NameError.*')
     """
     def __init__(self, _globals):
         self._globals = _globals
     def __call__(self, codeString):
-        """returns None if the statement was executed without exceptions,
-        otherwise returns the exception as an Error object."""
+        """returns None if codeString was executed without exceptions,
+        otherwise returns the exception in an Error object."""
         try:
             exec codeString.strip() in self._globals
         except Exception, e:
@@ -830,7 +830,11 @@ if __name__ == "__main__":
             print __doc__
             sys.exit(0)
         elif opt in ['-V', '--version']:
-            print "Version"
+            try:
+                import fmbt_config
+                print "Version " + fmbt_config.fmbt_version
+            except:
+                print "Version N/A"
             sys.exit(0)
         elif opt in ['-s', '--shell']:
             shellMode = True
@@ -894,7 +898,7 @@ if __name__ == "__main__":
     if shellMode:
         print "fMBT remote_python adapter interactive shell."
         print "Docs on built-in helpers:"
-        print "help(iShell), help(iDBus), help(iDBusListen)"
+        print "help(iCatch), help(iShell), help(iDBus), help(iDBusListen)"
         sys.stdout.flush()
         g_ioHandler = InteractiveShellIO()
     else:
