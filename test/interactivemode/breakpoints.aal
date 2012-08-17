@@ -113,8 +113,8 @@ aal "interactive_breakpoints" {
             global p
             command('c')
             s = p.read_nonblocking(8192, 1)
-            assert not "executed break action" in s, "break action without reason"
-            assert not "tag reached" in s, "break on tag without reason"
+            assert not "executed%20break%20action" in s, "break action without reason"
+            assert not "tag%20reached" in s, "break on tag without reason"
             assert p.terminate() == True, "terminate failed"
             p = pexpect.spawn(fmbt_launch_command)
         }
