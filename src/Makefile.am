@@ -4,11 +4,7 @@ else
 bin_PROGRAMS = fmbt remote_adapter_loader fmbt-aalc fmbt-aalp fmbt-ucheck
 endif
 
-dist_bin_SCRIPTS = remote_exec.sh
-
 if HAVE_PYTHON
-dist_bin_SCRIPTS += remote_python
-python_PYTHON = fmbtweb.py fmbt.py eyenfinger.py
 pkgpyexec_LTLIBRARIES = fmbt_cparsers.la
 if HAVE_MAGICK
 pyexec_LTLIBRARIES = eye4graphics.la

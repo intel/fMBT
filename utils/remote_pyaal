@@ -277,7 +277,11 @@ if __name__ == "__main__":
         if opt in ["-d", "--debug"]:
             opt_debug = True
         elif opt in ['-V', '--version']:
-            print "Version"
+            try:
+                import fmbt_config
+                print "Version " + fmbt_config.fmbt_version
+            except:
+                print "Version N/A"
             sys.exit(0)
         elif opt in ["-h", "--help"]:
             print __doc__
