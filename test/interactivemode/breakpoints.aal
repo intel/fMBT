@@ -6,26 +6,30 @@ aal "interactive_breakpoints" {
 
         p = pexpect.spawn(fmbt_launch_command)
 
-        def requireOutput(s):
-            assert p.expect(s, 1) == 0
+        def requireOutput(s, timeout=1):
+            assert p.expect(s, timeout) == 0
+
+        def command(c):
+            log("sending command: " + c)
+            p.write(c + "\n")
     }
 
-    # preview-hide-vars: p
+    # preview-hide-vars: tbs
     # preview-depth: 5
     variables {
         abs, tbs
     }
     initial_state {
-        abs = 0 # action breakpoints
-        tbs = 0 # tag breakpoints
+        abs = 0 # number of action breakpoints
+        tbs = 0 # number of tag breakpoints
     }
     action "iAddActionBp" {
         guard() { return abs < 2 }
         body()  { abs += 1 }
         adapter() {
-            p.write('b%s\n' % (abs+2,))
+            command('b%s' % (abs+2,))
             requireOutput('fMBT>')
-            p.write('b\n')
+            command('b')
             requireOutput('Action breakpoints \(%s\).*' % (abs+1,))
         }
     }
@@ -33,25 +37,25 @@ aal "interactive_breakpoints" {
         guard() { return abs > 0 }
         body()  { abs -= 1 }
         adapter() {
-            p.write('d1\n')
+            command('d1')
             requireOutput('fMBT>')
-            p.write('b\n')
+            command('b')
             requireOutput('Action breakpoints \(%s\)' % (abs-1,))
         }
     }
     action "iDelActionBp:too big" {
         adapter() {
-            p.write('d%s\n' % (abs+1,))
+            command('d%s' % (abs+1,))
             requireOutput('fMBT>')
-            p.write('b\n')
+            command('b')
             requireOutput('Action breakpoints \(%s\)' % (abs,))
         }
     }
     action "iDelActionBp:too small" {
         adapter() {
-            p.write('d0\n')
+            command('d0')
             requireOutput('fMBT>')
-            p.write('bb\n')
+            command('bb')
             requireOutput('Action breakpoints \(%s\)' % (abs,))            
         }
     }
@@ -59,9 +63,9 @@ aal "interactive_breakpoints" {
         guard() { return tbs < 2 }
         body() { tbs += 1 }
         adapter() {
-            p.write('B%s\n' % (tbs+1,))
+            command('B%s' % (tbs+1,))
             requireOutput('fMBT>')
-            p.write('B\n')
+            command('B')
             requireOutput('Tag breakpoints \(%s\)' % (tbs+1,))
         }
     }
@@ -69,40 +73,45 @@ aal "interactive_breakpoints" {
         guard() { return tbs > 0 }
         body() { tbs -= 1 }
         adapter() {
-            p.write('D%s\n' % (tbs,))
+            command('D%s' % (tbs,))
             requireOutput('fMBT>')
-            p.write('B\n')
+            command('B')
             requireOutput('Tag breakpoints \(%s\)' % (tbs-1,))
         }
     }
     action "iDelTagBp:too big" {
         adapter() {
-            p.write('D%s\n' % (tbs+1,))
+            command('D%s' % (tbs+1,))
             requireOutput('fMBT>')
-            p.write('BB\n')
+            command('BB')
             requireOutput('Tag breakpoints \(%s\)' % (tbs,))
         }
     }
     action "iDelTagBp:too small" {
         adapter() {
-            p.write('D-1\n')
+            command('D-1')
             requireOutput('fMBT>')
-            p.write('BB\n')
+            command('BB')
             requireOutput('Tag breakpoints \(%s\)' % (tbs,))
         }
     }
     action "iContinueUntilBreak" {
         guard() { return abs > 0 or tbs > 0 }
         adapter() {
-            p.write('c\n')
-            requireOutput('reason="(executed break action|tag reached)"')
+            command('c')
+            if tbs == 0:
+                requireOutput('reason="executed%20break%20action"')
+            elif abs == 0:
+                requireOutput('reason="tag%20reached"')
+            else:
+                requireOutput('reason="(executed%20break%20action|tag%20reached)"')
         }
     }
     action "iContinueForEver" {
         guard() { return abs == 0 and tbs == 0 }
         adapter() {
             global p
-            p.write('c\n')
+            command('c')
             s = p.read_nonblocking(8192, 1)
             assert not "executed break action" in s, "break action without reason"
             assert not "tag reached" in s, "break on tag without reason"
