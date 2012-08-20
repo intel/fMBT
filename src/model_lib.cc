@@ -38,7 +38,9 @@ namespace {
   Model* lib_creator(Log& l, std::string params) {
     Model* m;
     std::string model_name,model_param,model_filename;
-    std::string s(unescape_string(strdup(params.c_str())));
+    char* stmp=strdup(params.c_str());
+    std::string s(unescape_string(stmp));
+    free(stmp);
 
     split(s, model_name, model_param);
     split(model_name,model_name,model_filename,",");

@@ -49,6 +49,7 @@ void History_log::processNode(xmlTextReaderPtr reader)
       char* aname=unescape_string((char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"name"));
       if (aname!=NULL) {
 	anames.push_back(aname);
+	free(aname);
       }
     }
 
@@ -57,6 +58,7 @@ void History_log::processNode(xmlTextReaderPtr reader)
       char* tname=unescape_string((char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"name"));
       if (tname!=NULL) {
 	tnames.push_back(tname);
+	free(tname);
       }
     }
 
@@ -72,6 +74,7 @@ void History_log::processNode(xmlTextReaderPtr reader)
       current_time.tv_sec=sec;
       current_time.tv_usec=usec;
     }
+    free(time);
   }
 
   if ((xmlTextReaderDepth(reader)==3) &&
@@ -86,6 +89,9 @@ void History_log::processNode(xmlTextReaderPtr reader)
   if ((xmlTextReaderDepth(reader)==3) &&
       (strcmp((const char*)name,"tags")==0)) {
     // tags
+    if (tag) {
+      free(tag);
+    }
     tag=unescape_string((char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"enabled"));
     if (act) {
       send_action();      
@@ -101,6 +107,8 @@ void History_log::processNode(xmlTextReaderPtr reader)
     char* ver=(char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"verdict");
     std::vector<std::string> p;
     std::string a(ver);
+    test_verdict=ver;
+    free(ver);
     send_action(a,p,true);
   }
 }
@@ -110,6 +118,8 @@ void History_log::set_coverage(Coverage* cov,
 {
   c=cov;
   a=alpha;
+
+  LIBXML_TEST_VERSION
 
   xmlTextReaderPtr reader =
     xmlReaderForFile(file.c_str(), NULL, 0);
@@ -122,7 +132,9 @@ void History_log::set_coverage(Coverage* cov,
       ret = xmlTextReaderRead(reader);
     }
     xmlFreeTextReader(reader);
-  } 
+  }
+  xmlCleanupParser();
+  xmlMemoryDump();
 }
 
 void History_log::send_action()

@@ -61,7 +61,7 @@ std::string OutputFormat_Html::format_covs()
   ret=ret+"<td>"+testnames.back()+"</td>";
 
   //verdict
-  ret=ret+"<td></td>\n";
+  ret=ret+"<td>"+test_verdict+"</td>\n";
 
   for(unsigned i=0;i<covnames.size();i++) {
     ret=ret+"<td>"+to_string(covs[i]->getCoverage())+
@@ -98,6 +98,11 @@ std::string OutputFormat_Html::report()
     std::map<std::vector<int> , int, bool(*)(const std::vector<int>&,const std::vector<int>&) > cnt(cmprp);
 
     for(unsigned j=0;j<traces.size();j++) {
+      printf("size %i:",traces[j].size());
+      for(unsigned k=0;k<traces[j].size();k++) {
+	printf("%i,",traces[j][k]);
+      }
+      printf("\n");
       cnt[traces[j]]++;
     }
 

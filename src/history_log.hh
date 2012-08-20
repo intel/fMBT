@@ -26,7 +26,7 @@
 class History_log: public History {
 public:
   History_log(Log& l, std::string params = "");
-
+  virtual ~History_log() {};
   virtual void set_coverage(Coverage*,Alphabet* alpha);
 
 protected:

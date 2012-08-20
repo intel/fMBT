@@ -158,15 +158,13 @@ int main(int argc,char * const argv[])
   dparse(p,s,std::strlen(s));
   free_D_Parser(p);
   p=NULL;
-  //g_free(s);
+  free(s);
   s=NULL;
 
   if (optind == argc) {
     print_usage();
     error(3, 0, "No logfile?\n");
   }
-
-  l=new Log_null;
 
   if (!of->status) {
     std::printf("Error %s\n",of->errormsg.c_str());
@@ -189,5 +187,12 @@ int main(int argc,char * const argv[])
   o=of->report();
   fwrite(o.c_str(),1,o.size(),outfile);  
 
+  fflush(outfile);
+
+  if (outfile!=stdout) 
+    fclose(outfile);
+
+  delete of;
+  delete l;
   return 0;
 }

@@ -83,6 +83,7 @@ protected:
 
   std::string drop_tag;
   std::string completed_tag;
+  std::string test_verdict;
 };
 
 #undef  FACTORY_CREATE_PARAMS
