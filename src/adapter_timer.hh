@@ -22,6 +22,7 @@
 class Adapter_timer: public Adapter {
 public:
   Adapter_timer(Log& l, std::string params);
+  virtual ~Adapter_timer() {}
   virtual void execute(std::vector<int>& action);
   virtual int  observe(std::vector<int> &action,bool block=false);
   virtual std::string stringify();
