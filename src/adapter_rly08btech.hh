@@ -19,6 +19,7 @@
 #include "adapter.hh"
 #include <sys/time.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 class Adapter_rly08btech: public Adapter {
 public:
