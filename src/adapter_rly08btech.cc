@@ -60,6 +60,16 @@ bool Adapter_rly08btech::init(){
   command["iOn7"]   =0x6b;
   command["iOn8"]   =0x6c;
 
+  command["iOn(1)"]   =0x65;
+  command["iOn(2)"]   =0x66;
+  command["iOn(3)"]   =0x67;
+  command["iOn(4)"]   =0x68;
+  command["iOn(5)"]   =0x69;
+  command["iOn(6)"]   =0x6a;
+  command["iOn(7)"]   =0x6b;
+  command["iOn(8)"]   =0x6c;
+
+
   command["iAllOff"]=0x6e;
   
   command["iOff1"]  =0x6f;
@@ -70,6 +80,15 @@ bool Adapter_rly08btech::init(){
   command["iOff6"]  =0x74;
   command["iOff7"]  =0x75;
   command["iOff8"]  =0x76;
+
+  command["iOff(1)"]  =0x6f;
+  command["iOff(2)"]  =0x70;
+  command["iOff(3)"]  =0x71;
+  command["iOff(4)"]  =0x72;
+  command["iOff(5)"]  =0x73;
+  command["iOff(6)"]  =0x74;
+  command["iOff(7)"]  =0x75;
+  command["iOff(8)"]  =0x76;
 
   return true;
 }
