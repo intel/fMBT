@@ -73,7 +73,7 @@ void OutputFormat::set_model(std::string m)
 	status=false;
 	return;
       } else {
-      if (model->status) {
+      if (model->status && model->init()) {
 	set_model(model);
       } else {
 	status=false;
