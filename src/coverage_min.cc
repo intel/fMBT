@@ -21,8 +21,8 @@
 #include "model.hh"
 #include "helper.hh"
 
-Coverage_Min::Coverage_Min(Log& l, std::string& _params) :
-  Coverage(l), params(_params)
+Coverage_Min::Coverage_Min(Log& l, std::string& _params,unit* _u) :
+  Coverage(l), params(_params),u(_u)
 {
   static std::string separator(":");
   char* tmp=strdup(params.c_str());
@@ -89,18 +89,15 @@ float Coverage_Min::getCoverage()
     return ret;
   }
 
-  ret=coverages[0]->getCoverage();
+  u->next(coverages[0]->getCoverage(),true);
 
   for(unsigned i=1;i<coverages.size();i++) {
     if (coverages[i]) {
-      float tmp=coverages[i]->getCoverage();
-      if (tmp<ret) {
-	ret=tmp;
-      }
+      u->next(coverages[i]->getCoverage(),false);
     }
   }
 
-  return ret;
+  return u->value();
 }
 
 
@@ -133,4 +130,23 @@ void Coverage_Min::set_model(Model* _model) {
   }  
 }
 
-FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Min, "min")
+namespace {
+  Coverage* min_creator_func( Log& log, std::string params= "")
+  {
+    return new Coverage_Min(log, params,new Coverage_Min::unit_min);
+  }
+
+  Coverage* max_creator_func( Log& log, std::string params= "")
+  {
+    return new Coverage_Min(log, params,new Coverage_Min::unit_max);
+  }
+
+  Coverage* sum_creator_func( Log& log, std::string params= "")
+  {
+    return new Coverage_Min(log, params,new Coverage_Min::unit_sum);
+  }
+
+  static CoverageFactory::Register memin("min", min_creator_func);
+  static CoverageFactory::Register memax("max", max_creator_func);
+  static CoverageFactory::Register mesum("sum", sum_creator_func);
+}
