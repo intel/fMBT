@@ -56,6 +56,36 @@ done
 
 testpassed
 
+teststep "Coverage min"
+echo 'model = "lsts:t1.lsts"' > test.conf
+echo 'coverage = "min:perm:3:perm:2"' >> test.conf
+echo 'model = "lsts:t1.lsts"' > test2.conf
+echo 'coverage = "min:perm:2:perm:3"' >> test2.conf
+
+fmbt test.conf -l min1.log >>$LOGFILE 2>&1 || {
+    testfailed
+}
+
+fmbt test2.conf -l min2.log >>$LOGFILE 2>&1 || {
+    testfailed
+}
+
+fmbt-log -f \$sc min1.log | tail -1 | while read c
+do
+    if [ 0.333333 != $c ]; then
+	testfailed
+    fi
+done
+
+fmbt-log -f \$sc min1.log > log1
+fmbt-log -f \$sc min2.log > log2
+
+cmp log1 log2 || {
+    testfailed 
+}
+
+testpassed
+
 teststep "Coverage tag"
 echo 'model = "lsts:t1.lsts"' > test.conf
 echo 'coverage = "tag"' >> test.conf
@@ -117,3 +147,4 @@ fi
 done
 
 testpassed
+
