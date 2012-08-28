@@ -162,7 +162,7 @@ Available types & parameters:
 
                 measure coverage of all permutations of any <count>
                 actions in the test model. If count is not given, it
-                defaults to 1.
+                defaults to 2.
 
         tag
 

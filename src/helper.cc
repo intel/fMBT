@@ -242,6 +242,13 @@ char* escape_string(const char* msg)
 #endif
 }
 
+void escape_string(std::string& msg)
+{
+  char* s=escape_string(msg.c_str());
+  msg=std::string(s);
+  escape_free(s);
+}
+
 std::string removehash(std::string& s)
 {
   unsigned long cutpos = s.find_last_of("#");
@@ -517,30 +524,32 @@ ssize_t nonblock_getline(char **lineptr, size_t *n, FILE *stream,char* &read_buf
 
 /* non-blocking getline, filter out log entries */
 ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
-		 char* &read_buf,size_t &read_buf_pos,Log& log)
+                 char* &read_buf,size_t &read_buf_pos,Log& log)
 {
   ssize_t ret;
   bool log_redirect;
   do {
     log_redirect=false;
     ret=nonblock_getline(lineptr,n,stream,
-			 read_buf,read_buf_pos);
+                         read_buf,read_buf_pos);
     if (ret>0) {
       if (**lineptr=='d') {
-	log.debug(*lineptr+1);
-	std::free(*lineptr);
-	*lineptr = NULL;
-	log_redirect=true;
+        log.debug(*lineptr+1);
+        std::free(*lineptr);
+        *lineptr = NULL;
+        log_redirect=true;
       }
-      if (**lineptr=='l') {
+      if (**lineptr=='l' || **lineptr=='e') {
         // remote log messages must be url encoded when sent through
         // the remote adapter protocol
-	log.print("<remote msg=\"%s\"/>\n",*lineptr+1);
-	*lineptr = NULL;
-	log_redirect=true;
+        log.print("<remote msg=\"%s\"/>\n",*lineptr+1);
+        if (**lineptr == 'e')
+          fprintf(stderr, "%s\n", unescape_string(*lineptr+1));
+        std::free(*lineptr);
+        *lineptr = NULL;
+        log_redirect=true;
       }
-    }
-    
+    }   
   } while (ret>0 && log_redirect);
   return ret;
 }
@@ -554,11 +563,15 @@ ssize_t bgetline(char **lineptr, size_t *n, FILE *stream, Log& log)
     log_redirect = false;
     ret = getdelim(lineptr, n, '\n', stream);
     if (ret && ret != -1) {
-      if (**lineptr == 'l') {
+      if (**lineptr == 'l' || **lineptr=='e') {
         // remote log messages must be url encoded when sent through
         // the remote adapter protocol
         *(*lineptr + ret - 1) = '\0';
-	log.print("<remote msg=\"%s\"/>\n",*lineptr+1);
+        log.print("<remote msg=\"%s\"/>\n",*lineptr+1);
+        if (**lineptr == 'e')
+          fprintf(stderr, "%s\n", unescape_string(*lineptr+1));
+        std::free(*lineptr);
+        *lineptr = NULL;
         log_redirect = true;
       }
     }

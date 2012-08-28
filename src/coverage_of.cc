@@ -21,9 +21,6 @@
 
 Coverage_of::~Coverage_of()
 {
-  for(unsigned i=0;i<covs.size();i++) {
-    delete covs[i];
-  }  
 }
 
 std::string Coverage_of::stringify()
@@ -43,6 +40,7 @@ void Coverage_of::history(int action,std::vector<int>& props,
 			  Verdict::Verdict verdict)
 {
   for(unsigned i=0;i<covs.size();i++) {
-    covs[i]->history(action,props,verdict);
+    Coverage* c=covs[i];
+    c->history(action,props,verdict);
   }
 }

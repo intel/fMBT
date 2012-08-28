@@ -32,6 +32,7 @@ Log* l=NULL;
 #include <cstdlib>
 #include "dparse.h"
 #include "history_log.hh"
+#include "config.h"
 
 extern "C" {
 extern D_ParserTables parser_tables_uconf;
@@ -71,7 +72,6 @@ int main(int argc,char * const argv[])
 {
   FILE* outfile=stdout;
   char* usecasefile=NULL;
-  bool debug_enabled=false;
   int c;
   OutputFormat* of=NULL;
 
@@ -79,14 +79,16 @@ int main(int argc,char * const argv[])
 
   static struct option long_opts[] = {
     {"help", no_argument, 0, 'h'},
+    {"version", no_argument, 0, 'V'},
     {0, 0, 0, 0}
   };
 
-  while ((c = getopt_long (argc, argv, "hu:p:f:o:", long_opts, NULL)) != -1)
+  while ((c = getopt_long (argc, argv, "hu:p:f:o:V", long_opts, NULL)) != -1)
     switch (c)
     {
-    case 'D': 
-      debug_enabled=true;
+    case 'v':
+      printf("Version: "VERSION"\n");
+      return 0;
       break;
     case 'u':
       // Usecase file
@@ -156,15 +158,13 @@ int main(int argc,char * const argv[])
   dparse(p,s,std::strlen(s));
   free_D_Parser(p);
   p=NULL;
-  //g_free(s);
+  free(s);
   s=NULL;
 
   if (optind == argc) {
     print_usage();
     error(3, 0, "No logfile?\n");
   }
-
-  l=new Log_null;
 
   if (!of->status) {
     std::printf("Error %s\n",of->errormsg.c_str());
@@ -187,5 +187,12 @@ int main(int argc,char * const argv[])
   o=of->report();
   fwrite(o.c_str(),1,o.size(),outfile);  
 
+  fflush(outfile);
+
+  if (outfile!=stdout) 
+    fclose(outfile);
+
+  delete of;
+  delete l;
   return 0;
 }

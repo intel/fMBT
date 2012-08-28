@@ -32,9 +32,12 @@ extern Lts_xrules* xobj;
 
 std::string Lts_xrules::stringify()
 {
+  if (!status) {
+    return Writable::stringify();
+  }
   std::ostringstream t(std::ios::out | std::ios::binary);
   std::string name;
-
+  
   for(unsigned i=1;i<model_names.size();i++) {
     if (lts[i]!=NULL) {
       std::string s=lts[i]->stringify();
@@ -51,7 +54,10 @@ std::string Lts_xrules::stringify()
 
 void Lts_xrules::prop_create()
 {
-  if (prop_names.size()==0) {
+  if (!status) {
+    return;
+  }
+  if (prop_names.empty()) {
     prop_names.push_back("");
   }
   int count=0;
@@ -114,6 +120,10 @@ void Lts_xrules::add_file(unsigned int index,std::string& filename)
 {
   log.debug("%s(%i,%s)",__PRETTY_FUNCTION__,index,filename.c_str());
 
+  if (!status) {
+    return;
+  }
+
   if (model_names.size()<=index) {
     model_names.resize(index+2);
     lts.resize(index+2);
@@ -125,13 +135,36 @@ void Lts_xrules::add_file(unsigned int index,std::string& filename)
   
   model_names[index]=std::string(filename);
 
-  lts[index]=ModelFactory::create(log,filetype(filename),filename);
+  std::string model_name,model_param;
+
+  split(filename, model_name, model_param);  
+
+  lts[index]=ModelFactory::create(log,model_name,model_param);
+  
+  if (!lts[index]) {
+    // Let's try to load lsts/xrules..
+
+    lts[index]=ModelFactory::create(log,filetype(filename),filename);
+    if (!lts[index]) {
+      status=false;
+      errormsg=std::string("Can't load model ")+filename;
+      return;
+    }
+  }
+
+  if (!lts[index]->status) {
+    status=false;
+    errormsg="Submodel error"+filename+" "+lts[index]->errormsg;
+    return;
+  }
   
   if (!lts[index]->init()) {
-    status=false;    
+    status=false;
+    errormsg="Failed to init submodel "+filename+" "+lts[index]->errormsg;
+    return;
   }
+
   lts[index]->setparent(this);
-  
 }
 
 /*
@@ -151,7 +184,7 @@ void Lts_xrules::add_result_action(std::string* name)
   /* action_number returns negative, if the name is unknown */
 
   if (action<0) {
-    if (action_names.size()==0) {
+    if (action_names.empty()) {
       /* Yeah.. Let's insert the tau.. */
       std::string n("tau");
       action_names.push_back(n);
@@ -221,6 +254,9 @@ void Lts_xrules::add_component(unsigned int index,std::string& name)
 
 void Lts_xrules::print_root_par()
 {
+  if (!status) {
+    return;
+  }
   print_par(&root_par);
 }
 

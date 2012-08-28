@@ -51,6 +51,7 @@ fmbt -L testlog.txt test.conf >>$LOGFILE 2>&1 || {
     echo "mbt test log:     $(dirname $0)/testlog.txt" >> $LOGFILE
     echo "adapter test log: $(dirname $0)/testlog-adapter.txt" >> $LOGFILE
     testfailed
+    exit 1
 }
 testpassed
 
@@ -62,5 +63,16 @@ covered=$(awk -F\" '/coverage=/{print $4}' < testlog.txt | tail -n1)
 if [ "$covered" != "1.000000" ]; then
     echo "Failed: did not achieve the required coverage." >> $LOGFILE
     testfailed
+    exit 1
 fi
+testpassed
+
+teststep "interactive breakpoints and continue..."
+fmbt -l breakpoints.log breakpoints.conf >> $LOGFILE 2>&1 || {
+    echo "non-zero return value from fmbt" >> $LOGFILE
+    echo "fmbt log: $(dirname $0)/breakpoints.log" >> $LOGFILE
+    echo "adapter log: $(dirname $0)/breakpoints.aal.log" >> $LOGFILE
+    testfailed
+    exit 1
+}
 testpassed

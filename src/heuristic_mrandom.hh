@@ -32,6 +32,8 @@
 class Heuristic_mrandom : public Heuristic {
 public:
   Heuristic_mrandom(Log& l, std::string params);
+  virtual ~Heuristic_mrandom();
+  virtual bool execute(int action);
   virtual float getCoverage();
   virtual int getAction();
   virtual int getIAction();

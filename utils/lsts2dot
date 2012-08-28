@@ -190,12 +190,15 @@ if __name__=='__main__':
     logfile = None
 
     opts, remainder = getopt.getopt(
-        sys.argv[1:], 'hi:o:l:',
-        ['help', 'input=', 'invert-colors', 'output=', 'loops-in-states', 'log='])
+        sys.argv[1:], 'hi:o:l:V',
+        ['help', 'input=', 'invert-colors', 'output=', 'loops-in-states', 'log=', 'version'])
 
     for opt, arg in opts:
         if opt in ['-h', '--help']:
             print __doc__
+            sys.exit(0)
+        elif opt in ['-V', '--version']:
+            print "Version"
             sys.exit(0)
         elif opt in ['-i', '--input']:
             if arg == "-": continue

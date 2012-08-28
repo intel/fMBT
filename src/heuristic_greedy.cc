@@ -82,7 +82,13 @@ int Heuristic_greedy::getIAction()
   int* actions;
   int i = model->getIActions(&actions);
   int pos = -1;
+  
+  log.debug("greedy getIACtion %i",i);
 
+  for(int u=0;u<i;u++) {
+    log.debug("iaction %i %i",u,actions[u]);
+  }
+  
   if (i==0) {
     // No input actions. See if there are output actions available.
     i=model->getActions(&actions);
@@ -107,7 +113,7 @@ int Heuristic_greedy::getIAction()
   } else {
     /* In burst mode new path is not searched before previosly found
      * path is fully consumed */
-    if (!m_burst || m_path.size() == 0) {
+    if (!m_burst || m_path.empty() ) {
       /* Spend more time for better coverage */
       AlgPathToBestCoverage alg(m_search_depth);
       /* Use precalculated path (m_path) as a hint. */
@@ -119,6 +125,19 @@ int Heuristic_greedy::getIAction()
       }
     }
     if (m_path.size() > 0) {
+      log.debug("path %i",m_path.back());
+      i = model->getIActions(&actions);
+      bool broken=true;
+      int ret=m_path.back();
+      for(int j=0;j<i;j++) {
+	if (actions[j]==ret) {
+	  broken=false;
+	}
+      }
+      if (broken) {
+	log.print("<ERROR msg=\"%s %i\"/>","trying to return action %i, which is not executable in the model");
+	abort();
+      }
       return m_path.back();
     }
   }
@@ -127,6 +146,7 @@ int Heuristic_greedy::getIAction()
    * valid anymore (execute might have happened), ask it again. */
   i = model->getIActions(&actions);
   pos=(((float)random())/RAND_MAX)*i;
+
   return actions[pos];
 }
 

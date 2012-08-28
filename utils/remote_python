@@ -96,6 +96,11 @@ def error(msg):
     g_loop.quit()
     sys.exit(1)
 
+def fmbtstderr(msg):
+    to_fmbt = urllib.quote("e%s" % (msg,)) + '\n'
+    sys.stderr.write(to_fmbt)
+    log(msg)
+
 def warning(msg, writeToStderr=0):
     log("WARNING: %s" % (msg,), writeToStderr=writeToStderr)
 
@@ -344,9 +349,9 @@ oDBusSignal('HelloSignal',StoreAs(var1),StoreAs(var2),'valueOfArg3')
 
 class Error(object):
     """
-    Allows comparing cought and expected exceptions. Example:
+    Allows comparing raised and expected exceptions. Example:
 
-iDBus('system','net.connman','/','net.connman.Manager').SetProperty('foobar',2)==Error(DBusException,'Invalid property')
+iDBus('system','net.connman','/','net.connman.Manager').SetProperty('foobar',2) == Error('.*Invalid property.*')
     """
     def __init__(self, arg1, arg2 = None):
         """
@@ -403,13 +408,13 @@ class iCatch:
     """
     Executes Python statements and returns exceptions or None.
 
-    Example: iCatch('first_time += 1') == Error(NameError)
+    Example: iCatch('first_time += 1') == Error('NameError.*')
     """
     def __init__(self, _globals):
         self._globals = _globals
     def __call__(self, codeString):
-        """returns None if the statement was executed without exceptions,
-        otherwise returns the exception as an Error object."""
+        """returns None if codeString was executed without exceptions,
+        otherwise returns the exception in an Error object."""
         try:
             exec codeString.strip() in self._globals
         except Exception, e:
@@ -706,7 +711,8 @@ class AdapterIO:
             executedActionIndex = g_actions.index(executedActionName)
             sys.stderr.write(str(executedActionIndex) + '\n')
         except ValueError:
-            warning("Cannot report execution: '%s'." % (executedActionName,), writeToStderr=1)
+            fmbtstderr('remote_python: no actions corresponding to observed execution:\n"%s"' %
+                        (executedActionName,))
             sys.stderr.write('0\n')
 
 class InteractiveShellIO:
@@ -812,8 +818,8 @@ if __name__ == "__main__":
     opt_ignore_unknown_outputs = False
 
     opts, remainder = getopt.getopt(
-        sys.argv[1:], 'c:hsTd:L:l:',
-        ['help', 'shell', 'self-test',
+        sys.argv[1:], 'Vc:hsTd:L:l:',
+        ['version', 'help', 'shell', 'self-test',
          'action-delay=', 'log-file=',
          'ignore-unknown-outputs'])
 
@@ -822,6 +828,13 @@ if __name__ == "__main__":
             pre_exec_statements.append(arg)
         elif opt in ['-h', '--help']:
             print __doc__
+            sys.exit(0)
+        elif opt in ['-V', '--version']:
+            try:
+                import fmbt_config
+                print "Version " + fmbt_config.fmbt_version
+            except:
+                print "Version N/A"
             sys.exit(0)
         elif opt in ['-s', '--shell']:
             shellMode = True
@@ -885,7 +898,7 @@ if __name__ == "__main__":
     if shellMode:
         print "fMBT remote_python adapter interactive shell."
         print "Docs on built-in helpers:"
-        print "help(iShell), help(iDBus), help(iDBusListen)"
+        print "help(iCatch), help(iShell), help(iDBus), help(iDBusListen)"
         sys.stdout.flush()
         g_ioHandler = InteractiveShellIO()
     else:

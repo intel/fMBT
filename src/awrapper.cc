@@ -23,6 +23,10 @@
 
 std::string Awrapper::es("");
 
+Awrapper::~Awrapper()
+{
+}
+
 Awrapper::Awrapper(Log&l, std::string params, aal* _ada):
   Adapter(l, params), ada(_ada) {
   if (ada==NULL) {

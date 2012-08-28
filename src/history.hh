@@ -32,12 +32,13 @@ class Log;
 
 class History: public Writable {
 public:
-  History(Log& l, std::string params = "") : log(l) {}
+  History(Log& l, std::string params = "") : log(l) {test_verdict="N/A";}
+  virtual ~History() {};
 
   virtual void set_coverage(Coverage*,Alphabet* alpha) =0;
 
   static struct timeval current_time;
-
+  std::string test_verdict;
 protected:
   Log log;
 };

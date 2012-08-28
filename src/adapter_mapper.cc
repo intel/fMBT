@@ -43,6 +43,12 @@ Adapter_mapper::Adapter_mapper(Log& log, std::string _params)
   
 }
 
+Adapter_mapper::~Adapter_mapper()
+{
+  for(unsigned i=0;i<adapters.size();i++) {
+    delete adapters[i];
+  }
+}
 bool Adapter_mapper::init()
 {
   load(params);

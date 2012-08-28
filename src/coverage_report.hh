@@ -32,6 +32,10 @@ public:
     Coverage_exec_filter(l,_from,_to,_drop),count(0)
   {}
 
+  virtual ~Coverage_report() {
+
+  }
+
   virtual std::string stringify();
 
   virtual void push(){ save.push(online); save.push(count); };
@@ -54,7 +58,6 @@ private:
 
   bool prop_set(std::vector<int> p,int npro,int* props);
 
-  std::vector<int> executed;
   std::vector<struct timeval > etime;
 
   int count;

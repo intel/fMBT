@@ -34,24 +34,21 @@ void Coverage_Prop::history(int action,
   /* Not intrested about action or verdict. Just proposition */
   
   for(unsigned i=0;i<props.size();i++) {
-    int pos=map[props[i]];
-    if (pos && !data[pos]) {
+    if (prop_included[props[i]] && !data[props[i]]) {
       props_seen++;
-      data[pos]=true;
+      data[props[i]]=true;
     }
   }  
 }
 
 void Coverage_Prop::push()
 {
-  model->push();
   std::pair<std::vector<bool>,int> p(data,props_seen);
   state_save.push_front(p);
 }
 
 void Coverage_Prop::pop()
 {
-  model->pop();
   data=state_save.front().first;
   props_seen=state_save.front().second;
   state_save.pop_front();
@@ -63,10 +60,9 @@ bool Coverage_Prop::execute(int action)
   int cnt=model->getprops(&pro);
 
   for(int i=0;i<cnt;i++) {
-    int pos=map[pro[i]];
-    if (pos && !data[pos]) {
+    if (prop_included[pro[i]] && !data[pro[i]]) {
       props_seen++;
-      data[pos]=true;
+      data[pro[i]]=true;
     }
   }
 
@@ -121,7 +117,7 @@ void Coverage_Prop::set_model(Model* _model) {
       props_total=0;
     }
     for(unsigned i=1;i<model->getSPNames().size();i++) {
-      map[i]=i;
+      prop_included[i]=true;
     }
   } else {
     // Only props in the params.
@@ -130,11 +126,11 @@ void Coverage_Prop::set_model(Model* _model) {
     std::vector<std::string>& sp=model->getSPNames();
     strvec(props,params,separator);
     for(unsigned i=0;i<props.size();i++) {
-      int pos=find(sp,props[i]);
-      if (pos) 
-	map[i]=pos;
+      int propnum = find(sp,props[i]);
+      if (propnum)
+	prop_included[propnum]=true;
     }
-    props_total=map.size();
+    props_total=prop_included.size();
   }
   data.resize(props_total+1);
 }

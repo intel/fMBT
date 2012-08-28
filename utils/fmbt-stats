@@ -78,6 +78,7 @@ import operator
 import subprocess
 import getopt
 import os
+import fmbt_config
 
 MAXSPEED=100000
 
@@ -296,9 +297,9 @@ def stats_speed(arg, testlog_fileobj, output_fileobj, plot_filename):
         for avg in averages:
             if avg > i: avg = i
             prev_timestamp_avg = timestamp_action_list[i-avg][0]
-            # if timestamps are equal, use MAX_SPEED instead of
+            # if timestamps are equal, use MAXSPEED instead of
             # dividing by zero
-            if (this_timestamp-prev_timestamp_avg) == 0: data[-1].append(MAX_SPEED)
+            if (this_timestamp-prev_timestamp_avg) == 0: data[-1].append(MAXSPEED)
             else: data[-1].append( avg/(this_timestamp-prev_timestamp_avg) )
 
 
@@ -530,11 +531,14 @@ if __name__ == '__main__':
     plot_filename = None
 
     opts, remainder = getopt.getopt(
-        sys.argv[1:], 'hf:o:p:',
-        ['help', 'format=', 'output=', 'plot='])
+        sys.argv[1:], 'hf:o:p:V',
+        ['help', 'format=', 'output=', 'plot=', 'version'])
     for opt, arg in opts:
         if opt in ['-h', '--help']:
             print __doc__
+            sys.exit(0)
+        elif opt in ['-V', '--version']:
+            print "Version " + fmbt_config.fmbt_version
             sys.exit(0)
         elif opt in ['-f', '--format']:
             output_format = arg

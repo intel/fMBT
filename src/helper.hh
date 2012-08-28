@@ -44,6 +44,7 @@ char* readfile(const char* filename,const char* preprocess);
 char* readfile(const char* filename);
 std::string capsulate(std::string s);
 char* escape_string(const char* msg);
+void escape_string(std::string& msg);
 void escape_free(const char* msg);
 std::string removehash(std::string& s);
 void  string2vector(char* s,std::vector<int>& a);
@@ -72,6 +73,7 @@ ssize_t nonblock_getline(char **lineptr, size_t *n,
 
 ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
 		 char* &read_buf,size_t &read_buf_pos,Log& log);
+ssize_t bgetline(char **lineptr, size_t *n, FILE *stream, Log& log);
 
 void block(int fd);
 void nonblock(int fd);

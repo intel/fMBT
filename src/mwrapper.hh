@@ -31,7 +31,7 @@
 class Mwrapper: public Model {
 public:
   Mwrapper(Log&l, std::string params, aal* _model);
-
+  virtual ~Mwrapper();
   virtual int getActions(int** actions);
   virtual int getIActions(int** actions);
   virtual bool reset();

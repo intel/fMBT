@@ -32,6 +32,11 @@ extern "C" {
 extern D_ParserTables parser_tables_lts;
 }
 
+Lts::~Lts()
+{
+
+}
+
 int Lts::getprops(int** props) {
   int count=stateprops[current_state].size();
 
@@ -99,7 +104,7 @@ extern Lts* obj;
 
 void Lts::add_prop(std::string* name,std::vector<int>& pr)
 {
-  if (prop_names.size()==0) {
+  if (prop_names.empty()) {
     prop_names.push_back("");
   }
   int pro=prop_names.size();
@@ -120,6 +125,8 @@ bool Lts::init()
   bool ret;
 
   log.debug("Lts::load %s",name.c_str());
+
+  lts_name=name;
 
   obj=this;
 
@@ -203,7 +210,7 @@ int Lts::execute(int action)
 {
   struct _state* st=&state[current_state];
   
-  log.debug("Lts::execute: trying to execute action %i at state %i",action,current_state);
+  log.debug("Lts::execute: %s trying to execute action %i at state %i",lts_name.c_str(),action,current_state);
   
   log.debug("%i %i",
 	 st->first,
@@ -214,20 +221,22 @@ int Lts::execute(int action)
 	   current_state,actions[st->first+i]);
     if (actions[st->first+i]==action) {
       current_state=dstate[st->first+i];
-      log.debug("Lts::execute: action found, continuing from state %i",current_state);
+      log.debug("Lts::execute: %s action found, continuing from state %i",lts_name.c_str(),current_state);
       return true;
     }
   }
-  log.debug("Lts::execute: can't execute");
+  log.debug("Lts::execute: %s can't execute",lts_name.c_str());
   return false;
 }
 
 void Lts::push()
 {
+  log.debug("Lts::push %s",lts_name.c_str());
   state_save.push_front(current_state);
 }
 void Lts::pop()
 {
+  log.debug("Lts::pop %s",lts_name.c_str());
   current_state=state_save.front();
   state_save.pop_front();
 }

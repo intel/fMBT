@@ -118,13 +118,16 @@ readagain:
     action.resize(0);
     return;
   }
-  if (strlen(s) > 0 && s[0] == 'l') {
+  if (strlen(s) > 0 && (s[0] == 'l' || s[0] == 'e') ) {
     // Remote log message. Protocol requires that it's already URL
     // encoded (otherwise it could not contain linebreaks and other
     // special characters worth logging) => no encoding needed when
     // rewriting it to the log.
     if (s[strlen(s)-1] == '\n') s[strlen(s)-1] = '\0';
     log.print("<remote msg=\"%s\"/>\n",(s+1));
+    if (s[0] == 'e') {
+      fprintf(stderr,"%s\n",unescape_string(s+1));
+    }
     free(s);
     s = NULL;
     goto readagain;

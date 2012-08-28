@@ -40,7 +40,22 @@ FACTORY_IMPLEMENTATION(OutputFormat)
 #include "history_log.hh"
 #include "coverage_of.hh"
 
-OutputFormat::~OutputFormat() {}
+OutputFormat::~OutputFormat() {
+  for(unsigned i=0;i<covs.size();i++) {
+    delete covs[i];
+  }
+
+  for(unsigned i=0;i<rcovs.size();i++) {
+    delete rcovs[i];
+  }
+
+  for(unsigned i=0;i<testruns.size();i++) {
+    delete testruns[i];
+  }
+  if (model)
+    delete model;
+  model=NULL;
+}
 
 void OutputFormat::set_model(std::string m)
 { 
@@ -58,7 +73,7 @@ void OutputFormat::set_model(std::string m)
 	status=false;
 	return;
       } else {
-      if (model->status) {
+      if (model->status && model->init()) {
 	set_model(model);
       } else {
 	status=false;
@@ -83,15 +98,20 @@ void OutputFormat::add_uc(std::string& name,
 std::string OutputFormat::handle_history(Log&l,std::string& h)
 {
   if (status) {
+    test_verdict="N/A";
     History* history = new History_log(l,h);
     std::vector<Coverage*> c;
-    c.resize(rcovs.size());
-    std::copy(rcovs.begin(),rcovs.end(),c.begin());
+    c.insert(c.end(),rcovs.begin(),rcovs.end());
+    c.insert(c.end(),covs.begin(),covs.end());
     Coverage_of* cov=new Coverage_of(l,c);
-    
+
     testnames.push_back(h);
-    
+
     history->set_coverage(cov,model);
+    test_verdict=history->test_verdict;
+
+    delete cov;
+    delete history;
     return format_covs();
   } else {
     return "";

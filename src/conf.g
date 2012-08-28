@@ -51,13 +51,13 @@ conf_entry: model               |
             on_pass             |
             on_inconc           ;
 
-model: 'model' '=' string { conf_obj->set_model(*$2.str); } ;
+model: 'model' '=' string { conf_obj->set_model(*$2.str); delete $2.str; } ;
 
-heuristic: 'heuristic' '=' string { conf_obj->set_heuristic(*$2.str); } ;
+heuristic: 'heuristic' '=' string { conf_obj->set_heuristic(*$2.str); delete $2.str; } ;
 
-coverage: 'coverage' '=' string { conf_obj->set_coverage(*$2.str); } ;
+coverage: 'coverage' '=' string { conf_obj->set_coverage(*$2.str); delete $2.str; } ;
 
-adapter: 'adapter' '=' string { conf_obj->set_adapter(*$2.str); } ;
+adapter: 'adapter' '=' string { conf_obj->set_adapter(*$2.str); delete $2.str; } ;
 
 engine_cov: 'engine.cov' '=' float {
             fprintf(stderr, "Warning: (test configuration) engine.cov is to be DEPRECATED. Use\n");
@@ -99,7 +99,7 @@ engine_time: 'engine.endtime' '=' string {
                 new End_condition(Verdict::PASS, End_condition::DURATION, $2.str));
             } ;
 
-adapter_sleep: 'adapter.observesleep' '=' string { conf_obj->set_observe_sleep(*$2.str); } ;
+adapter_sleep: 'adapter.observesleep' '=' string { conf_obj->set_observe_sleep(*$2.str); delete $2.str; } ;
 
 end_condition: verdict '=' '"' end_type ':' string_woquotes '"'
         { conf_obj->add_end_condition(
@@ -117,13 +117,13 @@ end_condition_noarg: verdict '=' '"' end_type_noarg '"'
 
 history: 'history' '=' string { conf_obj->add_history($2.str); };
 
-on_fail: 'on_fail' '=' string { conf_obj->set_on_fail(*$2.str); };
+on_fail: 'on_fail' '=' string { conf_obj->set_on_fail(*$2.str); delete $2.str; };
 
-on_pass: 'on_pass' '=' string { conf_obj->set_on_pass(*$2.str); };
+on_pass: 'on_pass' '=' string { conf_obj->set_on_pass(*$2.str); delete $2.str; };
 
-on_inconc: 'on_inconc' '=' string { conf_obj->set_on_inconc(*$2.str); };
+on_inconc: 'on_inconc' '=' string { conf_obj->set_on_inconc(*$2.str); delete $2.str; };
 
-on_error: 'on_error' '=' string { conf_obj->set_on_error(*$2.str); };
+on_error: 'on_error' '=' string { conf_obj->set_on_error(*$2.str); delete $2.str; };
 
 verdict: pass {          $$.val=Verdict::PASS; } 
         | fail {         $$.val=Verdict::FAIL; }

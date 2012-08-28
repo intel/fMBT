@@ -24,10 +24,21 @@
 #include <string.h>
 
 namespace {
+
+  std::vector<void*> libs;
+
+  void libs_atexit() {
+    for(unsigned i=0;i<libs.size();i++) {
+      dlclose(libs[i]);
+    }
+  }
+
   Adapter* creator_func(Log& l, std::string params = "") {
     Adapter* a;
     std::string adapter_name,adapter_param,adapter_filename;
-    std::string s(unescape_string(strdup(params.c_str())));
+    char* stmp=strdup(params.c_str());
+    std::string s(unescape_string(stmp));
+    free(stmp);
 
     split(s, adapter_name, adapter_param);
     split(adapter_name,adapter_name,adapter_filename,",");
@@ -39,6 +50,10 @@ namespace {
 
       if (handle) {
 	a = AdapterFactory::create(l, adapter_name, adapter_param);
+	if (libs.empty()) {
+	  atexit(libs_atexit);
+	}
+	libs.push_back(handle);
       } else {
 	std::string d("dummy");
 	std::string em("");

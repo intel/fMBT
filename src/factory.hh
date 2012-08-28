@@ -45,6 +45,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <stdlib.h>
 
 #ifndef FACTORY_CREATE_PARAMS
 #define FACTORY_CREATE_PARAMS Log& log,                                \
@@ -87,13 +88,20 @@ namespace MODULETYPE##Factory {                                        \
 }
 
 #define FACTORY_IMPLEMENTATION(MODULETYPE)                             \
+void MODULETYPE##_ATEXITFUNC() {			               \
+  if (MODULETYPE##Factory::creators) 				       \
+    delete MODULETYPE##Factory::creators ;			       \
+  MODULETYPE##Factory::creators = 0;                                   \
+ }      							       \
 std::map<std::string, MODULETYPE##Factory::creator>*                   \
     MODULETYPE##Factory::creators = 0;                                 \
                                                                        \
 void MODULETYPE##Factory::add_factory(std::string name, creator c)     \
 {                                                                      \
-  if (!creators)                                                       \
+  if (!creators) {                                                     \
     creators = new std::map<std::string, MODULETYPE##Factory::creator>;\
+    atexit(MODULETYPE##_ATEXITFUNC);                                   \
+  }                                                                    \
   (*creators)[name] = c;                                               \
 }                                                                      \
                                                                        \

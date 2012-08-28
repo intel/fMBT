@@ -22,13 +22,25 @@
 #include "null.hh"
 #include "conf.hh"
 #include "helper.hh"
+#include <dlfcn.h>
 #include <cstring>
 
 namespace {
+
+  std::vector<void*> mods;
+
+  void mods_atexit() {
+    for(unsigned i=0;i<mods.size();i++) {
+      dlclose(mods[i]);
+    }
+  }
+
   Model* lib_creator(Log& l, std::string params) {
     Model* m;
     std::string model_name,model_param,model_filename;
-    std::string s(unescape_string(strdup(params.c_str())));
+    char* stmp=strdup(params.c_str());
+    std::string s(unescape_string(stmp));
+    free(stmp);
 
     split(s, model_name, model_param);
     split(model_name,model_name,model_filename,",");
@@ -40,6 +52,10 @@ namespace {
 
       if (handle) {
 	m = ModelFactory::create(l, model_name, model_param);
+	if (mods.empty()) {
+	  atexit(mods_atexit);
+	}
+	mods.push_back(handle);
       } else {
 	m = new Null(l);
 	if (m) {

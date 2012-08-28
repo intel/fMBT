@@ -1,4 +1,4 @@
-1="remote:../../src/remote_python -Ltestlog-adapter.txt"
+1="remote:remote_python -Ltestlog-adapter.txt"
 2="mapper:dummys.mrules"
 
 "init"                   -> (1, "iCatch('import fmbt_i') == None")

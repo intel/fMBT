@@ -55,9 +55,12 @@ void Conf::load(std::string& name,std::string& content)
   D_Parser *p = new_D_Parser(&parser_tables_conf, 512);
   p->loc.pathname = name.c_str();
   char *s;
-
+  
+  Conf* tmp=conf_obj;
   log.push("conf_load");
   log.debug("Conf::load %s",name.c_str());
+  conf_obj=this;
+
   s=readfile(name.c_str());
 
   if (s==NULL) {
@@ -66,9 +69,6 @@ void Conf::load(std::string& name,std::string& content)
     log.pop();
     return;
   }
-
-  Conf* tmp=conf_obj;
-  conf_obj=this;
 
   std::string ss(s);
   ss=ss+"\n"+content;
@@ -104,7 +104,7 @@ void Conf::load(std::string& name,std::string& content)
 		      + "\" failed.");
   }
 
-  Coverage* coverage = CoverageFactory::create(log,coverage_name,coverage_param);
+  coverage = CoverageFactory::create(log,coverage_name,coverage_param);
 
   if (coverage == NULL)
     RETURN_ERROR_VOID("Creating coverage \"" + coverage_name + "\" failed.");
@@ -201,6 +201,10 @@ Verdict::Verdict Conf::execute(bool interactive) {
       End_condition* e = end_conditions[i];
       if (e->status == false)
         RETURN_ERROR_VERDICT("Error in end condition: " + e->stringify());
+      if (e->counter == End_condition::ACTION) {
+        // avoid string comparisons, fetch the index of the tag
+        e->param_long = find(model->getActionNames(), *(e->param));
+      }
       if (e->counter == End_condition::STATETAG) {
         // avoid string comparisons, fetch the index of the tag
         e->param_long = find(model->getSPNames(), *(e->param));

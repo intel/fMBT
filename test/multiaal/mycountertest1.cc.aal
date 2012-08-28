@@ -1,0 +1,30 @@
+aal "mycountertest1" {
+    language: C++ {
+    };
+
+    variables {
+    }
+
+    initial_state {
+    }
+
+    action "iCreate" {
+        guard() { return true; }
+    }
+
+    action "iDestroy" {
+        guard() { return true;}
+    }
+
+    action "iIncrement" {
+        guard() { return true; }
+    }
+
+    action "iReset" {
+        guard() { return true; }
+    }
+
+    action "iCount" {
+        guard() { return true; }
+    }
+}

@@ -228,6 +228,7 @@ import getopt
 
 #import tema.lsts.lsts as lsts
 import lsts
+import fmbt_config
 
 # Rule syntax:
 reflags=re.DOTALL|re.MULTILINE
@@ -474,6 +475,7 @@ def parse_rulestr(s, filename):
     n=parse_string(slhs,r.lhs)
     if n!=0:
         line_number = slhs[:len(slhs)-n].count('\n') + 1
+        next_linefeed = slhs[len(slhs)-n:].find('\n')
         if next_linefeed > 0:
             bad_line = slhs[len(slhs)-n: len(slhs)-n + next_linefeed]
         else:
@@ -1089,13 +1091,16 @@ def parse_args(argv):
     arg_rules = []
 
     opts, remainder = getopt.getopt(
-        argv[1:], 'hkvf:i:o:',
-        ["help", "verbose", "version", "keep-labels",
+        argv[1:], 'Vhkvf:i:o:',
+        ["version", "help", "verbose", "version", "keep-labels",
          "file=", "input=", "output="])
 
     for opt, arg in opts:
         if opt in ["-h", "--help"]:
             print __doc__
+            sys.exit(0)
+        elif opt in ['-V', '--version']:
+            print "Version " + fmbt_config.fmbt_version
             sys.exit(0)
         elif opt in ["-k", "--keep-labels"]:
             arg_keep_labels = True

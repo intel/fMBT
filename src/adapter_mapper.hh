@@ -32,6 +32,7 @@
 class Adapter_mapper : public Adapter, Rules {
 public:
   Adapter_mapper(Log& log, std::string params);
+  virtual ~Adapter_mapper();
   virtual bool init();
 
   virtual void execute(std::vector<int>& action);
