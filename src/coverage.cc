@@ -18,7 +18,33 @@
  */
 #include "coverage.hh"
 
-FACTORY_IMPLEMENTATION(Coverage)
+FACTORY_ATEXIT(Coverage)
+FACTORY_CREATORS(Coverage)
+FACTORY_ADD_FACTORY(Coverage)
+
+Coverage* CoverageFactory::create(Log& log, std::string name,
+				  std::string params="")
+{
+  if (!creators) return NULL;
+
+  creator c = (*creators)[name];
+
+  if (c) {
+    return c(log, params);
+  } else {
+    char* endp;
+    long int val=strtol(name.c_str(),&endp,10);
+    if (*endp==0) {
+      c=(*creators)["const"];
+      if (c) {
+	return c(log,name);
+      }
+    }    
+  }
+
+  return NULL;
+}
+
 
 Coverage::Coverage(Log& l) :
   model(NULL), log(l)

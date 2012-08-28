@@ -148,3 +148,41 @@ done
 
 testpassed
 
+teststep "Coverage constant"
+echo 'model = "lsts:t2.lsts"' > test.conf
+echo 'coverage = "const:2"' >> test.conf
+
+fmbt test.conf -l const.log >>$LOGFILE 2>&1 || {
+    testfailed
+#    exit 1    
+}
+
+fmbt-log -f \$sc const.log|tail -1|while read f
+do
+if [ 2.000000 != $f ]; then
+    testfailed
+#    exit 1
+fi
+done
+
+testpassed
+
+
+teststep "Coverage constant short"
+echo 'model = "lsts:t2.lsts"' > test.conf
+echo 'coverage = "4"' >> test.conf
+
+fmbt test.conf -l const.log >>$LOGFILE 2>&1 || {
+    testfailed
+#    exit 1    
+}
+
+fmbt-log -f \$sc const.log|tail -1|while read f
+do
+if [ 4.000000 != $f ]; then
+    testfailed
+#    exit 1
+fi
+done
+
+testpassed
