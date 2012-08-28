@@ -38,11 +38,73 @@
 class Model;
 
 class Coverage_Min: public Coverage {
-
 public:
-  class unit;
-  Coverage_Min(Log& l, std::string& params);
-  virtual ~Coverage_Min() {}
+  class unit {
+  public:
+    virtual ~unit() {}
+    virtual void next(float, bool) =0;
+    virtual float value() =0;
+  };
+
+  class unit_min: public unit {
+  public:
+    virtual ~unit_min() {}
+    virtual void next(float f,bool first) {
+      if (first) {
+	v=f;
+      } else {
+	if (v>f) {
+	  v=f;
+	}
+      }
+    }
+    virtual float value() {
+      return v;
+    }
+    float v;
+  };
+
+  class unit_max: public unit {
+  public:
+    virtual ~unit_max() {}
+    virtual void next(float f,bool first) {
+      if (first) {
+	v=f;
+      } else {
+	if (v<f) {
+	  v=f;
+	}
+      }
+    }
+    virtual float value() {
+      return v;
+    }
+    float v;
+  };
+
+  class unit_sum: public unit {
+  public:
+    virtual ~unit_sum() {}
+    virtual void next(float f,bool first) {
+      if (first) {
+	v=f;
+      } else {
+	v+=f;
+      }
+    }
+    virtual float value() {
+      return v;
+    }
+    float v;
+  };
+
+  Coverage_Min(Log& l, std::string& params,unit* _u);
+  virtual ~Coverage_Min() {
+    delete u;
+    for(unsigned i=0;i<coverages.size();i++) {
+      delete coverages[i];
+    }
+  }
   virtual void push();
   virtual void pop();
 
@@ -58,6 +120,7 @@ public:
 protected:
   std::string params;
   std::vector<Coverage*> coverages;
+  unit* u;
 };
 
 
