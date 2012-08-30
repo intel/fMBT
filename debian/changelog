@@ -1,3 +1,10 @@
+fmbt (0.1.2) natty; urgency=low
+
+  * Error messages from remote adapters printed to stderr.
+  * Bug fixes.
+
+ -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 29 Aug 2012 15:42:51 +0300
+
 fmbt (0.1.1) natty; urgency=low
 
   * Fixed memory leaks, bugs and removed dead code.

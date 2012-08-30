@@ -14,7 +14,7 @@ Quick start for Debian/Ubuntu users:
 
 Quick start for Fedora users:
 
-    yum install  glibc-devel glib2-devel boost-devel libedit-devel gcc-c++ pexpect dbus-python libtool autoconf automake flex libxml2-devel graphviz ImageMagick ImageMagick-c++-devel gnuplot
+    yum install  glibc-devel glib2-devel boost-devel libedit-devel gcc-c++ pexpect dbus-python libtool autoconf automake flex libxml2-devel graphviz ImageMagick ImageMagick-c++-devel gnuplot python-pyside
 
 ./autogen.sh
 ./configure
