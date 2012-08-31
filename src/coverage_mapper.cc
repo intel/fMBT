@@ -296,20 +296,19 @@ void Coverage_Mapper::add_file(unsigned index,
   std::string cname;
   std::string mname;
 
-  split(coveragename,mname,cname);
+  param_cut(coveragename,mname,cname);
 
-  unescape_string(cname);
   coverage_names[index]=std::string(cname);
 
   if (cname=="") {
     models[index] = model;
   } else {
-    unescape_string(mname);
+    //unescape_string(mname);
     std::string model_name;
     std::string model_param;
 
-
-    split(mname, model_name, model_param);
+    param_cut(mname, model_name, model_param);
+    
 
     models[index] = ModelFactory::create(log,model_name,model_param);
     if (!models[index] || models[index]->status==false) {
@@ -322,7 +321,7 @@ void Coverage_Mapper::add_file(unsigned index,
   std::string cc;
   std::string cp;
 
-  split(cname,cc,cp);
+  param_cut(cname,cc,cp);
 
   log.debug("Trying to create coverage %s(%s)\n",cc.c_str(),cp.c_str());
   if (coverages[index]) {

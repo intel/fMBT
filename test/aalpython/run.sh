@@ -38,10 +38,10 @@ source ../functions.sh
 
 teststep "remote_pyaal model search (push/pop)..."
 cat > test.conf <<EOF
-model     = "aal_remote: remote_pyaal test1.py.aal"
-adapter   = "aal_remote: remote_pyaal test1.py.aal"
-heuristic = "lookahead:3"
-coverage  = "perm:2"
+model     = "aal_remote(remote_pyaal test1.py.aal)"
+adapter   = "aal_remote(remote_pyaal test1.py.aal)"
+heuristic = "lookahead(3)"
+coverage  = "perm(2)"
 pass      = "coverage:.5"
 EOF
 
@@ -72,7 +72,7 @@ fi
 
 teststep "remote_pyaal state tags..."
 cat > test.conf <<EOF
-model="aal_remote: remote_pyaal test1.py.aal"
+model="aal_remote(remote_pyaal test1.py.aal)"
 EOF
 
 # search for path to execute iDec in the model:
@@ -89,9 +89,9 @@ testpassed
 
 teststep "remote_pyaal output actions..."
 cat > outputs.conf <<EOF
-model   = "aal_remote: remote_pyaal -l pyaal.log outputs.aal"
-adapter = "aal_remote: remote_pyaal -l pyaal.log outputs.aal"
-heuristic = "lookahead:2"
+model   = "aal_remote(remote_pyaal -l pyaal.log outputs.aal)"
+adapter = "aal_remote(remote_pyaal -l pyaal.log outputs.aal)"
+heuristic = "lookahead(2)"
 pass = "steps:10"
 on_fail = "exit:1"
 EOF

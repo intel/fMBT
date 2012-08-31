@@ -63,7 +63,7 @@ void OutputFormat::set_model(std::string m)
     std::string model_name;
     std::string model_param;
     
-    split(m, model_name, model_param);
+    param_cut(m,model_name,model_param);
 
     printf("load model %s %s\n",model_name.c_str(),model_param.c_str());
     
@@ -124,7 +124,7 @@ void OutputFormat::add_uc(std::string& name,
   if (status) {
     std::string coverage_name;
     std::string coverage_param;
-    split(c, coverage_name, coverage_param);  
+    param_cut(c, coverage_name, coverage_param);  
     
     Coverage* coverage = CoverageFactory::create(l,coverage_name,coverage_param);
     if (coverage == NULL) {
@@ -155,7 +155,7 @@ void OutputFormat::add_testrun(std::string& name,
 {
   if (status) {
     std::string model_name,model_param;
-    split(_model, model_name, model_param);
+    param_cut(_model, model_name, model_param);
 
     Model* model;
     if ((model=Model::create(l, model_name, model_param)) == NULL) {

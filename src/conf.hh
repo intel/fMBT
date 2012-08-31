@@ -75,16 +75,20 @@ class Conf:public Writable {
   }
 
   void set_model(std::string& s) {
-    split(s, model_name, model_param);
+    //split(s, model_name, model_param);
+    param_cut(s, model_name, model_param);
   }
   void set_heuristic(std::string& s) {
-    split(s, heuristic_name, heuristic_param);
+    //split(s, heuristic_name, heuristic_param);
+    param_cut(s, heuristic_name, heuristic_param);
   }
   void set_coverage(std::string& s) {
-    split(s, coverage_name, coverage_param);
+    //split(s, coverage_name, coverage_param);
+    param_cut(s,coverage_name,coverage_param);
   }
   void set_adapter(std::string& s) {
-    split(s, adapter_name, adapter_param);
+    //split(s, adapter_name, adapter_param);
+    param_cut(s, adapter_name, adapter_param);
   }
   void set_on_error(std::string &s) {
     on_error = s;

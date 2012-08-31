@@ -166,7 +166,15 @@ bool Adapter_mapper::load(std::string& name)
 
   amobj=this;
 
+  printf("loading file %s\n",name.c_str());
+
   s=readfile(name.c_str());
+
+  if (!s) {
+    status=false;
+    errormsg=std::string("Can't load file\"")+name+std::string("\"");
+    return false;
+  }
 
   bool ret=dparse(p,s,std::strlen(s));
 

@@ -39,8 +39,8 @@ T(first,       "i2",                a2)
 EOF
 
 cat > test.conf<<EOF
-model="lts:model.lsts"
-adapter="dummy:1"
+model="lts(model.lsts)"
+adapter="dummy(1)"
 on_fail   = "exit:1"
 on_pass   = "exit:2"
 EOF
@@ -56,7 +56,7 @@ fi
 teststep "exitvalue on inconclusive deadlock"
 
 cat > test.conf<<EOF
-model="lts:model.lsts"
+model="lts(model.lsts)"
 adapter="dummy"
 inconc="deadlock"
 on_fail   = "exit:1"
@@ -75,7 +75,7 @@ fi
 teststep "exitvalue on passed"
 
 cat > test.conf<<EOF
-model="lts:model.lsts"
+model="lts(model.lsts)"
 adapter="dummy"
 on_fail   = "exit:1"
 on_pass   = "exit:2"
@@ -94,8 +94,8 @@ fi
 teststep "exitvalue on error (input action)"
 
 cat > test.conf<<EOF
-model="lts:model.lsts"
-adapter="dummy:2"
+model="lts(model.lsts)"
+adapter="dummy(2)"
 on_fail   = "exit:1"
 on_pass   = "exit:2"
 on_inconc = "exit:3"
@@ -113,8 +113,8 @@ fi
 teststep "exitvalue on error (output: communication error)"
 
 cat > test.conf<<EOF
-model="lts:model.lsts"
-adapter="dummy:2:1"
+model="lts(model.lsts)"
+adapter="dummy(2,1)"
 on_fail   = "exit:1"
 on_pass   = "exit:2"
 on_inconc = "exit:3"
@@ -148,8 +148,8 @@ fi
 teststep "error messages from remote AALs"
 for BROKEN in language initial_state guard body adapter; do
     cat > test.conf<<EOF
-model="aal_remote:remote_pyaal -l aal.log broken-$BROKEN.aal"
-adapter="aal_remote:remote_pyaal -l aal.log broken-$BROKEN.aal"
+model="aal_remote(remote_pyaal -l aal.log broken-$BROKEN.aal)"
+adapter="aal_remote(remote_pyaal -l aal.log broken-$BROKEN.aal)"
 on_fail   = "exit:1"
 on_pass   = "exit:2"
 on_inconc = "exit:3"
@@ -171,8 +171,8 @@ testpassed
 
 teststep "error messages from remote_python"
 cat > test.conf <<EOF
-model     = "lsts_remote:fmbt-gt -f 'broken-requiredvalue.gt'"
-adapter   = "remote:remote_python"
+model     = "lsts_remote(fmbt-gt -f 'broken-requiredvalue.gt')"
+adapter   = "remote(remote_python)"
 fail      = "steps:3"
 on_pass   = "exit:0"
 on_fail   = "exit:1"

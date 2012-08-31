@@ -137,7 +137,7 @@ void Lts_xrules::add_file(unsigned int index,std::string& filename)
 
   std::string model_name,model_param;
 
-  split(filename, model_name, model_param);  
+  param_cut(filename,model_name,model_param);
 
   lts[index]=ModelFactory::create(log,model_name,model_param);
   

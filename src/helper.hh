@@ -88,6 +88,11 @@ void split(std::string val, std::string& name,
 void regexpmatch(std::string& regexp,std::vector<std::string>& f,
 		 std::vector<int>& result,bool clear=true,int a=1);
 
+void param_cut(std::string val,std::string& name,
+	       std::string& option);
+
+void commalist(std::string& s,std::vector<std::string>& vec);
+void remove_force(std::string& s);
 
 #define MAX_LINE_LENGTH (1024*16)
 

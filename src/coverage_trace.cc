@@ -80,12 +80,10 @@ void Coverage_trace::set_model(Model* _model) {
     //What to do?
     status=false;
   } else {
-    unescape_string(params);
     std::vector<std::string> acts;
-    static const std::string separator(":");
     std::vector<std::string>& an=model->getActionNames();
 
-    strvec(acts,params,separator);
+    commalist(params,acts);
 
     for(unsigned i=0;i<acts.size();i++) {
       int pos=find(an,acts[i]);

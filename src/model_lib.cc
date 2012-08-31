@@ -38,16 +38,26 @@ namespace {
   Model* lib_creator(Log& l, std::string params) {
     Model* m;
     std::string model_name,model_param,model_filename;
-    char* stmp=strdup(params.c_str());
-    std::string s(unescape_string(stmp));
-    free(stmp);
+    std::vector<std::string> s;
 
-    split(s, model_name, model_param);
-    split(model_name,model_name,model_filename,",");
+    commalist(params,s);
+    if (s.size()<1) {
+      m = new Null(l);
+      if (m) {
+	m->status   = false;
+	m->errormsg = std::string("lib:Can't load model ") + params;
+      }
+      return m;
+    }
 
+    param_cut(s[0],model_name,model_param);
     m = ModelFactory::create(l, model_name, model_param);
 
     if (!m) {
+      if (s.size()>1) {
+	model_filename=s[1];
+      }
+
       void* handle=load_lib(model_name,model_filename);
 
       if (handle) {

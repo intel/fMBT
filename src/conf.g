@@ -106,7 +106,8 @@ end_condition: verdict '=' '"' end_type ':' string_woquotes '"'
                 new End_condition((Verdict::Verdict)$0.val,
                                   (End_condition::Counter)$3.val,
                                   $5.str));
-        } ;
+        }
+        ;
 
 end_condition_noarg: verdict '=' '"' end_type_noarg '"'
         { conf_obj->add_end_condition(

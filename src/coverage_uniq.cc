@@ -24,22 +24,28 @@ Coverage_uniq::Coverage_uniq(Log& l,std::string params) :Coverage(l)
 {
   std::string lens,sub;
   // Hmm. Parameters?
-  split(params,lens,sub);
-  len=atoi(lens.c_str());
+  std::vector<std::string> s;
+  commalist(params,s);
+
+  if (s.size()!=2) {
+    // FIX errormsg
+    status=false;
+    return;
+  }
+
+  len=atoi(s[0].c_str());
   if (len<2) {
     len=2;
   }
 
-  unescape_string(sub);
-
   std::string coverage_name,coverage_param;
-  split(sub,coverage_name,coverage_param);
+  param_cut(s[1],coverage_name,coverage_param);
 
-  // FIX errormsg
 
   Coverage* c = CoverageFactory::create(l,coverage_name,coverage_param);
 
   if (c==NULL) {
+    // FIX errormsg
     status=false;
   } else {
     status=c->status;

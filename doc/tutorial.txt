@@ -74,9 +74,9 @@ Create a test configuration file:
 
 $ cat > mkrmdir.conf << EOF
 model        = "mkrmdir.lsts"
-heuristic    = "lookahead:1"
-coverage     = "perm:1"
-adapter      = "remote:remote_python -L adapter.log"
+heuristic    = "lookahead(1)"
+coverage     = "perm(1)"
+adapter      = "remote(remote_python -L adapter.log)"
 pass         = "coverage:1.0"
 EOF
 
@@ -184,7 +184,7 @@ Increasing error detection power
 This is how we can make sure that the error is detected. First, let's
 increase permutations of actions that must be covered:
 
-$ sed -i 's/perm:1/perm:2/' mkrmdir.conf
+$ sed -i 's/perm(1)/perm(2)/' mkrmdir.conf
 
 Then set a limit for test steps because executing all permutations of
 any two actions is not possible. This limit guarantees that the test
