@@ -241,10 +241,5 @@ void Lts::pop()
   state_save.pop_front();
 }
 
-namespace {
-  Model* lts_creator(Log&l, std::string params) {
-    return new Lts(l, params);
-  }
-  static ModelFactory::Register lts("lts", lts_creator);
-  static ModelFactory::Register lsts("lsts", lts_creator);
-}
+FACTORY_DEFAULT_CREATOR(Model, Lts, "lts")
+FACTORY_DEFAULT_CREATOR(Model, Lts, "lsts")

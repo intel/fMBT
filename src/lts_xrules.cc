@@ -507,3 +507,4 @@ bool Lts_xrules::parent_active_par(struct par* par)
 }
 
 FACTORY_DEFAULT_CREATOR(Model, Lts_xrules, "xrules")
+FACTORY_DEFAULT_CREATOR(Model, Lts_xrules, "parallel")

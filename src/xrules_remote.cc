@@ -62,3 +62,4 @@ bool Xrules_remote::init()
 }
 
 FACTORY_DEFAULT_CREATOR(Model, Xrules_remote, "xrules_remote")
+FACTORY_DEFAULT_CREATOR(Model, Xrules_remote, "parallel_remote")
