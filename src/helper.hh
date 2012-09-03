@@ -29,7 +29,7 @@ class Log;
 
 extern bool human_readable;
 
-void* load_lib(const std::string& libname,std::string& model_filename);
+void* load_lib(const std::string& libname,const std::string& model_filename);
 int   find(const std::vector<std::string>&,const std::string);
 int   find(const std::vector<std::string*>&,const std::string);
 bool  isInputName(const std::string& name);

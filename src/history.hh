@@ -45,4 +45,6 @@ protected:
 
 FACTORY_DECLARATION(History)
 
+History* new_history(Log&, std::string&);
+
 #endif

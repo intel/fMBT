@@ -91,20 +91,20 @@ void Conf::load(std::string& name,std::string& content)
 
   conf_obj=tmp;
 
-  if ((heuristic=HeuristicFactory::create(log, heuristic_name, heuristic_param)) == NULL)
+  if ((heuristic=new_heuristic(log,heuristic_name)) == NULL)
     RETURN_ERROR_VOID("Creating heuristic \"" + heuristic_name + "\" failed.");
 
   if (heuristic->status==false)
     RETURN_ERROR_VOID("Error in heuristic \"" + heuristic_name + "\":" +
 		      heuristic->errormsg);
 
-  if ((model=Model::create(log, model_name, model_param)) == NULL) {
+  if ((model=new_model(log, model_name)) == NULL) {
     RETURN_ERROR_VOID("Creating model loader \"" +
 		      filetype(model_name)
 		      + "\" failed.");
   }
 
-  coverage = CoverageFactory::create(log,coverage_name,coverage_param);
+  coverage = new_coverage(log,coverage_name);
 
   if (coverage == NULL)
     RETURN_ERROR_VOID("Creating coverage \"" + coverage_name + "\" failed.");
@@ -121,7 +121,7 @@ void Conf::load(std::string& name,std::string& content)
 
   coverage->set_model(model);
 
-  adapter = AdapterFactory::create(log, adapter_name, adapter_param);
+  adapter = new_adapter(log, adapter_name);
 
   if (adapter && !adapter->status) {
     status=false;
@@ -131,10 +131,7 @@ void Conf::load(std::string& name,std::string& content)
 
   /* handle history */
   for(unsigned i=0;i<history.size();i++) {
-    std::string name,param;
-    split(*history[i],name,param);
-
-    History* h=HistoryFactory::create(log, name, param);
+    History* h=new_history(log,*history[i]);
     
     if (h) {
       h->set_coverage(coverage,model);
@@ -172,8 +169,7 @@ std::string Conf::stringify() {
   t << "model = \"" << removehash(model_name) << capsulate(model->stringify()) << std::endl;
   t << "heuristic = \"" << heuristic_name << "\"" << std::endl;
   t << "coverage = \"" <<  coverage_name << "\"" << std::endl;
-  t << "adapter = \"" << removehash(adapter_name) << ":"
-    << removehash(adapter_param)
+  t << "adapter = \"" << adapter_name
     << capsulate(adapter->stringify()) << std::endl;
 
   /* TODO: stringify end conditions */

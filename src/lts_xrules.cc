@@ -135,21 +135,12 @@ void Lts_xrules::add_file(unsigned int index,std::string& filename)
   
   model_names[index]=std::string(filename);
 
-  std::string model_name,model_param;
+  lts[index] = new_model(log,model_names[index]);
 
-  param_cut(filename,model_name,model_param);
-
-  lts[index]=ModelFactory::create(log,model_name,model_param);
-  
   if (!lts[index]) {
-    // Let's try to load lsts/xrules..
-
-    lts[index]=ModelFactory::create(log,filetype(filename),filename);
-    if (!lts[index]) {
-      status=false;
-      errormsg=std::string("Can't load model ")+filename;
-      return;
-    }
+    status=false;
+    errormsg=std::string("Can't load model ")+filename;
+    return;
   }
 
   if (!lts[index]->status) {

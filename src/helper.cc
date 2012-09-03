@@ -54,7 +54,7 @@ void escape_free(const char* msg)
 #endif
 }
 
-void *load_lib(const std::string& libname,std::string& model_filename)
+void *load_lib(const std::string& libname,const std::string& model_filename)
 {
   std::string name_candidate(libname);
   std::string errormessages;

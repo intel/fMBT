@@ -30,8 +30,7 @@ Coverage_Min::Coverage_Min(Log& l, std::string& _params,unit* _u) :
   commalist(params,s);
 
   for(unsigned i=0;i<s.size();i++) {
-    param_cut(s[i],name,option);
-    Coverage* cov=CoverageFactory::create(log, name, option);
+    Coverage* cov=new_coverage(log,s[i]);
     if (cov==NULL) {
       status=false;
       errormsg=std::string("Can't create coverage ")+name+"("+option+")";

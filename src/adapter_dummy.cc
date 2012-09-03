@@ -27,7 +27,6 @@ Adapter_dummy::Adapter_dummy(Log& l, std::string params) :
   Adapter::Adapter(l), tau(0), sil(0)
 {
   std::vector<std::string> s;
-  //split(params,ex,obs);
   commalist(params,s);
 
   if ((s.size()>0) && (s[0].length()>0)) {
@@ -64,7 +63,7 @@ void Adapter_dummy::execute(std::vector<int>& action)
   log.pop();
 }
 
-int   Adapter_dummy::observe(std::vector<int> &action,
+int Adapter_dummy::observe(std::vector<int> &action,
 				bool block)
 {
   switch (sil) {

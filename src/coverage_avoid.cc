@@ -41,14 +41,12 @@ Coverage_avoid::Coverage_avoid(Log& l, std::string& params) :
     if (f<=0.0) {
       f=1.0;
     }
-    std::string name;
-    std::string option;
-    param_cut(s[i+1],name,option);
-    
-    Coverage* cov=CoverageFactory::create(log, name,option);
+
+    Coverage* cov=new_coverage(log,s[i+1]);
+
     if (cov==NULL) {
       status=false;
-      errormsg=std::string("Can't create coverage ")+name+"("+option+")";
+      errormsg=std::string("Can't create coverage ")+s[i+1];
       return;
     }
     h.push_back(std::pair<float,Coverage*>(f,cov));

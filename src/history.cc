@@ -18,7 +18,14 @@
  */
 
 #include "history.hh"
+#include "helper.hh"
 
 struct timeval History::current_time;
 
 FACTORY_IMPLEMENTATION(History)
+
+History* new_history(Log& l, std::string& s) {
+  std::string name,option;
+  param_cut(s,name,option);
+  return HistoryFactory::create(l, name, option);
+}

@@ -76,19 +76,23 @@ class Conf:public Writable {
 
   void set_model(std::string& s) {
     //split(s, model_name, model_param);
-    param_cut(s, model_name, model_param);
+    //param_cut(s, model_name, model_param);
+    model_name=s;
   }
   void set_heuristic(std::string& s) {
+    heuristic_name=s;
     //split(s, heuristic_name, heuristic_param);
-    param_cut(s, heuristic_name, heuristic_param);
+    //param_cut(s, heuristic_name, heuristic_param);
   }
   void set_coverage(std::string& s) {
     //split(s, coverage_name, coverage_param);
-    param_cut(s,coverage_name,coverage_param);
+    //param_cut(s,coverage_name,coverage_param);
+    coverage_name=s;
   }
   void set_adapter(std::string& s) {
     //split(s, adapter_name, adapter_param);
-    param_cut(s, adapter_name, adapter_param);
+    //param_cut(s, adapter_name, adapter_param);
+    adapter_name=s;
   }
   void set_on_error(std::string &s) {
     on_error = s;
@@ -131,16 +135,16 @@ class Conf:public Writable {
   void set_exitvalue(std::string& s);
   std::vector<std::string*> history;
   std::string model_name;
-  std::string model_param;
+  //std::string model_param;
 
   std::string heuristic_name;
-  std::string heuristic_param;
+  //std::string heuristic_param;
 
   std::string coverage_name;
-  std::string coverage_param;
+  //std::string coverage_param;
 
   std::string adapter_name;
-  std::string adapter_param;
+  //std::string adapter_param;
 
   std::vector<End_condition*> end_conditions;
 

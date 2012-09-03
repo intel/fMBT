@@ -38,11 +38,7 @@ Coverage_uniq::Coverage_uniq(Log& l,std::string params) :Coverage(l)
     len=2;
   }
 
-  std::string coverage_name,coverage_param;
-  param_cut(s[1],coverage_name,coverage_param);
-
-
-  Coverage* c = CoverageFactory::create(l,coverage_name,coverage_param);
+  Coverage* c = new_coverage(l,s[1]);
 
   if (c==NULL) {
     // FIX errormsg

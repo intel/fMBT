@@ -49,16 +49,12 @@ Adapter_dlopen::Adapter_dlopen(Log& log, std::string params) :
   commalist(params,s);
 
   std::string library_file;
-  std::string adapter_name;
-  std::string adapter_params;
 
   if (s.size()!=2) {
     RETURN_ERROR("Incorrect number of elements");
   }
 
   library_file = s[0];
-
-  param_cut(s[1],adapter_name,adapter_params);
     
   library_handle = dlopen(library_file.c_str(), RTLD_NOW | RTLD_GLOBAL);
   if (!library_handle) {
@@ -71,9 +67,8 @@ Adapter_dlopen::Adapter_dlopen(Log& log, std::string params) :
   /* dlopening the adapter registers the loaded adapter to
      adapter_factory. Just try fetching it from there.
   */
-  loaded_adapter = AdapterFactory::create(log,
-                                          adapter_name,
-                                          adapter_params);
+  
+  loaded_adapter = new_adapter(log,s[1]);
   if (!loaded_adapter)
     RETURN_ERROR("creating adapter from successfully opened library failed");
 }

@@ -35,7 +35,7 @@ Coverage* CoverageFactory::create(Log& log, std::string name,
   } else {
     char* endp;
     long int val=strtol(name.c_str(),&endp,10);
-    if (*endp==0) {
+    if (*endp==0 && val>=0) {
       c=(*creators)["const"];
       if (c) {
 	return c(log,name);
