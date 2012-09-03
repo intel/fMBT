@@ -111,8 +111,8 @@ Adapter stack may contain the following building blocks.
   actions in the model into commands or expressions to be run in
   low-level adapters. For example, configuration
 
-    1 = "remote:ssh root@testhost /usr/local/bin/remote_python"
-    2 = "remote:/usr/local/bin/remote_exec.sh"
+    1 = "remote(ssh root@testhost /usr/local/bin/remote_python)"
+    2 = "remote(/usr/local/bin/remote_exec.sh)"
     "itesthost:(.*)"   -> (1, "$1")
     "ilocalhost:(.*)"  -> (2, "$1")
 
@@ -170,7 +170,7 @@ this:
 1. remote_python command line parameter "-c" in the test configuration
    file. Example:
 
-   adapter = "remote:remote_python -c 'from myteststeps import *'"
+   adapter = "remote(remote_python -c 'from myteststeps import *')"
 
 2. action that executes import statement in the model. Example:
    "iCatch('from myteststeps import *')"
