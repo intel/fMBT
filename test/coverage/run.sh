@@ -56,6 +56,32 @@ done
 
 testpassed
 
+teststep "Coverage perm with old syntax"
+echo 'model = "lsts(t1.lsts)"' > test.conf
+echo 'coverage = "perm:1"' >> test.conf
+
+fmbt test.conf -l perm.log >>$LOGFILE 2>&1 || {
+    testfailed
+}
+
+fmbt-log -f \$sc perm.log|head -1|while read f
+do
+if [ 0.000000 != $f ]; then
+    testfailed
+#    exit 1
+fi
+done
+
+fmbt-log -f \$sc perm.log|tail -1|while read l
+do
+if [ 1.000000 != $l ]; then
+    testfailed
+#    exit 1
+fi
+done
+
+testpassed
+
 teststep "Coverage min"
 echo 'model = "lsts(t1.lsts)"' > test.conf
 echo 'coverage = "min(perm(3),perm(2))"' >> test.conf

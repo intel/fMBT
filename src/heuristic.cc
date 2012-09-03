@@ -86,5 +86,20 @@ void Heuristic::set_model(Model* _model) {
 Heuristic* new_heuristic(Log& l, std::string& s) {
   std::string name,option;
   param_cut(s,name,option);
-  return HeuristicFactory::create(l, name, option);
+  Heuristic* ret=HeuristicFactory::create(l, name, option);
+
+  if (ret) {
+    return ret;
+  }
+
+  //Let's try old thing.
+  split(s, name, option);
+  ret=HeuristicFactory::create(l, name, option);
+
+  if (ret) {
+    fprintf(stderr,"DEPRACATED HEURISTIC SYNTAX. %s\nNew syntax is %s(%s)\n",
+	    s.c_str(),name.c_str(),option.c_str());
+  }
+
+  return ret;
 }

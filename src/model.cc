@@ -123,5 +123,20 @@ Model* Model_create(Log& log, std::string& model_name,std::string& model_param) 
 Model* new_model(Log& l, std::string& s) {
   std::string name,option;
   param_cut(s,name,option);
-  return Model_create(l, name, option);
+  Model* ret=Model_create(l, name, option);
+
+  if (ret) {
+    return ret;
+  }
+
+  //Let's try old thing.
+  split(s, name, option);
+  ret=Model_create(l, name, option);
+
+  if (ret) {
+    fprintf(stderr,"DEPRACATED MODEL SYNTAX. %s\nNew syntax is %s(%s)\n",
+	    s.c_str(),name.c_str(),option.c_str());
+  }
+
+  return ret;
 }
