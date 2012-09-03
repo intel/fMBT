@@ -35,7 +35,7 @@ Available types & parameters:
                 like parallel but reads standard output of <command>
                 instead of a file.
 
-        lib(<modelname>[,filename][:modelparams])
+        lib(<modelname>[,filename])
 
                 uses model "modelname". If the model is not already
                 registered (statically linked or LD_PRELOADed, for
@@ -55,7 +55,7 @@ Examples:
 
         model = "parallel_remote(fmbt-parallel a.lsts b.lsts)"
 
-        model = "lib(myaaltest1,myaaltests.so)"
+        model = "lib(myaaltest1(foo),myaaltests.so)"
 
 
 Adapter
