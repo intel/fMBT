@@ -116,3 +116,8 @@ const char* Adapter::getUActionName(int action)
   return unames[action];
 }
 
+Adapter* new_adapter(Log& l, std::string& s) {
+  std::string name,option;
+  param_cut(s,name,option);
+  return AdapterFactory::create(l, name, option);
+}

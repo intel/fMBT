@@ -17,6 +17,7 @@
  *
  */
 #include "coverage.hh"
+#include "helper.hh"
 
 FACTORY_ATEXIT(Coverage)
 FACTORY_CREATORS(Coverage)
@@ -62,4 +63,10 @@ void Coverage::set_model(Model* _model)
 
 std::string Coverage::stringify() {
     return std::string("");
+}
+
+Coverage* new_coverage(Log& l, std::string& s) {
+  std::string name,option;
+  param_cut(s,name,option);
+  return CoverageFactory::create(l, name, option);
 }

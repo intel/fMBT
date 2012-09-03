@@ -21,6 +21,7 @@
 #include "heuristic.hh"
 #include "model.hh"
 #include "log.hh"
+#include "helper.hh"
 
 FACTORY_IMPLEMENTATION(Heuristic)
 
@@ -80,4 +81,10 @@ Coverage* Heuristic::get_coverage() {
 
 void Heuristic::set_model(Model* _model) {
   model=_model;
+}
+
+Heuristic* new_heuristic(Log& l, std::string& s) {
+  std::string name,option;
+  param_cut(s,name,option);
+  return HeuristicFactory::create(l, name, option);
 }
