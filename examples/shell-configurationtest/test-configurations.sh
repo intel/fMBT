@@ -108,8 +108,8 @@ iCleanup() {
 
 cat > test.conf <<EOF
 model     = "testmodel.lsts"
-coverage  = "perm:2"
-heuristic = "lookahead:4"
+coverage  = "perm(2)"
+heuristic = "lookahead(4)"
 pass      = "no_progress:4"
 # disable built-in coverage end condition:
 fail      = "coverage:1.1"

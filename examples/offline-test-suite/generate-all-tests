@@ -67,7 +67,7 @@ while [ "$verdict" == "inconclusive" ]; do
     cp "$TESTCONF" next-test.conf
 
     for prevlog in test*.log; do
-        echo "history = \"log:$prevlog\"" >> next-test.conf
+        echo "history = \"log($prevlog)\"" >> next-test.conf
     done
 
     testnumber=$(( $testnumber + 1 ))

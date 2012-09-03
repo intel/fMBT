@@ -86,7 +86,7 @@ cat > deep.conf <<EOF
 model     = "lsts(model.lsts)"
 adapter   = "remote(remote_python -l adapter.log -c 'from teststeps import *')"
 heuristic = "lookahead(4)"
-history   = "log:quick.log"
+history   = "log(quick.log)"
 coverage  = "perm(4)"
 inconc    = "coverage:1.1"
 pass      = "no_progress:8"
