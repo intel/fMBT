@@ -126,13 +126,18 @@ FACTORY_CREATORS(MODULETYPE)                                           \
 FACTORY_ADD_FACTORY(MODULETYPE)                                        \
 FACTORY_CREATE(MODULETYPE)
 
-#define FACTORY_DEFAULT_CREATOR(MODULETYPE, CLASSNAME, ID)             \
+#define CONCAT2(x, y)     x ## y
+#define CONCAT(x, y)      CONCAT2(x, y)
+#define UNIQUENAME(prefix) CONCAT(prefix, __LINE__)
+
+#define FACTORY_DEFAULT_CREATOR(MODULETYPE, CLASSNAME, ID)	       \
 namespace {                                                            \
-  MODULETYPE* creator_func(FACTORY_CREATOR_PARAMS FACTORY_CREATE_DEFAULT_PARAMS)          \
+  MODULETYPE* UNIQUENAME(creator_func) (FACTORY_CREATOR_PARAMS FACTORY_CREATE_DEFAULT_PARAMS) \
   {                                                                    \
     return new CLASSNAME(FACTORY_CREATOR_PARAMS2);                     \
   }                                                                    \
-  static MODULETYPE##Factory::Register me(ID, creator_func);           \
+  static MODULETYPE##Factory::Register UNIQUENAME(me)(ID, UNIQUENAME(creator_func)); \
 }
 
 #endif
+
