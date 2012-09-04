@@ -134,7 +134,7 @@ Model* new_model(Log& l, std::string& s) {
   ret=Model_create(l, name, option);
 
   if (ret) {
-    fprintf(stderr,"DEPRACATED MODEL SYNTAX. %s\nNew syntax is %s(%s)\n",
+    fprintf(stderr,"DEPRECATED MODEL SYNTAX. %s\nNew syntax is %s(%s)\n",
 	    s.c_str(),name.c_str(),option.c_str());
   }
 

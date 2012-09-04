@@ -97,7 +97,7 @@ Heuristic* new_heuristic(Log& l, std::string& s) {
   ret=HeuristicFactory::create(l, name, option);
 
   if (ret) {
-    fprintf(stderr,"DEPRACATED HEURISTIC SYNTAX. %s\nNew syntax is %s(%s)\n",
+    fprintf(stderr,"DEPRECATED HEURISTIC SYNTAX. %s\nNew syntax is %s(%s)\n",
 	    s.c_str(),name.c_str(),option.c_str());
   }
 

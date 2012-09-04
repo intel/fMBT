@@ -130,7 +130,7 @@ Adapter* new_adapter(Log& l, std::string& s) {
   ret=AdapterFactory::create(l, name, option);
 
   if (ret) {
-    fprintf(stderr,"DEPRACATED ADAPTER SYNTAX. %s\nNew syntax is %s(%s)\n",
+    fprintf(stderr,"DEPRECATED ADAPTER SYNTAX. %s\nNew syntax is %s(%s)\n",
 	    s.c_str(),name.c_str(),option.c_str());
   }
 

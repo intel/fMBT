@@ -79,7 +79,7 @@ Coverage* new_coverage(Log& l, std::string& s) {
   ret=CoverageFactory::create(l, name, option);
 
   if (ret) {
-    fprintf(stderr,"DEPRACATED COVERAGE SYNTAX. %s\nNew syntax is %s(%s)\n",
+    fprintf(stderr,"DEPRECATED COVERAGE SYNTAX. %s\nNew syntax is %s(%s)\n",
 	    s.c_str(),name.c_str(),option.c_str());
   }
   return ret;
