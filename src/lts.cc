@@ -58,6 +58,11 @@ std::string Lts::stringify()
   t << "State_cnt = "      << state_cnt      << std::endl;
   t << "Action_cnt = "     << action_cnt     << std::endl;
   t << "Transition_cnt = " << transition_cnt << std::endl;
+
+  if (prop_cnt) {
+    t << "State_prop_cnt = " << prop_cnt     << std::endl;
+  }
+
   t << "Initial_states = " << init_state;
   t << ";\nEnd Header\n";
 
@@ -80,8 +85,23 @@ std::string Lts::stringify()
     t << ";" << std::endl;
     
   }
-
   t << "End Transitions\n";
+
+  if (prop_cnt) {
+    t << "Begin State_props" << std::endl;
+    for(unsigned i=0;i<prop_names.size();i++) {
+      if (prop_names[i]!="") {
+	t << "\"" << prop_names[i] << "\" : ";
+
+
+	t << ";" << std::endl;
+
+      }
+    }
+
+    t << "End State_props" << std::endl;
+  }
+
   t << "End Lsts\n";
   return t.str();
 }
