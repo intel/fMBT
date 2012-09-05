@@ -29,7 +29,9 @@
 History_log::History_log(Log& l, std::string params) :
   History(l,params), alphabet_done(false), act(NULL), tag(NULL), c(NULL), a(NULL), file(params)
 {
-
+  anames.push_back("");
+  tnames.push_back("");
+  a = new Alphabet_impl(anames,tnames);
 }
 
 void History_log::processNode(xmlTextReaderPtr reader)
@@ -117,13 +119,18 @@ void History_log::set_coverage(Coverage* cov,
 			       Alphabet* alpha)
 {
   c=cov;
-  a=alpha;
+  //a=alpha;
+
+  //printf("cov %p, alpha %p\n",c,a);
 
   LIBXML_TEST_VERSION
 
   xmlTextReaderPtr reader =
     xmlReaderForFile(file.c_str(), NULL, 0);
-  
+
+  //printf("file %s\n",file.c_str());
+  //printf("reader %p\n",reader);
+
   if (reader != NULL) {
     int ret;
     ret = xmlTextReaderRead(reader);
@@ -164,23 +171,23 @@ bool History_log::send_action(std::string& act,
       if (act=="pass") {
 	c->history(0,p,Verdict::PASS);
 	return true;
-      } 
-      
+      }
+
       if (act=="fail") {
 	c->history(0,p,Verdict::FAIL);
 	return true;
       }
-      
+
       if (act=="inconclusive") {
 	c->history(0,p,Verdict::INCONCLUSIVE);
 	return true;
       }
-      
+
       if (act=="error") {
 	c->history(0,p,Verdict::ERROR);
 	return true;
       }
-      
+
       if (act=="undefined") {
 	c->history(0,p,Verdict::UNDEFINED);
 	return true;

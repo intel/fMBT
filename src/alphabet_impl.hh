@@ -16,37 +16,37 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#ifndef __history_log_hh__
-#define __history_log_hh__
+#ifndef __alphabet_impl_hh__
+#define __alphabet_impl_hh__
 
-#include "history.hh"
 #include "alphabet.hh"
-#include <libxml/xmlreader.h>
+#include <string>
+#include <vector>
 
-#include "alphabet_impl.hh"
+class Alphabet_impl: public Alphabet {
+public:
+  Alphabet_impl(std::vector<std::string>& _ActionNames,
+		std::vector<std::string>& _SPNames):
+    ActionNames(_ActionNames),SPNames(_SPNames) {}
 
-class History_log: public History {
-public:
-  History_log(Log& l, std::string params = "");
-  virtual ~History_log() {};
-  virtual void set_coverage(Coverage*,Alphabet* alpha);
+  virtual ~Alphabet_impl() {}
+  //! Returns names of all actions available.
+  virtual std::vector<std::string>& getActionNames() {
+    return ActionNames;
+  }
 
-protected:
-  int alphabet_done;
-  char* act;
-  char* tag;
-  void processNode(xmlTextReaderPtr reader);
-  Coverage* c;
-public:
-  Alphabet* a;
-private:
-  void send_action();
-  bool send_action(std::string& a,std::vector<std::string>& props,
-		   bool verdict=false);
-  std::string file;
-public:
-  std::vector<std::string> anames;
-  std::vector<std::string> tnames;
+  //! Returns names of all available state propositions
+  virtual std::vector<std::string>& getSPNames() {
+    return SPNames;
+  }
+
+  //! Returns the name of the given action
+  virtual std::string& getActionName(int action) {
+    return ActionNames[action];
+  }
+
+  std::vector<std::string>& ActionNames;
+  std::vector<std::string>& SPNames;
 };
 
 #endif
