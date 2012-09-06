@@ -49,6 +49,12 @@ public:
       }
     } else {
       // verdict. Let's create lts.
+      // We might have props...
+
+      for(unsigned i=0;i<props.size();i++) {
+	prop[props[i]].push_back(trace.size()+1);
+      }
+
       lts.set_state_cnt(trace.size()+1);
       lts.set_action_cnt(hl.anames.size()-1);
       lts.set_transition_cnt(trace.size());
@@ -86,8 +92,6 @@ int main(int argc,char * const argv[])
   Log_null log;
 
   std::string file(argv[1]);
-
-  printf("log %s\n",file.c_str());
 
   History_log hl(log,file);
 

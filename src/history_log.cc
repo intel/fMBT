@@ -86,6 +86,8 @@ void History_log::processNode(xmlTextReaderPtr reader)
       send_action();
     }
     act=unescape_string((char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"name"));
+    log.debug("FOUND ACT %s\n",act);
+    send_action();
   }
   
   if ((xmlTextReaderDepth(reader)==3) &&
@@ -95,13 +97,12 @@ void History_log::processNode(xmlTextReaderPtr reader)
       free(tag);
     }
     tag=unescape_string((char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"enabled"));
-    if (act) {
-      send_action();      
-    }
-   }
+    log.debug("FOUND TAG %s\n",tag);
+  }
   
   if ((xmlTextReaderDepth(reader)==3) &&
       (strcmp((const char*)name,"stop")==0)) {
+    log.debug("STOP\n");
     if (act) {
       send_action();
     }
@@ -119,17 +120,11 @@ void History_log::set_coverage(Coverage* cov,
 			       Alphabet* alpha)
 {
   c=cov;
-  //a=alpha;
-
-  //printf("cov %p, alpha %p\n",c,a);
 
   LIBXML_TEST_VERSION
 
-  xmlTextReaderPtr reader =
+    xmlTextReaderPtr reader =
     xmlReaderForFile(file.c_str(), NULL, 0);
-
-  //printf("file %s\n",file.c_str());
-  //printf("reader %p\n",reader);
 
   if (reader != NULL) {
     int ret;
@@ -164,7 +159,9 @@ bool History_log::send_action(std::string& act,
 			      std::vector<std::string>& props,
 			      bool verdict)
 {
- std::vector<int> p;
+  std::vector<int> p;
+
+  log.debug("SEND_ACTION\n");
 
   if (c&&a) {
     if (verdict) {
