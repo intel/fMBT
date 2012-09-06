@@ -92,7 +92,12 @@ std::string Lts::stringify()
     for(unsigned i=0;i<prop_names.size();i++) {
       if (prop_names[i]!="") {
 	t << "\"" << prop_names[i] << "\" : ";
-
+	for(unsigned j=0;j<stateprops[i].size();j++) {
+	  if (j) {
+	    t << ", ";
+	  }
+	  t << stateprops[i][j];
+	}
 
 	t << ";" << std::endl;
 
