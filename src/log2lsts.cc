@@ -22,6 +22,21 @@
 #include "history_log.hh"
 #include "coverage.hh"
 
+#ifndef DROI
+#include <error.h>
+#else
+void error(int exitval, int dontcare, const char* format, ...)
+{
+  va_list ap;
+  fprintf(stderr, "fMBT error: ");
+  va_start(ap, format);
+  vfprintf(stderr, format, ap);
+  va_end(ap);
+  exit(exitval);
+}
+#endif
+
+
 class ltscoverage: public Coverage {
 public:
   ltscoverage(Log&l,History_log& _h): Coverage(l), prop_count(0), lts(l), hl(_h)
@@ -87,11 +102,50 @@ public:
   History_log& hl;
 };
 
+#include <getopt.h>
+#include "config.h"
+
+void print_usage()
+{
+  std::printf(
+    "Usage: fmbt-log2lsts [options] logfile\n"
+    "Options:\n"
+    "    -V     print version("VERSION")\n"
+    "    -h     help\n"
+    );
+}
+
+
 int main(int argc,char * const argv[])
 {
   Log_null log;
+  int c;
+  static struct option long_opts[] = {
+    {"help", no_argument, 0, 'h'},
+    {"version", no_argument, 0, 'V'},
+    {0, 0, 0, 0}
+  };
 
-  std::string file(argv[1]);
+  while ((c = getopt_long (argc, argv, "DEL:heil:qCo:V", long_opts, NULL)) != -1)
+    switch (c)
+    {
+    case 'V':
+      printf("Version: "VERSION"\n");
+      return 0;
+      break;
+    case 'h':
+      print_usage();
+      return 0;
+    default:
+      return 2;
+    }
+
+  if (optind == argc) {
+    print_usage();
+    error(32, 0, "logfile missing.\n");
+  }
+
+  std::string file(argv[optind]);
 
   History_log hl(log,file);
 
