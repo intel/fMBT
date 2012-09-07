@@ -39,7 +39,7 @@ void error(int exitval, int dontcare, const char* format, ...)
 
 class ltscoverage: public Coverage {
 public:
-  ltscoverage(Log&l,History_log& _h): Coverage(l), prop_count(0), lts(l), hl(_h)
+  ltscoverage(Log&l,History_log& _h, bool _verd): Coverage(l), prop_count(0), verd(_verd), lts(l), hl(_h)
   {}
   virtual ~ltscoverage() {}
   virtual void push() {}
@@ -60,6 +60,8 @@ public:
       }
       
       for(unsigned i=0;i<props.size();i++) {
+	log.debug("State %i, prop %i(%s)\n",
+		  trace.size(),props[i],hl.tnames[props[i]].c_str());
 	prop[props[i]].push_back(trace.size());
       }
     } else {
@@ -67,13 +69,15 @@ public:
       // We might have props...
 
       for(unsigned i=0;i<props.size();i++) {
+	log.debug("VState %i, prop %i(%s)\n",
+		  trace.size()+1,props[i],hl.tnames[props[i]].c_str());
 	prop[props[i]].push_back(trace.size()+1);
       }
 
       lts.set_state_cnt(trace.size()+1);
       lts.set_action_cnt(hl.anames.size()-1);
       lts.set_transition_cnt(trace.size());
-      lts.set_prop_cnt(hl.tnames.size()-1);
+      lts.set_prop_cnt(hl.tnames.size()-1+(verd?0:1));
       lts.set_initial_state(1);
       lts.header_done();
 
@@ -89,8 +93,42 @@ public:
 	s.push_back(i+2);
 	lts.add_transitions(i+1,a,e,s,e);
       }
+
       for(unsigned i=1;i<prop.size();i++) {
+	log.debug("add prop %s, %i\n",hl.tnames[i].c_str(),prop[i].size());
+	for(unsigned j=0;j<prop[i].size();j++) {
+	  log.debug("state %i\n",prop[i][j]);
+	}
 	lts.add_prop(&hl.tnames[i],prop[i]);
+      }
+
+      if (verd) {
+	std::vector<int> v;
+	v.push_back(trace.size()+1);
+	static std::string UNDEF("verdict::undefined");
+	static std::string pass("verdict::pass");
+	static std::string fail("verdict::fail");
+	static std::string inco("verdict::inconclusive");
+	static std::string err("verdict::error");
+	std::string s;
+	switch (verdict) {
+	case Verdict::FAIL: 
+	  s=fail;
+	  break;
+	case Verdict::PASS:
+	  s=pass;
+	  break;
+	case Verdict::INCONCLUSIVE:
+	  s=inco;
+	  break;
+	case Verdict::ERROR:
+	  s=err;
+	  break;
+	default:
+	  s=UNDEF;
+	}
+	log.debug("verdict...\n");
+ 	lts.add_prop(&s,v);
       }
     }
   }
@@ -98,6 +136,7 @@ public:
   std::vector<int> trace;
   std::vector<std::vector<int> > prop;
   int prop_count;
+  bool verd;
   Lts lts;
   History_log& hl;
 };
@@ -108,11 +147,12 @@ public:
 void print_usage()
 {
   std::printf(
-    "Usage: fmbt-log2lsts [options] logfile\n"
-    "Options:\n"
-    "    -V     print version("VERSION")\n"
-    "    -h     help\n"
-    );
+	      "Usage: fmbt-log2lsts [options] logfile\n"
+	      "Options:\n"
+	      "    -e     add test verdict to the end state as state proposition\n"
+	      "    -V     print version("VERSION")\n"
+	      "    -h     help\n"
+	      );
 }
 
 
@@ -120,25 +160,29 @@ int main(int argc,char * const argv[])
 {
   Log_null log;
   int c;
+  bool verd=false;
   static struct option long_opts[] = {
     {"help", no_argument, 0, 'h'},
     {"version", no_argument, 0, 'V'},
     {0, 0, 0, 0}
   };
 
-  while ((c = getopt_long (argc, argv, "DEL:heil:qCo:V", long_opts, NULL)) != -1)
+  while ((c = getopt_long (argc, argv, "heV", long_opts, NULL)) != -1)
     switch (c)
-    {
-    case 'V':
-      printf("Version: "VERSION"\n");
-      return 0;
-      break;
-    case 'h':
-      print_usage();
-      return 0;
-    default:
-      return 2;
-    }
+      {
+      case 'e':
+	verd=true;
+	break;
+      case 'V':
+	printf("Version: "VERSION"\n");
+	return 0;
+	break;
+      case 'h':
+	print_usage();
+	return 0;
+      default:
+	return 2;
+      }
 
   if (optind == argc) {
     print_usage();
@@ -149,7 +193,7 @@ int main(int argc,char * const argv[])
 
   History_log hl(log,file);
 
-  ltscoverage cov(log,hl);
+  ltscoverage cov(log,hl,verd);
 
   hl.set_coverage(&cov,NULL);
 

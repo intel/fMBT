@@ -73,6 +73,30 @@ std::string Lts::stringify()
   } 
   t << "End Action_names\n";
 
+  if (prop_cnt) {
+    t << "Begin State_props" << std::endl;
+    for(unsigned i=0;i<prop_names.size();i++) {
+      if (prop_names[i]!="") {
+	int c=0;
+	t << "\"" << prop_names[i] << "\" : ";
+	for(unsigned ii=1;ii<=state_cnt;ii++) {
+	  for(unsigned j=0;j<stateprops[ii].size();j++) {
+	    if (stateprops[ii][j]==i) {
+	      if (c) {
+		t << ", ";
+	      }
+	      t << ii;
+	      c++;
+	    }
+	  }
+	}
+	t << ";" << std::endl;
+      }
+    }
+
+    t << "End State_props" << std::endl;
+  }
+
   t << "Begin Transitions\n";
 
   for(int i=1;i<=state_cnt;i++) {
@@ -86,26 +110,6 @@ std::string Lts::stringify()
     
   }
   t << "End Transitions\n";
-
-  if (prop_cnt) {
-    t << "Begin State_props" << std::endl;
-    for(unsigned i=0;i<prop_names.size();i++) {
-      if (prop_names[i]!="") {
-	t << "\"" << prop_names[i] << "\" : ";
-	for(unsigned j=0;j<stateprops[i].size();j++) {
-	  if (j) {
-	    t << ", ";
-	  }
-	  t << stateprops[i][j];
-	}
-
-	t << ";" << std::endl;
-
-      }
-    }
-
-    t << "End State_props" << std::endl;
-  }
 
   t << "End Lsts\n";
   return t.str();

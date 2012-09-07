@@ -47,6 +47,8 @@ private:
 public:
   std::vector<std::string> anames;
   std::vector<std::string> tnames;
+private:
+  std::string separator;
 };
 
 #endif
