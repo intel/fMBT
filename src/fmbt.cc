@@ -21,6 +21,7 @@
 
 #include "conf.hh"
 #include "log.hh"
+#include "log_null.hh"
 #include "helper.hh"
 #include <iostream>
 #include <unistd.h>
@@ -61,6 +62,9 @@ void print_usage()
     "    -L<f>  append log to file f (default: standard output)\n"
     "    -l<f>  overwrite log to file f (default: standard output)\n"
     "    -q     quiet, do not print test verdict\n"
+    "    -V     print version("VERSION")\n"
+    "    -o     configfile line\n"
+    "    -C     print coverage modules.\n"
     );
 }
 
@@ -151,9 +155,15 @@ int main(int argc,char * const argv[])
 
   signal(SIGPIPE, nop_signal_handler);
 
-  { 
-    Log log(logfile);
-    Conf c(log,debug_enabled);
+  {
+    Log* log;
+
+    if (E)
+      log=new Log_null;
+    else
+      log=new Log(logfile);
+
+    Conf c(*log,debug_enabled);
     std::string conffilename(argv[optind]);
     c.load(conffilename,config_options);
 
