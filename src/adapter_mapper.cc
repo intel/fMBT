@@ -277,8 +277,12 @@ void Adapter_mapper::add_result_action(std::string* name)
 #ifndef DROI
     /* try regexp case */
     log.debug("Regexp case");
+    if (l_name.empty()) {
+      status=false;
+      return;
+    }
     const char* format_string = l_name[0].c_str();
-    
+
     log.debug("Format string \"%s\"",format_string);
 
     boost::regex expression(*name);
