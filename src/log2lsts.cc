@@ -77,7 +77,8 @@ public:
       lts.set_state_cnt(trace.size()+1);
       lts.set_action_cnt(hl.anames.size()-1);
       lts.set_transition_cnt(trace.size());
-      lts.set_prop_cnt(hl.tnames.size()-1+(verd?0:1));
+      lts.set_prop_cnt(hl.tnames.size()-1+(verd?1:0));
+
       lts.set_initial_state(1);
       lts.header_done();
 
@@ -161,15 +162,26 @@ int main(int argc,char * const argv[])
   Log_null log;
   int c;
   bool verd=false;
+  FILE* outputfile=stdout;
   static struct option long_opts[] = {
     {"help", no_argument, 0, 'h'},
     {"version", no_argument, 0, 'V'},
     {0, 0, 0, 0}
   };
 
-  while ((c = getopt_long (argc, argv, "heV", long_opts, NULL)) != -1)
+  while ((c = getopt_long (argc, argv, "heVo:", long_opts, NULL)) != -1)
     switch (c)
       {
+      case 'o':
+	if (outputfile!=stdout) {
+	  printf("more than one output file\n");
+	  print_usage();
+	  return 1;
+	}
+	outputfile=fopen(optarg,"w");
+	if (!outputfile) 
+          error(1,0,"cannot open output file \"%s\".",optarg);
+	break;
       case 'e':
 	verd=true;
 	break;
@@ -197,5 +209,6 @@ int main(int argc,char * const argv[])
 
   hl.set_coverage(&cov,NULL);
 
-  printf("%s\n",cov.lts.stringify().c_str());
+  fprintf(outputfile,"%s\n",cov.lts.stringify().c_str());
+  return 0;
 }
