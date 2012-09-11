@@ -42,7 +42,7 @@ model     = "aal_remote(remote_pyaal test1.py.aal)"
 adapter   = "aal_remote(remote_pyaal test1.py.aal)"
 heuristic = "lookahead(3)"
 coverage  = "perm(2)"
-pass      = "coverage:.5"
+pass      = "coverage(.5)"
 EOF
 
 # search for path to execute iDec in the model:
