@@ -93,6 +93,8 @@ void param_cut(std::string val,std::string& name,
 
 void commalist(std::string& s,std::vector<std::string>& vec);
 void remove_force(std::string& s);
+class EndHook;
+void hook_runner(EndHook* e);
 
 #define MAX_LINE_LENGTH (1024*16)
 

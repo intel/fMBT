@@ -35,7 +35,6 @@ extern D_ParserTables parser_tables_conf;
 extern Conf* conf_obj;
 
 #define RETURN_ERROR_VOID(s) { \
-  set_exitvalue(on_error); \
   log.pop();    \
   status=false; \
   errormsg=s;   \
@@ -43,7 +42,6 @@ extern Conf* conf_obj;
   }
 
 #define RETURN_ERROR_VERDICT(s) { \
-  set_exitvalue(on_error); \
   log.pop();    \
   status=false; \
   errormsg=s;   \
@@ -199,11 +197,11 @@ Verdict::Verdict Conf::execute(bool interactive) {
         RETURN_ERROR_VERDICT("Error in end condition: " + e->stringify());
       if (e->counter == End_condition::ACTION) {
         // avoid string comparisons, fetch the index of the tag
-        e->param_long = find(model->getActionNames(), *(e->param));
+        e->param_long = find(model->getActionNames(), (e->param));
       }
       if (e->counter == End_condition::STATETAG) {
         // avoid string comparisons, fetch the index of the tag
-        e->param_long = find(model->getSPNames(), *(e->param));
+        e->param_long = find(model->getSPNames(), (e->param));
       }
       if (e->counter == End_condition::COVERAGE) {
         end_by_coverage = true;
@@ -215,7 +213,7 @@ Verdict::Verdict Conf::execute(bool interactive) {
     // Add default end conditions (if coverage is reached, test is passed)
     if (!end_by_coverage) {
       end_conditions.push_back(
-        new End_condition(Verdict::PASS, End_condition::COVERAGE, new std::string("1.0")));
+          new End_condition(Verdict::PASS, End_condition::COVERAGE, "1.0"));
     }
   }
 
@@ -225,42 +223,37 @@ Verdict::Verdict Conf::execute(bool interactive) {
     engine.interactive();
   } else {
     Verdict::Verdict v = engine.run(end_time);
-    
+    std::list<EndHook*>* hooklist=NULL;
     switch (v) {
     case Verdict::FAIL: {
-      set_exitvalue(on_fail);
-      // Test failed. Continue according to the on_error
-      // configuration. In addition to the following it could at
-      // somepoint specify a shell command (for instance, package and
-      // send log files, etc.)
-      if (on_fail == "interactive")
-        engine.interactive();
+      hooklist=&fail_hooks;
       break;
     }
     case Verdict::PASS: { 
-      // Test passed      
-      set_exitvalue(on_pass);
+      hooklist=&pass_hooks;
       break;
     }
     case Verdict::INCONCLUSIVE: {
-      set_exitvalue(on_inconc);
+      hooklist=&inc_hooks;
       break;
     }
     case Verdict::ERROR: {
-      RETURN_ERROR_VERDICT(engine.verdict_msg() + ": " + engine.reason_msg());
+      hooklist=&error_hooks;
       break;
     }
     default: {
       // unknown verdict?
     }
-    }      
+    }
+    if (hooklist) 
+      for_each(hooklist->begin(),hooklist->end(),hook_runner);
   }
   log.pop();
   status = true;
   errormsg = engine.verdict_msg() + ": " + engine.reason_msg();
   return engine.verdict();
 }
-
+/*
 void Conf::set_exitvalue(std::string& s)
 {
   std::string cmd;
@@ -268,8 +261,22 @@ void Conf::set_exitvalue(std::string& s)
   split(s,cmd,value);
   exit_status=atoi(value.c_str());
 }
+*/
 
 void Conf::set_observe_sleep(std::string &s)
 {
   Adapter::sleeptime=atoi(s.c_str());
+}
+
+void Conf::add_end_condition(Verdict::Verdict v,std::string& s)
+
+{
+  End_condition *ec = new_end_condition(v,s);
+
+  if (ec==NULL) {
+    status=false;
+    errormsg=errormsg+"Can't create end condition \""+s+"\"\n";
+  } else {
+    add_end_condition(ec);
+  }
 }

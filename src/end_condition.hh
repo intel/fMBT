@@ -36,17 +36,19 @@ struct End_condition: public Writable {
     ACTION
   } Counter;
 
-  End_condition(Verdict::Verdict v, Counter c, std::string* p);
+  End_condition(Verdict::Verdict v, Counter c, const std::string& p);
   ~End_condition();
 
   Verdict::Verdict verdict;
   Counter counter;
-  std::string* param;
+  std::string param;
 
   float param_float;
   long param_long;
   time_t param_time;
 
 };
+
+End_condition* new_end_condition(Verdict::Verdict,const std::string&);
 
 #endif

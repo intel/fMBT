@@ -44,7 +44,6 @@ conf_entry: model               |
             engine_time         |
             adapter_sleep       |
             end_condition       |
-            end_condition_noarg |
             history             |
             on_error            |
             on_fail             |
@@ -66,9 +65,10 @@ engine_cov: 'engine.cov' '=' float {
             { 
               std::ostringstream o;
               o << $2.f;
+              std::string s(o.str());
               conf_obj->add_end_condition(
-                new End_condition(Verdict::PASS, End_condition::COVERAGE, new std::string(o.str())));
-            }
+                new End_condition(Verdict::PASS, End_condition::COVERAGE, s));
+              }
             } ;
 
 engine_count: 'engine.count' '=' int {
@@ -77,10 +77,11 @@ engine_count: 'engine.count' '=' int {
             fprintf(stderr, "instead.\n");
             { 
               std::ostringstream o;
-              o << $2.val;
+              o << $2.val; 
+              std::string s(o.str());             
               conf_obj->add_end_condition(
-                new End_condition(Verdict::PASS, End_condition::STEPS, new std::string(o.str())));
-            }
+                new End_condition(Verdict::PASS, End_condition::STEPS,s));
+             }
             } ;
 
 engine_tag: 'engine.tag' '=' string {
@@ -88,7 +89,8 @@ engine_tag: 'engine.tag' '=' string {
             fprintf(stderr, "pass = \"statetag:%s\"\n", $2.str->c_str());
             fprintf(stderr, "instead.\n");
             conf_obj->add_end_condition(
-                new End_condition(Verdict::PASS, End_condition::STATETAG, $2.str));
+                new End_condition(Verdict::PASS, End_condition::STATETAG, *$2.str));
+            delete $2.str;
             } ;
 
 engine_time: 'engine.endtime' '=' string {
@@ -96,25 +98,15 @@ engine_time: 'engine.endtime' '=' string {
             fprintf(stderr, "pass = \"duration:%s\"\n", $2.str->c_str());
             fprintf(stderr, "instead.\n");
             conf_obj->add_end_condition(
-                new End_condition(Verdict::PASS, End_condition::DURATION, $2.str));
+                new End_condition(Verdict::PASS, End_condition::DURATION, *$2.str));
+            delete $2.str;
             } ;
 
 adapter_sleep: 'adapter.observesleep' '=' string { conf_obj->set_observe_sleep(*$2.str); delete $2.str; } ;
 
-end_condition: verdict '=' '"' end_type ':' string_woquotes '"'
-        { conf_obj->add_end_condition(
-                new End_condition((Verdict::Verdict)$0.val,
-                                  (End_condition::Counter)$3.val,
-                                  $5.str));
-        }
+end_condition: verdict '=' string
+        { conf_obj->add_end_condition((Verdict::Verdict)$0.val,*$2.str); }
         ;
-
-end_condition_noarg: verdict '=' '"' end_type_noarg '"'
-        { conf_obj->add_end_condition(
-                new End_condition((Verdict::Verdict)$0.val,
-                                  (End_condition::Counter)$3.val,
-                                  NULL));
-        } ;
 
 history: 'history' '=' string { conf_obj->add_history($2.str); };
 
@@ -129,22 +121,12 @@ on_error: 'on_error' '=' string { conf_obj->set_on_error(*$2.str); delete $2.str
 verdict: pass {          $$.val=Verdict::PASS; } 
         | fail {         $$.val=Verdict::FAIL; }
         | inconclusive { $$.val=Verdict::INCONCLUSIVE; } ;
+
 pass: 'pass' ;
 fail: 'fail' ;
 inconclusive: 'inconc' | 'inconclusive' | 'exit' ;
 
-end_type: 'steps'       { $$.val=End_condition::STEPS; }
-        | 'coverage'    { $$.val=End_condition::COVERAGE; }
-        | 'statetag'    { $$.val=End_condition::STATETAG; }
-        | 'tag'         { $$.val=End_condition::STATETAG; }
-        | 'duration'    { $$.val=End_condition::DURATION; }
-        | 'no_progress' { $$.val=End_condition::NOPROGRESS; };
-
-end_type_noarg: 'deadlock'    { $$.val=End_condition::DEADLOCK; };
-
 string: "\"([^\"\\]|\\[^])*\"" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); } ;
-
-string_woquotes: "([^\"\\]|\\[^])*" { $$.str = new std::string($n0.start_loc.s,$n0.end-$n0.start_loc.s); } ;
 
 int: istr { $$.val = atoi($n0.start_loc.s); };
 
