@@ -106,7 +106,7 @@ Requires: libMagick++5
 Requires: ImageMagick-c++
 %endif
 Requires: ImageMagick
-Requires: xorg-x11-apps
+Requires: /usr/bin/xwd
 Requires: tesseract
 Requires: xautomation
 
