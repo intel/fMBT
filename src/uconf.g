@@ -22,13 +22,7 @@
 #include <vector>
 #include <sstream>
 
-void sdel(std::vector<std::string*>* strvec)
-{
-    for(unsigned i=0;i<strvec->size();i++) {
-        delete (*strvec)[i];
-    }
-    delete strvec;
-}
+void sdel(std::vector<std::string*>* strvec);
 
 typedef struct _node {
   int val;
