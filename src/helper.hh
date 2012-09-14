@@ -95,6 +95,7 @@ void commalist(std::string& s,std::vector<std::string>& vec);
 void remove_force(std::string& s);
 class EndHook;
 void hook_runner(EndHook* e);
+void sdel(std::vector<std::string*>* strvec);
 
 #define MAX_LINE_LENGTH (1024*16)
 

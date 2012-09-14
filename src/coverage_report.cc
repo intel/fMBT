@@ -30,7 +30,6 @@ std::string Coverage_report::stringify()
 void Coverage_report::set_model(Model* _model)
 {
   Coverage::set_model(_model);
-
   std::vector<std::string>& sp(model->getSPNames());  
 
   for(unsigned i=0;i<from.size();i++) {
@@ -78,7 +77,23 @@ void Coverage_report::set_model(Model* _model)
   }
 }
 
-
 void Coverage_report::on_find() {
+  count++;
   traces.push_back(executed);
+  tcount[executed]++;
+  Coverage_exec_filter::on_find();
+}
+
+void Coverage_report::push() {
+  save.push(online);
+  save.push(count);
+  traces_save.push(traces);
+  tcount_save.push(tcount);
+}
+
+void Coverage_report::pop() {
+  count=save.top(); save.pop(); 
+  online=save.top(); save.pop(); 
+  traces=traces_save.top(); traces_save.pop(); 
+  tcount=tcount_save.top(); tcount_save.pop();
 }

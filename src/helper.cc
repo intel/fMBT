@@ -751,3 +751,11 @@ void commalist(std::string& s,std::vector<std::string>& vec) {
   pushme=s.substr(lastend,pos);
   vec.push_back(pushme);
 }
+
+void sdel(std::vector<std::string*>* strvec)
+{
+    for(unsigned i=0;i<strvec->size();i++) {
+        delete (*strvec)[i];
+    }
+    delete strvec;
+}

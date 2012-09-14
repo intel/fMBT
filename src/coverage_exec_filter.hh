@@ -59,9 +59,10 @@ public:
 protected:
   bool prop_set(std::vector<int> p,int npro,int* props);
 
-  virtual void on_drop() { };
-  virtual void on_find() { };
-  virtual void on_start() { };
+  virtual void on_drop();
+  virtual void on_find();
+  virtual void on_start();
+  virtual void on_restart() { };
 
   std::vector<int> executed;
   std::vector<struct timeval > etime;

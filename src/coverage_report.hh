@@ -38,8 +38,8 @@ public:
 
   virtual std::string stringify();
 
-  virtual void push(){ save.push(online); save.push(count); };
-  virtual void pop() { count=save.top(); save.pop(); online=save.top(); save.pop(); };
+  virtual void push();
+  virtual void pop();
 
   virtual float getCoverage() { return count; }
 
@@ -49,9 +49,11 @@ public:
   virtual void set_model(Model* _model);
 
   std::vector<std::vector<int> > traces;
-  std::vector<std::vector<struct timeval> >  step_time;
-  std::vector< struct timeval >  start_time;
-  std::vector< struct timeval >  duration;
+  // std::vector<std::vector<struct timeval> >  step_time;
+  // We _could_ use set instead of map, but we'll count how many instanses of the trace we have.
+  std::map<std::vector<int>, int> tcount;
+  //  std::vector< struct timeval >  start_time;
+  //  std::vector< struct timeval >  duration;
 
 private:
   virtual void on_find();
@@ -62,6 +64,8 @@ private:
 
   int count;
   std::stack<int> save;
+  std::stack<std::vector<std::vector<int> > > traces_save;
+  std::stack<std::map<std::vector<int>, int> > tcount_save;
 };
 
 #endif
