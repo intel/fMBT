@@ -35,15 +35,15 @@ void Coverage_report::on_find() {
 }
 
 void Coverage_report::push() {
-  save.push(online);
+  Coverage_exec_filter::push();
   save.push(count);
   traces_save.push(traces);
   tcount_save.push(tcount);
 }
 
 void Coverage_report::pop() {
+  Coverage_exec_filter::pop();
   count=save.top(); save.pop();
-  online=save.top(); save.pop();
   traces=traces_save.top(); traces_save.pop();
   tcount=tcount_save.top(); tcount_save.pop();
 }
