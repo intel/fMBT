@@ -132,6 +132,8 @@ void Coverage_Prop::set_model(Model* _model) {
     props_total=prop_included.size();
   }
   data.resize(props_total+1);
+
+  execute(0);
 }
 
 FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Prop, "tag")

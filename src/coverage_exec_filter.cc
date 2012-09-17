@@ -77,7 +77,8 @@ void Coverage_exec_filter::set_model(Model* _model)
 
   }
 
-  
+  // Let's handle initial tags
+  execute(0);
 }
 
 bool Coverage_exec_filter::prop_set(std::vector<int> p,int npro,
