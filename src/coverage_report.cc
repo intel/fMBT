@@ -27,56 +27,6 @@ std::string Coverage_report::stringify()
   return std::string("");
 }
 
-void Coverage_report::set_model(Model* _model)
-{
-  Coverage::set_model(_model);
-  std::vector<std::string>& sp(model->getSPNames());  
-
-  for(unsigned i=0;i<from.size();i++) {
-    int pos=find(sp,*from[i]);
-    if (sp.size() && *from[i]!=sp[pos]) {
-      pos=model->action_number(*from[i]);
-      if (pos>0) {
-	start_action.push_back(pos);
-      } else {
-	log.debug("\"%s\" not an tag or an action.\n",from[i]->c_str());
-      }
-    } else {
-      start_tag.push_back(pos);
-    }
-  }
-
-  for(unsigned i=0;i<to.size();i++) {
-    int pos=find(sp,*to[i]);
-    if (sp.size() && *to[i]!=sp[pos]) {
-      pos=model->action_number(*to[i]);
-      if (pos>0) {
-	end_action.push_back(pos);
-      } else {
-	log.debug("\"%s\" not an tag or an action.\n",to[i]->c_str());
-      }
-    } else {
-      end_tag.push_back(pos);
-    }
-
-  }
-
-  for(unsigned i=0;i<drop.size();i++) {
-    int pos=find(sp,*drop[i]);
-    if (sp.size() && *drop[i]!=sp[pos]) {
-      pos=model->action_number(*drop[i]);
-      if (pos>0) {
-	rollback_action.push_back(pos);
-      } else {
-	log.debug("\"%s\" not an tag or an action.\n",drop[i]->c_str());	
-      }
-    } else {
-      rollback_tag.push_back(pos);
-    }
-
-  }
-}
-
 void Coverage_report::on_find() {
   count++;
   traces.push_back(executed);
@@ -92,8 +42,13 @@ void Coverage_report::push() {
 }
 
 void Coverage_report::pop() {
-  count=save.top(); save.pop(); 
-  online=save.top(); save.pop(); 
-  traces=traces_save.top(); traces_save.pop(); 
+  count=save.top(); save.pop();
+  online=save.top(); save.pop();
+  traces=traces_save.top(); traces_save.pop();
   tcount=tcount_save.top(); tcount_save.pop();
+}
+
+void Coverage_report::on_online(int action,std::vector<int>&p){
+  std::vector<int> pp;
+  executed.push_back(std::pair<int,std::vector<int> >(action,pp));
 }

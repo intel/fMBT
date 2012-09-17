@@ -23,21 +23,29 @@
 #include "helper.hh"
 #include <map>
 
-class Coverage_paths: public Coverage_report {
+class Coverage_paths_base: public Coverage_report {
 public:
-  Coverage_paths(Log&l,std::vector<std::string*>& _from,
+  Coverage_paths_base(Log&l,std::vector<std::string*>& _from,
 		 std::vector<std::string*>& _to,
 		 std::vector<std::string*>& _drop):
-    Coverage_report(l,_from,_to,_drop) {}
+    Coverage_report(l,_from,_to,_drop), filter_inputs(false),af(false),pf(true),unique(true) {}
   
-  virtual ~Coverage_paths() {}
+  virtual ~Coverage_paths_base() {}
 
-  virtual float getCoverage() { return tcount.size(); }  
-  
+  virtual float getCoverage() { 
+    if (unique) {
+      return tcount.size();
+    }
+    return count;
+  }
+  bool filter_inputs;
+  bool af;
+  bool pf;
+  bool unique;
 protected:
   virtual void on_restart();
+  virtual void on_online(int action,std::vector<int>&p);
 private:
-
 };
 
 #endif

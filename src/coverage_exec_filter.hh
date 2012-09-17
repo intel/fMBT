@@ -30,7 +30,6 @@ public:
 		       std::vector<std::string*>& _to,
 		       std::vector<std::string*>& _drop):
     Coverage(l),from(_from),to(_to),drop(_drop),online(false) {
-    printf("Coverage_exec_filter::Coverage_exec_filter()\n");
   }
 
   virtual ~Coverage_exec_filter() {}
@@ -63,8 +62,9 @@ protected:
   virtual void on_find();
   virtual void on_start();
   virtual void on_restart() { };
+  virtual void on_online(int action,std::vector<int>&p);
 
-  std::vector<int> executed;
+  std::vector<std::pair<int,std::vector<int> > > executed;
   std::vector<struct timeval > etime;
 
   std::vector<int> start_tag;
@@ -80,7 +80,7 @@ protected:
   std::vector<std::string*> drop;
   bool online;
   std::list<bool> save_online;
-  std::list<std::vector<int> > save_executed;
+  std::list<std::vector<std::pair<int,std::vector<int> > > > save_executed;
 };
 
 #endif

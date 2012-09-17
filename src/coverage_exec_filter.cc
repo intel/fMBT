@@ -113,18 +113,23 @@ void Coverage_exec_filter::on_start()
   etime.push_back(History::current_time);
 }
 
+void Coverage_exec_filter::on_online(int action,std::vector<int>&p) {
+  executed.push_back(std::pair<int,std::vector<int> >(action,p));
+  etime.push_back(History::current_time);
+}
+
 bool Coverage_exec_filter::execute(int action)
 {
   int* props;
   int npro;
 
+  npro=model->getprops(&props);
+
   if (online) {
-    executed.push_back(action);
-    etime.push_back(History::current_time);
+    std::vector<int> p(props,props+npro);
+    on_online(action,p);
   }
 
-  npro=model->getprops(&props);
- 
   if (online) {
     /* Ok. Let's search for drop. */
     if (prop_set(rollback_tag,npro,props) || 

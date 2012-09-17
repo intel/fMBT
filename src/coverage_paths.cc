@@ -27,10 +27,10 @@ extern "C" {
   extern D_ParserTables parser_tables_paths;
 }
 
-class Coverage_pathsw: public Coverage_paths {
+class Coverage_pathsw: public Coverage_paths_base {
 public:
   Coverage_pathsw(Log& l,std::string params):
-    Coverage_paths(l,_f,_t,_d) 
+    Coverage_paths_base(l,_f,_t,_d) 
   {
 
     paths_ff=&_f;
@@ -54,8 +54,139 @@ private:
   std::vector<std::string*> _f,_t,_d;
 };
 
-void Coverage_paths::on_restart() {
+class Coverage_uinputs: public Coverage_pathsw {
+public:
+  Coverage_uinputs(Log& l,std::string params):
+    Coverage_pathsw(l,params) {
+    filter_inputs=true;
+    pf=true;
+    af=false;
+  }
+  virtual ~Coverage_uinputs() {}
+};
+
+class Coverage_uexecs: public Coverage_pathsw {
+public:
+  Coverage_uexecs(Log& l,std::string params):
+    Coverage_pathsw(l,params) {
+    filter_inputs=false;
+    pf=true;
+    af=false;
+  }
+  virtual ~Coverage_uexecs() {}
+};
+
+class Coverage_upaths: public Coverage_pathsw {
+public:
+  Coverage_upaths(Log& l,std::string params):
+    Coverage_pathsw(l,params) {
+    filter_inputs=false;
+    pf=false;
+    af=true;
+  }
+  virtual ~Coverage_upaths() {}
+};
+
+class Coverage_uwalks: public Coverage_pathsw {
+public:
+  Coverage_uwalks(Log& l,std::string params):
+    Coverage_pathsw(l,params) {
+    filter_inputs=false;
+    pf=false;
+    af=false;
+  }
+  virtual ~Coverage_uwalks() {}
+};
+
+class Coverage_uinputswalks: public Coverage_pathsw {
+public:
+  Coverage_uinputswalks(Log& l,std::string params):
+    Coverage_pathsw(l,params) {
+    filter_inputs=false;
+    pf=false;
+    af=false;
+  }
+  virtual ~Coverage_uinputswalks() {}
+};
+
+
+class Coverage_inputs: public Coverage_pathsw {
+public:
+  Coverage_inputs(Log& l,std::string params):
+    Coverage_pathsw(l,params) {
+    filter_inputs=true;
+    pf=true;
+    af=false;
+    unique=false;
+  }
+  virtual ~Coverage_inputs() {}
+};
+
+class Coverage_execs: public Coverage_pathsw {
+public:
+  Coverage_execs(Log& l,std::string params):
+    Coverage_pathsw(l,params) {
+    filter_inputs=false;
+    pf=true;
+    af=false;
+    unique=false;
+  }
+  virtual ~Coverage_execs() {}
+};
+
+class Coverage_paths: public Coverage_pathsw {
+public:
+  Coverage_paths(Log& l,std::string params):
+    Coverage_pathsw(l,params) {
+    filter_inputs=false;
+    pf=false;
+    af=true;
+    unique=false;
+  }
+  virtual ~Coverage_paths() {}
+};
+
+class Coverage_walks: public Coverage_pathsw {
+public:
+  Coverage_walks(Log& l,std::string params):
+    Coverage_pathsw(l,params) {
+    filter_inputs=false;
+    pf=false;
+    af=false;
+    unique=false;
+  }
+  virtual ~Coverage_walks() {}
+};
+
+class Coverage_inputswalks: public Coverage_pathsw {
+public:
+  Coverage_inputswalks(Log& l,std::string params):
+    Coverage_pathsw(l,params) {
+    filter_inputs=false;
+    pf=false;
+    af=false;
+    unique=false;
+  }
+  virtual ~Coverage_inputswalks() {}
+};
+
+void Coverage_paths_base::on_restart() {
   executed.clear();
 }
 
-FACTORY_DEFAULT_CREATOR(Coverage, Coverage_pathsw, "paths")
+void Coverage_paths_base::on_online(int action,std::vector<int>&p){
+  std::vector<int> pp;
+  executed.push_back(std::pair<int,std::vector<int> >(af?0:action,pf?pp:p));
+}
+
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_upaths, "upaths" )
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_uwalks, "uwalks" )
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_uwalks, "uinputswalks" )
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_uexecs, "uexecs" )
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_uinputs,"uinputs")
+
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_paths, "paths" )
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_walks, "walks" )
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_walks, "inputswalks" )
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_execs, "execs" )
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_inputs,"inputs")

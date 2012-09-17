@@ -44,28 +44,32 @@ public:
   virtual float getCoverage() { return count; }
 
   virtual int fitness(int* actions,int n, float* fitness) {
+
     return 0;
   }
-  virtual void set_model(Model* _model);
 
-  std::vector<std::vector<int> > traces;
+  std::vector<std::vector<std::pair<int,std::vector<int> > > > traces;
   // std::vector<std::vector<struct timeval> >  step_time;
   // We _could_ use set instead of map, but we'll count how many instanses of the trace we have.
-  std::map<std::vector<int>, int> tcount;
+  std::map<std::vector<std::pair<int,std::vector<int> > >, int> tcount;
   //  std::vector< struct timeval >  start_time;
   //  std::vector< struct timeval >  duration;
 
-private:
+protected:
   virtual void on_find();
+  virtual void on_online(int action,std::vector<int>&p);
+
+private:
 
   bool prop_set(std::vector<int> p,int npro,int* props);
 
   std::vector<struct timeval > etime;
-
+protected:
   int count;
+private:
   std::stack<int> save;
-  std::stack<std::vector<std::vector<int> > > traces_save;
-  std::stack<std::map<std::vector<int>, int> > tcount_save;
+  std::stack<std::vector<std::vector<std::pair<int,std::vector<int> > > > > traces_save;
+  std::stack<std::map<std::vector<std::pair<int,std::vector<int> > >, int> > tcount_save;
 };
 
 #endif

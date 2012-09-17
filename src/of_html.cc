@@ -74,8 +74,8 @@ std::string OutputFormat_Html::format_covs()
 /* We might want to have more than one comparator for
    different orders */
 
-bool vcmp (const std::vector<int>& lhs,
-	   const std::vector<int>& rhs)
+bool vcmp (const std::vector<std::pair<int,std::vector<int> > >& lhs,
+	   const std::vector<std::pair<int,std::vector<int> > >& rhs)
 {
   if (lhs.size()==rhs.size()) {
     return lhs<rhs;
@@ -91,16 +91,16 @@ std::string OutputFormat_Html::report()
   
   for(unsigned i=0;i<reportnames.size();i++) {
 
-    bool(*cmprp)(const std::vector<int>&,
-		 const std::vector<int>&) = vcmp;
+    bool(*cmprp)(const std::vector<std::pair<int,std::vector<int> > >&,
+		 const std::vector<std::pair<int,std::vector<int> > >&) = vcmp;
 
-    std::vector<std::vector<int> >& traces(rcovs[i]->traces);
-    std::map<std::vector<int> , int, bool(*)(const std::vector<int>&,const std::vector<int>&) > cnt(cmprp);
+    std::vector<std::vector<std::pair<int,std::vector<int> > > >& traces(rcovs[i]->traces);
+    std::map<std::vector<std::pair<int,std::vector<int> > > , int, bool(*)(const std::vector<std::pair<int,std::vector<int> > >&,const std::vector<std::pair<int,std::vector<int> > >&) > cnt(cmprp);
 
     for(unsigned j=0;j<traces.size();j++) {
       printf("size %i:",(int)traces[j].size());
       for(unsigned k=0;k<traces[j].size();k++) {
-	printf("%i,",traces[j][k]);
+	printf("%i,",traces[j][k].first);
       }
       printf("\n");
       cnt[traces[j]]++;
@@ -114,16 +114,16 @@ std::string OutputFormat_Html::report()
     printf("vector size %i\n",(int)traces.size());
     printf("Unique traces %i\n",(int)cnt.size());
 
-    for(std::map<std::vector<int>,int>::iterator j=cnt.begin();
+    for(std::map<std::vector<std::pair<int,std::vector<int> > >,int>::iterator j=cnt.begin();
 	j!=cnt.end();j++) {
 
       ret=ret+"<td valign=\"top\">\n"
 	"<table border=\"0\">\n"
 	"<caption>Count:"+to_string((unsigned)j->second)+"</caption><td>";
       ret=ret+"\n<ol>\n";
-      const std::vector<int>& t(j->first);
+      const std::vector<std::pair<int,std::vector<int> > >& t(j->first);
       for(unsigned k=0; k<t.size();k++) {
-	ret=ret+"<li>"+an[t[k]];
+	ret=ret+"<li>"+an[t[k].first];
       }
       ret=ret+"</ol>\n";
       ret=ret+"</td></tr></table></td>";
