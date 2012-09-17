@@ -120,7 +120,7 @@ void Coverage_exec_filter::on_online(int action,std::vector<int>&p) {
 
 bool Coverage_exec_filter::execute(int action)
 {
-  int* props;
+  int* props=NULL;
   int npro;
 
   npro=model->getprops(&props);
@@ -155,4 +155,17 @@ bool Coverage_exec_filter::execute(int action)
   }
 
   return true;
+}
+
+void ds(std::string* s){
+  if (s) 
+    delete s;
+}
+
+Coverage_exec_filter::~Coverage_exec_filter() {
+  /*
+  for_each(from.begin(),from.end(),ds);
+  for_each(to.begin(),to.end(),ds);
+  for_each(drop.begin(),drop.end(),ds);
+  */
 }

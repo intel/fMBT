@@ -26,7 +26,6 @@ bool Lts_remote::init()
   std::string &name = params;
   std::string model("remote.lts#");
   gchar* stdout=NULL;
-  gchar* stderr=NULL;
   gint   exit_status=0;
   GError *ger=NULL;
   bool ret;
@@ -36,7 +35,7 @@ bool Lts_remote::init()
   int offset = 0;
   if (name.length() > 10 && name.c_str()[10] == '#') offset = 11;
 
-  g_spawn_command_line_sync(name.c_str() + offset,&stdout,&stderr,
+  g_spawn_command_line_sync(name.c_str() + offset,&stdout,NULL,
 			    &exit_status,&ger);
   if (!stdout) {
     errormsg = std::string("Lts_remote cannot execute \"") + (name.c_str()+offset) + "\"";
@@ -51,10 +50,16 @@ bool Lts_remote::init()
       params = model + escape_string(stdout);
       ret=Lts::init();
     }
-    g_free(stdout);
-    g_free(stderr);
-    g_free(ger);
   }
+
+  if (stdout) {
+    g_free(stdout);
+  }
+
+  if (ger) {
+    g_error_free(ger);
+  }
+
   return ret;
 }
 

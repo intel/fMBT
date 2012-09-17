@@ -28,24 +28,26 @@
 
 #endif
 
+class EndHook;
+
 extern "C" {
-extern D_ParserTables parser_tables_conf;
+  extern D_ParserTables parser_tables_conf;
 }
 
 extern Conf* conf_obj;
 
-#define RETURN_ERROR_VOID(s) { \
-  log.pop();    \
-  status=false; \
-  errormsg=s;   \
-  return; \
+#define RETURN_ERROR_VOID(s) {			\
+    log.pop();					\
+    status=false;				\
+    errormsg=s;					\
+    return;					\
   }
 
-#define RETURN_ERROR_VERDICT(s) { \
-  log.pop();    \
-  status=false; \
-  errormsg=s;   \
-  return Verdict::ERROR; \
+#define RETURN_ERROR_VERDICT(s) {		\
+    log.pop();					\
+    status=false;				\
+    errormsg=s;					\
+    return Verdict::ERROR;			\
   }
 
 void Conf::load(std::string& name,std::string& content)
@@ -213,7 +215,7 @@ Verdict::Verdict Conf::execute(bool interactive) {
     // Add default end conditions (if coverage is reached, test is passed)
     if (!end_by_coverage) {
       end_conditions.push_back(
-          new End_condition(Verdict::PASS, End_condition::COVERAGE, "1.0"));
+			       new End_condition(Verdict::PASS, End_condition::COVERAGE, "1.0"));
     }
   }
 
@@ -254,13 +256,13 @@ Verdict::Verdict Conf::execute(bool interactive) {
   return engine.verdict();
 }
 /*
-void Conf::set_exitvalue(std::string& s)
-{
+  void Conf::set_exitvalue(std::string& s)
+  {
   std::string cmd;
   std::string value;
   split(s,cmd,value);
   exit_status=atoi(value.c_str());
-}
+  }
 */
 
 void Conf::set_observe_sleep(std::string &s)
@@ -280,3 +282,40 @@ void Conf::add_end_condition(Verdict::Verdict v,std::string& s)
     add_end_condition(ec);
   }
 }
+
+void hook_delete(EndHook* e);
+
+Conf::~Conf() {
+  for (unsigned int i = 0; i < end_conditions.size(); i++)
+    delete end_conditions[i];
+  log.pop();
+  if (heuristic) 
+    delete heuristic;
+
+  if (adapter)
+    delete adapter;
+
+  if (model)
+    delete model;
+
+  if (coverage)
+    delete coverage;
+
+  adapter=NULL;
+  heuristic=NULL;
+  model=NULL;
+  coverage=NULL;
+
+  for(unsigned i=0;i<history.size();i++) {
+    if (history[i]) {
+      delete history[i];
+    }
+  }
+
+  for_each(pass_hooks.begin(),pass_hooks.end(),hook_delete);
+  for_each(fail_hooks.begin(),fail_hooks.end(),hook_delete);
+  for_each(inc_hooks.begin(),inc_hooks.end(),hook_delete);
+  for_each(error_hooks.begin(),error_hooks.end(),hook_delete);
+
+}
+

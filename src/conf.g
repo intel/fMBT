@@ -105,7 +105,7 @@ engine_time: 'engine.endtime' '=' string {
 adapter_sleep: 'adapter.observesleep' '=' string { conf_obj->set_observe_sleep(*$2.str); delete $2.str; } ;
 
 end_condition: verdict '=' string
-        { conf_obj->add_end_condition((Verdict::Verdict)$0.val,*$2.str); }
+        { conf_obj->add_end_condition((Verdict::Verdict)$0.val,*$2.str); delete $2.str; }
         ;
 
 history: 'history' '=' string { conf_obj->add_history($2.str); };

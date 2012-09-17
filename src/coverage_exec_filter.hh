@@ -22,6 +22,7 @@
 #include "coverage.hh"
 #include "helper.hh"
 #include <list>
+#include "log_null.hh"
 
 class Coverage_exec_filter: public Coverage {
 public:
@@ -32,7 +33,7 @@ public:
     Coverage(l),from(_from),to(_to),drop(_drop),online(false) {
   }
 
-  virtual ~Coverage_exec_filter() {}
+  virtual ~Coverage_exec_filter();
   virtual std::string stringify();
 
   virtual void push(){
@@ -75,9 +76,9 @@ protected:
   std::vector<int> end_action;
   std::vector<int> rollback_action;
 
-  std::vector<std::string*> from;
-  std::vector<std::string*> to;
-  std::vector<std::string*> drop;
+  std::vector<std::string*>& from;
+  std::vector<std::string*>& to;
+  std::vector<std::string*>& drop;
   bool online;
   std::list<bool> save_online;
   std::list<std::vector<std::pair<int,std::vector<int> > > > save_executed;

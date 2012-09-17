@@ -55,34 +55,7 @@ class Conf:public Writable {
     set_on_inconc("exit(1)");
 
   }
-  virtual ~Conf() {
-    for (unsigned int i = 0; i < end_conditions.size(); i++)
-      delete end_conditions[i];
-    log.pop();
-    if (heuristic) 
-      delete heuristic;
-
-    if (adapter)
-      delete adapter;
-
-    if (model)
-      delete model;
-
-    if (coverage)
-      delete coverage;
-
-    adapter=NULL;
-    heuristic=NULL;
-    model=NULL;
-    coverage=NULL;
-
-    for(unsigned i=0;i<history.size();i++) {
-      if (history[i]) {
-	delete history[i];
-      }
-    }
-
-  }
+  virtual ~Conf();
 
   void set_model(std::string& s) {
     //split(s, model_name, model_param);

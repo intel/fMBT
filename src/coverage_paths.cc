@@ -30,9 +30,8 @@ extern "C" {
 class Coverage_pathsw: public Coverage_paths_base {
 public:
   Coverage_pathsw(Log& l,std::string params):
-    Coverage_paths_base(l,_f,_t,_d) 
+    Coverage_paths_base(l,_f,_t,_d)
   {
-
     paths_ff=&_f;
     paths_tt=&_t;
     paths_dd=&_d;
@@ -43,6 +42,7 @@ public:
     status=ret;
     if (p->syntax_errors>0) {
       errormsg="Syntax error...";
+      status=false;
     }
     free_D_Parser(p);
     from=_f;
