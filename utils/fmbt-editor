@@ -599,22 +599,22 @@ Keyboard shortcuts:<br>
         except: regenerate=True
         if regenerate:
             if self._editingLSTS():
-                modelspec="lsts:%s" % (self._lstsFileName,)
+                modelspec="lsts(%s)" % (self._lstsFileName,)
                 lookahead = 4
             elif self._editingAAL():
-                modelspec="aal_remote:remote_pyaal -l %s.gted-%stmp.aal.log '%s'" % (
+                modelspec="aal_remote(remote_pyaal -l %s.gted-%stmp.aal.log '%s')" % (
                     self._gtFileName, os.getpid(), self._gtFileName)
                 lookahead = 3
             else:
-                modelspec="lsts_remote:fmbt-gt -f '%s'" % (self._gtFileName,)
+                modelspec="lsts_remote(fmbt-gt -f '%s')" % (self._gtFileName,)
                 lookahead = 4
             file(self._confFileName, "w").write("""model     = "%s"
-heuristic = "lookahead:%s"
-coverage  = "perm:2"
-pass      = "steps:20"
-on_pass   = "exit:0"
-on_fail   = "exit:1"
-on_inconc = "exit:2"
+heuristic = "lookahead(%s)"
+coverage  = "perm(2)"
+pass      = "steps(20)"
+on_pass   = "exit(0)"
+on_fail   = "exit(1)"
+on_inconc = "exit(2)"
 """ % (modelspec, lookahead))
 
     def _doGenerateTest(self):
