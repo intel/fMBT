@@ -45,7 +45,7 @@ while [ "$verdict" == "inconclusive" ]; do
     cp one-step-tests.conf next-test.conf
 
     for prev_test in $(seq 1 $testnumber); do
-        echo "history = \"log(test$prev_test.log)\"" >> next-test.conf
+        echo "history = \"log:test$prev_test.log\"" >> next-test.conf
     done
 
     testnumber=$(( $testnumber + 1 ))

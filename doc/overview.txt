@@ -135,8 +135,8 @@ for launching the low-level adapters, too.
 
 Example 3: a mapper adapter configuration file
 
-1="remote:ssh root@192.168.1.3 ./remote_python --action-delay 0.3"
-2="remote:ssh root@192.168.1.1 ./remote_exec.sh"
+1="remote(ssh root@192.168.1.3 ./remote_python --action-delay 0.3)"
+2="remote(ssh root@192.168.1.1 ./remote_exec.sh)"
 
 "iWifiTechAvailable"   -> (1, "iDBus('system','net.connman','/','net.connman.Manager').GetProperties()['AvailableTechnologies'].count('wifi')==1")
 "iWifiTechUnavailable" -> (1, "iDBus('system','net.connman','/','net.connman.Manager').GetProperties()['AvailableTechnologies'].count('wifi')==0")
@@ -158,8 +158,8 @@ models looks more like this:
 
 Example 4: a mapper adapter configuration file with macros
 
-1="remote:ssh root@192.168.1.3 ./remote_python --action-delay 0.3"
-2="remote:ssh root@192.168.1.1 ./remote_exec.sh"
+1="remote(ssh root@192.168.1.3 ./remote_python --action-delay 0.3)"
+2="remote(ssh root@192.168.1.1 ./remote_exec.sh)"
 
 "iWifiTechAvailable"   -> (1, "manager.GetProperties()['AvailableTechnologies'].count('wifi') == 1")
 "iWifiTechUnavailable" -> (1, "manager.GetProperties()['AvailableTechnologies'].count('wifi') == 0")
@@ -286,7 +286,7 @@ fMBT includes three heuristic modules:
 - "action_fitness" chooses action based on its coverage fitness
   value. Does not simulate executions, ignores covering state tags.
 
-- "lookahead:n": simulates executions of length 1..n, chooses the
+- "lookahead(n)": simulates executions of length 1..n, chooses the
   shortest execution that gives the best increase in the
   coverage. Slowest and smartest of all.
 

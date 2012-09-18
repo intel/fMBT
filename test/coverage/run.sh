@@ -31,7 +31,33 @@ fmbt-gt -f t1.gt -o t1.lsts >>$LOGFILE 2>&1 || {
 testpassed
 
 teststep "Coverage perm"
-echo 'model = "lsts:t1.lsts"' > test.conf
+echo 'model = "lsts(t1.lsts)"' > test.conf
+echo 'coverage = "perm(1)"' >> test.conf
+
+fmbt test.conf -l perm.log >>$LOGFILE 2>&1 || {
+    testfailed
+}
+
+fmbt-log -f \$sc perm.log|head -1|while read f
+do
+if [ 0.000000 != $f ]; then
+    testfailed
+#    exit 1
+fi
+done
+
+fmbt-log -f \$sc perm.log|tail -1|while read l
+do
+if [ 1.000000 != $l ]; then
+    testfailed
+#    exit 1
+fi
+done
+
+testpassed
+
+teststep "Coverage perm with old syntax"
+echo 'model = "lsts(t1.lsts)"' > test.conf
 echo 'coverage = "perm:1"' >> test.conf
 
 fmbt test.conf -l perm.log >>$LOGFILE 2>&1 || {
@@ -57,10 +83,10 @@ done
 testpassed
 
 teststep "Coverage min"
-echo 'model = "lsts:t1.lsts"' > test.conf
-echo 'coverage = "min:perm:3:perm:2"' >> test.conf
-echo 'model = "lsts:t1.lsts"' > test2.conf
-echo 'coverage = "min:perm:2:perm:3"' >> test2.conf
+echo 'model = "lsts(t1.lsts)"' > test.conf
+echo 'coverage = "min(perm(3),perm(2))"' >> test.conf
+echo 'model = "lsts(t1.lsts)"' > test2.conf
+echo 'coverage = "min(perm(2),perm(3))"' >> test2.conf
 
 fmbt test.conf -l min1.log >>$LOGFILE 2>&1 || {
     testfailed
@@ -87,7 +113,7 @@ cmp log1 log2 || {
 testpassed
 
 teststep "Coverage tag"
-echo 'model = "lsts:t1.lsts"' > test.conf
+echo 'model = "lsts(t1.lsts)"' > test.conf
 echo 'coverage = "tag"' >> test.conf
 
 fmbt test.conf -l tag.log >>$LOGFILE 2>&1 || {
@@ -122,7 +148,7 @@ testpassed
 
 
 teststep "Coverage tag with model..."
-echo 'model = "lsts:t2.lsts"' > test.conf
+echo 'model = "lsts(t2.lsts)"' > test.conf
 echo 'coverage = "tag"' >> test.conf
 
 fmbt test.conf -l tag.log >>$LOGFILE 2>&1 || {
@@ -148,3 +174,41 @@ done
 
 testpassed
 
+teststep "Coverage constant"
+echo 'model = "lsts(t2.lsts)"' > test.conf
+echo 'coverage = "const(2)"' >> test.conf
+
+fmbt test.conf -l const.log >>$LOGFILE 2>&1 || {
+    testfailed
+#    exit 1    
+}
+
+fmbt-log -f \$sc const.log|tail -1|while read f
+do
+if [ 2.000000 != $f ]; then
+    testfailed
+#    exit 1
+fi
+done
+
+testpassed
+
+
+teststep "Coverage constant short"
+echo 'model = "lsts(t2.lsts)"' > test.conf
+echo 'coverage = "4"' >> test.conf
+
+fmbt test.conf -l const.log >>$LOGFILE 2>&1 || {
+    testfailed
+#    exit 1    
+}
+
+fmbt-log -f \$sc const.log|tail -1|while read f
+do
+if [ 4.000000 != $f ]; then
+    testfailed
+#    exit 1
+fi
+done
+
+testpassed

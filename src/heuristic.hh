@@ -63,4 +63,6 @@ protected:
 
 FACTORY_DECLARATION(Heuristic)
 
+Heuristic* new_heuristic(Log&, std::string&);
+
 #endif

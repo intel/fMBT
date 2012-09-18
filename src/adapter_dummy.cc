@@ -26,14 +26,15 @@
 Adapter_dummy::Adapter_dummy(Log& l, std::string params) :
   Adapter::Adapter(l), tau(0), sil(0)
 {
-  std::string ex,obs;
-  split(params,ex,obs);
-  
-  if (ex!="") {
-    tau=atoi(ex.c_str());
+  std::vector<std::string> s;
+  commalist(params,s);
+
+  if ((s.size()>0) && (s[0].length()>0)) {
+    tau=atoi(s[0].c_str());
   }
-  if (obs!="") {
-    sil=atoi(obs.c_str());
+
+  if ((s.size()>1) && (s[1].length()>0)) {
+    sil=atoi(s[1].c_str());
   }
 }
 
@@ -62,7 +63,7 @@ void Adapter_dummy::execute(std::vector<int>& action)
   log.pop();
 }
 
-int   Adapter_dummy::observe(std::vector<int> &action,
+int Adapter_dummy::observe(std::vector<int> &action,
 				bool block)
 {
   switch (sil) {

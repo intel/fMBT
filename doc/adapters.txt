@@ -98,7 +98,7 @@ Adapter stack may contain the following building blocks.
   for communication between adapter_remote and the remote adapter. For
   example, a test configuration file can contain specification:
   
-    adapter = "remote:ssh root@testhost /usr/local/bin/remote_python"
+    adapter = "remote(ssh root@testhost /usr/local/bin/remote_python)"
 
 - adapter_mapper is a local adapter that forwards actions between the
   model (or a higher level adapter) and any number of local
@@ -111,8 +111,8 @@ Adapter stack may contain the following building blocks.
   actions in the model into commands or expressions to be run in
   low-level adapters. For example, configuration
 
-    1 = "remote:ssh root@testhost /usr/local/bin/remote_python"
-    2 = "remote:/usr/local/bin/remote_exec.sh"
+    1 = "remote(ssh root@testhost /usr/local/bin/remote_python)"
+    2 = "remote(/usr/local/bin/remote_exec.sh)"
     "itesthost:(.*)"   -> (1, "$1")
     "ilocalhost:(.*)"  -> (2, "$1")
 
@@ -140,7 +140,7 @@ Adapter stack may contain the following building blocks.
   containing local adapters and instantiates an adapter from
   there. For instance, test configuration
 
-  adapter = "dlopen:myadapters.so,mylocal:xyz"
+  adapter = "dlopen(myadapters.so,mylocal(xyz))"
 
   loads myadapters.so and uses "mylocal" adapter with parameters "xyz"
   as a top level adapter.
@@ -170,7 +170,7 @@ this:
 1. remote_python command line parameter "-c" in the test configuration
    file. Example:
 
-   adapter = "remote:remote_python -c 'from myteststeps import *'"
+   adapter = "remote(remote_python -c 'from myteststeps import *')"
 
 2. action that executes import statement in the model. Example:
    "iCatch('from myteststeps import *')"
@@ -443,9 +443,9 @@ Shared library adapter can be used through the "dlopen" adapter:
 
 $ cat > plugin-test.conf << EOF
 model        = "mysut.lsts"
-heuristic    = "lookahead:1"
-coverage     = "perm:1"
-adapter      = "dlopen:myadapters.so,mylocal:xyz"
+heuristic    = "lookahead(1)"
+coverage     = "perm(1)"
+adapter      = "dlopen(myadapters.so,mylocal(xyz))"
 pass         = "coverage:1.0"
 EOF
 
@@ -466,9 +466,9 @@ In this case we can use it directly in the configuration file:
 
 $ cat > static-test.conf << EOF
 model        = "mysut.lsts"
-heuristic    = "lookahead:1"
-coverage     = "perm:1"
-adapter      = "mylocal:xyz"
+heuristic    = "lookahead(1)"
+coverage     = "perm(1)"
+adapter      = "mylocal(xyz)"
 pass         = "coverage:1.0"
 EOF
 

@@ -31,6 +31,7 @@
 #include <sstream>
 #include <dlfcn.h>
 #include <cstdlib>
+#include "helper.hh"
 
 #define RETURN_ERROR(s) { \
     status = false;       \
@@ -43,22 +44,19 @@ Adapter_dlopen::Adapter_dlopen(Log& log, std::string params) :
   loaded_adapter(NULL)
 {
   void *library_handle;
-  char library_file[1024];
-  char adapter_name[1024];
-  char adapter_params[1024];
-  
-  std::stringstream s(params);
-  s.getline(library_file, 1024, ',');
-  s.getline(adapter_name, 1024, ':');
-  s.getline(adapter_params, 1024);
-  
-  if (library_file[0] == '\0')
-    RETURN_ERROR("library filename missing in adapter parameters");
-  
-  if (adapter_name[0] == '\0')
-    RETURN_ERROR("adapter name missing in adapter parameters");
-  
-  library_handle = dlopen(library_file, RTLD_NOW | RTLD_GLOBAL);
+
+  std::vector<std::string> s;
+  commalist(params,s);
+
+  std::string library_file;
+
+  if (s.size()!=2) {
+    RETURN_ERROR("Incorrect number of elements");
+  }
+
+  library_file = s[0];
+    
+  library_handle = dlopen(library_file.c_str(), RTLD_NOW | RTLD_GLOBAL);
   if (!library_handle) {
     std::ostringstream dlopenerror;
     dlopenerror << "opening \"" << library_file << "\" failed: " << dlerror();
@@ -69,9 +67,8 @@ Adapter_dlopen::Adapter_dlopen(Log& log, std::string params) :
   /* dlopening the adapter registers the loaded adapter to
      adapter_factory. Just try fetching it from there.
   */
-  loaded_adapter = AdapterFactory::create(log,
-                                          adapter_name,
-                                          adapter_params);
+  
+  loaded_adapter = new_adapter(log,s[1]);
   if (!loaded_adapter)
     RETURN_ERROR("creating adapter from successfully opened library failed");
 }

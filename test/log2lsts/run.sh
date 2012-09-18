@@ -18,31 +18,58 @@
 
 
 cd "$(dirname "$0")"
-LOGFILE=/tmp/fmbt.test.coverage.log
+LOGFILE=/tmp/fmbt.test.log2lsts.log
 export PATH=../../src:../../utils:$PATH
 
 source ../functions.sh
 
-teststep "coverage set: generate model"
-fmbt-gt -f t2.gt -o t2.lsts >>$LOGFILE 2>&1 || {
+teststep "log2lsts: generate model"
+fmbt-gt -f t1.gt -o t1.lsts >>$LOGFILE 2>&1 || {
     testfailed
-    exit 1
+    exit 1    
 }
 testpassed
 
-teststep "coverage set: cover tags"
-echo 'model = "lsts(t2.lsts)"' > test.conf
-echo 'coverage = "set(1:2:3 from \"Foo\" to \"iFoo\" -> \"tag\":0:4)"' >> test.conf
-echo 'pass = "steps:5"' >> test.conf
+teststep "Log2lsts: run"
+echo 'model = "lsts(t1.lsts)"' > test.conf
+echo 'coverage = "0"'         >> test.conf
 
-fmbt -D test.conf -l set.log >>$LOGFILE 2>&1 \
-    && testpassed \
-    || testfailed
+fmbt test.conf -l run1.log >>$LOGFILE 2>&1 || {
+    testfailed
+}
+
+testpassed
+
+teststep "Log2lsts: create lsts from log"
+
+fmbt-log2lts -o g1.lsts run1.log >>$LOGFILE 2>&1  || {
+    testfailed
+}
+
+testpassed
+
+teststep "Log2lsts: create lsts from log with verdict tag"
+
+fmbt-log2lts -o g1e.lsts run1.log >>$LOGFILE 2>&1  || {
+    testfailed
+}
+
+testpassed
 
 
-teststep "coverage set: defaults, cover actions regexp"
-fmbt arguments.conf -l arguments.log >> $LOGFILE 2>&1
-echo -n 'Expecting 1.0 coverage, observed: ' >> $LOGFILE
-fmbt-log -f '$sc' arguments.log  | tail -n 1 | tee -a $LOGFILE | grep -q 1.000000 \
-    && testpassed \
-    || testfailed
+teststep "Log2lsts: compare t1.lsts and g1.lsts"
+
+true || {
+    testfailed
+}
+
+testpassed
+
+teststep "Log2lsts: compare t1.lsts and g1e.lsts"
+
+true || {
+    testfailed
+}
+
+testpassed
+

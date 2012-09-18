@@ -21,6 +21,7 @@
 #include "heuristic.hh"
 #include "model.hh"
 #include "log.hh"
+#include "helper.hh"
 
 FACTORY_IMPLEMENTATION(Heuristic)
 
@@ -80,4 +81,25 @@ Coverage* Heuristic::get_coverage() {
 
 void Heuristic::set_model(Model* _model) {
   model=_model;
+}
+
+Heuristic* new_heuristic(Log& l, std::string& s) {
+  std::string name,option;
+  param_cut(s,name,option);
+  Heuristic* ret=HeuristicFactory::create(l, name, option);
+
+  if (ret) {
+    return ret;
+  }
+
+  //Let's try old thing.
+  split(s, name, option);
+  ret=HeuristicFactory::create(l, name, option);
+
+  if (ret) {
+    fprintf(stderr,"DEPRECATED HEURISTIC SYNTAX. %s\nNew syntax is %s(%s)\n",
+	    s.c_str(),name.c_str(),option.c_str());
+  }
+
+  return ret;
 }

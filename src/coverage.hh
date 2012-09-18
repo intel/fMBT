@@ -54,6 +54,8 @@ protected:
 
 FACTORY_DECLARATION(Coverage)
 
+Coverage* new_coverage(Log&, std::string&);
+
 #include "model.hh"
 
 #endif

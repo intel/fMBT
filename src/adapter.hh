@@ -130,4 +130,6 @@ FACTORY_DECLARATION(Adapter)
   }                                          \
 }
 
+Adapter* new_adapter(Log&, std::string&);
+
 #endif

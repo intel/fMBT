@@ -44,8 +44,8 @@ T(additional-actions, "iActions(i=0, o=1)",      choose-heuristic)
 T(additional-actions, "iActions(i=1, o=1)",      choose-heuristic)
 
 T(choose-heuristic,   "iHeur('lookahead')",      end-conditions)
-T(choose-heuristic,   "iHeur('lookahead:5')",    end-conditions)
-T(choose-heuristic,   "iHeur('lookahead:5b')",   end-conditions)
+T(choose-heuristic,   "iHeur('lookahead(5)')",    end-conditions)
+T(choose-heuristic,   "iHeur('lookahead(5b)')",   end-conditions)
 T(choose-heuristic,   "iHeur('random')",         end-conditions)
 
 T(end-conditions,     "iEnd('deadlock')",        require-inconc)

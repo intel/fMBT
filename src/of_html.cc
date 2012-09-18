@@ -98,7 +98,7 @@ std::string OutputFormat_Html::report()
     std::map<std::vector<int> , int, bool(*)(const std::vector<int>&,const std::vector<int>&) > cnt(cmprp);
 
     for(unsigned j=0;j<traces.size();j++) {
-      printf("size %i:",traces[j].size());
+      printf("size %i:",(int)traces[j].size());
       for(unsigned k=0;k<traces[j].size();k++) {
 	printf("%i,",traces[j][k]);
       }

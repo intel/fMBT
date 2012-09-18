@@ -29,7 +29,7 @@ class Log;
 
 extern bool human_readable;
 
-void* load_lib(const std::string& libname,std::string& model_filename);
+void* load_lib(const std::string& libname,const std::string& model_filename);
 int   find(const std::vector<std::string>&,const std::string);
 int   find(const std::vector<std::string*>&,const std::string);
 bool  isInputName(const std::string& name);
@@ -88,6 +88,13 @@ void split(std::string val, std::string& name,
 void regexpmatch(std::string& regexp,std::vector<std::string>& f,
 		 std::vector<int>& result,bool clear=true,int a=1);
 
+void param_cut(std::string val,std::string& name,
+	       std::string& option);
+
+void commalist(std::string& s,std::vector<std::string>& vec);
+void remove_force(std::string& s);
+class EndHook;
+void hook_runner(EndHook* e);
 
 #define MAX_LINE_LENGTH (1024*16)
 

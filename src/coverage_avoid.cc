@@ -33,26 +33,20 @@ Coverage_avoid::Coverage_avoid(Log& l, std::string& params) :
   Coverage(l),
   depth(0)
 {
-  static std::string separator(":");
-  char* tmp=strdup(params.c_str());
-  std::string m(unescape_string(tmp));
   std::vector<std::string> s;
-  strvec(s,m,separator);
-  free(tmp);
-  for(unsigned i=0;i+1<s.size();i+=3) {
+  commalist(params,s);
+
+  for(unsigned i=0;i+1<s.size();i+=2) {
     float f=atof(s[i].c_str());
     if (f<=0.0) {
       f=1.0;
     }
-    std::string prm("");
-    if (i+2<s.size()) {
-      prm=s[i+2];
-    }
 
-    Coverage* cov=CoverageFactory::create(log, s[i+1], prm);
+    Coverage* cov=new_coverage(log,s[i+1]);
+
     if (cov==NULL) {
       status=false;
-      errormsg=std::string("Can't create coverage ")+s[i+1]+":"+prm;
+      errormsg=std::string("Can't create coverage ")+s[i+1];
       return;
     }
     h.push_back(std::pair<float,Coverage*>(f,cov));

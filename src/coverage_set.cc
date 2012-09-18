@@ -39,7 +39,9 @@ public:
   Coverage_setw(Log& l,std::string params):
     Coverage_set(l,_f,_t,_d)
   {
-    unescape_string(params);
+    //unescape_string(params)
+    remove_force(params);
+
     set_ff=&_f;
     set_tt=&_t;
     set_dd=&_d;

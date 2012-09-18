@@ -37,21 +37,33 @@ namespace {
 
   Model* lib_creator(Log& l, std::string params) {
     Model* m;
-    std::string model_name,model_param,model_filename;
-    char* stmp=strdup(params.c_str());
-    std::string s(unescape_string(stmp));
-    free(stmp);
+    std::vector<std::string> s;
 
-    split(s, model_name, model_param);
-    split(model_name,model_name,model_filename,",");
+    commalist(params,s);
+    if (s.size()<1) {
+      m = new Null(l);
+      if (m) {
+	m->status   = false;
+	m->errormsg = std::string("lib:Can't load model ") + params;
+      }
+      return m;
+    }
 
-    m = ModelFactory::create(l, model_name, model_param);
+    m = new_model(l,s[0]);
 
     if (!m) {
-      void* handle=load_lib(model_name,model_filename);
+      void* handle=NULL;
+
+      if (s.size()>1) {
+	handle=load_lib("",s[1]);
+      } else {
+	std::string model_name,model_param;
+	param_cut(s[0],model_name,model_param);      
+	handle=load_lib(model_name,"");
+      }
 
       if (handle) {
-	m = ModelFactory::create(l, model_name, model_param);
+	m = new_model(l,s[0]);
 	if (mods.empty()) {
 	  atexit(mods_atexit);
 	}

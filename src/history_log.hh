@@ -23,6 +23,8 @@
 #include "alphabet.hh"
 #include <libxml/xmlreader.h>
 
+#include "alphabet_impl.hh"
+
 class History_log: public History {
 public:
   History_log(Log& l, std::string params = "");
@@ -35,13 +37,18 @@ protected:
   char* tag;
   void processNode(xmlTextReaderPtr reader);
   Coverage* c;
+public:
   Alphabet* a;
+private:
   void send_action();
   bool send_action(std::string& a,std::vector<std::string>& props,
 		   bool verdict=false);
   std::string file;
+public:
   std::vector<std::string> anames;
   std::vector<std::string> tnames;
+private:
+  std::string separator;
 };
 
 #endif

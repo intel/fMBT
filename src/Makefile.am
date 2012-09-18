@@ -1,7 +1,7 @@
 if ANDROID
 bin_PROGRAMS = fmbt_droid
 else
-bin_PROGRAMS = fmbt remote_adapter_loader fmbt-aalc fmbt-aalp fmbt-ucheck
+bin_PROGRAMS = fmbt remote_adapter_loader fmbt-aalc fmbt-aalp fmbt-ucheck fmbt-log2lts
 endif
 
 if HAVE_PYTHON
@@ -18,7 +18,7 @@ endif
 
 include Sources.mk
 
-noinst_HEADERS =  aalang.hh aalang_cpp.hh aalang_java.hh aalang_py.hh adapter_rly08btech.hh adapter_dlopen.hh adapter_dummy.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_timer.hh adapter_v4l2.hh alg_bdfs.hh conf.hh coverage.hh coverage_exec_filter.hh coverage_mapper.hh coverage_market.hh coverage_of.hh coverage_prop.hh coverage_report.hh coverage_tema_seq.hh coverage_tree.hh end_condition.hh eye4graphics.h helper.hh heuristic_greedy.hh heuristic.hh heuristic_minerror.hh heuristic_mrandom.hh heuristic_random.hh history.hh history_glob.hh history_log.hh history_multi.hh history_remote.hh log_null.hh lts.hh lts_remote.hh lts_trace.hh lts_xrules.hh model.hh model_remote.hh null.hh of.hh of_csv.hh of_html.hh of_null.hh policy.hh rules.hh test_engine.hh verdict.hh xrules_remote.hh model_yes.hh aal_remote.hh coverage_uniq.hh coverage_set.hh heuristic_weight.hh coverage_avoid.hh coverage_trace.hh coverage_min.hh coverage_const.hh
+noinst_HEADERS =  aalang.hh aalang_cpp.hh aalang_java.hh aalang_py.hh adapter_rly08btech.hh adapter_dlopen.hh adapter_dummy.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_timer.hh adapter_v4l2.hh alg_bdfs.hh conf.hh coverage.hh coverage_exec_filter.hh coverage_mapper.hh coverage_market.hh coverage_of.hh coverage_prop.hh coverage_report.hh coverage_tema_seq.hh coverage_tree.hh end_condition.hh eye4graphics.h helper.hh heuristic_greedy.hh heuristic.hh heuristic_minerror.hh heuristic_mrandom.hh heuristic_random.hh history.hh history_glob.hh history_log.hh history_multi.hh history_remote.hh log_null.hh lts.hh lts_remote.hh lts_trace.hh lts_xrules.hh model.hh model_remote.hh null.hh of.hh of_csv.hh of_html.hh of_null.hh policy.hh rules.hh test_engine.hh verdict.hh xrules_remote.hh model_yes.hh aal_remote.hh coverage_uniq.hh coverage_set.hh heuristic_weight.hh coverage_avoid.hh coverage_trace.hh coverage_min.hh coverage_const.hh alphabet_impl.hh endhook.hh
 
 pkginclude_HEADERS = adapter.hh factory.hh writable.hh log.hh aal.hh model.hh awrapper.hh mwrapper.hh alphabet.hh helper.hh
 
@@ -33,6 +33,7 @@ remote_adapter_loader_CPPFLAGS = -Wall -pedantic -I d -DDROI
 fmbt_cparsers_la_CPPFLAGS      = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DCAPI
 eye4graphics_la_CPPFLAGS       = -Wall -fPIC -I `pwd` `pkg-config --cflags Magick++`
 fmbt_aalc_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DINCDIR=\"${pkgincludedir}\"
+fmbt_log2lts_CPPFLAGS	       = -Wall -pedantic -fPIC -I d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0 libxml-2.0`
 
 fmbt_LDFLAGS                   = -g $(JVMLDFLAGS) `pkg-config --libs glib-2.0 gobject-2.0 libedit libxml-2.0` -lboost_regex -Wl,-E -ldl
 fmbt_ucheck_LDFLAGS            = -g `pkg-config --libs glib-2.0 gobject-2.0 libedit libxml-2.0` -lboost_regex -Wl,-E -ldl
@@ -41,6 +42,7 @@ fmbt_cparsers_la_LDFLAGS       = -g `pkg-config --libs glib-2.0 gobject-2.0 libe
 eye4graphics_la_LDFLAGS        = -g `pkg-config --libs Magick++` -avoid-version -module -shared
 remote_adapter_loader_LDFLAGS  = -g -ldl
 fmbt_aalc_LDFLAGS	       = -g `pkg-config --libs glib-2.0 gobject-2.0 libedit` -lboost_regex -Wl,-E -ldl
+fmbt_log2lts_LDFLAGS 	       = -g `pkg-config --libs libedit glib-2.0 gobject-2.0 libedit libxml-2.0` -lboost_regex -Wl,-E -ldl
 
 fmbt_LDADD                     = d/libdparse.a
 fmbt_ucheck_LDADD              = d/libdparse.a
@@ -48,6 +50,7 @@ fmbt_droid_LDADD               = d/libdparse.a
 fmbt_cparsers_la_LIBADD        = d/libdparse.a
 remote_adapter_loader_LDADD    = d/libdparse.a
 fmbt_aalc_LDADD                = d/libdparse.a
+fmbt_log2lts_LDADD   	       = d/libdparse.a
 
 dsources = d/baseline d/BUILD_VERSION d/calc d/CHANGES d/COPYRIGHT d/Makefile d/parser_tests d/README d/arg.h d/d.h d/dparse.h d/dparse_tables.h d/dparse_tree.h d/dsymtab.h d/gramgram.h d/gram.h d/lex.h d/lr.h d/mkdparse.h d/parse.h d/read_binary.h d/scan.h d/util.h d/write_tables.h d/arg.c d/dparse_tree.c d/driver_parsetree.c d/gram.c d/grammar.g.c d/lex.c d/lr.c d/make_dparser.c d/mkdparse.c d/my.c d/parse.c d/read_binary.c d/sample_parser.c d/scan.c d/symtab.c d/test_parser.c d/util.c d/version.c d/write_tables.c d/4calc.g d/C.g d/my.g d/sample.g d/faq.html d/index.html d/manual.html d/make_dparser.1 d/make_dparser.cat
 

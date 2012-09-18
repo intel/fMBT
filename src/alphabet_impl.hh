@@ -16,35 +16,37 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#ifndef __history_hh__
-#define __history_hh__
+#ifndef __alphabet_impl_hh__
+#define __alphabet_impl_hh__
 
-#include <vector>
-#include <string>
-
-#include "factory.hh"
-#include "writable.hh"
-#include "coverage.hh"
 #include "alphabet.hh"
-#include <sys/time.h>
+#include <string>
+#include <vector>
 
-class Log;
-
-class History: public Writable {
+class Alphabet_impl: public Alphabet {
 public:
-  History(Log& l, std::string params = "") : log(l) {test_verdict="N/A";}
-  virtual ~History() {};
+  Alphabet_impl(std::vector<std::string>& _ActionNames,
+		std::vector<std::string>& _SPNames):
+    ActionNames(_ActionNames),SPNames(_SPNames) {}
 
-  virtual void set_coverage(Coverage*,Alphabet* alpha) =0;
+  virtual ~Alphabet_impl() {}
+  //! Returns names of all actions available.
+  virtual std::vector<std::string>& getActionNames() {
+    return ActionNames;
+  }
 
-  static struct timeval current_time;
-  std::string test_verdict;
-protected:
-  Log log;
+  //! Returns names of all available state propositions
+  virtual std::vector<std::string>& getSPNames() {
+    return SPNames;
+  }
+
+  //! Returns the name of the given action
+  virtual std::string& getActionName(int action) {
+    return ActionNames[action];
+  }
+
+  std::vector<std::string>& ActionNames;
+  std::vector<std::string>& SPNames;
 };
-
-FACTORY_DECLARATION(History)
-
-History* new_history(Log&, std::string&);
 
 #endif
