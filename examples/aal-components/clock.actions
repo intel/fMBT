@@ -1,0 +1,19 @@
+action "iClockLaunch" {
+    guard() { return fg_app == "appgrid" }
+    body()  { fg_app = "clock" }
+}
+
+action "iClockBg" {
+    guard() { return fg_app == "clock" }
+    body()  { fg_app = "appgrid" }
+}
+
+action "iClockStartTimer" {
+    guard() { return fg_app == "clock" and not clock_timer_running }
+    body() { clock_timer_running = True }
+}
+
+action "iClockStopTimer" {
+    guard() { return fg_app == "clock" and clock_timer_running }
+    body() { clock_timer_running = False }
+}

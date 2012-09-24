@@ -1,0 +1,23 @@
+aal "basesystem" {
+    language: python {}
+
+    # preview-depth: 5
+    variables {
+        fg_app, clock_timer_running, \
+        calc_sci
+    }
+    initial_state {
+        fg_app = "appgrid"   # foreground application
+
+        clock_timer_running = False
+        calc_sci = False
+    }
+^ifdef "clock"
+^include "clock.actions"
+^endif
+
+^ifdef "calc"
+^include "calc.actions"
+^endif
+
+}
