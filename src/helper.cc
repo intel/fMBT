@@ -721,7 +721,7 @@ void param_cut(std::string val,std::string& name,
   name=val;
 }
 
-void commalist(std::string& s,std::vector<std::string>& vec) {
+void commalist(const std::string& s,std::vector<std::string>& vec) {
   int depth=0;
   int lastend=0;
   std::string pushme;

@@ -1,6 +1,6 @@
 LOCAL_ADAPTERS = adapter.cc awrapper.cc adapter_model.cc adapter_mapper.cc adapter_dummy.cc adapter_timer.cc adapter_lib.cc adapter_rly08btech.cc
 
-LOCAL_HEURISTICS =  heuristic.cc heuristic_random.cc heuristic_mrandom.cc heuristic_greedy.cc weight.g.d_parser.cc heuristic_weight.cc
+LOCAL_HEURISTICS =  heuristic.cc heuristic_random.cc heuristic_mrandom.cc heuristic_greedy.cc weight.g.d_parser.cc heuristic_weight.cc heuristic_include.cc
 
 LOCAL_COVERAGES = coverage.cc coverage_exec_filter.cc coverage_mapper.cc coverage_tree.cc coverage_prop.cc coverage_uniq.cc filter.g.d_parser.cc set.g.d_parser.cc coverage_set.cc coverage_avoid.cc coverage_trace.cc coverage_min.cc coverage_const.cc coverage_paths.cc coverage_report.cc paths.g.d_parser.cc
 
