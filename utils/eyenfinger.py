@@ -283,6 +283,39 @@ def iVerifyIcon(iconFilename, match=1.0, capture=None, _origin="iVerifyIcon"):
     return score, bbox
 
 def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=1.0, mousebutton=1, mouseevent=1, dryRun=False, capture=None):
+    """
+    Click coordinates relative to the given icon in previously iRead() image.
+
+    Parameters:
+        iconFilename read icon from this file
+
+        clickPos     position to be clicked,
+                     relative to word top-left corner of the bounding
+                     box around the word. X and Y units are relative
+                     to width and height of the box.  (0,0) is the
+                     top-left corner, (1,1) is bottom-right corner,
+                     (0.5, 0.5) is the middle point (default).
+                     Values below 0 or greater than 1 click outside
+                     the bounding box.
+
+        match        1.0 (default) requires exact match. Value between 0 and 1
+                     defines minimum required score for a fuzzy match.
+
+        mousebutton  mouse button to be synthesized on the event, default is 1.
+
+        mouseevent   event to be synthesized, default is MOUSEEVENT_CLICK,
+                     others: MOUSEEVENT_MOVE, MOUSEEVENT_DOWN, MOUSEEVENT_UP.
+
+        dryRun       if True, does not synthesize events. Can still illustrate
+                     what would have been done on the capture image if given.
+
+        capture      name of file where image of highlighted icon and
+                     clicked point are saved.
+
+    Returns score (1.0 for pixel-perfect match)
+
+    Throws BadMatch error if could not find a matching word.
+    """
     score, (left, top, right, bottom) = iVerifyIcon(iconFilename, match=match, capture=capture, _origin="iClickIcon")
 
     click_x = int(left + clickPos[0]*(right-left) + g_windowOffsets[g_lastWindow][0])
@@ -305,7 +338,7 @@ def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=1.0, mousebutton=1, mouse
         # use xte from the xautomation package
         runcmd("xte 'mousemove %s %s' %s" % (click_x, click_y, params))
 
-    return struct_bbox.error
+    return score
 
 def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33, mousebutton=1, mouseevent=1, dryRun=False, capture=None):
     """
@@ -315,7 +348,7 @@ def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33, mousebutton=1
         word       - word that should be clicked
         appearance - if word appears many times, appearance to
                      be clicked. Defaults to the first one.
-        clickPos -   position to be clicked,
+        clickPos   - position to be clicked,
                      relative to word top-left corner of the bounding
                      box around the word. X and Y units are relative
                      to width and height of the box.  (0,0) is the
@@ -323,7 +356,7 @@ def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33, mousebutton=1
                      (0.5, 0.5) is the middle point (default).
                      Values below 0 or greater than 1 click outside
                      the bounding box.
-        capture -    name of file where image of highlighted word and
+        capture    - name of file where image of highlighted word and
                      clicked point are saved.
 
     Returns pair: score, matching_word
