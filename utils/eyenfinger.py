@@ -158,7 +158,35 @@ def setPreprocessFilter(preprocess):
     global g_preprocess
     g_preprocess = preprocess
 
-def iRead(windowId = None, source = None, preprocess = "", ocr=True):
+def iRead(windowId = None, source = None, preprocess = None, ocr=True, capture=None):
+    """
+    Read the contents of the given window or other source. If neither
+    of windowId or source is given, reads the contents of active
+    window. iClickWord and iVerifyWord can be used after reading with
+    OCR.
+
+    Parameters:
+        windowId     id (0x....) or the title of the window to be read.
+                     Defaults to None.
+
+        source       name of the file to be read, for instance a screen
+                     capture. Defaults to None.
+
+        preprocess   preprocess specification to override the default
+                     that is set using setPreprocessFilter. Defaults
+                     to None. Set to "" to disable preprocessing before
+                     OCR.
+
+        ocr          words will be read using OCR if True
+                     (the default). Read object can be used with
+                     iClickIcon and iVerifyIcon without OCR, too.
+
+        capture      save image with read words highlighted to this
+                     file. Default: None (nothing is saved).
+
+    Returns list of words detected by OCR from the read object.
+    """
+
     global g_hocr
     global g_lastWindow
     global g_words
@@ -180,12 +208,17 @@ def iRead(windowId = None, source = None, preprocess = "", ocr=True):
     g_origImage = source
 
     if not ocr:
+        if capture:
+            drawWords(g_origImage, capture, [], [])
         return []
+
+    if preprocess == None:
+        preprocess = g_preprocess
 
     # convert to text
     g_readImage = g_origImage + "-pp.png"
     _, g_hocr = runcmd("convert %s %s %s && tesseract %s %s -l eng hocr" % (
-            g_origImage, g_preprocess, g_readImage,
+            g_origImage, preprocess, g_readImage,
             g_readImage, SCREENSHOT_FILENAME))
 
     # store every word and its coordinates
@@ -208,6 +241,8 @@ def iRead(windowId = None, source = None, preprocess = "", ocr=True):
                   int(bbox[2]/scaled_width * orig_width),
                   int(bbox[3]/scaled_height * orig_height)))
             _log('found "' + word + '": (' + str(bbox[0]) + ', ' + str(bbox[1]) + ')')
+    if capture:
+        drawWords(g_origImage, capture, g_words, g_words)
     return sorted(g_words.keys())
 
 def iVerifyWord(word, match=0.33, capture=None):
