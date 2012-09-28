@@ -23,6 +23,7 @@
 #include "coverage.hh"
 #include "alphabet_impl.hh"
 #include "model_yes.hh"
+#include <set>
 
 class Coverage_Include_base: public Coverage {
 public:
@@ -47,7 +48,7 @@ public:
   }
 
   virtual bool execute(int action) {
-    if (child) { // broken...
+    if (child && ((filteractions.find(action)==filteractions.end())==exclude)) {
       return child->execute(action);
     }
     return true;
@@ -76,6 +77,7 @@ protected:
   std::vector<std::string> subs;
   std::vector<std::string> ActionNames;
   std::vector<std::string> SPNames;
+  std::set<int> filteractions;
 };
 
 #endif

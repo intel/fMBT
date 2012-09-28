@@ -206,22 +206,48 @@ fi
 
 teststep "coverage: include"
 cat > cinclude.conf <<EOF
-model     = "lsts_remote(fmbt-gt -f 'abc.gt')"
+model     = "lsts_remote(fmbt-gt -f 'abc_reg.gt')"
 heuristic = "lookahead(1)"
-coverage  = "include(iA,perm(1))"
-fail      = "steps(2)"
+coverage  = "include(iA,perm(2))"
+fail      = "steps(3)"
 pass      = "coverage(1)"
 on_pass   = "exit(0)"
 on_fail   = "exit(1)"
 on_inconc = "exit(2)"
 EOF
 
-fmbt cinclude.conf -l cinclude.log 2> cinclude.txt || {
+../../src/fmbt cinclude.conf -l cinclude.log 2> cinclude.txt || {
     testfailed
     exit 1
 }
 
 fmbt-log -f \$sc cinclude.log|tail -1|while read f
+do
+if [ 1.000000 != $f ]; then
+    testfailed
+    exit 1
+fi
+done
+testpassed
+
+teststep "coverage: include regexp"
+cat > cinclude_reg.conf <<EOF
+model     = "lsts_remote(fmbt-gt -f 'abc_reg.gt')"
+heuristic = "lookahead(1)"
+coverage  = "include('iA.*',perm(1))"
+fail      = "steps(5)"
+pass      = "coverage(1)"
+on_pass   = "exit(0)"
+on_fail   = "exit(1)"
+on_inconc = "exit(2)"
+EOF
+
+fmbt cinclude_reg.conf -l cinclude_reg.log 2> cinclude_reg.txt || {
+    testfailed
+    exit 1
+}
+
+fmbt-log -f \$sc cinclude_reg.log|tail -1|while read f
 do
 if [ 1.000000 != $f ]; then
     testfailed
@@ -248,6 +274,32 @@ fmbt cexclude.conf -l cexclude.log 2> cexclude.txt || {
 }
 
 fmbt-log -f \$sc cexclude.log|tail -1|while read f
+do
+if [ 1.000000 != $f ]; then
+    testfailed
+    exit 1
+fi
+done
+testpassed
+
+teststep "coverage: exclude regexp"
+cat > cexclude_reg.conf <<EOF
+model     = "lsts_remote(fmbt-gt -f 'abc_reg.gt')"
+heuristic = "lookahead(1)"
+coverage  = "exclude('iA.*',perm(1))"
+fail      = "steps(3)"
+pass      = "coverage(1)"
+on_pass   = "exit(0)"
+on_fail   = "exit(1)"
+on_inconc = "exit(2)"
+EOF
+
+fmbt cexclude_reg.conf -l cexclude_reg.log 2> cexclude_reg.txt || {
+    testfailed
+    exit 1
+}
+
+fmbt-log -f \$sc cexclude_reg.log|tail -1|while read f
 do
 if [ 1.000000 != $f ]; then
     testfailed

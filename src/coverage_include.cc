@@ -19,7 +19,6 @@
 
 #include "coverage_include.hh"
 #include "helper.hh"
-#include <set>
 
 Coverage_Include_base::Coverage_Include_base(Log& l,
 					     const std::string& param,
@@ -36,12 +35,11 @@ void Coverage_Include_base::set_model(Model* _model)
 {
   Coverage::set_model(_model);
 
-  std::set<int> filteractions;
-
   std::vector<std::string>& n=model->getActionNames();
   for(unsigned i=0;i<subs.size()-1;i++) {
     int p=find(n,subs[i]);
     if (p) {
+      log.debug("Action %s %i\n",subs[i].c_str(),p);
       filteractions.insert(p);
     } else {
       // regexp?
@@ -49,10 +47,13 @@ void Coverage_Include_base::set_model(Model* _model)
       if (subs[i][0]=='\'' || subs[i][0]=='\"') {
 	// Let's remove first and the last charaster
 	subs[i]=subs[i].substr(1,subs[i].length()-2);
-      }
-      regexpmatch(subs[i],n,r,false);
-      for(unsigned j=0;j<r.size();j++) {
-	filteractions.insert(r[j]);
+	regexpmatch(subs[i],n,r,false);
+	for(unsigned j=0;j<r.size();j++) {
+	  log.debug("regexp %s %i\n",subs[i].c_str(),r[j]);
+	  filteractions.insert(r[j]);
+	}
+      } else {
+	log.debug("No such action %s\n",subs[i].c_str());
       }
     }
   }
@@ -61,6 +62,7 @@ void Coverage_Include_base::set_model(Model* _model)
   
   for(unsigned i=1;i<n.size();i++) {
     if ((filteractions.find(i)==filteractions.end())==exclude) {
+      log.debug("N: %s\n",n[i].c_str());
       ActionNames.push_back(n[i]);
     }
   }
