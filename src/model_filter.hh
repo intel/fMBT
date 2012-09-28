@@ -3,7 +3,6 @@
 #include <set>
 #include "helper.hh"
 
-
 class Model_filter : public Model {
 public:
   Model_filter(Log&l,const std::string& param,bool _i): Model(l), cmp(_i)
@@ -48,11 +47,22 @@ public:
   }
   virtual bool init() {
     // init filter.
-    std::vector<std::string>& n=submodel->getActionNames();    
+    std::vector<std::string>& n=submodel->getActionNames();
     for(unsigned i=0;i<fa.size()-1;i++) {
       int p=find(n,fa[i]);
       if (p) {
 	filteractions.insert(p);
+      } else {
+	// regexp?
+	std::vector<int> r;
+	if (fa[i][0]=='\'' || fa[i][0]=='\"') {
+	  // Let's remove first and the last charaster
+	  fa[i]=fa[i].substr(1,fa[i].length()-2);
+	}
+	regexpmatch(fa[i],n,r,false);
+	for(unsigned j=0;j<r.size();j++) {
+	  filteractions.insert(r[j]);
+	}
       }
     }
     return true;
