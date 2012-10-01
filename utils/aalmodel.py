@@ -14,7 +14,7 @@ class AALModel:
         self._all_tagnames = self._get_all("name", "tag")
         self._all_tagguards = self._get_all("guard", "tag")
         self._variables = model_globals
-        self._variables['action'] = lambda name: self._all_names.index(name)
+        self._variables['action'] = lambda name: self._all_names.index(name) + 1
         self._variables['name'] = lambda name: self._all_names.index(name)
         self._variables['variable'] = lambda varname: self._variables[varname]
         self._variables['assign'] = lambda varname, v: self._variables.__setitem__(varname, v)
@@ -132,17 +132,17 @@ class AALModel:
                 output_action = self.call(adapter)
                 observed_action = None
                 if type(output_action) == str:
-                    observed_action = self._all_names.index(output_action)
+                    observed_action = self._all_names.index(output_action) + 1
                 elif type(output_action) == type(True) and output_action == True:
-                    observed_action = index
+                    observed_action = index + 1
                 elif type(output_action) == int and output_action > 0:
                     observed_action = output_action
 
                 if observed_action:
                     self._log('observe: action "%s" adapter() returned %s. Reporting "%s"' % (
                             self._all_names[index], output_action,
-                            self._all_names[observed_action]))
-                    return [observed_action + 1]
+                            self._all_names[observed_action-1]))
+                    return [observed_action]
             if block:
                 if not start_time: start_time = time.time()
                 elif time.time() - start_time > self.timeout:
