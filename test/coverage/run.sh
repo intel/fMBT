@@ -307,3 +307,30 @@ if [ 1.000000 != $f ]; then
 fi
 done
 testpassed
+
+
+teststep "coverage: join"
+cat > cjoin.conf <<EOF
+model     = "lsts_remote(fmbt-gt -f 'abc_reg.gt')"
+heuristic = "lookahead(1)"
+coverage  = "join(iÅ(iA,iA1,iA2,iA3),perm(1))"
+fail      = "steps(4)"
+pass      = "coverage(1)"
+on_pass   = "exit(0)"
+on_fail   = "exit(1)"
+on_inconc = "exit(2)"
+EOF
+
+fmbt cjoin.conf -l cjoin.log 2> cjoin.txt || {
+    testfailed
+    exit 1
+}
+
+fmbt-log -f \$sc cjoin.log|tail -1|while read f
+do
+if [ 1.000000 != $f ]; then
+    testfailed
+    exit 1
+fi
+done
+testpassed
