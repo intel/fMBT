@@ -102,3 +102,14 @@ fmbt outputs.conf 2>test.verdict | tee outputs.log >> $LOGFILE
     fmbt-log outputs.log | grep -q 'o:Tmp changed' && 
     testpassed
 ) || testfailed
+
+teststep "remote_pyaal adapter_exception_handler..."
+cat > expected-steps.txt <<EOF
+iStep1
+iStep2 - change handler
+oOutputAction
+failTAU
+EOF
+fmbt adapter_exceptions.conf 2>> $LOGFILE | fmbt-log > observed-steps.txt || testfailed
+diff -u expected-steps.txt observed-steps.txt >> $LOGFILE || testfailed
+testpassed

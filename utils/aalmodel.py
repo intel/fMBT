@@ -40,7 +40,17 @@ class AALModel:
             return eval(func.func_code, self._variables)
         except Exception, e:
             self._log("Exception %s in %s: %s" % (e.__class__, func.func_name, e))
-            raise e
+            raise
+
+    def call_exception_handler(self, handler_name, action_name, exc):
+        rv = self._variables[handler_name](action_name, exc)
+        if type(rv) == int:
+            return rv
+        elif rv == None or rv == True:
+            return self._variables['action'](action_name)
+        else:
+            raise Exception('''Exception handler "%s('%s', %s)" returned unexpected value: %s''' %
+                            (handler_name, action_name, exc, rv))
 
     def reset(self):
         rv = self.call(self.initial_state)
@@ -51,10 +61,16 @@ class AALModel:
 
     def adapter_execute(self, i, adapter_call_arguments = ()):
         if self._all_types[i-1] == "input":
-            return self.call(self._all_adapters[i-1], adapter_call_arguments)
+            try:
+                return self.call(self._all_adapters[i-1], adapter_call_arguments)
+            except Exception, exc:
+                if 'adapter_exception_handler' in self._variables:
+                    return self.call_exception_handler('adapter_exception_handler', self._all_names[i-1], exc)
+                else:
+                    raise
         else:
-            self._log("Somebody called adapter_execute for an output action in AAL.\n")
-            self._log("Get that guy!\n")
+            self._log("AAL model: adapter_execute for an output action in AAL." +
+                      "This should take place in observe().\n")
             return 0
 
     def model_execute(self, i):
