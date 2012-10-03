@@ -412,7 +412,7 @@ factory with a default creator function. The default creator
 instantiates adapter class if "mylocal" adapter is needed in any
 configuration file. The constructor will be passed a log object and
 configuration parameters, that is, xyz in configuration
-adapter="mylocal:xyz".
+adapter="mylocal(xyz)".
 
 For completeness of this example, here is an implementation for MySUT.
 
@@ -446,7 +446,7 @@ model        = "mysut.lsts"
 heuristic    = "lookahead(1)"
 coverage     = "perm(1)"
 adapter      = "dlopen(myadapters.so,mylocal(xyz))"
-pass         = "coverage:1.0"
+pass         = "coverage(1.0)"
 EOF
 
 Let's verify this really works. Create a model and run a test:
@@ -469,7 +469,7 @@ model        = "mysut.lsts"
 heuristic    = "lookahead(1)"
 coverage     = "perm(1)"
 adapter      = "mylocal(xyz)"
-pass         = "coverage:1.0"
+pass         = "coverage(1.0)"
 EOF
 
 and finally run the test to verify that it works:
