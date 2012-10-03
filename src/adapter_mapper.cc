@@ -166,7 +166,7 @@ bool Adapter_mapper::load(std::string& name)
 
   amobj=this;
 
-  printf("loading file %s\n",name.c_str());
+  log.debug("loading file %s\n",name.c_str());
 
   s=readfile(name.c_str());
 
