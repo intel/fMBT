@@ -1,0 +1,23 @@
+This is an example of using AAL preprocessor for splitting AAL models
+into several files.
+
+Test model for a system is constructed from a base model and included
+components. The components are specified by preprocessor command line
+arguments -Dcalc and -Dclock, given in the test configuration file.
+
+Contents:
+
+basesystem.aal
+        
+        This introduces and initialises variables needed by
+        components. It includes component actions if corresponding
+        preprocessor flag, "calc" or "clock" is defined.
+
+clock.actions, calc.actions
+
+        These files contain test step definitions for each of the
+        components.
+
+fullsystem.conf
+
+        The test configuration file.

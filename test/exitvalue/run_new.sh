@@ -110,7 +110,7 @@ else
     testpassed
 fi
 
-teststep "new syntax exitvalue on error (output: communication error)"
+teststep "new syntax exitvalue on error (output: com error)"
 
 cat > test.conf<<EOF
 model="lts(model.lsts)"

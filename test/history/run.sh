@@ -33,12 +33,12 @@ source ../functions.sh
 ##########################################
 # Run the test
 
-teststep "history: new syntax one-step tests, separate log files"
+teststep "history: new syntax one-step tests, separate logs"
 ./one-step-tests.sh >> $LOGFILE 2>&1 \
     && testpassed \
     || testfailed
 
-teststep "history: new syntax one-step tests, separate log files"
+teststep "history: old syntax one-step tests, separate logs"
 ./one-step-tests_old.sh >> $LOGFILE 2>&1 \
     && testpassed \
     || testfailed

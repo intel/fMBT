@@ -1,0 +1,18 @@
+action "iCalcLaunch" {
+    guard() { return fg_app == "appgrid" }
+    body()  { fg_app = "calc" }
+}
+
+action "iCalcBg" {
+    guard() { return fg_app == "calc" }
+    body()  { fg_app = "appgrid" }
+}
+
+action "iToggleScientific" {
+    guard() { return fg_app == "calc" }
+    body()  { calc_sci = not calc_sci }
+}
+
+action "iDivideByZero" {
+    guard() { return fg_app == "calc" }
+}
