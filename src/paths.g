@@ -22,32 +22,22 @@
 #include <vector>
 #include <sstream>
 
-void sdel(std::vector<std::string*>* strvec);
-
 typedef struct _node {
-  int val;
   std::string* str;
   std::vector<std::string*>* strvec;
 } node;
+
 #define D_ParseNode_User node
-#include "of.hh"
-OutputFormat* uconf_obj;
+std::vector<std::string*> *paths_ff,*paths_tt,*paths_dd;
 }
 
-conf_file: model (usecase|testcase)+;
-
-model: 'model' '=' string { uconf_obj->set_model(*$2.str); delete $2.str; } ;
-
-usecase: string '=' string { uconf_obj->add_uc(*$0.str,*$2.str); delete $0.str; delete $2.str; } ;
-
-testcase: 'report' string 'from' strvec 'to' strvec opt_drop { uconf_obj->add_report(*$1.str,
-                *$3.strvec,
-                *$5.strvec,
-                *$6.strvec);
-            delete $1.str;
-            sdel($3.strvec);
-            sdel($5.strvec);
-            sdel($6.strvec);
+paths: 'from' strvec 'to' strvec opt_drop {
+            *paths_ff=*$1.strvec;
+            *paths_tt=*$3.strvec;
+            *paths_dd=*$4.strvec;
+            delete $1.strvec;
+            delete $3.strvec;
+            delete $4.strvec;
         };
 
 opt_drop: { $$.strvec = new std::vector<std::string*>; }

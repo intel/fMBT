@@ -721,7 +721,7 @@ void param_cut(std::string val,std::string& name,
   name=val;
 }
 
-void commalist(std::string& s,std::vector<std::string>& vec) {
+void commalist(const std::string& s,std::vector<std::string>& vec) {
   int depth=0;
   int lastend=0;
   std::string pushme;
@@ -750,4 +750,12 @@ void commalist(std::string& s,std::vector<std::string>& vec) {
   }
   pushme=s.substr(lastend,pos);
   vec.push_back(pushme);
+}
+
+void sdel(std::vector<std::string*>* strvec)
+{
+    for(unsigned i=0;i<strvec->size();i++) {
+        delete (*strvec)[i];
+    }
+    delete strvec;
 }

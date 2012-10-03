@@ -20,7 +20,7 @@
 
 class Model_yes: public Model {
 public:
-  Model_yes(Log& l, std::string& params) :
+  Model_yes(Log& l,const std::string& params) :
     Model(l, params), model(NULL) {
   }
 

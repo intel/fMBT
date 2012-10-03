@@ -1,0 +1,44 @@
+aal "twocounters" {
+    language: python {}
+
+    variables {
+        x, y
+    }
+    initial_state {
+        x = 0
+        y = 0
+    }
+    action "iANop_any" {
+        guard() { return x == y }
+    }
+    action "iIncX" {
+        guard() { return x < 2 }
+        body()  { x += 1 }
+    }
+    action "iIncY" {
+        guard() { return y < 2 }
+        body()  { y += 1 }
+    }
+    action "iReset" {
+        guard() { return x == y }
+        body() {
+            x = 0
+            y = 0
+        }
+    }
+    action "iZNop_ones" {
+        guard() { return x == y == 1 }
+    }
+    action "iZNop_twos" {
+        guard() { return x == y == 2 }
+    }
+    tag "all_zeros" {
+        guard() { return x == y == 0 }
+    }
+    tag "all_ones" {
+        guard() { return x == y == 1 }
+    }
+    tag "all_twos" {
+        guard() { return x == y == 2 }
+    }
+}

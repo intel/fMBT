@@ -47,6 +47,13 @@ void EndHookInteractive::run() {
   c->exit_interactive=true;
 }
 
+void hook_delete(EndHook* e)
+{
+  if (e) {
+    delete e;
+  }
+}
+
 void hook_runner(EndHook* e) {
   if (e) 
     e->run();
