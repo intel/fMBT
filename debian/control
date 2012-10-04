@@ -2,12 +2,70 @@ Source: fmbt
 Maintainer: Pablo Virolainen <pablo.virolainen@intel.com>
 Section: misc
 Priority: optional
-Standards-Version: 3.9.0
+Standards-Version: 3.9.3
 Build-Depends: debhelper (>= 7.3.8), libglib2.0-dev, libboost-dev, libedit-dev, python (>= 2.6), automake, libtool, libxml2-dev, libmagick++-dev, libboost-regex-dev, flex | flex-old
 X-Python-Version: >= 2.6
 
-Package: fmbt
+Package: fmbt-core
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, cpp, ${python:Depends}, python-pexpect, python-dbus
-Description: free Model Based Testing tool
-  fMBT is a tool for generating and executing model-based tests.
+Depends: ${shlibs:Depends}, ${misc:Depends}, cpp
+Description: fMBT core: Test generator and executor
+ fMBT is a tool for generating and executing model-based tests.
+ This is core package. It contains test generator and executor.
+
+Package: fmbt-utils
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, fmbt-python (= ${binary:Version}), fmbt-dev (= ${binary:Version}), graphviz, gnuplot, imagemagick
+Description: fMBT visualizing, staticstics, reporting and log utils
+ Tools for visualising models, inspecting logs, statistics and reporting.
+
+Package: fmbt-coreutils
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, fmbt-python (= ${binary:Version}), fmbt-dev (= ${binary:Version})
+Description: GT and AAL models handling
+ Tools for handling GT and AAL models
+
+Package: fmbt-dev
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: fMBT C++ headers
+ Headers for building AAL/C++ models and native adapters
+
+Package: fmbt-editor
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, python-pyside, fmbt-adapters-remote (= ${binary:Version}), fmbt-core (= ${binary:Version}), fmbt-coreutils (= ${binary:Version}), fmbt-utils (= ${binary:Version})
+Description: fMBT editor
+ fMBT editor program
+
+Package: fmbt-python
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, python
+Description: fMBT Python bindings
+ Common Python libraries for various fMBT components
+
+Package: fmbt-adapters-remote
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, python-dbus
+Description: fMBT remote adapters
+ Generic remote adapters for running shell script,
+ Python expressions and Javascript.
+
+Package: fmbt-adapter-eyenfinger
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, x11-apps, imagemagick, tesseract-ocr, xautomation
+Description: fMBT adapter for GUI testing
+ Proof-of-concept adapter for X11 GUI testing with OCR and icon matching.
+
+Package: fmbt-doc
+Architecture: all
+Section: doc
+Depends: ${misc:Depends}
+Description: fMBT documentation
+ fMBT full documentation.
+
+Package: fmbt-examples
+Architecture: all
+Depends: ${misc:Depends}
+Description: fMBT examples
+ various fMBT examples
+

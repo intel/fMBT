@@ -8,5 +8,9 @@ configure:
 override_dh_python2:
 	dh_python2 --no-guessing-versions
 
+override_dh_auto_install:
+	dh_auto_install
+	find $(CURDIR)/debian -name \*.la -exec rm -f {} \;
+
 %:
 	dh $@ --with python2
