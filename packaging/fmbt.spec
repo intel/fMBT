@@ -5,7 +5,7 @@ Summary:        free Model-Based Testing tool
 
 License:        lgpl
 URL:            https://github.com/01org/fMBT
-Source:		%{name}-%{version}.tar.gz
+Source:		%{name}_%{version}.tar.gz
 
 BuildRequires:  gcc-c++
 BuildRequires:  glib2-devel
@@ -19,7 +19,7 @@ BuildRequires:  python
 BuildRequires:  automake autoconf libtool
 %if 0%{?suse_version}
 BuildRequires:  libMagick++-devel
-BuildRequires:  libboost_regex1_46_1
+BuildRequires:  boost-devel
 %else
 BuildRequires:  ImageMagick-c++-devel
 BuildRequires:  boost-regex
