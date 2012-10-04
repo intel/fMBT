@@ -179,6 +179,23 @@ first line in a block is not meaningful, but the rest of the lines
 must be indented according to Python rules.
 
 
+AAL/Python tools
+----------------
+
+remote_pyaal is an fMBT utility that enables using AAL/Python models
+and adapters in test configuration. For instance, test configuration
+
+model   = "aal_remote(remote_pyaal -l aal.log example.aal)"
+adapter = "aal_remote(remote_pyaal -l aal.log example.aal)"
+
+uses the same AAL/Python model/adapter instance as both model and
+adapter.
+
+Before loading the AAL/Python file, remote_pyaal uses fmbt-aalc to
+compile AAL/Python into Python. By default, fmbt-aalc uses fmbt-aalp
+for preprocessing the AAL/Python file.
+
+
 AAL preprocessor
 ----------------
 
@@ -223,15 +240,16 @@ EOF
 
 $ fmbt-aalc example.aal > example.py
 
-After this, you can use 
 
-$ cat > example1.conf << EOF
-model = "aal_remote(remote_pyaal -l aal.log example.aal)"
-EOF
+remote_pyaal
+------------
 
-$ cat > example2.conf << EOF
-model = "aal_remote(remote_pyaal -l aal.log example.py)"
-EOF
+remote_pyaal implements remote AAL model/adapter interface. It can
+load a model/adapter from both AAL/Python and pure Python produced
+by fmbt-aalc.
+
+remote_pyaal can convert AAL/Python models into finite statemachines,
+too. It outputs the state machine in LSTS format to a file given
 
 
 Special variables and functions in AAL/Python
