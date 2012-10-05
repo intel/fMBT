@@ -1,0 +1,305 @@
+==========
+AAL/Python
+==========
+
+This is an AAL/Python reference for people who create test models,
+adapters or both using AAL/Python.
+
+AAL is a pre/postcondition language for defining
+
+1. test steps (how something is tested)
+
+2. conditions for test steps (under which they can be tested).
+
+In AAL/Python test steps and their conditions are written in Python.
+
+
+AAL syntax
+----------
+
+Syntax of AAL is the following:
+
+aal "<modelname>" {
+
+    language: <language> {
+        [prelude]
+    }
+
+    variables {
+        <declare variables for conditions and test steps>
+    }
+
+    initial_state {
+        <define initial values for variables>
+    }
+
+    action "<name>" [, "<name>"...] {
+        guard() {
+            <precondition: return true when test step can be executed>
+        }
+        body() {
+            <postcondition: change conditions after successful execution
+             of this test step>
+        }
+        adapter() {
+            <test step: code to be executed to carry out the test>
+        }
+    }...
+
+    tag "<name>" {
+        guard() {
+            <precondition: return true to tag states>
+        }
+    }...
+}
+
+guard(), body() and adapter() blocks in actions and tags are
+optional. Default guard() is always true, default body and adapter
+blocks are empty.
+
+Names of actions must start with either
+
+- "i" for input actions. Execution of these actions is triggered by
+  the test generator.
+
+- "o" for output actions. Execution of these actions is triggered by
+  the system under test.
+
+Comments in AAL are written after "#" on their own lines. Commenting
+inside code blocks depend on the programming language.
+
+
+Control flow
+------------
+
+When compiled AAL module is loaded by fmbt or its adapter like
+remote_pyaal, the prelude code is executed first. Once loaded, the
+model/adapter is initialised by executing the initial_state
+block. After this the AAL module is ready for test run.
+
+
+Control flow in a simple test run
+
+Let us consider a simple case first:
+
+- test generation heuristic is random or lookahead without parameters
+  (that is, test execution will not be simulated)
+
+- the same AAL code is used as a model and an adapter in the test
+  configuration
+
+- AAL contains only input actions
+
+First, the test generator evaluates guard() of every input action. If
+there are multiname actions, their guard() is evaluated for each name
+separately.
+
+Once the generator has decided the next step among actions whose
+guards returned true, it executes the adapter() of the chosen
+action. If executed successfully, the generator finally executes
+body() of the action. The next round starts by evaluating guards()
+again.
+
+
+Control flow in case of simulation
+
+Test generator simulates test execution before choosing the next step
+if test configuration defines heuristic lookhead(n) with n > 0. In
+simulation the generator calls guard() blocks of all input actions,
+then for each enabled action it:
+
+1. pushes the values of variables to a stack.
+
+2. executes the body() of the action in simulation turn. This may
+   change the values of variables.
+
+3. simulates executions of following n-1 steps similarly.
+
+4. pops the original values of variables from the stack.
+
+Finally the algorithm chooses the next step, executes adapter() and,
+in case of success, body() of the chosen action as in the simple case.
+
+
+Control flow when AAL is used only as a model
+
+Choosing the next step takes place as in simple and simulation
+cases. However, adapter() blocks are never executed. Instead, the name
+of the chosen action is sent to configured adapter. In case of
+successful execution, body() of the chosen test step is executed.
+
+
+Control flow when AAL is used only an adapter
+
+guard() and body() blocks are never executed. Adapter() blocks are
+executed in the order in which they have been chosen by the test
+generator.
+
+
+Control flow when adapter() returns a different action
+
+Control flow when adapter() raises an exception
+
+
+AAL/Python syntax
+-----------------
+
+The code between "{" and "}" is Python except for in one
+case. Variables block is a comma-separated list of names of
+variables. Continued line should end with "\".
+
+Example:
+
+variables {
+    system_state, \
+    calculator_mode, \
+    calendar_view, calendar_active_day
+}
+
+
+guard() must return True or False. Two examples:
+
+action "iAlwaysDisabled" {
+    guard() { return False }
+}
+
+action "iCalendar-NextDay" {
+    guard() {
+        if calendar_view == "year":
+            return False
+        else:
+            return True
+    }
+}
+
+As seen above, single-line Python statements can be written to the
+same or separate lines as "{" and "}". In multiline blocks each
+statement must be written to its own line. Indentation depth of the
+first line in a block is not meaningful, but the rest of the lines
+must be indented according to Python rules.
+
+
+AAL/Python tools
+----------------
+
+remote_pyaal is an fMBT utility that enables using AAL/Python models
+and adapters in test configuration. For instance, test configuration
+
+model   = "aal_remote(remote_pyaal -l aal.log example.aal)"
+adapter = "aal_remote(remote_pyaal -l aal.log example.aal)"
+
+uses the same AAL/Python model/adapter instance as both model and
+adapter.
+
+Before loading the AAL/Python file, remote_pyaal uses fmbt-aalc to
+compile AAL/Python into Python. By default, fmbt-aalc uses fmbt-aalp
+for preprocessing the AAL/Python file.
+
+
+AAL preprocessor
+----------------
+
+fmbt-aalp is the AAL preprocessor. It understands the following
+directives:
+
+^ifdef "<name>"
+^ifndef "<name>"
+^endif
+^include "<filename>"
+
+The directives must be used in the beginning of each line.
+
+
+AAL compiler
+------------
+
+fmbt-aalc compiles the AAL/<language> code to <language>. Before
+compilation it runs a preprocessor, that is fmbt-aalp by default.
+
+For instance, AAL/Python model is compiled into Python library as
+follows:
+
+$ cat > example.aal << EOF
+aal "example" {
+
+    language: python { import os }
+
+    variables        { pid_printed }
+
+    initial_state    { pid_printed = False }
+
+    action "iPrintMyPID" {
+        guard()      { return pid_printed == False }
+        body() {
+            log("my pid is: %s" % (os.getpid()))
+            pid_printed = True
+        }
+    }
+}
+EOF
+
+$ fmbt-aalc example.aal > example.py
+
+
+remote_pyaal
+------------
+
+remote_pyaal implements remote AAL model/adapter interface. It can
+load a model/adapter from both AAL/Python and pure Python produced
+by fmbt-aalc.
+
+remote_pyaal can convert AAL/Python models into finite statemachines,
+too. It outputs the state machine in LSTS format to a file given
+
+
+Special variables and functions in AAL/Python
+---------------------------------------------
+
+action_name - string that contains the name of the action.
+
+        Available: in guard(), body() and action() blocks.
+
+        Example: Actions "iLogin:Alice" and "iLogin:Bob" can be
+        executed when "Alice" or "Bob" is not yet logged in.
+        
+        action "iLogin:Alice", "iLogin:Bob" {
+            guard() {
+                username = action_name.split(":")[1]
+                return not username in logged_in
+            }
+            body() {
+                username = action_name.split(":")[1]
+                logged_in.add(username)
+            }
+        }
+
+
+action(name) - function that returns corresponding action (id)
+
+        Available: TODO
+
+        Example: TODO
+
+
+adapter_exception_handler(action_name, exc) - hook adapter exceptions
+
+        Available: N/A (defined by user)
+
+        If defined, this function will be called in case adapter()
+        block of any action raises an exception. Name of the action
+        and the exception object are passed as arguments.
+
+        If this function returns an integer, adapter reports execution
+        of that action to test generator.
+
+        If this function returns nothing, adapter reports execution of
+        the action whose adapter() raised the exception.
+
+        If this function raises an exception, adapter reports
+        execution of an unidentified action (test will fail).
+
+        Example: TODO
+
+log(message) - function that writes messages to remote_pyaal's log
+
+        Available: everywhere.
