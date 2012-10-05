@@ -157,7 +157,6 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %{python_sitelib}/%{name}/%{name}-stats
 %{python_sitelib}/%{name}/lsts2dot
 
-
 %files coreutils
 %defattr(-, root, root, -)
 %{_bindir}/%{name}-aalc
@@ -169,7 +168,7 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 
 %files devel
 %defattr(-, root, root, -)
-%{_includedir}/%{name}
+%dir %{_includedir}/%{name}
 %{_includedir}/%{name}/*.hh
 
 %files editor
@@ -181,14 +180,15 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 
 %files python
 %defattr(-, root, root, -)
-%{python_sitelib}
+%dir %{python_sitelib}/%{name}
 %{python_sitelib}/%{name}.py*
 %{python_sitelib}/%{name}/lsts.py*
 %{python_sitelib}/%{name}/aalmodel.py*
 %{python_sitelib}/%{name}/%{name}parsers.py*
-%{_libdir}/python*/site-packages/%{name}
-%{_libdir}/python*/site-packages/%{name}/%{name}_cparsers.so
 %{python_sitelib}/%{name}/%{name}_config.py*
+%dir %{_libdir}/python*/site-packages/%{name}/
+%{_libdir}/python*/site-packages/%{name}/%{name}_cparsers.so
+
 
 %files adapters-remote
 %defattr(-, root, root, -)
@@ -207,13 +207,13 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 
 %files doc
 %defattr(-, root, root, -)
-/usr/share/doc/%{name}
-%doc /usr/share/doc/%{name}/README
-%doc /usr/share/doc/%{name}/*.txt
+%dir %{_datadir}/doc/%{name}/
+%doc %{_datadir}/doc/%{name}/README
+%doc %{_datadir}/doc/%{name}/*.txt
 
 %files examples
 %defattr(-, root, root, -)
-/usr/share/doc/%{name}/examples
-%doc /usr/share/doc/%{name}/examples/*
+%dir %{_datadir}/doc/%{name}/examples
+%doc %{_datadir}/doc/%{name}/examples/*
 
 %changelog
