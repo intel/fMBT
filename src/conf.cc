@@ -47,6 +47,7 @@ extern Conf* conf_obj;
     log.pop();					\
     status=false;				\
     errormsg=s;					\
+    exit_status=-1;                             \
     return Verdict::ERROR;			\
   }
 
@@ -199,11 +200,17 @@ Verdict::Verdict Conf::execute(bool interactive) {
         RETURN_ERROR_VERDICT("Error in end condition: " + e->stringify());
       if (e->counter == End_condition::ACTION) {
         // avoid string comparisons, fetch the index of the tag
-        e->param_long = find(model->getActionNames(), (e->param));
+        e->param_long = find(model->getActionNames(), (e->param),-1);
+	if (e->param_long==-1) {
+	  RETURN_ERROR_VERDICT("Error in end condition: " + e->stringify());
+	}
       }
       if (e->counter == End_condition::STATETAG) {
         // avoid string comparisons, fetch the index of the tag
-        e->param_long = find(model->getSPNames(), (e->param));
+        e->param_long = find(model->getSPNames(), (e->param),-1);
+	if (e->param_long==-1) {
+	  RETURN_ERROR_VERDICT("Error in end condition: " + e->stringify());
+	}
       }
       if (e->counter == End_condition::COVERAGE) {
         end_by_coverage = true;
