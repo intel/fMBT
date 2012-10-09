@@ -30,8 +30,8 @@ class Log;
 extern bool human_readable;
 
 void* load_lib(const std::string& libname,const std::string& model_filename);
-int   find(const std::vector<std::string>&,const std::string);
-int   find(const std::vector<std::string*>&,const std::string);
+int   find(const std::vector<std::string>&,const std::string,int def=0);
+int   find(const std::vector<std::string*>&,const std::string,int def=0);
 bool  isInputName(const std::string& name);
 bool  isOutputName(const std::string& name);
 void  clear_whitespace(std::string& s);

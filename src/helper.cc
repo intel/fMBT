@@ -95,24 +95,24 @@ void *load_lib(const std::string& libname,const std::string& model_filename)
   return handle;
 }
 
-int find(const std::vector<std::string> &v,const std::string s)
+int find(const std::vector<std::string> &v,const std::string s,int def)
 {
   for(unsigned i=0;i<v.size();i++) {
     if (v[i]==s) {
       return i;
     }
   }
-  return 0;
+  return def;
 }
 
-int find(const std::vector<std::string*> &v,const std::string s)
+int find(const std::vector<std::string*> &v,const std::string s,int def)
 {
   for(unsigned i=0;i<v.size();i++) {
     if (*v[i]==s) {
       return i;
     }
   }
-  return 0;
+  return def;
 }
 
 bool isOutputName(const std::string& name)
