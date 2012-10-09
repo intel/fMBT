@@ -27,6 +27,12 @@ source ../functions.sh
 
 teststep "fmbt-stats: generate log files for tests"
 fmbt-gt -f model.gt -o model.lsts >>$LOGFILE 2>&1
+
+if ! gnuplot < /dev/null 2>/dev/null; then
+    echo "gnuplot not installed, skipping plot testing" >>$LOGFILE
+    fmbt-gt -i model.lsts -o model.lsts "T(s,\"iPlot('\${..*}')\",t)->" >>$LOGFILE 2>&1
+fi
+
 cat > test.conf <<EOF
 model = "lsts:model.lsts"
 inconc = "steps:10000"
@@ -54,7 +60,6 @@ inconc = "steps:0"
 EOF
 fmbt test.conf -l stats-input-0.log >>$LOGFILE 2>&1
 testpassed
-
 
 teststep "fmbt-stats: logs and parameters (quick)"
 cat > quick.conf <<EOF

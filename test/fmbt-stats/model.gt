@@ -16,7 +16,7 @@ T(testdefaults,  "iFormatDist('')",  testdefaults2)
 
 T(testdefaults2, "iOutput('csv')",   testdefaults3)
 
-T(testdefaults3, "iPlot('gif')",     execute)
+T(testdefaults3, "iPlot('')",     execute)
 
 # testall goes through all format options with all output and plotting
 # configurations
