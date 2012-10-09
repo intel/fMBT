@@ -122,9 +122,8 @@ void Coverage_Prop::set_model(Model* _model) {
   } else {
     // Only props in the params.
     std::vector<std::string> props;
-    static const std::string separator(":");
     std::vector<std::string>& sp=model->getSPNames();
-    strvec(props,params,separator);
+    commalist(params,props);
     for(unsigned i=0;i<props.size();i++) {
       int propnum = find(sp,props[i]);
       if (propnum)
@@ -133,6 +132,8 @@ void Coverage_Prop::set_model(Model* _model) {
     props_total=prop_included.size();
   }
   data.resize(props_total+1);
+
+  execute(0);
 }
 
 FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Prop, "tag")

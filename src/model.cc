@@ -110,12 +110,26 @@ void Model::setparent(Model* m)
   parent = m;
 }
 
-Model* Model::create(Log& log, std::string& model_name,std::string& model_param) {
-    Model* model;
-    if ((model=ModelFactory::create(log, model_name, model_param)) == NULL) {
-      // Fallback to plain file loader for 'model = "filename.ext"'
-      // where "ext" defines the loader and filename.ext is loaded.
-      model=ModelFactory::create(log, filetype(model_name), model_name);
-    }
-    return model;
+Model* new_model(Log& l, std::string& s) {
+  std::string name,option;
+  param_cut(s,name,option);
+  Model* ret=ModelFactory::create(l, name, option);
+
+  if (ret) {
+    return ret;
   }
+
+  //Let's try old thing.
+  split(s, name, option);
+
+  ret=ModelFactory::create(l, name, option);
+
+  if (ret) {
+    fprintf(stderr,"DEPRECATED MODEL SYNTAX. %s\nNew syntax is %s(%s)\n",
+	    s.c_str(),name.c_str(),option.c_str());
+  } else {
+    ret=ModelFactory::create(l, filetype(s), s);
+  }
+
+  return ret;
+}

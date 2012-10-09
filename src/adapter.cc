@@ -116,3 +116,23 @@ const char* Adapter::getUActionName(int action)
   return unames[action];
 }
 
+Adapter* new_adapter(Log& l, std::string& s) {
+  std::string name,option;
+  param_cut(s,name,option);
+  Adapter* ret=AdapterFactory::create(l, name, option);
+
+  if (ret) {
+    return ret;
+  }
+
+  //Let's try old thing.
+  split(s, name, option);
+  ret=AdapterFactory::create(l, name, option);
+
+  if (ret) {
+    fprintf(stderr,"DEPRECATED ADAPTER SYNTAX. %s\nNew syntax is %s(%s)\n",
+	    s.c_str(),name.c_str(),option.c_str());
+  }
+
+  return ret;
+}

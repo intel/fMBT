@@ -38,11 +38,11 @@ source ../functions.sh
 
 teststep "remote_pyaal model search (push/pop)..."
 cat > test.conf <<EOF
-model     = "aal_remote: remote_pyaal test1.py.aal"
-adapter   = "aal_remote: remote_pyaal test1.py.aal"
-heuristic = "lookahead:3"
-coverage  = "perm:2"
-pass      = "coverage:.5"
+model     = "aal_remote(remote_pyaal test1.py.aal)"
+adapter   = "aal_remote(remote_pyaal test1.py.aal)"
+heuristic = "lookahead(3)"
+coverage  = "perm(2)"
+pass      = "coverage(.5)"
 EOF
 
 # search for path to execute iDec in the model:
@@ -72,7 +72,7 @@ fi
 
 teststep "remote_pyaal state tags..."
 cat > test.conf <<EOF
-model="aal_remote: remote_pyaal test1.py.aal"
+model="aal_remote(remote_pyaal test1.py.aal)"
 EOF
 
 # search for path to execute iDec in the model:
@@ -89,9 +89,9 @@ testpassed
 
 teststep "remote_pyaal output actions..."
 cat > outputs.conf <<EOF
-model   = "aal_remote: remote_pyaal -l pyaal.log outputs.aal"
-adapter = "aal_remote: remote_pyaal -l pyaal.log outputs.aal"
-heuristic = "lookahead:2"
+model   = "aal_remote(remote_pyaal -l pyaal.log outputs.aal)"
+adapter = "aal_remote(remote_pyaal -l pyaal.log outputs.aal)"
+heuristic = "lookahead(2)"
 pass = "steps:10"
 on_fail = "exit:1"
 EOF
@@ -102,3 +102,14 @@ fmbt outputs.conf 2>test.verdict | tee outputs.log >> $LOGFILE
     fmbt-log outputs.log | grep -q 'o:Tmp changed' && 
     testpassed
 ) || testfailed
+
+teststep "remote_pyaal adapter_exception_handler..."
+cat > expected-steps.txt <<EOF
+iStep1
+iStep2 - change handler
+oOutputAction
+failTAU
+EOF
+fmbt adapter_exceptions.conf 2>> $LOGFILE | fmbt-log > observed-steps.txt || testfailed
+diff -u expected-steps.txt observed-steps.txt >> $LOGFILE || testfailed
+testpassed

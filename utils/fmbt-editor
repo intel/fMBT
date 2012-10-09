@@ -455,7 +455,13 @@ Keyboard shortcuts:<br>
             if self._editingAAL(): # validate AAL
                 self._aalcFileName = self._gtFileName + ".gted-%stmp.py" % (os.getpid(),)
                 self._lstsFileName = self._gtFileName + ".gted-%stmp.lsts" % (os.getpid(),)
-                aal2py_cmd = "fmbt-aalc -o '%s' %s" % (self._aalcFileName, self._gtFileName)
+                # Pick up preprocessor arguments from remote_pyaal command line
+                aal_ppflags = ""
+                conf_lines = str(self.conf_editor.toPlainText()).split('\n')
+                for l in conf_lines:
+                    if "model" in l: aal_ppflags=' '.join(
+                        ["'-D%s'" % f for f in re.findall('-D ?([^ ]*)', l)])
+                aal2py_cmd = "fmbt-aalc %s -o '%s' %s" % (aal_ppflags, self._aalcFileName, self._gtFileName)
                 executed_program = "fmbt-aalc"
                 validation_exitstatus = self.runcmd(aal2py_cmd)
                 if validation_exitstatus == 0:
@@ -463,7 +469,7 @@ Keyboard shortcuts:<br>
                     show_hide_args = ""
                     for v in show_vars: show_hide_args += " -S '%s'" % (v,)
                     for v in hide_vars: show_hide_args += " -H '%s'" % (v,)
-                    py2lsts_cmd = "remote_pyaal -o '%s'%s -D %s '%s'" % (self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
+                    py2lsts_cmd = "remote_pyaal %s -o '%s'%s --lsts-depth %s '%s'" % (aal_ppflags, self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
                     validation_exitstatus = self.runcmd(py2lsts_cmd)
 
             elif self._editingGT(): # validate GT
@@ -599,22 +605,22 @@ Keyboard shortcuts:<br>
         except: regenerate=True
         if regenerate:
             if self._editingLSTS():
-                modelspec="lsts:%s" % (self._lstsFileName,)
+                modelspec="lsts(%s)" % (self._lstsFileName,)
                 lookahead = 4
             elif self._editingAAL():
-                modelspec="aal_remote:remote_pyaal -l %s.gted-%stmp.aal.log '%s'" % (
+                modelspec="aal_remote(remote_pyaal -l %s.gted-%stmp.aal.log '%s')" % (
                     self._gtFileName, os.getpid(), self._gtFileName)
                 lookahead = 3
             else:
-                modelspec="lsts_remote:fmbt-gt -f '%s'" % (self._gtFileName,)
+                modelspec="lsts_remote(fmbt-gt -f '%s')" % (self._gtFileName,)
                 lookahead = 4
             file(self._confFileName, "w").write("""model     = "%s"
-heuristic = "lookahead:%s"
-coverage  = "perm:2"
-pass      = "steps:20"
-on_pass   = "exit:0"
-on_fail   = "exit:1"
-on_inconc = "exit:2"
+heuristic = "lookahead(%s)"
+coverage  = "perm(2)"
+pass      = "steps(20)"
+on_pass   = "exit(0)"
+on_fail   = "exit(1)"
+on_inconc = "exit(2)"
 """ % (modelspec, lookahead))
 
     def _doGenerateTest(self):

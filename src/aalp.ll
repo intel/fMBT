@@ -5,6 +5,9 @@
 #include <map>
 #include <cstring>
 
+#include "config.h"
+#include <getopt.h>
+
 std::list<YY_BUFFER_STATE> istack;
 std::map<std::string,bool> def;
 
@@ -124,7 +127,6 @@ int state=NONE;
   if (istack.empty()) {
     yyterminate();
   } else {
-    delete yyin;
     yy_delete_buffer( YY_CURRENT_BUFFER );
     yy_switch_to_buffer(istack.back());
     istack.pop_back();
@@ -133,14 +135,54 @@ int state=NONE;
 
 %%
 
+void print_usage()
+{
+  std::printf(
+    "Usage: fmbt-aalp [options] inputfile\n"
+    "Options:\n"
+    "    -D     define preprocessor flag\n"
+    "    -h     print usage\n"
+    "    -V     print version\n"
+    );
+}
+
 int main(int argc,char** argv)
-	{
-	  if (argc==2) {
-	    yyset_in(fopen(argv[1], "r" ));
-	  }
-	  yylex();
-	  return 0;
-	}
+{
+  static struct option long_opts[] = {
+    {"help", no_argument, 0, 'h'},
+    {"version", no_argument, 0, 'V'},
+    {0, 0, 0, 0}
+  };
+  char c;
+  while ((c = getopt_long (argc, argv, "hD:V", long_opts, NULL)) != -1) {
+    switch (c)
+    {
+    case 'V':
+      printf("Version: "VERSION"\n");
+      return 0;
+      break;
+    case 'D':
+      def[optarg] = true;
+      break;
+    case 'h':
+      print_usage();
+      return 0;
+    default:
+      return 2;
+    }
+  }
+
+  if (optind + 1 < argc) { // too many arguments
+    print_usage();
+    return -1;
+  }
+
+  if (optind < argc) { // preprocessed file given on command line
+    yyset_in(fopen(argv[optind], "r" ));
+  }
+  yylex();
+  return 0;
+}
 
 int yywrap()
 {

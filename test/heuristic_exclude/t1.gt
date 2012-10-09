@@ -1,0 +1,5 @@
+P(s,p)->T(s,"iFoo",s2)
+T(s,"iFilter",s2)
+T(s,"iBar",s2)
+T(s,"iHee",s2)
+T(s2,"iFoo",s)

@@ -166,7 +166,15 @@ bool Adapter_mapper::load(std::string& name)
 
   amobj=this;
 
+  log.debug("loading file %s\n",name.c_str());
+
   s=readfile(name.c_str());
+
+  if (!s) {
+    status=false;
+    errormsg=std::string("Can't load file\"")+name+std::string("\"");
+    return false;
+  }
 
   bool ret=dparse(p,s,std::strlen(s));
 
@@ -195,22 +203,12 @@ bool Adapter_mapper::load(std::string& name)
       log.debug("Loading adapter \"%s\"",
              adapter_names[i].c_str());
 
-      std::string adapter_class;
-      std::string adapter_params;
-      
-      split(adapter_names[i],adapter_class,adapter_params);
-
-      log.debug("class %s, params %i",
-             adapter_class.c_str(),
-             adapter_params.c_str());
-
-      Adapter* a = AdapterFactory::create(log, adapter_class,
-                                          adapter_params);
+      Adapter* a = new_adapter(log,adapter_names[i]);
 
       if (!a || !a->status) {
 	status=false;
 	errormsg=std::string("Can't create adapter ")
-	  + adapter_class + ":"+adapter_params;
+	  + adapter_names[i];
       } else {
 	a->set_actions(&adapter_anames[i]);
 	log.debug("Created adapter to %p",a);
@@ -277,8 +275,12 @@ void Adapter_mapper::add_result_action(std::string* name)
 #ifndef DROI
     /* try regexp case */
     log.debug("Regexp case");
+    if (l_name.empty()) {
+      status=false;
+      return;
+    }
     const char* format_string = l_name[0].c_str();
-    
+
     log.debug("Format string \"%s\"",format_string);
 
     boost::regex expression(*name);

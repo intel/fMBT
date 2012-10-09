@@ -29,7 +29,10 @@
 History_log::History_log(Log& l, std::string params) :
   History(l,params), alphabet_done(false), act(NULL), tag(NULL), c(NULL), a(NULL), file(params)
 {
-
+  separator=std::string(" ");
+  anames.push_back("");
+  tnames.push_back("");
+  a = new Alphabet_impl(anames,tnames);
 }
 
 void History_log::processNode(xmlTextReaderPtr reader)
@@ -84,6 +87,8 @@ void History_log::processNode(xmlTextReaderPtr reader)
       send_action();
     }
     act=unescape_string((char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"name"));
+    log.debug("FOUND ACT %s\n",act);
+    send_action();
   }
   
   if ((xmlTextReaderDepth(reader)==3) &&
@@ -93,19 +98,20 @@ void History_log::processNode(xmlTextReaderPtr reader)
       free(tag);
     }
     tag=unescape_string((char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"enabled"));
-    if (act) {
-      send_action();      
-    }
-   }
+    log.debug("FOUND TAG %s\n",tag);
+  }
   
   if ((xmlTextReaderDepth(reader)==3) &&
       (strcmp((const char*)name,"stop")==0)) {
+    log.debug("STOP\n");
     if (act) {
       send_action();
     }
     // verdict
     char* ver=(char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"verdict");
     std::vector<std::string> p;
+    std::string t(tag);
+    strvec(p,t,separator);
     std::string a(ver);
     test_verdict=ver;
     free(ver);
@@ -117,13 +123,12 @@ void History_log::set_coverage(Coverage* cov,
 			       Alphabet* alpha)
 {
   c=cov;
-  a=alpha;
 
   LIBXML_TEST_VERSION
 
-  xmlTextReaderPtr reader =
+    xmlTextReaderPtr reader =
     xmlReaderForFile(file.c_str(), NULL, 0);
-  
+
   if (reader != NULL) {
     int ret;
     ret = xmlTextReaderRead(reader);
@@ -142,10 +147,11 @@ void History_log::send_action()
   std::string a(act);
   std::string t(tag);
 
-  std::string separator(" ");
   std::vector<std::string> props;
-  
-  strvec(props,t,separator);
+
+  if (t!="") {
+    strvec(props,t,separator);
+  }
   send_action(a,props);
   free(tag);
   free(act);
@@ -157,30 +163,39 @@ bool History_log::send_action(std::string& act,
 			      std::vector<std::string>& props,
 			      bool verdict)
 {
- std::vector<int> p;
+  std::vector<int> p;
+
+  log.debug("SEND_ACTION (%i)\n",props.size());
+
+  for(unsigned i=0;i<props.size();i++) {
+    int j=find(a->getSPNames(),props[i]);
+    log.debug("TAG %i(%s) %i\n",
+	      i,props[i].c_str(),j);
+    p.push_back(j);
+  }
 
   if (c&&a) {
     if (verdict) {
       if (act=="pass") {
 	c->history(0,p,Verdict::PASS);
 	return true;
-      } 
-      
+      }
+
       if (act=="fail") {
 	c->history(0,p,Verdict::FAIL);
 	return true;
       }
-      
+
       if (act=="inconclusive") {
 	c->history(0,p,Verdict::INCONCLUSIVE);
 	return true;
       }
-      
+
       if (act=="error") {
 	c->history(0,p,Verdict::ERROR);
 	return true;
       }
-      
+
       if (act=="undefined") {
 	c->history(0,p,Verdict::UNDEFINED);
 	return true;
@@ -190,12 +205,6 @@ bool History_log::send_action(std::string& act,
     int action=find(a->getActionNames(),act);
 
     if (action>0) {
-
-      for(unsigned i=0;i<props.size();i++) {
-	int j=find(a->getSPNames(),props[i]);
-	p.push_back(j);
-      }
-
       c->history(action,p,Verdict::UNDEFINED);
       return true;
     } else {

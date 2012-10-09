@@ -151,20 +151,5 @@ int Heuristic_greedy::getIAction()
 }
 
 FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "greedy")
-
-namespace {
-  Heuristic* creator_func2(Log& log, std::string params = "")
-  {
-    return new Heuristic_greedy(log, params);
-  }
-  static HeuristicFactory::Register me2("lookahead", creator_func2);
-}
-
-namespace {
-  Heuristic* creator_func3(Log& log, std::string params = "")
-  {
-    std::string p("");
-    return new Heuristic_greedy(log, p);
-  }
-  static HeuristicFactory::Register me3("action_fitness", creator_func3);
-}
+FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "lookahead")
+FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "action_fitness")

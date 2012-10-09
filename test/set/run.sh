@@ -31,11 +31,11 @@ fmbt-gt -f t2.gt -o t2.lsts >>$LOGFILE 2>&1 || {
 testpassed
 
 teststep "coverage set: cover tags"
-echo 'model = "lsts:t2.lsts"' > test.conf
-echo 'coverage = "set:1:2:3 from %22iFoo%22 to %22iFoo%22 -> %22tag%22:0:4"' >> test.conf
+echo 'model = "lsts(t2.lsts)"' > test.conf
+echo 'coverage = "set(1:2:3 from \"Foo\" to \"iFoo\" -> \"tag\":0:4)"' >> test.conf
 echo 'pass = "steps:5"' >> test.conf
 
-fmbt test.conf -l set.log >>$LOGFILE 2>&1 \
+fmbt -D test.conf -l set.log >>$LOGFILE 2>&1 \
     && testpassed \
     || testfailed
 

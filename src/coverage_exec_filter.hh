@@ -22,6 +22,7 @@
 #include "coverage.hh"
 #include "helper.hh"
 #include <list>
+#include "log_null.hh"
 
 class Coverage_exec_filter: public Coverage {
 public:
@@ -30,10 +31,9 @@ public:
 		       std::vector<std::string*>& _to,
 		       std::vector<std::string*>& _drop):
     Coverage(l),from(_from),to(_to),drop(_drop),online(false) {
-    printf("Coverage_exec_filter::Coverage_exec_filter()\n");
   }
 
-  virtual ~Coverage_exec_filter() {}
+  virtual ~Coverage_exec_filter();
   virtual std::string stringify();
 
   virtual void push(){
@@ -59,11 +59,13 @@ public:
 protected:
   bool prop_set(std::vector<int> p,int npro,int* props);
 
-  virtual void on_drop() { };
-  virtual void on_find() { };
-  virtual void on_start() { };
+  virtual void on_drop();
+  virtual void on_find();
+  virtual void on_start();
+  virtual void on_restart() { };
+  virtual void on_online(int action,std::vector<int>&p);
 
-  std::vector<int> executed;
+  std::vector<std::pair<int,std::vector<int> > > executed;
   std::vector<struct timeval > etime;
 
   std::vector<int> start_tag;
@@ -74,12 +76,12 @@ protected:
   std::vector<int> end_action;
   std::vector<int> rollback_action;
 
-  std::vector<std::string*> from;
-  std::vector<std::string*> to;
-  std::vector<std::string*> drop;
+  std::vector<std::string*>& from;
+  std::vector<std::string*>& to;
+  std::vector<std::string*>& drop;
   bool online;
   std::list<bool> save_online;
-  std::list<std::vector<int> > save_executed;
+  std::list<std::vector<std::pair<int,std::vector<int> > > > save_executed;
 };
 
 #endif

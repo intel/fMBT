@@ -1,5 +1,5 @@
-1 = "lib:mycountertest1"
-2 = "lib:mycountertest2"
+1 = "lib(mycountertest1)"
+2 = "lib(mycountertest2)"
 
 (1,"iCreate") (2,"iCreate") -> "iCreate"
 (1,"iDestroy") (2,"iDestroy") -> "iDestroy"

@@ -28,26 +28,26 @@
 
 #endif
 
+class EndHook;
+
 extern "C" {
-extern D_ParserTables parser_tables_conf;
+  extern D_ParserTables parser_tables_conf;
 }
 
 extern Conf* conf_obj;
 
-#define RETURN_ERROR_VOID(s) { \
-  set_exitvalue(on_error); \
-  log.pop();    \
-  status=false; \
-  errormsg=s;   \
-  return; \
+#define RETURN_ERROR_VOID(s) {			\
+    log.pop();					\
+    status=false;				\
+    errormsg=s;					\
+    return;					\
   }
 
-#define RETURN_ERROR_VERDICT(s) { \
-  set_exitvalue(on_error); \
-  log.pop();    \
-  status=false; \
-  errormsg=s;   \
-  return Verdict::ERROR; \
+#define RETURN_ERROR_VERDICT(s) {		\
+    log.pop();					\
+    status=false;				\
+    errormsg=s;					\
+    return Verdict::ERROR;			\
   }
 
 void Conf::load(std::string& name,std::string& content)
@@ -91,20 +91,20 @@ void Conf::load(std::string& name,std::string& content)
 
   conf_obj=tmp;
 
-  if ((heuristic=HeuristicFactory::create(log, heuristic_name, heuristic_param)) == NULL)
+  if ((heuristic=new_heuristic(log,heuristic_name)) == NULL)
     RETURN_ERROR_VOID("Creating heuristic \"" + heuristic_name + "\" failed.");
 
   if (heuristic->status==false)
     RETURN_ERROR_VOID("Error in heuristic \"" + heuristic_name + "\":" +
 		      heuristic->errormsg);
 
-  if ((model=Model::create(log, model_name, model_param)) == NULL) {
+  if ((model=new_model(log, model_name)) == NULL) {
     RETURN_ERROR_VOID("Creating model loader \"" +
 		      filetype(model_name)
 		      + "\" failed.");
   }
 
-  coverage = CoverageFactory::create(log,coverage_name,coverage_param);
+  coverage = new_coverage(log,coverage_name);
 
   if (coverage == NULL)
     RETURN_ERROR_VOID("Creating coverage \"" + coverage_name + "\" failed.");
@@ -121,7 +121,7 @@ void Conf::load(std::string& name,std::string& content)
 
   coverage->set_model(model);
 
-  adapter = AdapterFactory::create(log, adapter_name, adapter_param);
+  adapter = new_adapter(log, adapter_name);
 
   if (adapter && !adapter->status) {
     status=false;
@@ -131,10 +131,7 @@ void Conf::load(std::string& name,std::string& content)
 
   /* handle history */
   for(unsigned i=0;i<history.size();i++) {
-    std::string name,param;
-    split(*history[i],name,param);
-
-    History* h=HistoryFactory::create(log, name, param);
+    History* h=new_history(log,*history[i]);
     
     if (h) {
       h->set_coverage(coverage,model);
@@ -172,8 +169,7 @@ std::string Conf::stringify() {
   t << "model = \"" << removehash(model_name) << capsulate(model->stringify()) << std::endl;
   t << "heuristic = \"" << heuristic_name << "\"" << std::endl;
   t << "coverage = \"" <<  coverage_name << "\"" << std::endl;
-  t << "adapter = \"" << removehash(adapter_name) << ":"
-    << removehash(adapter_param)
+  t << "adapter = \"" << adapter_name
     << capsulate(adapter->stringify()) << std::endl;
 
   /* TODO: stringify end conditions */
@@ -203,11 +199,11 @@ Verdict::Verdict Conf::execute(bool interactive) {
         RETURN_ERROR_VERDICT("Error in end condition: " + e->stringify());
       if (e->counter == End_condition::ACTION) {
         // avoid string comparisons, fetch the index of the tag
-        e->param_long = find(model->getActionNames(), *(e->param));
+        e->param_long = find(model->getActionNames(), (e->param));
       }
       if (e->counter == End_condition::STATETAG) {
         // avoid string comparisons, fetch the index of the tag
-        e->param_long = find(model->getSPNames(), *(e->param));
+        e->param_long = find(model->getSPNames(), (e->param));
       }
       if (e->counter == End_condition::COVERAGE) {
         end_by_coverage = true;
@@ -219,7 +215,7 @@ Verdict::Verdict Conf::execute(bool interactive) {
     // Add default end conditions (if coverage is reached, test is passed)
     if (!end_by_coverage) {
       end_conditions.push_back(
-        new End_condition(Verdict::PASS, End_condition::COVERAGE, new std::string("1.0")));
+			       new End_condition(Verdict::PASS, End_condition::COVERAGE, "1.0"));
     }
   }
 
@@ -229,51 +225,97 @@ Verdict::Verdict Conf::execute(bool interactive) {
     engine.interactive();
   } else {
     Verdict::Verdict v = engine.run(end_time);
-    
+    std::list<EndHook*>* hooklist=NULL;
     switch (v) {
     case Verdict::FAIL: {
-      set_exitvalue(on_fail);
-      // Test failed. Continue according to the on_error
-      // configuration. In addition to the following it could at
-      // somepoint specify a shell command (for instance, package and
-      // send log files, etc.)
-      if (on_fail == "interactive")
-        engine.interactive();
+      hooklist=&fail_hooks;
       break;
     }
     case Verdict::PASS: { 
-      // Test passed      
-      set_exitvalue(on_pass);
+      hooklist=&pass_hooks;
       break;
     }
     case Verdict::INCONCLUSIVE: {
-      set_exitvalue(on_inconc);
+      hooklist=&inc_hooks;
       break;
     }
     case Verdict::ERROR: {
-      RETURN_ERROR_VERDICT(engine.verdict_msg() + ": " + engine.reason_msg());
+      hooklist=&error_hooks;
       break;
     }
     default: {
       // unknown verdict?
     }
-    }      
+    }
+    if (hooklist) 
+      for_each(hooklist->begin(),hooklist->end(),hook_runner);
   }
   log.pop();
   status = true;
   errormsg = engine.verdict_msg() + ": " + engine.reason_msg();
   return engine.verdict();
 }
-
-void Conf::set_exitvalue(std::string& s)
-{
+/*
+  void Conf::set_exitvalue(std::string& s)
+  {
   std::string cmd;
   std::string value;
   split(s,cmd,value);
   exit_status=atoi(value.c_str());
-}
+  }
+*/
 
 void Conf::set_observe_sleep(std::string &s)
 {
   Adapter::sleeptime=atoi(s.c_str());
 }
+
+void Conf::add_end_condition(Verdict::Verdict v,std::string& s)
+
+{
+  End_condition *ec = new_end_condition(v,s);
+
+  if (ec==NULL) {
+    status=false;
+    errormsg=errormsg+"Can't create end condition \""+s+"\"\n";
+  } else {
+    add_end_condition(ec);
+  }
+}
+
+void hook_delete(EndHook* e);
+
+Conf::~Conf() {
+  for (unsigned int i = 0; i < end_conditions.size(); i++)
+    delete end_conditions[i];
+  log.pop();
+  if (heuristic) 
+    delete heuristic;
+
+  if (adapter)
+    delete adapter;
+
+  if (model)
+    delete model;
+
+  if (coverage)
+    delete coverage;
+
+  adapter=NULL;
+  heuristic=NULL;
+  model=NULL;
+  coverage=NULL;
+
+  for(unsigned i=0;i<history.size();i++) {
+    if (history[i]) {
+      delete history[i];
+    }
+  }
+
+  for_each(pass_hooks.begin(),pass_hooks.end(),hook_delete);
+  for_each(fail_hooks.begin(),fail_hooks.end(),hook_delete);
+  for_each(inc_hooks.begin(),inc_hooks.end(),hook_delete);
+  for_each(error_hooks.begin(),error_hooks.end(),hook_delete);
+
+}
+

@@ -86,16 +86,18 @@ namespace MODULETYPE##Factory {                                        \
         }                                                              \
     };                                                                 \
 }
-
-#define FACTORY_IMPLEMENTATION(MODULETYPE)                             \
+#define FACTORY_ATEXIT(MODULETYPE)                                     \
 void MODULETYPE##_ATEXITFUNC() {			               \
   if (MODULETYPE##Factory::creators) 				       \
     delete MODULETYPE##Factory::creators ;			       \
   MODULETYPE##Factory::creators = 0;                                   \
- }      							       \
+ }
+
+#define FACTORY_CREATORS(MODULETYPE)                                   \
 std::map<std::string, MODULETYPE##Factory::creator>*                   \
-    MODULETYPE##Factory::creators = 0;                                 \
-                                                                       \
+    MODULETYPE##Factory::creators = 0;                                 
+
+#define FACTORY_ADD_FACTORY(MODULETYPE)                                \
 void MODULETYPE##Factory::add_factory(std::string name, creator c)     \
 {                                                                      \
   if (!creators) {                                                     \
@@ -103,8 +105,9 @@ void MODULETYPE##Factory::add_factory(std::string name, creator c)     \
     atexit(MODULETYPE##_ATEXITFUNC);                                   \
   }                                                                    \
   (*creators)[name] = c;                                               \
-}                                                                      \
-                                                                       \
+}
+
+#define FACTORY_CREATE(MODULETYPE)                                     \
 MODULETYPE* MODULETYPE##Factory::create(                               \
     FACTORY_CREATE_PARAMS FACTORY_CREATE_DEFAULT_PARAMS)               \
 {                                                                      \
@@ -117,14 +120,24 @@ MODULETYPE* MODULETYPE##Factory::create(                               \
   return NULL;                                                         \
 }
 
+#define FACTORY_IMPLEMENTATION(MODULETYPE)                             \
+FACTORY_ATEXIT(MODULETYPE)                                             \
+FACTORY_CREATORS(MODULETYPE)                                           \
+FACTORY_ADD_FACTORY(MODULETYPE)                                        \
+FACTORY_CREATE(MODULETYPE)
 
-#define FACTORY_DEFAULT_CREATOR(MODULETYPE, CLASSNAME, ID)             \
+#define CONCAT2(x, y)     x ## y
+#define CONCAT(x, y)      CONCAT2(x, y)
+#define UNIQUENAME(prefix) CONCAT(prefix, __LINE__)
+
+#define FACTORY_DEFAULT_CREATOR(MODULETYPE, CLASSNAME, ID)	       \
 namespace {                                                            \
-  MODULETYPE* creator_func(FACTORY_CREATOR_PARAMS FACTORY_CREATE_DEFAULT_PARAMS)          \
+  MODULETYPE* UNIQUENAME(creator_func) (FACTORY_CREATOR_PARAMS FACTORY_CREATE_DEFAULT_PARAMS) \
   {                                                                    \
     return new CLASSNAME(FACTORY_CREATOR_PARAMS2);                     \
   }                                                                    \
-  static MODULETYPE##Factory::Register me(ID, creator_func);           \
+  static MODULETYPE##Factory::Register UNIQUENAME(me)(ID, UNIQUENAME(creator_func)); \
 }
 
 #endif
+

@@ -39,7 +39,9 @@ public:
   Coverage_setw(Log& l,std::string params):
     Coverage_set(l,_f,_t,_d)
   {
-    unescape_string(params);
+    //unescape_string(params)
+    remove_force(params);
+
     set_ff=&_f;
     set_tt=&_t;
     set_dd=&_d;
@@ -58,6 +60,7 @@ public:
     to=_t;
     drop=_d;
   }
+  virtual ~Coverage_setw() {}
 private:
   std::vector<std::string*> _f,_t,_d;
 };
@@ -125,10 +128,12 @@ void Coverage_set::on_drop()
 {
   log.debug("on_drop called\n");
   current_set.clear();
+  Coverage_exec_filter::on_drop();
 }
 
 void Coverage_set::on_start()
 {
+  Coverage_exec_filter::on_start();
   log.debug("on_start called\n");
   current_set.clear();
 }
@@ -215,6 +220,7 @@ void Coverage_set::on_find()
   }
   log.debug("%i/%i\n",current_count,total_count);
   current_set.clear();
+  Coverage_exec_filter::on_find();
 }
 
 void Coverage_set::set_model(Model* _model) {

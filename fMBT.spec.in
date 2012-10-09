@@ -17,6 +17,8 @@ BuildRequires:  autoconf
 BuildRequires:  automake
 BuildRequires:  ImageMagick-c++-devel
 Requires:       dbus-python
+Requires:       python-pyside
+Requires:       gnuplot
 
 %description
 free Model-Based Testing tool automates both generating

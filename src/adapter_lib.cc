@@ -17,6 +17,7 @@
  *
  */
 #include "adapter.hh"
+#include "adapter_dummy.hh"
 #include "log.hh"
 #include "conf.hh"
 #include "helper.hh"
@@ -33,36 +34,49 @@ namespace {
     }
   }
 
-  Adapter* creator_func(Log& l, std::string params = "") {
-    Adapter* a;
-    std::string adapter_name,adapter_param,adapter_filename;
-    char* stmp=strdup(params.c_str());
-    std::string s(unescape_string(stmp));
-    free(stmp);
+  Adapter* lib_creator(Log& l, std::string params) {
+    Adapter* m;
+    std::vector<std::string> s;
 
-    split(s, adapter_name, adapter_param);
-    split(adapter_name,adapter_name,adapter_filename,",");
+    commalist(params,s);
+    if (s.size()<1) {
+      m = new Adapter_dummy(l,"");
+      if (m) {
+	m->status   = false;
+	m->errormsg = std::string("lib:Can't load adapter ") + params;
+      }
+      return m;
+    }
 
-    a = AdapterFactory::create(l, adapter_name, adapter_param);
+    m = new_adapter(l,s[0]);
 
-    if (!a) {
-      void* handle=load_lib(adapter_name,adapter_filename);
+    if (!m) {
+      void* handle=NULL;
+
+      if (s.size()>1) {
+	handle=load_lib("",s[1]);
+      } else {
+	std::string adapter_name,adapter_param;
+	param_cut(s[0],adapter_name,adapter_param);
+	handle=load_lib(adapter_name,"");
+      }
 
       if (handle) {
-	a = AdapterFactory::create(l, adapter_name, adapter_param);
+	m = new_adapter(l,s[0]);
 	if (libs.empty()) {
 	  atexit(libs_atexit);
 	}
 	libs.push_back(handle);
       } else {
-	std::string d("dummy");
-	std::string em("");
-	a = AdapterFactory::create(l, d, em);
-	a->status   = false;
-	a->errormsg = std::string("lib:Can't load adapter ") + params;
+	m = new Adapter_dummy(l,"");
+	if (m) {
+	  m->status   = false;
+	  m->errormsg = std::string("lib:Can't load adapter ") + params;
+	}
       }
     }
-    return a;
+    return m;
   }
-  static AdapterFactory::Register me("lib", creator_func);
+
+  static AdapterFactory::Register me("lib", lib_creator);
 }

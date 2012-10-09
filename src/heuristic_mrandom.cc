@@ -32,24 +32,19 @@ Heuristic_mrandom::~Heuristic_mrandom()
 Heuristic_mrandom::Heuristic_mrandom(Log& l, std::string params) :
   Heuristic(l)
 {
-  static std::string separator(":");
   float total=0;
-  char* tmp=strdup(params.c_str());
-  std::string m(unescape_string(tmp));
   std::vector<std::string> s;
-  strvec(s,m,separator);
-  free(tmp);
-  for(unsigned i=0;i+1<s.size();i+=3) {
+
+  commalist(params,s);
+
+  for(unsigned i=0;i+1<s.size();i+=2) {
     float f=atof(s[i].c_str());
     if (f<=0.0) {
       f=1.0;
     }
-    std::string prm("");
-    if (i+2<s.size()) {
-      prm=s[i+2];
-    }
 
-    Heuristic* heu=HeuristicFactory::create(log, s[i+1], prm);
+    Heuristic* heu=new_heuristic(log,s[i+1]);
+
     if (heu==NULL) {
       status=false;
       errormsg=std::string("Can't create heuristic ")+s[i+1];

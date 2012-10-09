@@ -30,7 +30,7 @@ export PATH=../../src:../../utils:$PATH
 
 source ../functions.sh
 
-teststep "exitvalue on failure"
+teststep "old syntax exitvalue on failure"
 
 fmbt-gt -o model.lsts -f - <<EOF
 P(first, p) ->
@@ -53,7 +53,7 @@ else
     testpassed
 fi
 
-teststep "exitvalue on inconclusive deadlock"
+teststep "old syntax exitvalue on inconclusive deadlock"
 
 cat > test.conf<<EOF
 model="lts:model.lsts"
@@ -72,7 +72,7 @@ else
     testpassed
 fi
 
-teststep "exitvalue on passed"
+teststep "old syntax exitvalue on passed"
 
 cat > test.conf<<EOF
 model="lts:model.lsts"
@@ -91,7 +91,7 @@ else
 fi
 
 
-teststep "exitvalue on error (input action)"
+teststep "old syntax exitvalue on error (input action)"
 
 cat > test.conf<<EOF
 model="lts:model.lsts"
@@ -110,11 +110,11 @@ else
     testpassed
 fi
 
-teststep "exitvalue on error (output: communication error)"
+teststep "old syntax exitvalue on error (output: com error)"
 
 cat > test.conf<<EOF
 model="lts:model.lsts"
-adapter="dummy:2:1"
+adapter="dummy(2,1)"
 on_fail   = "exit:1"
 on_pass   = "exit:2"
 on_inconc = "exit:3"
@@ -135,7 +135,7 @@ else
 fi
 
 
-teststep "exitvalue on nonexisting config file"
+teststep "old syntax exitvalue on nonexisting config file"
 
 fmbt no_such_file.conf  >>$LOGFILE 2>&1
 if [ $? -ne 4 ]
@@ -145,7 +145,7 @@ else
     testpassed
 fi
 
-teststep "error messages from remote AALs"
+teststep "old syntax error messages from remote AALs"
 for BROKEN in language initial_state guard body adapter; do
     cat > test.conf<<EOF
 model="aal_remote:remote_pyaal -l aal.log broken-$BROKEN.aal"
@@ -169,7 +169,7 @@ EOF
 done
 testpassed
 
-teststep "error messages from remote_python"
+teststep "old syntax error messages from remote_python"
 cat > test.conf <<EOF
 model     = "lsts_remote:fmbt-gt -f 'broken-requiredvalue.gt'"
 adapter   = "remote:remote_python"
@@ -188,3 +188,5 @@ grep 'ZeroDivisionError' stdout.txt >>$LOGFILE 2>&1 || {
     testfailed
 }
 testpassed
+
+exec ./run_new.sh

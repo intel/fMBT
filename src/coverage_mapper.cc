@@ -296,22 +296,20 @@ void Coverage_Mapper::add_file(unsigned index,
   std::string cname;
   std::string mname;
 
-  split(coveragename,mname,cname);
+  std::vector<std::string> s;
+  commalist(coveragename,s);
+  if (s.size()==2) {
+    mname=s[1];
+  }
+  cname=s[0];
 
-  unescape_string(cname);
   coverage_names[index]=std::string(cname);
 
   if (cname=="") {
     models[index] = model;
   } else {
-    unescape_string(mname);
-    std::string model_name;
-    std::string model_param;
+    models[index] = new_model(log,mname);
 
-
-    split(mname, model_name, model_param);
-
-    models[index] = ModelFactory::create(log,model_name,model_param);
     if (!models[index] || models[index]->status==false) {
       status=false;
       return;
@@ -319,12 +317,8 @@ void Coverage_Mapper::add_file(unsigned index,
     models[index]->init();
     models[index]->reset();
   }
-  std::string cc;
-  std::string cp;
 
-  split(cname,cc,cp);
-
-  log.debug("Trying to create coverage %s(%s)\n",cc.c_str(),cp.c_str());
+  log.debug("Trying to create coverage %s(%s)\n",cname.c_str());
   if (coverages[index]) {
     status=false;
     errormsg=std::string("Coverage already at index ")+to_string(index);
@@ -337,7 +331,7 @@ void Coverage_Mapper::add_file(unsigned index,
     return;
   }
 
-  coverages[index] = CoverageFactory::create(log,cc,cp);
+  coverages[index] = new_coverage(log,cname);
 
   if (!coverages[index]) {
     status=false;

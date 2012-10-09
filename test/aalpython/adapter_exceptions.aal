@@ -1,0 +1,83 @@
+aal "adapter_exceptions" {
+    language: python {
+        import traceback
+
+        def take_same_action(action_name, exc):
+            log("take_same_action(%s, %s)" % (action_name, exc))
+            log(traceback.format_exc())
+            # returns None => the same action is reported to be executed
+
+        def take_output_action(action_name, exc):
+            log("take_output_action(%s, %s)" % (action_name, exc))
+            # returns another action that will be reported to be executed
+            return action("oOutputAction")
+
+        def raise_an_exception(action_name, exc):
+            log("raise_an_exception(%s, %s)" % (action_name, exc))
+            # raises exception => test fails
+            raise Exception("unrecoverable error!")
+
+        adapter_exception_handler = take_same_action
+    }
+
+    # preview-hide-vars: 
+    # preview-depth: 5
+    variables {
+        x
+    }
+    initial_state {
+        x = 0
+    }
+    action "oOutputAction" {
+        guard() { return x < 999 }
+        body() {
+            global adapter_exception_handler
+            adapter_exception_handler = raise_an_exception
+            log("body of oOutputAction")
+            x = 999
+        }
+    }
+    action "iStep1" {
+        guard() { return x == 0 }
+        body()  { x = 1 }
+        adapter() {            
+            raise Exception("hello-from-iStep1")
+        }
+    }
+    action "iStep2 - change handler" {
+        guard() { return x == 1 }
+        body() { x = 2 }
+        adapter() {
+            global adapter_exception_handler
+            adapter_exception_handler = take_output_action
+            log("switching handler to %s" % (adapter_exception_handler,))
+        }
+        
+    }
+    action "iStep3" {
+        guard() { return x == 2 }
+        body() {
+            log("body of iStep3")
+            x = 3
+        }
+        adapter() {
+            # division-by-zero
+            i = 1/0
+        }
+    }
+    action "iStep4 - Never execute me" {
+        guard() { return x == 3 }
+        body() {
+            x = 4
+        }
+    }
+    action "iStep5" {
+        guard() { return x == 999 }
+        body() {
+            x = 3
+        }
+        adapter() {
+            raise Exception("This is it.")
+        }
+    }
+}

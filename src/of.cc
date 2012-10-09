@@ -60,14 +60,8 @@ OutputFormat::~OutputFormat() {
 void OutputFormat::set_model(std::string m)
 { 
   if (status) {
-    std::string model_name;
-    std::string model_param;
     
-    split(m, model_name, model_param);
-
-    printf("load model %s %s\n",model_name.c_str(),model_param.c_str());
-    
-    if ((model=Model::create(l,model_name,model_param)) == NULL)
+    if ((model=new_model(l,m)) == NULL)
       {
 	errormsg="Can't create model \""+m+"\"";
 	status=false;
@@ -122,11 +116,7 @@ void OutputFormat::add_uc(std::string& name,
 			  std::string& c)
 {
   if (status) {
-    std::string coverage_name;
-    std::string coverage_param;
-    split(c, coverage_name, coverage_param);  
-    
-    Coverage* coverage = CoverageFactory::create(l,coverage_name,coverage_param);
+    Coverage* coverage = new_coverage(l,c);
     if (coverage == NULL) {
       errormsg="Can't create coverage";
       status=false;
@@ -154,11 +144,9 @@ void OutputFormat::add_testrun(std::string& name,
 			       std::string& _model)
 {
   if (status) {
-    std::string model_name,model_param;
-    split(_model, model_name, model_param);
 
     Model* model;
-    if ((model=Model::create(l, model_name, model_param)) == NULL) {
+    if ((model=new_model(l, _model)) == NULL) {
       errormsg="Can't create model \""+_model+"\"";
       status=false;
     } else {

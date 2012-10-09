@@ -40,12 +40,12 @@ while [ "$verdict" == "inconclusive" ]; do
     # - for each previous test NUM, one line is appended to the
     #   configuration for each previous test X:
     #
-    #   history = "log:test<NUM>.log"
+    #   history = "log(test<NUM>.log)"
 
     cp one-step-tests.conf next-test.conf
 
     for prev_test in $(seq 1 $testnumber); do
-        echo "history = \"log:test$prev_test.log\"" >> next-test.conf
+        echo "history = \"log(test$prev_test.log)\"" >> next-test.conf
     done
 
     testnumber=$(( $testnumber + 1 ))

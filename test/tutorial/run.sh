@@ -75,14 +75,14 @@ check_minimum_num_of_lines mkrmdir.lsts 30
 testpassed
 
 teststep "modify perm and step limit in configuration..."
-if grep -q steps: mkrmdir.conf || ! grep -q perm:1 mkrmdir.conf; then
-    echo "steps does or perm:1 do not exist in original configuration" >> $LOGFILE
+if grep -q steps: mkrmdir.conf || ! grep -q 'perm(1)' mkrmdir.conf; then
+    echo "steps does or perm(1) do not exist in original configuration" >> $LOGFILE
     testfailed
 fi
 source sed.1
 source echo.1
-if ! ( grep -q 100 mkrmdir.conf && grep -q perm:2 mkrmdir.conf ); then
-    echo "steps:100 or perm:2 is missing in the configuration" >> $LOGFILE
+if ! ( grep -q 100 mkrmdir.conf && grep -q 'perm(2)' mkrmdir.conf ); then
+    echo "steps:100 or perm(2) is missing in the configuration" >> $LOGFILE
     testfailed
 fi
 testpassed

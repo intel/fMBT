@@ -110,34 +110,36 @@ int main(int argc,char** argv) {
     switch (c)
       {
       case 'V':
-	printf("Version: "VERSION"\n");
-	return 0;
-	break;
+        printf("Version: "VERSION"\n");
+        return 0;
+        break;
       case 'B':
-	prep_command=optarg;
-	break;
+        prep_command=optarg;
+        break;
       case 'b':
-	compile_command=optarg;
-	compile_command+=" ";
-	break;
+        compile_command=optarg;
+        compile_command+=" ";
+        break;
       case 'c':
-	lib=true;
-	break;
+        lib=true;
+        break;
       case 'D':
-	prep.push_back(optarg);
-	pstr=pstr+" -D"+optarg+" ";
-	break;
+        prep.push_back(optarg);
+        pstr=pstr+" -D"+optarg+" ";
+        if (prep_command != "")
+          prep_command=prep_command+" -D"+optarg+" ";
+        break;
       case 'o':
-	outputfile=fopen(optarg,"w");
-	compile_command=compile_command+optarg;
-	if (!outputfile)
+        outputfile=fopen(optarg,"w");
+        compile_command=compile_command+optarg;
+        if (!outputfile)
           error(1,0,"cannot open output file \"%s\".",optarg);
-	break;
+        break;
       case 'h':
-	print_usage();
-	return 0;
+        print_usage();
+        return 0;
       default:
-	return 2;
+        return 2;
       }
   }
 
@@ -195,7 +197,7 @@ int main(int argc,char** argv) {
 
     for(int i=0;i<argc;i++) {
       if (argv[i]) {
-	free(argv[i]);
+        free(argv[i]);
       }
     }
     free(argv);

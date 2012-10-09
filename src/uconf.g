@@ -22,13 +22,7 @@
 #include <vector>
 #include <sstream>
 
-void sdel(std::vector<std::string*>* strvec)
-{
-    for(unsigned i=0;i<strvec->size();i++) {
-        delete (*strvec)[i];
-    }
-    delete strvec;
-}
+void sdel(std::vector<std::string*>* strvec);
 
 typedef struct _node {
   int val;
@@ -67,4 +61,5 @@ strvec: string { $$.strvec = new std::vector<std::string*>;
             $$.strvec->push_back($1.str);
         } ;
 
-string: "\"([^\"\\]|\\[^])*\"" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); } ;
+string: "\"([^\"\\]|\\[^])*\"" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); } |
+        "\'([^\'\\]|\\[^])*\'" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); } ;

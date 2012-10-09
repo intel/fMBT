@@ -58,6 +58,11 @@ std::string Lts::stringify()
   t << "State_cnt = "      << state_cnt      << std::endl;
   t << "Action_cnt = "     << action_cnt     << std::endl;
   t << "Transition_cnt = " << transition_cnt << std::endl;
+
+  if (prop_cnt) {
+    t << "State_prop_cnt = " << prop_cnt     << std::endl;
+  }
+
   t << "Initial_states = " << init_state;
   t << ";\nEnd Header\n";
 
@@ -67,6 +72,30 @@ std::string Lts::stringify()
     t << i << " = \"" << action_names[i] << "\"\n";
   } 
   t << "End Action_names\n";
+
+  if (prop_cnt) {
+    t << "Begin State_props" << std::endl;
+    for(unsigned i=0;i<prop_names.size();i++) {
+      if (prop_names[i]!="") {
+	int c=0;
+	t << "\"" << prop_names[i] << "\" : ";
+	for(unsigned ii=1;ii<=state_cnt;ii++) {
+	  for(unsigned j=0;j<stateprops[ii].size();j++) {
+	    if (stateprops[ii][j]==i) {
+	      if (c) {
+		t << ", ";
+	      }
+	      t << ii;
+	      c++;
+	    }
+	  }
+	}
+	t << ";" << std::endl;
+      }
+    }
+
+    t << "End State_props" << std::endl;
+  }
 
   t << "Begin Transitions\n";
 
@@ -80,8 +109,8 @@ std::string Lts::stringify()
     t << ";" << std::endl;
     
   }
-
   t << "End Transitions\n";
+
   t << "End Lsts\n";
   return t.str();
 }
@@ -241,10 +270,5 @@ void Lts::pop()
   state_save.pop_front();
 }
 
-namespace {
-  Model* lts_creator(Log&l, std::string params) {
-    return new Lts(l, params);
-  }
-  static ModelFactory::Register lts("lts", lts_creator);
-  static ModelFactory::Register lsts("lsts", lts_creator);
-}
+FACTORY_DEFAULT_CREATOR(Model, Lts, "lts")
+FACTORY_DEFAULT_CREATOR(Model, Lts, "lsts")

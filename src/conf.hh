@@ -31,77 +31,70 @@
 #include "writable.hh"
 #include "helper.hh"
 
+class EndHook;
+class Conf;
+EndHook* new_endhook(Conf* c,const std::string& s);
+
 class Conf:public Writable {
  public:
   Conf(Log& l, bool debug_enabled=false)
-    :log(l), exit_status(0),
+    :log(l), exit_status(0), exit_interactive(false),
      heuristic_name("random"), coverage_name("perm"),
      adapter_name("dummy"), end_time(-1),
-     on_error("exit:1"), on_fail("interactive"),
-     on_pass("exit:0"), on_inconc("exit:1"),
+     on_error("exit(1)"), on_fail("interactive"),
+     on_pass("exit(0)"), on_inconc("exit(1)"),
      heuristic(NULL), model(NULL),
      adapter(NULL),coverage(NULL)
   {
     log.push("fmbt_log");
     log.set_debug(debug_enabled);
-  }
-  virtual ~Conf() {
-    for (unsigned int i = 0; i < end_conditions.size(); i++)
-      delete end_conditions[i];
-    log.pop();
-    if (heuristic) 
-      delete heuristic;
 
-    if (adapter)
-      delete adapter;
-
-    if (model)
-      delete model;
-
-    if (coverage)
-      delete coverage;
-
-    adapter=NULL;
-    heuristic=NULL;
-    model=NULL;
-    coverage=NULL;
-
-    for(unsigned i=0;i<history.size();i++) {
-      if (history[i]) {
-	delete history[i];
-      }
-    }
+    set_on_error("exit(1)");
+    set_on_fail("interactive");
+    set_on_pass("exit(0)");
+    set_on_inconc("exit(1)");
 
   }
+  virtual ~Conf();
 
   void set_model(std::string& s) {
-    split(s, model_name, model_param);
+    //split(s, model_name, model_param);
+    //param_cut(s, model_name, model_param);
+    model_name=s;
   }
   void set_heuristic(std::string& s) {
-    split(s, heuristic_name, heuristic_param);
+    heuristic_name=s;
+    //split(s, heuristic_name, heuristic_param);
+    //param_cut(s, heuristic_name, heuristic_param);
   }
   void set_coverage(std::string& s) {
-    split(s, coverage_name, coverage_param);
+    //split(s, coverage_name, coverage_param);
+    //param_cut(s,coverage_name,coverage_param);
+    coverage_name=s;
   }
   void set_adapter(std::string& s) {
-    split(s, adapter_name, adapter_param);
+    //split(s, adapter_name, adapter_param);
+    //param_cut(s, adapter_name, adapter_param);
+    adapter_name=s;
   }
-  void set_on_error(std::string &s) {
-    on_error = s;
+  void set_on_error(const std::string &s) {
+    error_hooks.push_back(new_endhook(this,s));
   }
-  void set_on_fail(std::string &s) {
-    on_fail = s;
+  void set_on_fail(const std::string &s) {
+    fail_hooks.push_back(new_endhook(this,s));
   }
-  void set_on_pass(std::string &s) {
-    on_pass = s;
+  void set_on_pass(const std::string &s) {
+    pass_hooks.push_back(new_endhook(this,s));
   }
-  void set_on_inconc(std::string &s) {
-    on_inconc = s;
+  void set_on_inconc(const std::string &s) {
+    inc_hooks.push_back(new_endhook(this,s));
   }
 
   void add_end_condition(End_condition *ec) {
     end_conditions.push_back(ec);
   }
+
+  void add_end_condition(Verdict::Verdict v,std::string& s);
 
   void set_observe_sleep(std::string &s);
 
@@ -122,21 +115,22 @@ class Conf:public Writable {
   virtual std::string stringify();
 
   int exit_status;
-
+  bool exit_interactive;
  protected:
-  void set_exitvalue(std::string& s);
+  //void set_exitvalue(std::string& s);
+  std::list<EndHook*> pass_hooks,fail_hooks,inc_hooks,error_hooks;
   std::vector<std::string*> history;
   std::string model_name;
-  std::string model_param;
+  //std::string model_param;
 
   std::string heuristic_name;
-  std::string heuristic_param;
+  //std::string heuristic_param;
 
   std::string coverage_name;
-  std::string coverage_param;
+  //std::string coverage_param;
 
   std::string adapter_name;
-  std::string adapter_param;
+  //std::string adapter_param;
 
   std::vector<End_condition*> end_conditions;
 

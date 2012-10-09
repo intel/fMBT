@@ -12,30 +12,30 @@ Model must be defined in the configuration.
 
 Syntax:
 
-        model = "type:params"
+        model = "type(params)"
 
 Available types & parameters:
 
-        lsts:<filename>
+        lsts(<filename>)
 
                 loads state machine in lsts from the given file.
 
-        lsts_remote:<command>
+        lsts_remote(<command>)
 
                 loads state machine in lsts format from the standard
                 output of <command>.
 
-        parallel:<filename>
+        parallel(<filename>)
 
                 loads state machine that is results in running state
                 machines defined in filename in parallel.
 
-        parallel_remote:<command>
+        parallel_remote(<command>)
 
                 like parallel but reads standard output of <command>
                 instead of a file.
 
-        lib:<modelname>[,filename][:modelparams]
+        lib(<modelname>[,filename])
 
                 uses model "modelname". If the model is not already
                 registered (statically linked or LD_PRELOADed, for
@@ -45,17 +45,17 @@ Available types & parameters:
 
 Examples:
 
-        model = "lsts:models/mymodel.lsts"
+        model = "lsts(models/mymodel.lsts)"
 
-        model = "lsts_remote:fmbt-gt -f mymodel.gt"
+        model = "lsts_remote(fmbt-gt -f mymodel.gt)"
 
-        model = "lsts_remote:wget -O- http://modelhost/mymodel.lsts"
+        model = "lsts_remote(wget -O- http://modelhost/mymodel.lsts)"
 
-        model = "lsts_remote:./create_mymodel.sh --exclude negativecases"
+        model = "lsts_remote(./create_mymodel.sh --exclude negativecases)"
 
-        model = "parallel_remote:fmbt-parallel a.lsts b.lsts"
+        model = "parallel_remote(fmbt-parallel a.lsts b.lsts)"
 
-        model = "lib:myaaltest1,myaaltests.so"
+        model = "lib(myaaltest1(foo),myaaltests.so)"
 
 
 Adapter
@@ -67,7 +67,7 @@ If not given, adapter defaults to "dummy".
 
 Syntax:
 
-        adapter = "type:params"
+        adapter = "type(params)"
 
 Available types & parameters:
 
@@ -77,16 +77,16 @@ Available types & parameters:
                 reports successful executions. Can be used for offline
                 test generation.
 
-        mapper:<filename>
+        mapper(<filename>)
 
                 redirects and possibly renames actions in test model
                 to subadapters according to rules in filename.
 
-        lib:<adaptername>[,filename]
+        lib(<adaptername>[,filename])
 
                 TODO
 
-        remote:<command>
+        remote(<command>)
 
                 launches a remote adapter process and forwards actions
                 to it for execution. fMBT comes with remote adapters
@@ -94,13 +94,13 @@ Available types & parameters:
 
 Examples:
 
-        adapter = "remote:remote_exec.sh"
+        adapter = "remote(remote_exec.sh)"
 
-        adapter = "remote:ssh user@host ./remote_python"
+        adapter = "remote(ssh user@host ./remote_python)"
 
-        adapter = "mapper:adapters.mrules"
+        adapter = "mapper(adapters.mrules)"
 
-        adapter = "lib:myaaltest1,myaaltests.so"
+        adapter = "lib(myaaltest1,myaaltests.so)"
 
 
 Heuristic
@@ -113,11 +113,11 @@ If not given, defaults to "random".
 
 Syntax:
 
-        heuristic = "type:params"
+        heuristic = "type(params)"
 
 Available types & parameters:
 
-        lookahead[:depth]
+        lookahead[(depth)]
 
                 if depth is given, simulates execution of all possible
                 paths of length <depth> in the test model. Choose the
@@ -126,11 +126,13 @@ Available types & parameters:
                 based on names of enabled actions in the current state
                 of the model. Execution on model is not simulated.
 
-        mrandom:TODO
+        mrandom(weight,heuristic,...)
 
-                TODO
+                eg. mrandom(20,random(1343649162),80,lookahead(5)) will
+		use random heuristic with 20% propability and lookahead with
+		80% propability.		
 
-        random[:seed]
+        random[(seed)]
 
                 evenly distributed random choice among all enabled
                 input actions. If seed is given, that is used for
@@ -140,9 +142,9 @@ Available types & parameters:
 
 Examples:
 
-        heuristic = "lookahead:5"
+        heuristic = "lookahead(5)"
 
-        heuristic = "random:42"
+        heuristic = "random(42)"
 
 
 Coverage
@@ -154,11 +156,11 @@ Defaults to "perm"
 
 Syntax:
 
-        coverage = "type:params"
+        coverage = "type(params)"
 
 Available types & parameters:
 
-        perm[:count]
+        perm[(count)]
 
                 measure coverage of all permutations of any <count>
                 actions in the test model. If count is not given, it
@@ -170,7 +172,7 @@ Available types & parameters:
                 really want.
 
         
-        covlang:<expression>
+        covlang(<expression>)
 
                 measure coverage of the given coverage language
                 expression. The expression is formed by combining "a
@@ -179,13 +181,13 @@ Available types & parameters:
 
 Examples:
 
-        coverage = "perm:1"
+        coverage = "perm(1)"
 
                  good for a smoke test, coverage reaches 1.0 when
                  every action in the model has been executed at least
                  once.
 
-        coverage = "perm:2"
+        coverage = "perm(2)"
 
                 if there are actions A, B and C in the model, coverage
                 of "perm:2" reaches 1.0 when AB, BA, AC, CA, BC and CB
@@ -195,7 +197,7 @@ Examples:
                 set a limit for number of steps, too. See End
                 conditions.
 
-        coverage = "covlang:a A then (a B or a C)"
+        coverage = "covlang(a A then (a B or a C))"
 
                 coverage reaches 1.0 when action A has been executed
                 and at least either of actions B and C has been
@@ -211,11 +213,11 @@ tests that have not been generated in previous test runs.
 
 Syntax:
 
-        history = "type:params"
+        history = "type(params)"
 
 Available types & parameters:
 
-        log:filename
+        log(filename)
 
                 read log from filename
 

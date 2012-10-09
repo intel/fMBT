@@ -24,17 +24,16 @@
 Coverage_Min::Coverage_Min(Log& l, std::string& _params,unit* _u) :
   Coverage(l), params(_params),u(_u)
 {
-  static std::string separator(":");
-  char* tmp=strdup(params.c_str());
-  std::string m(unescape_string(tmp));
+  std::string name,option;
+
   std::vector<std::string> s;
-  strvec(s,m,separator);
-  free(tmp); 
-  for(unsigned i=0;i+1<s.size();i+=2) {  
-    Coverage* cov=CoverageFactory::create(log, s[i], s[i+1]);
+  commalist(params,s);
+
+  for(unsigned i=0;i<s.size();i++) {
+    Coverage* cov=new_coverage(log,s[i]);
     if (cov==NULL) {
       status=false;
-      errormsg=std::string("Can't create coverage ")+s[i]+":"+s[i+1];
+      errormsg=std::string("Can't create coverage ")+name+"("+option+")";
       return;
     }
     coverages.push_back(cov);

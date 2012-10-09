@@ -491,7 +491,7 @@ void Test_engine::interactive()
 	num=atoi(s+1);
 	if (num>0) {
 	  e=new End_condition(Verdict::INCONCLUSIVE,
-			      End_condition::STEPS,&breakstr);
+			      End_condition::STEPS,breakstr);
 	  e->param_long=step_count+num;
 	  end_conditions.push_back(e);
 	}
@@ -530,7 +530,7 @@ void Test_engine::interactive()
 	  // Add breakpoint
 	  End_condition* e=new End_condition(Verdict::INCONCLUSIVE,
 					     End_condition::ACTION,
-					     &breakstr);
+					     breakstr);
 	  e->param_long=num;
 	  atags.push_back(e);
 	} else {
@@ -562,7 +562,7 @@ void Test_engine::interactive()
 	  // Add breakpoint
 	  End_condition* e=new End_condition(Verdict::INCONCLUSIVE,
 					     End_condition::STATETAG,
-					     &breakstr);
+					     breakstr);
 	  e->param_long=num;
 	  etags.push_back(e);
 	} else {

@@ -54,7 +54,7 @@ void escape_free(const char* msg)
 #endif
 }
 
-void *load_lib(const std::string& libname,std::string& model_filename)
+void *load_lib(const std::string& libname,const std::string& model_filename)
 {
   std::string name_candidate(libname);
   std::string errormessages;
@@ -158,6 +158,22 @@ void clear_coding(std::string& s){
       s=s.substr(pos);      
     }
   }
+}
+
+void remove_force(std::string& s)
+{
+  std::string ss("");
+  for(unsigned i=0;i<s.size();i++) {
+    switch (s[i]) {
+    case '\\': {
+      break;
+    }
+    default: {
+      ss=ss+s[i];
+    }
+    }
+  }
+  s=ss;
 }
 
 std::string removehash(std::string& s);
@@ -665,4 +681,81 @@ void regexpmatch(std::string& regexp,std::vector<std::string>& f,
   }
 
 #endif
+}
+
+int last(std::string& val,char c)
+{
+  int pos=val.length();  
+  for(;pos>0;pos--) {
+    if (val[pos]==c && val[pos-1]!='\\') {
+      return pos;
+    }
+  }
+  return -1;
+}
+
+void param_cut(std::string val,std::string& name,
+	       std::string& option)
+{
+  unsigned pos=0;
+  for(;pos<val.length();pos++) {
+    switch (val[pos]) {
+    case '\\': {
+      pos++;
+      break;
+    }
+    case '(':
+      int lstpos = last(val,')');
+      if (lstpos>0) {
+	name = val.substr(0,pos);
+	remove_force(name);
+	option = val.substr(pos+1,lstpos-pos-1);
+	remove_force(option);
+      } else {
+	// ERROR
+      }
+      return;
+      break;
+    }
+  }
+  name=val;
+}
+
+void commalist(const std::string& s,std::vector<std::string>& vec) {
+  int depth=0;
+  int lastend=0;
+  std::string pushme;
+  unsigned pos=0;
+  for(;pos<s.length();pos++) {
+    switch (s[pos]) {
+    case '\\': 
+      pos++;
+      break;
+    case '(': 
+      depth++;
+      break;
+    case ')':
+      depth--;
+      break;
+    case ',':
+      if (depth==0) {
+	// COMMA!
+	pushme=s.substr(lastend,pos-lastend);
+	remove_force(pushme);
+	vec.push_back(pushme);
+	lastend=pos+1;
+      }
+      break;
+    }
+  }
+  pushme=s.substr(lastend,pos);
+  vec.push_back(pushme);
+}
+
+void sdel(std::vector<std::string*>* strvec)
+{
+    for(unsigned i=0;i<strvec->size();i++) {
+        delete (*strvec)[i];
+    }
+    delete strvec;
 }

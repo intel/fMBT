@@ -97,7 +97,7 @@ public:
 
   void setparent(Model* m);
 
-  static Model* create(Log& log, std::string& model_name,std::string& model_params);
+  //static Model* create(Log& log, std::string& model_name,std::string& model_params);
 
 protected:
   Log &log;
@@ -111,5 +111,7 @@ protected:
 };
 
 FACTORY_DECLARATION(Model)
+
+Model* new_model(Log& l, std::string& s);
 
 #endif

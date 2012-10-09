@@ -33,7 +33,6 @@ void Coverage_exec_filter::set_model(Model* _model)
 
   std::vector<std::string>& sp(model->getSPNames());  
 
-
   for(unsigned i=0;i<from.size();i++) {
     int pos=find(sp,*from[i]);
     if (!sp.size() || *from[i]!=sp[pos]) {
@@ -78,7 +77,8 @@ void Coverage_exec_filter::set_model(Model* _model)
 
   }
 
-  
+  // Let's handle initial tags
+  execute(0);
 }
 
 bool Coverage_exec_filter::prop_set(std::vector<int> p,int npro,
@@ -94,47 +94,79 @@ bool Coverage_exec_filter::prop_set(std::vector<int> p,int npro,
   return false;
 }
 
+void Coverage_exec_filter::on_drop()
+{
+  online=false;
+  executed.clear();
+  etime.clear();
+}
+
+void Coverage_exec_filter::on_find()
+{
+  online=false;
+  executed.clear();
+  etime.clear();
+}
+
+void Coverage_exec_filter::on_start()
+{
+  online=true;
+  etime.push_back(History::current_time);
+}
+
+void Coverage_exec_filter::on_online(int action,std::vector<int>&p) {
+  executed.push_back(std::pair<int,std::vector<int> >(action,p));
+  etime.push_back(History::current_time);
+}
+
 bool Coverage_exec_filter::execute(int action)
 {
-  int* props;
+  int* props=NULL;
   int npro;
 
+  npro=model->getprops(&props);
+
   if (online) {
-    executed.push_back(action);
-    etime.push_back(History::current_time);
+    std::vector<int> p(props,props+npro);
+    on_online(action,p);
   }
 
-  npro=model->getprops(&props);
- 
   if (online) {
     /* Ok. Let's search for drop. */
     if (prop_set(rollback_tag,npro,props) || 
 	prop_set(rollback_action,1,&action)) {
       on_drop();
-      online=false;
-      executed.clear();
-      etime.clear();
     } else {
       /* No drop? Let's search for to */
       if (prop_set(end_tag,npro,props) || 
 	  prop_set(end_action,1,&action)) {
 	on_find();
-	online=false;
-	executed.clear();
-	etime.clear();
       }
     }
-  } 
+  }
 
-  if (!online) {
-    /* Let's search for from */
-    if (prop_set(start_tag,npro,props) || 
-	prop_set(start_action,1,&action)) {
-      online=true;
-      etime.push_back(History::current_time);
+  /* Let's search for from */
+  if (prop_set(start_tag,npro,props) || 
+      prop_set(start_action,1,&action)) {
+    if (online) {
+      on_restart();
+    } else {
       on_start();
     }
   }
 
   return true;
+}
+
+void ds(std::string* s){
+  if (s) 
+    delete s;
+}
+
+Coverage_exec_filter::~Coverage_exec_filter() {
+  /*
+  for_each(from.begin(),from.end(),ds);
+  for_each(to.begin(),to.end(),ds);
+  for_each(drop.begin(),drop.end(),ds);
+  */
 }

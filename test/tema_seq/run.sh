@@ -35,8 +35,8 @@ export PATH=../../src:../../utils:$PATH
 source ../functions.sh
 
 cp mkrmdir.conf minimizer.conf
-sed -i -r -e 's/^(heuristic.*")[^"]*(".*)/\1lookahead:6b\2/g' minimizer.conf
-sed -i -r -e 's/^(coverage.*")[^"]*(".*)/\1tema_seq:org_error.tr\2/g' minimizer.conf
+sed -i -r -e 's/^(heuristic.*")[^"]*(".*)/\1lookahead(6b\2)/g' minimizer.conf
+sed -i -r -e 's/^(coverage.*")[^"]*(".*)/\1tema_seq(org_error.tr\2)/g' minimizer.conf
 
 rm -rf minimizer.log adapter.log /tmp/fmbt.mkrmdir
 
