@@ -250,7 +250,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
   gettimeofday(&start_time,NULL);
   log_tags();
   log_status(log, step_count, heuristic.getCoverage());
-  do {
+  while (-1 == (condition_i = matching_end_condition(step_count))) {
     action=0;
 
     gettimeofday(&Adapter::current_time,NULL);
@@ -386,7 +386,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
     update_coverage(heuristic.getCoverage(), step_count,
                     &last_coverage, &last_step_cov_growth);
 
-  } while (-1 == (condition_i = matching_end_condition(step_count)));
+  }
 
  out:
   return stop_test(end_conditions[condition_i]);
