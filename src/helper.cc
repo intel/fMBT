@@ -21,6 +21,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
+#include <algorithm>
 
 #ifndef DROI
 #include <boost/regex.hpp>
@@ -134,12 +135,12 @@ void clear_whitespace(std::string& s){
   pos=s.find_last_not_of(white);
   if (pos==std::string::npos) {
     s.clear();
+  } else {
+    s.erase(pos+1);
     pos=s.find_first_not_of(white);
     if (pos!=std::string::npos) {
       s=s.substr(pos);      
     }
-  } else {
-    s.erase(pos+1);
   }
 }
 
@@ -721,7 +722,7 @@ void param_cut(std::string val,std::string& name,
   name=val;
 }
 
-void commalist(const std::string& s,std::vector<std::string>& vec) {
+void commalist(const std::string& s,std::vector<std::string>& vec, bool remove_whitespace) {
   int depth=0;
   int lastend=0;
   std::string pushme;
@@ -750,6 +751,11 @@ void commalist(const std::string& s,std::vector<std::string>& vec) {
   }
   pushme=s.substr(lastend,pos);
   vec.push_back(pushme);
+
+  if (remove_whitespace) {
+    for_each(vec.begin(),vec.end(),clear_whitespace);
+  }
+
 }
 
 void sdel(std::vector<std::string*>* strvec)
