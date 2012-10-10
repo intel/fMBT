@@ -2,7 +2,7 @@
 AAL/Python
 ==========
 
-This is an AAL/Python reference documentation.
+This is AAL/Python reference documentation.
 
 AAL is a pre/postcondition language for defining
 
@@ -141,7 +141,18 @@ generator.
 
 Control flow when adapter() returns a different action
 
+body() of the action returned (reported) by the adapter is executed,
+instead of body() of the suggested action.
+
+
 Control flow when adapter() raises an exception
+
+If adapter_exception_hander() is not defined, this is an execution of
+an unidentified action and test fails. If the handler is defined, it
+is called. If it returns an action, that body() of that action is
+executed. If it returns None, body() of suggested action is
+executed. If it raises an exception, test fails with an execution of
+an unidentified action.
 
 
 AAL/Python syntax
