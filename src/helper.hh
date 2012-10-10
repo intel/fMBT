@@ -30,8 +30,8 @@ class Log;
 extern bool human_readable;
 
 void* load_lib(const std::string& libname,const std::string& model_filename);
-int   find(const std::vector<std::string>&,const std::string);
-int   find(const std::vector<std::string*>&,const std::string);
+int   find(const std::vector<std::string>&,const std::string,int def=0);
+int   find(const std::vector<std::string*>&,const std::string,int def=0);
 bool  isInputName(const std::string& name);
 bool  isOutputName(const std::string& name);
 void  clear_whitespace(std::string& s);
@@ -91,7 +91,7 @@ void regexpmatch(std::string& regexp,std::vector<std::string>& f,
 void param_cut(std::string val,std::string& name,
 	       std::string& option);
 
-void commalist(const std::string& s,std::vector<std::string>& vec);
+void commalist(const std::string& s,std::vector<std::string>& vec, bool remove_whitespace=true);
 void remove_force(std::string& s);
 class EndHook;
 void hook_runner(EndHook* e);
