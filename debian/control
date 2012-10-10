@@ -3,7 +3,7 @@ Maintainer: Pablo Virolainen <pablo.virolainen@intel.com>
 Section: misc
 Priority: optional
 Standards-Version: 3.9.3
-Build-Depends: debhelper (>= 7.3.8), libglib2.0-dev, libboost-dev, libedit-dev, python (>= 2.6), automake, libtool, libxml2-dev, libmagick++-dev, libboost-regex-dev, flex | flex-old, python-pexpect, python-dbus, python-gobject, graphviz, imagemagick
+Build-Depends: debhelper (>= 7.3.8), libglib2.0-dev, libboost-dev, libedit-dev, python (>= 2.6), automake, libtool, libxml2-dev, libmagick++-dev, libboost-regex-dev, flex | flex-old, dbus, python-pexpect, python-dbus, python-gobject, graphviz, imagemagick
 X-Python-Version: >= 2.6
 
 Package: fmbt-core
