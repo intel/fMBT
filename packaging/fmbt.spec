@@ -97,7 +97,7 @@ Requires: dbus-python
 %description adapters-remote
 Generic remote adapters for running shell script, Python expressions and Javascript
 
-%package adapters-eyenfinger
+%package adapter-eyenfinger
 Summary: fMBT adapter for GUI testing
 
 %if 0%{?suse_version}
@@ -110,7 +110,7 @@ Requires: /usr/bin/xwd
 Requires: tesseract
 Requires: xautomation
 
-%description adapters-eyenfinger
+%description adapter-eyenfinger
 Proof-of-concept adapter for X11 GUI testing with OCR and icon matching.
 
 %package doc
@@ -201,7 +201,7 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %{python_sitelib}/%{name}/remote_python
 %{python_sitelib}/%{name}web.py*
 
-%files adapters-eyenfinger
+%files adapter-eyenfinger
 %defattr(-, root, root, -)
 %{_libdir}/python*/site-packages/eye4graphics.so
 %{python_sitelib}/eyenfinger.py*
