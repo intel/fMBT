@@ -47,13 +47,11 @@ void Coverage_Include_base::set_model(Model* _model)
       if (subs[i][0]=='\'' || subs[i][0]=='\"') {
 	// Let's remove first and the last charaster
 	subs[i]=subs[i].substr(1,subs[i].length()-2);
-	regexpmatch(subs[i],n,r,false);
-	for(unsigned j=0;j<r.size();j++) {
-	  log.debug("regexp %s %i\n",subs[i].c_str(),r[j]);
-	  filteractions.insert(r[j]);
-	}
-      } else {
-	log.debug("No such action %s\n",subs[i].c_str());
+      }
+      regexpmatch(subs[i],n,r,false);
+      for(unsigned j=0;j<r.size();j++) {
+	log.debug("regexp %s %i\n",subs[i].c_str(),r[j]);
+	filteractions.insert(r[j]);
       }
     }
   }
