@@ -150,6 +150,7 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %defattr(-, root, root, -)
 %{_bindir}/%{name}-view
 %{_bindir}/%{name}-log
+%{_bindir}/%{name}-log2lsts
 %{_bindir}/%{name}-stats
 %{_bindir}/lsts2dot
 %{_bindir}/%{name}-ucheck

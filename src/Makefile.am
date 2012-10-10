@@ -1,7 +1,7 @@
 if ANDROID
 bin_PROGRAMS = fmbt_droid
 else
-bin_PROGRAMS = fmbt remote_adapter_loader fmbt-aalc fmbt-aalp fmbt-ucheck fmbt-log2lts
+bin_PROGRAMS = fmbt remote_adapter_loader fmbt-aalc fmbt-aalp fmbt-ucheck fmbt-log2lsts
 endif
 
 if HAVE_PYTHON
