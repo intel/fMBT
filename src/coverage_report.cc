@@ -27,11 +27,11 @@ std::string Coverage_report::stringify()
   return std::string("");
 }
 
-void Coverage_report::on_find() {
+void Coverage_report::on_find(int action,std::vector<int>&p) {
   count++;
   traces.push_back(executed);
   tcount[executed]++;
-  Coverage_exec_filter::on_find();
+  Coverage_exec_filter::on_find(action,p);
 }
 
 void Coverage_report::push() {
