@@ -33,26 +33,35 @@ End_condition::End_condition(Verdict::Verdict v, Counter c,const std::string& p)
   : verdict(v), counter(c), param(p),
     param_float(-1.0), param_long(-1), param_time(-1)
 {
-    switch (counter) {
+  char* endp;
+  switch (counter) {
 
-    case STEPS:
-      param_long = atol(param.c_str());
+  case STEPS:
+    param_long = strtol(param.c_str(),&endp,10);
+    if (endp && endp[0]!=0) {
+	
+    }
+    if (param_long>=0 && endp[0]==0) {
       status = true;
-      break;
+    } else {
+      errormsg=param+" is not a valid step count";
+      status = false;
+    }
+    break;
 
-    case COVERAGE:
-      param_float = atof(param.c_str());
-      status = true;
-      break;
+  case COVERAGE:
+    param_float = atof(param.c_str());
+    status = true;
+    break;
 
-    case STATETAG:
-      // param already contains the state tag string, but it cannot be
-      // converted into index (param_long) because the model is not
-      // initialized
-      status = true;
-      break;
+  case STATETAG:
+    // param already contains the state tag string, but it cannot be
+    // converted into index (param_long) because the model is not
+    // initialized
+    status = true;
+    break;
 
-    case DURATION:
+  case DURATION:
     {
       param_time = -1;
 #ifndef DROI
@@ -91,21 +100,21 @@ End_condition::End_condition(Verdict::Verdict v, Counter c,const std::string& p)
       break;
     }
 
-    case NOPROGRESS:
-      param_long = atol(param.c_str());
-      status = true;
-      break;
+  case NOPROGRESS:
+    param_long = atol(param.c_str());
+    status = true;
+    break;
 
-    case DEADLOCK:
-      status = true;
-      break;
-    case ACTION:
-      // param already contains the action string, but it cannot be
-      // converted into index (param_long) because the model is not
-      // initialized
-      status = true;
-      break;
-    } /* switch (counter) ... */    
+  case DEADLOCK:
+    status = true;
+    break;
+  case ACTION:
+    // param already contains the action string, but it cannot be
+    // converted into index (param_long) because the model is not
+    // initialized
+    status = true;
+    break;
+  } /* switch (counter) ... */    
 }
 
 End_condition::~End_condition()
