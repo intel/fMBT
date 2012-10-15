@@ -126,8 +126,12 @@ void Coverage_Prop::set_model(Model* _model) {
     commalist(params,props);
     for(unsigned i=0;i<props.size();i++) {
       int propnum = find(sp,props[i]);
-      if (propnum)
+      if (propnum) {
 	prop_included[propnum]=true;
+      } else {
+	status=false;
+	errormsg+="No such tag in the model \""+props[i]+"\"";
+      }
     }
     props_total=prop_included.size();
   }
