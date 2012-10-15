@@ -94,21 +94,21 @@ bool Coverage_exec_filter::prop_set(std::vector<int> p,int npro,
   return false;
 }
 
-void Coverage_exec_filter::on_drop()
+void Coverage_exec_filter::on_drop(int action,std::vector<int>&p)
 {
   online=false;
   executed.clear();
   etime.clear();
 }
 
-void Coverage_exec_filter::on_find()
+void Coverage_exec_filter::on_find(int action,std::vector<int>&p)
 {
   online=false;
   executed.clear();
   etime.clear();
 }
 
-void Coverage_exec_filter::on_start()
+void Coverage_exec_filter::on_start(int action,std::vector<int>&p)
 {
   online=true;
   etime.push_back(History::current_time);
@@ -125,9 +125,9 @@ bool Coverage_exec_filter::execute(int action)
   int npro;
 
   npro=model->getprops(&props);
+  std::vector<int> p(props,props+npro);
 
   if (online) {
-    std::vector<int> p(props,props+npro);
     on_online(action,p);
   }
 
@@ -135,12 +135,12 @@ bool Coverage_exec_filter::execute(int action)
     /* Ok. Let's search for drop. */
     if (prop_set(rollback_tag,npro,props) || 
 	prop_set(rollback_action,1,&action)) {
-      on_drop();
+      on_drop(action,p);
     } else {
       /* No drop? Let's search for to */
       if (prop_set(end_tag,npro,props) || 
 	  prop_set(end_action,1,&action)) {
-	on_find();
+	on_find(action,p);
       }
     }
   }
@@ -149,9 +149,9 @@ bool Coverage_exec_filter::execute(int action)
   if (prop_set(start_tag,npro,props) || 
       prop_set(start_action,1,&action)) {
     if (online) {
-      on_restart();
+      on_restart(action,p);
     } else {
-      on_start();
+      on_start(action,p);
     }
   }
 
@@ -170,3 +170,112 @@ Coverage_exec_filter::~Coverage_exec_filter() {
   for_each(drop.begin(),drop.end(),ds);
   */
 }
+
+#include "dparse.h"
+
+extern "C" {
+  extern D_ParserTables parser_tables_filter;
+}
+
+extern std::vector<std::string*> *ff,*tt,*dd;
+
+class Coverage_from: public Coverage_exec_filter {
+public:
+  Coverage_from(Log& l,std::string params):
+    Coverage_exec_filter(l,_f,_t,_d), sub(NULL)
+  {
+    std::vector<std::string> s;
+    commalist(params,s);
+
+    if (s.size()!=2) {
+      status=false;
+      errormsg="coverage from parse error "+params;
+      return;
+    }
+
+    sub=new_coverage(log,s[1]);
+
+    if (sub==NULL) {
+      status=false;
+      errormsg="can't create coverage "+s[1];
+    }
+    
+    if (!sub->status) {
+      status=false;
+      errormsg=sub->errormsg;
+    }
+
+    ff=&_f;
+    tt=&_t;
+    dd=&_d;
+    D_Parser *p = new_D_Parser(&parser_tables_filter, 512);
+    bool ret=dparse(p,(char*)params.c_str(),strlen(s[0].c_str()));
+    ret=p->syntax_errors==0 && ret;
+    status=ret;
+    if (p->syntax_errors>0) {
+      errormsg="Syntax error...";
+    }
+    free_D_Parser(p);
+    from=_f;
+    to=_t;
+    drop=_d;
+  }
+  virtual ~Coverage_from() {
+    if (sub)
+      delete sub;      
+  }
+  virtual void push() {
+    if (sub)
+      sub->push();
+    
+    return Coverage_exec_filter::push();
+  }
+
+  virtual void pop() {
+    if (sub)
+      sub->pop();
+    
+    return Coverage_exec_filter::pop();
+  }
+
+  virtual float getCoverage()
+  {
+    if (sub) 
+      return sub->getCoverage();
+
+    return Coverage_exec_filter::getCoverage();
+  }
+
+  virtual int fitness(int* actions,int n, float* fitness) { 
+    if (sub)
+      return sub->fitness(actions,n,fitness);
+
+    return Coverage_exec_filter::fitness(actions,n,fitness);
+  }
+
+  virtual void on_online(int action,std::vector<int>&p) {
+    if (sub) {
+      sub->execute(action);
+    }
+    Coverage_exec_filter::on_online(action,p);
+  }
+
+  virtual void on_start(int action,std::vector<int>&p) {
+    Coverage_exec_filter::on_start(action,p);
+    if (sub) {
+      sub->execute(action);
+    }    
+  }
+
+  virtual void set_model(Model* _model) {
+    Coverage_exec_filter::set_model(_model);    
+
+    if (sub) 
+      sub->set_model(model);
+  }
+private:
+  std::vector<std::string*> _f,_t,_d;
+  Coverage* sub;
+};
+
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_from, "from")

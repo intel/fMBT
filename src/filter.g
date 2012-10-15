@@ -32,13 +32,13 @@ std::vector<std::string*> *ff,*tt,*dd;
 #define D_ParseNode_User node
 }
 
-testcase: 'from' strvec 'to' strvec opt_drop {
-            *ff=*$1.strvec;
-            *tt=*$3.strvec;
-            *dd=*$4.strvec;
-            delete $1.strvec;
+testcase: strvec 'to' strvec opt_drop {
+            *ff=*$0.strvec;
+            *tt=*$2.strvec;
+            *dd=*$3.strvec;
+            delete $0.strvec;
+            delete $2.strvec;
             delete $3.strvec;
-            delete $4.strvec;
         };
 
 opt_drop: { $$.strvec = new std::vector<std::string*>; }

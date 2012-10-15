@@ -59,10 +59,10 @@ public:
 protected:
   bool prop_set(std::vector<int> p,int npro,int* props);
 
-  virtual void on_drop();
-  virtual void on_find();
-  virtual void on_start();
-  virtual void on_restart() { };
+  virtual void on_drop(int action,std::vector<int>&p);
+  virtual void on_find(int action,std::vector<int>&p);
+  virtual void on_start(int action,std::vector<int>&p);
+  virtual void on_restart(int action,std::vector<int>&p) { };
   virtual void on_online(int action,std::vector<int>&p);
 
   std::vector<std::pair<int,std::vector<int> > > executed;
