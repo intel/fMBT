@@ -49,7 +49,7 @@ int Heuristic_random::getAction()
 
   if (i==0) {
     // DEADLOCK
-    return DEADLOCK;
+    return Alphabet::DEADLOCK;
   }
 
   return select(i,actions);
@@ -73,9 +73,9 @@ int Heuristic_random::getIAction()
     // Ok.. no output actions
     i=model->getActions(&actions);
     if (i==0) {
-      return DEADLOCK;      
+      return Alphabet::DEADLOCK;      
     }
-    return OUTPUT_ONLY;
+    return Alphabet::OUTPUT_ONLY;
   }
 
   return select(i,actions);

@@ -58,7 +58,7 @@ int Heuristic_greedy::getAction()
   int i = model->getActions(&actions);
 
   if (i==0) {
-    return DEADLOCK;      
+    return Alphabet::DEADLOCK;      
   }
 
   float* f=new float[i];
@@ -82,7 +82,7 @@ int Heuristic_greedy::getIAction()
   int* actions;
   int i = model->getIActions(&actions);
   int pos = -1;
-  
+
   log.debug("greedy getIACtion %i",i);
 
   for(int u=0;u<i;u++) {
@@ -93,9 +93,9 @@ int Heuristic_greedy::getIAction()
     // No input actions. See if there are output actions available.
     i=model->getActions(&actions);
     if (i==0) {
-      return DEADLOCK;      
+      return Alphabet::DEADLOCK;
     }
-    return OUTPUT_ONLY;
+    return Alphabet::OUTPUT_ONLY;
   }
 
   if (m_search_depth < 1) {

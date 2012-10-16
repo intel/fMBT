@@ -18,132 +18,23 @@
  */
 
 #include "end_condition.hh"
-
+#include "adapter.hh"
+#include "model.hh"
 #include <stdlib.h>
 
 #include <stdio.h> // DEBUG
 
-#ifndef DROI
-#include <glib.h>
-#endif
-
 #include "helper.hh"
 
-End_condition::End_condition(Verdict::Verdict v, Counter c,const std::string& p)
-  : verdict(v), counter(c), param(p),
+End_condition::End_condition(Verdict::Verdict v, const std::string& p)
+  : verdict(v), param(p),
     param_float(-1.0), param_long(-1), param_time(-1)
 {
-  char* endp;
-  switch (counter) {
-
-  case STEPS:
-    param_long = strtol(param.c_str(),&endp,10);
-    if (endp && endp[0]!=0) {
-	
-    }
-    if (param_long>=0 && endp[0]==0) {
-      status = true;
-    } else {
-      errormsg=param+" is not a valid step count";
-      status = false;
-    }
-    break;
-
-  case COVERAGE:
-    param_float = atof(param.c_str());
-    status = true;
-    break;
-
-  case STATETAG:
-    // param already contains the state tag string, but it cannot be
-    // converted into index (param_long) because the model is not
-    // initialized
-    status = true;
-    break;
-
-  case DURATION:
-    {
-      param_time = -1;
-#ifndef DROI
-      char* out = NULL;
-      int stat;
-      std::string ss = "date --date='" + param + "' +%s.%N";
-
-      if (g_spawn_command_line_sync(ss.c_str(), &out, NULL, &stat, NULL)) {
-        if (!stat) {
-          // Store seconds to param_time and microseconds to param_long
-          param_time = atoi(out);
-          param_long = (strtod(out, NULL) - param_time) * 1000000;
-          status = true;
-        } else {
-          errormsg = "Parsing 'duration' parameter '" + param + "' failed.";
-          errormsg += " Date returned an error when executing '" + ss + "'";
-          status = false;
-        }
-      } else {
-        errormsg = "Parsing 'duration' parameter '" + param + "' failed, could not execute '";
-        errormsg += ss + "'";
-        status = false;
-      }
-#else
-      char* endp;
-      long r = strtol(param.c_str(), &endp, 10);
-      if (*endp == 0) {
-        param_time = r;
-        status = true;
-      } else {
-        // Error on str?
-        errormsg = "Parsing duration '" + param + "' failed.";
-        status = false;
-      }
-#endif
-      break;
-    }
-
-  case NOPROGRESS:
-    param_long = atol(param.c_str());
-    status = true;
-    break;
-
-  case DEADLOCK:
-    status = true;
-    break;
-  case ACTION:
-    // param already contains the action string, but it cannot be
-    // converted into index (param_long) because the model is not
-    // initialized
-    status = true;
-    break;
-  } /* switch (counter) ... */    
 }
 
 End_condition::~End_condition()
 {
 
-}
-
-int convert(std::string& s)
-{
-  if (s=="steps") 
-    return End_condition::STEPS;
-
-  if (s=="coverage")
-    return End_condition::COVERAGE;
-
-  if (s=="statetag" || s=="tag") 
-    return End_condition::STATETAG;
-
-  if (s=="duration")
-    return End_condition::DURATION;
-
-  if (s=="no_progress")
-    return  End_condition::NOPROGRESS;
-
-  if (s=="deadlock")
-    return  End_condition::DEADLOCK;
-
-
-  return -1;
 }
 
 End_condition* new_end_condition(Verdict::Verdict v,const std::string& s)
@@ -152,21 +43,62 @@ End_condition* new_end_condition(Verdict::Verdict v,const std::string& s)
   std::string name,option;
   param_cut(s,name,option);
 
-  int i=convert(name);
+  ret = End_conditionFactory::create(v,name,option);
 
-  if (i<0) {
-    split(s, name, option);
-    i=convert(name);
-    if (i>=0) {
+  if (ret) {
+    return ret;
+  }
+
+  //Let's try old thing.
+  split(s, name, option);
+  ret = End_conditionFactory::create(v,name,option);
+  
+  if (ret) {
       fprintf(stderr,
 	      "DEPRECATED END CONDITION SYNTAX. %s\nNew syntax is %s(%s)\n",
 	      s.c_str(),name.c_str(),option.c_str());
-    }
   }
 
-  if (i>=0) {
-    ret = new End_condition(v,(End_condition::Counter)i,option);
-  }
 
   return ret;
 }
+
+bool End_condition_tag::match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic) {
+  int *t;
+  int s = heuristic.get_model()->getprops(&t);
+  for(int i=0; i<s; i++) {
+    if (t[i] == param_long) return true;
+  }
+  return false;
+}
+
+bool End_condition_duration::match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic) {
+  if (Adapter::current_time.tv_sec > param_time + 1 ||
+      (Adapter::current_time.tv_sec == param_time
+       && Adapter::current_time.tv_usec >= param_long)
+      ) return true;
+  
+  return false;
+}
+
+#undef FACTORY_CREATE_PARAMS
+#undef FACTORY_CREATOR_PARAMS
+#undef FACTORY_CREATOR_PARAMS2
+
+#define FACTORY_CREATE_PARAMS Verdict::Verdict v,	               \
+                       std::string name,                               \
+                       std::string params
+
+#define FACTORY_CREATOR_PARAMS Verdict::Verdict v, std::string params
+#define FACTORY_CREATOR_PARAMS2 v, params
+
+FACTORY_IMPLEMENTATION(End_condition)
+
+FACTORY_DEFAULT_CREATOR(End_condition, End_condition_steps,   "steps")
+FACTORY_DEFAULT_CREATOR(End_condition, End_condition_coverage,"coverage")
+FACTORY_DEFAULT_CREATOR(End_condition, End_condition_tag,     "tag")
+FACTORY_DEFAULT_CREATOR(End_condition, End_condition_tag,     "statetag")
+FACTORY_DEFAULT_CREATOR(End_condition, End_condition_duration,"duration")
+FACTORY_DEFAULT_CREATOR(End_condition, End_condition_noprogress,"noprogress")
+FACTORY_DEFAULT_CREATOR(End_condition, End_condition_noprogress,"no_progress")
+FACTORY_DEFAULT_CREATOR(End_condition, End_condition_deadlock,"deadlock")

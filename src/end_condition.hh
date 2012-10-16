@@ -22,10 +22,16 @@
 
 #include "verdict.hh"
 #include "writable.hh"
+#include "heuristic.hh"
+#include "model.hh"
 #include <string>
 
-struct End_condition: public Writable {
+#ifndef DROI
+#include <glib.h>
+#endif
 
+class End_condition: public Writable {
+public:
   typedef enum {
     STEPS = 0,
     COVERAGE,
@@ -36,8 +42,13 @@ struct End_condition: public Writable {
     ACTION
   } Counter;
 
-  End_condition(Verdict::Verdict v, Counter c, const std::string& p);
-  ~End_condition();
+  End_condition(Verdict::Verdict v, const std::string& p);
+  virtual ~End_condition();
+
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic)=0;
+  virtual const std::string& end_reason() {
+    return er;
+  }
 
   Verdict::Verdict verdict;
   Counter counter;
@@ -47,7 +58,202 @@ struct End_condition: public Writable {
   long param_long;
   time_t param_time;
 
+  std::string er;
 };
+
+
+
+class End_condition_steps: public End_condition {
+public:
+  End_condition_steps(Verdict::Verdict v, const std::string& p):
+    End_condition(v,p) {
+    counter = STEPS;
+    er="step limit reached";
+    char* endp;
+    
+    param_long = strtol(param.c_str(),&endp,10);
+    if (endp && endp[0]!=0) {
+      status=false;
+      errormsg=param+" not a valid step limit requirement";
+      return;
+    }
+    if (param_long>=0 && endp[0]==0) {
+      status = true;
+    } else {
+      errormsg=param+" is not a valid step count";
+      status = false;
+    }
+  }
+  virtual ~End_condition_steps() {}
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic) {
+    if (param_long > -1 && step_count >= param_long) return true;
+    return false;
+  }
+};
+
+class End_condition_coverage: public End_condition {
+public:
+  End_condition_coverage(Verdict::Verdict v, const std::string& p):
+    End_condition(v,p) {
+    counter = COVERAGE;
+    er="coverage reached";
+    char* endp;
+    
+    param_float = strtod(param.c_str(),&endp);
+    if (endp && endp[0]!=0) {
+      status=false;
+      errormsg=param+" not a valid coverage requirement";
+      return;
+    }
+    if (endp[0]==0) {
+      status = true;
+    } else {
+      errormsg=param+" is not a valid step count";
+      status = false;
+    }
+  }
+  virtual ~End_condition_coverage() {}
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic) {
+      if (heuristic.getCoverage() >= param_float) return true;
+    return false;
+  }
+};
+
+class End_condition_tag: public End_condition {
+public:
+  End_condition_tag(Verdict::Verdict v, const std::string& p):
+    End_condition(v,p) {
+    counter = STATETAG;
+    er="tag reached";
+    status = true;    
+  }
+  virtual ~End_condition_tag() {}
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic);
+};
+
+class End_condition_duration: public End_condition {
+public:
+  End_condition_duration(Verdict::Verdict v, const std::string& p):
+    End_condition(v,p) {
+    counter = DURATION;
+    er="time limit reached";
+    status=true;
+    param_time = -1;
+#ifndef DROI
+    char* out = NULL;
+    int stat;
+    std::string ss = "date --date='" + param + "' +%s.%N";
+    
+    if (g_spawn_command_line_sync(ss.c_str(), &out, NULL, &stat, NULL)) {
+      if (!stat) {
+	// Store seconds to param_time and microseconds to param_long
+	param_time = atoi(out);
+	param_long = (strtod(out, NULL) - param_time) * 1000000;
+	status = true;
+      } else {
+	errormsg = "Parsing 'duration' parameter '" + param + "' failed.";
+	errormsg += " Date returned an error when executing '" + ss + "'";
+	status = false;
+      }
+    } else {
+      errormsg = "Parsing 'duration' parameter '" + param + "' failed, could not execute '";
+      errormsg += ss + "'";
+      status = false;
+    }
+#else
+    char* endp;
+    long r = strtol(param.c_str(), &endp, 10);
+    if (*endp == 0) {
+      param_time = r;
+      status = true;
+    } else {
+      // Error on str?
+      errormsg = "Parsing duration '" + param + "' failed.";
+      status = false;
+    }
+#endif
+  }
+  virtual ~End_condition_duration() {}
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic);
+};
+
+
+class End_condition_noprogress: public End_condition {
+public:
+  End_condition_noprogress(Verdict::Verdict v, const std::string& p):
+    End_condition(v,p) {
+    er="no progress limit reached";
+    param_long = atol(param.c_str());
+    status = true;
+    counter = NOPROGRESS;
+  }
+  virtual ~End_condition_noprogress() {}
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic) {
+    if (step_count - last_step_cov_growth >= param_long) return true;
+
+    return false;
+  }
+};
+
+
+class End_condition_deadlock: public End_condition {
+public:
+  End_condition_deadlock(Verdict::Verdict v, const std::string& p):
+    End_condition(v,p) {
+    er="deadlock reached";
+    status = true;
+    counter = DEADLOCK;
+  }
+  virtual ~End_condition_deadlock() {}
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic) {
+    if (state==Alphabet::DEADLOCK) {
+      return true;
+    }
+    
+    return false;
+  }
+};
+
+class End_condition_action: public End_condition {
+public:
+  End_condition_action(Verdict::Verdict v, const std::string& p):
+    End_condition(v,p) {
+    er="executed break action";
+    status = true;
+    counter = ACTION;
+  }
+  virtual ~End_condition_action() {}
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic) {
+    if ((action>=0) && (action==param_long)) return true;
+
+    return false;
+  }
+};
+
+#undef FACTORY_CREATE_PARAMS
+#undef FACTORY_CREATOR_PARAMS
+#undef FACTORY_CREATOR_PARAMS2
+
+#define FACTORY_CREATE_PARAMS Verdict::Verdict v,	               \
+                       std::string name,                               \
+                       std::string params
+
+#define FACTORY_CREATOR_PARAMS Verdict::Verdict v, std::string params
+#define FACTORY_CREATOR_PARAMS2 v, params
+
+FACTORY_DECLARATION(End_condition)
+
+#undef FACTORY_CREATE_PARAMS
+#undef FACTORY_CREATOR_PARAMS
+#undef FACTORY_CREATOR_PARAMS2
+
+#define FACTORY_CREATE_PARAMS Log& log,                                \
+                       std::string name,                               \
+                       std::string params
+
+#define FACTORY_CREATOR_PARAMS Log& log, std::string params
+#define FACTORY_CREATOR_PARAMS2 log, params
+
 
 End_condition* new_end_condition(Verdict::Verdict,const std::string&);
 

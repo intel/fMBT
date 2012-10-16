@@ -137,9 +137,9 @@ int aal_remote::observe(std::vector<int> &action, bool block)
   int action_alternatives = getact(NULL, action, d_stdin, d_stdout,_log);
   
   if (action_alternatives > 0) {
-    if (action[0] == SILENCE) {
+    if (action[0] == Alphabet::SILENCE) {
       action.clear();
-      return SILENCE;
+      return Alphabet::SILENCE;
     }
   }
   return action_alternatives != 0;

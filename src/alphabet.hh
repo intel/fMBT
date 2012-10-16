@@ -21,6 +21,8 @@
 
 #include <string>
 
+class Alphabet {
+public:
 enum values {
   OUTPUT_ONLY =-1,
   DEADLOCK = -2,
@@ -28,8 +30,6 @@ enum values {
   TIMEOUT = -4
 };
 
-class Alphabet {
-public:
   virtual ~Alphabet() {}
   //! Returns names of all actions available.
   virtual std::vector<std::string>& getActionNames() = 0;

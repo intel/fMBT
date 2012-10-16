@@ -196,7 +196,7 @@ std::string aalang_cpp::stringify()
     }
   }
   if (!obsa) {
-    s=s+"\treturn SILENCE;\n";
+    s=s+"\treturn Alphabet::SILENCE;\n";
   }
   s=s+"\t} while(block);"
     "\treturn 0;\n"

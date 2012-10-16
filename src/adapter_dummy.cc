@@ -77,7 +77,7 @@ int Adapter_dummy::observe(std::vector<int> &action,
   }
   }
 
-  return SILENCE;
+  return Alphabet::SILENCE;
 }
 
 FACTORY_DEFAULT_CREATOR(Adapter, Adapter_dummy, "dummy")

@@ -125,7 +125,7 @@ FACTORY_DECLARATION(Adapter)
     tv.tv_sec=Test_engine::end_time;         \
     tv.tv_usec=0;                            \
     if (!timercmp(&current_time,&tv,<)) {    \
-      return TIMEOUT;                        \
+      return Alphabet::TIMEOUT;		     \
     }                                        \
   }                                          \
 }
