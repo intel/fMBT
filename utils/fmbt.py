@@ -27,6 +27,10 @@
 # Log function implementations are provided by the adapter
 # component such as remote_python or remote_pyaal.
 
+import datetime
+
+g_fmbt_adapterlogtimeformat="%s.%f"
+
 def fmbtlog(msg, flush=True):
     try: file("/tmp/fmbt.fmbtlog", "a").write("%s\n" % (msg,))
     except: pass
@@ -38,3 +42,18 @@ def adapterlog(msg, flush=True):
 def reportOutput(msg):
     try: file("/tmp/fmbt.reportOutput", "a").write("%s\n" % (msg,))
     except: pass
+
+def setAdapterLogTimeFormat(strftime_format):
+    """
+    Use given time format string in timestamping adapterlog messages
+    """
+    global g_fmbt_adapterlogtimeformat
+    g_fmbt_adapterlogtimeformat = strftime_format
+
+def formatAdapterLogMessage(msg, fmt="%s %s\n"):
+    """
+    Return timestamped adapter log message
+    """
+    return fmt % (
+        datetime.datetime.now().strftime(g_fmbt_adapterlogtimeformat),
+        msg)

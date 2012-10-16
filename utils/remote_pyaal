@@ -73,11 +73,11 @@ log_flush_interval = 1.0 # in seconds
 def _log(msg, flush=False):
     global log_filename
     if opt_debug:
-        file(log_filename,"a").write("%.4f %s\n" % (time.time(), msg))
+        file(log_filename,"a").write(fmbt.formatAdapterLogMessage(msg))
         return
     current_time = time.time()
     if log_filename:
-        _log.messages.append("%.4f %s\n" % (current_time, msg))
+        _log.messages.append(fmbt.formatAdapterLogMessage(msg))
         if flush or current_time - _log.last_flush > log_flush_interval:
             file(log_filename,"a").write(''.join(_log.messages))
             _log.last_flush = current_time

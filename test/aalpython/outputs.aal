@@ -1,5 +1,9 @@
 aal "outputs" {
-    language: python { import os }
+    language: python {
+        import os
+        import fmbt
+        fmbt.setAdapterLogTimeFormat("DATETIME %F %T.%f")
+    }
 
     variables { found, exists, filenames, file_exists }
 
