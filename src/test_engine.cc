@@ -243,6 +243,9 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
     while (adapter.observe(actions)>0) {
       step_count++;
       action = policy.choose(actions);
+      if (action>=heuristic.get_model()->getActionNames().size()) {
+        return stop_test(Verdict::ERROR, std::string("adapter communication failure. Adapter returned action "+to_string(action)+" which is out of range").c_str());
+      }
       log_adapter_output(log, adapter, action);
 
       if (!heuristic.execute(action)) {
@@ -338,6 +341,12 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
         return stop_test(Verdict::ERROR, "adapter communication failure");
       }
       int adapter_response = policy.choose(actions);
+
+      // Let's chect that adapter_response is in the valid range.
+      if (adapter_response>=heuristic.get_model()->getActionNames().size()) {
+        return stop_test(Verdict::ERROR, std::string("adapter communication failure. Adapter returned action "+to_string(adapter_response)+" which is out of range").c_str());
+      }
+
       log_adapter_execute(log, adapter, adapter_response);
       log.debug("Test_engine::run: passing adapter response action %i to test generation.\n",
 		adapter_response);
