@@ -23,8 +23,8 @@ Usage: remote_python [options]
 
 Options:
   -c <string>
-          execute the given string in Python interpreter before
-          starting executing actions. Example:
+          execute the string in the Python interpreter before starting
+          executing actions. Example:
           remote_python -c 'from myteststeps import *'
 
   -d, --action-delay=<float>
