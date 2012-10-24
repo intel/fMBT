@@ -17,7 +17,7 @@
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
 ########################################################################
-# This script generates tests many tests based on given configuration
+# This script generates many tests based on given configuration
 # file. New tests are generated as long as
 #
 # 1. generated tests result in verdict "inconclusive", and
