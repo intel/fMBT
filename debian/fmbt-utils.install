@@ -1,6 +1,5 @@
 usr/bin/fmbt-view
 usr/bin/fmbt-log
-usr/bin/fmbt-log2lsts
 usr/bin/fmbt-stats
 usr/bin/lsts2dot
 usr/bin/fmbt-ucheck
