@@ -250,12 +250,21 @@ def iVerifyWord(word, match=0.33, capture=None):
     Verify that word can be found from previously iRead() image.
 
     Parameters:
-        word       - word that should be checked
-        match      - minimum matching score
-        capture    - save image with verified word highlighted
+        word         word that should be checked
+
+        match        minimum matching score
+
+        capture      save image with verified word highlighted
                      to this file. Default: None (nothing is saved).
 
-    Returns pair: score, matching_word
+    Returns pair: ((score, matchingWord), (left, top, right, bottom)), where
+
+        score        score of found match (1.0 for perfect match)
+
+        matchingWord corresponding word detected by OCR
+
+        (left, top, right, bottom)
+                     bounding box of the word in read image
 
     Throws BadMatch error if word is not found.
     """
@@ -267,20 +276,28 @@ def iVerifyWord(word, match=0.33, capture=None):
     if score < match:
         raise BadMatch('No matching word for "%s". The best candidate "%s" with score %.2f, required %.2f' %
                             (word, matching_word, score, match))
-    return score, matching_word
+    return ((score, matching_word), g_words[matching_word][0][2])
 
 def iVerifyIcon(iconFilename, match=1.0, capture=None, _origin="iVerifyIcon"):
     """
     Verify that icon can be found from previously iRead() image.
 
     Parameters:
-        iconFilename - name of the icon file to be searched for
-        match        - minimum matching score between 0 and 1.0,
+
+        iconFilename   name of the icon file to be searched for
+
+        match          minimum matching score between 0 and 1.0,
                        1.0 is perfect match (default)
-        capture      - save image with verified icon highlighted
+
+        capture        save image with verified icon highlighted
                        to this file. Default: None (nothing is saved).
 
-    Returns pair: score, bounding box of found icon
+    Returns pair: (score, (left, top, right, bottom)), where
+
+        score          score of found match (1.0 for perfect match)
+
+        (left, top, right, bottom)
+                       bounding box of found icon
 
     Throws BadMatch error if icon is not found.
     """
@@ -315,7 +332,7 @@ def iVerifyIcon(iconFilename, match=1.0, capture=None, _origin="iVerifyIcon"):
     if capture:
         drawIcon(g_origImage, capture, iconFilename, bbox)
 
-    return score, bbox
+    return (score, bbox)
 
 def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=1.0, mousebutton=1, mouseevent=1, dryRun=False, capture=None):
     """
@@ -341,13 +358,20 @@ def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=1.0, mousebutton=1, mouse
         mouseevent   event to be synthesized, default is MOUSEEVENT_CLICK,
                      others: MOUSEEVENT_MOVE, MOUSEEVENT_DOWN, MOUSEEVENT_UP.
 
-        dryRun       if True, does not synthesize events. Can still illustrate
-                     what would have been done on the capture image if given.
+        dryRun       if True, does not synthesize events. Still returns
+                     coordinates of the clicked position and illustrates
+                     the clicked position on the capture image if
+                     given.
 
         capture      name of file where image of highlighted icon and
                      clicked point are saved.
 
-    Returns score (1.0 for pixel-perfect match)
+    Returns pair (score, (clickedX, clickedY)), where
+
+        score        score of found match (1.0 for perfect match)
+
+        (clickedX, clickedY)
+                     X and Y coordinates of clicked position
 
     Throws BadMatch error if could not find a matching word.
     """
@@ -373,17 +397,20 @@ def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=1.0, mousebutton=1, mouse
         # use xte from the xautomation package
         runcmd("xte 'mousemove %s %s' %s" % (click_x, click_y, params))
 
-    return score
+    return (score, (click_x, click_y))
 
 def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33, mousebutton=1, mouseevent=1, dryRun=False, capture=None):
     """
     Click coordinates relative to the given word in previously iRead() image.
 
     Parameters:
-        word       - word that should be clicked
-        appearance - if word appears many times, appearance to
+
+        word         word that should be clicked
+
+        appearance   if word appears many times, appearance to
                      be clicked. Defaults to the first one.
-        clickPos   - position to be clicked,
+
+        clickPos     position to be clicked,
                      relative to word top-left corner of the bounding
                      box around the word. X and Y units are relative
                      to width and height of the box.  (0,0) is the
@@ -391,10 +418,18 @@ def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33, mousebutton=1
                      (0.5, 0.5) is the middle point (default).
                      Values below 0 or greater than 1 click outside
                      the bounding box.
-        capture    - name of file where image of highlighted word and
+
+        capture      name of file where image of highlighted word and
                      clicked point are saved.
 
-    Returns pair: score, matching_word
+    Returns pair: ((score, matchingWord), (clickedX, clickedY)), where
+
+        score        score of found match (1.0 for perfect match)
+
+        matchingWord corresponding word detected by OCR
+
+        (clickedX, clickedY)
+                     X and Y coordinates of clicked position.
 
     Throws BadMatch error if could not find a matching word.
     """
@@ -434,7 +469,7 @@ def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33, mousebutton=1
     if not dryRun:
         # use xte from the xautomation package
         runcmd("xte 'mousemove %s %s' %s" % (click_x, click_y, params))
-    return score
+    return ((score, matching_word), (click_x, click_y))
 
 def iType(word, delay=0.0):
     """
