@@ -103,6 +103,11 @@ fmbt outputs.conf 2>test.verdict | tee outputs.log >> $LOGFILE
     testpassed
 ) || testfailed
 
+grep -q '^DATETIME' pyaal.log || {
+    echo "possible fmbt.setAdapterLogTimeFormat() failure" >> $LOGFILE
+    testfailed
+}
+
 teststep "remote_pyaal adapter_exception_handler..."
 cat > expected-steps.txt <<EOF
 iStep1

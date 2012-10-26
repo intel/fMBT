@@ -64,7 +64,9 @@ testpassed
 teststep "fmbt-stats: logs and parameters (quick)"
 cat > quick.conf <<EOF
 model     = "lsts(model.lsts)"
-adapter   = "remote(remote_python -l adapter.log -c 'from teststeps import *')"
+adapter   = "remote(remote_python -l adapter.log
+                 -c 'import fmbt; fmbt.setAdapterLogTimeFormat(\"TIME: %T.%f\")'
+                 -c 'from teststeps import *')"
 heuristic = "lookahead(4)"
 coverage  = "perm(1)"
 inconc    = "coverage:1.1"
@@ -74,6 +76,10 @@ EOF
 fmbt quick.conf -l quick.log >>$LOGFILE 2>&1 || {
     testfailed
     exit 1
+}
+grep -q '^TIME:' adapter.log || {
+    echo "possible fmbt.setAdapterLogTimeFormat() failure" >> $LOGFILE
+    testfailed
 }
 testpassed
 

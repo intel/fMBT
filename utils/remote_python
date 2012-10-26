@@ -23,8 +23,8 @@ Usage: remote_python [options]
 
 Options:
   -c <string>
-          execute the given string in Python interpreter before
-          starting executing actions. Example:
+          execute the string in the Python interpreter before starting
+          executing actions. Example:
           remote_python -c 'from myteststeps import *'
 
   -d, --action-delay=<float>
@@ -75,20 +75,22 @@ import atexit
 
 import signal
 
+import fmbt
+
 MAX_LINE_LENGTH=1024*1024 # bytes
 MAX_LOGGED_RETURN_VALUE_LENGTH = 142
 
 gLogFile = "/tmp/remote_python.log"
 
 def log(msg, writeToFile=1, writeToStdout=0, writeToStderr=0):
-    timestamped = "l%13.2f %s\n" % (time.time(), msg.rstrip())
+    timestamped = fmbt.formatAdapterLogMessage(msg.rstrip())
     if writeToFile:
         file(gLogFile, "a").write(timestamped)
     if writeToStdout:
-        sys.stdout.write(urllib.quote(timestamped[:-1]) + '\n')
+        sys.stdout.write('l' + urllib.quote(timestamped[:-1]) + '\n')
         sys.stdout.flush()
     if writeToStderr:
-        sys.stderr.write(urllib.quote(timestamped[:-1]) + '\n')
+        sys.stderr.write('l' + urllib.quote(timestamped[:-1]) + '\n')
 
 def error(msg):
     global g_loop
