@@ -181,7 +181,7 @@ teststep "coverage: uwalks between tags..."
 cat > uwalks.conf <<EOF
 model     = "aal_remote(remote_pyaal -l twocounters.aal.log 'twocounters.aal')"
 heuristic = "lookahead(5)"
-coverage  = "uwalks(from \"all_zeros\" to \"all_ones\")"
+coverage  = "uwalks(from 'all_zeros' to 'all_ones')"
 pass      = "coverage(1)"
 fail      = "steps(20)"
 on_pass   = "exit(0)"
@@ -203,6 +203,41 @@ then
 else
     testfailed
 fi
+
+teststep "coverage: uwalks between actions..."
+cat > uwalks.conf <<EOF
+model     = "lsts_remote(fmbt-gt -f coffee.gt)"
+heuristic = "lookahead(7)"
+coverage  = "uwalks(from 'iOrderCoffee' to 'iCollectItem')"
+pass      = "coverage(5)"
+fail      = "no_progress(10)"
+fail      = "steps(100)"
+on_pass   = "exit(0)"
+on_fail   = "exit(1)"
+on_inconc = "exit(2)"
+EOF
+
+if ! fmbt -l uwalks.log uwalks.conf 2>uwalks-verdict.txt; then
+    echo "this uwalks.conf test was expected to pass:" >>$LOGFILE
+    cat uwalks.conf >>$LOGFILE
+    tail -n 20 uwalks.log >>$LOGFILE
+    testfailed
+fi
+
+fmbt-log uwalks.log | tee uwalks-steps-seen.txt >>$LOGFILE
+
+if [ "$(grep iCollectItem uwalks-steps-seen.txt | wc -l)" != "5" ]; then
+    echo "five iCollectItem steps expected," >>$LOGFILE
+    echo "$(grep iCollectItem uwalks-steps-seen.txt | wc -l) seen." >>$LOGFILE
+    testfailed
+fi
+
+if grep -q iCancelOrder uwalks-steps-seen.txt; then
+    echo "iCancelOrder appears in the log but it should not." >>$LOGFILE
+    echo "- it does not add minimal unique walks" >>$LOGFILE
+    testfailed
+fi
+testpassed
 
 teststep "coverage: include"
 cat > cinclude.conf <<EOF
