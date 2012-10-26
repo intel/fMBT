@@ -1,7 +1,7 @@
 if ANDROID
 bin_PROGRAMS = fmbt_droid
 else
-bin_PROGRAMS = fmbt remote_adapter_loader fmbt-aalc fmbt-aalp fmbt-ucheck fmbt-log2lts
+bin_PROGRAMS = fmbt remote_adapter_loader fmbt-aalc fmbt-aalp fmbt-ucheck fmbt-log2lsts
 endif
 
 if HAVE_PYTHON
@@ -33,7 +33,7 @@ remote_adapter_loader_CPPFLAGS = -Wall -pedantic -I d -DDROI
 fmbt_cparsers_la_CPPFLAGS      = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DCAPI
 eye4graphics_la_CPPFLAGS       = -Wall -fPIC -I `pwd` `pkg-config --cflags Magick++`
 fmbt_aalc_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DINCDIR=\"${pkgincludedir}\"
-fmbt_log2lts_CPPFLAGS	       = -Wall -pedantic -fPIC -I d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0 libxml-2.0`
+fmbt_log2lsts_CPPFLAGS	       = -Wall -pedantic -fPIC -I d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0 libxml-2.0`
 
 fmbt_LDFLAGS                   = -g $(JVMLDFLAGS) `pkg-config --libs glib-2.0 gobject-2.0 libedit libxml-2.0` -lboost_regex -Wl,-E -ldl
 fmbt_ucheck_LDFLAGS            = -g `pkg-config --libs glib-2.0 gobject-2.0 libedit libxml-2.0` -lboost_regex -Wl,-E -ldl
@@ -42,7 +42,7 @@ fmbt_cparsers_la_LDFLAGS       = -g `pkg-config --libs glib-2.0 gobject-2.0 libe
 eye4graphics_la_LDFLAGS        = -g `pkg-config --libs Magick++` -avoid-version -module -shared
 remote_adapter_loader_LDFLAGS  = -g -ldl
 fmbt_aalc_LDFLAGS	       = -g `pkg-config --libs glib-2.0 gobject-2.0 libedit` -lboost_regex -Wl,-E -ldl
-fmbt_log2lts_LDFLAGS 	       = -g `pkg-config --libs libedit glib-2.0 gobject-2.0 libedit libxml-2.0` -lboost_regex -Wl,-E -ldl
+fmbt_log2lsts_LDFLAGS 	       = -g `pkg-config --libs libedit glib-2.0 gobject-2.0 libedit libxml-2.0` -lboost_regex -Wl,-E -ldl
 
 fmbt_LDADD                     = d/libdparse.a
 fmbt_ucheck_LDADD              = d/libdparse.a
@@ -50,7 +50,7 @@ fmbt_droid_LDADD               = d/libdparse.a
 fmbt_cparsers_la_LIBADD        = d/libdparse.a
 remote_adapter_loader_LDADD    = d/libdparse.a
 fmbt_aalc_LDADD                = d/libdparse.a
-fmbt_log2lts_LDADD   	       = d/libdparse.a
+fmbt_log2lsts_LDADD   	       = d/libdparse.a
 
 dsources = d/baseline d/BUILD_VERSION d/calc d/CHANGES d/COPYRIGHT d/Makefile d/parser_tests d/README d/arg.h d/d.h d/dparse.h d/dparse_tables.h d/dparse_tree.h d/dsymtab.h d/gramgram.h d/gram.h d/lex.h d/lr.h d/mkdparse.h d/parse.h d/read_binary.h d/scan.h d/util.h d/write_tables.h d/arg.c d/dparse_tree.c d/driver_parsetree.c d/gram.c d/grammar.g.c d/lex.c d/lr.c d/make_dparser.c d/mkdparse.c d/my.c d/parse.c d/read_binary.c d/sample_parser.c d/scan.c d/symtab.c d/test_parser.c d/util.c d/version.c d/write_tables.c d/4calc.g d/C.g d/my.g d/sample.g d/faq.html d/index.html d/manual.html d/make_dparser.1 d/make_dparser.cat
 

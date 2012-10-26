@@ -16,6 +16,20 @@ Syntax:
 
 Available types & parameters:
 
+        aal_remote(<command>)
+
+                uses a child process that executes <command> as a
+                model. Communicates with the child using fMBT AAL
+                protocol.
+
+        lib(<modelname>[,filename])
+
+                uses model "modelname". If the model is not already
+                registered (statically linked or LD_PRELOADed, for
+                instance), shared library <filename> is loaded. If
+                <filename> is not given, fMBT tries to load
+                "modelname.so" and "libmodelname.so".
+
         lsts(<filename>)
 
                 loads state machine in lsts from the given file.
@@ -35,15 +49,11 @@ Available types & parameters:
                 like parallel but reads standard output of <command>
                 instead of a file.
 
-        lib(<modelname>[,filename])
-
-                uses model "modelname". If the model is not already
-                registered (statically linked or LD_PRELOADed, for
-                instance), shared library <filename> is loaded. If
-                <filename> is not given, fMBT tries to load
-                "modelname.so" and "libmodelname.so".
-
 Examples:
+
+        model = "aal_remote(remote_pyaal -l aal.log mytest.aal)"
+
+        model = "lib(myaaltest1(foo),myaaltests.so)"
 
         model = "lsts(models/mymodel.lsts)"
 
@@ -55,7 +65,6 @@ Examples:
 
         model = "parallel_remote(fmbt-parallel a.lsts b.lsts)"
 
-        model = "lib(myaaltest1(foo),myaaltests.so)"
 
 
 Adapter
@@ -70,6 +79,13 @@ Syntax:
         adapter = "type(params)"
 
 Available types & parameters:
+
+        aal_remote(<command>)
+
+                executes <command> in a child process to invoke an AAL
+                adapter. If exactly the same command is used for
+                invoking an aal_remote model, too, the same child
+                process will implement both the model and the adapter.
 
         dummy
 
@@ -88,15 +104,19 @@ Available types & parameters:
 
         remote(<command>)
 
-                launches a remote adapter process and forwards actions
-                to it for execution. fMBT comes with remote adapters
+                executes <command> in a child process and forwards
+                actions to it for execution. <command> is executed
+                only once, the same child process will execute
+                multiple actions. fMBT comes with remote adapters
                 remote_python and remote_exec.sh (see adapters.txt).
 
 Examples:
 
+        adapter = "aal_remote(remote_pyaal -l aal.log mytest.aal)"
+
         adapter = "remote(remote_exec.sh)"
 
-        adapter = "remote(ssh user@host ./remote_python)"
+        adapter = "remote(ssh user@host ./remote_python -l adapter.log)"
 
         adapter = "mapper(adapters.mrules)"
 
@@ -117,16 +137,37 @@ Syntax:
 
 Available types & parameters:
 
+        exclude(action-regexp [, action-regexp...], heuristic-spec)
+
+                limits test generation by excluding given actions and
+                actions matching action-regexps. Uses heuristic-spec
+                to choose the next action but hides it the possibility
+                to execute excluded actions. Excluded actions are
+                suggested by exclude(...) heuristics only if no other
+                input actions are available. If action-regexp is not a
+                name of action, it is handled as a regular expression.
+
+        include(action-regexp [, action-regexp...], heuristic-spec)
+
+                limits test generation to given actions or actions
+                matching action-regexps. Uses heuristic-spec to choose
+                the next action but hides it the possibility to
+                execute other than included actions. Excluded actions
+                are suggested by include(...) heuristics only if no
+                other input actions are available. If action-regexp is
+                not a name of action, it is handled as a regular
+                expression.
+
         lookahead[(depth)]
 
                 if depth is given, simulates execution of all possible
-                paths of length <depth> in the test model. Choose the
+                paths of length <depth> in the test model. Chooses the
                 first action of a path that results in the best
                 coverage. If depth is not given, decision is made only
                 based on names of enabled actions in the current state
-                of the model. Execution on model is not simulated.
+                of the model without simulation.
 
-        mrandom(weight,heuristic,...)
+        mrandom(weight, heuristic[, weight, heuristic...])
 
                 eg. mrandom(20,random(1343649162),80,lookahead(5)) will
 		use random heuristic with 20% propability and lookahead with
@@ -142,9 +183,23 @@ Available types & parameters:
 
 Examples:
 
+        heuristic = "exclude(.*Error.*, lookahead(3))"
+
+                chooses the first action of a three-step-path that
+                gives the best coverage and does not include actions
+                containing string "Error". Suggests an action
+                containing "Error" only if nothing else can be
+                suggested.
+
         heuristic = "lookahead(5)"
 
+                chooses the first action of a five-step-path that gives
+                the best coverage.
+
         heuristic = "random(42)"
+
+                chooses a random enabled action with a random number
+                generator initialised with seed 42.
 
 
 Coverage
@@ -152,7 +207,7 @@ Coverage
 
 Defines how coverage of test run is measured.
 
-Defaults to "perm"
+Defaults to "perm".
 
 Syntax:
 
@@ -160,9 +215,23 @@ Syntax:
 
 Available types & parameters:
 
+        exclude(action-regexp [, action-regexp...], coverage-spec)
+
+                uses coverage-spec to measure coverage, but execution
+                of excluded actions will not affect the result. If
+                action-regexp is not a name of action, it is handled
+                as a regular expression.
+
+        include(action-regexp [, action-regexp...], coverage-spec)
+
+                uses coverage-spec to measure coverage, but execution
+                of included actions only will affect the result. If
+                action-regexp is not a name of action, it is handled
+                as a regular expression.
+
         perm[(count)]
 
-                measure coverage of all permutations of any <count>
+                measures coverage of all permutations of any <count>
                 actions in the test model. If count is not given, it
                 defaults to 2.
 
@@ -174,28 +243,43 @@ Available types & parameters:
         
         covlang(<expression>)
 
-                measure coverage of the given coverage language
+                measures coverage of the given coverage language
                 expression. The expression is formed by combining "a
                 actionname", "e action-regexp" with "and", "or" and
                 "then" operators and parenthesis.
 
 Examples:
 
+        coverage = "exclude(.*Choose(Cash|Credit|Bank).*, perm(1))"
+
+                measures coverage of all other actions but those which
+                include ChooseCash, ChooseCredit or ChooseBank in
+                their names.
+
+        coverage = "include(iChoose(Cash|Credit|Bank), iPay, perm(2))"
+
+                measures coverage of action pairs from the set of four
+                actions: iChooseCash, iChooseCredit, iChooseBank and
+                iPay. Because of measuring perm(2), reaching full
+                coverage requires, for instance, testing action pairs
+
+                iChooseCash, iPay
+                iChooseCredit, iPay
+                iChooseBank, iPay
+
         coverage = "perm(1)"
 
-                 good for a smoke test, coverage reaches 1.0 when
-                 every action in the model has been executed at least
-                 once.
+                good for a smoke test, coverage reaches 1.0 when
+                every action in the model has been executed at least
+                once.
 
         coverage = "perm(2)"
 
                 if there are actions A, B and C in the model, coverage
-                of "perm:2" reaches 1.0 when AB, BA, AC, CA, BC and CB
-                have been executed. Suitable for regression
-                tests. Notice that not all permutations can be covered
-                because of test model. Therefore it's a good idea to
-                set a limit for number of steps, too. See End
-                conditions.
+                of "perm(2)" reaches 1.0 when AA, AB, AC, BA, BB, BC,
+                CA, CB and CC have been executed. Suitable for
+                regression tests. Notice that not all permutations can
+                be covered because of test model. See End conditions.
 
         coverage = "covlang(a A then (a B or a C))"
 
@@ -209,7 +293,8 @@ History
 
 Fill coverage by reading test history from given log files before
 starting test generation. This can be used, for instance, to generate
-tests that have not been generated in previous test runs.
+tests that have not been generated in previous test runs. There can be
+several history lines in the test configuration.
 
 Syntax:
 
@@ -219,26 +304,38 @@ Available types & parameters:
 
         log(filename)
 
-                read log from filename
+                reads log from filename and feed it to the current
+                coverage configuration.
+
+Examples:
+
+        coverage = "perm(2)"
+        history  = "log(smoketest.log)"
+
+                Assume that an already executed smoke test produced
+                smoketest.log. Measure now coverage perm(2) and,
+                before starting test generation, consider all
+                permutions of two actions covered that were already
+                tested in the smoke test.
 
 
 End conditions
 --------------
 
-Define in which conditions test must be stopped and the resulting
+Define under which conditions testing must be stopped with a given
 verdict. There can be many end conditions that result in the same
 verdict.
 
-If any verdict on coverage is not given, there is a default coverage
-end condition: pass = "coverage:1.0".
+If any verdicts on coverage is not given, there is a default coverage
+end condition: pass = "coverage(1.0)".
 
 Syntax:
 
-        <verdict> = "measure:value"
+        <verdict> = "measure(value)"
 
         <verdict> = "condition"
 
-Available verdict:
+Available verdicts:
 
         pass    test did not find any errors and tested what was wanted.
 
@@ -249,18 +346,19 @@ Available verdict:
 
 Available measures, values and conditions:
 
-        coverage:<decimal>
+        coverage(<decimal>)
 
                 finish with the verdict if coverage reaches the given
-                level. coverage returns values from 0.0 to 1.0
-                (including 0.0 and 1.0).
+                level. perm coverages return values from 0.0 to 1.0
+                (including 0.0 and 1.0), some other coverages like
+                path counters can return values greater than 1.0, too.
 
         deadlock
 
                 finish with the verdict if model is in a deadlock
                 state, that is, there are no enabled actions.
 
-        duration:<timespec>
+        duration(<timespec>)
 
                 finish with the verdict if the time limit is reached.
                 <timespec> is anything accepted by
@@ -270,17 +368,18 @@ Available measures, values and conditions:
                 for instance, "1.5 secs", "1 hour 30 minutes", "2
                 days", "1 week", or "2012-06-24 15:30".
 
-        no_progress:<integer>
+        no_progress(<integer>)
 
                 finish with the verdict if <integer> test steps have
-                been executed in a row without progress in coverage.
+                been executed in a row without progress in measured
+                coverage.
 
-        tag:<name>
+        tag(<name>)
 
                 finish with the verdict when the current state of the
                 test model is tagged with <name>.
 
-        steps:<integer>
+        steps(<integer>)
 
                 finish with the verdict when the number of test steps
                 reaches <integer>.
@@ -294,29 +393,30 @@ Examples:
         state with tag this_should_never_happen is reached or model is
         in deadlock.
 
-        pass   = "coverage:0.5"
+        pass   = "coverage(0.5)"
 
-        pass   = "steps:1000"
+        pass   = "steps(1000)"
 
-        inconc = "duration:7 seconds"
+        inconc = "duration(7 seconds)"
 
-        fail   = "tag:this_should_never_happen"
+        fail   = "tag(this_should_never_happen)"
 
         fail   = "deadlock"
+
 
 Exit hooks
 ----------
 
 An exit hook defines how fmbt process behaves when test run is
-finished on given verdict.
+finished with given verdict.
 
 Syntax:
 
-        on_<verdict> = "type:params"
+        on_<verdict> = "type(params)"
 
 or
 
-        on_error = "type:params"
+        on_error = "type(params)"
 
         on_error hook is entered if an unexpected error prevents
         continuing test run. For instance, if the connection to a
@@ -324,14 +424,14 @@ or
 
 Available types & parameters:
 
-        exit:status
+        exit(status)
 
                 exit with the given exit status.
 
 Examples:
 
-        on_fail   = "exit:1"
+        on_fail   = "exit(1)"
 
-        on_inconc = "exit:2"
+        on_inconc = "exit(2)"
 
-        on_error  = "exit:42"
+        on_error  = "exit(42)"

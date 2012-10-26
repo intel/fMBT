@@ -1,3 +1,12 @@
+fmbt (0.2.0) natty; urgency=low
+
+  * heuristics: exclude/include actions.
+  * coverage: exclude/include actions.
+  * configuration and Python/AAL documentation.
+  * packaging
+
+ -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 10 Oct 2012 16:03:25 +0300
+
 fmbt (0.1.2) natty; urgency=low
 
   * Error messages from remote adapters printed to stderr.

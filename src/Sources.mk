@@ -24,4 +24,4 @@ eye4graphics_la_SOURCES       = eye4graphics.cc
 
 fmbt_aalp_SOURCES = aalp.ll
 
-fmbt_log2lts_SOURCES = log2lsts.cc lts.cc model.cc log.cc coverage.cc lts.g.d_parser.cc history.cc helper.cc history_log.cc
+fmbt_log2lsts_SOURCES = log2lsts.cc lts.cc model.cc log.cc coverage.cc lts.g.d_parser.cc history.cc helper.cc history_log.cc

@@ -45,6 +45,9 @@ testfailed() {
         printf "failed, see $LOGFILE\n"        
     fi
     echo "# failed." >>$LOGFILE
+    echo "### $LOGFILE CONTENTS ###"
+    cat "$LOGFILE"
+    echo "### END OF $LOGFILE ###"
     exit 1
 }
 

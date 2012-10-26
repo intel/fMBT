@@ -2,8 +2,7 @@
 AAL/Python
 ==========
 
-This is an AAL/Python reference for people who create test models,
-adapters or both using AAL/Python.
+This is AAL/Python reference documentation.
 
 AAL is a pre/postcondition language for defining
 
@@ -63,42 +62,45 @@ Names of actions must start with either
   the test generator.
 
 - "o" for output actions. Execution of these actions is triggered by
-  the system under test.
+  the system under test. Test engine cannot suggest executing these
+  actions.
 
 Comments in AAL are written after "#" on their own lines. Commenting
-inside code blocks depend on the programming language.
+syntax inside code blocks is the same as in the programming language
+in use.
 
 
 Control flow
 ------------
 
-When compiled AAL module is loaded by fmbt or its adapter like
+When a compiled AAL module is loaded by fmbt or its adapter like
 remote_pyaal, the prelude code is executed first. Once loaded, the
 model/adapter is initialised by executing the initial_state
-block. After this the AAL module is ready for test run.
+block. After this the AAL module is ready for test run and the control
+flow is as follows.
 
 
 Control flow in a simple test run
 
 Let us consider a simple case first:
 
-- test generation heuristic is random or lookahead without parameters
-  (that is, test execution will not be simulated)
+- Test generation heuristic is random or lookahead without parameters
+  (that is, test execution will not be simulated).
 
-- the same AAL code is used as a model and an adapter in the test
-  configuration
+- The same AAL code is used as a model and an adapter in the test
+  configuration.
 
-- AAL contains only input actions
+- AAL contains only input actions.
 
 First, the test generator evaluates guard() of every input action. If
 there are multiname actions, their guard() is evaluated for each name
 separately.
 
 Once the generator has decided the next step among actions whose
-guards returned true, it executes the adapter() of the chosen
-action. If executed successfully, the generator finally executes
-body() of the action. The next round starts by evaluating guards()
-again.
+guards returned true, it executes the adapter() block of the chosen
+action. If executed successfully, the generator finally executes the
+body() block of the action. The next round starts by evaluating
+guards() again.
 
 
 Control flow in case of simulation
@@ -108,17 +110,18 @@ if test configuration defines heuristic lookhead(n) with n > 0. In
 simulation the generator calls guard() blocks of all input actions,
 then for each enabled action it:
 
-1. pushes the values of variables to a stack.
+1. pushes the values of variables into a stack.
 
-2. executes the body() of the action in simulation turn. This may
-   change the values of variables.
+2. executes the body() block of the action in simulation turn. This
+   may change the values of variables.
 
-3. simulates executions of following n-1 steps similarly.
+3. simulates executions of next n-1 steps similarly.
 
 4. pops the original values of variables from the stack.
 
-Finally the algorithm chooses the next step, executes adapter() and,
-in case of success, body() of the chosen action as in the simple case.
+Finally the algorithm chooses the next step, executes the adapter()
+and, in case of success, the body() of the chosen action as in the
+simple case.
 
 
 Control flow when AAL is used only as a model
@@ -138,7 +141,18 @@ generator.
 
 Control flow when adapter() returns a different action
 
+body() of the action returned (reported) by the adapter is executed,
+instead of body() of the suggested action.
+
+
 Control flow when adapter() raises an exception
+
+If adapter_exception_hander() is not defined, this is an execution of
+an unidentified action and test fails. If the handler is defined, it
+is called. If it returns an action, that body() of that action is
+executed. If it returns None, body() of suggested action is
+executed. If it raises an exception, test fails with an execution of
+an unidentified action.
 
 
 AAL/Python syntax
