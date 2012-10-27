@@ -47,7 +47,9 @@ bool Lts_remote::init()
         + (name.c_str()+offset) + "\"";
       ret=false;
     } else {
-      params = model + escape_string(stdout);
+      char*escaped=escape_string(stdout);
+      params = model + escaped;
+      escape_free(escaped);
       ret=Lts::init();
     }
   }
