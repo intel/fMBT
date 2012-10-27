@@ -34,8 +34,8 @@ void Coverage_exec_filter::set_model(Model* _model)
   std::vector<std::string>& sp(model->getSPNames());  
 
   for(unsigned i=0;i<from.size();i++) {
-    int pos=find(sp,*from[i]);
-    if (!sp.size() || *from[i]!=sp[pos]) {
+    int pos=find(sp,*from[i],-1);
+    if (pos<0) {
       pos=model->action_number(*from[i]);
       if (pos>0) {
 	start_action.push_back(pos);
@@ -48,8 +48,8 @@ void Coverage_exec_filter::set_model(Model* _model)
   }
 
   for(unsigned i=0;i<to.size();i++) {
-    int pos=find(sp,*to[i]);
-    if (!sp.size() || *to[i]!=sp[pos]) {
+    int pos=find(sp,*to[i],-1);
+    if (pos<0) {
       pos=model->action_number(*to[i]);
       if (pos>0) {
 	end_action.push_back(pos);
@@ -63,8 +63,8 @@ void Coverage_exec_filter::set_model(Model* _model)
   }
 
   for(unsigned i=0;i<drop.size();i++) {
-    int pos=find(sp,*drop[i]);
-    if (!sp.size() && *drop[i]!=sp[pos]) {
+    int pos=find(sp,*drop[i],-1);
+    if (pos<0) {
       pos=model->action_number(*drop[i]);
       if (pos>0) {
 	rollback_action.push_back(pos);
