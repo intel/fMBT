@@ -22,12 +22,12 @@ Available types & parameters:
                 model. Communicates with the child using fMBT AAL
                 protocol.
 
-        lib(<modelname>[,filename])
+        lib(<modelname> [, filename])
 
-                uses model "modelname". If the model is not already
-                registered (statically linked or LD_PRELOADed, for
-                instance), shared library <filename> is loaded. If
-                <filename> is not given, fMBT tries to load
+                uses model <modelname>. If the model is not already
+                loaded (statically linked or LD_PRELOADed, for
+                instance), shared library filename is loaded. If
+                filename is not given, fMBT tries to load
                 "modelname.so" and "libmodelname.so".
 
         lsts(<filename>)
@@ -96,11 +96,16 @@ Available types & parameters:
         mapper(<filename>)
 
                 redirects and possibly renames actions in test model
-                to subadapters according to rules in filename.
+                to subadapters according to rules in mapper adapter
+                configuration file <filename>.
 
-        lib(<adaptername>[,filename])
+        lib(<adaptername> [, filename])
 
-                TODO
+                Uses adapter <adaptername>. If the adapter is not
+                already loaded (statically linked or LD_PRELOADed, for
+                instance), shared library filename is loaded. If
+                filename is not given, fMBT tries to load
+                "adaptername.so" and "libadaptername.so".
 
         remote(<command>)
 
