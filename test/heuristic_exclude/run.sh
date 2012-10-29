@@ -26,29 +26,43 @@ source ../functions.sh
 teststep "heuristic: generate model..."
 fmbt-gt -f t1.gt -o t1.lsts >>$LOGFILE 2>&1 || {
     testfailed
-    exit 1    
+    exit 1
 }
 testpassed
 
-# We should get coverage 0.75
+cat > test-defaults.conf <<EOF
+model     = "lsts(t1.lsts)"
+coverage  = "perm(1)"
+fail      = "coverage(1)"
+pass      = "no_progress(4)"
+EOF
 
 teststep "heuristic exclude"
-echo 'model = "lsts(t1.lsts)"' > test.conf
-echo 'coverage = "perm(1)"' >> test.conf
-echo 'heuristic = "exclude(iFilter,lookahead(1))"' >> test.conf
-echo 'fail      = "coverage(1)"' >> test.conf
-echo 'pass      = "no_progress(4)"' >> test.conf
 
-fmbt test.conf -l hexclude.log >>$LOGFILE 2>&1 || {
-    testfailed
-}
+for ACTIONMATCH in "iFilter" "'iFilter'" ".*ilter" "'iFi.*'"; do
 
-covered=$(awk -F\" '/coverage=/{print $4}' < hexclude.log | tail -n1)
+    cp test-defaults.conf test.conf
+    cat >> test.conf <<EOF
+heuristic = "exclude($ACTIONMATCH, lookahead(1))"
+EOF
 
-if [ "$covered" != "0.750000" ]; then
-    echo "Failed: did not achieve the required coverage." >> $LOGFILE
-    testfailed
-    exit 1
-fi
+    (echo "testing"; tail -n 1 test.conf) >> $LOGFILE 2>&1
+
+    fmbt test.conf -l hexclude.log >>$LOGFILE 2>&1 || {
+        testfailed
+    }
+
+    covered=$(awk -F\" '/coverage=/{print $4}' < hexclude.log | tail -n1)
+    if [ "$covered" != "0.750000" ]; then
+        echo "Failed: did not achieve the required coverage." >> $LOGFILE
+        testfailed
+        exit 1
+    fi
+
+    if fmbt-log hexclude.log | grep -q iFilter; then
+        echo "Failed: excluded action 'iFilter' was executed" >> $LOGFILE
+        testfailed
+    fi
+done
 
 testpassed

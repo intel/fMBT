@@ -183,7 +183,7 @@ Available types & parameters:
 
 Examples:
 
-        heuristic = "exclude(.*Error.*, lookahead(3))"
+        heuristic = "exclude('.*Error.*', lookahead(3))"
 
                 chooses the first action of a three-step-path that
                 gives the best coverage and does not include actions
@@ -235,6 +235,18 @@ Available types & parameters:
                 actions in the test model. If count is not given, it
                 defaults to 2.
 
+        uwalks(from regexp_1 to regexp_2)
+
+                measures the number of minimal unique walks that start
+                from actions or tags matching regexp_1, and end to
+                actions or tags matching regexp_2.
+
+        walks(from regexp_1 to regexp_2)
+
+                like uwalks, but not restricted to unique walks only.
+                That is, testing the same walk again increases the
+                count.
+
         tag
 
                 TODO. See if the current implementation is what we
@@ -250,13 +262,13 @@ Available types & parameters:
 
 Examples:
 
-        coverage = "exclude(.*Choose(Cash|Credit|Bank).*, perm(1))"
+        coverage = "exclude('.*Choose(Cash|Credit|Bank).*', perm(1))"
 
                 measures coverage of all other actions but those which
                 include ChooseCash, ChooseCredit or ChooseBank in
                 their names.
 
-        coverage = "include(iChoose(Cash|Credit|Bank), iPay, perm(2))"
+        coverage = "include('iChoose(Cash|Credit|Bank)', 'iPay', perm(2))"
 
                 measures coverage of action pairs from the set of four
                 actions: iChooseCash, iChooseCredit, iChooseBank and
@@ -280,6 +292,11 @@ Examples:
                 CA, CB and CC have been executed. Suitable for
                 regression tests. Notice that not all permutations can
                 be covered because of test model. See End conditions.
+
+        coverage = "uwalks(from 'iOrderCoffee' to 'iCancelOrder')"
+
+                measures how many different minimal sequences from
+                iOrderCoffee to iCancelOrder has been tested.
 
         coverage = "covlang(a A then (a B or a C))"
 
