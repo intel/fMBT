@@ -215,25 +215,34 @@ Syntax:
 
 Available types & parameters:
 
-        exclude(action-regexp [, action-regexp...], coverage-spec)
+        exclude(action-regexp [, action-regexp...], type(params))
 
-                uses coverage-spec to measure coverage, but execution
-                of excluded actions will not affect the result. If
-                action-regexp is not a name of action, it is handled
-                as a regular expression.
+                uses coverage type(params) to measure coverage, but
+                execution of excluded actions will not affect the
+                result. If action-regexp is not a name of action, it
+                is handled as a regular expression.
 
-        include(action-regexp [, action-regexp...], coverage-spec)
+        include(action-regexp [, action-regexp...], type(params))
 
-                uses coverage-spec to measure coverage, but execution
-                of included actions only will affect the result. If
-                action-regexp is not a name of action, it is handled
-                as a regular expression.
+                uses coverage type(params) to measure coverage, but
+                execution of included actions only will affect the
+                result. If action-regexp is not a name of action, it
+                is handled as a regular expression.
+
+        min(type(params) [, type(params)...])
+
+                measures the minimum value of all coverages given as
+                parameters.
 
         perm[(count)]
 
-                measures coverage of all permutations of any <count>
-                actions in the test model. If count is not given, it
-                defaults to 2.
+                measures the percentage of coverage of all
+                permutations of any <count> actions in the test
+                model. If count is not given, it defaults to 2.
+
+        sum(type(params) [, type(params)...])
+
+                measures the sum of all coverages given as parameters.
 
         uwalks(from regexp_1 to regexp_2)
 
@@ -249,9 +258,8 @@ Available types & parameters:
 
         tag
 
-                TODO. See if the current implementation is what we
-                really want.
-
+                measures the percentage of coverage of all tags in the
+                states of the model.
         
         covlang(<expression>)
 
@@ -297,6 +305,15 @@ Examples:
 
                 measures how many different minimal sequences from
                 iOrderCoffee to iCancelOrder has been tested.
+
+        coverage = "sum(uwalks(from 'iPause' to 'iContinue'),
+                        uwalks(from 'iContinue' to 'iPause'),
+                        perm(2))"
+
+                measures how many different sequences have been tested
+                from pausing playback to continuing it, and vice
+                versa. Percentage of covered permutations of action
+                pairs is added to the measure.
 
         coverage = "covlang(a A then (a B or a C))"
 

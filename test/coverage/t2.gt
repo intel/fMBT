@@ -1,3 +1,9 @@
-P(s,p)->T(s,"iFoo",s2)
+P(s,p)->
+P(s, "tag1")
 
-P(s2,"tag")
+T(s,"iCoverSecond",s2)
+P(s2, "tag2")
+
+T(s2, "iCoverComb", ss)
+P(ss, "tag1")
+P(ss, "tag2")
