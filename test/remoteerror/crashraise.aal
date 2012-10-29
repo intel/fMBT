@@ -36,7 +36,7 @@ aal "crashraiserubbish" {
         outputs = 0
         check_bug("init")
     }
-    action "iTestStep" {
+    action "iTestStep()" {
         guard() {
             check_bug("iguard")
             return True
