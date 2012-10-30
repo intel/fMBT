@@ -117,9 +117,12 @@ long normdiag_error(int hayx,int neex,int neey,int x,int y,
     long delta = 0;
     int checked_steps = 0;
     for(int checkx=xstart+1, checky=ystart+1;
-        0 <= checkx && 0 <= checky &&
-            0 <= checkx+xstep*2-1 && 0 <= checky+ystep*2-1 &&
-            checkx+xstep*2+1 < neex && checky+ystep*2+1 < neey;
+        (0 <= checkx &&
+         0 <= checky &&
+         0 <= checkx+xstep*2-1 &&
+         0 <= checky+ystep*2-1 &&
+         checkx+xstep*2+1 < neex &&
+         checky+ystep*2+1 < neey);
         checkx+=xstep, checky+=ystep) {
 
         int n1 = (((*(nee_pixel+neex*checky+checkx)).green - nee_smallest)*colors)
@@ -217,11 +220,14 @@ int iconsearch(std::vector<BoundingBox>& retval,
     
     /* Fuzzy match */
     /* sweep diagonal */
+    const int samples = 16;
+    const int stepx = neex >= samples ? neex/samples : 1;
+    const int stepy = neey >= samples ? neey/samples : 1;
     for (int y=0;y<hayy-neey;y++) {
         for (int x=0;x<hayx-neex;x++) {
             long thisdelta = normdiag_error(hayx, neex, neey, x, y,
                                             hay_pixel, nee_pixel,
-                                            0, 0, 1, 1);
+                                            0, 0, stepx, stepy);
             if (thisdelta != INCOMPARABLE && thisdelta <= color_threshold) {
                 candidates.push_back( Candidate(thisdelta, std::pair<int,int>(x, y)) );
             }
