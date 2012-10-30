@@ -47,7 +47,7 @@ int Mwrapper::getIActions(int** actions) {
     if (is_output((*actions)[i])) {
       ret--;
       memmove(&(*actions)[i],&(*actions)[i+1],sizeof(int)*
-	      (a-i));
+	      (a-i-1));
     }
   }
   return ret;
