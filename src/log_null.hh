@@ -25,6 +25,8 @@ class Log_null: public Log {
 public:
   virtual ~Log_null() {}
   virtual void write(const char* msg) {}
+  virtual void error(const char**format,...) {}
+  virtual void print(const char* format,va_list ap) {}
   virtual void print(const char* format,...) {}  
   virtual void write(int action,const char *name,
 		     const char *msg) {} 
