@@ -371,7 +371,7 @@ std::string capsulate(std::string s) {
   return t.str();
 }
 
-void string2vector(char* s,std::vector<int>& a)
+bool string2vector(char* s,std::vector<int>& a)
 {
   int v;
   int i=0;
@@ -385,7 +385,13 @@ void string2vector(char* s,std::vector<int>& a)
     ss=endp;
     v=strtol(ss,&endp,10);
     i++;
-  } 
+  }
+
+  if (ss[0]!='\0' && ss[0]!='\n') {
+    return false;
+  }
+
+  return true;
 }
 
 #ifndef DROI
@@ -553,15 +559,24 @@ ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
       if (**lineptr=='d') {
         log.debug(*lineptr+1);
         std::free(*lineptr);
-        *lineptr = NULL;
+	*lineptr = NULL;
         log_redirect=true;
       }
       if (**lineptr=='l' || **lineptr=='e') {
         // remote log messages must be url encoded when sent through
         // the remote adapter protocol
-        log.print("<remote msg=\"%s\"/>\n",*lineptr+1);
+	//log.print("<remote msg=\"%s\"/>\n",*lineptr+1);
+
+        if (**lineptr == 'e') {
+	  static const char* m[] = {"<remote msg=\"%s\">\n","%s\n"};
+	  log.error(m, *lineptr+1);
+	} else {
+	  log.print("<remote msg=\"%s\"/>\n",*lineptr+1);
+	}
+	/*
         if (**lineptr == 'e')
           fprintf(stderr, "%s\n", unescape_string(*lineptr+1));
+	*/
         std::free(*lineptr);
         *lineptr = NULL;
         log_redirect=true;
@@ -610,12 +625,16 @@ int getint(FILE* out,FILE* in,Log& log)
     if (ret == 0 && line[0] != '0') {
       char *escaped_line = escape_string(line);
       if (escaped_line) {
-        log.print("<remote error=\"I/O error: integer expected, got: %s\"/>\n", escaped_line);
+	static const char* m[] = { "<remote error=\"I/O error: integer expected, got: %s\"/>\n",
+				   "Remote expected integer, got \"%s\"\n"};
+        log.error(m, escaped_line);
         escape_free(escaped_line);
       }
     }
   } else {
-    log.print("<remote error=\"I/O error: integer expected, got nothing./>\n");
+    static const char* m[] = { "<remote error=\"I/O error: integer expected, got nothing./>\n",
+			      "Remote expected integer, got nothing\n"};
+    log.error(m);
   }
   if (line) {
     free(line);

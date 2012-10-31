@@ -24,8 +24,9 @@
 
 #include "aal.hh"
 #include <glib.h>
+#include "remote.hh"
 
-class aal_remote: public aal {
+class aal_remote: public aal, public remote {
 public:
   aal_remote(Log&l,std::string&);
   virtual ~aal_remote() {};
@@ -47,7 +48,6 @@ private:
   FILE* d_stdout;
   FILE* d_stderr;
 
-  GPid pid;
 };
 
 #endif

@@ -46,7 +46,7 @@ aal_remote::aal_remote(Log&l,std::string& s)
     return;
   }
 
-  g_spawn_async_with_pipes(NULL,argv,NULL,G_SPAWN_SEARCH_PATH,NULL,&pid,NULL,&_stdin,&_stdout,&_stderr,&gerr);
+  g_spawn_async_with_pipes(NULL,argv,NULL,G_SPAWN_SEARCH_PATH,NULL,NULL,&pid,&_stdin,&_stdout,&_stderr,&gerr);
 
   if (gerr) {
     errormsg = "aal_remote: g_spawn_async_with_pipes error: " + std::string(gerr->message);
@@ -54,6 +54,10 @@ aal_remote::aal_remote(Log&l,std::string& s)
     status = false;
     return;
   }
+
+  monitor();
+
+  prefix="aal remote("+s+")";
 
   d_stdin=fdopen(_stdin,"w");
   d_stdout=fdopen(_stdout,"r");
@@ -83,6 +87,7 @@ aal_remote::aal_remote(Log&l,std::string& s)
 }
 
 int aal_remote::adapter_execute(int action,const char* params) {
+  while(g_main_context_iteration(NULL,FALSE));
 
   if (params)
     std::fprintf(d_stdin, "ap%s\n",params);
@@ -92,16 +97,19 @@ int aal_remote::adapter_execute(int action,const char* params) {
 }
 
 int aal_remote::model_execute(int action) {
+  while(g_main_context_iteration(NULL,FALSE));
   std::fprintf(d_stdin, "m%i\n", action);
   return getint(d_stdin,d_stdout,_log);
 }
 
 void aal_remote::push() {
+  while(g_main_context_iteration(NULL,FALSE));
   std::fprintf(d_stdin,"mu\n");
   fflush(d_stdin);
 }
 
 void aal_remote::pop() {
+  while(g_main_context_iteration(NULL,FALSE));
   std::fprintf(d_stdin,"mo\n");
   fflush(d_stdin);
 }
@@ -118,17 +126,20 @@ bool aal_remote::reset() {
 }
 
 int aal_remote::getActions(int** act) {
+  while(g_main_context_iteration(NULL,FALSE));
   std::fprintf(d_stdin, "ma\n");
   return getact(act,actions,d_stdin,d_stdout,_log);
 }
 
 int aal_remote::getprops(int** pro) {
+  while(g_main_context_iteration(NULL,FALSE));
   std::fprintf(d_stdin, "mp\n");
   return getact(pro,tags,d_stdin,d_stdout,_log);
 }
 
 int aal_remote::observe(std::vector<int> &action, bool block)
 {
+  while(g_main_context_iteration(NULL,FALSE));
   if (block) {
     std::fprintf(d_stdin, "aob\n"); // block
   } else {
