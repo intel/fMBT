@@ -61,12 +61,12 @@ void Awrapper::set_actions(std::vector<std::string>* _actions)
     }
     splitted_actions.push_back(name);
     
-    unsigned result=find(wn,(*actions)[i]);
+    unsigned result=find(wn,(*actions)[i],-1);
 
-    if ((*actions)[i]!=wn[result]) {
+    if (result==-1) {
       // Let's try it without parameters
-      result=find(wn,splitted_actions[i]);
-      if (splitted_actions[i]!=wn[result]) {
+      result=find(wn,splitted_actions[i],-1);
+      if (result==-1) {
 	//Nope....
 	continue;
       }
