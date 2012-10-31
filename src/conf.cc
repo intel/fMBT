@@ -68,6 +68,7 @@ void Conf::load(std::string& name,std::string& content)
     status=false;
     errormsg=std::string("Can't read configuration file \"")+name+"\"";
     log.pop();
+    free_D_Parser(p);
     return;
   }
 
