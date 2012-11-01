@@ -33,6 +33,7 @@
 #include "config.h"
 
 #ifndef DROI
+#include <glib-object.h>
 #include <error.h>
 #else
 void error(int exitval, int dontcare, const char* format, ...)
@@ -150,26 +151,37 @@ int main(int argc,char * const argv[])
  
   if (optind == argc) {
     print_usage();
-    error(32, 0, "test configuration file missing.\n");
+    error(0, 0, "test configuration file missing.\n");
+    return 32;
   }
 
   signal(SIGPIPE, nop_signal_handler);
 
+#ifndef DROI
+  g_type_init ();  
+#endif
+
   {
     Log* log;
 
-    if (E)
+    if (E) {
+      if (logfile!=NULL && logfile!=stderr) {
+	fclose(logfile);
+	logfile==NULL;
+      }
       log=new Log_null;
-    else
+    } else {
       log=new Log(logfile);
+    }
 
     Conf c(*log,debug_enabled);
     std::string conffilename(argv[optind]);
     c.load(conffilename,config_options);
 
-    if (!c.status)
-      error(4, 0, "%s\n", c.stringify().c_str());
-     
+    if (!c.status) {
+      error(0, 0, "%s\n", c.stringify().c_str());
+      return 4;
+    }
     if (E) {
       std::fprintf(stderr, "%s\n",c.stringify().c_str());
     } else {
