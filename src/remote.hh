@@ -32,7 +32,6 @@ public:
 protected:
   void monitor() {
     id=g_child_watch_add(pid, watch_func,this);
-    fprintf(stderr,"monitor() id==%i,pid %i\n",id,pid);
   }
 
   static void watch_func(GPid pid,gint status,gpointer user_data) {
