@@ -243,7 +243,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
     while (adapter.observe(actions)>0) {
       step_count++;
       action = policy.choose(actions);
-      if (action>=heuristic.get_model()->getActionNames().size()) {
+      if ((action>0)&&((unsigned)action>=heuristic.get_model()->getActionNames().size())) {
         return stop_test(Verdict::ERROR, std::string("adapter communication failure. Adapter returned action "+to_string(action)+" which is out of range").c_str());
       }
       log_adapter_output(log, adapter, action);
@@ -343,7 +343,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       int adapter_response = policy.choose(actions);
 
       // Let's chect that adapter_response is in the valid range.
-      if (adapter_response>=heuristic.get_model()->getActionNames().size()) {
+      if ((adapter_response>0) && ((unsigned)adapter_response>=heuristic.get_model()->getActionNames().size())) {
         return stop_test(Verdict::ERROR, std::string("adapter communication failure. Adapter returned action "+to_string(adapter_response)+" which is out of range").c_str());
       }
 
@@ -411,11 +411,18 @@ namespace interactive {
       adapter.execute(actions_v);
       if (actions_v.empty()) {
         fprintf(stderr,"adapter:   [communication failure]\n");
+	return;
       } else {
         if (skip_m) adapter_response = actions_v[0];
         else adapter_response = policy.choose(actions_v);
-        log_adapter_execute(log, adapter, adapter_response);
-        fprintf(stderr,"adapter:   %s\n", heuristic.getActionName(adapter_response).c_str());
+
+	if ((adapter_response>0) && (adapter_response>=heuristic.get_model()->getActionNames().size())) {
+	  fprintf(stderr,"adapter:   [communication failure %i]\n",adapter_response);
+	  return;
+	} else {
+	  log_adapter_execute(log, adapter, adapter_response);
+	  fprintf(stderr,"adapter:   %s\n", heuristic.getActionName(adapter_response).c_str());
+	}
       }
     }
 
@@ -461,7 +468,7 @@ void Test_engine::interactive()
       fprintf(stderr,"Action %i:%s\n",action,heuristic.getActionName(action).c_str());
       actions_v.resize(0);
     }
-    
+
     char* s=READLINE("fMBT> ");
 
     if (s==NULL) {
