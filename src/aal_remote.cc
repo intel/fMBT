@@ -30,8 +30,6 @@ aal_remote::aal_remote(Log&l,std::string& s)
 {
 
   int _stdin,_stdout,_stderr;
-  g_type_init ();
-
   gchar **argv = NULL;
   gint argc;
   GError *gerr=NULL;

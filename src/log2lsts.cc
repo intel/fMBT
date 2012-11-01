@@ -23,6 +23,7 @@
 #include "coverage.hh"
 
 #ifndef DROI
+#include <glib-object.h>
 #include <error.h>
 #else
 void error(int exitval, int dontcare, const char* format, ...)
@@ -168,6 +169,10 @@ int main(int argc,char * const argv[])
     {"version", no_argument, 0, 'V'},
     {0, 0, 0, 0}
   };
+
+#ifndef DROI
+  g_type_init ();  
+#endif
 
   while ((c = getopt_long (argc, argv, "heVo:", long_opts, NULL)) != -1)
     switch (c)

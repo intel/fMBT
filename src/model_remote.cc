@@ -72,8 +72,6 @@ bool Model_remote::init()
 {
 
   int _stdin,_stdout,_stderr;
-  //  g_type_init (); needed?
-
   gchar **argv = (gchar**)malloc(42*sizeof(gchar*));
   gint argc;
   GError *gerr=NULL;

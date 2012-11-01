@@ -26,6 +26,7 @@
 #include <stdarg.h>
 
 #ifndef DROI
+#include <glib-object.h>
 #include <error.h>
 #else
 void error(int exitval, int dontcare, const char* format, ...)
@@ -56,6 +57,10 @@ int main(int argc,char** argv)
   char* s=NULL;
   size_t si=0;
   std::vector<std::string> anames;
+
+#ifndef DROI
+  g_type_init ();  
+#endif
 
   if (argc < 3)
     error(1, 0, "Invalid arguments.\n"

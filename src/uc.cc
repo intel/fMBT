@@ -40,6 +40,7 @@ extern D_ParserTables parser_tables_uconf;
 extern OutputFormat* uconf_obj;
 
 #ifndef DROI
+#include <glib-object.h>
 #include <error.h>
 #else
 void error(int exitval, int dontcare, const char* format, ...)
@@ -74,6 +75,10 @@ int main(int argc,char * const argv[])
   char* usecasefile=NULL;
   int c;
   OutputFormat* of=NULL;
+
+#ifndef DROI
+  g_type_init ();  
+#endif
 
   l=new Log_null();
 
