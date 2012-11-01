@@ -45,11 +45,17 @@ public:
       status=false;
     }
     free_D_Parser(p);
+    /*
     from=_f;
     to=_t;
     drop=_d;
+    */
   }
-  virtual ~Coverage_pathsw() {}
+  virtual ~Coverage_pathsw() {
+    for_each(from.begin(),from.end(),ds);
+    for_each(to.begin(),to.end(),ds);
+    for_each(drop.begin(),drop.end(),ds);
+  }
 private:
   std::vector<std::string*> _f,_t,_d;
 };

@@ -158,17 +158,12 @@ bool Coverage_exec_filter::execute(int action)
   return true;
 }
 
-void ds(std::string* s){
+void Coverage_exec_filter::ds(std::string* s){
   if (s) 
     delete s;
 }
 
 Coverage_exec_filter::~Coverage_exec_filter() {
-  /*
-  for_each(from.begin(),from.end(),ds);
-  for_each(to.begin(),to.end(),ds);
-  for_each(drop.begin(),drop.end(),ds);
-  */
 }
 
 #include "dparse.h"

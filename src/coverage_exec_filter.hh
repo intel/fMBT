@@ -57,6 +57,7 @@ public:
   virtual void set_model(Model* _model);
 
 protected:
+  static void ds(std::string* s);
   bool prop_set(std::vector<int> p,int npro,int* props);
 
   virtual void on_drop(int action,std::vector<int>&p);
