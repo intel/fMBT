@@ -139,6 +139,8 @@ long normdiag_error(int hayxsize,int neex,int neey,int x,int y,
         nee_greatest - nee_smallest > (hay_greatest - hay_smallest) * 2) {
         return INCOMPARABLE;
     }
+    const int nee_colorscale = nee_greatest == nee_smallest ?  1 : nee_greatest - nee_smallest;
+    const int hay_colorscale = hay_greatest == hay_smallest ?  1 : hay_greatest - hay_smallest;
 
     long delta = 0;
     int checked_steps = 0;
@@ -152,9 +154,9 @@ long normdiag_error(int hayxsize,int neex,int neey,int x,int y,
         checkx+=xstep, checky+=ystep) {
 
         int n1 = (((*(nee_pixel+neex*checky+checkx)).green - nee_smallest)*colors)
-            /(nee_greatest-nee_smallest);
+            / nee_colorscale;
         int n2 = (((*(nee_pixel+neex*(checky+ystep*2)+(checkx+xstep*2))).green - nee_smallest)*colors)
-            /(nee_greatest-nee_smallest);
+            / nee_colorscale;
         int bestdiff = -1;
 
         int h1, h2;
@@ -162,12 +164,12 @@ long normdiag_error(int hayxsize,int neex,int neey,int x,int y,
 
 #define GREEN(h1xoffset, h1yoffset, penalty)                            \
         do {                                                            \
-            h2=((((*(hay_pixel+hayxsize*(checky+y+(h1yoffset))+checkx+x+(h1xoffset))).green - hay_smallest)*colors) / (hay_greatest-hay_smallest)); \
+            h2=((((*(hay_pixel+hayxsize*(checky+y+(h1yoffset))+checkx+x+(h1xoffset))).green - hay_smallest)*colors) / hay_colorscale); \
             diff = (n1-n2)-(h1-h2); diff = diff*diff + penalty;         \
             if (bestdiff == -1 || diff < bestdiff) bestdiff = diff;     \
         } while (0);
 
-        h1 = ((((*(hay_pixel+hayxsize*(checky+y)+checkx+x)).green - hay_smallest)*colors) / (hay_greatest-hay_smallest));
+        h1 = ((((*(hay_pixel+hayxsize*(checky+y)+checkx+x)).green - hay_smallest)*colors) / hay_colorscale);
 
         GREEN(xstep*2, ystep*2, 0);
         for (int xi=xstep*2-1; xi<=xstep*2+1 && bestdiff > colors/4; xi++) {
