@@ -1,0 +1,16 @@
+P(start, "gt:istate")
+->
+T(start, "iOrderCoffee", pay)
+
+T(pay, "iCancelOrder", start)
+T(pay, "iChooseCash", coins)
+T(pay, "iChooseCredit", card)
+
+T(coins, "iCancelPayment", pay)
+T(coins, "iInsertCoins", coming)
+
+T(card, "iInsertCard", card-in)
+T(card, "iCancelPayment", pay)
+T(card-in, "iTakeCard", coming)
+
+T(coming, "iCollectItem", start)

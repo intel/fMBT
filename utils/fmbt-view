@@ -16,9 +16,15 @@
 # this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
-if [ "x$1" == "x" ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+print_help_and_quit()
+{
     echo "Usage: fmbt-view [options] modelname.lsts"
+    echo ""
+    echo "  modelname.lsts is a file containing a state machine in LSTS"
+    echo "  format, or \"-\" for reading the lsts from standard input."
+    echo ""
     echo "Options:"
+    echo "  -d      Debug (don't remove temporary files)."
     echo "  -f <format>"
     echo "          Default format is pdf. Other supported formats are:"
     echo -n "         "; dot -Thelp 2>&1 | sed 's/.*://'
@@ -28,7 +34,11 @@ if [ "x$1" == "x" ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
     echo "  -i      Invert coloring (highlights unvisited states)"
     echo "  -o <outputfile>"
     echo "          Write image to outputfile, do not display it."
-    exit 1
+    exit 0
+}
+
+if [ "x$1" == "x" ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+    print_help_and_quit
 fi
 
 FORMAT=pdf
@@ -36,32 +46,95 @@ LOGFILE=""
 OUTPUTFILE=""
 COLORING=""
 DISPLAY_IMAGE=1
-while getopts f:il:o:v opt
+DEBUG=0
+while getopts df:hil:o:v opt
 do
     case $opt in
-	v) echo "Version" exit 0;;
+        d) DEBUG=1;;
+        h) print_help_and_quit;;
+        v) echo "Version"; exit 0;;
         f) FORMAT=$OPTARG;;
         i) COLORING="--invert-colors";;
         l) LOGFILE="-l $OPTARG";;
         o) OUTPUTFILE=$OPTARG; DISPLAY_IMAGE=0;;
     esac
 done
+if [ "$OPTIND" != "$#" ]; then
+    echo "Invalid arguments, try -h for help."
+    exit 1;
+fi
 shift $(expr $OPTIND - 1)
 
-UTILPATH="$(dirname "$0")"
-if [ "$OUTPUTFILE" == "" ]; then
-        OUTPUTFILE=$(mktemp --suffix ."$FORMAT") || { echo "Can't create temporary file:""$OUTPUTFILE"; exit 1;}
-	
+INPUTFILE="$1"
+
+if [ "$INPUTFILE" != "-" ] && [ ! -f "$INPUTFILE" ]; then
+    echo "Invalid input file \"$INPUTFILE\"."
+    exit 1
 fi
 
-( eval $UTILPATH/lsts2dot --loops-in-states -i "$1" $COLORING $LOGFILE | dot -T$FORMAT -o"$OUTPUTFILE" ) && {
+if [ "$INPUTFILE" != "-" ]; then
+    grep -q 'Begin Lsts' "$INPUTFILE" || {
+        echo "\"$INPUTFILE\" is not an LSTS file"
+        exit 1
+    }
+fi
 
-    if [ "$DISPLAY_IMAGE" == "1" ]; then
-        echo "Graphviz output saved to $OUTPUTFILE"
-        echo "Displaying..."
-        display "$OUTPUTFILE"
+UTILPATH="$(dirname "$0")"
+DOTFILE=$(mktemp --tmpdir --suffix .dot fmbt-view.tmp.XXXXXXXX) || {
+    echo "Can't create temporary file: $DOTFILE"
+    exit 1
+}
+ERRORFILE=$(mktemp --tmpdir --suffix .error fmbt-view.tmp.XXXXXXXX) || {
+    echo "Can't create temporary file: $ERRORFILE"
+    exit 1
+}
+
+if [ "$OUTPUTFILE" == "" ]; then
+    OUTPUTFILE=$(mktemp --tmpdir --suffix ."$FORMAT" fmbt-view.tmp.XXXXXXXX) || {
+        echo "Can't create temporary file:""$OUTPUTFILE";
+        exit 1;
+    }
+fi
+
+remove_temp_files()
+{
+    if [ "$DEBUG" == "0" ]; then
+        rm -f "$DOTFILE" "$ERRORFILE"
+        if [ "$DISPLAY_IMAGE" == "1" ]; then
+            rm -f "$OUTPUTFILE"
+        fi
+    else
+        echo "Digraph without layout: $DOTFILE"
+        echo "Digraph wit layout:     $OUTPUTFILE"
     fi
 }
+
+for SIGNAL in INT QUIT TERM; do
+    trap "remove_temp_files; trap $SIGNAL; kill -$SIGNAL \$\$" $SIGNAL
+done
+
+eval $UTILPATH/lsts2dot --loops-in-states -i "$INPUTFILE" $COLORING $LOGFILE >$DOTFILE 2>$ERRORFILE || {
+    echo "Error in converting state machine (lsts) into digraph (dot)"
+    cat $ERRORFILE
+    remove_temp_files
+    exit 1
+}
+
+eval dot -T$FORMAT -o"$OUTPUTFILE" < $DOTFILE  >$ERRORFILE 2>&1 || {
+    echo "Error in layouting digraph with Graphviz dot."
+    if grep -q Segmentation $ERRORFILE; then
+        echo "Possibly too many states."
+    fi
+    cat $ERRORFILE
+    remove_temp_files
+    exit 2
+}
+
 if [ "$DISPLAY_IMAGE" == "1" ]; then
-    rm "$OUTPUTFILE"
+    eval display "$OUTPUTFILE" >$ERRORFILE 2>&1 || {
+        echo "Unexpected exit from display:"
+        cat $ERRORFILE
+    }
 fi
+
+remove_temp_files

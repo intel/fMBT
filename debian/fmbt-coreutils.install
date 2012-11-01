@@ -1,6 +1,7 @@
 usr/bin/fmbt-aalc
 usr/bin/fmbt-aalp
 usr/bin/fmbt-gt
+usr/bin/fmbt-log2lsts
 usr/bin/fmbt-parallel
 usr/lib/python*/*packages/fmbt/fmbt-gt
 usr/lib/python*/*packages/fmbt/fmbt-parallel

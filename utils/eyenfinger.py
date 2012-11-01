@@ -102,10 +102,19 @@ keys = [
     "t", "u", "v", "w", "x", "y", "z", "braceleft", "bar",
     "braceright"]
 
-class BadMatch (Exception):
+class EyenfingerError(Exception):
     pass
 
-class BadWindowName (Exception):
+class BadMatch (EyenfingerError):
+    pass
+
+class BadWindowName (EyenfingerError):
+    pass
+
+class BadSourceImage(EyenfingerError):
+    pass
+
+class BadIconImage(EyenfingerError):
     pass
 
 try:
@@ -146,7 +155,7 @@ except Exception, e:
     _log('Loading icon recognition library failed: "%s".' % (e,))
 
 
-def runcmd(cmd):
+def _runcmd(cmd):
     _log("runcmd: " + cmd)
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output = p.stdout.read()
@@ -197,7 +206,7 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=True, capture=N
         iUseWindow(windowId)
 
         # take a screenshot
-        runcmd("xwd -root -screen -out %s.xwd && convert %s.xwd -crop %sx%s+%s+%s '%s'" %
+        _runcmd("xwd -root -screen -out %s.xwd && convert %s.xwd -crop %sx%s+%s+%s '%s'" %
                (SCREENSHOT_FILENAME, SCREENSHOT_FILENAME,
                 g_windowSizes[g_lastWindow][0], g_windowSizes[g_lastWindow][1],
                 g_windowOffsets[g_lastWindow][0], g_windowOffsets[g_lastWindow][1],
@@ -217,7 +226,7 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=True, capture=N
 
     # convert to text
     g_readImage = g_origImage + "-pp.png"
-    _, g_hocr = runcmd("convert %s %s %s && tesseract %s %s -l eng hocr" % (
+    _, g_hocr = _runcmd("convert %s %s %s && tesseract %s %s -l eng hocr" % (
             g_origImage, preprocess, g_readImage,
             g_readImage, SCREENSHOT_FILENAME))
 
@@ -227,7 +236,7 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=True, capture=N
     # convert word coordinates to the unscaled pixmap
     orig_width, orig_height = g_windowSizes[g_lastWindow][0], g_windowSizes[g_lastWindow][1]
 
-    scaled_width, scaled_height = re.findall('bbox 0 0 ([0-9]+)\s*([0-9]+)', runcmd("grep ocr_page %s.html | head -n 1" % (SCREENSHOT_FILENAME,))[1])[0]
+    scaled_width, scaled_height = re.findall('bbox 0 0 ([0-9]+)\s*([0-9]+)', _runcmd("grep ocr_page %s.html | head -n 1" % (SCREENSHOT_FILENAME,))[1])[0]
     scaled_width, scaled_height = float(scaled_width), float(scaled_height)
 
     for word in sorted(g_words.keys()):
@@ -250,12 +259,21 @@ def iVerifyWord(word, match=0.33, capture=None):
     Verify that word can be found from previously iRead() image.
 
     Parameters:
-        word       - word that should be checked
-        match      - minimum matching score
-        capture    - save image with verified word highlighted
+        word         word that should be checked
+
+        match        minimum matching score
+
+        capture      save image with verified word highlighted
                      to this file. Default: None (nothing is saved).
 
-    Returns pair: score, matching_word
+    Returns pair: ((score, matchingWord), (left, top, right, bottom)), where
+
+        score        score of found match (1.0 for perfect match)
+
+        matchingWord corresponding word detected by OCR
+
+        (left, top, right, bottom)
+                     bounding box of the word in read image
 
     Throws BadMatch error if word is not found.
     """
@@ -267,30 +285,45 @@ def iVerifyWord(word, match=0.33, capture=None):
     if score < match:
         raise BadMatch('No matching word for "%s". The best candidate "%s" with score %.2f, required %.2f' %
                             (word, matching_word, score, match))
-    return score, matching_word
+    return ((score, matching_word), g_words[matching_word][0][2])
 
 def iVerifyIcon(iconFilename, match=1.0, capture=None, _origin="iVerifyIcon"):
     """
     Verify that icon can be found from previously iRead() image.
 
     Parameters:
-        iconFilename - name of the icon file to be searched for
-        match        - minimum matching score between 0 and 1.0,
+
+        iconFilename   name of the icon file to be searched for
+
+        match          minimum matching score between 0 and 1.0,
                        1.0 is perfect match (default)
-        capture      - save image with verified icon highlighted
+
+        capture        save image with verified icon highlighted
                        to this file. Default: None (nothing is saved).
 
-    Returns pair: score, bounding box of found icon
+    Returns pair: (score, (left, top, right, bottom)), where
+
+        score          score of found match (1.0 for perfect match)
+
+        (left, top, right, bottom)
+                       bounding box of found icon
 
     Throws BadMatch error if icon is not found.
     """
     if not eye4graphics:
         _log('ERROR: %s("%s") called, but eye4graphics not loaded.' % (_origin, iconFilename))
-        raise Exception("eye4graphics not available")
-    struct_bbox = Bbox(0,0,0,0,0)
+        raise EyenfingerError("eye4graphics not available")
+    if not g_origImage:
+        _log('ERROR %s("%s") called, but source not defined (iRead not called).' % (_origin, iconFilename))
+        raise BadSourceImage("Source image not defined, cannot search for an icon.")
+    if not (os.path.isfile(iconFilename) and os.access(iconFilename, os.R_OK)):
+        _log('ERROR %s("%s") called, but the icon file is not readable.' % (_origin, iconFilename))
+        raise BadIconImage('Icon "%s" is not readable.' % (iconFilename,))
     if match > 1.0:
-        _log('%s("%s"): invalid match value, must be below 1.0. ' % (_origin, iconFilename,))
+        _log('ERROR %s("%s"): invalid match value, must be below 1.0. ' % (_origin, iconFilename,))
         raise ValueError("invalid match value: %s, should be 0 <= match <= 1.0" % (match,))
+
+    struct_bbox = Bbox(0,0,0,0,0)
     threshold = int((1.0-match)*20)
     err = eye4graphics.findSingleIcon(ctypes.byref(struct_bbox),
                                       g_origImage, iconFilename, threshold)
@@ -315,7 +348,7 @@ def iVerifyIcon(iconFilename, match=1.0, capture=None, _origin="iVerifyIcon"):
     if capture:
         drawIcon(g_origImage, capture, iconFilename, bbox)
 
-    return score, bbox
+    return (score, bbox)
 
 def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=1.0, mousebutton=1, mouseevent=1, dryRun=False, capture=None):
     """
@@ -341,13 +374,20 @@ def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=1.0, mousebutton=1, mouse
         mouseevent   event to be synthesized, default is MOUSEEVENT_CLICK,
                      others: MOUSEEVENT_MOVE, MOUSEEVENT_DOWN, MOUSEEVENT_UP.
 
-        dryRun       if True, does not synthesize events. Can still illustrate
-                     what would have been done on the capture image if given.
+        dryRun       if True, does not synthesize events. Still returns
+                     coordinates of the clicked position and illustrates
+                     the clicked position on the capture image if
+                     given.
 
         capture      name of file where image of highlighted icon and
                      clicked point are saved.
 
-    Returns score (1.0 for pixel-perfect match)
+    Returns pair (score, (clickedX, clickedY)), where
+
+        score        score of found match (1.0 for perfect match)
+
+        (clickedX, clickedY)
+                     X and Y coordinates of clicked position
 
     Throws BadMatch error if could not find a matching word.
     """
@@ -371,19 +411,22 @@ def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=1.0, mousebutton=1, mouse
 
     if not dryRun:
         # use xte from the xautomation package
-        runcmd("xte 'mousemove %s %s' %s" % (click_x, click_y, params))
+        _runcmd("xte 'mousemove %s %s' %s" % (click_x, click_y, params))
 
-    return score
+    return (score, (click_x, click_y))
 
 def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33, mousebutton=1, mouseevent=1, dryRun=False, capture=None):
     """
     Click coordinates relative to the given word in previously iRead() image.
 
     Parameters:
-        word       - word that should be clicked
-        appearance - if word appears many times, appearance to
+
+        word         word that should be clicked
+
+        appearance   if word appears many times, appearance to
                      be clicked. Defaults to the first one.
-        clickPos   - position to be clicked,
+
+        clickPos     position to be clicked,
                      relative to word top-left corner of the bounding
                      box around the word. X and Y units are relative
                      to width and height of the box.  (0,0) is the
@@ -391,10 +434,18 @@ def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33, mousebutton=1
                      (0.5, 0.5) is the middle point (default).
                      Values below 0 or greater than 1 click outside
                      the bounding box.
-        capture    - name of file where image of highlighted word and
+
+        capture      name of file where image of highlighted word and
                      clicked point are saved.
 
-    Returns pair: score, matching_word
+    Returns pair: ((score, matchingWord), (clickedX, clickedY)), where
+
+        score        score of found match (1.0 for perfect match)
+
+        matchingWord corresponding word detected by OCR
+
+        (clickedX, clickedY)
+                     X and Y coordinates of clicked position.
 
     Throws BadMatch error if could not find a matching word.
     """
@@ -433,8 +484,8 @@ def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33, mousebutton=1
 
     if not dryRun:
         # use xte from the xautomation package
-        runcmd("xte 'mousemove %s %s' %s" % (click_x, click_y, params))
-    return score
+        _runcmd("xte 'mousemove %s %s' %s" % (click_x, click_y, params))
+    return ((score, matching_word), (click_x, click_y))
 
 def iType(word, delay=0.0):
     """
@@ -478,7 +529,7 @@ def iType(word, delay=0.0):
             # char is keyname or single letter/number
             args.append("'key %s'" % (char,))
     usdelay = " 'usleep %s' " % (int(delay*1000000),)
-    runcmd("xte %s" % (usdelay.join(args),))
+    _runcmd("xte %s" % (usdelay.join(args),))
 
 def findWord(word, detected_words = None, appearance=1):
     """
@@ -557,12 +608,12 @@ def iUseWindow(windowIdOrName = None):
     elif windowIdOrName.startswith("0x"):
         g_lastWindow = windowIdOrName
     else:
-        g_lastWindow = runcmd("xwininfo -name '%s' | awk '/Window id: 0x/{print $4}'" %
+        g_lastWindow = _runcmd("xwininfo -name '%s' | awk '/Window id: 0x/{print $4}'" %
                               (windowIdOrName,))[1].strip()
         if not g_lastWindow.startswith("0x"):
             raise BadWindowName('Cannot find window id for "%s" (got: "%s")' %
                                 (windowIdOrName, g_lastWindow))
-    _, output = runcmd("xwininfo -id %s | awk '/Width:/{w=$NF}/Height:/{h=$NF}/Absolute upper-left X/{x=$NF}/Absolute upper-left Y/{y=$NF}END{print x\" \"y\" \"w\" \"h}'" %
+    _, output = _runcmd("xwininfo -id %s | awk '/Width:/{w=$NF}/Height:/{h=$NF}/Absolute upper-left X/{x=$NF}/Absolute upper-left Y/{y=$NF}END{print x\" \"y\" \"w\" \"h}'" %
                        (g_lastWindow,))
     offset_x, offset_y, width, height = output.split(" ")
     g_windowOffsets[g_lastWindow] = (int(offset_x), int(offset_y))
@@ -592,7 +643,7 @@ def iUseImageAsWindow(imagefilename):
 def iActiveWindow(windowId = None):
     """ return id of active window, in '0x1d0f14' format """
     if windowId == None:
-        _, output = runcmd("xprop -root | awk '/_NET_ACTIVE_WINDOW\(WINDOW\)/{print $NF}'")
+        _, output = _runcmd("xprop -root | awk '/_NET_ACTIVE_WINDOW\(WINDOW\)/{print $NF}'")
         windowId = output.strip()
 
     return windowId
@@ -618,21 +669,21 @@ def drawWords(inputfilename, outputfilename, words, detected_words):
             color, left, top, w)
         draw_commands += """ -stroke none -fill %s -draw "text %s,%s '%.2f'" """ % (
             color, left, bottom+10, score)
-    runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))
+    _runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))
 
 def drawIcon(inputfilename, outputfilename, iconFilename, bbox, color='green'):
     left, top, right, bottom = bbox[0], bbox[1], bbox[2], bbox[3]
     draw_commands = """ -stroke %s -fill blue -draw "fill-opacity 0.2 rectangle %s,%s %s,%s" """ % (color, left, top, right, bottom)
     draw_commands += """ -stroke none -fill %s -draw "text %s,%s '%s'" """ % (
         color, left, top, iconFilename)
-    runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))
+    _runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))
 
 def drawClickedPoint(inputfilename, outputfilename, clickedXY):
     x, y = clickedXY
     draw_commands = """ -stroke red -fill blue -draw "fill-opacity 0.2 circle %s,%s %s,%s" """ % (
         x, y, x + 20, y)
     draw_commands += """ -stroke none -fill red -draw "point %s,%s" """ % (x, y)
-    runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))
+    _runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))
 
 def evaluatePreprocessFilter(imagefilename, ppfilter, words):
     """
@@ -642,7 +693,7 @@ def evaluatePreprocessFilter(imagefilename, ppfilter, words):
     global g_preprocess
     evaluatePreprocessFilter.count += 1
     preprocessed_filename = '%s-pre%s.png' % (imagefilename, evaluatePreprocessFilter.count)
-    runcmd("convert '%s' %s '%s' && tesseract %s eyenfinger.autoconfigure hocr" %
+    _runcmd("convert '%s' %s '%s' && tesseract %s eyenfinger.autoconfigure hocr" %
            (imagefilename, ppfilter, preprocessed_filename,
             preprocessed_filename))
     detected_words = _hocr2words(file("eyenfinger.autoconfigure.html").read())

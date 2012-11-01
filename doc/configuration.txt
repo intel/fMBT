@@ -22,12 +22,12 @@ Available types & parameters:
                 model. Communicates with the child using fMBT AAL
                 protocol.
 
-        lib(<modelname>[,filename])
+        lib(<modelname> [, filename])
 
-                uses model "modelname". If the model is not already
-                registered (statically linked or LD_PRELOADed, for
-                instance), shared library <filename> is loaded. If
-                <filename> is not given, fMBT tries to load
+                uses model <modelname>. If the model is not already
+                loaded (statically linked or LD_PRELOADed, for
+                instance), shared library filename is loaded. If
+                filename is not given, fMBT tries to load
                 "modelname.so" and "libmodelname.so".
 
         lsts(<filename>)
@@ -96,11 +96,16 @@ Available types & parameters:
         mapper(<filename>)
 
                 redirects and possibly renames actions in test model
-                to subadapters according to rules in filename.
+                to subadapters according to rules in mapper adapter
+                configuration file <filename>.
 
-        lib(<adaptername>[,filename])
+        lib(<adaptername> [, filename])
 
-                TODO
+                Uses adapter <adaptername>. If the adapter is not
+                already loaded (statically linked or LD_PRELOADed, for
+                instance), shared library filename is loaded. If
+                filename is not given, fMBT tries to load
+                "adaptername.so" and "libadaptername.so".
 
         remote(<command>)
 
@@ -183,7 +188,7 @@ Available types & parameters:
 
 Examples:
 
-        heuristic = "exclude(.*Error.*, lookahead(3))"
+        heuristic = "exclude('.*Error.*', lookahead(3))"
 
                 chooses the first action of a three-step-path that
                 gives the best coverage and does not include actions
@@ -215,31 +220,51 @@ Syntax:
 
 Available types & parameters:
 
-        exclude(action-regexp [, action-regexp...], coverage-spec)
+        exclude(action-regexp [, action-regexp...], type(params))
 
-                uses coverage-spec to measure coverage, but execution
-                of excluded actions will not affect the result. If
-                action-regexp is not a name of action, it is handled
-                as a regular expression.
+                uses coverage type(params) to measure coverage, but
+                execution of excluded actions will not affect the
+                result. If action-regexp is not a name of action, it
+                is handled as a regular expression.
 
-        include(action-regexp [, action-regexp...], coverage-spec)
+        include(action-regexp [, action-regexp...], type(params))
 
-                uses coverage-spec to measure coverage, but execution
-                of included actions only will affect the result. If
-                action-regexp is not a name of action, it is handled
-                as a regular expression.
+                uses coverage type(params) to measure coverage, but
+                execution of included actions only will affect the
+                result. If action-regexp is not a name of action, it
+                is handled as a regular expression.
+
+        min(type(params) [, type(params)...])
+
+                measures the minimum value of all coverages given as
+                parameters.
 
         perm[(count)]
 
-                measures coverage of all permutations of any <count>
-                actions in the test model. If count is not given, it
-                defaults to 2.
+                measures the percentage of coverage of all
+                permutations of any <count> actions in the test
+                model. If count is not given, it defaults to 2.
+
+        sum(type(params) [, type(params)...])
+
+                measures the sum of all coverages given as parameters.
+
+        uwalks(from regexp_1 to regexp_2)
+
+                measures the number of minimal unique walks that start
+                from actions or tags matching regexp_1, and end to
+                actions or tags matching regexp_2.
+
+        walks(from regexp_1 to regexp_2)
+
+                like uwalks, but not restricted to unique walks only.
+                That is, testing the same walk again increases the
+                count.
 
         tag
 
-                TODO. See if the current implementation is what we
-                really want.
-
+                measures the percentage of coverage of all tags in the
+                states of the model.
         
         covlang(<expression>)
 
@@ -250,13 +275,13 @@ Available types & parameters:
 
 Examples:
 
-        coverage = "exclude(.*Choose(Cash|Credit|Bank).*, perm(1))"
+        coverage = "exclude('.*Choose(Cash|Credit|Bank).*', perm(1))"
 
                 measures coverage of all other actions but those which
                 include ChooseCash, ChooseCredit or ChooseBank in
                 their names.
 
-        coverage = "include(iChoose(Cash|Credit|Bank), iPay, perm(2))"
+        coverage = "include('iChoose(Cash|Credit|Bank)', 'iPay', perm(2))"
 
                 measures coverage of action pairs from the set of four
                 actions: iChooseCash, iChooseCredit, iChooseBank and
@@ -280,6 +305,20 @@ Examples:
                 CA, CB and CC have been executed. Suitable for
                 regression tests. Notice that not all permutations can
                 be covered because of test model. See End conditions.
+
+        coverage = "uwalks(from 'iOrderCoffee' to 'iCancelOrder')"
+
+                measures how many different minimal sequences from
+                iOrderCoffee to iCancelOrder has been tested.
+
+        coverage = "sum(uwalks(from 'iPause' to 'iContinue'),
+                        uwalks(from 'iContinue' to 'iPause'),
+                        perm(2))"
+
+                measures how many different sequences have been tested
+                from pausing playback to continuing it, and vice
+                versa. Percentage of covered permutations of action
+                pairs is added to the measure.
 
         coverage = "covlang(a A then (a B or a C))"
 

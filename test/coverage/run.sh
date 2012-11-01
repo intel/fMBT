@@ -23,7 +23,7 @@ export PATH=../../src:../../utils:$PATH
 
 source ../functions.sh
 
-teststep "coverage: generate model..."
+teststep "coverage generate model..."
 fmbt-gt -f t1.gt -o t1.lsts >>$LOGFILE 2>&1 || {
     testfailed
     exit 1    
@@ -42,7 +42,6 @@ fmbt-log -f \$sc perm.log|head -1|while read f
 do
 if [ 0.000000 != $f ]; then
     testfailed
-#    exit 1
 fi
 done
 
@@ -50,7 +49,6 @@ fmbt-log -f \$sc perm.log|tail -1|while read l
 do
 if [ 1.000000 != $l ]; then
     testfailed
-#    exit 1
 fi
 done
 
@@ -58,9 +56,10 @@ testpassed
 
 teststep "coverage min..."
 echo 'model = "lsts:t1.lsts"' > test.conf
-echo 'coverage = "min:perm:3:perm:2"' >> test.conf
+echo 'coverage = "min(perm(3), perm(2),
+                      perm(1))"' >> test.conf
 echo 'model = "lsts:t1.lsts"' > test2.conf
-echo 'coverage = "min:perm:2:perm:3"' >> test2.conf
+echo 'coverage = "min(perm:1,perm:2,perm:3)"' >> test2.conf
 
 fmbt test.conf -l min1.log >>$LOGFILE 2>&1 || {
     testfailed
@@ -80,9 +79,9 @@ done
 fmbt-log -f \$sc min1.log > log1
 fmbt-log -f \$sc min2.log > log2
 
-#cmp log1 log2 || {
-#    testfailed 
-#}
+cmp log1 log2 || {
+    testfailed 
+}
 
 testpassed
 
@@ -92,14 +91,12 @@ echo 'coverage = "tag"' >> test.conf
 
 fmbt test.conf -l tag.log >>$LOGFILE 2>&1 || {
     testfailed
-#    exit 1    
 }
 
 fmbt-log -f \$sc tag.log|head -1|while read f
 do
 if [ 1.000000 != $f ]; then
     testfailed
-#    exit 1
 fi
 done
 
@@ -107,48 +104,33 @@ fmbt-log -f \$sc tag.log|tail -1|while read f
 do
 if [ 1.000000 != $f ]; then
     testfailed
-#    exit 1
 fi
 done
-
 testpassed
 
-teststep "coverage: generate model2..."
-fmbt-gt -f t2.gt -o t2.lsts >>$LOGFILE 2>&1 || {
+teststep "coverage tag with model 2..."
+cat > test.conf <<EOF
+model = "lsts_remote(fmbt-gt -f t2.gt)"
+coverage = "tag"
+pass = "coverage(1.0)"
+on_fail = "exit(1)"
+EOF
+
+fmbt test.conf -l tag2.log >>$LOGFILE 2>&1 || {
     testfailed
-    exit 1    
-}
-testpassed
-
-
-teststep "coverage tag with model..."
-echo 'model = "lsts:t2.lsts"' > test.conf
-echo 'coverage = "tag"' >> test.conf
-
-fmbt test.conf -l tag.log >>$LOGFILE 2>&1 || {
-    testfailed
-#    exit 1    
 }
 
-fmbt-log -f \$sc tag.log|head -1|while read f
-do
-if [ 0.000000 != $f ]; then
+if ! ( fmbt-log -f '$ax' tag2.log | grep -q iCoverSecond ); then
+    echo "iCoverSecond should have been executed before reaching full coverage" >>$LOGFILE
     testfailed
-#    exit 1
 fi
-done
-
-fmbt-log -f \$sc tag.log|tail -1|while read f
-do
-if [ 1.000000 != $f ]; then
+if fmbt-log -f '$ax' tag2.log | grep -q iCoverBoth; then
+    echo "iCoverBoth should not have been executed - full coverage reached before it" >>$LOGFILE
     testfailed
-#    exit 1
 fi
-done
 testpassed
 
-
-teststep "coverage: walks between tags"
+teststep "coverage walks between tags"
 cat > walks.conf <<EOF
 model     = "aal_remote(remote_pyaal -l twocounters.aal.log 'twocounters.aal')"
 heuristic = "lookahead(5)"
@@ -177,11 +159,11 @@ else
     ( testfailed )
 fi
 
-teststep "coverage: uwalks between tags..."
+teststep "coverage uwalks between tags..."
 cat > uwalks.conf <<EOF
 model     = "aal_remote(remote_pyaal -l twocounters.aal.log 'twocounters.aal')"
 heuristic = "lookahead(5)"
-coverage  = "uwalks(from \"all_zeros\" to \"all_ones\")"
+coverage  = "uwalks(from 'all_zeros' to 'all_ones')"
 pass      = "coverage(1)"
 fail      = "steps(20)"
 on_pass   = "exit(0)"
@@ -204,7 +186,70 @@ else
     testfailed
 fi
 
-teststep "coverage: include"
+teststep "coverage uwalks between actions..."
+cat > uwalks.conf <<EOF
+model     = "lsts_remote(fmbt-gt -f coffee.gt)"
+heuristic = "lookahead(7)"
+coverage  = "uwalks(from 'iOrderCoffee' to 'iCollectItem')"
+pass      = "coverage(5)"
+fail      = "no_progress(10)"
+fail      = "steps(100)"
+on_pass   = "exit(0)"
+on_fail   = "exit(1)"
+on_inconc = "exit(2)"
+EOF
+
+if ! fmbt -l uwalks.log uwalks.conf 2>uwalks-verdict.txt; then
+    echo "this uwalks.conf test was expected to pass:" >>$LOGFILE
+    cat uwalks.conf >>$LOGFILE
+    tail -n 20 uwalks.log >>$LOGFILE
+    testfailed
+fi
+
+fmbt-log uwalks.log | tee uwalks-steps-seen.txt >>$LOGFILE
+
+if [ "$(grep iCollectItem uwalks-steps-seen.txt | wc -l)" != "5" ]; then
+    echo "five iCollectItem steps expected," >>$LOGFILE
+    echo "$(grep iCollectItem uwalks-steps-seen.txt | wc -l) seen." >>$LOGFILE
+    testfailed
+fi
+
+if grep -q iCancelOrder uwalks-steps-seen.txt; then
+    echo "iCancelOrder appears in the log but it should not." >>$LOGFILE
+    echo "- it does not add minimal unique walks" >>$LOGFILE
+    testfailed
+fi
+testpassed
+
+
+teststep "coverage sum..."
+cat > sum.conf <<EOF
+model     = "lsts_remote(fmbt-gt -f coffee.gt)"
+heuristic = "lookahead(7)"
+coverage  = "sum(perm(1),
+                 perm(1),
+                 perm(1))"
+pass      = "coverage(5)"
+inconc    = "no_progress(10)"
+fail      = "steps(100)"
+on_pass   = "exit(1)"
+on_fail   = "exit(2)"
+on_inconc = "exit(0)"
+EOF
+
+if ! fmbt -l sum.log sum.conf >>$LOGFILE 2>&1; then
+    echo "sum test exit status != 0" >>$LOGFILE
+    testfailed
+fi
+
+if [ "$(fmbt-log -f '$sc' sum.log | tail -n 1)" != "3.000000" ]; then
+    echo "coverage 3.000000 expected, got: $(fmbt-log -f '$sc' sum.log | tail -n 1)" >>$LOGFILE
+    testfailed
+fi
+
+testpassed
+
+teststep "coverage include..."
 cat > cinclude.conf <<EOF
 model     = "lsts_remote(fmbt-gt -f 'abc_reg.gt')"
 heuristic = "lookahead(1)"
@@ -230,7 +275,7 @@ fi
 done
 testpassed
 
-teststep "coverage: include regexp"
+teststep "coverage include regexp..."
 cat > cinclude_reg.conf <<EOF
 model     = "lsts_remote(fmbt-gt -f 'abc_reg.gt')"
 heuristic = "lookahead(1)"
@@ -256,7 +301,7 @@ fi
 done
 testpassed
 
-teststep "coverage: exclude"
+teststep "coverage exclude..."
 cat > cexclude.conf <<EOF
 model     = "lsts_remote(fmbt-gt -f 'abc.gt')"
 heuristic = "lookahead(1)"
@@ -282,7 +327,7 @@ fi
 done
 testpassed
 
-teststep "coverage: exclude regexp"
+teststep "coverage exclude regexp..."
 cat > cexclude_reg.conf <<EOF
 model     = "lsts_remote(fmbt-gt -f 'abc_reg.gt')"
 heuristic = "lookahead(1)"
@@ -309,7 +354,7 @@ done
 testpassed
 
 
-teststep "coverage: join"
+teststep "coverage join..."
 cat > cjoin.conf <<EOF
 model     = "lsts_remote(fmbt-gt -f 'abc_reg.gt')"
 heuristic = "lookahead(1)"

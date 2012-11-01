@@ -51,21 +51,47 @@ inline bool same_color(const PixelPacket *p1, const PixelPacket *p2)
     }
 }
 
-bool pixelperfect_match(int hayx, int neex, int neey, int x, int y,
+bool pixelperfect_match(const int hayxsize,
+                        const int neex, const int neey,
+                        const int x, const int y,
                         const PixelPacket *hay_pixel,
                         const PixelPacket *nee_pixel)
 {
-    for(int i=0; i<neey && i<neex; i++) {
-        if (!same_color((hay_pixel + hayx*(y+i) + x+i),
-                        (nee_pixel + neex*i     + i))) {
+    /* try to fail fast, do very fast diagonal sweep */
+    int samples = 8;
+    int stepx = neex >= samples ? neex/samples : 1;
+    int stepy = neey >= samples ? neey/samples : 1;
+    if (stepx > 16) stepx = 16;
+    if (stepy > 16) stepy = 16;
+    for (int _x=0, _y=0;
+         _x<neex && _y<neey;
+         _x+=stepx, _y+=stepy) {
+        if (!same_color((hay_pixel + hayxsize*(y+_y) + x+_x),
+                        (nee_pixel + neex*_y     + _x))) {
             return false;
         }
     }
-    
+
+    /* take more samples from the middle row */
+    samples = 32;
+    stepx = neex >= samples ? neex/samples : 1;
+    if (stepx > 8) stepx = 8;
+    for (int _x=0, _y=neey/2;
+         _x<neex;
+         _x+=stepx) {
+        if (!same_color((hay_pixel + hayxsize*(y+_y) + x+_x),
+                        (nee_pixel + neex*_y     + _x))) {
+            return false;
+        }
+    }
+
+    /* full check, pixel-by-pixel */
     for(int _y=0; _y<neey; _y++) {
         for(int _x=0; _x<neex; _x++) {
-            if (!same_color((hay_pixel + hayx*(y+_y) + x+_x),
+            if (!same_color((hay_pixel + hayxsize*(y+_y) + x+_x),
                             (nee_pixel + neex*_y     + _x))) {
+                printf("haystack (%d, %d) needle (%d, %d) differ.\n",
+                       x+_x, y+_y, _x, _y);
                 return false;
             }
         }
@@ -73,7 +99,7 @@ bool pixelperfect_match(int hayx, int neex, int neey, int x, int y,
     return true;
 }
 
-long normdiag_error(int hayx,int neex,int neey,int x,int y,
+long normdiag_error(int hayxsize,int neex,int neey,int x,int y,
                     const PixelPacket *hay_pixel,
                     const PixelPacket *nee_pixel,
                     const int xstart, const int ystart,
@@ -104,7 +130,7 @@ long normdiag_error(int hayx,int neex,int neey,int x,int y,
         int nvalue = (*(nee_pixel+neex*nory+norx)).green;
         if (nee_smallest == -1 || nvalue < nee_smallest) nee_smallest = nvalue;
         if (nee_greatest == -1 || nvalue > nee_greatest) nee_greatest = nvalue;
-        int hvalue = (*(hay_pixel+hayx*(nory+y)+norx+x)).green;
+        int hvalue = (*(hay_pixel+hayxsize*(nory+y)+norx+x)).green;
         if (hay_smallest == -1 || hvalue < hay_smallest) hay_smallest = hvalue;
         if (hay_greatest == -1 || hvalue > hay_greatest) hay_greatest = hvalue;
     }
@@ -117,9 +143,12 @@ long normdiag_error(int hayx,int neex,int neey,int x,int y,
     long delta = 0;
     int checked_steps = 0;
     for(int checkx=xstart+1, checky=ystart+1;
-        0 <= checkx && 0 <= checky &&
-            0 <= checkx+xstep*2-1 && 0 <= checky+ystep*2-1 &&
-            checkx+xstep*2+1 < neex && checky+ystep*2+1 < neey;
+        (0 <= checkx &&
+         0 <= checky &&
+         0 <= checkx+xstep*2-1 &&
+         0 <= checky+ystep*2-1 &&
+         checkx+xstep*2+1 < neex &&
+         checky+ystep*2+1 < neey);
         checkx+=xstep, checky+=ystep) {
 
         int n1 = (((*(nee_pixel+neex*checky+checkx)).green - nee_smallest)*colors)
@@ -133,12 +162,12 @@ long normdiag_error(int hayx,int neex,int neey,int x,int y,
 
 #define GREEN(h1xoffset, h1yoffset, penalty)                            \
         do {                                                            \
-            h2=((((*(hay_pixel+hayx*(checky+y+(h1yoffset))+checkx+x+(h1xoffset))).green - hay_smallest)*colors) / (hay_greatest-hay_smallest)); \
+            h2=((((*(hay_pixel+hayxsize*(checky+y+(h1yoffset))+checkx+x+(h1xoffset))).green - hay_smallest)*colors) / (hay_greatest-hay_smallest)); \
             diff = (n1-n2)-(h1-h2); diff = diff*diff + penalty;         \
             if (bestdiff == -1 || diff < bestdiff) bestdiff = diff;     \
         } while (0);
 
-        h1 = ((((*(hay_pixel+hayx*(checky+y)+checkx+x)).green - hay_smallest)*colors) / (hay_greatest-hay_smallest));
+        h1 = ((((*(hay_pixel+hayxsize*(checky+y)+checkx+x)).green - hay_smallest)*colors) / (hay_greatest-hay_smallest));
 
         GREEN(xstep*2, ystep*2, 0);
         for (int xi=xstep*2-1; xi<=xstep*2+1 && bestdiff > colors/4; xi++) {
@@ -217,29 +246,35 @@ int iconsearch(std::vector<BoundingBox>& retval,
     
     /* Fuzzy match */
     /* sweep diagonal */
+    int samples = 16;
+    int stepx = neex >= samples ? neex/samples : 1;
+    int stepy = neey >= samples ? neey/samples : 1;
     for (int y=0;y<hayy-neey;y++) {
         for (int x=0;x<hayx-neex;x++) {
             long thisdelta = normdiag_error(hayx, neex, neey, x, y,
                                             hay_pixel, nee_pixel,
-                                            0, 0, 1, 1);
+                                            0, 0, stepx, stepy);
             if (thisdelta != INCOMPARABLE && thisdelta <= color_threshold) {
                 candidates.push_back( Candidate(thisdelta, std::pair<int,int>(x, y)) );
             }
         }
     }
 
-    /* sweep more lines */
+    /* sweep more lines, take samples on every pixel */
     for (unsigned int ci=0; ci < candidates.size(); ci++) {
+        if (candidates[ci].first == LONG_MAX) continue;
+
         int thisdelta;
         int x = candidates[ci].second.first;
         int y = candidates[ci].second.second;
 
         thisdelta = normdiag_error(hayx, neex, neey, x, y, hay_pixel, nee_pixel,
-                                  0, neey/2, 1, 0);
+                                   0, neey/2, 1, 0);
         if (thisdelta == INCOMPARABLE) {
             candidates[ci].first = LONG_MAX; continue;
         }
         candidates[ci].first += thisdelta;
+
         thisdelta = normdiag_error(hayx, neex, neey, x, y, hay_pixel, nee_pixel,
                                   neex/2, 0, 0, 1);
         if (thisdelta == INCOMPARABLE) {

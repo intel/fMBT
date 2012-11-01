@@ -44,7 +44,6 @@ Test generator and executor
 %package utils
 Summary: fMBT visualizing, staticstics, reporting and log utils
 Requires: %{name}-python
-Requires: %{name}-devel
 Requires: python
 Requires: graphviz
 Requires: gnuplot
@@ -87,7 +86,7 @@ Common Python libraries for various fMBT components
 
 %package adapters-remote
 Summary: fMBT remote adapters
-Requires: %{name}-python
+Requires: %{name}-coreutils
 %if 0%{?suse_version}
 Requires:       dbus-1-python
 %else
@@ -125,6 +124,24 @@ Summary: fMBT examples
 %description examples
 various fMBT examples
 
+%package all
+Summary: Meta package for installing all fMBT packages
+Requires: %{name}-adapter-eyenfinger
+Requires: %{name}-doc
+Requires: %{name}-editor
+Requires: %{name}-examples
+
+%description all
+Meta package for installing all fMBT packages
+
+%package for-aalpython-tests
+Summary: Meta package for generating and running AAL/Python tests
+Requires: %{name}-adapters-remote
+Requires: %{name}-core
+
+%description for-aalpython-tests
+Meta package for generating and running AAL/Python tests
+
 %prep
 %setup -q
 ./autogen.sh
@@ -142,7 +159,6 @@ make install DESTDIR=$RPM_BUILD_ROOT
 rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/%{name}/%{name}_cparsers.la
 rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 
-
 %files core
 %{_bindir}/%{name}
 
@@ -150,7 +166,6 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %defattr(-, root, root, -)
 %{_bindir}/%{name}-view
 %{_bindir}/%{name}-log
-%{_bindir}/%{name}-log2lsts
 %{_bindir}/%{name}-stats
 %{_bindir}/lsts2dot
 %{_bindir}/%{name}-ucheck
@@ -163,6 +178,7 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %{_bindir}/%{name}-aalc
 %{_bindir}/%{name}-aalp
 %{_bindir}/%{name}-gt
+%{_bindir}/%{name}-log2lsts
 %{_bindir}/%{name}-parallel
 %{python_sitelib}/%{name}/%{name}-gt
 %{python_sitelib}/%{name}/%{name}-parallel
@@ -189,7 +205,6 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %{python_sitelib}/%{name}/%{name}_config.py*
 %dir %{_libdir}/python*/site-packages/%{name}/
 %{_libdir}/python*/site-packages/%{name}/%{name}_cparsers.so
-
 
 %files adapters-remote
 %defattr(-, root, root, -)
