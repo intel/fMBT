@@ -24,10 +24,15 @@
 
 class remote {
 public:
-  remote():pid(0),id(0) {}
+  remote():pid(0),id(0) {
+    g_main_context_ref(g_main_context_default());
+  }
   virtual ~remote() {
-    if (id) 
-      g_source_remove(id);
+    if (id) {
+      printf("g_source_remove returned %i\n",g_source_remove(id));
+    }
+    g_spawn_close_pid(pid);
+    g_main_context_unref(g_main_context_default());
   }
 protected:
   void monitor() {

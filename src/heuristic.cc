@@ -28,10 +28,12 @@ FACTORY_IMPLEMENTATION(Heuristic)
 Heuristic::Heuristic(Log& l, std::string params) :
 model(NULL),none(""), log(l)
 {
+  log.ref();
 }
 
 Heuristic::~Heuristic()
 {
+  log.unref();
 }
 
 bool Heuristic::execute(int action)

@@ -29,10 +29,11 @@ aal_remote::aal_remote(Log&l,std::string& s)
     d_stdin(NULL), d_stdout(NULL), d_stderr(NULL)
 {
 
-  int _stdin,_stdout,_stderr;
+  int _stdin=-1,_stdout=-1,_stderr=-1;
   gchar **argv = NULL;
-  gint argc;
+  gint argc=0;
   GError *gerr=NULL;
+
 
   g_shell_parse_argv(s.c_str(),&argc,&argv,&gerr);
 
@@ -44,7 +45,15 @@ aal_remote::aal_remote(Log&l,std::string& s)
     return;
   }
 
-  g_spawn_async_with_pipes(NULL,argv,NULL,G_SPAWN_SEARCH_PATH,NULL,NULL,&pid,&_stdin,&_stdout,&_stderr,&gerr);
+  g_spawn_async_with_pipes(NULL,argv,NULL,(GSpawnFlags)(G_SPAWN_SEARCH_PATH|G_SPAWN_DO_NOT_REAP_CHILD),NULL,NULL,&pid,&_stdin,&_stdout,&_stderr,&gerr);
+
+  for(int i=0;i<argc;i++) {
+    if (argv[i]) {
+      free(argv[i]);
+    }
+  }
+  free(argv);
+  //g_strfreev(argv);
 
   if (gerr) {
     errormsg = "aal_remote: g_spawn_async_with_pipes error: " + std::string(gerr->message);
@@ -80,6 +89,9 @@ aal_remote::aal_remote(Log&l,std::string& s)
     tag_names.push_back(read_buf);
     red=getline(&read_buf,&read_buf_pos,d_stdout);
   }
+
+  free(read_buf);
+  read_buf_pos=0;
 
   fflush(d_stdin);  
 }
@@ -162,7 +174,9 @@ namespace {
   std::map<std::string,aal_remote*> storage;
 
   Adapter* adapter_creator(Log& l, std::string params = "") {
-    std::string remotename(unescape_string(strdup(params.c_str())));
+    //std::string remotename(unescape_string(strdup(params.c_str())));
+    std::string remotename(params);
+    unescape_string(remotename);    
     aal_remote* al=storage[remotename];
     if (!al) {
       al=new aal_remote(l,remotename);
@@ -176,7 +190,10 @@ namespace {
   }
   
   Model* model_creator(Log& l, std::string params) {
-    std::string remotename(unescape_string(strdup(params.c_str())));
+    //std::string remotename(unescape_string(strdup(params.c_str())));
+    std::string remotename(params);
+    unescape_string(remotename);    
+
     aal_remote* al=storage[remotename];
     if (!al) {
       al=new aal_remote(l,remotename);
