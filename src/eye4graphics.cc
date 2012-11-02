@@ -351,6 +351,31 @@ int findSingleIcon(BoundingBox* bbox,
     return retval;
 }
 
+int imageDimensions(BoundingBox* bbox,
+                    const char* imagefile)
+{
+    Image *image;
+
+    bbox->left   = 0;
+    bbox->top    = 0;
+    bbox->right  = -1;
+    bbox->bottom = -1;
+    bbox->error  = 0;
+    
+    try { image = new Image(imagefile); }
+    catch(ErrorFileOpen e) {
+        return -3;
+    }
+
+    bbox->right = image->columns();
+    bbox->bottom = image->rows();
+
+    delete image;
+
+    return 0;
+}
+
+
 // make library:
 // g++ -fPIC -shared -o eye4graphics.so -O3 -Wall `pkg-config --cflags --libs Magick++` eye4graphics.cc
 

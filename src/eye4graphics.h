@@ -49,4 +49,21 @@ extern "C" {
                        const char* imagefile,
                        const char* iconfile,
                        const int threshold);
+
+    /*
+     * imageDimensions
+     *
+     * Parameters:
+     *   - bbox for returning dimensions of the image
+     *   - imagefile - name of the image
+     *
+     * Return value:
+     *    0: success
+     *   -3: cannot open image file
+     *
+     *       on success, bbox.right is the width, and bbox.bottom is
+     *       the height of the image.
+     */
+    int imageDimensions(BoundingBox* bbox,
+                        const char* imagefile);
 }
