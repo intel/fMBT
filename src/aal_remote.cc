@@ -53,7 +53,6 @@ aal_remote::aal_remote(Log&l,std::string& s)
     }
   }
   free(argv);
-  //g_strfreev(argv);
 
   if (gerr) {
     errormsg = "aal_remote: g_spawn_async_with_pipes error: " + std::string(gerr->message);

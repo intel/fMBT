@@ -22,7 +22,7 @@
 
 Mwrapper::~Mwrapper()
 {
-  
+  delete model;
 }
 
 

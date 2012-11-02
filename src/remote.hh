@@ -29,7 +29,7 @@ public:
   }
   virtual ~remote() {
     if (id) {
-      printf("g_source_remove returned %i\n",g_source_remove(id));
+      g_source_remove(id);
     }
     g_spawn_close_pid(pid);
     g_main_context_unref(g_main_context_default());

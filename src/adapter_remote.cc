@@ -52,6 +52,13 @@ bool Adapter_remote::init()
 
   g_spawn_async_with_pipes(NULL,argv,NULL,(GSpawnFlags)(G_SPAWN_SEARCH_PATH|G_SPAWN_DO_NOT_REAP_CHILD),NULL,NULL,&pid,&_stdin,&_stdout,&_stderr,&gerr);
 
+  for(int i=0;i<argc;i++) {
+    if (argv[i]) {
+      free(argv[i]);
+    }
+  }
+  free(argv);
+
   if (gerr) {
     errormsg = "adapter_remote g_spawn_async_with_pipes error: " + std::string(gerr->message);
     log.debug(errormsg.c_str());
