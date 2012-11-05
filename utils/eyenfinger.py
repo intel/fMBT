@@ -71,6 +71,8 @@ g_words = {}
 
 g_lastWindow = None
 
+g_defaultIconMatch = 1.0
+
 # windowsOffsets maps window-id to (x, y) pair.
 g_windowOffsets = {None: (0,0)}
 # windowsSizes maps window-id to (width, height) pair.
@@ -168,6 +170,13 @@ def setPreprocessFilter(preprocess):
     global g_preprocess
     g_preprocess = preprocess
 
+def iSetDefaultIconMatch(match):
+    """
+    Set the default match value that will be used in iClickIcon and
+    iVerifyIcon calls.
+    """
+    global g_defaultIconMatch
+    g_defaultIconMatch = match
 
 def iRead(windowId = None, source = None, preprocess = None, ocr=True, capture=None):
     """
@@ -291,7 +300,7 @@ def iVerifyWord(word, match=0.33, capture=None):
     return ((score, matching_word), g_words[matching_word][0][2])
 
 
-def iVerifyIcon(iconFilename, match=1.0, capture=None, _origin="iVerifyIcon"):
+def iVerifyIcon(iconFilename, match=None, capture=None, _origin="iVerifyIcon"):
     """
     Verify that icon can be found from previously iRead() image.
 
@@ -323,6 +332,8 @@ def iVerifyIcon(iconFilename, match=1.0, capture=None, _origin="iVerifyIcon"):
     if not (os.path.isfile(iconFilename) and os.access(iconFilename, os.R_OK)):
         _log('ERROR %s("%s") called, but the icon file is not readable.' % (_origin, iconFilename))
         raise BadIconImage('Icon "%s" is not readable.' % (iconFilename,))
+    if match == None:
+        match = g_defaultIconMatch
     if match > 1.0:
         _log('ERROR %s("%s"): invalid match value, must be below 1.0. ' % (_origin, iconFilename,))
         raise ValueError("invalid match value: %s, should be 0 <= match <= 1.0" % (match,))
@@ -355,7 +366,7 @@ def iVerifyIcon(iconFilename, match=1.0, capture=None, _origin="iVerifyIcon"):
     return (score, bbox)
 
 
-def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=1.0, mouseButton=1, mouseEvent=MOUSEEVENT_CLICK, dryRun=False, capture=None):
+def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=None, mouseButton=1, mouseEvent=MOUSEEVENT_CLICK, dryRun=False, capture=None):
     """
     Click coordinates relative to the given icon in previously iRead() image.
 
