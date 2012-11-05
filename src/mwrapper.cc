@@ -22,18 +22,25 @@
 
 Mwrapper::~Mwrapper()
 {
-  delete model;
+  if (model) {
+    model->unref();
+  }
 }
 
 
 Mwrapper::Mwrapper(Log&l, std::string params, aal* _model):
   Model(l, params), model(_model)  
 {
-  action_names=model->getActionNames();
-  prop_names=model->getSPNames();
-  precalc_input_output();
-  status = model->status;
-  errormsg = model->errormsg;
+  if (model) {
+    model->ref();
+    status = model->status;
+    errormsg = model->errormsg;
+    action_names=model->getActionNames();
+    prop_names=model->getSPNames();
+    precalc_input_output();
+  } else {
+    status=false;
+  }
 }
 
 int Mwrapper::getActions(int** actions) {

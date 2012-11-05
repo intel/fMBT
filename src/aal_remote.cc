@@ -172,16 +172,26 @@ namespace {
 
   std::map<std::string,aal_remote*> storage;
 
-  Adapter* adapter_creator(Log& l, std::string params = "") {
-    //std::string remotename(unescape_string(strdup(params.c_str())));
+  aal* al_helper(Log& l, std::string params) {
     std::string remotename(params);
-    unescape_string(remotename);    
-    aal_remote* al=storage[remotename];
+    unescape_string(remotename); 
+    std::string fullname("aal_remote("+remotename+")");
+
+    if (aal::storage==NULL) {
+      aal::storage=new std::map<std::string,aal*>;
+    }
+
+    aal* al=(*aal::storage)[fullname];
     if (!al) {
       al=new aal_remote(l,remotename);
-      storage[remotename]=al;
+      (*aal::storage)[fullname]=al;
     }
-    
+    return al;
+  }
+
+  Adapter* adapter_creator(Log& l, std::string params = "") {
+    aal* al=al_helper(l,params);
+
     if (al) {
       return new Awrapper(l,params,al);
     }
@@ -189,16 +199,8 @@ namespace {
   }
   
   Model* model_creator(Log& l, std::string params) {
-    //std::string remotename(unescape_string(strdup(params.c_str())));
-    std::string remotename(params);
-    unescape_string(remotename);    
+    aal* al=al_helper(l,params);
 
-    aal_remote* al=storage[remotename];
-    if (!al) {
-      al=new aal_remote(l,remotename);
-      storage[remotename]=al;
-    }
-    
     if (al) {
       return new Mwrapper(l,params,al);
     }

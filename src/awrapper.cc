@@ -25,13 +25,18 @@ std::string Awrapper::es("");
 
 Awrapper::~Awrapper()
 {
+  if (ada) {
+    ada->unref();
+  }
 }
 
 Awrapper::Awrapper(Log&l, std::string params, aal* _ada):
   Adapter(l, params), ada(_ada) {
   if (ada==NULL) {
     status=false;
-  }  
+  } else {
+    ada->ref();
+  }
 }
 
 void Awrapper::set_actions(std::vector<std::string>* _actions)

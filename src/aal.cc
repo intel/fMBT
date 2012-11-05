@@ -21,6 +21,8 @@
 #include "helper.hh"
 #include <cstdlib>
 
+std::map<std::string,aal*>* aal::storage=NULL;
+
 void aal::log(const char* format, ...)
 {
   va_list ap;

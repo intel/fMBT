@@ -181,15 +181,15 @@ int aal_java::getprops(int** pro) {
 
 namespace {
 
-  std::map<std::string,aal_java*> storage;
-
   Adapter* adapter_creator(Log& l, std::string params = "") {
     std::string classname(unescape_string(strdup(params.c_str())));
-    aal_java* al=storage[classname];
+    std::string fullname("aal_remote("+remotename+")");
+    aal_java* al=dynamic_cast<aal_java*>aal::storage[fullname];
     if (!al) {
       al=new aal_java(l,classname);
       if (al->status) {
 	storage[classname]=al;
+	aal::storage[fullname]=al;
       } else {
 	delete al;
 	al=NULL;
@@ -204,11 +204,11 @@ namespace {
 
   Model* model_creator(Log& l, std::string params) {
     std::string classname(unescape_string(strdup(params.c_str())));
-    aal_java* al=storage[classname];
+    aal_java* al=dynamic_cast<aal_java*>aal::storage[fullname];
     if (!al) {
       al=new aal_java(l,classname);
       if (al->status) {
-	storage[classname]=al;
+	aal::storage[fullname]=al;
       } else {
 	delete al;
 	al=NULL;
