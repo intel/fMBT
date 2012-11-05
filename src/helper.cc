@@ -191,12 +191,6 @@ std::string filetype(std::string& _s)
   return r.substr(0,found);
 }
 
-bool isxrules(std::string& s)
-{
-  std::string s1(".xrules");
-  return (s.substr(s.size()-s1.size())==s1);
-}
-
 char* unescape_string(char* msg)
 {
   int l=std::strlen(msg);
