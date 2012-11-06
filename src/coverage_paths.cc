@@ -176,7 +176,7 @@ public:
   virtual ~Coverage_inputswalks() {}
 };
 
-void Coverage_paths_base::on_restart() {
+void Coverage_paths_base::on_restart(int action,std::vector<int>&p) {
   executed.clear();
 }
 
