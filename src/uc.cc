@@ -82,6 +82,8 @@ int main(int argc,char * const argv[])
 
   l=new Log_null();
 
+  l->ref();
+
   static struct option long_opts[] = {
     {"help", no_argument, 0, 'h'},
     {"version", no_argument, 0, 'V'},
@@ -183,7 +185,15 @@ int main(int argc,char * const argv[])
     fprintf(stderr,"Handling log %s\n",argv[i]);
     std::string s(argv[i]);
     o=of->handle_history(*l,s);
+
+    if (!of->status) {
+      return -1;
+    }
     fwrite(o.c_str(),1,o.size(),outfile);
+  }
+
+  if (!of->status) {
+    return -1;
   }
 
   o=of->footer();

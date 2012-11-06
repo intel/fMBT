@@ -27,55 +27,49 @@ std::string Coverage_exec_filter::stringify()
   return std::string("");
 }
 
+void Coverage_exec_filter::mhandler
+(std::vector<std::string>& sp,std::vector<std::string>& n,
+ std::vector<std::string*>& from,std::vector<int>& act,
+ std::vector<int>& tag)
+{
+  for(unsigned i=0;i<from.size();i++) {
+    int pos=find(sp,*from[i],-1);
+    if (pos<0) {
+      pos=model->action_number(*(from[i]));
+      if (pos>0) {
+	act.push_back(pos);
+      } else {
+	std::vector<int> r;	
+	regexpmatch(*(from[i]),sp,r,false);
+	if (!r.empty()) {
+	  // Let's dump to actions...
+	  tag.insert(tag.begin(),r.begin(),r.end());
+	} else {
+	  regexpmatch(*(from[i]),n,r,false);
+	  if (!r.empty()) {
+	    act.insert(act.begin(),r.begin(),r.end());
+	  } else {
+	    // Nothing?
+	    printf("No match for %s\n",from[i]->c_str());
+	  }	  
+	}
+      }
+    } else {
+      tag.push_back(pos);
+    }
+  }
+}
+
 void Coverage_exec_filter::set_model(Model* _model)
 {
   Coverage::set_model(_model);
 
-  std::vector<std::string>& sp(model->getSPNames());  
+  std::vector<std::string>& sp(model->getSPNames());
+  std::vector<std::string>& n(model->getActionNames());
 
-  for(unsigned i=0;i<from.size();i++) {
-    int pos=find(sp,*from[i],-1);
-    if (pos<0) {
-      pos=model->action_number(*from[i]);
-      if (pos>0) {
-	start_action.push_back(pos);
-      } else {
-
-      }
-    } else {
-      start_tag.push_back(pos);
-    }
-  }
-
-  for(unsigned i=0;i<to.size();i++) {
-    int pos=find(sp,*to[i],-1);
-    if (pos<0) {
-      pos=model->action_number(*to[i]);
-      if (pos>0) {
-	end_action.push_back(pos);
-      } else {
-
-      }
-    } else {
-      end_tag.push_back(pos);
-    }
-
-  }
-
-  for(unsigned i=0;i<drop.size();i++) {
-    int pos=find(sp,*drop[i],-1);
-    if (pos<0) {
-      pos=model->action_number(*drop[i]);
-      if (pos>0) {
-	rollback_action.push_back(pos);
-      } else {
-
-      }
-    } else {
-      rollback_tag.push_back(pos);
-    }
-
-  }
+  mhandler(sp,n,from,start_action,start_tag);
+  mhandler(sp,n,to,end_action,end_tag);
+  mhandler(sp,n,drop,rollback_action,rollback_tag);
 
   // Let's handle initial tags
   execute(0);
@@ -112,6 +106,11 @@ void Coverage_exec_filter::on_start(int action,std::vector<int>&p)
 {
   online=true;
   etime.push_back(History::current_time);
+
+  // Let's init....
+  if (prop_set(start_action,1,&action)) {
+    on_online(action,p);
+  }
 }
 
 void Coverage_exec_filter::on_online(int action,std::vector<int>&p) {
