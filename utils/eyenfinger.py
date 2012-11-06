@@ -742,17 +742,21 @@ def iUseWindow(windowIdOrName = None):
     g_windowSizes[g_lastWindow] = (int(width), int(height))
     return g_lastWindow
 
-def iUseImageAsWindow(imagefilename):
+def iUseImageAsWindow(imageFilename):
     global g_lastWindow
-        
-    g_lastWindow = imagefilename
+
+    if not eye4graphics:
+        _log('ERROR: iUseImageAsWindow("%s") called, but eye4graphics not loaded.' % (imageFilename,))
+        raise EyenfingerError("eye4graphics not available")
+    
+    g_lastWindow = imageFilename
 
     struct_bbox = Bbox(0,0,0,0,0)
     err = eye4graphics.imageDimensions(ctypes.byref(struct_bbox),
-                                       imagefilename)
+                                       imageFilename)
     if err != 0:
-        _log('iUseImageAsWindow: Failed reading dimensions of image "%s": %s' % (imagefilename, e))
-        raise BadSourceImage('Failed to read dimensions of "%s".' % (imagefilename,))
+        _log('iUseImageAsWindow: Failed reading dimensions of image "%s".' % (imageFilename,))
+        raise BadSourceImage('Failed to read dimensions of "%s".' % (imageFilename,))
         
     g_windowOffsets[g_lastWindow] = (0, 0)
     g_windowSizes[g_lastWindow] = (int(struct_bbox.right), int(struct_bbox.bottom))
@@ -808,16 +812,16 @@ def drawClickedPoint(inputfilename, outputfilename, clickedXY):
     draw_commands += """ -stroke none -fill red -draw "point %s,%s" """ % (x, y)
     _runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))
 
-def evaluatePreprocessFilter(imagefilename, ppfilter, words):
+def evaluatePreprocessFilter(imageFilename, ppfilter, words):
     """
     Visualise how given words are detected from given image file when
     using given preprocessing filter.
     """
     global g_preprocess
     evaluatePreprocessFilter.count += 1
-    preprocessed_filename = '%s-pre%s.png' % (imagefilename, evaluatePreprocessFilter.count)
+    preprocessed_filename = '%s-pre%s.png' % (imageFilename, evaluatePreprocessFilter.count)
     _runcmd("convert '%s' %s '%s' && tesseract %s eyenfinger.autoconfigure hocr" %
-           (imagefilename, ppfilter, preprocessed_filename,
+           (imageFilename, ppfilter, preprocessed_filename,
             preprocessed_filename))
     detected_words = _hocr2words(file("eyenfinger.autoconfigure.html").read())
     scored_words = []
@@ -837,7 +841,7 @@ def evaluatePreprocessFilter(imagefilename, ppfilter, words):
 evaluatePreprocessFilter.count = 0
 evaluatePreprocessFilter.scores = []
 
-def autoconfigure(imagefilename, words):
+def autoconfigure(imageFilename, words):
     """
     Search for image preprocessing configuration that will maximise
     the score of finding given words in the image.
@@ -845,7 +849,7 @@ def autoconfigure(imagefilename, words):
     """
 
     # check image width
-    iUseImageAsWindow(imagefilename)
+    iUseImageAsWindow(imageFilename)
     image_width = g_windowSizes[g_lastWindow][0]
 
     resize_filters = ['Mitchell', 'Catrom', 'Hermite', 'Gaussian']
@@ -861,36 +865,36 @@ def autoconfigure(imagefilename, words):
         for blevel, wlevel in levels:
             for z in zoom:
                 evaluatePreprocessFilter(
-                    imagefilename,
+                    imageFilename,
                     "-sharpen 5 -filter %s -resize %sx -sharpen 5 -level %s%%,%s%%,3.0 -sharpen 5" % (f, z * image_width, blevel, wlevel),
                     words)
 
                 evaluatePreprocessFilter(
-                    imagefilename,
+                    imageFilename,
                     "-sharpen 5 -filter %s -resize %sx -level %s%%,%s%%,3.0 -sharpen 5" % (
                         f, z * image_width, blevel, wlevel),
                     words)
 
                 evaluatePreprocessFilter(
-                    imagefilename,
+                    imageFilename,
                     "-sharpen 5 -filter %s -resize %sx -level %s%%,%s%%,3.0" % (
                         f, z * image_width, blevel, wlevel),
                     words)
 
                 evaluatePreprocessFilter(
-                    imagefilename,
+                    imageFilename,
                     "-sharpen 5 -level %s%%,%s%%,3.0 -filter %s -resize %sx -sharpen 5" % (
                         blevel, wlevel, f, z * image_width),
                     words)
 
                 evaluatePreprocessFilter(
-                    imagefilename,
+                    imageFilename,
                     "-sharpen 5 -level %s%%,%s%%,1.0 -filter %s -resize %sx" % (
                         blevel, wlevel, f, z * image_width),
                     words)
 
                 evaluatePreprocessFilter(
-                    imagefilename,
+                    imageFilename,
                     "-sharpen 5 -level %s%%,%s%%,10.0 -filter %s -resize %sx" % (
                         blevel, wlevel, f, z * image_width),
                     words)
