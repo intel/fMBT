@@ -32,8 +32,8 @@ class Log;
 
 class History: public Writable {
 public:
-  History(Log& l, std::string params = "") : log(l) {test_verdict="N/A";}
-  virtual ~History() {};
+  History(Log& l, std::string params = "") : log(l) {test_verdict="N/A";log.ref();}
+  virtual ~History() {log.unref();};
 
   virtual void set_coverage(Coverage*,Alphabet* alpha) =0;
 

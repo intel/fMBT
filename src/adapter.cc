@@ -29,6 +29,7 @@ FACTORY_IMPLEMENTATION(Adapter)
 Adapter::Adapter(Log& l, std::string params) :
 log(l), actions(NULL), parent(NULL)
 {
+  log.ref();
 }
 
 Adapter::~Adapter()
@@ -39,6 +40,7 @@ Adapter::~Adapter()
       unames[i]=NULL;
     }
   }
+  log.unref();
 }
 
 void Adapter::set_actions(std::vector<std::string>* _actions)

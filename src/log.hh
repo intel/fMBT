@@ -26,7 +26,7 @@
 
 class Log {
 public:
-  Log(FILE* f,bool de=false): out(f), debug_enabled(de)  { }
+  Log(FILE* f,bool de=false): refcount(0), out(f), debug_enabled(de)  { }
   Log(): out(stderr), debug_enabled(false)  { }
   virtual ~Log() {}
   virtual void push(std::string&);
@@ -50,7 +50,20 @@ public:
     return debug_enabled;
   }
 
+  void ref() {
+    refcount++;
+  }
+
+  void unref() {
+    refcount--;
+    if (refcount<=0) {
+      delete this;
+    }
+  }
+  
+
 protected:
+  int refcount;
   virtual void write(const char* msg);
   virtual void write(std::string& msg);
 

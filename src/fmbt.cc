@@ -167,7 +167,7 @@ int main(int argc,char * const argv[])
     if (E) {
       if (logfile!=NULL && logfile!=stderr) {
 	fclose(logfile);
-	logfile==NULL;
+	logfile=NULL;
       }
       log=new Log_null;
     } else {

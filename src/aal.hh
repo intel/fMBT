@@ -23,11 +23,25 @@
 #include "log.hh"
 #include <vector>
 #include <string>
+#include <map>
 
+template<class InputIterator, class T>
+  InputIterator find_second ( InputIterator first, InputIterator last, const T& value )
+  {
+    for ( ;first!=last; first++) {
+      if ( first->second==value ) {
+	break;
+      }
+    }
+    return first;
+  }
+
+class aal;
+ 
 class aal {
 public:
-  aal(Log&l, std::string& _params): _log(l), params(_params) {status=true;};
-  virtual ~aal() {};
+  aal(Log&l, std::string& _params): refcount(0),_log(l), params(_params) {status=true;_log.ref();};
+  virtual ~aal() {_log.unref();};
   virtual int adapter_execute(int action,const char* params)=0;
   virtual int model_execute(int action)  =0;
   virtual int getActions(int** act)      =0;
@@ -51,7 +65,30 @@ public:
   }
 
   virtual void log(const char* format, ...);
+
+  void ref() {
+    refcount++;
+  }
+
+  void unref() {
+    refcount--;
+    if (refcount<=0 && storage) {
+      std::map<std::string,aal*>::iterator it=
+	find_second(storage->begin(),storage->end(),this);
+      if (it!=storage->end()) {
+	storage->erase(it);
+      }
+      if (storage->empty()) {
+	delete storage;
+	storage=NULL;
+      }
+      delete this;
+    }
+  }
+  static std::map<std::string,aal*>* storage;
+
 protected:
+  int refcount;
   std::vector<int> actions;
   std::vector<int> tags;
   std::vector<std::string> action_names; /* action names.. */
