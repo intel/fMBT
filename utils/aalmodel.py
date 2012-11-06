@@ -1,6 +1,7 @@
 import copy
 import types
 import time
+import traceback
 
 SILENCE = -3
 
@@ -40,6 +41,7 @@ class AALModel:
             return eval(func.func_code, self._variables)
         except Exception, e:
             self._log("Exception %s in %s: %s" % (e.__class__, func.func_name, e))
+            self._log(traceback.format_exc())
             raise
 
     def call_exception_handler(self, handler_name, action_name, exc):
@@ -86,8 +88,8 @@ class AALModel:
             for index, guard in enumerate(self._all_guards):
                 if self.call(guard): enabled_actions.append(index + 1)
         except Exception, e:
-            raise Exception('Error at guard() of "%s": %s: %s' % (
-                self._all_names[index], type(e).__name__, e))
+            raise Exception('Error at guard() of "%s": %s: %s\n%s' % (
+                self._all_names[index], type(e).__name__, e, traceback.format_exc()))
         return enabled_actions
     
     def getIActions(self):

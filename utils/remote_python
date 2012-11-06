@@ -71,6 +71,8 @@ import compiler
 import ast
 import re
 
+import traceback
+
 import atexit
 
 import signal
@@ -895,7 +897,7 @@ if __name__ == "__main__":
             log("Executing command line argument '%s'" % statement)
             exec statement in g_dbusEvalGlobals
         except Exception, e:
-            error("No exceptions allowed, got '%s'" % (e,))
+            error("No exceptions allowed, got '%s'\n%s" % (e, traceback.format_exc()))
 
     if shellMode:
         print "fMBT remote_python adapter interactive shell."
