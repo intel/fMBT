@@ -66,8 +66,6 @@ bool Adapter_remote::init()
     return false;
   }
 
-  fprintf(stderr,"pid %i\n",pid);
-
   prefix="adapter remote("+prm+")";
 
   monitor();
