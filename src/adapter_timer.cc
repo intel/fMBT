@@ -163,7 +163,7 @@ void Adapter_timer::execute(std::vector<int>& action)
 int  Adapter_timer::observe(std::vector<int> &action,
 			    bool block)
 {
-  int ret=SILENCE;
+  int ret=Alphabet::SILENCE;
 
   for(unsigned i=0;i<enabled.size();i++) {
     int timer_id=enabled[i];

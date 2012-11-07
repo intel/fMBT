@@ -28,10 +28,12 @@ FACTORY_IMPLEMENTATION(Heuristic)
 Heuristic::Heuristic(Log& l, std::string params) :
 model(NULL),none(""), log(l)
 {
+  log.ref();
 }
 
 Heuristic::~Heuristic()
 {
+  log.unref();
 }
 
 bool Heuristic::execute(int action)
@@ -64,7 +66,10 @@ std::vector<std::string>& Heuristic::getAllActions()
 }
 
 float Heuristic::getCoverage() {
-  return my_coverage->getCoverage();  
+  if (my_coverage==NULL) {
+    return 0.0;
+  }
+  return my_coverage->getCoverage();
 }
 
 Model* Heuristic::get_model() {

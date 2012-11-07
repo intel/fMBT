@@ -68,6 +68,7 @@ void Conf::load(std::string& name,std::string& content)
     status=false;
     errormsg=std::string("Can't read configuration file \"")+name+"\"";
     log.pop();
+    free_D_Parser(p);
     return;
   }
 
@@ -221,8 +222,7 @@ Verdict::Verdict Conf::execute(bool interactive) {
     }
     // Add default end conditions (if coverage is reached, test is passed)
     if (!end_by_coverage) {
-      end_conditions.push_back(
-			       new End_condition(Verdict::PASS, End_condition::COVERAGE, "1.0"));
+      end_conditions.push_back(new End_condition_coverage(Verdict::PASS, "1.0"));
     }
   }
 

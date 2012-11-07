@@ -40,7 +40,7 @@ public:
     Coverage_set(l,_f,_t,_d)
   {
     //unescape_string(params)
-    remove_force(params);
+    //remove_force(params);
 
     set_ff=&_f;
     set_tt=&_t;
@@ -124,16 +124,16 @@ std::string Coverage_set::stringify()
   return std::string("");
 }
 
-void Coverage_set::on_drop()
+void Coverage_set::on_drop(int action,std::vector<int>&p)
 {
   log.debug("on_drop called\n");
   current_set.clear();
-  Coverage_exec_filter::on_drop();
+  Coverage_exec_filter::on_drop(action,p);
 }
 
-void Coverage_set::on_start()
+void Coverage_set::on_start(int action,std::vector<int>&p)
 {
-  Coverage_exec_filter::on_start();
+  Coverage_exec_filter::on_start(action,p);
   log.debug("on_start called\n");
   current_set.clear();
 }
@@ -187,7 +187,7 @@ bool Coverage_set::filter()
   return true;
 }
 
-void Coverage_set::on_find()
+void Coverage_set::on_find(int action,std::vector<int>&p)
 {
   log.debug("on_find called %i %i\n",current_count,(int)sets.size());
   // Check that set_filter match current_set. I'll implement that later :D
@@ -220,7 +220,7 @@ void Coverage_set::on_find()
   }
   log.debug("%i/%i\n",current_count,total_count);
   current_set.clear();
-  Coverage_exec_filter::on_find();
+  Coverage_exec_filter::on_find(action,p);
 }
 
 void Coverage_set::set_model(Model* _model) {

@@ -50,10 +50,12 @@ Coverage* CoverageFactory::create(Log& log, std::string name,
 Coverage::Coverage(Log& l) :
   model(NULL), log(l)
 {
+  log.ref();
 }
 
 Coverage::~Coverage()
 {
+  log.unref();
 }
 
 void Coverage::set_model(Model* _model)
@@ -62,7 +64,10 @@ void Coverage::set_model(Model* _model)
 }
 
 std::string Coverage::stringify() {
-    return std::string("");
+  if (!status) {
+    return Writable::stringify();
+  }
+  return std::string("");
 }
 
 Coverage* new_coverage(Log& l, std::string& s) {

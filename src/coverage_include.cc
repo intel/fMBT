@@ -22,7 +22,7 @@
 
 Coverage_Include_base::Coverage_Include_base(Log& l,
 					     const std::string& param,
-					     bool _exclude): Coverage(l), child(NULL), exclude(_exclude)
+					     bool _exclude): Coverage(l),alpha(NULL),submodel(NULL), child(NULL), exclude(_exclude)
 {
   commalist(param,subs);
   if (subs.size()>1) {

@@ -1,0 +1,68 @@
+aal "crashraiserubbish" {
+    language: python {
+        """
+        Before use, define BUG variable to be of the form
+        <when>-<what>
+        where <when> is load, init, iguard, ibody, iadapter,
+                        oguard, obody or oadapter
+        and <what> is crash, raise or print
+        """
+
+        import os
+        import sys
+        import signal
+        def crashnow():
+            os.kill(os.getpid(), signal.SIGSEGV)
+        def raisenow():
+            raise Exception("BogusException from crashraise.aal")
+        def printnow():
+            sys.stdout.write('This is rubbishFromAAL\n')
+            sys.stdout.flush()
+        def check_bug(real_pos):
+            if BUG.split('-')[0] == real_pos:
+                eval(BUG.split('-')[1] + "now()")
+        stderr = sys.stderr
+        stdout = sys.stdout
+        check_bug("load")
+    }
+
+    # preview-hide-vars: 
+    # preview-depth: 5
+    variables {
+        inputs, outputs
+    }
+    initial_state {
+        inputs = 0
+        outputs = 0
+        check_bug("init")
+    }
+    action "iTestStep()" {
+        guard() {
+            check_bug("iguard")
+            return True
+        }
+        body()  {
+            check_bug("ibody")
+            inputs += 1
+        }
+        adapter() {
+            check_bug("iadapter")
+        }
+    }
+    action "oTestStep" {
+        guard() {
+            check_bug("oguard")
+            return True
+        }
+        body() {
+            check_bug("obody")
+            outputs += 1
+        }
+        adapter() {
+            check_bug("oadapter")
+            if inputs > outputs:
+                # this output is observed
+                return True
+        }
+    }
+}

@@ -45,9 +45,9 @@ public:
   void add_filter();
 
 protected:
-  virtual void on_drop();
-  virtual void on_find();
-  virtual void on_start();
+  virtual void on_drop(int action,std::vector<int>&p);
+  virtual void on_find(int action,std::vector<int>&p);
+  virtual void on_start(int action,std::vector<int>&p);
 
   std::vector<std::pair<std::string*,std::pair<int,int> > > _fv;
 

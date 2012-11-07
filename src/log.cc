@@ -66,17 +66,20 @@ void Log::vuprint(const char* format,va_list ap)
   }
 }
 
-void Log::print(const char* format,...)
-{ 
-  va_list ap;
-  
+void Log::print(const char* format,va_list ap)
+{
   // indentation level
   for (unsigned int i=1; i<element.size(); i++) fprintf(out, "    ");
 
-  va_start(ap, format);
   vprint(format,ap);   
-  va_end(ap);
   fflush(out);
+}
+void Log::print(const char* format,...)
+{ 
+  va_list ap;
+  va_start(ap, format);
+  print(format,ap);   
+  va_end(ap);
 }
 
 void Log::write(int action,const char *name,const char *msg)
@@ -95,6 +98,22 @@ void Log::write(std::string& msg)
   write(msg.c_str());
 }
 
+void Log::error(const char** format,...)
+{
+    va_list ap;
+    char* msg=NULL;
+
+    va_start(ap, format);
+
+    print(format[0],ap);
+
+    if (vasprintf(&msg,format[1],ap)>0) {
+      char* m=unescape_string(msg);
+      fprintf(stderr,"%s",m);
+      std::free(msg);
+    }
+    va_end(ap);
+}
 void Log::debug(const char* msg,...)
 {
   if (debug_enabled) {

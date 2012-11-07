@@ -33,7 +33,6 @@ public:
 
   virtual bool execute(int action);
 
-  virtual float getCoverage();
   virtual int getAction();
   virtual int getIAction();
 private:

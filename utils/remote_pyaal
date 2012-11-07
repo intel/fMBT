@@ -67,6 +67,7 @@ import time
 import fmbt
 import atexit
 import urllib
+import traceback
 
 sys.path.append(os.getcwd())
 
@@ -154,14 +155,14 @@ class RemoteAALBridge:
                 try:
                     put_list(self._aal.getActions())
                 except Exception, e:
-                    fmbtstderr(str(e))
+                    fmbtstderr("%s" % (e,))
                     error(str(e))
             elif cmd == "mp":
                 put_list(self._aal.getprops())
             elif cmd == "mr":
                 try:    self._aal.reset()
                 except Exception, e:
-                    fmbtstderr('Error at initial_state(): %s: %s' % (type(e).__name__, e))
+                    fmbtstderr('Error at initial_state(): %s: %s\n%s' % (type(e).__name__, e, traceback.format_exc()))
                     put(0)
                 else:   put(1)
             elif cmd == "mu":
@@ -169,15 +170,23 @@ class RemoteAALBridge:
             elif cmd == "mo":
                 self._aal.pop()
             elif cmd == "aop":
-                put_list(self._aal.observe(False))
+                try:
+                    put_list(self._aal.observe(False))
+                except Exception, e:
+                    fmbtstderr('Error when polling outputs: %s: %s\n%s' % (type(e).__name__, e, traceback.format_exc()))
+                    put_list([])
             elif cmd == "aob":
-                put_list(self._aal.observe(True))
+                try:
+                    put_list(self._aal.observe(True))
+                except Exception, e:
+                    fmbtstderr('Error when waiting for outputs: %s: %s\n%s' % (type(e).__name__, e, traceback.format_exc()))
+                    put_list([])
             elif cmd[0] == "m":
                 action_number = int(cmd[1:])
                 try:
                     rv = self._aal.model_execute(action_number)
                 except Exception, e:
-                    fmbtstderr('Error at body() of "%s": %s: %s' % (action_names[action_number-1], type(e).__name__, e))
+                    fmbtstderr('Error at body() of "%s": %s: %s\n%s' % (action_names[action_number-1], type(e).__name__, e, traceback.format_exc()))
                     put(0)
                 else:
                     put(rv)
@@ -189,7 +198,7 @@ class RemoteAALBridge:
                     rv = self._aal.adapter_execute(action_number,
                                                    adapter_call_arguments)
                 except Exception, e:
-                    fmbtstderr('Error at adapter() of "%s": %s: %s' % (action_names[action_number-1], type(e).__name__, e))
+                    fmbtstderr('Error at adapter() of "%s": %s: %s\n%s' % (action_names[action_number-1], type(e).__name__, e, traceback.format_exc()))
                     put(0)
                 else:   put(rv)
                 adapter_call_arguments = []
@@ -341,7 +350,10 @@ if __name__ == "__main__":
             _log("Executing command line argument '%s'" % statement)
             exec statement
         except Exception, e:
-            error("No exceptions allowed, got '%s'" % (e,))
+            fmbtstderr('Exception from command line argument "%s":\n%s' %
+                       (statement, traceback.format_exc()))
+            error("No exceptions allowed, got '%s':\n%s" %
+                  (e, traceback.format_exc()))
 
     try:
         exec aal_code
@@ -351,14 +363,14 @@ if __name__ == "__main__":
                                for num,line in enumerate(code_lines)]
         _log('\n'.join(code_with_line_nums))
         fmbtstderr("Executing %s failed: %s: %s" % (aal_filename, type(e).__name__, e))
-        error("executing aal code failed:\n%s" % (e,))
+        error("executing aal code failed:\n%s\n%s" % (e, traceback.format_exc()))
 
     try:
         # Generated AAL code exports generated AAL class as "Model".
         # Model is inherited from AALModel in aalmodel.py.
         aal = Model()
     except Exception as e:
-        error("error when instantiating Model(): %s" % (e,))
+        error("error when instantiating Model(): %s\n%s" % (e, traceback.format_exc()))
     aal._log = _log
     aal.timeout = opt_timeout
     aal._variables['fmbtlog'] = fmbtlog

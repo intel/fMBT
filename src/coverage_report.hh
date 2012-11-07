@@ -56,12 +56,11 @@ public:
   //  std::vector< struct timeval >  duration;
 
 protected:
-  virtual void on_find();
+  virtual void on_find(int action,std::vector<int>&p);
   virtual void on_online(int action,std::vector<int>&p);
 
 private:
-
-  bool prop_set(std::vector<int> p,int npro,int* props);
+  //  bool prop_set(std::vector<int> p,int npro,int* props);
 
   std::vector<struct timeval > etime;
 protected:

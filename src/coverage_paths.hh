@@ -43,7 +43,7 @@ public:
   bool pf;
   bool unique;
 protected:
-  virtual void on_restart();
+  virtual void on_restart(int action,std::vector<int>&p);
   virtual void on_online(int action,std::vector<int>&p);
 private:
 };

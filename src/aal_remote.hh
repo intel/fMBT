@@ -24,11 +24,16 @@
 
 #include "aal.hh"
 #include <glib.h>
+#include "remote.hh"
 
-class aal_remote: public aal {
+class aal_remote: public aal, public remote {
 public:
   aal_remote(Log&l,std::string&);
-  virtual ~aal_remote() {};
+  virtual ~aal_remote() {
+    fclose(d_stdin);
+    fclose(d_stdout);
+    fclose(d_stderr);
+  };
 
   virtual int adapter_execute(int action,const char* params);
   virtual int model_execute(int action);
@@ -47,7 +52,6 @@ private:
   FILE* d_stdout;
   FILE* d_stderr;
 
-  GPid pid;
 };
 
 #endif

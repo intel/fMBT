@@ -74,6 +74,7 @@ void OutputFormat::set_model(std::string m)
 	errormsg="Model error "+model->errormsg;
       }
     }
+  } else {
   }
 }
 
@@ -105,7 +106,7 @@ std::string OutputFormat::handle_history(Log&l,std::string& h)
     test_verdict=history->test_verdict;
 
     delete cov;
-    delete history;
+    //delete history;
     return format_covs();
   } else {
     return "";

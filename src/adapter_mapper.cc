@@ -459,7 +459,7 @@ int Adapter_mapper::observeRobin(std::vector<int> &action)
 
   if (robin==adapters.size()) {
     if (silence_cnt==adapters.size()) {
-      return SILENCE;
+      return Alphabet::SILENCE;
     }
 
     silence_cnt=0;
@@ -479,7 +479,7 @@ int Adapter_mapper::observeRobin(std::vector<int> &action)
 
   int ret = adapters[robin]->observe(action,false);
 
-  if (ret==SILENCE) {
+  if (ret==Alphabet::SILENCE) {
     silence_cnt++;
   }
 
@@ -501,16 +501,16 @@ int Adapter_mapper::observe(std::vector<int> &action,bool block)
       return r;
     }
 
-    if (r==TIMEOUT) {
+    if (r==Alphabet::TIMEOUT) {
       return r;
     }
 
     if (silence_cnt==adapter_cnt) {
-      return SILENCE;
+      return Alphabet::SILENCE;
     }
 
   } while (block);
-  return SILENCE;
+  return Alphabet::SILENCE;
 }
 
 FACTORY_DEFAULT_CREATOR(Adapter, Adapter_mapper, "mapper")

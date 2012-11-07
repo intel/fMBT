@@ -79,13 +79,13 @@ float Heuristic_include_base::getCoverage() {
 
 int Heuristic_include_base::getAction()
 {
-  int ret=SILENCE;
+  int ret=Alphabet::SILENCE;
 
   if (child) {
     ret=child->getAction();
   }
 
-  if (ret==SILENCE || ret==DEADLOCK) {
+  if (ret==Alphabet::SILENCE || ret==Alphabet::DEADLOCK) {
     ret = hr.getAction();
   }
 
@@ -94,13 +94,13 @@ int Heuristic_include_base::getAction()
 
 int Heuristic_include_base::getIAction()
 {
-  int i=SILENCE;
+  int i=Alphabet::SILENCE;
 
   if (child) {
     i=child->getIAction();
   }
 
-  if (i==SILENCE || i==DEADLOCK) {
+  if (i==Alphabet::SILENCE || i==Alphabet::DEADLOCK) {
     i=hr.getIAction();
   }
 

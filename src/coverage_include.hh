@@ -33,6 +33,12 @@ public:
     if (child) {
       delete child;
     }
+    if (alpha) {
+      delete alpha;
+    }
+    if (submodel) {
+      delete submodel;
+    }
   }
 
   virtual void push() {

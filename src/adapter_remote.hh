@@ -18,8 +18,9 @@
  */
 #include "adapter.hh"
 #include <glib.h>
+#include "remote.hh"
 
-class Adapter_remote: public Adapter {
+class Adapter_remote: public Adapter, public remote {
 public:
   Adapter_remote(Log& l, std::string& params, bool encode=true);
   ~Adapter_remote() {
@@ -39,7 +40,5 @@ protected:
   FILE* d_stderr;
 
   std::string prm;
-  
-  GPid pid;
   bool urlencode;
 };

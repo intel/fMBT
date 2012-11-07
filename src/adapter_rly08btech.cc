@@ -133,7 +133,7 @@ void Adapter_rly08btech::execute(std::vector<int>& action)
 int  Adapter_rly08btech::observe(std::vector<int> &action,
 			    bool block)
 {
-  int ret=SILENCE;
+  int ret=Alphabet::SILENCE;
 
   return ret;
 }

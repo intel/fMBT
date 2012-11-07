@@ -50,7 +50,14 @@ bool Adapter_remote::init()
     return false;
   }
 
-  g_spawn_async_with_pipes(NULL,argv,NULL,G_SPAWN_SEARCH_PATH,NULL,&pid,NULL,&_stdin,&_stdout,&_stderr,&gerr);
+  g_spawn_async_with_pipes(NULL,argv,NULL,(GSpawnFlags)(G_SPAWN_SEARCH_PATH|G_SPAWN_DO_NOT_REAP_CHILD),NULL,NULL,&pid,&_stdin,&_stdout,&_stderr,&gerr);
+
+  for(int i=0;i<argc;i++) {
+    if (argv[i]) {
+      free(argv[i]);
+    }
+  }
+  free(argv);
 
   if (gerr) {
     errormsg = "adapter_remote g_spawn_async_with_pipes error: " + std::string(gerr->message);
@@ -58,6 +65,10 @@ bool Adapter_remote::init()
     status = false;
     return false;
   }
+
+  prefix="adapter remote("+prm+")";
+
+  monitor();
 
   d_stdin=fdopen(_stdin,"w");
   d_stdout=fdopen(_stdout,"r");
@@ -95,7 +106,7 @@ std::string Adapter_remote::stringify()
 }
 
 Adapter_remote::Adapter_remote(Log& l, std::string& params, bool encode) :
-  Adapter::Adapter(l), read_buf(NULL), read_buf_pos(0),
+  Adapter::Adapter(l),remote(), read_buf(NULL), read_buf_pos(0),
   d_stdin(NULL), d_stdout(NULL), d_stderr(NULL),
   urlencode(encode)
 {
@@ -104,17 +115,25 @@ Adapter_remote::Adapter_remote(Log& l, std::string& params, bool encode) :
   memset(read_buf, 'M', MAX_LINE_LENGTH);
 }
 
+#include <errno.h>
+
 void Adapter_remote::execute(std::vector<int>& action)
 {
   char* s = NULL;
   size_t si = 0;
+  int e;
+
   std::fprintf(d_stdin, "%i\n", action[0]);
 
   fflush(d_stdin);
 
 readagain:
-  if (getline(&s,&si,d_stderr) < 0) {
+  while(g_main_context_iteration(NULL,FALSE));
+  if ((e=getline(&s,&si,d_stderr)) < 0) {
+    static const char* m[] = { "<remote read_error=\"%i,%i,%s\"/>\n",
+			       "remote read error %i, %i,%s\n"};
     log.debug("Adapter_remote::execute reading child processes execution status failed\n");
+    log.error(m,e,errno,strerror(errno));
     action.resize(0);
     return;
   }
@@ -133,7 +152,13 @@ readagain:
     goto readagain;
   }
 
-  string2vector(s,action);
+  if (!string2vector(s,action) || action.size()==0) {
+    // Something wrong...
+    static const char* m[] = { "<remote protocol_error=\"%s\"/>\n",
+			     "%s\n"};
+    log.error(m,s);
+    action.resize(0);
+  }
 
   std::free(s);
 }
@@ -142,6 +167,8 @@ int Adapter_remote::observe(std::vector<int> &action,bool block)
 {
   char* s=NULL;
   size_t si=0;
+
+  while(g_main_context_iteration(NULL,FALSE));
 
   if (block) {
     while (agetline(&s,&si,d_stdout,read_buf,read_buf_pos,log)<=0) {}

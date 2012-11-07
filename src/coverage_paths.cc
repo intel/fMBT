@@ -45,11 +45,17 @@ public:
       status=false;
     }
     free_D_Parser(p);
+    /*
     from=_f;
     to=_t;
     drop=_d;
+    */
   }
-  virtual ~Coverage_pathsw() {}
+  virtual ~Coverage_pathsw() {
+    for_each(from.begin(),from.end(),ds);
+    for_each(to.begin(),to.end(),ds);
+    for_each(drop.begin(),drop.end(),ds);
+  }
 private:
   std::vector<std::string*> _f,_t,_d;
 };
@@ -170,8 +176,12 @@ public:
   virtual ~Coverage_inputswalks() {}
 };
 
-void Coverage_paths_base::on_restart() {
+void Coverage_paths_base::on_restart(int action,std::vector<int>&p) {
   executed.clear();
+  std::vector<int> pp;
+  if (prop_set(start_action,1,&action)) {
+    executed.push_back(std::pair<int,std::vector<int> >(af?0:action,pf?pp:p));
+  }
 }
 
 void Coverage_paths_base::on_online(int action,std::vector<int>&p){

@@ -72,8 +72,6 @@ bool Model_remote::init()
 {
 
   int _stdin,_stdout,_stderr;
-  //  g_type_init (); needed?
-
   gchar **argv = (gchar**)malloc(42*sizeof(gchar*));
   gint argc;
   GError *gerr=NULL;
@@ -89,6 +87,13 @@ bool Model_remote::init()
   }
 
   g_spawn_async_with_pipes(NULL,argv,NULL,G_SPAWN_SEARCH_PATH,NULL,NULL,NULL,&_stdin,&_stdout,&_stderr,&gerr);  
+
+  for(int i=0;i<argc;i++) {
+    if (argv[i]) {
+      free(argv[i]);
+    }
+  }
+  free(argv);
 
   if (gerr) {
     errormsg = "model_remote g_spawn_async_with_pipes error: " + std::string(gerr->message);

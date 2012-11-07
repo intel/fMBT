@@ -40,6 +40,7 @@ extern D_ParserTables parser_tables_uconf;
 extern OutputFormat* uconf_obj;
 
 #ifndef DROI
+#include <glib-object.h>
 #include <error.h>
 #else
 void error(int exitval, int dontcare, const char* format, ...)
@@ -75,7 +76,13 @@ int main(int argc,char * const argv[])
   int c;
   OutputFormat* of=NULL;
 
+#ifndef DROI
+  g_type_init ();  
+#endif
+
   l=new Log_null();
+
+  l->ref();
 
   static struct option long_opts[] = {
     {"help", no_argument, 0, 'h'},
@@ -178,7 +185,15 @@ int main(int argc,char * const argv[])
     fprintf(stderr,"Handling log %s\n",argv[i]);
     std::string s(argv[i]);
     o=of->handle_history(*l,s);
+
+    if (!of->status) {
+      return -1;
+    }
     fwrite(o.c_str(),1,o.size(),outfile);
+  }
+
+  if (!of->status) {
+    return -1;
   }
 
   o=of->footer();

@@ -119,7 +119,7 @@ int Heuristic_weight::getAction()
 
   if (i==0) {
     // DEADLOCK
-    return DEADLOCK;
+    return Alphabet::DEADLOCK;
   }
 
   int pos=weight_select(i,actions);
@@ -138,9 +138,9 @@ int Heuristic_weight::getIAction()
     // Ok.. no output actions
     i=model->getActions(&actions);
     if (i==0) {
-      return DEADLOCK;      
+      return Alphabet::DEADLOCK;      
     }
-    return OUTPUT_ONLY;
+    return Alphabet::OUTPUT_ONLY;
   }
 
   int pos=weight_select(i,actions);

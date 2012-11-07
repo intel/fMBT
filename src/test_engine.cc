@@ -183,24 +183,7 @@ Verdict::Verdict Test_engine::stop_test(Verdict::Verdict v, const char* _reason)
 
 Verdict::Verdict Test_engine::stop_test(End_condition* ec)
 {
-  switch (ec->counter) {
-  case End_condition::STEPS:
-    return stop_test(ec->verdict, "step limit reached");
-  case End_condition::COVERAGE:
-    return stop_test(ec->verdict, "coverage reached");
-  case End_condition::STATETAG:
-    return stop_test(ec->verdict, "tag reached");
-  case End_condition::DURATION:
-    return stop_test(ec->verdict, "time limit reached");
-  case End_condition::NOPROGRESS:
-    return stop_test(ec->verdict, "no progress limit reached");
-  case End_condition::DEADLOCK:
-    return stop_test(ec->verdict, "deadlock reached");
-  case End_condition::ACTION:
-    return stop_test(ec->verdict, "executed break action");
-  default:
-    return stop_test(ec->verdict, "unknown");
-  }
+  return stop_test(ec->verdict,ec->end_reason().c_str());
 }
 
 void Test_engine::log_tags()
@@ -260,6 +243,9 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
     while (adapter.observe(actions)>0) {
       step_count++;
       action = policy.choose(actions);
+      if ((action>0)&&((unsigned)action>=heuristic.get_model()->getActionNames().size())) {
+        return stop_test(Verdict::ERROR, std::string("adapter communication failure. Adapter returned action "+to_string(action)+" which is out of range").c_str());
+      }
       log_adapter_output(log, adapter, action);
 
       if (!heuristic.execute(action)) {
@@ -290,29 +276,29 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
     log.debug("Step %i",step_count);
 
     switch(action) {
-    case DEADLOCK: {
+    case Alphabet::DEADLOCK: {
       log.print("<state type=\"deadlock\"/>\n");
 
-      if (-1 != (condition_i = matching_end_condition(step_count,DEADLOCK))) {
+      if (-1 != (condition_i = matching_end_condition(step_count,Alphabet::DEADLOCK))) {
 	goto out;
       }      
 
       int ret=adapter.observe(actions,true);
-      if (ret!=SILENCE && ret!=TIMEOUT) {
+      if (ret!=Alphabet::SILENCE && ret!=Alphabet::TIMEOUT) {
 	return stop_test(Verdict::FAIL, "response on deadlock");
       }
       return stop_test(Verdict::PASS, "end of model");
       break;
     }
-    case OUTPUT_ONLY: {
+    case Alphabet::OUTPUT_ONLY: {
       log.print("<state type=\"output only\"/>\n");
 
       int value = adapter.observe(actions,true);
       log.print("<observe %i/>\n",value);
 
-      if (value==TIMEOUT) {
+      if (value==Alphabet::TIMEOUT) {
 	actions.resize(1);
-	actions[0] = TIMEOUT;
+	actions[0] = Alphabet::TIMEOUT;
 	log.print("<TIMEOUT %i %i/>\n",Adapter::current_time.tv_sec,
 		  end_time);
         if (-1 != (condition_i = matching_end_condition(step_count)))
@@ -321,9 +307,9 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
                  // before adapter observed output. There should have
                  // been a matching end condition that defines the
                  // verdict for this case.
-      } else if (value==SILENCE) {
+      } else if (value==Alphabet::SILENCE) {
 	actions.resize(1);
-	actions[0] = SILENCE;
+	actions[0] = Alphabet::SILENCE;
         log.debug("Test_engine::run: SUT remained silent (action %i).\n", action);	
       } else {
 	if (!actions.empty()) {
@@ -355,6 +341,12 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
         return stop_test(Verdict::ERROR, "adapter communication failure");
       }
       int adapter_response = policy.choose(actions);
+
+      // Let's chect that adapter_response is in the valid range.
+      if ((adapter_response>0) && ((unsigned)adapter_response>=heuristic.get_model()->getActionNames().size())) {
+        return stop_test(Verdict::ERROR, std::string("adapter communication failure. Adapter returned action "+to_string(adapter_response)+" which is out of range").c_str());
+      }
+
       log_adapter_execute(log, adapter, adapter_response);
       log.debug("Test_engine::run: passing adapter response action %i to test generation.\n",
 		adapter_response);
@@ -419,11 +411,18 @@ namespace interactive {
       adapter.execute(actions_v);
       if (actions_v.empty()) {
         fprintf(stderr,"adapter:   [communication failure]\n");
+	return;
       } else {
         if (skip_m) adapter_response = actions_v[0];
         else adapter_response = policy.choose(actions_v);
-        log_adapter_execute(log, adapter, adapter_response);
-        fprintf(stderr,"adapter:   %s\n", heuristic.getActionName(adapter_response).c_str());
+
+	if ((adapter_response>0) && (adapter_response>=heuristic.get_model()->getActionNames().size())) {
+	  fprintf(stderr,"adapter:   [communication failure %i]\n",adapter_response);
+	  return;
+	} else {
+	  log_adapter_execute(log, adapter, adapter_response);
+	  fprintf(stderr,"adapter:   %s\n", heuristic.getActionName(adapter_response).c_str());
+	}
       }
     }
 
@@ -469,7 +468,7 @@ void Test_engine::interactive()
       fprintf(stderr,"Action %i:%s\n",action,heuristic.getActionName(action).c_str());
       actions_v.resize(0);
     }
-    
+
     char* s=READLINE("fMBT> ");
 
     if (s==NULL) {
@@ -490,8 +489,7 @@ void Test_engine::interactive()
 
 	num=atoi(s+1);
 	if (num>0) {
-	  e=new End_condition(Verdict::INCONCLUSIVE,
-			      End_condition::STEPS,breakstr);
+	  e=new End_condition_steps(Verdict::INCONCLUSIVE,breakstr);
 	  e->param_long=step_count+num;
 	  end_conditions.push_back(e);
 	}
@@ -528,9 +526,8 @@ void Test_engine::interactive()
 	num=std::atoi(s+1);
 	if (num>0 && num<=ana.size()) {
 	  // Add breakpoint
-	  End_condition* e=new End_condition(Verdict::INCONCLUSIVE,
-					     End_condition::ACTION,
-					     breakstr);
+	  End_condition* e=new End_condition_action(Verdict::INCONCLUSIVE,
+						    breakstr);
 	  e->param_long=num;
 	  atags.push_back(e);
 	} else {
@@ -560,9 +557,8 @@ void Test_engine::interactive()
 	unsigned int tag_count=ana.size();
 	if (num>0 && num<=tag_count) {
 	  // Add breakpoint
-	  End_condition* e=new End_condition(Verdict::INCONCLUSIVE,
-					     End_condition::STATETAG,
-					     breakstr);
+	  End_condition* e=new End_condition_tag(Verdict::INCONCLUSIVE,
+						 breakstr);
 	  e->param_long=num;
 	  etags.push_back(e);
 	} else {
@@ -846,38 +842,8 @@ int Test_engine::matching_end_condition(int step_count,int state, int action)
 
     End_condition* e = end_conditions[cond_i];
 
-    switch (e->counter)
-    {
-    case End_condition::ACTION:
-      if ((action>=0) && (action==e->param_long)) return cond_i;
-      break;
-    case End_condition::DEADLOCK:
-      if (state==DEADLOCK) return cond_i;
-      break;
-    case End_condition::STEPS:
-      if (e->param_long > -1 && step_count >= e->param_long) return cond_i;
-      break;
-    case End_condition::COVERAGE:
-      if (heuristic.getCoverage() >= e->param_float) return cond_i;
-      break;
-    case End_condition::STATETAG:
-    {
-      int *t;
-      int s = heuristic.get_model()->getprops(&t);
-      for(int i=0; i<s; i++) {
-        if (t[i] == e->param_long) return cond_i;
-      }
-      break;
-    }
-    case End_condition::DURATION:
-      if (Adapter::current_time.tv_sec > e->param_time + 1 ||
-          (Adapter::current_time.tv_sec == e->param_time
-           && Adapter::current_time.tv_usec >= e->param_long)
-          ) return cond_i;
-      break;
-    case End_condition::NOPROGRESS:
-      if (step_count - last_step_cov_growth >= e->param_long) return cond_i;
-      break;
+    if (e->match(step_count,state,action,last_step_cov_growth,heuristic)) {
+      return cond_i;
     }
   }
   return -1;

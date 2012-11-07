@@ -110,8 +110,12 @@ void History_log::processNode(xmlTextReaderPtr reader)
     // verdict
     char* ver=(char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"verdict");
     std::vector<std::string> p;
-    std::string t(tag);
-    strvec(p,t,separator);
+
+    if (tag!=NULL) {
+      std::string t(tag);
+      strvec(p,t,separator);
+    }
+
     std::string a(ver);
     test_verdict=ver;
     free(ver);
