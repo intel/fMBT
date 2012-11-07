@@ -71,6 +71,8 @@ g_words = {}
 
 g_lastWindow = None
 
+g_defaultIconMatch = 1.0
+
 # windowsOffsets maps window-id to (x, y) pair.
 g_windowOffsets = {None: (0,0)}
 # windowsSizes maps window-id to (width, height) pair.
@@ -163,9 +165,18 @@ def _runcmd(cmd):
     _log("stderr: " + p.stderr.read())
     return p.wait(), output
 
+
 def setPreprocessFilter(preprocess):
     global g_preprocess
     g_preprocess = preprocess
+
+def iSetDefaultIconMatch(match):
+    """
+    Set the default match value that will be used in iClickIcon and
+    iVerifyIcon calls.
+    """
+    global g_defaultIconMatch
+    g_defaultIconMatch = match
 
 def iRead(windowId = None, source = None, preprocess = None, ocr=True, capture=None):
     """
@@ -254,6 +265,7 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=True, capture=N
         drawWords(g_origImage, capture, g_words, g_words)
     return sorted(g_words.keys())
 
+
 def iVerifyWord(word, match=0.33, capture=None):
     """
     Verify that word can be found from previously iRead() image.
@@ -287,7 +299,8 @@ def iVerifyWord(word, match=0.33, capture=None):
                             (word, matching_word, score, match))
     return ((score, matching_word), g_words[matching_word][0][2])
 
-def iVerifyIcon(iconFilename, match=1.0, capture=None, _origin="iVerifyIcon"):
+
+def iVerifyIcon(iconFilename, match=None, capture=None, _origin="iVerifyIcon"):
     """
     Verify that icon can be found from previously iRead() image.
 
@@ -319,6 +332,8 @@ def iVerifyIcon(iconFilename, match=1.0, capture=None, _origin="iVerifyIcon"):
     if not (os.path.isfile(iconFilename) and os.access(iconFilename, os.R_OK)):
         _log('ERROR %s("%s") called, but the icon file is not readable.' % (_origin, iconFilename))
         raise BadIconImage('Icon "%s" is not readable.' % (iconFilename,))
+    if match == None:
+        match = g_defaultIconMatch
     if match > 1.0:
         _log('ERROR %s("%s"): invalid match value, must be below 1.0. ' % (_origin, iconFilename,))
         raise ValueError("invalid match value: %s, should be 0 <= match <= 1.0" % (match,))
@@ -350,7 +365,8 @@ def iVerifyIcon(iconFilename, match=1.0, capture=None, _origin="iVerifyIcon"):
 
     return (score, bbox)
 
-def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=1.0, mousebutton=1, mouseevent=1, dryRun=False, capture=None):
+
+def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=None, mouseButton=1, mouseEvent=MOUSEEVENT_CLICK, dryRun=False, capture=None):
     """
     Click coordinates relative to the given icon in previously iRead() image.
 
@@ -369,9 +385,9 @@ def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=1.0, mousebutton=1, mouse
         match        1.0 (default) requires exact match. Value between 0 and 1
                      defines minimum required score for a fuzzy match.
 
-        mousebutton  mouse button to be synthesized on the event, default is 1.
+        mouseButton  mouse button to be synthesized on the event, default is 1.
 
-        mouseevent   event to be synthesized, default is MOUSEEVENT_CLICK,
+        mouseEvent   event to be synthesized, the default is MOUSEEVENT_CLICK,
                      others: MOUSEEVENT_MOVE, MOUSEEVENT_DOWN, MOUSEEVENT_UP.
 
         dryRun       if True, does not synthesize events. Still returns
@@ -387,35 +403,21 @@ def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=1.0, mousebutton=1, mouse
         score        score of found match (1.0 for perfect match)
 
         (clickedX, clickedY)
-                     X and Y coordinates of clicked position
+                     X and Y coordinates of clicked position on the
+                     screen.
 
     Throws BadMatch error if could not find a matching word.
     """
-    score, (left, top, right, bottom) = iVerifyIcon(iconFilename, match=match, capture=capture, _origin="iClickIcon")
+    score, bbox = iVerifyIcon(iconFilename, match=match, capture=capture, _origin="iClickIcon")
 
-    click_x = int(left + clickPos[0]*(right-left) + g_windowOffsets[g_lastWindow][0])
-    click_y = int(top + clickPos[1]*(bottom-top) + g_windowOffsets[g_lastWindow][1])
+    clickedXY = iClickBox(bbox, clickPos, mouseButton, mouseEvent, dryRun,
+                          capture, _captureText = iconFilename)
 
-    if mouseevent == MOUSEEVENT_CLICK:
-        params = "'mouseclick %s'" % (mousebutton,)
-    elif mouseevent == MOUSEEVENT_DOWN:
-        params = "'mousedown %s'" % (mousebutton,)
-    elif mouseevent == MOUSEEVENT_UP:
-        params = "'mouseup %s'" % (mousebutton,)
-    else:
-        params = ""
+    return (score, clickedXY)
 
-    if capture:
-        drawIcon(g_origImage, capture, iconFilename, (left, top, right, bottom))
-        drawClickedPoint(capture, capture, (click_x, click_y))
 
-    if not dryRun:
-        # use xte from the xautomation package
-        _runcmd("xte 'mousemove %s %s' %s" % (click_x, click_y, params))
-
-    return (score, (click_x, click_y))
-
-def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33, mousebutton=1, mouseevent=1, dryRun=False, capture=None):
+def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33,
+               mouseButton=1, mouseEvent=1, dryRun=False, capture=None):
     """
     Click coordinates relative to the given word in previously iRead() image.
 
@@ -445,13 +447,14 @@ def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33, mousebutton=1
         matchingWord corresponding word detected by OCR
 
         (clickedX, clickedY)
-                     X and Y coordinates of clicked position.
+                     X and Y coordinates of clicked position on the
+                     screen.
 
     Throws BadMatch error if could not find a matching word.
     """
     windowId = g_lastWindow
 
-    score, matching_word =  findWord(word)
+    score, matching_word = findWord(word)
 
     if score < match:
         raise BadMatch('No matching word for "%s". The best candidate "%s" with score %.2f, required %.2f' %
@@ -459,33 +462,152 @@ def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33, mousebutton=1
 
     # Parameters should contain some hints on which appearance of the
     # word should be clicked. At the moment we'll use the first one.
-    left, top, right, bottom = g_words[matching_word][appearance-1][2]
+    bbox = g_words[matching_word][appearance-1][2]
 
-    click_x = int(left + clickPos[0]*(right-left) + g_windowOffsets[windowId][0])
-    click_y = int(top + clickPos[1]*(bottom-top) + g_windowOffsets[windowId][1])
+    clickedX, clickedY = iClickBox(bbox, clickPos, mouseButton, mouseEvent, dryRun, capture=False)
 
     _log('iClickWord("%s"): word "%s", match %.2f, bbox %s, window offset %s, click %s' %
-        (word, matching_word, score,
-         (left, top, right, bottom), g_windowOffsets[windowId],
-         (click_x, click_y)))
+         (word, matching_word, score,
+          bbox, g_windowOffsets[windowId],
+          (clickedX, clickedY)))
 
-    if mouseevent == MOUSEEVENT_CLICK:
-        params = "'mouseclick %s'" % (mousebutton,)
-    elif mouseevent == MOUSEEVENT_DOWN:
-        params = "'mousedown %s'" % (mousebutton,)
-    elif mouseevent == MOUSEEVENT_UP:
-        params = "'mouseup %s'" % (mousebutton,)
+    if capture:
+        drawWords(g_origImage, capture, [word], g_words)
+        drawClickedPoint(capture, capture, (clickedX, clickedY))
+
+    return ((score, matching_word), (clickedX, clickedY))
+
+
+def iClickBox((left, top, right, bottom), clickPos=(0.5, 0.5),
+              mouseButton=1, mouseEvent=1, dryRun=False,
+              capture=None, _captureText=None):
+    """
+    Click coordinates relative to the given bounding box, default is
+    in the middle of the box.
+
+    Parameters:
+
+        (left, top, right, bottom)
+                     coordinates of the box inside the window.
+                     (0, 0) is the top-left corner of the window.
+
+        clickPos     (offsetX, offsetY) position to be clicked,
+                     relative to the given box. (0, 0) is the
+                     top-left, and (1.0, 1.0) is the lower-right
+                     corner of the box.  The default is (0.5, 0.5),
+                     that is, the middle point of the box. Values
+                     smaller than 0 and bigger than 1 are allowed,
+                     too.
+
+        mouseButton  mouse button to be synthesized on the event, default is 1.
+
+        mouseEvent   event to be synthesized, the default is MOUSEEVENT_CLICK,
+                     others: MOUSEEVENT_MOVE, MOUSEEVENT_DOWN, MOUSEEVENT_UP.
+
+        dryRun       if True, does not synthesize events. Still returns
+                     coordinates of the clicked position and illustrates
+                     the clicked position on the capture image if
+                     given.
+
+        capture      name of file where the last screenshot with
+                     clicked point highlighted is saved. The default
+                     is None (nothing is saved).
+
+    Returns pair (clickedX, clickedY)
+                     X and Y coordinates of clicked position on the
+                     screen.
+
+    """
+    clickWinX = int(left + clickPos[0]*(right-left))
+    clickWinY = int(top + clickPos[1]*(bottom-top))
+
+    (clickedX, clickedY) = iClickWindow((clickWinX, clickWinY),
+                                        mouseButton, mouseEvent,
+                                        dryRun, capture=False)
+
+    if capture:
+        if _captureText == None:
+            _captureText = "Box: %s, %s, %s, %s" % (left, top, right, bottom)
+        drawIcon(g_origImage, capture, _captureText, (left, top, right, bottom))
+        drawClickedPoint(capture, capture, (clickedX, clickedY))
+
+    return (clickedX, clickedY)
+
+
+def iClickWindow((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=False, capture=None):
+    """
+    Click given coordinates in the window.
+
+    Parameters:
+
+        (clickX, clickY)
+                     coordinates to be clicked inside the window.
+                     (0, 0) is the top-left corner of the window.
+
+        mouseButton  mouse button to be synthesized on the event, default is 1.
+
+        mouseEvent   event to be synthesized, the default is MOUSEEVENT_CLICK,
+                     others: MOUSEEVENT_MOVE, MOUSEEVENT_DOWN, MOUSEEVENT_UP.
+
+        dryRun       if True, does not synthesize events. Still
+                     illustrates the clicked position on the capture
+                     image if given.
+
+        capture      name of file where the last screenshot with
+                     clicked point highlighted is saved. The default
+                     is None (nothing is saved).
+
+    Returns pair (clickedX, clickedY)
+                     X and Y coordinates of clicked position on the
+                     screen.
+    """
+    clickScrX = clickX + g_windowOffsets[g_lastWindow][0]
+    clickScrY = clickY + g_windowOffsets[g_lastWindow][1]
+
+    iClickScreen((clickScrX, clickScrY), mouseButton, mouseEvent, dryRun, capture)
+
+    return (clickScrX, clickScrY)
+
+
+def iClickScreen((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=False, capture=None):
+    """
+    Click given absolute coordinates on the screen.
+
+    Parameters:
+
+        (clickX, clickY)
+                     coordinates to be clicked on the screen. (0, 0)
+                     is the top-left corner of the screen.
+
+        mouseButton  mouse button to be synthesized on the event, default is 1.
+
+        mouseEvent   event to be synthesized, the default is MOUSEEVENT_CLICK,
+                     others: MOUSEEVENT_MOVE, MOUSEEVENT_DOWN, MOUSEEVENT_UP.
+
+        dryRun       if True, does not synthesize events. Still
+                     illustrates the clicked position on the capture
+                     image if given.
+
+        capture      name of file where the last screenshot with
+                     clicked point highlighted is saved. The default
+                     is None (nothing is saved).
+    """
+    if mouseEvent == MOUSEEVENT_CLICK:
+        params = "'mouseclick %s'" % (mouseButton,)
+    elif mouseEvent == MOUSEEVENT_DOWN:
+        params = "'mousedown %s'" % (mouseButton,)
+    elif mouseEvent == MOUSEEVENT_UP:
+        params = "'mouseup %s'" % (mouseButton,)
     else:
         params = ""
 
     if capture:
-        drawWords(g_origImage, capture, [word], g_words)
-        drawClickedPoint(capture, capture, (click_x, click_y))
+        drawClickedPoint(g_origImage, capture, (clickX, clickY))
 
     if not dryRun:
         # use xte from the xautomation package
-        _runcmd("xte 'mousemove %s %s' %s" % (click_x, click_y, params))
-    return ((score, matching_word), (click_x, click_y))
+        _runcmd("xte 'mousemove %s %s' %s" % (clickX, clickY, params))
+
 
 def iType(word, delay=0.0):
     """
@@ -620,24 +742,24 @@ def iUseWindow(windowIdOrName = None):
     g_windowSizes[g_lastWindow] = (int(width), int(height))
     return g_lastWindow
 
-def iUseImageAsWindow(imagefilename):
+def iUseImageAsWindow(imageFilename):
     global g_lastWindow
-    try: import Image
-    except ImportError, e:
-        _log("iUseImageAsWindow: Python Imaging Library missing. eyenfinger requires PIL if images are used as windows.")
-        raise e
+
+    if not eye4graphics:
+        _log('ERROR: iUseImageAsWindow("%s") called, but eye4graphics not loaded.' % (imageFilename,))
+        raise EyenfingerError("eye4graphics not available")
+    
+    g_lastWindow = imageFilename
+
+    struct_bbox = Bbox(0,0,0,0,0)
+    err = eye4graphics.imageDimensions(ctypes.byref(struct_bbox),
+                                       imageFilename)
+    if err != 0:
+        _log('iUseImageAsWindow: Failed reading dimensions of image "%s".' % (imageFilename,))
+        raise BadSourceImage('Failed to read dimensions of "%s".' % (imageFilename,))
         
-    g_lastWindow = imagefilename
-
-    try:
-        image = Image.open(imagefilename)
-        image_width, image_height = image.size
-    except Exception, e:
-        _log('iUseImageAsWindow: Failed reading dimensions of image "%s": %s' % (imagefilename, e))
-        raise e
-
     g_windowOffsets[g_lastWindow] = (0, 0)
-    g_windowSizes[g_lastWindow] = (image_width, image_height)
+    g_windowSizes[g_lastWindow] = (int(struct_bbox.right), int(struct_bbox.bottom))
     return g_lastWindow
 
 def iActiveWindow(windowId = None):
@@ -679,22 +801,27 @@ def drawIcon(inputfilename, outputfilename, iconFilename, bbox, color='green'):
     _runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))
 
 def drawClickedPoint(inputfilename, outputfilename, clickedXY):
+    """
+    clickedXY contains absolute screen coordinates
+    """
     x, y = clickedXY
+    x -= g_windowOffsets[g_lastWindow][0]
+    y -= g_windowOffsets[g_lastWindow][1]
     draw_commands = """ -stroke red -fill blue -draw "fill-opacity 0.2 circle %s,%s %s,%s" """ % (
         x, y, x + 20, y)
     draw_commands += """ -stroke none -fill red -draw "point %s,%s" """ % (x, y)
     _runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))
 
-def evaluatePreprocessFilter(imagefilename, ppfilter, words):
+def evaluatePreprocessFilter(imageFilename, ppfilter, words):
     """
     Visualise how given words are detected from given image file when
     using given preprocessing filter.
     """
     global g_preprocess
     evaluatePreprocessFilter.count += 1
-    preprocessed_filename = '%s-pre%s.png' % (imagefilename, evaluatePreprocessFilter.count)
+    preprocessed_filename = '%s-pre%s.png' % (imageFilename, evaluatePreprocessFilter.count)
     _runcmd("convert '%s' %s '%s' && tesseract %s eyenfinger.autoconfigure hocr" %
-           (imagefilename, ppfilter, preprocessed_filename,
+           (imageFilename, ppfilter, preprocessed_filename,
             preprocessed_filename))
     detected_words = _hocr2words(file("eyenfinger.autoconfigure.html").read())
     scored_words = []
@@ -714,7 +841,7 @@ def evaluatePreprocessFilter(imagefilename, ppfilter, words):
 evaluatePreprocessFilter.count = 0
 evaluatePreprocessFilter.scores = []
 
-def autoconfigure(imagefilename, words):
+def autoconfigure(imageFilename, words):
     """
     Search for image preprocessing configuration that will maximise
     the score of finding given words in the image.
@@ -722,7 +849,7 @@ def autoconfigure(imagefilename, words):
     """
 
     # check image width
-    iUseImageAsWindow(imagefilename)
+    iUseImageAsWindow(imageFilename)
     image_width = g_windowSizes[g_lastWindow][0]
 
     resize_filters = ['Mitchell', 'Catrom', 'Hermite', 'Gaussian']
@@ -738,36 +865,36 @@ def autoconfigure(imagefilename, words):
         for blevel, wlevel in levels:
             for z in zoom:
                 evaluatePreprocessFilter(
-                    imagefilename,
+                    imageFilename,
                     "-sharpen 5 -filter %s -resize %sx -sharpen 5 -level %s%%,%s%%,3.0 -sharpen 5" % (f, z * image_width, blevel, wlevel),
                     words)
 
                 evaluatePreprocessFilter(
-                    imagefilename,
+                    imageFilename,
                     "-sharpen 5 -filter %s -resize %sx -level %s%%,%s%%,3.0 -sharpen 5" % (
                         f, z * image_width, blevel, wlevel),
                     words)
 
                 evaluatePreprocessFilter(
-                    imagefilename,
+                    imageFilename,
                     "-sharpen 5 -filter %s -resize %sx -level %s%%,%s%%,3.0" % (
                         f, z * image_width, blevel, wlevel),
                     words)
 
                 evaluatePreprocessFilter(
-                    imagefilename,
+                    imageFilename,
                     "-sharpen 5 -level %s%%,%s%%,3.0 -filter %s -resize %sx -sharpen 5" % (
                         blevel, wlevel, f, z * image_width),
                     words)
 
                 evaluatePreprocessFilter(
-                    imagefilename,
+                    imageFilename,
                     "-sharpen 5 -level %s%%,%s%%,1.0 -filter %s -resize %sx" % (
                         blevel, wlevel, f, z * image_width),
                     words)
 
                 evaluatePreprocessFilter(
-                    imagefilename,
+                    imageFilename,
                     "-sharpen 5 -level %s%%,%s%%,10.0 -filter %s -resize %sx" % (
                         blevel, wlevel, f, z * image_width),
                     words)
