@@ -52,6 +52,7 @@ void Log::vprint(const char* format,va_list ap)
     write(msg);
     std::free(msg);
   }
+  fflush(out);
 }
 
 void Log::vuprint(const char* format,va_list ap)
@@ -66,19 +67,12 @@ void Log::vuprint(const char* format,va_list ap)
   }
 }
 
-void Log::print(const char* format,va_list ap)
-{
-  // indentation level
-  for (unsigned int i=1; i<element.size(); i++) fprintf(out, "    ");
-
-  vprint(format,ap);   
-  fflush(out);
-}
 void Log::print(const char* format,...)
 { 
   va_list ap;
+  for (unsigned int i=1; i<element.size(); i++) fprintf(out, "    ");
   va_start(ap, format);
-  print(format,ap);   
+  vprint(format,ap);   
   va_end(ap);
 }
 
