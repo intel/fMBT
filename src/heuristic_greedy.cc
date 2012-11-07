@@ -45,13 +45,6 @@ bool Heuristic_greedy::execute(int action)
   return Heuristic::execute(action);
 }
 
-float Heuristic_greedy::getCoverage() {
-  if (my_coverage==NULL) {
-    return 0.0;
-  }
-  return my_coverage->getCoverage();  
-}
-
 int Heuristic_greedy::getAction()
 {
   int* actions;

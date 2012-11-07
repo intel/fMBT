@@ -66,7 +66,10 @@ std::vector<std::string>& Heuristic::getAllActions()
 }
 
 float Heuristic::getCoverage() {
-  return my_coverage->getCoverage();  
+  if (my_coverage==NULL) {
+    return 0.0;
+  }
+  return my_coverage->getCoverage();
 }
 
 Model* Heuristic::get_model() {
