@@ -897,6 +897,8 @@ if __name__ == "__main__":
             log("Executing command line argument '%s'" % statement)
             exec statement in g_dbusEvalGlobals
         except Exception, e:
+            fmbtstderr('Exception from command line argument "%s":\n%s' %
+                       (statement, traceback.format_exc()))
             error("No exceptions allowed, got '%s'\n%s" % (e, traceback.format_exc()))
 
     if shellMode:

@@ -350,7 +350,10 @@ if __name__ == "__main__":
             _log("Executing command line argument '%s'" % statement)
             exec statement
         except Exception, e:
-            error("No exceptions allowed, got '%s':\n%s" % (e, traceback.format_exc()))
+            fmbtstderr('Exception from command line argument "%s":\n%s' %
+                       (statement, traceback.format_exc()))
+            error("No exceptions allowed, got '%s':\n%s" %
+                  (e, traceback.format_exc()))
 
     try:
         exec aal_code
