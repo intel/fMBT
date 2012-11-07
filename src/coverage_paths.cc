@@ -178,6 +178,10 @@ public:
 
 void Coverage_paths_base::on_restart(int action,std::vector<int>&p) {
   executed.clear();
+  std::vector<int> pp;
+  if (prop_set(start_action,1,&action)) {
+    executed.push_back(std::pair<int,std::vector<int> >(af?0:action,pf?pp:p));
+  }
 }
 
 void Coverage_paths_base::on_online(int action,std::vector<int>&p){

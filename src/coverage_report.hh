@@ -60,8 +60,7 @@ protected:
   virtual void on_online(int action,std::vector<int>&p);
 
 private:
-
-  bool prop_set(std::vector<int> p,int npro,int* props);
+  //  bool prop_set(std::vector<int> p,int npro,int* props);
 
   std::vector<struct timeval > etime;
 protected:
