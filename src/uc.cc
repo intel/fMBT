@@ -163,6 +163,11 @@ int main(int argc,char * const argv[])
     return 3;    
   }
   dparse(p,s,std::strlen(s));
+
+  if (p->syntax_errors) {
+    return -1;
+  }
+
   free_D_Parser(p);
   p=NULL;
   free(s);
