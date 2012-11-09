@@ -98,21 +98,12 @@ std::string OutputFormat_Html::report()
     std::map<std::vector<std::pair<int,std::vector<int> > > , int, bool(*)(const std::vector<std::pair<int,std::vector<int> > >&,const std::vector<std::pair<int,std::vector<int> > >&) > cnt(cmprp);
 
     for(unsigned j=0;j<traces.size();j++) {
-      printf("size %i:",(int)traces[j].size());
-      for(unsigned k=0;k<traces[j].size();k++) {
-	printf("%i,",traces[j][k].first);
-      }
-      printf("\n");
       cnt[traces[j]]++;
     }
 
-    ret=ret+"<tr><td><a href=\"javascript:showHide('"+reportnames[i]+"')\"><table><tr><td>" + reportnames[i]+"</td></tr><tr><td>Number of executed tests:"+to_string((unsigned)traces.size())+"</td></tr><tr><td>unique tests:"+to_string(unsigned(cnt.size()))+"</td></tr></table></a></td>";
-    ret=ret+"<td>\n<div id=\""+reportnames[i]+"\">\n"+
+    ret=ret+"<tr><td><a href=\"javascript:showHide('ID"+to_string(i)+"')\"><table><tr><td>" + reportnames[i]+"</td></tr><tr><td>Number of executed tests:"+to_string((unsigned)traces.size())+"</td></tr><tr><td>unique tests:"+to_string(unsigned(cnt.size()))+"</td></tr></table></a></td>";
+    ret=ret+"<td>\n<div id=\"ID"+to_string(i)+"\">\n"+
       "<table border=\"4\">";
-    
-    printf("reportnames %s\n",reportnames[i].c_str());
-    printf("vector size %i\n",(int)traces.size());
-    printf("Unique traces %i\n",(int)cnt.size());
 
     for(std::map<std::vector<std::pair<int,std::vector<int> > >,int>::iterator j=cnt.begin();
 	j!=cnt.end();j++) {
