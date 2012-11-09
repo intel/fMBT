@@ -30,21 +30,22 @@ using namespace Magick;
 
 #define INCOMPARABLE -1
 
-inline bool same_color(const PixelPacket *p1, const PixelPacket *p2)
+inline bool same_color(const PixelPacket *p1, const PixelPacket *p2,
+                       const int colorDiff, const unsigned char skipTransparency)
 {
-    /* FIXME: this should be able to execute with threshold ==
-       0. However, if ImageMagick is build with QuantumDepth > 8,
-       there seem to be slight differences. Also casting to unsigned
-       char is not architecture independent. Use ImageMagick to
-       quantify colors correctly!
-     */
-    const int threshold = 1;
-    if ((unsigned char)(p1->red) - threshold <= (unsigned char)(p2->red) &&
-        (unsigned char)(p1->red) + threshold >= (unsigned char)(p2->red) &&
-        (unsigned char)(p1->green) - threshold <= (unsigned char)(p2->green) &&
-        (unsigned char)(p1->green) + threshold >= (unsigned char)(p2->green) &&
-        (unsigned char)(p1->blue) - threshold <= (unsigned char)(p2->blue) &&
-        (unsigned char)(p1->blue) + threshold >= (unsigned char)(p2->blue)) {
+    /* do not compare transparent pixels */
+    if (skipTransparency) {
+        if (p1->opacity >= skipTransparency || p2->opacity >= skipTransparency) {
+            return true;
+        }
+    }
+
+    if ((unsigned char)(p1->red) + colorDiff   >= (unsigned char)(p2->red) &&
+        (unsigned char)(p2->red) + colorDiff   >= (unsigned char)(p1->red) &&
+        (unsigned char)(p1->green) + colorDiff >= (unsigned char)(p2->green) &&
+        (unsigned char)(p2->green) + colorDiff >= (unsigned char)(p1->green) &&
+        (unsigned char)(p1->blue) + colorDiff  >= (unsigned char)(p2->blue) &&
+        (unsigned char)(p2->blue) + colorDiff  >= (unsigned char)(p1->blue)) {
         return true;
     } else {
         return false;
@@ -55,7 +56,9 @@ bool pixelperfect_match(const int hayxsize,
                         const int neex, const int neey,
                         const int x, const int y,
                         const PixelPacket *hay_pixel,
-                        const PixelPacket *nee_pixel)
+                        const PixelPacket *nee_pixel,
+                        const int colorDiff,
+                        const unsigned char skipTransparency)
 {
     /* try to fail fast, do very fast diagonal sweep */
     int samples = 8;
@@ -67,7 +70,9 @@ bool pixelperfect_match(const int hayxsize,
          _x<neex && _y<neey;
          _x+=stepx, _y+=stepy) {
         if (!same_color((hay_pixel + hayxsize*(y+_y) + x+_x),
-                        (nee_pixel + neex*_y     + _x))) {
+                        (nee_pixel + neex*_y     + _x),
+                        colorDiff,
+                        skipTransparency)) {
             return false;
         }
     }
@@ -80,7 +85,9 @@ bool pixelperfect_match(const int hayxsize,
          _x<neex;
          _x+=stepx) {
         if (!same_color((hay_pixel + hayxsize*(y+_y) + x+_x),
-                        (nee_pixel + neex*_y     + _x))) {
+                        (nee_pixel + neex*_y     + _x),
+                        colorDiff,
+                        skipTransparency)) {
             return false;
         }
     }
@@ -89,9 +96,9 @@ bool pixelperfect_match(const int hayxsize,
     for(int _y=0; _y<neey; _y++) {
         for(int _x=0; _x<neex; _x++) {
             if (!same_color((hay_pixel + hayxsize*(y+_y) + x+_x),
-                            (nee_pixel + neex*_y     + _x))) {
-                printf("haystack (%d, %d) needle (%d, %d) differ.\n",
-                       x+_x, y+_y, _x, _y);
+                            (nee_pixel + neex*_y     + _x),
+                            colorDiff,
+                            skipTransparency)) {
                 return false;
             }
         }
@@ -204,9 +211,16 @@ long normdiag_error(int hayxsize,int neex,int neey,int x,int y,
 int iconsearch(std::vector<BoundingBox>& retval,
                Image& haystack,
                Image& needle,
-               const int threshold)
+               const int threshold,
+               const double colorMatch,
+               const double opacityLimit)
 {
     const int color_threshold = COLORS * threshold;
+
+    const int colorDiff = 256 - (256 * colorMatch);
+
+    const unsigned char skipTransparency = 255 * opacityLimit;
+
     typedef std::pair<long, std::pair<int,int> > Candidate;
     std::vector< Candidate > candidates;
 
@@ -214,8 +228,13 @@ int iconsearch(std::vector<BoundingBox>& retval,
     needle.modifyImage();
 
     if (threshold == 0) {
-        haystack.type(TrueColorType);
-        needle.type(TrueColorType);
+        if (skipTransparency > 0) {
+            haystack.type(TrueColorMatteType);
+            needle.type(TrueColorMatteType);
+        } else {
+            haystack.type(TrueColorType);
+            needle.type(TrueColorType);
+        }
     } else {
         haystack.type(GrayscaleType);
         needle.type(GrayscaleType);
@@ -231,7 +250,9 @@ int iconsearch(std::vector<BoundingBox>& retval,
         for (int y=0; y < hayy-neey; y++) {
             for (int x=0; x < hayx-neex; x++) {
                 if (pixelperfect_match(hayx, neex, neey, x, y,
-                                       hay_pixel, nee_pixel)) {
+                                       hay_pixel, nee_pixel,
+                                       colorDiff,
+                                       skipTransparency)) {
                     BoundingBox bbox;
                     bbox.left = x;
                     bbox.top = y;
@@ -308,7 +329,9 @@ int iconsearch(std::vector<BoundingBox>& retval,
 int findSingleIcon(BoundingBox* bbox,
                    const char* imagefile,
                    const char* iconfile,
-                   const int threshold)
+                   const int threshold,
+                   const double colorMatch,
+                   const double opacityLimit)
 {
     /* TODO: another version with multiple versions of the same
      * icon. Clear, blurred, etc.
@@ -336,7 +359,7 @@ int findSingleIcon(BoundingBox* bbox,
     }
 
     std::vector<BoundingBox> found;
-    if (iconsearch(found, *haystack, *needle, threshold) > 0
+    if (iconsearch(found, *haystack, *needle, threshold, colorMatch, opacityLimit) > 0
         && found.size() > 0) {
         *bbox = found[0];
         if (bbox->error > threshold)

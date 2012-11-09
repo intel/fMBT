@@ -72,6 +72,9 @@ g_words = {}
 g_lastWindow = None
 
 g_defaultIconMatch = 1.0
+g_defaultIconColorMatch = 1.0
+g_defaultIconOpacityLimit = 0.0
+g_defaultReadWithOCR = True
 
 # windowsOffsets maps window-id to (x, y) pair.
 g_windowOffsets = {None: (0,0)}
@@ -165,20 +168,50 @@ def _runcmd(cmd):
     _log("stderr: " + p.stderr.read())
     return p.wait(), output
 
-
 def setPreprocessFilter(preprocess):
     global g_preprocess
     g_preprocess = preprocess
 
 def iSetDefaultIconMatch(match):
     """
-    Set the default match value that will be used in iClickIcon and
-    iVerifyIcon calls.
+    Set the default icon matching value, ranging from 0 to 1. The
+    value will be used in iClickIcon and iVerifyIcon, if the optional
+    match parameter is omitted. Value 1.0 will use pixel-perfect
+    matching (the default), values below 1.0 will use fuzzy matching.
+
+    Fuzzy matching is EXPERIMENTAL.
     """
     global g_defaultIconMatch
     g_defaultIconMatch = match
 
-def iRead(windowId = None, source = None, preprocess = None, ocr=True, capture=None):
+def iSetDefaultIconColorMatch(colorMatch):
+    """
+    Set the default color matching value, ranging from 0 to 1. When
+    using pixel-perfect matching this will allow given error in pixel
+    colors.
+
+    For instance, when comparing 24 bit RGB images, value 0.97 will
+    allow 256 - int(256 * .97) = 8 difference on each color channel.
+    """
+    global g_defaultIconColorMatch
+    g_defaultIconColorMatch = colorMatch
+
+def iSetDefaultIconOpacityLimit(opacityLimit):
+    """
+    Set the default minimum opacity for pixels to be matched. Defaults
+    to 0.0, all pixels are matched independently of their opacity.
+    """
+    global g_defaultIconOpacityLimit
+    g_defaultIconOpacityLimit = opacityLimit
+
+def iSetDefaultReadWithOCR(ocr):
+    """
+    Set the default for using OCR when reading images or windows.
+    """
+    global g_defaultReadWithOCR
+    g_defaultReadWithOCR = ocr
+
+def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=None):
     """
     Read the contents of the given window or other source. If neither
     of windowId or source is given, reads the contents of active
@@ -212,6 +245,9 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=True, capture=N
     global g_words
     global g_readImage
     global g_origImage
+
+    if ocr == None:
+        ocr = g_defaultReadWithOCR
 
     if not source:
         iUseWindow(windowId)
@@ -300,7 +336,7 @@ def iVerifyWord(word, match=0.33, capture=None):
     return ((score, matching_word), g_words[matching_word][0][2])
 
 
-def iVerifyIcon(iconFilename, match=None, capture=None, _origin="iVerifyIcon"):
+def iVerifyIcon(iconFilename, match=None, colorMatch=None, opacityLimit=None, capture=None, _origin="iVerifyIcon"):
     """
     Verify that icon can be found from previously iRead() image.
 
@@ -310,6 +346,15 @@ def iVerifyIcon(iconFilename, match=None, capture=None, _origin="iVerifyIcon"):
 
         match          minimum matching score between 0 and 1.0,
                        1.0 is perfect match (default)
+
+        colorMatch     1.0 (default) requires exact color match. Value
+                       below 1.0 defines maximum allowed color
+                       difference. See iSetDefaultIconColorMatch.
+
+        opacityLimit   0.0 (default) requires exact color values
+                       independently of opacity. If lower than 1.0,
+                       pixel less opaque than given value are skipped
+                       in pixel perfect comparisons.
 
         capture        save image with verified icon highlighted
                        to this file. Default: None (nothing is saved).
@@ -337,11 +382,23 @@ def iVerifyIcon(iconFilename, match=None, capture=None, _origin="iVerifyIcon"):
     if match > 1.0:
         _log('ERROR %s("%s"): invalid match value, must be below 1.0. ' % (_origin, iconFilename,))
         raise ValueError("invalid match value: %s, should be 0 <= match <= 1.0" % (match,))
+    if colorMatch == None:
+        colorMatch = g_defaultIconColorMatch
+    if not 0.0 <= colorMatch <= 1.0:
+        _log('ERROR %s("%s"): invalid colorMatch value, must be between 0 and 1. ' % (_origin, iconFilename,))
+        raise ValueError("invalid colorMatch value: %s, should be 0 <= colorMatch <= 1.0" % (colorMatch,))
+    if opacityLimit == None:
+        opacityLimit = g_defaultIconOpacityLimit
+    if not 0.0 <= opacityLimit <= 1.0:
+        _log('ERROR %s("%s"): invalid opacityLimit value, must be between 0 and 1. ' % (_origin, iconFilename,))
+        raise ValueError("invalid opacityLimit value: %s, should be 0 <= opacityLimit <= 1.0" % (opacityLimit,))
 
     struct_bbox = Bbox(0,0,0,0,0)
     threshold = int((1.0-match)*20)
     err = eye4graphics.findSingleIcon(ctypes.byref(struct_bbox),
-                                      g_origImage, iconFilename, threshold)
+                                      g_origImage, iconFilename, threshold,
+                                      ctypes.c_double(colorMatch),
+                                      ctypes.c_double(opacityLimit))
     bbox = (int(struct_bbox.left), int(struct_bbox.top),
             int(struct_bbox.right), int(struct_bbox.bottom))
 
@@ -366,7 +423,9 @@ def iVerifyIcon(iconFilename, match=None, capture=None, _origin="iVerifyIcon"):
     return (score, bbox)
 
 
-def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=None, mouseButton=1, mouseEvent=MOUSEEVENT_CLICK, dryRun=False, capture=None):
+def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=None,
+               colorMatch=None, opacityLimit=None,
+               mouseButton=1, mouseEvent=MOUSEEVENT_CLICK, dryRun=False, capture=None):
     """
     Click coordinates relative to the given icon in previously iRead() image.
 
@@ -382,8 +441,18 @@ def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=None, mouseButton=1, mous
                      Values below 0 or greater than 1 click outside
                      the bounding box.
 
-        match        1.0 (default) requires exact match. Value between 0 and 1
-                     defines minimum required score for a fuzzy match.
+        match        1.0 (default) requires exact match. Value below 1.0
+                     defines minimum required score for fuzzy matching
+                     (EXPERIMENTAL). See iSetDefaultIconMatch.
+
+        colorMatch   1.0 (default) requires exact color match. Value
+                     below 1.0 defines maximum allowed color
+                     difference. See iSetDefaultIconColorMatch.
+
+        opacityLimit 0.0 (default) requires exact color values
+                     independently of opacity. If lower than 1.0,
+                     pixel less opaque than given value are skipped
+                     in pixel perfect comparisons.
 
         mouseButton  mouse button to be synthesized on the event, default is 1.
 
@@ -408,7 +477,9 @@ def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=None, mouseButton=1, mous
 
     Throws BadMatch error if could not find a matching word.
     """
-    score, bbox = iVerifyIcon(iconFilename, match=match, capture=capture, _origin="iClickIcon")
+    score, bbox = iVerifyIcon(iconFilename, match=match,
+                              colorMatch=colorMatch, opacityLimit=opacityLimit,
+                              capture=capture, _origin="iClickIcon")
 
     clickedXY = iClickBox(bbox, clickPos, mouseButton, mouseEvent, dryRun,
                           capture, _captureText = iconFilename)

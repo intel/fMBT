@@ -31,11 +31,15 @@ extern "C" {
      *
      * Parameters:
      *   - bbox for returning found icon's bounding box
-     *   - imagefile - name of image to be searched from (haystack)
-     *   - iconfile - name of icon to be search for (needle)
-     *   - threshold - max. acceptable error.
+     *   - imagefile    - name of image to be searched from (haystack)
+     *   - iconfile     - name of icon to be search for (needle)
+     *   - threshold    - max. acceptable error.
      *       0: perfect match
      *       9: big error allowed
+     *   - colorMatch   - 0.0 - 1.0, required color match
+     *   - opacityLimit - skip comparing pixels with opacity < opacityLimit
+     *                    0.0 (default) compares all pixels without reading
+     *                    opacity values
      *
      * Return value:
      *    0: success
@@ -48,7 +52,9 @@ extern "C" {
     int findSingleIcon(BoundingBox* bbox,
                        const char* imagefile,
                        const char* iconfile,
-                       const int threshold);
+                       const int threshold,
+                       const double colorMatch,
+                       const double opacityLimit);
 
     /*
      * imageDimensions
