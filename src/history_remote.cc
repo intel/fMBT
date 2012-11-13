@@ -28,8 +28,8 @@ History_remote::History_remote(Log& l, std::string params) :
   cmd=params;
 }
 
-void History_remote::set_coverage(Coverage* cov,
-				  Alphabet* alpha)
+Alphabet* History_remote::set_coverage(Coverage* cov,
+				       Alphabet* alpha)
 {
   a=alpha;
   c=cov;
@@ -64,6 +64,7 @@ void History_remote::set_coverage(Coverage* cov,
     }
     send_action(act,props);
   }
+  return NULL;
 }
 
 bool History_remote::send_action(std::string& act,

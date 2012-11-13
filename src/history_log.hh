@@ -24,14 +24,17 @@
 #include <libxml/xmlreader.h>
 
 #include "alphabet_impl.hh"
+#include "model_yes.hh"
+#include "log_null.hh"
 
 class History_log: public History {
 public:
   History_log(Log& l, std::string params = "");
   virtual ~History_log() {};
-  virtual void set_coverage(Coverage*,Alphabet* alpha);
+  virtual Alphabet* set_coverage(Coverage*,Alphabet* alpha);
 
 protected:
+  Log_null l;
   int alphabet_done;
   char* act;
   char* tag;
@@ -39,6 +42,8 @@ protected:
   Coverage* c;
 public:
   Alphabet* a;
+  Model_yes* myes;
+  bool model_from_log;
 private:
   void send_action();
   bool send_action(std::string& a,std::vector<std::string>& props,
