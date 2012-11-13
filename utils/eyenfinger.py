@@ -67,7 +67,7 @@ g_origImage = None
 
 g_hocr = ""
 
-g_words = {}
+g_words = None
 
 g_lastWindow = None
 
@@ -120,6 +120,9 @@ class BadSourceImage(EyenfingerError):
     pass
 
 class BadIconImage(EyenfingerError):
+    pass
+
+class NoOCRResults(EyenfingerError):
     pass
 
 try:
@@ -264,6 +267,7 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
     g_origImage = source
 
     if not ocr:
+        g_words = None
         if capture:
             drawWords(g_origImage, capture, [], [])
         return []
@@ -302,12 +306,15 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
     return sorted(g_words.keys())
 
 
-def iVerifyWord(word, match=0.33, capture=None):
+def iVerifyWord(word, match=0.33, appearance=1, capture=None):
     """
     Verify that word can be found from previously iRead() image.
 
     Parameters:
         word         word that should be checked
+
+        appearance   if word appears many times, appearance to
+                     be clicked. Defaults to the first one.
 
         match        minimum matching score
 
@@ -324,7 +331,13 @@ def iVerifyWord(word, match=0.33, capture=None):
                      bounding box of the word in read image
 
     Throws BadMatch error if word is not found.
+
+    Throws NoOCRResults error if there are OCR results available
+    on the current screen.
     """
+    if g_words == None:
+        raise NoOCRResults('iRead has not been called with ocr=True')
+
     score, matching_word = findWord(word)
 
     if capture:
@@ -333,7 +346,7 @@ def iVerifyWord(word, match=0.33, capture=None):
     if score < match:
         raise BadMatch('No matching word for "%s". The best candidate "%s" with score %.2f, required %.2f' %
                             (word, matching_word, score, match))
-    return ((score, matching_word), g_words[matching_word][0][2])
+    return ((score, matching_word), g_words[matching_word][appearance-1][2])
 
 
 def iVerifyIcon(iconFilename, match=None, colorMatch=None, opacityLimit=None, capture=None, _origin="iVerifyIcon"):
@@ -522,20 +535,15 @@ def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33,
                      screen.
 
     Throws BadMatch error if could not find a matching word.
+
+    Throws NoOCRResults error if there are OCR results available
+    on the current screen.
     """
-    windowId = g_lastWindow
-
-    score, matching_word = findWord(word)
-
-    if score < match:
-        raise BadMatch('No matching word for "%s". The best candidate "%s" with score %.2f, required %.2f' %
-                            (word, matching_word, score, match))
-
-    # Parameters should contain some hints on which appearance of the
-    # word should be clicked. At the moment we'll use the first one.
-    bbox = g_words[matching_word][appearance-1][2]
+    (score, matching_word), bbox = iVerifyWord(word, appearance=appearance, match=match, capture=False)
 
     clickedX, clickedY = iClickBox(bbox, clickPos, mouseButton, mouseEvent, dryRun, capture=False)
+
+    windowId = g_lastWindow
 
     _log('iClickWord("%s"): word "%s", match %.2f, bbox %s, window offset %s, click %s' %
          (word, matching_word, score,
@@ -728,15 +736,18 @@ def findWord(word, detected_words = None, appearance=1):
     """
     Returns pair (score, corresponding-detected-word)
     """
-    if not detected_words:
+    if detected_words == None:
         detected_words = g_words
+        if g_words == None:
+            raise NoOCRResults()
 
     scored_words = []
     for w in detected_words:
         scored_words.append((_score(w, word), w))
     scored_words.sort()
 
-    assert len(scored_words) > 0, "No words found"
+    if len(scored_words) == 0:
+        raise BadMatch("No words found.")
 
     return scored_words[-1]
 
@@ -897,7 +908,10 @@ def evaluatePreprocessFilter(imageFilename, ppfilter, words):
     detected_words = _hocr2words(file("eyenfinger.autoconfigure.html").read())
     scored_words = []
     for w in words:
-        score, word = findWord(w, detected_words)
+        try:
+            score, word = findWord(w, detected_words)
+        except BadMatch:
+            return
         scored_words.append((score, word, w))
     scored_words.sort()
 
