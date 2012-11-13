@@ -44,6 +44,10 @@ Options:
           $tr - reason for the verdict
           $tt - total test runtime [s]
 
+  -t, --time-format=<fmt>
+          fmt defines how timestamps are formatted. See
+          strftime manual for details. %f gives microseconds.
+
   -r, --raw
           do not decode actions
 
@@ -54,6 +58,7 @@ import sys
 import getopt
 import urllib2
 import fmbt_config
+import datetime
 
 fields = {
     '$ax' : ['<action type=', '"', 3],
@@ -65,7 +70,7 @@ fields = {
     '$mn' : ['<redirect id=', '"', 1],
     '$sc' : ['<status steps=', '"', 3],
     '$sn' : ['<status steps=', '"', 1],
-    '$st' : ['<current_time time=', '"', 1],
+    '$st' : ['<current_time time=', '"', 1, lambda s:s],
     '$tg' : ['<tags enabled=', '"', 1],
     '$tv' : ['<stop verdict=', '"', 1],
     '$tr' : ['<stop verdict=', '"', 3],
@@ -78,11 +83,17 @@ def extract(input_file_obj, output_file_obj, output_format, raw):
     # 1. parse everything that is done during a single test step
     # 2. write the stuff in requested format to output_file_obj
 
-    def pick(line, delimiter, fieldindex):
+    def pick(line, field_values):
+        if len(field_values) > 3:
+            _, delimiter, fieldindex, formatter = field_values
+        else:
+            _, delimiter, fieldindex = field_values
+            formatter = lambda s: s
+
         if raw == 1:
             contents = line.split(delimiter)[fieldindex]
         else:
-            try: contents = urllib2.unquote(line.split(delimiter)[fieldindex])
+            try: contents = formatter(urllib2.unquote(line.split(delimiter)[fieldindex]))
             except: contents = '<syntax error>'
         return contents
 
@@ -91,9 +102,9 @@ def extract(input_file_obj, output_file_obj, output_format, raw):
     parsed_data = clean_data()
     for lineno, line in enumerate(input_file_obj):
         for field in fields:
-            match, delimiter, fieldno = fields[field]
+            match = fields[field][0]
             if match in line:
-                parsed_data[field].append(pick(line, delimiter, fieldno))
+                parsed_data[field].append(pick(line, fields[field]))
 
         # a test step done, print values
         ppoutput = ""
@@ -123,8 +134,8 @@ if __name__ == '__main__':
     option_raw = 0
 
     opts, remainder = getopt.getopt(
-        sys.argv[1:], 'hrf:o:v',
-        ['help', 'raw', 'format=', 'output=', "version"])
+        sys.argv[1:], 'hrf:o:t:v',
+        ['help', 'raw', 'format=', 'output=', 'time-format=', "version"])
     for opt, arg in opts:
         if opt in ['-h', '--help']:
             print __doc__
@@ -136,6 +147,8 @@ if __name__ == '__main__':
             option_raw = 1
         elif opt in ['-f', '--format']:
             output_format = arg
+        elif opt in ['-t', '--time-format']:
+            fields['$st'][3] = lambda s: datetime.datetime.fromtimestamp(float(s)).strftime(arg)
         elif opt in ['-o', '--output'] and not arg in ['', '-']:
             output_file_obj = file(arg, 'w')
 
