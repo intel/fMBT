@@ -431,6 +431,14 @@ std::string to_string(const float f)
   return ss.str();
 }
 
+#include <iomanip>
+
+std::string to_string(const struct timeval&t)
+{
+  std::stringstream ss;
+  ss << t.tv_sec << "." << std::setfill('0') << std::setw(6) << t.tv_usec;
+  return ss.str();
+}
 
 std::string to_string(const unsigned t)
 {
