@@ -36,9 +36,7 @@ class OutputFormat: public Writable {
 public:
   OutputFormat(std::string params) : Writable(),model(NULL) {l.ref();}
   virtual ~OutputFormat();
-  virtual void set_model(Model* m) {
-    model=m;
-  }
+  virtual void set_model(Model* m);
   virtual void set_model(std::string m);
 
   virtual void set_prefix(std::string& _prefix)

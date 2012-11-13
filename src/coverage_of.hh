@@ -40,6 +40,8 @@ public:
   virtual void history(int action,std::vector<int>& props,
 		       Verdict::Verdict verdict);
 
+  virtual void set_model(Model* _model);
+
 private:
   std::vector<Coverage*>& covs;
 };

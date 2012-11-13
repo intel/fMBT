@@ -65,13 +65,14 @@ protected:
   virtual void on_start(int action,std::vector<int>&p);
   virtual void on_restart(int action,std::vector<int>&p) { };
   virtual void on_online(int action,std::vector<int>&p);
+  virtual void on_offline(int action,std::vector<int>&p) { };
   void mhandler(std::vector<std::string>& sp,std::vector<std::string>& n,
 		std::vector<std::string*>& from,std::vector<int>& act,
 		std::vector<int>& tag);
 public:
   std::vector<std::pair<int,std::vector<int> > > executed;
-protected:
   std::vector<struct timeval > etime;
+protected:
 
   std::vector<int> start_tag;
   std::vector<int> end_tag;

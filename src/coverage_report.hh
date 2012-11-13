@@ -23,13 +23,14 @@
 
 #include <sys/time.h>
 #include <stack>
+#include <utility>
 
 class Coverage_report: public Coverage_exec_filter {
 public:
   Coverage_report(Log&l,std::vector<std::string*>& _from,
 		  std::vector<std::string*>& _to,
 		  std::vector<std::string*>& _drop):
-    Coverage_exec_filter(l,_from,_to,_drop),count(0)
+    Coverage_exec_filter(l,_from,_to,_drop),count(0),was_online(false)
   {}
 
   virtual ~Coverage_report() {
@@ -58,17 +59,18 @@ public:
 protected:
   virtual void on_find(int action,std::vector<int>&p);
   virtual void on_online(int action,std::vector<int>&p);
+  virtual void on_offline(int action,std::vector<int>&p);
 
-private:
   //  bool prop_set(std::vector<int> p,int npro,int* props);
-
-  std::vector<struct timeval > etime;
+public:
+  std::vector<std::pair<struct timeval,struct timeval> > times;
 protected:
   int count;
 private:
   std::stack<int> save;
   std::stack<std::vector<std::vector<std::pair<int,std::vector<int> > > > > traces_save;
   std::stack<std::map<std::vector<std::pair<int,std::vector<int> > >, int> > tcount_save;
+  bool was_online;
 };
 
 #endif

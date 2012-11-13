@@ -10,7 +10,7 @@ COMMON_SOURCES = fmbt.cc test_engine.cc log.cc helper.cc lts.g.d_parser.cc xrule
 
 fmbt_SOURCES                  = $(COMMON_SOURCES) adapter_dlopen.cc adapter_remote.cc lts_remote.cc lts_trace.cc xrules_remote.cc covlang.g.d_parser.cc coverage_market.cc coverage_tema_seq.cc history_remote.cc model_remote.cc aal_java.cc aal_remote.cc history_log.cc history_multi.cc history_glob.cc
 
-fmbt_ucheck_SOURCES	      = uc.cc helper.cc log.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc conf.cc end_condition.cc test_engine.cc adapter.cc history.cc heuristic.cc policy.cc alg_bdfs.cc conf.g.d_parser.cc uconf.g.d_parser.cc mrules.g.d_parser.cc of.cc of_null.cc awrapper.cc null.cc aal.cc history_log.cc $(LOCAL_COVERAGES) $(LOCAL_MODELS) lts_remote.cc coverage_of.cc of_html.cc of_csv.cc endhook.cc
+fmbt_ucheck_SOURCES	      = uc.cc helper.cc log.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc conf.cc end_condition.cc test_engine.cc adapter.cc history.cc heuristic.cc policy.cc alg_bdfs.cc conf.g.d_parser.cc uconf.g.d_parser.cc mrules.g.d_parser.cc of.cc of_null.cc awrapper.cc null.cc aal.cc history_log.cc $(LOCAL_COVERAGES) lts_remote.cc coverage_of.cc of_html.cc of_csv.cc endhook.cc $(LOCAL_MODELS)
 
 fmbt_droid_SOURCES            = $(COMMON_SOURCES)
 
@@ -24,4 +24,4 @@ eye4graphics_la_SOURCES       = eye4graphics.cc
 
 fmbt_aalp_SOURCES = aalp.ll
 
-fmbt_log2lsts_SOURCES = log2lsts.cc lts.cc model.cc log.cc coverage.cc lts.g.d_parser.cc history.cc helper.cc history_log.cc
+fmbt_log2lsts_SOURCES = log2lsts.cc lts.cc model.cc log.cc coverage.cc lts.g.d_parser.cc history.cc helper.cc history_log.cc model_yes.cc
