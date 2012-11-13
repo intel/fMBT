@@ -29,10 +29,12 @@ public:
   }
   virtual ~remote() {
     if (id) {
+      while(g_main_context_iteration(NULL,FALSE));
       g_source_remove(id);
     }
     g_spawn_close_pid(pid);
     g_main_context_unref(g_main_context_default());
+    while(g_main_context_iteration(NULL,FALSE));
   }
 protected:
   void monitor() {
