@@ -49,8 +49,8 @@ void Coverage_exec_filter::mhandler
 	  if (!r.empty()) {
 	    act.insert(act.begin(),r.begin(),r.end());
 	  } else {
-	    // Nothing?
-	    printf("No match for %s\n",from[i]->c_str());
+	    status=false;
+	    errormsg=errormsg+"No match for "+from[i]->c_str()+"\n";
 	  }	  
 	}
       }
@@ -128,6 +128,8 @@ bool Coverage_exec_filter::execute(int action)
 
   if (online) {
     on_online(action,p);
+  } else {
+    on_offline(action,p);
   }
 
   if (online) {
@@ -264,8 +266,13 @@ public:
   virtual void set_model(Model* _model) {
     Coverage_exec_filter::set_model(_model);    
 
-    if (sub) 
+    if (status && sub) {
       sub->set_model(model);
+      if (sub->status==false) {
+	status=false;
+	errormsg=errormsg+"Sub model failed*:"+sub->errormsg;
+      }
+    }
   }
 private:
   std::vector<std::string*> _f,_t,_d;

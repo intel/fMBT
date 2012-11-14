@@ -27,10 +27,10 @@ int glob(const char *pattern, int flags,
 void globfree(glob_t *pglob);
 */
 
-#define RETURN_ERROR_VOID(s) { \
+#define RETURN_ERROR(s) { \
   status=false; \
   errormsg=s;   \
-  return; \
+  return NULL; \
   }
 
 
@@ -40,8 +40,8 @@ History_multi::History_multi(Log& l, std::string _params) :
 
 }
 
-void History_multi::set_coverage(Coverage* cov,
-				 Alphabet* alpha)
+Alphabet* History_multi::set_coverage(Coverage* cov,
+				      Alphabet* alpha)
 {
   std::vector<std::string> v;
   static const std::string separator(":");
@@ -52,12 +52,13 @@ void History_multi::set_coverage(Coverage* cov,
     if (h) {
       h->set_coverage(cov,alpha);
       if (!h->status) {
-	RETURN_ERROR_VOID(h->errormsg);
+	RETURN_ERROR(h->errormsg);
       }
     } else {
-      RETURN_ERROR_VOID("Creating history \""+ v[0] + ":" + v[i] + "\" failed");
+      RETURN_ERROR("Creating history \""+ v[0] + ":" + v[i] + "\" failed");
     }
   }
+  return NULL;
 }
 
 FACTORY_DEFAULT_CREATOR(History, History_multi, "multi")

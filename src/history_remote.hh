@@ -23,7 +23,7 @@ class History_remote: public History {
 public:
   History_remote(Log& l, std::string params = "");
 
-  virtual void set_coverage(Coverage*,Alphabet* alpha);
+  virtual Alphabet* set_coverage(Coverage*,Alphabet* alpha);
 
 protected:
   Coverage* c;

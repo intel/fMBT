@@ -29,7 +29,7 @@ public:
   virtual ~History_multi() {
 
   }
-  virtual void set_coverage(Coverage*,Alphabet* alpha);
+  virtual Alphabet* set_coverage(Coverage*,Alphabet* alpha);
 
 protected:
   std::string params;

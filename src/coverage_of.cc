@@ -44,3 +44,13 @@ void Coverage_of::history(int action,std::vector<int>& props,
     c->history(action,props,verdict);
   }
 }
+
+void Coverage_of::set_model(Model* _model) {
+  Coverage::set_model(_model);
+  for(unsigned i=0;i<covs.size();i++) {
+    Coverage* c=covs[i];
+    if (c) {
+      c->set_model(model);
+    }
+  }  
+}

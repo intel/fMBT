@@ -43,6 +43,12 @@ void History_log::processNode(xmlTextReaderPtr reader)
   if (xmlTextReaderDepth(reader)>2) {
     if (!alphabet_done) {
       alphabet_done=true;
+      if (model_from_log) {
+	l.ref();
+	myes=new Model_yes(l,"");
+	myes->set_model(a);
+	c->set_model(myes);
+      }
     }
   }
   
@@ -73,7 +79,7 @@ void History_log::processNode(xmlTextReaderPtr reader)
     char* endp;
     long sec = strtol(time, &endp, 10);
     if (*endp=='.') {
-      long usec=strtol(endp, &endp, 10);
+      long usec=strtol(endp+1, &endp, 10);
       current_time.tv_sec=sec;
       current_time.tv_usec=usec;
     }
@@ -123,10 +129,16 @@ void History_log::processNode(xmlTextReaderPtr reader)
   }
 }
 
-void History_log::set_coverage(Coverage* cov,
-			       Alphabet* alpha)
+Alphabet* History_log::set_coverage(Coverage* cov,
+				    Alphabet* alpha)
 {
   c=cov;
+
+  if (alpha) {
+    model_from_log=false;
+  } else {
+    model_from_log=true;
+  }
 
   LIBXML_TEST_VERSION
 
@@ -144,6 +156,8 @@ void History_log::set_coverage(Coverage* cov,
   }
   xmlCleanupParser();
   xmlMemoryDump();
+ 
+  return myes;
 }
 
 void History_log::send_action()

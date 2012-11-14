@@ -28,6 +28,7 @@ std::string Coverage_report::stringify()
 }
 
 void Coverage_report::on_find(int action,std::vector<int>&p) {
+  was_online=true;
   count++;
   traces.push_back(executed);
   tcount[executed]++;
@@ -51,4 +52,13 @@ void Coverage_report::pop() {
 void Coverage_report::on_online(int action,std::vector<int>&p){
   std::vector<int> pp;
   executed.push_back(std::pair<int,std::vector<int> >(action,pp));
+}
+
+void Coverage_report::on_offline(int action,std::vector<int>&p){
+  if (was_online) {
+    struct timeval t1=* etime.begin();
+    times.push_back(std::pair<struct timeval,struct timeval>
+		    (t1,History::current_time));
+    was_online=false;
+  }
 }

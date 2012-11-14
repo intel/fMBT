@@ -36,7 +36,7 @@ OutputFormat* uconf_obj;
 
 conf_file: model (usecase|testcase)+;
 
-model: 'model' '=' string { uconf_obj->set_model(*$2.str); delete $2.str; } ;
+model: 'model' '=' string { uconf_obj->set_model(*$2.str); delete $2.str; } | ;
 
 usecase: string '=' string { uconf_obj->add_uc(*$0.str,*$2.str); delete $0.str; delete $2.str; } ;
 
@@ -45,9 +45,11 @@ testcase: 'report' string 'from' strvec 'to' strvec opt_drop { uconf_obj->add_re
                 *$5.strvec,
                 *$6.strvec);
             delete $1.str;
+            /*
             sdel($3.strvec);
             sdel($5.strvec);
             sdel($6.strvec);
+            */
         };
 
 opt_drop: { $$.strvec = new std::vector<std::string*>; }

@@ -57,8 +57,39 @@ OutputFormat::~OutputFormat() {
   model=NULL;
 }
 
+void OutputFormat::set_model(Model* m) {
+  model=m;
+
+  if (status) {
+    for(int i=0;i<covs.size();i++) {
+      if (covs[i]) {
+	covs[i]->set_model(model);
+	if (covs[i]->status==false) {
+	  status=false;
+	  errormsg=errormsg+" "+covs[i]->errormsg;
+	}
+      }
+    }
+  }
+
+  if (status) {
+    for(int i=0;i<rcovs.size();i++) {
+      if (rcovs[i]) {
+	rcovs[i]->set_model(model);
+	if (rcovs[i]->status==false) {
+	  status=false;
+	  errormsg=errormsg+" "+rcovs[i]->errormsg;
+	}
+      }
+    }
+  }
+
+}
+
 void OutputFormat::set_model(std::string m)
 { 
+  return;
+  /*
   if (status) {
     
     if ((model=new_model(l,m)) == NULL)
@@ -76,6 +107,7 @@ void OutputFormat::set_model(std::string m)
     }
   } else {
   }
+  */
 }
 
 
@@ -83,9 +115,14 @@ void OutputFormat::add_uc(std::string& name,
 			  Coverage* c)
 {
   if (status) {
-    covnames.push_back(name);
-    covs.push_back(c);
-    c->set_model(model);
+    if (c->status) {
+      covnames.push_back(name);
+      covs.push_back(c);
+      // c->set_model(model);
+    } else {
+      status=false;
+      errormsg=errormsg+"coverage \""+ name  + "\": "+c->errormsg;
+    }
   }
 }
 
@@ -102,7 +139,12 @@ std::string OutputFormat::handle_history(Log&l,std::string& h)
 
     testnames.push_back(h);
 
-    history->set_coverage(cov,model);
+    Alphabet* al=history->set_coverage(cov,model);
+
+    if (al) {
+      model=dynamic_cast<Model*>(al);
+    }
+    
     test_verdict=history->test_verdict;
 
     delete cov;
@@ -135,7 +177,12 @@ void OutputFormat::add_report(std::string& name,
   if (status) {
     reportnames.push_back(name);
     Coverage_report* c=new Coverage_report(l,from,to,drop);
-    c->set_model(model);
+    if (c->status==false) {
+      status=false;
+      errormsg=errormsg+" Report failure:"+c->errormsg;
+    } else {
+      // c->set_model(model);
+    }
     rcovs.push_back(c);
   }
 }

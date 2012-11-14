@@ -32,6 +32,7 @@ std::string OutputFormat_Csv::csv_escape(std::string& s)
 std::string OutputFormat_Csv::format_covs()
 {
   std::string ret;
+  std::string pre;
 
   //testname
   ret=csv_escape(testnames.back());
@@ -39,13 +40,33 @@ std::string OutputFormat_Csv::format_covs()
   //verdict
   ret=ret+",";
 
-  for(unsigned i=0;i<covnames.size()-1;i++) {
-    ret=ret+","+to_string(covs[i]->getCoverage());
+  pre=ret;
+
+  if (!covnames.empty()) {
+    for(unsigned i=0;i<covnames.size()-1;i++) {
+      if (covs[i]) 
+	ret=ret+","+to_string(covs[i]->getCoverage());
+    }
+    if (covnames.size()>0) {
+      ret=ret+","+to_string(covs[covnames.size()-1]->getCoverage());
+    }
   }
-  if (covnames.size()>0) {
-    ret=ret+","+to_string(covs[covnames.size()-1]->getCoverage());
+
+  ret+=CRLF;
+
+  if (!reportnames.empty()) {
+    for(unsigned i=0;i<reportnames.size();i++) {
+      if (rcovs[i]->times.empty()) {
+	printf("No end time for %i???\n",i);
+      } else {
+	for(unsigned j=0;j<rcovs[i]->times.size();j++) {
+	  ret+=pre+"\""+reportnames[i];
+	  ret=ret+"\","+to_string(rcovs[i]->times[j].first)+","+to_string(rcovs[i]->times[j].second) + CRLF;
+	}
+      }
+    }
   }
-  return ret+CRLF;
+  return ret;
 }
 
 FACTORY_DEFAULT_CREATOR(OutputFormat, OutputFormat_Csv, "csv")
