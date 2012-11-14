@@ -17,6 +17,20 @@ aal "outputs" {
             if file_exists(filename): os.remove(filename)
     }
 
+    action "o:Txt changed" {
+        guard() { return True }
+        body() {
+            found['txt'] = not found['txt']
+        }
+        adapter() {
+            if file_exists(filenames[0]) != found['txt']: return True
+        }
+    }
+
+    action "o:Jpg changed" {
+        body() { found['jpg'] = not found['jpg'] }
+    }
+
     action "iChange:txt", "iChange:jpg", "iChange:png", "iChange:tmp" {
         guard() {
             # Enable iChange:X for non-existing file.X only -
@@ -39,19 +53,6 @@ aal "outputs" {
         }
     }
 
-    action "o:Txt changed" {
-        guard() { return True }
-        body() {
-            found['txt'] = not found['txt']
-        }
-        adapter() {
-            if file_exists(filenames[0]) != found['txt']: return True
-        }
-    }
-
-    action "o:Jpg changed" {
-        body() { found['jpg'] = not found['jpg'] }
-    }
     action "o:Png changed" {
         guard() { return 1 }
         body() {
@@ -63,6 +64,10 @@ aal "outputs" {
             elif file_exists(filenames[2]) != found['png']:
                 return action("o:Png changed")
         }
+    }
+
+    action "iNeverHappen" {
+        guard() { return False }
     }
 
     action "o:Tmp changed" {
