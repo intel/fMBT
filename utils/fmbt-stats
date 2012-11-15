@@ -94,10 +94,9 @@ def read_from_log_timestamp_execaction(testlog_fileobj):
     try:
         line = p.stdout.readline()
         while line:
-            # s_timestamp, s_actionname = line.split(' ',1)
             space = line.find(" ")
-            timestamp_actionname_list.append((float(line[:space]), line[space+1:-1]))
-            # timestamp_actionname_list.append((float(s_timestamp), s_actionname.strip()))
+            if line[space+1:].strip():
+                timestamp_actionname_list.append((float(line[:space]), line[space+1:-1]))
             line = p.stdout.readline()
     except Exception, e:
         error('invalid line in fmbt-log output: "%s"' % line[:-1])
