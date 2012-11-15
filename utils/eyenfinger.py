@@ -249,6 +249,10 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
     global g_readImage
     global g_origImage
 
+    g_words = None
+    g_readImage = None
+    g_origImage = None
+
     if ocr == None:
         ocr = g_defaultReadWithOCR
 
@@ -267,7 +271,6 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
     g_origImage = source
 
     if not ocr:
-        g_words = None
         if capture:
             drawWords(g_origImage, capture, [], [])
         return []
@@ -830,7 +833,7 @@ def iUseImageAsWindow(imageFilename):
     if not eye4graphics:
         _log('ERROR: iUseImageAsWindow("%s") called, but eye4graphics not loaded.' % (imageFilename,))
         raise EyenfingerError("eye4graphics not available")
-    
+
     g_lastWindow = imageFilename
 
     struct_bbox = Bbox(0,0,0,0,0)
@@ -839,7 +842,7 @@ def iUseImageAsWindow(imageFilename):
     if err != 0:
         _log('iUseImageAsWindow: Failed reading dimensions of image "%s".' % (imageFilename,))
         raise BadSourceImage('Failed to read dimensions of "%s".' % (imageFilename,))
-        
+
     g_windowOffsets[g_lastWindow] = (0, 0)
     g_windowSizes[g_lastWindow] = (int(struct_bbox.right), int(struct_bbox.bottom))
     return g_lastWindow
