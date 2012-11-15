@@ -63,12 +63,12 @@ import datetime
 def identity_formatter(s):
     return s
 
-def drop_TAU_formatter(s):
-   if s == "TAU": return ""
+def TAU_formatter(s):
+   if s == "TAU": return "[unidentified action]"
    return s
 
 fields = {
-    '$ax' : ['<action type=', '"', 3, drop_TAU_formatter],
+    '$ax' : ['<action type=', '"', 3, TAU_formatter],
     '$as' : ['<suggested_action type=', '"', 3, identity_formatter],
     '$am' : ['<action_name name=', '"', 1, identity_formatter],
     '$al' : ['<remote msg=', '"', 1, identity_formatter],

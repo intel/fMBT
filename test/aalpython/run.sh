@@ -113,7 +113,7 @@ cat > expected-steps.txt <<EOF
 iStep1
 iStep2 - change handler
 oOutputAction
-failTAU
+fail[unidentified action]
 EOF
 fmbt adapter_exceptions.conf 2>> $LOGFILE | fmbt-log > observed-steps.txt || testfailed
 diff -u expected-steps.txt observed-steps.txt >> $LOGFILE || testfailed
