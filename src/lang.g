@@ -36,12 +36,22 @@ typedef struct _node {
 #define D_ParseNode_User node
 std::vector<std::string> aname;
 
+bool adapter,body,guard;
+
 int count=1;
 
 char *ops;
 void *ops_cache=&count;
 
 #include "d.h"
+
+void raise_error(d_loc_t& sl,Parser *p) {
+    p->last_syntax_error_line = sl.line;
+    p->user.syntax_errors++;
+    p->user.loc.line= sl.line;
+    p->user.loc.ws = sl.s-1;
+    p->user.syntax_error_fn((D_Parser*)p);
+}
 
 int bstr_scan(char *ops, void *ops_cache, d_loc_t *loc,
               unsigned char *op_assoc, int *op_priority)
@@ -89,12 +99,20 @@ header: variables | ainit | istate | push | pop | comment;
 comment: '#' "[^\n]*" {} ;
 
 
-act: 'action' astr '{' ab '}' {
+act: 'action' astr { guard=false;body=false;adapter=false; } '{' ab '}' {
+            if (!guard) {
+                obj->empty_guard();
+            }
+            if (!body) {
+                obj->empty_body();
+            }
+            if (!adapter) {
+                obj->empty_adapter();
+            }
             obj->next_action();
         };
 
-ab: comment* guard comment* body comment* adapter comment* |
-    comment* guard comment* adapter comment* body comment* ;
+ab: (comment|guard|body|adapter)*;
 
 astr:   string          {
             obj->set_name($0.str);
@@ -137,14 +155,26 @@ istate: 'initial_state' '{' bstr '}' { obj->set_istate($2.str); } ;
 
 ainit: 'adapter_init' '{' bstr '}' { obj->set_ainit($2.str); } ;
 
-guard: 'guard' '()' '{' bstr '}' { obj->set_guard($3.str); }
-    | { obj->empty_guard(); } ;
+guard: 'guard' '()' '{' bstr '}' {
+            if (guard) {
+                raise_error($n0.start_loc,(Parser*)_parser);
+            } else {
+                obj->set_guard($3.str); guard=true; 
+            }
+        } ;
+body: ('body'|'model') '()' '{' bstr '}' { if (body) {
+                raise_error($n0.start_loc,(Parser*)_parser);
+            } else {
+                obj->set_body($3.str); body=true;
+            }
+        } ;
 
-body: ('body'|'model') '()' '{' bstr '}' { obj->set_body($3.str); }
-    | { obj->empty_body(); };
-
-adapter: 'adapter' '()' '{' bstr '}' { obj->set_adapter($3.str); }
-    | { obj->empty_adapter(); };
+adapter: 'adapter' '()' '{' bstr '}' { if (adapter) {
+                raise_error($n0.start_loc,(Parser*)_parser);
+            } else {
+                obj->set_adapter($3.str); adapter=true;
+            }
+        };
 
 bstr: (${scan bstr_scan(ops,ops_cache)})* {
             char* start=d_ws_before(NULL,& $n0);
