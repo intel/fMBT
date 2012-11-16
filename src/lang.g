@@ -84,13 +84,17 @@ aal_start: 'aal' string '{' language {
             obj->set_namestr($1.str);
         } ;
 
-header: variables | istate | push | pop | comment;
+header: variables | ainit | istate | push | pop | comment;
 
 comment: '#' "[^\n]*" {} ;
 
-act: 'action' astr '{' comment* guard comment* body comment* adapter comment* '}' {
+
+act: 'action' astr '{' ab '}' {
             obj->next_action();
         };
+
+ab: comment* guard comment* body comment* adapter comment* |
+    comment* guard comment* adapter comment* body comment* ;
 
 astr:   string          {
             obj->set_name($0.str);
@@ -130,6 +134,8 @@ python: 'Python' | 'python' | 'py';
 variables: 'variables' '{' bstr '}' { obj->set_variables($2.str); };
 
 istate: 'initial_state' '{' bstr '}' { obj->set_istate($2.str); } ;
+
+ainit: 'adapter_init' '{' bstr '}' { obj->set_ainit($2.str); } ;
 
 guard: 'guard' '()' '{' bstr '}' { obj->set_guard($3.str); }
     | { obj->empty_guard(); } ;
