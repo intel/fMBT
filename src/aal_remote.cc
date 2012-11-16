@@ -134,6 +134,17 @@ bool aal_remote::reset() {
   return rv;
 }
 
+bool aal_remote::init() {
+  std::fprintf(d_stdin, "ai\n");
+  bool rv = (getint(d_stdin,d_stdout,_log) == 1);
+  if (!rv) {
+    errormsg = "aal_remote adapter failed to init \"" + params + "\".\n"
+      "      (try executing: echo ai | " + params + ")";
+    status = false;
+  }
+  return rv;
+}
+
 int aal_remote::getActions(int** act) {
   while(g_main_context_iteration(NULL,FALSE));
   std::fprintf(d_stdin, "ma\n");

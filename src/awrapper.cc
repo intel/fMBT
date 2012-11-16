@@ -36,7 +36,13 @@ Awrapper::Awrapper(Log&l, std::string params, aal* _ada):
     status=false;
   } else {
     ada->ref();
+    status=ada->status;
   }
+}
+
+bool Awrapper::init()
+{
+  return ada->init();
 }
 
 void Awrapper::set_actions(std::vector<std::string>* _actions)

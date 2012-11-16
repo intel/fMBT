@@ -104,6 +104,13 @@ void aalang_py::set_istate(std::string* ist)
     indent(8, *ist) + "\n";
 }
 
+void aalang_py::set_ainit(std::string* iai)
+{
+  s += "\n    def adapter_init():\n" + variables +
+    indent(8, *iai) + "\n";
+}
+
+
 void aalang_py::set_tagname(std::string* name)
 {
   s+="\n    tag" + to_string(tag_cnt) + "name = \""+*name+"\"\n";

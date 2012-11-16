@@ -39,6 +39,7 @@ public:
   virtual int model_execute(int action);
   virtual int getActions(int** act);
   virtual bool reset();
+  virtual bool init();
 
   virtual void push();
   virtual void pop();

@@ -45,7 +45,10 @@ public:
   virtual int adapter_execute(int action,const char* params)=0;
   virtual int model_execute(int action)  =0;
   virtual int getActions(int** act)      =0;
-  virtual bool reset() {
+  virtual bool reset() { // Model
+    return true;
+  }
+  virtual bool init() { // Adapter
     return true;
   }
   virtual std::vector<std::string>& getActionNames() {

@@ -36,6 +36,7 @@ public:
   virtual void next_tag();
   virtual void set_variables(std::string* var);
   virtual void set_istate(std::string* ist);
+  virtual void set_ainit(std::string* iai);
   virtual void set_guard(std::string* gua);
 
   virtual void set_push(std::string* p);
@@ -58,6 +59,7 @@ protected:
   int tag_cnt;
   int name_cnt;
   std::string* istate;
+  std::string* ainit;
   std::string* name;
   std::string push;
   std::string pop;

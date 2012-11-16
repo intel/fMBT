@@ -54,6 +54,7 @@ private:
   jmethodID mexec;
   jmethodID geta;
   jmethodID Reset;
+  jmethodID Init;
   jmethodID Push;
   jmethodID Pop;
   jmethodID Getprops;

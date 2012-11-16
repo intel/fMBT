@@ -40,6 +40,7 @@ public:
   virtual void set_tagname(std::string* name);
   virtual void next_tag();
   virtual void set_istate(std::string* ist);
+  virtual void set_ainit(std::string* iai);
   virtual void set_guard(std::string* gua);
 
   virtual void set_push(std::string* p);

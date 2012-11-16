@@ -32,6 +32,7 @@ public:
   virtual void next_tag()                      = 0;
   virtual void set_variables(std::string* var) = 0;
   virtual void set_istate(std::string* ist)    = 0;
+  virtual void set_ainit(std::string* iai)     = 0;
   virtual void set_guard(std::string* gua)     = 0;
 
   virtual void set_push(std::string* p) = 0;

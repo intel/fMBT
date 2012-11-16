@@ -22,7 +22,7 @@
 #include "helper.hh"
 
 aalang_java::aalang_java(): aalang(),action_cnt(1), tag_cnt(1), name_cnt(0),
-			  istate(NULL), name(NULL), tag(false)
+			    istate(NULL),ainit(NULL), name(NULL), tag(false)
 {
   default_guard="return true;";
   default_body="";
@@ -74,6 +74,12 @@ void aalang_java::set_istate(std::string* ist)
 {
   istate=ist;
 }
+
+void aalang_java::set_ainit(std::string* iai)
+{
+  ainit=iai;
+}
+
 
 void aalang_java::set_push(std::string* p)
 {
@@ -167,7 +173,24 @@ std::string aalang_java::stringify()
   }
   s+="};\n";
 
-  s=s+"public " + *name + "() {\n" + *istate + "\t};\n";
+  s=s+"public " + *name + "() {\n" "\t};\n";
+
+  if (istate) {
+    s+="boolean reset() {\n"
+      "if (true) {\n" +
+      *istate+
+      "}\n"
+      "\nreturn true;\n}\n\n";
+  }
+
+  if (ainit) {
+    s+="boolean init() {\n"
+      "if (true) {\n" +
+      *ainit+
+      "}\n"
+      "\nreturn true;\n}\n\n";
+  }
+  
 
   if (pop!="") {
     s=s+"\n void pop(){\n"+pop+"\n}\n";
@@ -196,10 +219,8 @@ std::string aalang_java::stringify()
 
   s+="\treturn 0;\n"
     "}\n"
-    " boolean reset() {\n"+
-    *istate +
-    "return true;\n}\n\n"
-    " int adapter_execute(int action) {\n"
+ 
+   " int adapter_execute(int action) {\n"
     "\tswitch(action) {\n";
   
   for(int i=1;i<action_cnt;i++) {

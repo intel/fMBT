@@ -22,7 +22,7 @@
 #include "helper.hh"
 
 aalang_cpp::aalang_cpp(): aalang(),action_cnt(1), tag_cnt(1), name_cnt(0),
-			  istate(NULL), name(NULL), tag(false)
+			  istate(NULL),ainit(NULL), name(NULL), tag(false)
 {
   default_guard="return true;"; 
   default_body="";
@@ -39,6 +39,8 @@ aalang_cpp::~aalang_cpp()
 {
   if (istate)
     delete istate;
+  if (ainit)
+    delete ainit;
   if (name)
     delete name;
 }
@@ -76,6 +78,11 @@ void aalang_cpp::set_variables(std::string* var)
 void aalang_cpp::set_istate(std::string* ist)
 {
   istate=ist;
+}
+
+void aalang_cpp::set_ainit(std::string* iai)
+{
+  ainit=iai;
 }
 
 void aalang_cpp::set_push(std::string* p)
@@ -167,14 +174,19 @@ std::string aalang_cpp::stringify()
     }
   }
 
-  if (!istate) {
-    istate=new std::string("//default istate\n");
+  s+="}\n";
+
+  if (istate) {
+    s+="virtual bool reset() {\n"+
+      *istate+
+      "\nreturn true;\n}\n\n";
   }
 
-  s+=*istate+"}\n"
-    "virtual bool reset() {\n"+
-    *istate +
-    "return true;\n}\n\n";
+  if (ainit) {
+    s+="virtual bool init() {\n"+
+      *ainit+
+      "\nreturn true;\n}\n\n";
+  }
 
   if (pop!="") {
     s=s+"\nvirtual void pop(){\n"+pop+"\n}\n";

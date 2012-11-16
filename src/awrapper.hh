@@ -34,8 +34,8 @@ public:
   virtual void set_actions(std::vector<std::string>* _actions);
 
   virtual void execute(std::vector<int>& action);
-  virtual int  observe(std::vector<int> &action,bool block=false
-);
+  virtual int  observe(std::vector<int> &action,bool block=false);
+  virtual bool init();
 protected:
   static std::string es;
   std::map<std::pair<int,std::string&>, int > ada2aal;
