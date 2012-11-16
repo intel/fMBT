@@ -1,0 +1,260 @@
+aal "eyenfinger" {
+    language: python { 
+        from eyenfinger import * # Our needed library
+
+        # Function to verify the icon with no errors expected
+        def iVerifyIconNoErrors():
+            # Make sure we have the icon first
+            try:
+                icon_coords = iVerifyIcon("screenshot2-icon.png")
+            except BadSourceImage, e:
+                log("No icon exception: %s" % (e,))
+            else:
+                log("Unexpected error in reading icon.")
+            # Now, assert the coordinates if everything worked fine
+            assert icon_coords == (1.0, (6, 6, 27, 24)), "The icon could not be verified."
+
+        # Function to verify the clicking of the icon with no expected errors
+        def iClickIconNoErrors():
+            # Store the coordinates for iClickIcon
+            try:
+                icon_coords = iClickIcon("screenshot2-icon.png", dryRun=True)
+            except BadSourceImage, e:
+                log("No icon exception: %s" % (e,))
+            else:
+                log("Unexpected exception in reading icon.")
+                # Everything is fine here so we check coordinates
+                assert icon_coords == (1.0, (16, 15)), "Icon Coordinates are not good"
+                
+        # Function which expects an exception when clicking an icon after
+        # reading a bad screenshot
+        def iClickIconException(expected):
+            # Try reading the icon
+            try:
+                icon_coords = iClickIcon("screenshot2-icon.png", dryRun=True)
+            except expected, e:
+                log("Expected exception: %s" % (e,))
+            else:
+                log("Unexpected exception in reading icon.")
+
+        # Function which expects an exception when clicking a word after
+        # reading a bad screenshot
+        def iClickWordException(expected):
+            # Try clicking the Word
+            try:
+                clicked_word = iClickWord("MONKEYS", dryRun=True)
+            except expected, e:
+                log("Expected exception: %s" % (e,))
+            else:
+                log("Unexpected exception in clicking MONKEYS.")
+
+        # Function which expects an exception when verifying an icon
+        # after reading a bad image
+        def iVerifyIconException(expected):
+            # Try verifying the icon
+            try:
+                verify_iconcoords = iVerifyIcon("screenshot2-icon.png")
+            except expected, e:
+                log("Expected exception: %s" % (e,))
+            else:
+                log("Unexpected exception in verifying icon.")
+
+        # Function to verify a word
+        def iVerifyAWord():            
+            # Let's try to search some monkeys
+            try:
+                verify_word = iVerifyWord("MONKEYS")                
+            except BadMatch, e:
+                log("Bad Match exception: %s" % (e,))
+            else:
+                log("Other unexpected exception for reading MONKEYS")
+            # If everything is fine, we make sure that the coordinates are also fine
+            assert verify_word == ((1.0, 'MONKEYS'), (5, 156, 61, 166)), "No monkeys around in the words"
+        
+        # Function which expects an exception when verifying a word
+        # after reading a bad image
+        def iVerifyWordException(expected):
+            # Try verifying the word
+            try:
+                verify_word = iVerifyWord("MONKEYS")
+            except expected, e:
+                log("Expected exception: %s" % (e,))
+            else:
+                log("Unexpected exception in verifying word.")
+
+        # Function to click a word
+        def iClickAWord():
+           try:
+               clicked_word = iClickWord("MONKEYS", dryRun=True)
+           except BadMatch, e:
+               log("Bad Match for MONKEYS: %s" % (e,))
+           else:
+               log("Other unexpected exception for clicking MONKEYS")
+           # Make sure the coordinates are fine
+           assert clicked_word == ((1.0, 'MONKEYS'), (33, 161)), "Coordinates for monkeys are wrong"
+    }
+
+    # preview-hide-vars: 
+    # preview-depth: 5
+    variables {
+        screenshot
+    }
+    initial_state {
+        screenshot = None # No screenshot has been read yet.
+    }
+
+    action "iNoScreenShot" 
+    {
+    #########################################################
+    # The purpose of this action is to test what happens when
+    # there is no screenshot.
+    #########################################################
+        guard() { return screenshot == None }
+        adapter() 
+        {
+            # Trying iVerifyIcon should throw BadSourceImage now
+            try:
+                iVerifyIcon("screenshot2-icon.png")
+            # Should happen when there is no screenshot
+            except BadSourceImage, e:
+                log("Expected BadSourceImage: %s" % (e,))
+            else:
+                assert False, "Expected BadSourceImage, got else"
+            # Trying iVerifyWord should fail
+            try:
+                iVerifyWord("Monkeys")
+            # Should fail with AssertionError
+            except NoOCRResults, e:
+                log("Expected AssertionError: %s" % (e, ))
+            else:
+                assert False, "Expected AssertionError, got else"
+            # Trying iClickIcon should fail
+            try:
+                coordinates = iClickIcon("screenshot2-png.png", dryRun=True)
+            except BadSourceImage, e:
+                log("Expected BadSourceImage: %s" % (e,))
+            else:
+                assert False, "Expected BadSourceImage, got else"
+            # Trying iClickWord should fail
+            try:
+                clicked_word = iClickWord("Monkeys", dryRun=True)
+            except NoOCRResults, e:
+                log("Expected NoOCRResults: %s" % (e,))
+            else:
+                assert False, "Expected BadSourceImage, got else"
+        }
+    }
+    action "iValidScreenshotNoOCR" 
+    {
+    #########################################################
+    # The purpose of this action is to test some eyenfinger
+    # actions when we have a screenshot without OCR.
+    #########################################################
+        guard() {  }
+        body() {
+            screenshot = "screenshot2.png"
+        }
+        adapter() {
+            # Attempting to read the words
+            words = iRead(source="screenshot2.png")    
+
+            # Verifying the icon
+            iVerifyIconNoErrors()
+        
+            # Store the coordinates for iClickIcon
+            iClickIconNoErrors()
+
+            # Clicking a word
+            iClickAWord()
+
+            # Attempting to verify the word
+            iVerifyAWord()
+        }
+    }
+    action "iValidScreenShotOCR" {
+    #########################################################
+    # The purpose of this action is to test some eyenfinger
+    # actions when we have a screenshot with OCR present.
+    #########################################################
+        guard() { return screenshot == "screenshot2.png" }
+        adapter() {
+            # The attempt to read the words
+            words = iRead(source="screenshot2.png", ocr=True)
+
+            # Verifying the icon
+            iVerifyIconNoErrors()
+        
+            # Store the coordinates for iClickIcon
+            iClickIconNoErrors()
+
+            # Clicking a word
+            iClickAWord()
+
+            # Attempting to verify the word
+            iVerifyAWord()
+        }
+    }
+    action "iInvalidScreenshotNoOCR" {
+    #########################################################
+    # The purpose of this action is to test that eyefinger 
+    # throws an exception when we provide an invalid screenshot
+    #########################################################
+        guard() {  }
+        body() {
+            screenshot = "NobodyRenamesAFileLikeThis.png"
+        }
+        adapter() {
+            # Feeding an invalid screenshot should throw BadSourceImage
+            try:
+                words = iRead(source="NobodyRenamesAFileLikeThis.png")
+            except BadSourceImage, e:
+                log("Expected BadSourceImage: %s" % (e,))
+            else:
+                log("Other exception for invalid screenshot")
+
+            # Trying to click the icon should throw exception
+            iClickIconException(BadSourceImage)
+
+            # Trying to click a word should throw exception
+            iClickWordException(NoOCRResults)
+
+            # Verifying the icon should throw exception
+            iVerifyIconException(BadSourceImage)
+
+            # Verifying a word should throw exception
+            iVerifyWordException(NoOCRResults)
+            }            
+    }
+
+    action "iInvalidScreenshotOCR" {
+    #########################################################
+    # The purpose of this action is to test that eyefinger 
+    # throws an exception when we provide an invalid screenshot with OCR
+    #########################################################
+        guard() {  }
+        body() {
+            screenshot = "YetAnotherInvalidPNG.png"
+        }
+        adapter() {
+            # Feeding an invalid screenshot should throw BadSourceImage
+            try:
+                words = iRead(source="YetAnotherInvalidPNG.png", ocr=True)
+            except BadSourceImage, e:
+                log("Expected BadSourceImage: %s" % (e,))
+            else:
+                log("Other exception for invalid screenshot")
+
+            # Trying to click the icon should throw exception
+            iClickIconException(BadSourceImage)
+
+            # Trying to click a word should throw exception
+            iClickWordException(NoOCRResults)
+
+            # Verifying the icon should throw exception
+            iVerifyIconException(BadSourceImage)
+
+            # Verifying a word should throw exception
+            iVerifyWordException(NoOCRResults)
+            }
+    }
+}
