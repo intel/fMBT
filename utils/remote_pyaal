@@ -166,11 +166,11 @@ class RemoteAALBridge:
                     put(0)
                 else:   put(1)
             elif cmd == "ai":
-                try:    self._aal.init()
+                try: rv = self._aal.adapter_init()
                 except Exception, e:
                     fmbtstderr('Error at adapter_init(): %s: %s\n%s' % (type(e).__name__, e, traceback.format_exc()))
                     put(0)
-                else:   put(1)
+                else:   put(rv)
             elif cmd == "mu":
                 self._aal.push()
             elif cmd == "mo":

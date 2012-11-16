@@ -121,7 +121,7 @@ astr:   string          {
             obj->set_name($2.str);
         } ;
 
-tag: 'tag' tstr '{' comment* guard  comment* '}' { obj->next_tag(); };
+tag: 'tag' tstr { guard=false;body=false;adapter=false; } '{' comment* guard  comment* '}' { obj->next_tag(); };
 
 tstr:   string          {
             obj->set_tagname($0.str);

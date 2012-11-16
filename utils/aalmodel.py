@@ -61,9 +61,8 @@ class AALModel:
                 types.ModuleType, types.FunctionType, types.ClassType]]
         return rv
 
-    def init(self):
-        rv = self.call(self.adapter_init)
-        return rv
+    def adapter_init(self):
+        return 1
 
     def adapter_execute(self, i, adapter_call_arguments = ()):
         if self._all_types[i-1] == "input":

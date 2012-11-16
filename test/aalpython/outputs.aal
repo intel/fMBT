@@ -12,6 +12,9 @@ aal "outputs" {
         filenames = [pre+"txt", pre+"jpg", pre+"png", pre+"tmp"]
         found = {'txt': False, 'jpg': False, 'png': False, 'tmp': False}
         exists = {'txt': False, 'jpg': False, 'png': False, 'tmp': False}
+    }
+
+    adapter_init {
         file_exists = os.path.exists
         for filename in filenames:
             if file_exists(filename): os.remove(filename)

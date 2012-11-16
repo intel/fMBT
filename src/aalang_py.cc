@@ -106,8 +106,9 @@ void aalang_py::set_istate(std::string* ist)
 
 void aalang_py::set_ainit(std::string* iai)
 {
-  s += "\n    def adapter_init():\n" + variables +
-    indent(8, *iai) + "\n";
+  std::string r("return 1");
+  s += "\n    def adapter_init(self):\n" + variables +
+    indent(8, *iai) + "\n" + indent(8, r) + "\n";
 }
 
 
