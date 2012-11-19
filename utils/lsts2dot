@@ -29,6 +29,17 @@ Options:
   -i, --input=<filename>
           Read lsts from the file. Default: standard input.
 
+  -l, --log=<filename>
+          Read fMBT log from the file and color visited states in
+          visualised model.
+
+  --erase-transitions=<regexp>
+          Erase transitions matching to the regular expression.
+
+  --erase-untraversed-transitions=<regexp>
+          Erase transitions matching to the regular expression if they
+          have not been traversed in the log (see --log).
+
   --loops-in-states
           Print looping transitions as labels in states instead of
           drawing the loops.
@@ -41,6 +52,7 @@ import sys
 import getopt
 import lsts
 import subprocess
+import re
 
 def error(msg, exit_status=1):
     sys.stderr.write("lsts2dot: %s\n" % (msg,))
@@ -87,7 +99,7 @@ def colors(lsts_obj, testlog_fileobj):
                     state_colors[current_state] = COLOR_ST_PASS
                     current_state = initial_state
                 elif tv == "inconclusive":
-                    state_colors[current_state] = COLOR_ST_INCONC                    
+                    state_colors[current_state] = COLOR_ST_INCONC
                     current_state = initial_state
                 elif tv == "fail":
                     sys.stderr.write('failing... %s\n' % (action_sugg,))
@@ -122,7 +134,8 @@ def colors(lsts_obj, testlog_fileobj):
     except: pass
     return tr_colors, state_colors
 
-def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert_colors = False):
+def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert_colors = False,
+             erase_transitions = [], erase_untraversed = []):
     outfileobj.write('digraph g {\n')
     outfileobj.write('    node [shape=box]\n')
     l=lsts.reader(infileobj)
@@ -134,7 +147,18 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
 
     state2props = {int(l.get_header().initial_states): ["[initial state]"]}
     actionnames=l.get_actionnames()
-    
+
+    erase_all_actions = set([])
+    erase_untraversed_actions = set([])
+    if erase_transitions or erase_untraversed:
+        for actionindex, actionname in enumerate(actionnames):
+            for erase_regexp in erase_transitions:
+                if erase_regexp.match(actionname):
+                    erase_all_actions.add(actionindex)
+            for erase_regexp in erase_untraversed:
+                if erase_regexp.match(actionname):
+                    erase_untraversed_actions.add(actionindex)
+
     for propname in l.get_stateprops():
         prettyname = "[" + propname + "]"
         for state in l.get_stateprops()[propname]:
@@ -145,7 +169,10 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
 
     for source,outtrans in enumerate(l.get_transitions()):
         for dest,action in outtrans:
-            a=actionnames[action]
+            if action in erase_all_actions: continue
+            if action in erase_untraversed_actions:
+                if not (source, action, dest) in tr_colors: continue
+            a = actionnames[action]
             if loops_as_props and source==dest:
                 if source in state2props: state2props[source].append(a)
                 else: state2props[source]=[a]
@@ -188,10 +215,12 @@ if __name__=='__main__':
     infile = sys.stdin
     outfile = sys.stdout
     logfile = None
+    erase_transitions = []
+    erase_untraversed = []
 
     opts, remainder = getopt.getopt(
         sys.argv[1:], 'hi:o:l:V',
-        ['help', 'input=', 'invert-colors', 'output=', 'loops-in-states', 'log=', 'version'])
+        ['help', 'erase-transitions=', 'erase-untraversed-transitions=', 'input=', 'invert-colors', 'output=', 'loops-in-states', 'log=', 'version'])
 
     for opt, arg in opts:
         if opt in ['-h', '--help']:
@@ -200,6 +229,14 @@ if __name__=='__main__':
         elif opt in ['-V', '--version']:
             print "Version"
             sys.exit(0)
+        elif opt == '--erase-transitions':
+            try: erase_transitions.append(re.compile(arg))
+            except Exception, e:
+                error('bad regular expression for --erase-transitions: "%s"' % (arg,))
+        elif opt == '--erase-untraversed-transitions':
+            try: erase_untraversed.append(re.compile(arg))
+            except Exception, e:
+                error('bad regular expression for --erase-untraversed-transitions: "%s"' % (arg,))
         elif opt in ['-i', '--input']:
             if arg == "-": continue
             try: infile = file(arg, 'r')
@@ -214,9 +251,9 @@ if __name__=='__main__':
             except Exception, e: error('cannot read file "%s": %s' % (arg, e))
         elif opt in ['--invert-colors']:
             invert_colors = True
-            
 
-    lsts2dot(infile, outfile, loops_as_props, logfile, invert_colors)
+
+    lsts2dot(infile, outfile, loops_as_props, logfile, invert_colors, erase_transitions, erase_untraversed)
 
     try: outfile.close()
     except: pass
