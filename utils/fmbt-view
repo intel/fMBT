@@ -34,6 +34,12 @@ print_help_and_quit()
     echo "  -i      Invert coloring (highlights unvisited states)"
     echo "  -o <outputfile>"
     echo "          Write image to outputfile, do not display it."
+    echo "  -e <regexp>"
+    echo "          Erase transitions matching the regular expression."
+    echo "  -E <regexp>"
+    echo "          Erase transitions matching the regular expression"
+    echo "          unless they have been traversed in the given log"
+    echo "          (see -l)."
     exit 0
 }
 
@@ -47,7 +53,9 @@ OUTPUTFILE=""
 COLORING=""
 DISPLAY_IMAGE=1
 DEBUG=0
-while getopts df:hil:o:v opt
+ERASE_TRANSITIONS=""
+ERASE_UNTRAVERSED=""
+while getopts df:hil:o:ve:E: opt
 do
     case $opt in
         d) DEBUG=1;;
@@ -57,6 +65,9 @@ do
         i) COLORING="--invert-colors";;
         l) LOGFILE="-l $OPTARG";;
         o) OUTPUTFILE=$OPTARG; DISPLAY_IMAGE=0;;
+
+        e) ERASE_TRANSITIONS=$ERASE_TRANSITIONS"--erase-transitions='$OPTARG' ";;
+        E) ERASE_UNTRAVERSED=$ERASE_UNTRAVERSED"--erase-untraversed-transitions='$OPTARG' ";;
     esac
 done
 if [ "$OPTIND" != "$#" ]; then
@@ -113,7 +124,13 @@ for SIGNAL in INT QUIT TERM; do
     trap "remove_temp_files; trap $SIGNAL; kill -$SIGNAL \$\$" $SIGNAL
 done
 
-eval $UTILPATH/lsts2dot --loops-in-states -i "$INPUTFILE" $COLORING $LOGFILE >$DOTFILE 2>$ERRORFILE || {
+LSTS2DOT_COMMAND="$UTILPATH/lsts2dot --loops-in-states -i \"$INPUTFILE\" $COLORING $ERASE_TRANSITIONS $ERASE_UNTRAVERSED $LOGFILE >$DOTFILE 2>$ERRORFILE"
+
+if [ "$DEBUG" == "1" ]; then
+    echo Run: $LSTS2DOT_COMMAND
+fi
+
+eval $LSTS2DOT_COMMAND || {
     echo "Error in converting state machine (lsts) into digraph (dot)"
     cat $ERRORFILE
     remove_temp_files
