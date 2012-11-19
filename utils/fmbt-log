@@ -60,21 +60,28 @@ import urllib2
 import fmbt_config
 import datetime
 
+def identity_formatter(s):
+    return s
+
+def TAU_formatter(s):
+   if s == "TAU": return "[unidentified action]"
+   return s
+
 fields = {
-    '$ax' : ['<action type=', '"', 3],
-    '$as' : ['<suggested_action type=', '"', 3],
-    '$am' : ['<action_name name=', '"', 1],
-    '$al' : ['<remote msg=', '"', 1],
-    '$ms' : ['<redirect id=', '"', 5],
-    '$mc' : ['<redirect id=', '"', 3],
-    '$mn' : ['<redirect id=', '"', 1],
-    '$sc' : ['<status steps=', '"', 3],
-    '$sn' : ['<status steps=', '"', 1],
-    '$st' : ['<current_time time=', '"', 1, lambda s:s],
-    '$tg' : ['<tags enabled=', '"', 1],
-    '$tv' : ['<stop verdict=', '"', 1],
-    '$tr' : ['<stop verdict=', '"', 3],
-    '$tt' : ['<elapsed_time', '"', 1]
+    '$ax' : ['<action type=', '"', 3, TAU_formatter],
+    '$as' : ['<suggested_action type=', '"', 3, identity_formatter],
+    '$am' : ['<action_name name=', '"', 1, identity_formatter],
+    '$al' : ['<remote msg=', '"', 1, identity_formatter],
+    '$ms' : ['<redirect id=', '"', 5, identity_formatter],
+    '$mc' : ['<redirect id=', '"', 3, identity_formatter],
+    '$mn' : ['<redirect id=', '"', 1, identity_formatter],
+    '$sc' : ['<status steps=', '"', 3, identity_formatter],
+    '$sn' : ['<status steps=', '"', 1, identity_formatter],
+    '$st' : ['<current_time time=', '"', 1, identity_formatter],
+    '$tg' : ['<tags enabled=', '"', 1, identity_formatter],
+    '$tv' : ['<stop verdict=', '"', 1, identity_formatter],
+    '$tr' : ['<stop verdict=', '"', 3, identity_formatter],
+    '$tt' : ['<elapsed_time', '"', 1, identity_formatter]
 }
 
 def extract(input_file_obj, output_file_obj, output_format, raw):
@@ -84,12 +91,7 @@ def extract(input_file_obj, output_file_obj, output_format, raw):
     # 2. write the stuff in requested format to output_file_obj
 
     def pick(line, field_values):
-        if len(field_values) > 3:
-            _, delimiter, fieldindex, formatter = field_values
-        else:
-            _, delimiter, fieldindex = field_values
-            formatter = lambda s: s
-
+        _, delimiter, fieldindex, formatter = field_values
         if raw == 1:
             contents = line.split(delimiter)[fieldindex]
         else:
@@ -98,6 +100,8 @@ def extract(input_file_obj, output_file_obj, output_format, raw):
         return contents
 
     clean_data = lambda: dict([(field, []) for field in fields])
+
+    empty_row = output_format % dict([(field, '') for field in fields])
 
     parsed_data = clean_data()
     for lineno, line in enumerate(input_file_obj):
@@ -108,7 +112,9 @@ def extract(input_file_obj, output_file_obj, output_format, raw):
 
         # a test step done, print values
         ppoutput = ""
-        if ('<status steps=' in line) or ('</test_engine>' in line):
+        if (('<status steps=' in line) or
+            ('<stop verdict' in line) or
+            ('</test_engine>' in line)):
             printable_data = {}
             for field in parsed_data:
                 printable_data[field] = '; '.join(parsed_data[field])
@@ -125,7 +131,7 @@ def extract(input_file_obj, output_file_obj, output_format, raw):
             ppoutput = output_format % printable_data
             parsed_data['$al'] = []
             parsed_data['$am'] = []
-        if ppoutput.strip(): output_file_obj.write(ppoutput)
+        if ppoutput != empty_row: output_file_obj.write(ppoutput)
 
 if __name__ == '__main__':
     input_file_obj = sys.stdin

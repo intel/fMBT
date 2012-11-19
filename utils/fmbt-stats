@@ -87,17 +87,20 @@ def error(msg):
     sys.exit(1)
 
 def read_from_log_timestamp_execaction(testlog_fileobj):
-    cmd = "fmbt-log -f '$st $ax'"
+    cmd = "fmbt-log -f '$st $as|FMBT-STATS|$ax'"
     p = subprocess.Popen(cmd, shell=True, stdin=testlog_fileobj.fileno(), stdout=subprocess.PIPE)
 
     timestamp_actionname_list = []
     try:
         line = p.stdout.readline()
         while line:
-            # s_timestamp, s_actionname = line.split(' ',1)
             space = line.find(" ")
-            timestamp_actionname_list.append((float(line[:space]), line[space+1:-1]))
-            # timestamp_actionname_list.append((float(s_timestamp), s_actionname.strip()))
+            actionname1, actionname2 = line[space+1:-1].split('|FMBT-STATS|')
+            if actionname1 == actionname2:
+                timestamp_actionname_list.append((float(line[:space]), actionname1))
+            else:
+                timestamp_actionname_list.append((float(line[:space]), "%s => %s" % (actionname1, actionname2)))
+                
             line = p.stdout.readline()
     except Exception, e:
         error('invalid line in fmbt-log output: "%s"' % line[:-1])
