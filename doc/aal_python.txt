@@ -266,6 +266,39 @@ remote_pyaal can convert AAL/Python models into finite statemachines,
 too. It outputs the state machine in LSTS format to a file given
 
 
+fmbt-editor
+-----------
+
+fMBT editor visualises AAL models as finite state machines. By
+default, each visualised state corresponds to a unique combination of
+values of variables, that are listed in AAL's variables block.
+
+The scope and the output of the visualisation can be adjusted with the
+following special comments understood by the editor.
+
+# preview-hide-vars: <comma-separated-list-of-variables>
+
+        Hide given variables. Each visualised state corresponds to a
+        unique combination of values of *visible* variables. If two
+        states differ by values of hidden variables only, the states
+        will be equated in the visualisation.
+
+# preview-show-vars: <comma-separated-list-of-variables>
+
+        Hide all other variables but the ones that are listed here.
+
+# preview-hide-trans: <regular expression>
+
+        Hide all transitions where action matches to the regular
+        expression.
+
+# preview-hide-untested-trans: <regular expression>
+
+        Hide all transitions where action matches to the regular
+        expression and the transitions have not been executed in the
+        generated test.
+
+
 Special variables and functions in AAL/Python
 ---------------------------------------------
 
@@ -275,7 +308,7 @@ action_name - string that contains the name of the action.
 
         Example: Actions "iLogin:Alice" and "iLogin:Bob" can be
         executed when "Alice" or "Bob" is not yet logged in.
-        
+
         action "iLogin:Alice", "iLogin:Bob" {
             guard() {
                 username = action_name.split(":")[1]
