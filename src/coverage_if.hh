@@ -91,6 +91,26 @@ protected:
   Coverage *left,*right;
 };
 
+class Coverage_skip: public Coverage_compare {
+public:
+  Coverage_skip(Log&l, std::string& params): Coverage_compare(l,params) {
+    cmp="skip";
+  }
+
+  virtual float getCoverage() {
+    return right->getCoverage();
+  }
+
+  virtual bool execute(int action) {
+    left->execute(action);
+    if (left->getCoverage()>=1.0) {
+      right->execute(action);
+    }
+    return true;
+  }
+
+};
+
 class Coverage_lt: public Coverage_compare {
 public:
   Coverage_lt(Log&l, std::string& params): Coverage_compare(l,params) {

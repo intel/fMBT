@@ -25,11 +25,8 @@
 
 class Coverage_Steps: public Coverage {
 public:
-  Coverage_Steps(Log&l, std::string& params): Coverage(l) {
-    reset_value=-1;
-    if (params=="") {
-      val=-1;
-    } else {
+  Coverage_Steps(Log&l, std::string& params): Coverage(l),val(-1),count(0),reset_value(-1) {
+    if (params!="") {
       std::vector<std::string> subs;
       commalist(params,subs);
       val=atoi(subs[0].c_str());
@@ -37,7 +34,6 @@ public:
 	reset_value=atoi(subs[1].c_str());
       }
     }
-    count=0;
   }
 
   virtual ~Coverage_Steps() { }
