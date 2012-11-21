@@ -50,7 +50,11 @@ testpassed
 
 
 teststep "eyenfinger states"
-# TODO:
-# run: fmbt test.conf | tee -a $LOGFILE >states.log 2>fmbt.output
-# check that states.log and fmbt.output are ok.
-testfailed
+if fmbt -l test.log test.aal.conf 2>fmbt.output; then
+    fmbt-log test.log >>$LOGFILE
+    cat fmbt.output >>$LOGFILE
+    testpassed
+else
+    cat test.log fmbt.output >>$LOGFILE
+    testfailed
+fi
