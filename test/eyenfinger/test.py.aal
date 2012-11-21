@@ -1,6 +1,12 @@
 aal "eyenfinger" {
-    language: python { 
+    language: python {
         from eyenfinger import * # Our needed library
+
+        import distutils.spawn
+        if distutils.spawn.find_executable("tesseract") != None:
+            OCRAvailable = True
+        else:
+            OCRAvailable = False
 
         # Function to verify the icon with no errors expected
         def iVerifyIconNoErrors():
@@ -25,7 +31,7 @@ aal "eyenfinger" {
                 log("Unexpected exception in reading icon.")
                 # Everything is fine here so we check coordinates
                 assert icon_coords == (1.0, (16, 15)), "Icon Coordinates are not good"
-                
+
         # Function which expects an exception when clicking an icon after
         # reading a bad screenshot
         def iClickIconException(expected):
@@ -60,17 +66,17 @@ aal "eyenfinger" {
                 log("Unexpected exception in verifying icon.")
 
         # Function to verify a word
-        def iVerifyAWord():            
+        def iVerifyAWord():
             # Let's try to search some monkeys
             try:
-                verify_word = iVerifyWord("MONKEYS")                
+                verify_word = iVerifyWord("MONKEYS")
             except BadMatch, e:
                 log("Bad Match exception: %s" % (e,))
             else:
                 log("Other unexpected exception for reading MONKEYS")
             # If everything is fine, we make sure that the coordinates are also fine
             assert verify_word == ((1.0, 'MONKEYS'), (5, 156, 61, 166)), "No monkeys around in the words"
-        
+
         # Function which expects an exception when verifying a word
         # after reading a bad image
         def iVerifyWordException(expected):
@@ -94,7 +100,7 @@ aal "eyenfinger" {
            assert clicked_word == ((1.0, 'MONKEYS'), (33, 161)), "Coordinates for monkeys are wrong"
     }
 
-    # preview-hide-vars: 
+    # preview-hide-vars:
     # preview-depth: 5
     variables {
         screenshot
@@ -103,14 +109,14 @@ aal "eyenfinger" {
         screenshot = None # No screenshot has been read yet.
     }
 
-    action "iNoScreenShot" 
+    action "iNoScreenShot"
     {
     #########################################################
     # The purpose of this action is to test what happens when
     # there is no screenshot.
     #########################################################
         guard() { return screenshot == None }
-        adapter() 
+        adapter()
         {
             # Trying iVerifyIcon should throw BadSourceImage now
             try:
@@ -144,31 +150,31 @@ aal "eyenfinger" {
                 assert False, "Expected BadSourceImage, got else"
         }
     }
-    action "iValidScreenshotNoOCR" 
+    action "iValidScreenshotNoOCR"
     {
     #########################################################
     # The purpose of this action is to test some eyenfinger
     # actions when we have a screenshot without OCR.
     #########################################################
-        guard() {  }
+        guard() {}
         body() {
             screenshot = "screenshot2.png"
         }
         adapter() {
             # Attempting to read the words
-            words = iRead(source="screenshot2.png")    
+            words = iRead(source="screenshot2.png", ocr=False)
 
             # Verifying the icon
             iVerifyIconNoErrors()
-        
+
             # Store the coordinates for iClickIcon
             iClickIconNoErrors()
 
             # Clicking a word
-            iClickAWord()
+            iClickWordException(NoOCRResults)
 
             # Attempting to verify the word
-            iVerifyAWord()
+            iVerifyWordException(NoOCRResults)
         }
     }
     action "iValidScreenShotOCR" {
@@ -176,14 +182,14 @@ aal "eyenfinger" {
     # The purpose of this action is to test some eyenfinger
     # actions when we have a screenshot with OCR present.
     #########################################################
-        guard() { return screenshot == "screenshot2.png" }
+        guard() { return OCRAvailable and screenshot == "screenshot2.png" }
         adapter() {
             # The attempt to read the words
             words = iRead(source="screenshot2.png", ocr=True)
 
             # Verifying the icon
             iVerifyIconNoErrors()
-        
+
             # Store the coordinates for iClickIcon
             iClickIconNoErrors()
 
@@ -196,7 +202,7 @@ aal "eyenfinger" {
     }
     action "iInvalidScreenshotNoOCR" {
     #########################################################
-    # The purpose of this action is to test that eyefinger 
+    # The purpose of this action is to test that eyefinger
     # throws an exception when we provide an invalid screenshot
     #########################################################
         guard() {  }
@@ -206,7 +212,7 @@ aal "eyenfinger" {
         adapter() {
             # Feeding an invalid screenshot should throw BadSourceImage
             try:
-                words = iRead(source="NobodyRenamesAFileLikeThis.png")
+                words = iRead(source="NobodyRenamesAFileLikeThis.png", ocr=False)
             except BadSourceImage, e:
                 log("Expected BadSourceImage: %s" % (e,))
             else:
@@ -223,15 +229,15 @@ aal "eyenfinger" {
 
             # Verifying a word should throw exception
             iVerifyWordException(NoOCRResults)
-            }            
+            }
     }
 
     action "iInvalidScreenshotOCR" {
     #########################################################
-    # The purpose of this action is to test that eyefinger 
+    # The purpose of this action is to test that eyefinger
     # throws an exception when we provide an invalid screenshot with OCR
     #########################################################
-        guard() {  }
+        guard() { return OCRAvailable }
         body() {
             screenshot = "YetAnotherInvalidPNG.png"
         }
