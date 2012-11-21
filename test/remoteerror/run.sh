@@ -39,11 +39,11 @@ source ../functions.sh
 teststep "remote aal errors..."
 failure_count=0
 for WHEN in "load" "init" "iguard" "iadapter" "ibody" "oguard" "oadapter" "obody"; do
-    for WHAT in "raise" "crash" "print"; do
+    for WHAT in "raise" "crash" "stdout" "stderr"; do
         for HEURISTIC in "random" "lookahead(2)"; do
             echo "" >> $LOGFILE
             echo "AAL, heur=$HEURISTIC, when: $WHEN  problem: $WHAT" >> $LOGFILE
-            
+
             cat > test.conf <<EOF
 model     = "aal_remote(remote_pyaal -l aal.log -c 'BUG=\"$WHEN-$WHAT\"' crashraise.aal)"
 adapter   = "aal_remote(remote_pyaal -l aal.log -c 'BUG=\"$WHEN-$WHAT\"' crashraise.aal)"
@@ -71,16 +71,16 @@ EOF
                 echo "fails because: exit status $FMBTSTATUS, expected 84" >>$LOGFILE
                 failure_count=$(( $failure_count + 1 ))
             fi
-            
+
             if [ "$WHAT" == "crash" ] && ! grep -q 'Segmentation' fmbt-output.txt; then
                 echo "fails because: segmentation fault missing in fmbt-output.txt" >>$LOGFILE
-                failure_count=$(( $failure_count + 1 ))                
+                failure_count=$(( $failure_count + 1 ))
             elif [ "$WHAT" == "raise" ] && ! grep -q 'BogusException' fmbt-output.txt; then
                 echo "fails because: raised exception missing in fmbt-output.txt" >>$LOGFILE
-                failure_count=$(( $failure_count + 1 ))                
-            elif [ "$WHAT" == "print" ] && ! grep -q 'rubbishFromAAL' fmbt-output.txt; then
+                failure_count=$(( $failure_count + 1 ))
+            elif ( [ "$WHAT" == "stderr" ] || [ "$WHAT" == "stdout" ] ) && ! grep -q 'rubbishFromAAL' fmbt-output.txt; then
                 echo "fails because: rubbish printed from AAL is missing in fmbt-output.txt" >>$LOGFILE
-                failure_count=$(( $failure_count + 1 ))                
+                failure_count=$(( $failure_count + 1 ))
             fi
         done
     done
@@ -98,10 +98,10 @@ teststep "remote adapter errors..."
 failure_count=0
 for WHEN in "load" "input"; do
     for WHAT in "raise" "crash" "stdout" "stderr"; do
-        
+
         echo "" >> $LOGFILE
         echo "remote adapter, when: $WHEN  problem: $WHAT" >> $LOGFILE
-        
+
         cat > test.conf <<EOF
 model     = "aal_remote(remote_pyaal -l aal.log -c 'BUG=\"none-none\"' crashraise.aal)"
 adapter   = "remote(remote_python -l remote_python.log -c 'BUG=\"$WHEN-$WHAT\"' -c 'from crashingsteps import *')"
@@ -132,16 +132,16 @@ EOF
         fi
         if [ "$WHAT" == "crash" ] && ! grep -q 'Segmentation' fmbt-output.txt; then
             echo "fails because: segmentation fault missing in fmbt-output.txt" >>$LOGFILE
-            failure_count=$(( $failure_count + 1 ))                
+            failure_count=$(( $failure_count + 1 ))
         elif [ "$WHAT" == "raise" ] && ! grep -q 'BogusException' fmbt-output.txt; then
             echo "fails because: raised exception missing in fmbt-output.txt" >>$LOGFILE
-            failure_count=$(( $failure_count + 1 ))                
+            failure_count=$(( $failure_count + 1 ))
         elif [ "$WHAT" == "stdout" ] && ! grep -q 'rubbish-to-stdout' fmbt-output.txt; then
             echo "fails because: rubbish-to-stdout from crashingsteps.py is missing in fmbt-output.txt" >>$LOGFILE
-            failure_count=$(( $failure_count + 1 ))                
+            failure_count=$(( $failure_count + 1 ))
         elif [ "$WHAT" == "stderr" ] && ! grep -q 'rubbish-to-stderr' fmbt-output.txt; then
             echo "fails because: rubbish-to-stderr from crashingsteps.py is missing in fmbt-output.txt" >>$LOGFILE
-            failure_count=$(( $failure_count + 1 ))                
+            failure_count=$(( $failure_count + 1 ))
         fi
     done
 done

@@ -15,9 +15,12 @@ aal "crashraiserubbish" {
             os.kill(os.getpid(), signal.SIGSEGV)
         def raisenow():
             raise Exception("BogusException from crashraise.aal")
-        def printnow():
+        def stdoutnow():
             sys.stdout.write('This is rubbishFromAAL\n')
             sys.stdout.flush()
+        def stderrnow():
+            sys.stderr.write('This is rubbishFromAAL\n')
+            sys.stderr.flush()
         def check_bug(real_pos):
             if BUG.split('-')[0] == real_pos:
                 eval(BUG.split('-')[1] + "now()")
@@ -26,7 +29,7 @@ aal "crashraiserubbish" {
         check_bug("load")
     }
 
-    # preview-hide-vars: 
+    # preview-hide-vars:
     # preview-depth: 5
     variables {
         inputs, outputs
