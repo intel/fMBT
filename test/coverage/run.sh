@@ -26,7 +26,7 @@ source ../functions.sh
 teststep "coverage generate model..."
 fmbt-gt -f t1.gt -o t1.lsts >>$LOGFILE 2>&1 || {
     testfailed
-    exit 1    
+    exit 1
 }
 testpassed
 
@@ -80,7 +80,7 @@ fmbt-log -f \$sc min1.log > log1
 fmbt-log -f \$sc min2.log > log2
 
 cmp log1 log2 || {
-    testfailed 
+    testfailed
 }
 
 testpassed
@@ -220,7 +220,6 @@ if grep -q iCancelOrder uwalks-steps-seen.txt; then
     testfailed
 fi
 testpassed
-
 
 teststep "coverage sum..."
 cat > sum.conf <<EOF
@@ -379,3 +378,78 @@ if [ 1.000000 != $f ]; then
 fi
 done
 testpassed
+
+teststep "coverage lt, le, gt, ge + steps without params..."
+for coverage_cmp in "lt(3, steps)" "le(4, steps)" "gt(steps, 3)" "ge(steps, 4)"; do
+    cat > compare.conf <<EOF
+model     = "lsts_remote(fmbt-gt -f coffee.gt)"
+heuristic = "lookahead(3)"
+coverage  = "$coverage_cmp"
+pass      = "coverage(1)"
+fail      = "no_progress(10)"
+fail      = "steps(5)"
+on_pass   = "exit(0)"
+on_fail   = "exit(1)"
+on_inconc = "exit(2)"
+EOF
+    cat compare.conf >>$LOGFILE
+    if ! fmbt -l compare.log compare.conf >>$LOGFILE 2>&1; then
+        echo "fmbt test verdict 'fail', pass expected." >>$LOGFILE
+        testfailed
+    fi
+    fmbt-log compare.log >>$LOGFILE
+    echo "step count: $(fmbt-log -f '$ax' compare.log | wc -l)" >>$LOGFILE
+    if [ "$(fmbt-log -f '$ax' compare.log | wc -l)" != "4" ]; then
+        echo "expected 4 test steps." >>$LOGFILE
+        testfailed
+    fi
+done
+testpassed
+
+teststep "coverage if(first, second) + constants..."
+cat > if.conf <<EOF
+model     = "lsts_remote(fmbt-gt -f coffee.gt)"
+heuristic = "lookahead(5)"
+coverage  = "if( gt(perm(1), 0.5), 13)"
+pass      = "coverage(13)"
+fail      = "no_progress(5)"
+fail      = "steps(50)"
+on_pass   = "exit(0)"
+on_fail   = "exit(1)"
+on_inconc = "exit(2)"
+EOF
+if ! fmbt -l if.log if.conf >>$LOGFILE 2>&1; then
+    echo "fmbt verdict pass expected" >>$LOGFILE
+    testfailed
+fi
+if [ "$(fmbt-log -f '$ax' if.log | wc -l)" != "5" ]; then
+    echo "expected to execute 5 steps to cover > 50 % from 9 actions" >>$LOGFILE
+    testfailed
+fi
+testpassed
+
+teststep "coverage steps with params + if..."
+cat > steps.conf <<EOF
+model     = "lsts_remote(fmbt-gt -f coffee.gt)"
+heuristic = "lookahead(4)"
+coverage  = "if(steps(4,6), 0, perm(1))"
+pass      = "coverage(1)"
+fail      = "no_progress(10)"
+fail      = "steps(50)"
+on_pass   = "exit(0)"
+on_fail   = "exit(1)"
+on_inconc = "exit(2)"
+EOF
+if ! fmbt -l steps.log steps.conf >>$LOGFILE 2>&1; then
+    echo "fmbt verdict pass expected" >>$LOGFILE
+    testfailed
+fi
+if (( $(fmbt-log -f '$ax' steps.log | wc -l) <= 11 )); then
+    echo "too few steps, optimal number of steps to cover perm(1) is 12." >>$LOGFILE
+    testfailed
+fi
+if (( $(fmbt-log -f '$sc' steps.log | grep 0.000000 | wc -l) < 5 )); then
+    echo "too few 0.000000 coverages observed, at least initial coverage 0"
+    echo "and twice a two-step if(0) branch expected." >>$LOGFILE
+    testfailed
+fi

@@ -175,8 +175,8 @@ Available types & parameters:
         mrandom(weight, heuristic[, weight, heuristic...])
 
                 eg. mrandom(20,random(1343649162),80,lookahead(5)) will
-		use random heuristic with 20% propability and lookahead with
-		80% propability.		
+                use random heuristic with 20% propability and lookahead with
+                80% propability.
 
         random[(seed)]
 
@@ -234,55 +234,11 @@ Available types & parameters:
                 result. If action-regexp is not a name of action, it
                 is handled as a regular expression.
 
+        max(type(params) [, type(params)...])
         min(type(params) [, type(params)...])
 
-                measures the minimum value of all coverages given as
-                parameters.
-
-        max(type(params) [, type(params)...])
-
-                measures the maximum value of all coverages given as
-                parameters.
-
-	steps([step count to return 1.0[, step count to reset]])
-
-                steps() returns the executed steps.
-		steps(4) returns 1, if at least 4 steps are executed, othervise
-		returns 0
-		steps(4,8) returns 1, if at least 4 steps are executed, 
-		othervise returns 0. When 8 steps are executed, execution 
-		count resets to 0.
-
-	skip(type(params),type(params))
-
-		Skips the execution of the second type if the first type
-		coverage returns less than 1
-		eg: skip(steps(5),perm(2)) will skip first 5 steps.
-
-	lt(type(params),type(params))
-
-		Returns 1.0 (or more) iff left parameter is less that right one
-
-	le(type(params),type(params))
-
-		Returns 1.0 (or more) iff right parameter is greater that left
-
-	gt(type(params),type(params))
-
-		Returns 1.0 (or more) iff right parameter is greater that left
-
-	ge(type(params),type(params))
-
-		Returns 1.0 (or more) iff right parameter is less that left
-
-	if(type(params),type(params))
-
-		Returns left parameter if it returns less than 1.0. Othervise
-		returns sum of parameters.
-
-	if(type(params),type(params),type(params))
-
-		condition, then, else.
+                measure the maximum and minimum value of all coverages
+                given as parameters.
 
         perm[(count)]
 
@@ -310,8 +266,68 @@ Available types & parameters:
 
                 measures the percentage of coverage of all tags in the
                 states of the model.
-        
-        covlang(<expression>)
+
+
+        Following EXPERIMENTAL coverages may not pass all their tests
+        and may still be changed before getting their final shape.
+
+        number EXPERIMENTAL
+
+                decimal numbers (like 1, 1.0, 0.5) can be used as
+                constant coverage functions.
+
+        steps[([count [, restart]])] EXPERIMENTAL
+
+                without parameters: measures the number of executed steps.
+
+                with count parameter: returns 0 until number of steps
+                reaches count, then 1.
+
+                with count and restart parameters: as above, but step
+                counter is reset after restart steps. After restarting
+                steps returns 0 again until count is reached. In
+                conjunction with the if coverage, the steps coverage
+                enables toggling between different ways to measure
+                coverage.
+
+                Example:
+
+                if(steps(10, 12), 0, perm(2))
+
+                measure perm(2) coverage for ten steps, then
+                measurement results in 0 for any next two steps, then
+                again measure perm(2) for ten steps, and so on. This
+                will cause the lookahead heuristics to take two
+                consecutive random test steps in the end of each dozen
+                test steps.
+
+        skip(type(params), type(params)) EXPERIMENTAL
+
+                TODO: what this measures?
+
+        lt(type(params), type(params)) EXPERIMENTAL
+        le(type(params), type(params)) EXPERIMENTAL
+        gt(type(params), type(params)) EXPERIMENTAL
+        ge(type(params), type(params)) EXPERIMENTAL
+
+                return 1.0 (or more) when the left parameter is less
+                than (lt), less or equal than (le), greater than (gt),
+                or greater or equal than (ge) the right one. Otherwise
+                measured value is less than 1.0.
+
+        if(type1(params1), type2(params2)) EXPERIMENTAL
+
+                returns the value of type1(params1) if it is less than
+                1.0. Otherwise returns the sum of type1(params1) and
+                type2(params2).
+
+        if(type1(params1), type2(params2), type3(params3)) EXPERIMENTAL
+
+                returns the value of type3(params3) if type1(params1)
+                is less than 1.0. Otherwise returns the value of
+                type2(params2).
+
+        covlang(<expression>) EXPERIMENTAL
 
                 measures coverage of the given coverage language
                 expression. The expression is formed by combining "a
