@@ -239,6 +239,51 @@ Available types & parameters:
                 measures the minimum value of all coverages given as
                 parameters.
 
+        max(type(params) [, type(params)...])
+
+                measures the maximum value of all coverages given as
+                parameters.
+
+	steps([step count to return 1.0[, step count to reset]])
+
+                steps() returns the executed steps.
+		steps(4) returns 1, if at least 4 steps are executed, othervise
+		returns 0
+		steps(4,8) returns 1, if at least 4 steps are executed, 
+		othervise returns 0. When 8 steps are executed, execution 
+		count resets to 0.
+
+	skip(type(params),type(params))
+
+		Skips the execution of the second type if the first type
+		coverage returns less than 1
+		eg: skip(steps(5),perm(2)) will skip first 5 steps.
+
+	lt(type(params),type(params))
+
+		Returns 1.0 (or more) iff left parameter is less that right one
+
+	le(type(params),type(params))
+
+		Returns 1.0 (or more) iff right parameter is greater that left
+
+	gt(type(params),type(params))
+
+		Returns 1.0 (or more) iff right parameter is greater that left
+
+	ge(type(params),type(params))
+
+		Returns 1.0 (or more) iff right parameter is less that left
+
+	if(type(params),type(params))
+
+		Returns left parameter if it returns less than 1.0. Othervise
+		returns sum of parameters.
+
+	if(type(params),type(params),type(params))
+
+		condition, then, else.
+
         perm[(count)]
 
                 measures the percentage of coverage of all
