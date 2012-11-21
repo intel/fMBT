@@ -58,30 +58,36 @@ import math
 import htmlentitydefs
 import sys
 import os
+import tempfile
+import atexit
+import shutil
 
-g_preprocess = "-sharpen 5 -filter Mitchell -resize 1920x1600 -level 40%%,70%%,5.0 -sharpen 5"
+_g_preprocess = "-sharpen 5 -filter Mitchell -resize 1920x1600 -level 40%%,70%%,5.0 -sharpen 5"
 
-g_readImage = None
+_g_readImage = None
 
-g_origImage = None
+_g_origImage = None
 
-g_hocr = ""
+_g_hocr = ""
 
-g_words = None
+_g_words = None
 
-g_lastWindow = None
+_g_lastWindow = None
 
-g_defaultIconMatch = 1.0
-g_defaultIconColorMatch = 1.0
-g_defaultIconOpacityLimit = 0.0
-g_defaultReadWithOCR = True
+_g_defaultIconMatch = 1.0
+_g_defaultIconColorMatch = 1.0
+_g_defaultIconOpacityLimit = 0.0
+_g_defaultReadWithOCR = True
 
 # windowsOffsets maps window-id to (x, y) pair.
-g_windowOffsets = {None: (0,0)}
+_g_windowOffsets = {None: (0,0)}
 # windowsSizes maps window-id to (width, height) pair.
-g_windowSizes = {}
+_g_windowSizes = {}
 
-SCREENSHOT_FILENAME = "/tmp/eyenfinger.png"
+_g_tempdir = tempfile.mkdtemp(prefix="eyenfinger.%s." % (os.getpid(),))
+
+SCREENSHOT_FILENAME = _g_tempdir + "/screenshot.png"
+LOG_FILENAME = _g_tempdir + "/eyenfinger.log"
 
 MOUSEEVENT_MOVE, MOUSEEVENT_CLICK, MOUSEEVENT_DOWN, MOUSEEVENT_UP = range(4)
 
@@ -132,8 +138,8 @@ try:
 
 except ImportError:
     def _log(msg):
-        file("/tmp/eyenfinger.log", "a").write("%13.2f %s\n" %
-                                               (time.time(), msg))
+        file(LOG_FILENAME, "a").write("%13.2f %s\n" %
+                                      (time.time(), msg))
 
 
 try:
@@ -162,6 +168,9 @@ except Exception, e:
     eye4graphics = None
     _log('Loading icon recognition library failed: "%s".' % (e,))
 
+def _exitHandler():
+    shutil.rmtree(_g_tempdir, ignore_errors=True)
+atexit.register(_exitHandler)
 
 def _runcmd(cmd):
     _log("runcmd: " + cmd)
@@ -172,8 +181,8 @@ def _runcmd(cmd):
     return p.wait(), output
 
 def setPreprocessFilter(preprocess):
-    global g_preprocess
-    g_preprocess = preprocess
+    global _g_preprocess
+    _g_preprocess = preprocess
 
 def iSetDefaultIconMatch(match):
     """
@@ -184,8 +193,8 @@ def iSetDefaultIconMatch(match):
 
     Fuzzy matching is EXPERIMENTAL.
     """
-    global g_defaultIconMatch
-    g_defaultIconMatch = match
+    global _g_defaultIconMatch
+    _g_defaultIconMatch = match
 
 def iSetDefaultIconColorMatch(colorMatch):
     """
@@ -196,23 +205,23 @@ def iSetDefaultIconColorMatch(colorMatch):
     For instance, when comparing 24 bit RGB images, value 0.97 will
     allow 256 - int(256 * .97) = 8 difference on each color channel.
     """
-    global g_defaultIconColorMatch
-    g_defaultIconColorMatch = colorMatch
+    global _g_defaultIconColorMatch
+    _g_defaultIconColorMatch = colorMatch
 
 def iSetDefaultIconOpacityLimit(opacityLimit):
     """
     Set the default minimum opacity for pixels to be matched. Defaults
     to 0.0, all pixels are matched independently of their opacity.
     """
-    global g_defaultIconOpacityLimit
-    g_defaultIconOpacityLimit = opacityLimit
+    global _g_defaultIconOpacityLimit
+    _g_defaultIconOpacityLimit = opacityLimit
 
 def iSetDefaultReadWithOCR(ocr):
     """
     Set the default for using OCR when reading images or windows.
     """
-    global g_defaultReadWithOCR
-    g_defaultReadWithOCR = ocr
+    global _g_defaultReadWithOCR
+    _g_defaultReadWithOCR = ocr
 
 def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=None):
     """
@@ -243,18 +252,18 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
     Returns list of words detected by OCR from the read object.
     """
 
-    global g_hocr
-    global g_lastWindow
-    global g_words
-    global g_readImage
-    global g_origImage
+    global _g_hocr
+    global _g_lastWindow
+    global _g_words
+    global _g_readImage
+    global _g_origImage
 
-    g_words = None
-    g_readImage = None
-    g_origImage = None
+    _g_words = None
+    _g_readImage = None
+    _g_origImage = None
 
     if ocr == None:
-        ocr = g_defaultReadWithOCR
+        ocr = _g_defaultReadWithOCR
 
     if not source:
         iUseWindow(windowId)
@@ -262,40 +271,40 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
         # take a screenshot
         _runcmd("xwd -root -screen -out %s.xwd && convert %s.xwd -crop %sx%s+%s+%s '%s'" %
                (SCREENSHOT_FILENAME, SCREENSHOT_FILENAME,
-                g_windowSizes[g_lastWindow][0], g_windowSizes[g_lastWindow][1],
-                g_windowOffsets[g_lastWindow][0], g_windowOffsets[g_lastWindow][1],
+                _g_windowSizes[_g_lastWindow][0], _g_windowSizes[_g_lastWindow][1],
+                _g_windowOffsets[_g_lastWindow][0], _g_windowOffsets[_g_lastWindow][1],
                 SCREENSHOT_FILENAME))
         source = SCREENSHOT_FILENAME
     else:
         iUseImageAsWindow(source)
-    g_origImage = source
+    _g_origImage = source
 
     if not ocr:
         if capture:
-            drawWords(g_origImage, capture, [], [])
+            drawWords(_g_origImage, capture, [], [])
         return []
 
     if preprocess == None:
-        preprocess = g_preprocess
+        preprocess = _g_preprocess
 
     # convert to text
-    g_readImage = g_origImage + "-pp.png"
-    _, g_hocr = _runcmd("convert %s %s %s && tesseract %s %s -l eng hocr" % (
-            g_origImage, preprocess, g_readImage,
-            g_readImage, SCREENSHOT_FILENAME))
+    _g_readImage = _g_origImage + "-pp.png"
+    _, _g_hocr = _runcmd("convert %s %s %s && tesseract %s %s -l eng hocr" % (
+            _g_origImage, preprocess, _g_readImage,
+            _g_readImage, SCREENSHOT_FILENAME))
 
     # store every word and its coordinates
-    g_words = _hocr2words(file(SCREENSHOT_FILENAME + ".html").read())
+    _g_words = _hocr2words(file(SCREENSHOT_FILENAME + ".html").read())
 
     # convert word coordinates to the unscaled pixmap
-    orig_width, orig_height = g_windowSizes[g_lastWindow][0], g_windowSizes[g_lastWindow][1]
+    orig_width, orig_height = _g_windowSizes[_g_lastWindow][0], _g_windowSizes[_g_lastWindow][1]
 
     scaled_width, scaled_height = re.findall('bbox 0 0 ([0-9]+)\s*([0-9]+)', _runcmd("grep ocr_page %s.html | head -n 1" % (SCREENSHOT_FILENAME,))[1])[0]
     scaled_width, scaled_height = float(scaled_width), float(scaled_height)
 
-    for word in sorted(g_words.keys()):
-        for appearance, (wordid, middle, bbox) in enumerate(g_words[word]):
-            g_words[word][appearance] = \
+    for word in sorted(_g_words.keys()):
+        for appearance, (wordid, middle, bbox) in enumerate(_g_words[word]):
+            _g_words[word][appearance] = \
                 (wordid,
                  (int(middle[0]/scaled_width * orig_width),
                   int(middle[1]/scaled_height * orig_height)),
@@ -305,8 +314,8 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
                   int(bbox[3]/scaled_height * orig_height)))
             _log('found "' + word + '": (' + str(bbox[0]) + ', ' + str(bbox[1]) + ')')
     if capture:
-        drawWords(g_origImage, capture, g_words, g_words)
-    return sorted(g_words.keys())
+        drawWords(_g_origImage, capture, _g_words, _g_words)
+    return sorted(_g_words.keys())
 
 
 def iVerifyWord(word, match=0.33, appearance=1, capture=None):
@@ -338,18 +347,18 @@ def iVerifyWord(word, match=0.33, appearance=1, capture=None):
     Throws NoOCRResults error if there are OCR results available
     on the current screen.
     """
-    if g_words == None:
+    if _g_words == None:
         raise NoOCRResults('iRead has not been called with ocr=True')
 
     score, matching_word = findWord(word)
 
     if capture:
-        drawWords(g_origImage, capture, [word], g_words)
+        drawWords(_g_origImage, capture, [word], _g_words)
 
     if score < match:
         raise BadMatch('No matching word for "%s". The best candidate "%s" with score %.2f, required %.2f' %
                             (word, matching_word, score, match))
-    return ((score, matching_word), g_words[matching_word][appearance-1][2])
+    return ((score, matching_word), _g_words[matching_word][appearance-1][2])
 
 
 def iVerifyIcon(iconFilename, match=None, colorMatch=None, opacityLimit=None, capture=None, _origin="iVerifyIcon"):
@@ -387,24 +396,24 @@ def iVerifyIcon(iconFilename, match=None, colorMatch=None, opacityLimit=None, ca
     if not eye4graphics:
         _log('ERROR: %s("%s") called, but eye4graphics not loaded.' % (_origin, iconFilename))
         raise EyenfingerError("eye4graphics not available")
-    if not g_origImage:
+    if not _g_origImage:
         _log('ERROR %s("%s") called, but source not defined (iRead not called).' % (_origin, iconFilename))
         raise BadSourceImage("Source image not defined, cannot search for an icon.")
     if not (os.path.isfile(iconFilename) and os.access(iconFilename, os.R_OK)):
         _log('ERROR %s("%s") called, but the icon file is not readable.' % (_origin, iconFilename))
         raise BadIconImage('Icon "%s" is not readable.' % (iconFilename,))
     if match == None:
-        match = g_defaultIconMatch
+        match = _g_defaultIconMatch
     if match > 1.0:
         _log('ERROR %s("%s"): invalid match value, must be below 1.0. ' % (_origin, iconFilename,))
         raise ValueError("invalid match value: %s, should be 0 <= match <= 1.0" % (match,))
     if colorMatch == None:
-        colorMatch = g_defaultIconColorMatch
+        colorMatch = _g_defaultIconColorMatch
     if not 0.0 <= colorMatch <= 1.0:
         _log('ERROR %s("%s"): invalid colorMatch value, must be between 0 and 1. ' % (_origin, iconFilename,))
         raise ValueError("invalid colorMatch value: %s, should be 0 <= colorMatch <= 1.0" % (colorMatch,))
     if opacityLimit == None:
-        opacityLimit = g_defaultIconOpacityLimit
+        opacityLimit = _g_defaultIconOpacityLimit
     if not 0.0 <= opacityLimit <= 1.0:
         _log('ERROR %s("%s"): invalid opacityLimit value, must be between 0 and 1. ' % (_origin, iconFilename,))
         raise ValueError("invalid opacityLimit value: %s, should be 0 <= opacityLimit <= 1.0" % (opacityLimit,))
@@ -412,7 +421,7 @@ def iVerifyIcon(iconFilename, match=None, colorMatch=None, opacityLimit=None, ca
     struct_bbox = Bbox(0,0,0,0,0)
     threshold = int((1.0-match)*20)
     err = eye4graphics.findSingleIcon(ctypes.byref(struct_bbox),
-                                      g_origImage, iconFilename, threshold,
+                                      _g_origImage, iconFilename, threshold,
                                       ctypes.c_double(colorMatch),
                                       ctypes.c_double(opacityLimit))
     bbox = (int(struct_bbox.left), int(struct_bbox.top),
@@ -422,7 +431,7 @@ def iVerifyIcon(iconFilename, match=None, colorMatch=None, opacityLimit=None, ca
         msg = '%s: "%s" not found, match=%.2f, threshold=%s, closest threshold %s.' % (
             _origin, iconFilename, match, threshold, int(struct_bbox.error))
         if capture:
-            drawIcon(g_origImage, capture, iconFilename, bbox, 'red')
+            drawIcon(_g_origImage, capture, iconFilename, bbox, 'red')
         _log(msg)
         raise BadMatch(msg)
     elif err != 0:
@@ -434,7 +443,7 @@ def iVerifyIcon(iconFilename, match=None, colorMatch=None, opacityLimit=None, ca
         score = 1.0
 
     if capture:
-        drawIcon(g_origImage, capture, iconFilename, bbox)
+        drawIcon(_g_origImage, capture, iconFilename, bbox)
 
     return (score, bbox)
 
@@ -546,15 +555,15 @@ def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33,
 
     clickedX, clickedY = iClickBox(bbox, clickPos, mouseButton, mouseEvent, dryRun, capture=False)
 
-    windowId = g_lastWindow
+    windowId = _g_lastWindow
 
     _log('iClickWord("%s"): word "%s", match %.2f, bbox %s, window offset %s, click %s' %
          (word, matching_word, score,
-          bbox, g_windowOffsets[windowId],
+          bbox, _g_windowOffsets[windowId],
           (clickedX, clickedY)))
 
     if capture:
-        drawWords(g_origImage, capture, [word], g_words)
+        drawWords(_g_origImage, capture, [word], _g_words)
         drawClickedPoint(capture, capture, (clickedX, clickedY))
 
     return ((score, matching_word), (clickedX, clickedY))
@@ -610,7 +619,7 @@ def iClickBox((left, top, right, bottom), clickPos=(0.5, 0.5),
     if capture:
         if _captureText == None:
             _captureText = "Box: %s, %s, %s, %s" % (left, top, right, bottom)
-        drawIcon(g_origImage, capture, _captureText, (left, top, right, bottom))
+        drawIcon(_g_origImage, capture, _captureText, (left, top, right, bottom))
         drawClickedPoint(capture, capture, (clickedX, clickedY))
 
     return (clickedX, clickedY)
@@ -643,8 +652,8 @@ def iClickWindow((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=False, ca
                      X and Y coordinates of clicked position on the
                      screen.
     """
-    clickScrX = clickX + g_windowOffsets[g_lastWindow][0]
-    clickScrY = clickY + g_windowOffsets[g_lastWindow][1]
+    clickScrX = clickX + _g_windowOffsets[_g_lastWindow][0]
+    clickScrY = clickY + _g_windowOffsets[_g_lastWindow][1]
 
     iClickScreen((clickScrX, clickScrY), mouseButton, mouseEvent, dryRun, capture)
 
@@ -684,7 +693,7 @@ def iClickScreen((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=False, ca
         params = ""
 
     if capture:
-        drawClickedPoint(g_origImage, capture, (clickX, clickY))
+        drawClickedPoint(_g_origImage, capture, (clickX, clickY))
 
     if not dryRun:
         # use xte from the xautomation package
@@ -740,8 +749,8 @@ def findWord(word, detected_words = None, appearance=1):
     Returns pair (score, corresponding-detected-word)
     """
     if detected_words == None:
-        detected_words = g_words
-        if g_words == None:
+        detected_words = _g_words
+        if _g_words == None:
             raise NoOCRResults()
 
     scored_words = []
@@ -808,33 +817,33 @@ def _hocr2words(hocr):
     return rv
 
 def iUseWindow(windowIdOrName = None):
-    global g_lastWindow
+    global _g_lastWindow
     if windowIdOrName == None:
-        if g_lastWindow == None:
-            g_lastWindow = iActiveWindow()
+        if _g_lastWindow == None:
+            _g_lastWindow = iActiveWindow()
     elif windowIdOrName.startswith("0x"):
-        g_lastWindow = windowIdOrName
+        _g_lastWindow = windowIdOrName
     else:
-        g_lastWindow = _runcmd("xwininfo -name '%s' | awk '/Window id: 0x/{print $4}'" %
+        _g_lastWindow = _runcmd("xwininfo -name '%s' | awk '/Window id: 0x/{print $4}'" %
                               (windowIdOrName,))[1].strip()
-        if not g_lastWindow.startswith("0x"):
+        if not _g_lastWindow.startswith("0x"):
             raise BadWindowName('Cannot find window id for "%s" (got: "%s")' %
-                                (windowIdOrName, g_lastWindow))
+                                (windowIdOrName, _g_lastWindow))
     _, output = _runcmd("xwininfo -id %s | awk '/Width:/{w=$NF}/Height:/{h=$NF}/Absolute upper-left X/{x=$NF}/Absolute upper-left Y/{y=$NF}END{print x\" \"y\" \"w\" \"h}'" %
-                       (g_lastWindow,))
+                       (_g_lastWindow,))
     offset_x, offset_y, width, height = output.split(" ")
-    g_windowOffsets[g_lastWindow] = (int(offset_x), int(offset_y))
-    g_windowSizes[g_lastWindow] = (int(width), int(height))
-    return g_lastWindow
+    _g_windowOffsets[_g_lastWindow] = (int(offset_x), int(offset_y))
+    _g_windowSizes[_g_lastWindow] = (int(width), int(height))
+    return _g_lastWindow
 
 def iUseImageAsWindow(imageFilename):
-    global g_lastWindow
+    global _g_lastWindow
 
     if not eye4graphics:
         _log('ERROR: iUseImageAsWindow("%s") called, but eye4graphics not loaded.' % (imageFilename,))
         raise EyenfingerError("eye4graphics not available")
 
-    g_lastWindow = imageFilename
+    _g_lastWindow = imageFilename
 
     struct_bbox = Bbox(0,0,0,0,0)
     err = eye4graphics.imageDimensions(ctypes.byref(struct_bbox),
@@ -843,9 +852,9 @@ def iUseImageAsWindow(imageFilename):
         _log('iUseImageAsWindow: Failed reading dimensions of image "%s".' % (imageFilename,))
         raise BadSourceImage('Failed to read dimensions of "%s".' % (imageFilename,))
 
-    g_windowOffsets[g_lastWindow] = (0, 0)
-    g_windowSizes[g_lastWindow] = (int(struct_bbox.right), int(struct_bbox.bottom))
-    return g_lastWindow
+    _g_windowOffsets[_g_lastWindow] = (0, 0)
+    _g_windowSizes[_g_lastWindow] = (int(struct_bbox.right), int(struct_bbox.bottom))
+    return _g_lastWindow
 
 def iActiveWindow(windowId = None):
     """ return id of active window, in '0x1d0f14' format """
@@ -890,8 +899,8 @@ def drawClickedPoint(inputfilename, outputfilename, clickedXY):
     clickedXY contains absolute screen coordinates
     """
     x, y = clickedXY
-    x -= g_windowOffsets[g_lastWindow][0]
-    y -= g_windowOffsets[g_lastWindow][1]
+    x -= _g_windowOffsets[_g_lastWindow][0]
+    y -= _g_windowOffsets[_g_lastWindow][1]
     draw_commands = """ -stroke red -fill blue -draw "fill-opacity 0.2 circle %s,%s %s,%s" """ % (
         x, y, x + 20, y)
     draw_commands += """ -stroke none -fill red -draw "point %s,%s" """ % (x, y)
@@ -902,7 +911,7 @@ def evaluatePreprocessFilter(imageFilename, ppfilter, words):
     Visualise how given words are detected from given image file when
     using given preprocessing filter.
     """
-    global g_preprocess
+    global _g_preprocess
     evaluatePreprocessFilter.count += 1
     preprocessed_filename = '%s-pre%s.png' % (imageFilename, evaluatePreprocessFilter.count)
     _runcmd("convert '%s' %s '%s' && tesseract %s eyenfinger.autoconfigure hocr" %
@@ -922,7 +931,7 @@ def evaluatePreprocessFilter(imageFilename, ppfilter, words):
     evaluatePreprocessFilter.scores.append( (scored_words[0][0] + avg_score, scored_words[0][0], avg_score, ppfilter) )
     evaluatePreprocessFilter.scores.sort()
     # set the best preprocess filter so far as a default
-    g_preprocess = evaluatePreprocessFilter.scores[-1][-1]
+    _g_preprocess = evaluatePreprocessFilter.scores[-1][-1]
     drawWords(preprocessed_filename, preprocessed_filename, words, detected_words)
     sys.stdout.write("%.2f %s %s %s\n" % (sum([s[0] for s in scored_words])/float(len(scored_words)), scored_words[0], preprocessed_filename, ppfilter))
     sys.stdout.flush()
@@ -938,7 +947,7 @@ def autoconfigure(imageFilename, words):
 
     # check image width
     iUseImageAsWindow(imageFilename)
-    image_width = g_windowSizes[g_lastWindow][0]
+    image_width = _g_windowSizes[_g_lastWindow][0]
 
     resize_filters = ['Mitchell', 'Catrom', 'Hermite', 'Gaussian']
     levels = [(20, 30), (20, 40), (20, 50),
