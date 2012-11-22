@@ -73,7 +73,9 @@ AAL_GUARDRE   = re.compile('guard()\s*{')
 AAL_BODYRE    = re.compile('body()\s*{')
 AAL_ADAPTERRE = re.compile('adapter()\s*{')
 
-GT_HIDESHOWRE = re.compile('preview-(show|hide)-vars:(.*)')
+GT_HIDESHOWRE = re.compile('preview-(show|hide)-(vars|variables):(.*)')
+GT_HIDETRANRE = re.compile('preview-hide-(trans|transitions):(.*)')
+GT_HIDEUNTRAVTRANRE = re.compile('preview-hide-untested-(trans|transitions):(.*)')
 GT_DEPTHRE = re.compile('preview-depth:(.*)')
 
 def isModelFile(filename):
@@ -179,7 +181,7 @@ def asyncRuncmd(cmd, onThreadSuccess=lambda: None, onSuccess=lambda: None, onErr
             else:
                 errors = 0
                 try: cmd()
-                except: errors = 1                
+                except: errors = 1
                 if errors == 0:
                     onThreadSuccess()
                     self.emit(Async.signal_success)
@@ -368,7 +370,7 @@ Keyboard shortcuts:<br>
 
         if str(newName) == "":
             return
-        
+
         if self.edit.currentIndex() == EDITTAB_GT:
             self._set_gtFileName(newName)
         else:
@@ -430,16 +432,22 @@ Keyboard shortcuts:<br>
 
     def aalPreviewArguments(self):
         show_and_hide = [[], []]
+        hide_transitions = []
+        hide_untraversed_transitions = []
         preview_depth = 5
         pt = str(self.editor.toPlainText())
-        for show_or_hide, var in GT_HIDESHOWRE.findall(pt):
+        for show_or_hide, _, var in GT_HIDESHOWRE.findall(pt):
             correct_list = ['show', 'hide'].index(show_or_hide)
             for v in var.replace(',', ' ').split():
                 show_and_hide[correct_list].append(v)
+        for _, regexp in GT_HIDETRANRE.findall(pt):
+            hide_transitions.append(regexp.lstrip())
+        for _, regexp in GT_HIDEUNTRAVTRANRE.findall(pt):
+            hide_untraversed_transitions.append(regexp.lstrip())
         for depth in GT_DEPTHRE.findall(pt):
             try: preview_depth = int(depth)
             except: print 'Invalid preview depth: "%s" (integer expected).' % (preview_depth,)
-        return show_and_hide, preview_depth
+        return show_and_hide, preview_depth, hide_transitions, hide_untraversed_transitions
 
     def autoSave(self):
         """
@@ -465,8 +473,8 @@ Keyboard shortcuts:<br>
                 executed_program = "fmbt-aalc"
                 validation_exitstatus = self.runcmd(aal2py_cmd)
                 if validation_exitstatus == 0:
-                    [show_vars, hide_vars], preview_depth = self.aalPreviewArguments()
                     show_hide_args = ""
+                    [show_vars, hide_vars], preview_depth, _, _ = self.aalPreviewArguments()
                     for v in show_vars: show_hide_args += " -S '%s'" % (v,)
                     for v in hide_vars: show_hide_args += " -H '%s'" % (v,)
                     py2lsts_cmd = "remote_pyaal %s -o '%s'%s --lsts-depth %s '%s'" % (aal_ppflags, self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
@@ -551,7 +559,13 @@ Keyboard shortcuts:<br>
         else: logparam = "-l '%s'" % (self._logFileName)
         if self._model_ok:
             if not self._test_ok: logparam = ""
-            cmd = "fmbt-view -f png %s -o '%s' '%s'" % (logparam, imgname, self._lstsFileName)
+            _, _, previewHideTransitions, previewHideUTransitions = self.aalPreviewArguments()
+            hideparams = ""
+            for regexp in previewHideTransitions:
+                hideparams += "-e '%s'" % (regexp,)
+            for regexp in previewHideUTransitions:
+                hideparams += "-E '%s'" % (regexp,)
+            cmd = "fmbt-view -f png %s %s -o '%s' '%s'" % (logparam, hideparams, imgname, self._lstsFileName)
             asyncRuncmd(cmd,
                         onThreadSuccess = self.pixmapLoader("model", imgname),
                         onSuccess = self.pixmapViewer("model"),
@@ -705,7 +719,7 @@ on_inconc = "exit(2)"
         self.edit = QtGui.QTabWidget()
         self.edit.connect(self.edit, QtCore.SIGNAL("currentChanged(int)"),
                           self.editTabChanged)
-        
+
         def makeScalableEditor(parent, font):
             editor = QtGui.QTextEdit()
             editor.setUndoRedoEnabled(True)
@@ -897,7 +911,7 @@ on_inconc = "exit(2)"
 
     def findPrev(self):
         self.find(QtGui.QTextDocument.FindBackward)
-    
+
     def findTextChanged(self, text):
         if text == "":
             self.findHitCounter.setText("Hits: -")
@@ -905,7 +919,7 @@ on_inconc = "exit(2)"
             self.findHitCounter.setText("Hits: %s" % (
                     self.findFromPlainText.count(text)))
         self.findCanReplace = None
-    
+
     def editTabChanged(self, tabIndex):
         if tabIndex == EDITTAB_GT: self.editGT()
         elif tabIndex == EDITTAB_CONF: self.editConf()
@@ -1245,7 +1259,7 @@ class GTHighlighter(QtGui.QSyntaxHighlighter):
                         self.setFormat(0, len(text), self._usualErrorsFormat)
                         self.setCurrentBlockState(0)
                         return
-        
+
         for pattern, format in self.highlightingRules:
             expression = QtCore.QRegExp(pattern)
             index = expression.indexIn(text)
