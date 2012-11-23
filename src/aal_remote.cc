@@ -235,9 +235,6 @@ int aal_remote::observe(std::vector<int> &action, bool block)
 #include "helper.hh"
 
 namespace {
-
-  std::map<std::string,aal_remote*> storage;
-
   aal* al_helper(Log& l, std::string params) {
     std::string remotename(params);
     unescape_string(remotename); 
