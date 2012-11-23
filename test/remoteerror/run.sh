@@ -44,7 +44,7 @@ for WHEN in "load" "init" "iguard" "iadapter" "ibody" "oguard" "oadapter" "obody
             echo "" >> $LOGFILE
             echo "AAL, heur=$HEURISTIC, when: $WHEN  problem: $WHAT" >> $LOGFILE
 
-            cat > test.conf <<EOF
+            cat > test.$WHEN.$WHAT.aal.conf <<EOF
 model     = "aal_remote(remote_pyaal -l aal.log -c 'BUG=\"$WHEN-$WHAT\"' crashraise.aal)"
 adapter   = "aal_remote(remote_pyaal -l aal.log -c 'BUG=\"$WHEN-$WHAT\"' crashraise.aal)"
 heuristic = "$HEURISTIC"
@@ -54,32 +54,32 @@ on_fail   = "exit(1)"
 on_inconc = "exit(2)"
 on_error  = "exit(84)"
 EOF
-            echo "---- begin of test.conf ----" >>$LOGFILE
-            cat test.conf >>$LOGFILE
-            echo "---- end of test.conf ----" >>$LOGFILE
+            echo "---- begin of test.$WHEN.$WHAT.aal.conf ----" >>$LOGFILE
+            cat test.$WHEN.$WHAT.aal.conf >>$LOGFILE
+            echo "---- end of test.$WHEN.$WHAT.aal.conf ----" >>$LOGFILE
 
             echo "---- begin of fmbt log ----" >>$LOGFILE
-            fmbt test.conf >>$LOGFILE 2>fmbt-output.txt
+            fmbt test.$WHEN.$WHAT.aal.conf >>$LOGFILE 2>fmbt-output.$WHEN.$WHAT.aal.txt
             FMBTSTATUS=$?
             echo "---- end of fmbt log ----" >>$LOGFILE
 
-            echo "---- begin of fmbt-output.txt ----" >>$LOGFILE
-            cat fmbt-output.txt >>$LOGFILE
-            echo "---- end of fmbt-output.txt ----" >>$LOGFILE
+            echo "---- begin of fmbt-output.$WHEN.$WHAT.aal.txt ----" >>$LOGFILE
+            cat fmbt-output.$WHEN.$WHAT.aal.txt >>$LOGFILE
+            echo "---- end of fmbt-output.$WHEN.$WHAT.aal.txt ----" >>$LOGFILE
 
             if [ "$FMBTSTATUS" != "84" ]; then
                 echo "fails because: exit status $FMBTSTATUS, expected 84" >>$LOGFILE
                 failure_count=$(( $failure_count + 1 ))
             fi
 
-            if [ "$WHAT" == "crash" ] && ! grep -q 'Segmentation' fmbt-output.txt; then
-                echo "fails because: segmentation fault missing in fmbt-output.txt" >>$LOGFILE
+            if [ "$WHAT" == "crash" ] && ! grep -q 'Terminated by a signal (11)' fmbt-output.$WHEN.$WHAT.aal.txt; then
+                echo "fails because: segmentation fault missing in fmbt-output.$WHEN.$WHAT.aal.txt" >>$LOGFILE
                 failure_count=$(( $failure_count + 1 ))
-            elif [ "$WHAT" == "raise" ] && ! grep -q 'BogusException' fmbt-output.txt; then
-                echo "fails because: raised exception missing in fmbt-output.txt" >>$LOGFILE
+            elif [ "$WHAT" == "raise" ] && ! grep -q 'BogusException' fmbt-output.$WHEN.$WHAT.aal.txt; then
+                echo "fails because: raised exception missing in fmbt-output.$WHEN.$WHAT.aal.txt" >>$LOGFILE
                 failure_count=$(( $failure_count + 1 ))
-            elif ( [ "$WHAT" == "stderr" ] || [ "$WHAT" == "stdout" ] ) && ! grep -q 'rubbishFromAAL' fmbt-output.txt; then
-                echo "fails because: rubbish printed from AAL is missing in fmbt-output.txt" >>$LOGFILE
+            elif ( [ "$WHAT" == "stderr" ] || [ "$WHAT" == "stdout" ] ) && ! grep -q 'rubbishFromAAL' fmbt-output.$WHEN.$WHAT.aal.txt; then
+                echo "fails because: rubbish printed from AAL is missing in fmbt-output.$WHEN.$WHAT.aal.txt" >>$LOGFILE
                 failure_count=$(( $failure_count + 1 ))
             fi
         done
@@ -102,7 +102,7 @@ for WHEN in "load" "input"; do
         echo "" >> $LOGFILE
         echo "remote adapter, when: $WHEN  problem: $WHAT" >> $LOGFILE
 
-        cat > test.conf <<EOF
+        cat > test.$WHEN.$WHAT.remote.conf <<EOF
 model     = "aal_remote(remote_pyaal -l aal.log -c 'BUG=\"none-none\"' crashraise.aal)"
 adapter   = "remote(remote_python -l remote_python.log -c 'BUG=\"$WHEN-$WHAT\"' -c 'from crashingsteps import *')"
 heuristic = "random"
@@ -113,34 +113,34 @@ on_inconc = "exit(2)"
 on_error  = "exit(84)"
 EOF
 
-        echo "---- begin of test.conf ----" >>$LOGFILE
-        cat test.conf >>$LOGFILE
-        echo "---- end of test.conf ----" >>$LOGFILE
+        echo "---- begin of test.$WHEN.$WHAT.remote.conf ----" >>$LOGFILE
+        cat test.$WHEN.$WHAT.remote.conf >>$LOGFILE
+        echo "---- end of test.$WHEN.$WHAT.remote.conf ----" >>$LOGFILE
 
         echo "---- begin of fmbt log ----" >>$LOGFILE
-        fmbt test.conf >>$LOGFILE 2>fmbt-output.txt
+        fmbt test.$WHEN.$WHAT.remote.conf >>$LOGFILE 2>fmbt-output.$WHEN.$WHAT.remote.txt
         FMBTSTATUS=$?
         echo "---- end of fmbt log ----" >>$LOGFILE
 
-        echo "---- begin of fmbt-output.txt ----" >>$LOGFILE
-        cat fmbt-output.txt >>$LOGFILE
-        echo "---- end of fmbt-output.txt ----" >>$LOGFILE
+        echo "---- begin of fmbt-output.$WHEN.$WHAT.remote.txt ----" >>$LOGFILE
+        cat fmbt-output.$WHEN.$WHAT.remote.txt >>$LOGFILE
+        echo "---- end of fmbt-output.$WHEN.$WHAT.remote.txt ----" >>$LOGFILE
 
         if [ "$FMBTSTATUS" != "84" ]; then
             echo "fails because: exit status $FMBTSTATUS, expected 84" >>$LOGFILE
             failure_count=$(( $failure_count + 1 ))
         fi
-        if [ "$WHAT" == "crash" ] && ! grep -q 'Segmentation' fmbt-output.txt; then
-            echo "fails because: segmentation fault missing in fmbt-output.txt" >>$LOGFILE
+        if [ "$WHAT" == "crash" ] && ! grep -q 'Terminated by a signal (11)' fmbt-output.$WHEN.$WHAT.remote.txt; then
+            echo "fails because: segmentation fault missing in fmbt-output.$WHEN.$WHAT.remote.txt" >>$LOGFILE
             failure_count=$(( $failure_count + 1 ))
-        elif [ "$WHAT" == "raise" ] && ! grep -q 'BogusException' fmbt-output.txt; then
-            echo "fails because: raised exception missing in fmbt-output.txt" >>$LOGFILE
+        elif [ "$WHAT" == "raise" ] && ! grep -q 'BogusException' fmbt-output.$WHEN.$WHAT.remote.txt; then
+            echo "fails because: raised exception missing in fmbt-output.$WHEN.$WHAT.remote.txt" >>$LOGFILE
             failure_count=$(( $failure_count + 1 ))
-        elif [ "$WHAT" == "stdout" ] && ! grep -q 'rubbish-to-stdout' fmbt-output.txt; then
-            echo "fails because: rubbish-to-stdout from crashingsteps.py is missing in fmbt-output.txt" >>$LOGFILE
+        elif [ "$WHAT" == "stdout" ] && ! grep -q 'rubbish-to-stdout' fmbt-output.$WHEN.$WHAT.remote.txt; then
+            echo "fails because: rubbish-to-stdout from crashingsteps.py is missing in fmbt-output.$WHEN.$WHAT.remote.txt" >>$LOGFILE
             failure_count=$(( $failure_count + 1 ))
-        elif [ "$WHAT" == "stderr" ] && ! grep -q 'rubbish-to-stderr' fmbt-output.txt; then
-            echo "fails because: rubbish-to-stderr from crashingsteps.py is missing in fmbt-output.txt" >>$LOGFILE
+        elif [ "$WHAT" == "stderr" ] && ! grep -q 'rubbish-to-stderr' fmbt-output.$WHEN.$WHAT.remote.txt; then
+            echo "fails because: rubbish-to-stderr from crashingsteps.py is missing in fmbt-output.$WHEN.$WHAT.remote.txt" >>$LOGFILE
             failure_count=$(( $failure_count + 1 ))
         fi
     done
