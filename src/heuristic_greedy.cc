@@ -72,6 +72,10 @@ int Heuristic_greedy::getAction()
 
 int Heuristic_greedy::getIAction()
 {
+  if (!status) {
+    return 0;
+  }
+
   int* actions;
   int i = model->getIActions(&actions);
   int pos = -1;
@@ -112,6 +116,11 @@ int Heuristic_greedy::getIAction()
       /* Use precalculated path (m_path) as a hint. */
       std::reverse(m_path.begin(), m_path.end());
       double score = alg.search(*model, *my_coverage, m_path);
+
+      if (!alg.status) {
+	status=false;
+      }
+
       if (m_path.size() > 0) {
         std::reverse(m_path.begin(), m_path.end());
         log.debug("score: %f, path length: %d", score, m_path.size());
@@ -120,6 +129,9 @@ int Heuristic_greedy::getIAction()
     if (m_path.size() > 0) {
       log.debug("path %i",m_path.back());
       i = model->getIActions(&actions);
+      if (i==0) {
+	return Alphabet::ERROR;
+      }
       bool broken=true;
       int ret=m_path.back();
       for(int j=0;j<i;j++) {
@@ -128,7 +140,7 @@ int Heuristic_greedy::getIAction()
 	}
       }
       if (broken) {
-	log.print("<ERROR msg=\"%s %i\"/>","trying to return action %i, which is not executable in the model");
+	log.print("<ERROR msg=\"%s %i\"/>","trying to return action %i, which is not executable in the model",ret);
 	abort();
       }
       return m_path.back();

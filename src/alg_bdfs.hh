@@ -27,8 +27,9 @@ class Model;
 class Coverage;
 
 #include <vector>
+#include "writable.hh"
 
-class AlgBDFS
+class AlgBDFS: public Writable
 {
 public:
     AlgBDFS(int searchDepth): m_search_depth(searchDepth) {};
