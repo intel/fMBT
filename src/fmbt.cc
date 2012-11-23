@@ -179,8 +179,11 @@ int main(int argc,char * const argv[])
     c.load(conffilename,config_options);
 
     if (!c.status) {
+      c.exit_status=4;
       error(0, 0, "%s\n", c.stringify().c_str());
-      return 4;
+      // Let's handle verdict
+      c.handle_hooks(Verdict::ERROR);
+      return c.exit_status;
     }
     if (E) {
       std::fprintf(stderr, "%s\n",c.stringify().c_str());
