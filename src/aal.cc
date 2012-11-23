@@ -40,3 +40,40 @@ void aal::log(const char* format, ...)
 
   va_end(ap);  
 }
+
+namespace {
+
+
+  aal* al_helper() {
+
+    if (aal::storage==NULL) {
+      return NULL;
+    }
+
+    if (aal::storage->empty() || aal::storage->size()!=1) {
+      return NULL;
+    }
+    return aal::storage->begin()->second;    
+  }
+
+  Adapter* adapter_creator(Log& l, std::string params = "") {
+    aal* al=al_helper();
+
+    if (al) {
+      return new Awrapper(l,params,al);
+    }
+    return NULL;
+  }
+  
+  Model* model_creator(Log& l, std::string params) {
+    aal* al=al_helper();
+
+    if (al) {
+      return new Mwrapper(l,params,al);
+    }
+    return NULL;
+  }
+  
+  static ModelFactory  ::Register Mo("aal", model_creator);
+  static AdapterFactory::Register Ad("aal", adapter_creator);
+}
