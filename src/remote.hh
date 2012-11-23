@@ -22,9 +22,11 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#include "writable.hh"
+
 class remote {
 public:
-  remote():pid(0),id(0) {
+  remote():pid(0),id(0),_status(NULL) {
     g_main_context_ref(g_main_context_default());
   }
   virtual ~remote() {
@@ -37,7 +39,8 @@ public:
     while(g_main_context_iteration(NULL,FALSE));
   }
 protected:
-  void monitor() {
+  void monitor(bool* b=NULL) {
+    _status=b;
     id=g_child_watch_add(pid, watch_func,this);
   }
 
@@ -48,18 +51,24 @@ protected:
     if (WIFEXITED(status)) {
       // child terminated normally
       fprintf(stderr,"%s Terminated normally (%i)\n",r->prefix.c_str(),WEXITSTATUS(status)); // The exit status.
+      if (r->_status)
+	*(r->_status)=false;
       return;
     }
 
     if (WIFSIGNALED(status)) {
       // Terminated by a signal
       fprintf(stderr,"%s Terminated by a signal (%i)\n",r->prefix.c_str(),WTERMSIG(status)); // The signal
+      if (r->_status)
+	*(r->_status)=false;
       return;
     }
     
     if (WCOREDUMP(status)) {
       // dumped...
       fprintf(stderr,"%s dumped the core\n",r->prefix.c_str());
+      if (r->_status)
+	*(r->_status)=false;
       return;
     }
     // Currently we don't care about the rest 
@@ -67,4 +76,5 @@ protected:
   GPid pid;
   guint id;
   std::string prefix;
+  bool* _status;
 };

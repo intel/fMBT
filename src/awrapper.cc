@@ -102,6 +102,7 @@ void Awrapper::execute(std::vector<int>& action)
   std::string& prm=parameters[action[0]];
 
   int tmp=ada->adapter_execute(aal2ada[action[0]],parameters[action[0]].c_str());
+  status=ada->status;
   log.debug("return %i\n",tmp);
   int ret=0;
   if (tmp) {
@@ -120,6 +121,7 @@ void Awrapper::execute(std::vector<int>& action)
 int  Awrapper::observe(std::vector<int> &action,
 		       bool block) {
   int tmp=ada->observe(action,block);
+  status=ada->status;
   std::vector<std::string>& wn=ada->getActionNames();
   for(int i=0;i<tmp;i++) {
     int t=ada2aal[action[i],std::pair<int,std::string&>(action[i],es)];

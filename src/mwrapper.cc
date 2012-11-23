@@ -37,17 +37,27 @@ Mwrapper::Mwrapper(Log&l, std::string params, aal* _model):
     errormsg = model->errormsg;
     action_names=model->getActionNames();
     prop_names=model->getSPNames();
+    status = model->status;
     precalc_input_output();
   } else {
     status=false;
   }
 }
 
-int Mwrapper::getActions(int** actions) {
-  return model->getActions(actions);
+int Mwrapper::getActions(int** actions) { 
+  if (!status) {
+    return 0;
+  }
+  int ret=model->getActions(actions);
+  status = model->status;
+  return ret;
 }
 
 int Mwrapper::getIActions(int** actions) {
+  if (!status) {
+    return 0;
+  }
+
   int a=model->getActions(actions);
   int ret=a;
   for(int i=0;i<a;i++) {
@@ -59,6 +69,7 @@ int Mwrapper::getIActions(int** actions) {
       a--;
     }
   }
+  status = model->status;
   return ret;
 }
 
@@ -71,22 +82,29 @@ bool Mwrapper::reset() {
 /* No props */
 int Mwrapper::getprops(int** props)
 {
-  return model->getprops(props);
+  int ret= model->getprops(props);
+  status = model->status;
+  return ret;
 }
 
 int Mwrapper::execute(int action)
 {
-  if (model->model_execute(action)) 
+  if (model->model_execute(action)) {
+    status = model->status;
     return action;
+  }
+  status = model->status;
   return 0;
 }
 
 void Mwrapper::push() {
   model->push();
+  status = model->status;
 }
 
 void Mwrapper::pop() {
   model->pop();
+  status = model->status;
 }
 
 bool Mwrapper::init()

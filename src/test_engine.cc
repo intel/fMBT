@@ -267,15 +267,20 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
     }
 
     action = heuristic.getIAction();
-    if (action >= 0)
+    if (action >= 0) {
       log.debug("Test_engine::run: test generator suggests executing %i '%s'\n",
 		action, heuristic.getActionName(action).c_str());
-    
+    }
+
     step_count++;
 
     log.debug("Step %i",step_count);
 
     switch(action) {
+    case Alphabet::ERROR: {
+      return stop_test(Verdict::ERROR, "Model error");
+      break;
+    }
     case Alphabet::DEADLOCK: {
       log.print("<state type=\"deadlock\"/>\n");
 

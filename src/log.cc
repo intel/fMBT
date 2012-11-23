@@ -44,12 +44,12 @@ void Log::pop() {
 }
 
 #include <stdarg.h>
-void Log::vprint(const char* format,va_list ap)
+void Log::vprint(const char* format,va_list ap,FILE* f)
 {
   char* msg=NULL;
 
   if (vasprintf(&msg,format,ap)>0) {
-    write(msg);
+    write(msg,f);
     std::free(msg);
   }
   fflush(out);
@@ -82,9 +82,9 @@ void Log::write(int action,const char *name,const char *msg)
 	 action,name,msg);
 }
 
-void Log::write(const char* msg)
+void Log::write(const char* msg,FILE* f)
 {
-  fprintf(out,"%s",msg);
+  fprintf(f,"%s",msg);
 }
 
 void Log::write(std::string& msg)
@@ -94,19 +94,16 @@ void Log::write(std::string& msg)
 
 void Log::error(const char** format,...)
 {
-  va_list ap;
-  char* msg=NULL;
+  va_list ap0,ap1;
 
   for (unsigned int i=1; i<element.size(); i++) fprintf(out, "    ");
 
-  va_start(ap, format);
-  vprint(format[0],ap);
-  if (vasprintf(&msg,format[1],ap)>0) {
-    char* m=unescape_string(msg);
-    fprintf(stderr,"%s",m);
-    std::free(msg);
-  }
-  va_end(ap);
+  va_start(ap0, format[0]);
+  va_start(ap1, format[1]);
+  vprint(format[0],ap0);
+  vprint(format[1],ap1,stderr);
+  va_end(ap0);
+  va_end(ap1);
 }
 
 void Log::debug(const char* msg,...)

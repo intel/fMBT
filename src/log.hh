@@ -33,7 +33,7 @@ public:
   virtual void push(const char*);
   virtual void pop();
 
-  virtual void vprint(const char* format,va_list ap);
+  virtual void vprint(const char* format,va_list ap,FILE*);
   virtual void vuprint(const char* format,va_list ap);
   virtual void print(const char* format,...);
   virtual void debug(const char* msg,...);
@@ -63,11 +63,19 @@ public:
 
 protected:
   int refcount;
-  virtual void write(const char* msg);
+  virtual void write(const char* msg,FILE* f);
+  virtual void write(const char* msg) 
+  {
+    write(msg,out);
+  }
   virtual void write(std::string& msg);
 
-  std::stack<std::string> element;
+  virtual void vprint(const char* format,va_list ap) {
+    vprint(format,ap,out);
+  }
+
   FILE* out;
+  std::stack<std::string> element;
   bool debug_enabled;
 };
 
