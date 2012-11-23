@@ -47,8 +47,10 @@ public:
 
   virtual int observe(std::vector<int> &action,bool block=false);
 private:
+  void handle_stderr();
   char* read_buf;
   size_t read_buf_pos;
+
   FILE* d_stdin;
   FILE* d_stdout;
   FILE* d_stderr;
