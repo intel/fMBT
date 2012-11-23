@@ -114,6 +114,8 @@ class Conf:public Writable {
 
   virtual std::string stringify();
 
+  void handle_hooks(Verdict::Verdict v);
+
   int exit_status;
   bool exit_interactive;
  protected:

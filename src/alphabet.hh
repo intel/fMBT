@@ -27,7 +27,8 @@ enum values {
   OUTPUT_ONLY =-1,
   DEADLOCK = -2,
   SILENCE = -3,
-  TIMEOUT = -4
+  TIMEOUT = -4,
+  ERROR   = -5  
 };
 
   virtual ~Alphabet() {}

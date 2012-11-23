@@ -232,36 +232,60 @@ Verdict::Verdict Conf::execute(bool interactive) {
     engine.interactive();
   } else {
     Verdict::Verdict v = engine.run(end_time);
-    std::list<EndHook*>* hooklist=NULL;
-    switch (v) {
-    case Verdict::FAIL: {
-      hooklist=&fail_hooks;
-      break;
+
+    if (!heuristic->status) {
+      fprintf(stderr,"heuristic error %s\n",heuristic->errormsg.c_str());
     }
-    case Verdict::PASS: { 
-      hooklist=&pass_hooks;
-      break;
+
+    if (!model->status) {
+      fprintf(stderr,"model error %s\n",model->errormsg.c_str());
     }
-    case Verdict::INCONCLUSIVE: {
-      hooklist=&inc_hooks;
-      break;
+
+    if (!adapter->status) {
+      fprintf(stderr,"adapter error %s\n",adapter->errormsg.c_str());
     }
-    case Verdict::ERROR: {
-      hooklist=&error_hooks;
-      break;
+
+    if (!coverage->status) {
+      fprintf(stderr,"coverage error %s\n",coverage->errormsg.c_str());
     }
-    default: {
-      // unknown verdict?
-    }
-    }
-    if (hooklist) 
-      for_each(hooklist->begin(),hooklist->end(),hook_runner);
+    handle_hooks(v);
   }
   log.pop();
   status = true;
   errormsg = engine.verdict_msg() + ": " + engine.reason_msg();
   return engine.verdict();
 }
+
+void Conf::handle_hooks(Verdict::Verdict v)
+{
+  std::list<EndHook*>* hooklist=NULL;
+
+  switch (v) {
+  case Verdict::FAIL: {
+    hooklist=&fail_hooks;
+    break;
+  }
+  case Verdict::PASS: { 
+    hooklist=&pass_hooks;
+    break;
+  }
+  case Verdict::INCONCLUSIVE: {
+    hooklist=&inc_hooks;
+    break;
+  }
+  case Verdict::ERROR: {
+    hooklist=&error_hooks;
+    break;
+  }
+  default: {
+    // unknown verdict?
+  }
+  }
+  if (hooklist) 
+    for_each(hooklist->begin(),hooklist->end(),hook_runner);  
+}
+
+
 /*
   void Conf::set_exitvalue(std::string& s)
   {
