@@ -135,6 +135,9 @@ try:
 except Exception, e:
     error('Error importing Qt4 bindings from "%s": %s\nInstall PySide Python bindings for Qt4 or try different -q parameter.' % (opt_qt_bindings, e))
 
+def _deleteTrailingWhitespace(multilineString):
+    return '\n'.join([line.rstrip() for line in multilineString.split('\n')])
+
 class MyScaleEvents(QtCore.QObject):
     """
     Catch scaling events: Ctrl++, Ctrl+-, Ctrl+wheel. Change
@@ -248,13 +251,14 @@ class MainWindow(QtGui.QMainWindow):
         self._fileDialogFilter = None
 
     def about(self):
-        QtGui.QMessageBox.about(self, "fMBT GT editor",'''
-<b>fMBT GT-editor</b><br>
-for editing GT files and adjusting test generation parameters<br><br>
+        QtGui.QMessageBox.about(self, "fMBT editor",'''
+<b>fMBT editor</b><br>
+for editing GT and AAL models and adjusting test generation parameters<br><br>
 Keyboard shortcuts:<br>
 <table align="left" cellpadding="2">
 <tr><td>Editing</td></tr>
-<tr><td><i>Tab</i></td><td>Complete/rotate through states and actions in GT editor</td></tr>
+<tr><td><i>Ctrl+S</i></td><td>Save (and update previews)</td></tr>
+<tr><td><i>Tab</i></td><td>Rotate through completions when editing GT or AAL</td></tr>
 <tr><td><i>Ctrl+C</i></td><td>Copy</td></tr>
 <tr><td><i>Ctrl+X</i></td><td>Cut</td></tr>
 <tr><td><i>Ctrl+V</i></td><td>Paste</td></tr>
@@ -296,9 +300,10 @@ Keyboard shortcuts:<br>
             self._set_gtFileName("noname.gt")
         else:
             self._set_gtFileName(path)
+        self.refreshImages()
 
     def newFileAAL(self, path=None):
-        self.editor.setPlainText('aal "" {\n'
+        self.editor.setPlainText('aal "noname" {\n'
                                  '    language: python {}\n'
                                  '\n'
                                  '    # preview-hide-vars: \n'
@@ -322,6 +327,7 @@ Keyboard shortcuts:<br>
             self._set_gtFileName("noname.py.aal")
         else:
             self._set_gtFileName(path)
+        self.refreshImages()
 
     def newConfFile(self, path):
         self.conf_editor.setPlainText("")
@@ -332,13 +338,17 @@ Keyboard shortcuts:<br>
     def saveFile(self):
         if self.edit.currentIndex() == EDITTAB_GT:
             print "[saving '%s']" % (self._gtFileName,)
-            file(self._gtFileName, "w").write(self.editor.toPlainText())
+            file(self._gtFileName, "w").write(_deleteTrailingWhitespace(self.editor.toPlainText()))
+            if self._menuOptionUpdateOnSave.isChecked():
+                self.refreshImages()
         else:
             if not self._confFileName or self._confFileName.startswith(self._gtFileName):
                 self.saveFileAs()
             else:
                 print "[saving '%s']" % (self._confFileName,)
-                file(self._confFileName, "w").write(self.conf_editor.toPlainText())
+                file(self._confFileName, "w").write(_deleteTrailingWhitespace(self.conf_editor.toPlainText()))
+                if self._menuOptionUpdateOnSave.isChecked():
+                    self.refreshImages()
 
     def saveFileAs(self):
         fileFormats = {'gt': "fMBT GT commands (*.gt)",
@@ -383,6 +393,8 @@ Keyboard shortcuts:<br>
             dialog = QtGui.QFileDialog()
             if self._fileDialogDirectory:
                 dialog.setDirectory(self._fileDialogDirectory)
+            else:
+                dialog.setDirectory(os.getcwd())
             if self.edit.currentIndex() == EDITTAB_GT:
                 dialog.setWindowTitle("Open model")
                 dialog.setNameFilters(["fMBT GT commands (*.gt)","fMBT AAL models (*.aal)","State machines (*.lsts)"])
@@ -409,10 +421,12 @@ Keyboard shortcuts:<br>
                     self._confFileName = None
                     self._doGenerateConf()
                 self._set_gtFileName(path)
+                self.refreshImages()
             else:
                 self.conf_editor.setPlainText(file(path).read())
                 self.conf_editor.setFocus()
                 self._set_confFileName(path)
+                self.refreshImages()
 
     def runcmd(self, cmd):
         print cmd
@@ -457,7 +471,7 @@ Keyboard shortcuts:<br>
         saved = 0
         gt_contents = self.editor.toPlainText()
         if self._refreshed_gt != gt_contents:
-            file(self._gtFileName, "w").write(gt_contents)
+            file(self._gtFileName, "w").write(_deleteTrailingWhitespace(gt_contents))
             self._refreshed_gt = gt_contents
             saved += 1
             if self._editingAAL(): # validate AAL
@@ -503,7 +517,7 @@ Keyboard shortcuts:<br>
             if conf_contents == "":
                 self._doGenerateConf()
             else:
-                file(self._confFileName, "w").write(conf_contents)
+                file(self._confFileName, "w").write(_deleteTrailingWhitespace(conf_contents))
             self._refreshed_conf = conf_contents
             saved += 2
         return saved
@@ -987,6 +1001,11 @@ on_inconc = "exit(2)"
                               lambda: (self.preview.setCurrentIndex(PREVIEWTAB_COV),
                                        self.preview_covimage.setFocus()),
                               "F8")
+        commandMenu.addSeparator()
+        self._menuOptionUpdateOnSave = QtGui.QAction("&Update preview on Save", self)
+        self._menuOptionUpdateOnSave.setCheckable(True)
+        self._menuOptionUpdateOnSave.setChecked(True)
+        commandMenu.addAction(self._menuOptionUpdateOnSave)
 
     def setupHelpMenu(self):
         helpMenu = QtGui.QMenu("&Help", self)
@@ -1206,21 +1225,17 @@ on_inconc = "exit(2)"
         self.editor.ensureCursorVisible()
 
     def refreshImages(self):
-        if time.time() - self._last_keypress < 2.0:
-            # Wait at least 2 secs from the last keypress event before
-            # refreshing.
-            return
-        if self.splitter.sizes()[1] == 0:
-            return
-        if self.autoSave() != 0:
-            if self.preview.currentIndex() == PREVIEWTAB_MODEL:
-                self.visualiseModel(change_tab = False)
-            elif self.preview.currentIndex() == PREVIEWTAB_TEST:
-                self.generateTest(change_tab = False)
-            elif self.preview.currentIndex() == PREVIEWTAB_DIST:
-                self.plotDistribution(change_tab = False)
-            elif self.preview.currentIndex() == PREVIEWTAB_COV:
-                self.plotCoverage(change_tab = False)
+        # if visualisation pages are hidden, don't refresh
+        if self.splitter.sizes()[1] == 0: return
+
+        if self.preview.currentIndex() == PREVIEWTAB_MODEL:
+            self.visualiseModel(change_tab = False)
+        elif self.preview.currentIndex() == PREVIEWTAB_TEST:
+            self.generateTest(change_tab = False)
+        elif self.preview.currentIndex() == PREVIEWTAB_DIST:
+            self.plotDistribution(change_tab = False)
+        elif self.preview.currentIndex() == PREVIEWTAB_COV:
+            self.plotCoverage(change_tab = False)
 
 class GTHighlighter(QtGui.QSyntaxHighlighter):
     def __init__(self, parent=None):
@@ -1378,8 +1393,7 @@ if __name__ == '__main__':
     window.show()
 
     timer = QtCore.QTimer()
-    timer.connect(timer, QtCore.SIGNAL("timeout()"), window.refreshImages)
-    timer.start(1000)
+    QtCore.QTimer.singleShot(300, window.refreshImages)
 
     app.exec_()
     removeTemporaryFiles(window._gtFileName)
