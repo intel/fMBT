@@ -67,6 +67,7 @@ import time
 import fmbt
 import atexit
 import urllib
+import tempfile
 import traceback
 
 sys.path.append(os.getcwd())
@@ -288,7 +289,7 @@ if __name__ == "__main__":
     # Parse arguments
     opts, remainder = getopt.gnu_getopt(
         sys.argv[1:], 'c:dhl:L:t:o:D:H:S:V',
-        ["debug", "help", "log-file=", "timeout=", "output=", 
+        ["debug", "help", "log-file=", "timeout=", "output=",
          "lsts-depth=", "lsts-hide-var=", "lsts-show-var=", "version"])
 
     for opt, arg in opts:
@@ -329,7 +330,7 @@ if __name__ == "__main__":
     if len(remainder) != 1:
         print __doc__
         error("aal filename missing")
-    
+
     aal_filename = remainder[0]
 
     if aal_filename.endswith(".aal"):
@@ -355,8 +356,12 @@ if __name__ == "__main__":
             error("No exceptions allowed, got '%s':\n%s" %
                   (e, traceback.format_exc()))
 
+    aalpy_fd, aalpy_filename = tempfile.mkstemp(suffix='.py', prefix='remote_pyaal.')
+    os.write(aalpy_fd, aal_code)
+    os.close(aalpy_fd)
+
     try:
-        exec aal_code
+        exec file(aalpy_filename)
     except Exception as e:
         code_lines = aal_code.split('\n')
         code_with_line_nums = ['%4s: %s' % (num+1, line)
@@ -364,6 +369,8 @@ if __name__ == "__main__":
         _log('\n'.join(code_with_line_nums))
         fmbtstderr("Executing %s failed: %s: %s" % (aal_filename, type(e).__name__, e))
         error("executing aal code failed:\n%s\n%s" % (e, traceback.format_exc()))
+    atexit.register(lambda: os.remove(aalpy_filename))
+
 
     try:
         # Generated AAL code exports generated AAL class as "Model".
