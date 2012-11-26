@@ -73,10 +73,11 @@ AAL_GUARDRE   = re.compile('guard()\s*{')
 AAL_BODYRE    = re.compile('body()\s*{')
 AAL_ADAPTERRE = re.compile('adapter()\s*{')
 
-GT_HIDESHOWRE = re.compile('preview-(show|hide)-(vars|variables):(.*)')
-GT_HIDETRANRE = re.compile('preview-hide-(trans|transitions):(.*)')
-GT_HIDEUNTRAVTRANRE = re.compile('preview-hide-untested-(trans|transitions):(.*)')
-GT_DEPTHRE = re.compile('preview-depth:(.*)')
+GT_HIDESHOWRE = re.compile(' preview-(show|hide)-(vars|variables):(.*)')
+GT_HIDESHOWTRANRE = re.compile(' preview-(show|hide)-(trans|transitions):(.*)')
+GT_HIDEUNTRAVTRANRE = re.compile(' preview-hide-untested-(trans|transitions):(.*)')
+GT_SHOWTRAVTRANRE = re.compile(' preview-show-tested-(trans|transitions):(.*)')
+GT_DEPTHRE = re.compile(' preview-depth:(.*)')
 
 def isModelFile(filename):
     if filename.lower().endswith(".conf"):
@@ -136,7 +137,7 @@ except Exception, e:
     error('Error importing Qt4 bindings from "%s": %s\nInstall PySide Python bindings for Qt4 or try different -q parameter.' % (opt_qt_bindings, e))
 
 def _deleteTrailingWhitespace(multilineString):
-    return '\n'.join([line.rstrip() for line in multilineString.split('\n')])
+    return '\n'.join([line.rstrip() for line in str(multilineString).split('\n')])
 
 class MyScaleEvents(QtCore.QObject):
     """
@@ -169,10 +170,15 @@ def asyncRuncmd(cmd, onThreadSuccess=lambda: None, onSuccess=lambda: None, onErr
     function calls that do not raise exceptions."""
     class Async(QtCore.QThread):
         def run(self):
-            if type(cmd) == str:
-                sys.stdout.write(cmd)
+            if type(cmd) == str or type(cmd) == tuple:
+                if type(cmd) == str:
+                    useShell = True
+                    sys.stdout.write(cmd)
+                else:
+                    useShell = False
+                    sys.stdout.write("%s '%s'" % (cmd[0], "' '".join(cmd[1:])))
                 sys.stdout.flush()
-                p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                p = subprocess.Popen(cmd, shell=useShell, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 output = p.stderr.read() + p.stdout.read()
                 sys.stdout.write('\n' + output + '\n')
                 sys.stdout.flush()
@@ -201,6 +207,7 @@ def asyncRuncmd(cmd, onThreadSuccess=lambda: None, onSuccess=lambda: None, onErr
         # too early.
         asyncRuncmd.finished[cmd] = asyncRuncmd.running[cmd]
         del asyncRuncmd.running[cmd]
+    if type(cmd) == list: cmd = tuple(cmd)
     if cmd in asyncRuncmd.running: return "Command already running"
     async = Async()
     async.connect(async, Async.signal_success, onSuccess, QtCore.Qt.QueuedConnection)
@@ -448,20 +455,29 @@ Keyboard shortcuts:<br>
         show_and_hide = [[], []]
         hide_transitions = []
         hide_untraversed_transitions = []
+        show_transitions = []
+        show_traversed_transitions = []
         preview_depth = 5
         pt = str(self.editor.toPlainText())
         for show_or_hide, _, var in GT_HIDESHOWRE.findall(pt):
             correct_list = ['show', 'hide'].index(show_or_hide)
             for v in var.replace(',', ' ').split():
                 show_and_hide[correct_list].append(v)
-        for _, regexp in GT_HIDETRANRE.findall(pt):
-            hide_transitions.append(regexp.lstrip())
+        for show_or_hide, _, regexp in GT_HIDESHOWTRANRE.findall(pt):
+            if show_or_hide == 'show':
+                show_transitions.append(regexp.lstrip())
+            else:
+                hide_transitions.append(regexp.lstrip())
         for _, regexp in GT_HIDEUNTRAVTRANRE.findall(pt):
             hide_untraversed_transitions.append(regexp.lstrip())
+        for _, regexp in GT_SHOWTRAVTRANRE.findall(pt):
+            show_traversed_transitions.append(regexp.lstrip())
         for depth in GT_DEPTHRE.findall(pt):
             try: preview_depth = int(depth)
             except: print 'Invalid preview depth: "%s" (integer expected).' % (preview_depth,)
-        return show_and_hide, preview_depth, hide_transitions, hide_untraversed_transitions
+        return (show_and_hide, preview_depth,
+                hide_transitions, hide_untraversed_transitions,
+                show_transitions, show_traversed_transitions)
 
     def autoSave(self):
         """
@@ -488,7 +504,7 @@ Keyboard shortcuts:<br>
                 validation_exitstatus = self.runcmd(aal2py_cmd)
                 if validation_exitstatus == 0:
                     show_hide_args = ""
-                    [show_vars, hide_vars], preview_depth, _, _ = self.aalPreviewArguments()
+                    [show_vars, hide_vars], preview_depth, _, _, _, _ = self.aalPreviewArguments()
                     for v in show_vars: show_hide_args += " -S '%s'" % (v,)
                     for v in hide_vars: show_hide_args += " -H '%s'" % (v,)
                     py2lsts_cmd = "remote_pyaal %s -o '%s'%s --lsts-depth %s '%s'" % (aal_ppflags, self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
@@ -568,18 +584,29 @@ Keyboard shortcuts:<br>
 
     def visualiseModel_havingTestGenerated(self, change_tab):
         imgname = self._gtFileName + ".gted-%stmp.states.png" % (os.getpid(),)
+        logparam = []
         try: file(self._logFileName)
         except: logparam = ""
-        else: logparam = "-l '%s'" % (self._logFileName)
+        else:
+            logparam.append("-l")
+            logparam.append(self._logFileName)
         if self._model_ok:
             if not self._test_ok: logparam = ""
-            _, _, previewHideTransitions, previewHideUTransitions = self.aalPreviewArguments()
-            hideparams = ""
+            _, _, previewHideTransitions, previewHideUTransitions, previewShowTransitions, previewShowTestedTransitions = self.aalPreviewArguments()
+            hideparams = []
             for regexp in previewHideTransitions:
-                hideparams += "-e '%s'" % (regexp,)
+                hideparams.append("-e")
+                hideparams.append(regexp)
             for regexp in previewHideUTransitions:
-                hideparams += "-E '%s'" % (regexp,)
-            cmd = "fmbt-view -f png %s %s -o '%s' '%s'" % (logparam, hideparams, imgname, self._lstsFileName)
+                hideparams.append("-E")
+                hideparams.append(regexp)
+            for regexp in previewShowTransitions:
+                hideparams.append("-s")
+                hideparams.append(regexp)
+            for regexp in previewShowTestedTransitions:
+                hideparams.append("-S")
+                hideparams.append(regexp)
+            cmd = ["fmbt-view", "-f", "png"] + logparam + hideparams + ["-o", imgname, self._lstsFileName]
             asyncRuncmd(cmd,
                         onThreadSuccess = self.pixmapLoader("model", imgname),
                         onSuccess = self.pixmapViewer("model"),
