@@ -29,7 +29,9 @@
 
 import datetime
 
-g_fmbt_adapterlogtimeformat="%s.%f"
+_g_fmbt_adapterlogtimeformat="%s.%f"
+_g_actionName = "undefined"
+_g_testStep = 0
 
 def fmbtlog(msg, flush=True):
     try: file("/tmp/fmbt.fmbtlog", "a").write("%s\n" % (msg,))
@@ -47,13 +49,19 @@ def setAdapterLogTimeFormat(strftime_format):
     """
     Use given time format string in timestamping adapterlog messages
     """
-    global g_fmbt_adapterlogtimeformat
-    g_fmbt_adapterlogtimeformat = strftime_format
+    global _g_fmbt_adapterlogtimeformat
+    _g_fmbt_adapterlogtimeformat = strftime_format
 
 def formatAdapterLogMessage(msg, fmt="%s %s\n"):
     """
     Return timestamped adapter log message
     """
     return fmt % (
-        datetime.datetime.now().strftime(g_fmbt_adapterlogtimeformat),
+        datetime.datetime.now().strftime(_g_fmbt_adapterlogtimeformat),
         msg)
+
+def getActionName():
+    return _g_actionName
+
+def getTestStep():
+    return _g_testStep
