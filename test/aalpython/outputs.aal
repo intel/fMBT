@@ -7,6 +7,8 @@ aal "outputs" {
 
     variables { found, exists, filenames, file_exists }
 
+    # preview-show-tested-transitions: iChange.*
+
     initial_state {
         pre   = "/tmp/fmbt.aalpython.file."
         filenames = [pre+"txt", pre+"jpg", pre+"png", pre+"tmp"]
@@ -78,5 +80,9 @@ aal "outputs" {
             if file_exists(filenames[3]) != found['tmp']:
                 return "o:Tmp changed"
         }
+    }
+
+    tag "exists['txt']", "exists['jpg']", "exists['png']" {
+        guard() { return eval(tag_name) }
     }
 }

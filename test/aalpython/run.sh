@@ -99,7 +99,8 @@ fmbt outputs.conf 2>test.verdict | tee outputs.log >> $LOGFILE
 (   fmbt-log outputs.log | grep -q 'o:Txt changed' && \
     fmbt-log outputs.log | grep -q 'o:Jpg changed' && \
     fmbt-log outputs.log | grep -q 'o:Png changed' && \
-    fmbt-log outputs.log | grep -q 'o:Tmp changed' && 
+    fmbt-log outputs.log | grep -q 'o:Tmp changed' && \
+    fmbt-log -f '$tg' outputs.log | grep -q "exists\['txt'\]" && \
     testpassed
 ) || testfailed
 
