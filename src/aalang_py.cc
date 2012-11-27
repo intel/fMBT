@@ -24,13 +24,13 @@
 std::string indent(int depth, std::string &s)
 {
   std::string rv;
-  
+
   int offset = 0; // original indentation
   int first_linebreak = s.find('\n');
   int first_nonspace = s.find_first_not_of(" \t\n\r");
   int line_start = 0;
   int line_end = 0;
-  
+
   /* search the first non-empty line, the indentation offset is
    * calculated based on that. */
   while (first_linebreak < first_nonspace) {
@@ -84,7 +84,7 @@ void aalang_py::set_name(std::string* name)
 }
 
 void aalang_py::set_namestr(std::string* _name)
-{ 
+{
   name=_name;
   s+="import aalmodel\n"
     "class _gen_"+*name+"(aalmodel.AALModel):\n"
@@ -114,7 +114,6 @@ void aalang_py::set_ainit(std::string* iai,const char* file,int line,int col)
 
 void aalang_py::set_tagname(std::string* name)
 {
-  s+="\n    tag" + to_string(tag_cnt) + "name = \""+*name+"\"\n";
   multiname.push_back(*name);
   delete name;
   tag = true;
@@ -122,7 +121,14 @@ void aalang_py::set_tagname(std::string* name)
 
 void aalang_py::next_tag()
 {
-  tag_cnt++;
+  for (unsigned int i = 0; i < multiname.size(); i++) {
+    s+="\n    tag" + to_string(tag_cnt) + "name = \""+multiname[i]+"\"\n";
+    /* tagXguard */
+    s+="    def tag" + to_string(tag_cnt) + "guard():\n" + variables;
+    s+="        tag_name = \"" + multiname[i] + "\"\n";
+    s+=indent(8,m_guard)+"\n";
+    tag_cnt++;
+  }
   multiname.clear();
   tag = false;
 }
@@ -130,15 +136,7 @@ void aalang_py::next_tag()
 void aalang_py::set_guard(std::string* gua,const char* file,int line,int col)
 {
   default_if_empty(*gua, "return True");
-  if (tag) {
-    s+="    def tag"+to_string(tag_cnt)+"guard():\n"+ variables;
-    if (gua->find("tag_name") != std::string::npos)
-      s+="        tag_name = '" + multiname[0] + "'\n";
-    s+=indent(8,*gua)+"\n";
-  }
-  else {
-    m_guard = *gua;
-  }
+  m_guard = *gua;
 }
 
 void aalang_py::set_push(std::string* p,const char* file,int line,int col)
@@ -181,10 +179,8 @@ void aalang_py::next_action()
 
     /* actionXguard */
     s+="    def action" + acnt + "guard():\n" + variables;
-    if (m_guard.find("action_name") != std::string::npos)
-      s+="        action_name = \"" + multiname[i] + "\"\n";
-    if (m_guard.find("action_index") != std::string::npos)
-      s+="        action_index = " + to_string(i) + "\n";
+    s+="        action_name = \"" + multiname[i] + "\"\n";
+    s+="        action_index = " + to_string(i) + "\n";
     s+="        try:\n" +
       indent(12,m_guard) + "\n" +
       "        except Exception as _aalException:\n" +
@@ -192,10 +188,8 @@ void aalang_py::next_action()
 
     /* actionXbody */
     s+="    def action"+acnt+"body():\n" + variables;
-    if (m_body.find("action_name") != std::string::npos)
-      s+="        action_name = \"" + multiname[i] + "\"\n";
-    if (m_body.find("action_index") != std::string::npos)
-      s+="        action_index = " + to_string(i) + "\n";
+    s+="        action_name = \"" + multiname[i] + "\"\n";
+    s+="        action_index = " + to_string(i) + "\n";
     s+="        try:\n" +
       indent(12,m_body)+"\n"
       "        except Exception as _aalException:\n"
@@ -203,10 +197,8 @@ void aalang_py::next_action()
 
     /* actionXadapter */
     s+="    def action"+acnt+"adapter():\n" + variables;
-    if (m_adapter.find("action_name") != std::string::npos)
-      s+="        action_name = \"" + multiname[i] + "\"\n";
-    if (m_adapter.find("action_index") != std::string::npos)
-      s+="        action_index = " + to_string(i) + "\n";
+    s+="        action_name = \"" + multiname[i] + "\"\n";
+    s+="        action_index = " + to_string(i) + "\n";
     s+=indent(8,m_adapter)+"\n";
     if (this_is_input) {
       s+="        return " +acnt + "\n";

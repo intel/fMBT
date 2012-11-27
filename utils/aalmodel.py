@@ -2,6 +2,7 @@ import copy
 import types
 import time
 import traceback
+import fmbt
 
 SILENCE = -3
 
@@ -20,6 +21,7 @@ class AALModel:
         self._variables['variable'] = lambda varname: self._variables[varname]
         self._variables['assign'] = lambda varname, v: self._variables.__setitem__(varname, v)
         self._stack = []
+        fmbt._g_testStep = 1
 
     def _get_all(self, property_name, itemtype):
         plist = []
@@ -55,6 +57,7 @@ class AALModel:
                             (handler_name, action_name, exc, rv))
 
     def reset(self):
+        fmbt._g_actionName = "undefined"
         rv = self.call(self.initial_state)
         self._push_variables = [v for v in self.initial_state.func_code.co_names
                                 if v in self._variables and type(eval(v, self._variables)) not in [
@@ -67,6 +70,7 @@ class AALModel:
     def adapter_execute(self, i, adapter_call_arguments = ()):
         if self._all_types[i-1] == "input":
             try:
+                fmbt._g_actionName = self._all_names[i-1]
                 return self.call(self._all_adapters[i-1], adapter_call_arguments)
             except Exception, exc:
                 if 'adapter_exception_handler' in self._variables:
@@ -79,8 +83,11 @@ class AALModel:
             return 0
 
     def model_execute(self, i):
+        fmbt._g_actionName = self._all_names[i-1]
         if self.call(self._all_guards[i-1]):
             self.call(self._all_bodies[i-1])
+            if len(self._stack) == 0:
+                fmbt._g_testStep += 1
             return i
         else:
             return 0
@@ -89,16 +96,18 @@ class AALModel:
         enabled_actions = []
         try:
             for index, guard in enumerate(self._all_guards):
+                fmbt._g_actionName = self._all_names[index]
                 if self.call(guard): enabled_actions.append(index + 1)
         except Exception, e:
             raise Exception('Error at guard() of "%s": %s: %s\n%s' % (
                 self._all_names[index], type(e).__name__, e, traceback.format_exc()))
         return enabled_actions
-    
+
     def getIActions(self):
         enabled_iactions = []
         try:
             for index, guard in enumerate(self._all_guards):
+                fmbt._g_actionName = self._all_names[index]
                 if self._all_types[index] == "input" and self.call(guard):
                     enabled_iactions.append(index + 1)
         except Exception, e:
@@ -109,6 +118,7 @@ class AALModel:
     def getprops(self):
         enabled_tags = []
         for index, guard in enumerate(self._all_tagguards):
+            fmbt._g_actionName = "undefined"
             if self.call(guard): enabled_tags.append(index + 1)
         return enabled_tags
 
@@ -150,6 +160,7 @@ class AALModel:
         while poll_more:
             for index, adapter in enumerate(self._all_adapters):
                 if self._all_types[index] != "output": continue
+                fmbt._g_actionName = self._all_names[index]
                 output_action = self.call(adapter)
                 observed_action = None
                 if type(output_action) == str:

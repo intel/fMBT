@@ -99,7 +99,8 @@ fmbt outputs.conf 2>test.verdict | tee outputs.log >> $LOGFILE
 (   fmbt-log outputs.log | grep -q 'o:Txt changed' && \
     fmbt-log outputs.log | grep -q 'o:Jpg changed' && \
     fmbt-log outputs.log | grep -q 'o:Png changed' && \
-    fmbt-log outputs.log | grep -q 'o:Tmp changed' && 
+    fmbt-log outputs.log | grep -q 'o:Tmp changed' && \
+    fmbt-log -f '$tg' outputs.log | grep -q "exists\['txt'\]" && \
     testpassed
 ) || testfailed
 
@@ -115,6 +116,11 @@ iStep2 - change handler
 oOutputAction
 fail[unidentified action]
 EOF
-fmbt adapter_exceptions.conf 2>> $LOGFILE | fmbt-log > observed-steps.txt || testfailed
-diff -u expected-steps.txt observed-steps.txt >> $LOGFILE || testfailed
+fmbt adapter_exceptions.conf 2>adapter_exception_handler.stderr | fmbt-log > observed-steps.txt || testfailed
+diff -u expected-steps.txt observed-steps.txt >>$LOGFILE || testfailed
+if ! grep -q 'raise Exception("unrecoverable error!")' adapter_exception_handler.stderr; then
+    cat adapter_exception_handler.stderr >>$LOGFILE
+    echo "fails because: AAL line that raised exception not shown in stderr" >>$LOGFILE
+    testfailed
+fi
 testpassed
