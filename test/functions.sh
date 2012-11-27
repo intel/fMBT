@@ -18,6 +18,7 @@
 
 teststep() {
     TESTSTEP_DESCRIPTION=""
+    TESTSTEP_PROGRESS="1"
     printf "%-50s" "$1"
     echo "##########################################" >>$LOGFILE
     echo "# $1" >>$LOGFILE
@@ -26,18 +27,26 @@ teststep() {
 teststep_quiet() {
     # Quiet teststep is reported to stdout only if failed
     TESTSTEP_DESCRIPTION=$(printf "%-50s" "$1")
+    TESTSTEP_PROGRESS="1"
     echo "##########################################" >>$LOGFILE
     echo "# $1" >>$LOGFILE
 }
 
 testpassed() {
+    if [ -z "$TESTSTEP_PROGRESS" ]; then
+	return
+    fi
     if [ -z "$TESTSTEP_DESCRIPTION" ]; then
         printf "passed.\n"
     fi
     echo "# passed." >>$LOGFILE
+    TESTSTEP_PROGRESS=""
 }
 
 testfailed() {
+    if [ -z "$TESTSTEP_PROGRESS" ]; then
+	return
+    fi
     if [ -z "$TESTSTEP_DESCRIPTION" ]; then
         printf "failed, see $LOGFILE\n"
     else
@@ -48,10 +57,14 @@ testfailed() {
     echo "### $LOGFILE CONTENTS ###"
     cat "$LOGFILE"
     echo "### END OF $LOGFILE ###"
+    TESTSTEP_PROGRESS=""
     exit 1
 }
 
 testskipped() {
+    if [ -z "$TESTSTEP_PROGRESS" ]; then
+	return
+    fi
     if [ -z "$TESTSTEP_DESCRIPTION" ]; then
         printf "skipped.\n"
     else
@@ -59,6 +72,7 @@ testskipped() {
         printf "skipped.\n"
     fi
     echo "# skipped." >>$LOGFILE
+    TESTSTEP_PROGRESS=""
 }
 
 check_file_exists() {
