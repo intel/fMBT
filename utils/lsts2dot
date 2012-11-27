@@ -47,12 +47,19 @@ Options:
   -o, --output=<filename>
           Write dot output to the file. Default: standard output.
 
+  -O, --erase-orphaned-states
+          Erase states that do not have any transitions.
+
   -s, --show-transitions=<regexp>
           Show transitions matching the regular expression.
 
   -S, --show-traversed-transitions=<regexp>
           Show transitions that match the regular expression and
           have been traversed in the log (see --log).
+
+  -U, --erase-unvisited-states
+          Erase states that have not been visited in the log (see
+          --log).
 """
 
 import sys
@@ -143,10 +150,11 @@ def colors(lsts_obj, testlog_fileobj):
 
 def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert_colors = False,
              erase_transitions = [], erase_untraversed = [],
-             show_transitions = [], show_traversed = []):
+             show_transitions = [], show_traversed = [],
+             erase_orphaned_states = False, erase_unvisited_states = False):
     outfileobj.write('digraph g {\n')
     outfileobj.write('    node [shape=box]\n')
-    l=lsts.reader(infileobj)
+    l = lsts.reader(infileobj)
 
     if logfile != None:
         tr_colors, state_colors = colors(l, logfile)
@@ -154,7 +162,7 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
         tr_colors, state_colors = {}, {}
 
     state2props = {int(l.get_header().initial_states): ["[initial state]"]}
-    actionnames=l.get_actionnames()
+    actionnames = l.get_actionnames()
 
     erase_all_actions = set([])
     erase_untraversed_actions = set([])
@@ -194,15 +202,19 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
             else:
                 state2props[state]=[prettyname]
 
+    states_with_transitions = set([])
     for source,outtrans in enumerate(l.get_transitions()):
         for dest,action in outtrans:
             if action in erase_all_actions: continue
             if action in erase_untraversed_actions:
                 if not (source, action, dest) in tr_colors: continue
+            if erase_orphaned_states:
+                states_with_transitions.add(source)
+                states_with_transitions.add(dest)
             a = actionnames[action]
             if loops_as_props and source==dest:
                 if source in state2props: state2props[source].append(a)
-                else: state2props[source]=[a]
+                else: state2props[source] = [a]
             else:
                 if tr_colors and (source, action, dest) in tr_colors:
                     normal_color = tr_colors[(source, action, dest)]
@@ -213,14 +225,18 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
                             colordata = ' color="%s"' % (COLOR_TR_INVERTED,)
                     else:
                         colordata = ' color="%s"' % (normal_color,)
-                elif tr_colors and invert_colors:
-                    colordata = ' color="%s"' % (COLOR_TR_INVERTED,)
                 else:
-                    colordata = ''
+                    if erase_unvisited_states: continue
+                    if tr_colors and invert_colors:
+                        colordata = ' color="%s"' % (COLOR_TR_INVERTED,)
+                    else:
+                        colordata = ''
                 outfileobj.write('    S%s -> S%s [label="%s"%s]\n'
                                  % (source,dest,a,colordata))
 
     for state in xrange(l.get_header().state_cnt):
+        if erase_orphaned_states and not state in states_with_transitions:
+            continue
         props = state2props.get(state, [])
         props.sort()
         colordata = ''
@@ -230,6 +246,8 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
                 if not (invert_colors and normal_color == COLOR_ST_VISITED):
                     colordata = ' fillcolor="%s" style="filled"' % (normal_color,)
             else:
+                if erase_unvisited_states:
+                    continue
                 if invert_colors:
                     colordata = ' fillcolor="%s" style="filled"' % (COLOR_ST_INVERTED,)
         outfileobj.write('    S%s [label="%s\\l"%s]\n'
@@ -237,8 +255,8 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
     outfileobj.write('}\n')
 
 if __name__=='__main__':
-    loops_as_props=False
-    invert_colors=False
+    loops_as_props = False
+    invert_colors = False
     infile = sys.stdin
     outfile = sys.stdout
     logfile = None
@@ -246,10 +264,13 @@ if __name__=='__main__':
     erase_untraversed = []
     show_transitions = []
     show_traversed = []
+    erase_unvisited_states = False
+    erase_orphaned_states = False
 
     opts, remainder = getopt.getopt(
-        sys.argv[1:], 'e:E:hi:l:o:s:S:V',
+        sys.argv[1:], 'e:E:hi:l:o:Os:S:UV',
         ['help', 'erase-transitions=', 'erase-untraversed-transitions=',
+         'erase-unvisited-states', 'erase-orphaned-states',
          'input=', 'invert-colors', 'output=', 'show-transitions=',
          'show-traversed-transitions=', 'loops-in-states', 'log=', 'version'])
 
@@ -280,6 +301,8 @@ if __name__=='__main__':
         elif opt in ['-o', '--output'] and not arg in ['', '-']:
             try: outfile = file(arg, 'w')
             except Exception, e: error('cannot open file for writing "%s": %s' % (arg, e))
+        elif opt in ['-O', '--erase-orphaned-states']:
+            erase_orphaned_states = True
         elif opt in ['-s', '--show-transitions']:
             try: show_transitions.append(re.compile(arg))
             except Exception, e:
@@ -288,11 +311,14 @@ if __name__=='__main__':
             try: show_traversed.append(re.compile(arg))
             except Exception, e:
                 error('bad regular expression for %s: "%s"' % (opt, arg))
+        elif opt in ['-U', '--erase-unvisited-states']:
+            erase_unvisited_states = True
         elif opt in ['--invert-colors']:
             invert_colors = True
 
     lsts2dot(infile, outfile, loops_as_props, logfile, invert_colors,
-             erase_transitions, erase_untraversed, show_transitions, show_traversed)
+             erase_transitions, erase_untraversed, show_transitions, show_traversed,
+             erase_orphaned_states, erase_unvisited_states)
 
     try: outfile.close()
     except: pass

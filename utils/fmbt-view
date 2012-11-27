@@ -40,12 +40,15 @@ print_help_and_quit()
     echo "          Erase transitions matching the regular expression"
     echo "          unless they have been traversed in the given log"
     echo "          (see -l)."
+    echo "  -O      Erase orphaned states, that is, states without any"
+    echo "          transitions."
     echo "  -s <regexp>"
     echo "          Show only transitions matching the regular expression."
     echo "  -S <regexp>"
     echo "          Show only transitions that match the regular"
     echo "          expression and have been traversed in the given log"
     echo "          (see -l)."
+    echo "  -U      Erase unvisited states."
     exit 0
 }
 
@@ -63,7 +66,9 @@ ERASE_TRANSITIONS=""
 ERASE_UNTRAVERSED=""
 SHOW_TRANSITIONS=""
 SHOW_TRAVERSED=""
-while getopts df:hil:o:ve:E:s:S: opt
+ERASE_ORPHANED_STATES=""
+ERASE_UNVISITED_STATES=""
+while getopts df:hil:o:ve:E:s:S:OU opt
 do
     case $opt in
         d) DEBUG=1;;
@@ -78,6 +83,8 @@ do
         E) ERASE_UNTRAVERSED=$ERASE_UNTRAVERSED"--erase-untraversed-transitions='$OPTARG' ";;
         s) SHOW_TRANSITIONS=$SHOW_TRANSITIONS"--show-transitions='$OPTARG' ";;
         S) SHOW_TRAVERSED=$SHOW_TRAVERSED"--show-traversed-transitions='$OPTARG' ";;
+        O) ERASE_ORPHANED_STATES="-O ";;
+        U) ERASE_UNVISITED_STATES="-U ";;
     esac
 done
 if [ "$OPTIND" != "$#" ]; then
@@ -134,7 +141,7 @@ for SIGNAL in INT QUIT TERM; do
     trap "remove_temp_files; trap $SIGNAL; kill -$SIGNAL \$\$" $SIGNAL
 done
 
-LSTS2DOT_COMMAND="$UTILPATH/lsts2dot --loops-in-states -i \"$INPUTFILE\" $COLORING $ERASE_TRANSITIONS $ERASE_UNTRAVERSED $SHOW_TRANSITIONS $SHOW_TRAVERSED $LOGFILE >$DOTFILE 2>$ERRORFILE"
+LSTS2DOT_COMMAND="$UTILPATH/lsts2dot --loops-in-states -i \"$INPUTFILE\" $COLORING $ERASE_TRANSITIONS $ERASE_UNTRAVERSED $SHOW_TRANSITIONS $SHOW_TRAVERSED $ERASE_ORPHANED_STATES $ERASE_UNVISITED_STATES $LOGFILE >$DOTFILE 2>$ERRORFILE"
 
 if [ "$DEBUG" == "1" ]; then
     echo Run: $LSTS2DOT_COMMAND
