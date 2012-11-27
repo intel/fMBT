@@ -27,7 +27,7 @@ class Coverage_Const: public Coverage {
 public:
 
   Coverage_Const(Log&l, std::string& params): Coverage(l) {
-    val=atoi(params.c_str());
+    val=atof(params.c_str());
   }
 
   virtual ~Coverage_Const() { }
@@ -50,7 +50,7 @@ public:
 
 
 protected:
-  int val;
+  float val;
 };
 
 #endif
