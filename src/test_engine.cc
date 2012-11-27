@@ -321,13 +321,17 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 	actions[0] = Alphabet::TIMEOUT;
 	log.print("<TIMEOUT %i %i/>\n",Adapter::current_time.tv_sec,
 		  end_time);
-        if (-1 != (condition_i = matching_end_condition(step_count)))
+        if (-1 != (condition_i = matching_end_condition(step_count,actions[0])))
           goto out;
+	
+	// TIMEOUT means that testing has run out of time
+	// before adapter observed output. There should have
+	// been a matching end condition that defines the
+	// verdict for this case.
+	// If not, let's return an error.
+	return stop_test(Verdict::ERROR,
+			 "TIMEOUT while communicating with adapter");
 
-        abort(); // TIMEOUT means that testing has run out of time
-                 // before adapter observed output. There should have
-                 // been a matching end condition that defines the
-                 // verdict for this case.
       } else if (value==Alphabet::SILENCE) {
 	actions.resize(1);
 	actions[0] = Alphabet::SILENCE;
