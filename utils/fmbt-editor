@@ -77,6 +77,8 @@ GT_HIDESHOWRE = re.compile(' preview-(show|hide)-(vars|variables):(.*)')
 GT_HIDESHOWTRANRE = re.compile(' preview-(show|hide)-(trans|transitions):(.*)')
 GT_HIDEUNTRAVTRANRE = re.compile(' preview-hide-untested-(trans|transitions):(.*)')
 GT_SHOWTRAVTRANRE = re.compile(' preview-show-tested-(trans|transitions):(.*)')
+GT_HIDESTATES = re.compile(' preview-hide-states:((unvisited)|(orphaned)|,| )*')
+
 GT_DEPTHRE = re.compile(' preview-depth:(.*)')
 
 def isModelFile(filename):
@@ -457,6 +459,8 @@ Keyboard shortcuts:<br>
         hide_untraversed_transitions = []
         show_transitions = []
         show_traversed_transitions = []
+        hide_states_orphaned = False
+        hide_states_unvisited = False
         preview_depth = 5
         pt = str(self.editor.toPlainText())
         for show_or_hide, _, var in GT_HIDESHOWRE.findall(pt):
@@ -472,12 +476,18 @@ Keyboard shortcuts:<br>
             hide_untraversed_transitions.append(regexp.lstrip())
         for _, regexp in GT_SHOWTRAVTRANRE.findall(pt):
             show_traversed_transitions.append(regexp.lstrip())
+        for fields in GT_HIDESTATES.findall(pt):
+            if "orphaned" in fields:
+                hide_states_orphaned = True
+            if "unvisited" in fields:
+                hide_states_unvisited = True
         for depth in GT_DEPTHRE.findall(pt):
             try: preview_depth = int(depth)
             except: print 'Invalid preview depth: "%s" (integer expected).' % (preview_depth,)
         return (show_and_hide, preview_depth,
                 hide_transitions, hide_untraversed_transitions,
-                show_transitions, show_traversed_transitions)
+                show_transitions, show_traversed_transitions,
+                hide_states_orphaned, hide_states_unvisited)
 
     def autoSave(self):
         """
@@ -504,7 +514,7 @@ Keyboard shortcuts:<br>
                 validation_exitstatus = self.runcmd(aal2py_cmd)
                 if validation_exitstatus == 0:
                     show_hide_args = ""
-                    [show_vars, hide_vars], preview_depth, _, _, _, _ = self.aalPreviewArguments()
+                    [show_vars, hide_vars], preview_depth, _, _, _, _, _, _ = self.aalPreviewArguments()
                     for v in show_vars: show_hide_args += " -S '%s'" % (v,)
                     for v in hide_vars: show_hide_args += " -H '%s'" % (v,)
                     py2lsts_cmd = "remote_pyaal %s -o '%s'%s --lsts-depth %s '%s'" % (aal_ppflags, self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
@@ -592,7 +602,7 @@ Keyboard shortcuts:<br>
             logparam.append(self._logFileName)
         if self._model_ok:
             if not self._test_ok: logparam = ""
-            _, _, previewHideTransitions, previewHideUTransitions, previewShowTransitions, previewShowTestedTransitions = self.aalPreviewArguments()
+            _, _, previewHideTransitions, previewHideUTransitions, previewShowTransitions, previewShowTestedTransitions, previewEraseOrphanedStates, previewEraseUnvisitedStates = self.aalPreviewArguments()
             hideparams = []
             for regexp in previewHideTransitions:
                 hideparams.append("-e")
@@ -606,6 +616,10 @@ Keyboard shortcuts:<br>
             for regexp in previewShowTestedTransitions:
                 hideparams.append("-S")
                 hideparams.append(regexp)
+            if previewEraseOrphanedStates:
+                hideparams.append("-O")
+            if previewEraseUnvisitedStates:
+                hideparams.append("-U")
             cmd = ["fmbt-view", "-f", "png"] + logparam + hideparams + ["-o", imgname, self._lstsFileName]
             asyncRuncmd(cmd,
                         onThreadSuccess = self.pixmapLoader("model", imgname),

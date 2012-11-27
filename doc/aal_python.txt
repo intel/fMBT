@@ -298,6 +298,14 @@ following special comments understood by the editor.
         expression and the transitions have not been executed in the
         generated test.
 
+# preview-hide-states: [unvisited] [orphaned]
+
+        unvisited: hide states that have not been visited in the test.
+
+        orphaned: hide states where all incoming and outcoming
+        transitions have been hidden because of
+        preview-show-[tested-]trans or preview-hide-[untested-]trans.
+
 # preview-show-trans: <regular expression>
 
         Show only transitions where action matches the regular
