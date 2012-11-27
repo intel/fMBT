@@ -298,6 +298,17 @@ following special comments understood by the editor.
         expression and the transitions have not been executed in the
         generated test.
 
+# preview-show-trans: <regular expression>
+
+        Show only transitions where action matches the regular
+        expression.
+
+# preview-show-tested-trans: <regular expression>
+
+        Show only transitions where action matches the regular
+        expression and the transitions have been executed in the
+        generated test.
+
 
 Special variables and functions in AAL/Python
 ---------------------------------------------
