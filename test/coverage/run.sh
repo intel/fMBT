@@ -453,3 +453,4 @@ if (( $(fmbt-log -f '$sc' steps.log | grep 0.000000 | wc -l) < 5 )); then
     echo "and twice a two-step if(0) branch expected." >>$LOGFILE
     testfailed
 fi
+testpassed
