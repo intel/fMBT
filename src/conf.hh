@@ -52,7 +52,7 @@ class Conf:public Writable {
     End_condition *ec = new End_status_error(Verdict::ERROR,"");
     add_end_condition(ec);
 
-    set_on_error("exit(1)");
+    set_on_error("exit(4)");
     set_on_fail("interactive");
     set_on_pass("exit(0)");
     set_on_inconc("exit(1)");
