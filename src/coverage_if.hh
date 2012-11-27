@@ -250,6 +250,9 @@ public:
   virtual float getCoverage() {
     float cc=condition->getCoverage();
     if (cc>=1.0) {
+      if (else_c) {
+	return then_c->getCoverage();
+      }
       return cc+then_c->getCoverage();
     }
 
