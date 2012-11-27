@@ -20,6 +20,7 @@
 #include "end_condition.hh"
 #include "adapter.hh"
 #include "model.hh"
+#include "coverage.hh"
 #include <stdlib.h>
 
 #include <stdio.h> // DEBUG
@@ -78,6 +79,24 @@ bool End_condition_duration::match(int step_count,int state, int action,int last
        && Adapter::current_time.tv_usec >= param_long)
       ) return true;
   
+  return false;
+}
+
+bool End_status_error::match(int step_count,int state, int action,
+			     int last_step_cov_growth,Heuristic& heuristic)
+{
+  if (!heuristic.status) {
+    er="Heuristic error:"+heuristic.errormsg;
+    return true;
+  }
+  if (!heuristic.get_model()->status) {
+    er="Model error:"+heuristic.get_model()->errormsg;
+    return true;
+  }
+  if (!heuristic.get_coverage()->status) {
+    er="Coverage error:"+heuristic.get_coverage()->errormsg;
+    return true;
+  }
   return false;
 }
 

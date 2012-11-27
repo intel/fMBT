@@ -39,7 +39,8 @@ public:
     DURATION,
     NOPROGRESS,
     DEADLOCK,
-    ACTION
+    ACTION,
+    STATUS
   } Counter;
 
   End_condition(Verdict::Verdict v, const std::string& p);
@@ -182,10 +183,10 @@ class End_condition_noprogress: public End_condition {
 public:
   End_condition_noprogress(Verdict::Verdict v, const std::string& p):
     End_condition(v,p) {
+    counter = NOPROGRESS;
     er="no progress limit reached";
     param_long = atol(param.c_str());
     status = true;
-    counter = NOPROGRESS;
   }
   virtual ~End_condition_noprogress() {}
   virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic) {
@@ -200,9 +201,9 @@ class End_condition_deadlock: public End_condition {
 public:
   End_condition_deadlock(Verdict::Verdict v, const std::string& p):
     End_condition(v,p) {
+    counter = DEADLOCK;
     er="deadlock reached";
     status = true;
-    counter = DEADLOCK;
   }
   virtual ~End_condition_deadlock() {}
   virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic) {
@@ -214,13 +215,24 @@ public:
   }
 };
 
+class End_status_error: public End_condition {
+public:
+  End_status_error(Verdict::Verdict v, const std::string& p):
+    End_condition(v,p) {
+    counter = STATUS;
+    status = true;
+  }
+  virtual ~End_status_error() {}
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic);
+};
+
 class End_condition_action: public End_condition {
 public:
   End_condition_action(Verdict::Verdict v, const std::string& p):
     End_condition(v,p) {
+    counter = ACTION;
     er="executed break action";
     status = true;
-    counter = ACTION;
   }
   virtual ~End_condition_action() {}
   virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic) {
