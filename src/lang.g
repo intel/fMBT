@@ -131,10 +131,10 @@ tstr:   string          {
         } ;
 
 push: 'push' '{' bstr '}' { 
-            obj->set_push($2.str); 
+            obj->set_push($2.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col); 
         } ;
 
-pop:  'pop' '{' bstr '}' { obj->set_pop ($2.str); } ;
+pop:  'pop' '{' bstr '}' { obj->set_pop ($2.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col); } ;
 
 language: 'language:' cpp    { obj=new aalang_cpp  ; } starter ';'? |
           'language:' java   { obj=new aalang_java ; } starter ';'? |
@@ -145,34 +145,36 @@ cpp: 'C++' | 'cpp' | 'c++';
 java: 'oak' | 'green' | 'java';
 
 starter: |
-        '{' bstr '}' { obj->set_starter($1.str); };
+        '{' bstr '}' { obj->set_starter($1.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col); };
 
 python: 'Python' | 'python' | 'py';
 
-variables: 'variables' '{' bstr '}' { obj->set_variables($2.str); };
+variables: 'variables' '{' bstr '}' { obj->set_variables($2.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col); };
 
-istate: 'initial_state' '{' bstr '}' { obj->set_istate($2.str); } ;
+istate: 'initial_state' '{' bstr '}' { obj->set_istate($2.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col); } ;
 
-ainit: 'adapter_init' '{' bstr '}' { obj->set_ainit($2.str); } ;
+ainit: 'adapter_init' '{' bstr '}' { obj->set_ainit($2.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col); } ;
 
 guard: 'guard' '()' '{' bstr '}' {
             if (guard) {
                 raise_error($n0.start_loc,(Parser*)_parser);
             } else {
-                obj->set_guard($3.str); guard=true; 
+                obj->set_guard($3.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col); guard=true; 
             }
         } ;
 body: ('body'|'model') '()' '{' bstr '}' { if (body) {
                 raise_error($n0.start_loc,(Parser*)_parser);
             } else {
-                obj->set_body($3.str); body=true;
+                obj->set_body($3.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col);
+                body=true;
             }
         } ;
 
 adapter: 'adapter' '()' '{' bstr '}' { if (adapter) {
                 raise_error($n0.start_loc,(Parser*)_parser);
             } else {
-                obj->set_adapter($3.str); adapter=true;
+                obj->set_adapter($3.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col);
+                adapter=true;
             }
         };
 

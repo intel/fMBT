@@ -30,29 +30,29 @@ public:
   virtual void set_namestr(std::string* name)  = 0;
   virtual void set_tagname(std::string* name)  = 0;
   virtual void next_tag()                      = 0;
-  virtual void set_variables(std::string* var) = 0;
-  virtual void set_istate(std::string* ist)    = 0;
-  virtual void set_ainit(std::string* iai)     = 0;
-  virtual void set_guard(std::string* gua)     = 0;
+  virtual void set_variables(std::string* var,const char*,int,int) = 0;
+  virtual void set_istate(std::string* ist,const char*,int,int)    = 0;
+  virtual void set_ainit(std::string* iai,const char*,int,int)     = 0;
+  virtual void set_guard(std::string* gua,const char*,int,int)     = 0;
 
-  virtual void set_push(std::string* p) = 0;
-  virtual void set_pop(std::string* p) = 0;
+  virtual void set_push(std::string* p,const char*,int,int)        = 0;
+  virtual void set_pop(std::string* p,const char*,int,int)         = 0;
 
   virtual void empty_guard() {
-    set_guard(&default_guard);
+    set_guard(&default_guard,"default",0,0);
   }
-  virtual void set_body(std::string* bod) = 0;
+  virtual void set_body(std::string* bod,const char*, int, int) = 0;
   virtual void empty_body() {
-    set_body(&default_body);
+    set_body(&default_body,"default",0,0);
   }
-  virtual void set_adapter(std::string* ada) = 0;
+  virtual void set_adapter(std::string* ada,const char*,int,int) = 0;
   virtual void empty_adapter() {
-    set_adapter(&default_adapter);
+    set_adapter(&default_adapter,"default",0,0);
   }
   
   virtual void next_action() = 0;
   virtual std::string stringify() = 0;
-  virtual void set_starter(std::string* st) = 0;
+  virtual void set_starter(std::string* st,const char*, int, int) = 0;
 protected:
   std::string default_guard;
   std::string default_body;

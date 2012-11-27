@@ -45,10 +45,17 @@ aalang_cpp::~aalang_cpp()
     delete name;
 }
 
-
-void aalang_cpp::set_starter(std::string* st)
+std::string to_line(const char* f,int line)
 {
-  s+=*st;
+  if (line) {
+    return "\n#line "+to_string(line)+" \""+f+"\"\n";
+  }
+  return "";
+}
+
+void aalang_cpp::set_starter(std::string* st,const char* file,int line,int col)
+{
+  s+=to_line(file,line)+*st;
   delete st;
 }
 
@@ -69,31 +76,37 @@ void aalang_cpp::set_namestr(std::string* _name)
   s+="class _gen_"+*name+":public aal {\nprivate:\n\t";
 }
 
-void aalang_cpp::set_variables(std::string* var)
+void aalang_cpp::set_variables(std::string* var,const char* file,int line,int col)
 {
   s+="//variables\n"+*var+"\n";
   delete var;
 }
 
-void aalang_cpp::set_istate(std::string* ist)
+void aalang_cpp::set_istate(std::string* ist,const char* file,int line,int col)
 {
-  istate=ist;
+  if (ist) {
+    istate=new std::string(to_line(file,line)+*ist);
+    delete ist;
+  }
 }
 
-void aalang_cpp::set_ainit(std::string* iai)
+void aalang_cpp::set_ainit(std::string* iai,const char* file,int line,int col)
 {
-  ainit=iai;
+  if (iai) {
+    ainit=new std::string(to_line(file,line)+*iai);
+    delete iai;
+  }
 }
 
-void aalang_cpp::set_push(std::string* p)
+void aalang_cpp::set_push(std::string* p,const char* file,int line,int col)
 {
-  push=*p;
+  push=to_line(file,line)+*p;
   delete p;
 }
 
-void aalang_cpp::set_pop(std::string* p)
+void aalang_cpp::set_pop(std::string* p,const char* file,int line,int col)
 {
-  pop=*p;
+  pop=to_line(file,line)+*p;
   delete p;
 }
 
@@ -116,29 +129,29 @@ void aalang_cpp::next_tag()
   tag=false;
 }
 
-void aalang_cpp::set_guard(std::string* gua)
+void aalang_cpp::set_guard(std::string* gua,const char* file,int line,int col)
 {
   if (tag) {
-    s+="bool tag"+to_string(tag_cnt)+"_guard() {\n"+
+    s+=to_line(file,line)+"bool tag"+to_string(tag_cnt)+"_guard() {\n"+
       *gua+"}\n";
   } else {
-    s+="bool action"+to_string(action_cnt)+"_guard() {\n"+
+    s+=to_line(file,line)+"bool action"+to_string(action_cnt)+"_guard() {\n"+
       *gua+"}\n";
   }
   if (gua!=&default_guard) 
     delete gua;
 }
 
-void aalang_cpp::set_body(std::string* bod)
+void aalang_cpp::set_body(std::string* bod,const char* file,int line,int col)
 {
-  s+="void action"+to_string(action_cnt)+"_body() {\n"+*bod+"}\n";
+  s+=to_line(file,line)+"void action"+to_string(action_cnt)+"_body() {\n"+*bod+"}\n";
   if (bod!=&default_body) 
     delete bod;
 }
 
-void aalang_cpp::set_adapter(std::string* ada)
+void aalang_cpp::set_adapter(std::string* ada,const char* file,int line,int col)
 {
-  s+="int action" + to_string(action_cnt) + "_adapter(const char* param) {\n" +
+  s+=to_line(file,line)+"int action" + to_string(action_cnt) + "_adapter(const char* param) {\n" +
       *ada + "\n"
       "\treturn " + to_string(action_cnt) + ";\n"
       "}\n";

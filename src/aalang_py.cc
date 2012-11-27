@@ -72,7 +72,7 @@ void default_if_empty(std::string& s, const std::string& default_value)
   if (first_nonspace == std::string::npos) s = default_value;
 }
 
-void aalang_py::set_starter(std::string* st)
+void aalang_py::set_starter(std::string* st,const char* file,int line,int col)
 {
   s+=indent(0, *st)+"\n";
 }
@@ -92,19 +92,19 @@ void aalang_py::set_namestr(std::string* _name)
     "        aalmodel.AALModel.__init__(self, globals())\n";
 }
 
-void aalang_py::set_variables(std::string* var)
+void aalang_py::set_variables(std::string* var,const char* file,int line,int col)
 {
   variables="        global " + indent(0,*var) + "\n";
   delete var;
 }
 
-void aalang_py::set_istate(std::string* ist)
+void aalang_py::set_istate(std::string* ist,const char* file,int line,int col)
 {
   s += "\n    def initial_state():\n" + variables +
     indent(8, *ist) + "\n";
 }
 
-void aalang_py::set_ainit(std::string* iai)
+void aalang_py::set_ainit(std::string* iai,const char* file,int line,int col)
 {
   std::string r("return 1");
   s += "\n    def adapter_init(self):\n" + variables +
@@ -127,7 +127,7 @@ void aalang_py::next_tag()
   tag = false;
 }
 
-void aalang_py::set_guard(std::string* gua)
+void aalang_py::set_guard(std::string* gua,const char* file,int line,int col)
 {
   default_if_empty(*gua, "return True");
   if (tag) {
@@ -141,25 +141,25 @@ void aalang_py::set_guard(std::string* gua)
   }
 }
 
-void aalang_py::set_push(std::string* p)
+void aalang_py::set_push(std::string* p,const char* file,int line,int col)
 {
   push=*p;
   delete p;
 }
 
-void aalang_py::set_pop(std::string* p)
+void aalang_py::set_pop(std::string* p,const char* file,int line,int col)
 {
   pop=*p;
   delete p;
 }
 
-void aalang_py::set_body(std::string* bod)
+void aalang_py::set_body(std::string* bod,const char* file,int line,int col)
 {
   default_if_empty(*bod, "pass");
   m_body = *bod;
 }
 
-void aalang_py::set_adapter(std::string* ada)
+void aalang_py::set_adapter(std::string* ada,const char* file,int line,int col)
 {
   default_if_empty(*ada, "pass");
   m_adapter = *ada;

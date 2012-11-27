@@ -34,19 +34,19 @@ public:
   virtual void set_namestr(std::string* name);
   virtual void set_tagname(std::string* name);
   virtual void next_tag();
-  virtual void set_variables(std::string* var);
-  virtual void set_istate(std::string* ist);
-  virtual void set_ainit(std::string* iai);
-  virtual void set_guard(std::string* gua);
+  virtual void set_variables(std::string* var,const char*,int,int);
+  virtual void set_istate(std::string* ist,const char*,int,int);
+  virtual void set_ainit(std::string* iai,const char*,int,int);
+  virtual void set_guard(std::string* gua,const char*,int,int);
 
-  virtual void set_push(std::string* p);
-  virtual void set_pop(std::string* p);
+  virtual void set_push(std::string* p,const char*,int,int);
+  virtual void set_pop(std::string* p,const char*,int,int);
 
-  virtual void set_body(std::string* bod);
-  virtual void set_adapter(std::string* ada);
+  virtual void set_body(std::string* bod,const char*,int,int);
+  virtual void set_adapter(std::string* ada,const char*,int,int);
   virtual void next_action();
   virtual std::string stringify();
-  virtual void set_starter(std::string* st);
+  virtual void set_starter(std::string* st,const char*,int,int);
 private:
   void factory_register();
 

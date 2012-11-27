@@ -42,7 +42,7 @@ aalang_java::~aalang_java()
 }
 
 
-void aalang_java::set_starter(std::string* st)
+void aalang_java::set_starter(std::string* st,const char* file,int line,int col)
 {
   s+=*st;
   delete st;
@@ -64,30 +64,30 @@ void aalang_java::set_namestr(std::string* _name)
   s+="public class "+*name+"{\n\t";
 }
 
-void aalang_java::set_variables(std::string* var)
+void aalang_java::set_variables(std::string* var,const char* file,int line,int col)
 {
   s+="//variables\n"+*var+"\n";
   delete var;
 }
 
-void aalang_java::set_istate(std::string* ist)
+void aalang_java::set_istate(std::string* ist,const char* file,int line,int col)
 {
   istate=ist;
 }
 
-void aalang_java::set_ainit(std::string* iai)
+void aalang_java::set_ainit(std::string* iai,const char* file,int line,int col)
 {
   ainit=iai;
 }
 
 
-void aalang_java::set_push(std::string* p)
+void aalang_java::set_push(std::string* p,const char* file,int line,int col)
 {
   push=*p;
   delete p;
 }
 
-void aalang_java::set_pop(std::string* p)
+void aalang_java::set_pop(std::string* p,const char* file,int line,int col)
 {
   pop=*p;
   delete p;
@@ -112,7 +112,7 @@ void aalang_java::next_tag()
   tag=false;
 }
 
-void aalang_java::set_guard(std::string* gua)
+void aalang_java::set_guard(std::string* gua,const char* file,int line,int col)
 {
   if (tag) {
     s+="boolean tag"+to_string(tag_cnt)+"_guard() {\n"+
@@ -125,14 +125,14 @@ void aalang_java::set_guard(std::string* gua)
     delete gua;
 }
 
-void aalang_java::set_body(std::string* bod)
+void aalang_java::set_body(std::string* bod,const char* file,int line,int col)
 {
   s+="void action"+to_string(action_cnt)+"_body() {\n"+*bod+"}\n";
   if (bod!=&default_body) 
     delete bod;
 }
 
-void aalang_java::set_adapter(std::string* ada)
+void aalang_java::set_adapter(std::string* ada,const char* file,int line,int col)
 {
   s+="int action" + to_string(action_cnt) + "_adapter() {\n" +
     "\tif (true) {\n"+
