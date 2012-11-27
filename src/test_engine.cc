@@ -241,6 +241,11 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 	      Adapter::current_time.tv_usec);
 
     while (adapter.observe(actions)>0) {
+
+      if (!adapter.status) {
+	return stop_test(Verdict::ERROR, ("Adapter error"+adapter.errormsg).c_str());
+      }
+
       step_count++;
       action = policy.choose(actions);
       if ((action>0)&&((unsigned)action>=heuristic.get_model()->getActionNames().size())) {
@@ -289,6 +294,11 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       }      
 
       int ret=adapter.observe(actions,true);
+
+      if (!adapter.status) {
+	return stop_test(Verdict::ERROR, ("Adapter error"+adapter.errormsg).c_str());
+      }
+
       if (ret!=Alphabet::SILENCE && ret!=Alphabet::TIMEOUT) {
 	return stop_test(Verdict::FAIL, "response on deadlock");
       }
@@ -299,6 +309,11 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       log.print("<state type=\"output only\"/>\n");
 
       int value = adapter.observe(actions,true);
+
+      if (!adapter.status) {
+	return stop_test(Verdict::ERROR, ("Adapter error"+adapter.errormsg).c_str());
+      }
+
       log.print("<observe %i/>\n",value);
 
       if (value==Alphabet::TIMEOUT) {
@@ -308,6 +323,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 		  end_time);
         if (-1 != (condition_i = matching_end_condition(step_count)))
           goto out;
+
         abort(); // TIMEOUT means that testing has run out of time
                  // before adapter observed output. There should have
                  // been a matching end condition that defines the
@@ -342,6 +358,11 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       actions[0]=action;
       log_adapter_suggest(log, adapter, actions[0]);
       adapter.execute(actions);
+
+      if (!adapter.status) {
+	return stop_test(Verdict::ERROR, ("Adapter error"+adapter.errormsg).c_str());
+      }
+
       if (actions.empty()) {
         return stop_test(Verdict::ERROR, "adapter communication failure");
       }
