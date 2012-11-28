@@ -6,6 +6,12 @@ import fmbt
 
 SILENCE = -3
 
+def setCodeFileLine(c, filename, lineno):
+    return types.CodeType(
+        c.co_argcount, c.co_nlocals, c.co_stacksize, c.co_flags,
+        c.co_code, c.co_consts, c.co_names, c.co_varnames,
+        filename, c.co_name, lineno, c.co_lnotab, c.co_freevars)
+
 class AALModel:
     def __init__(self, model_globals):
         self._all_guards = self._get_all("guard", "action")
@@ -57,21 +63,32 @@ class AALModel:
                             (handler_name, action_name, exc, rv))
 
     def reset(self):
+        # initialize model
         fmbt._g_actionName = "undefined"
         rv = self.call(self.initial_state)
-        self._push_variables = [v for v in self.initial_state.func_code.co_names
-                                if v in self._variables and type(eval(v, self._variables)) not in [
-                types.ModuleType, types.FunctionType, types.ClassType]]
+        self._push_variables = [
+            v for v in self.initial_state.func_code.co_names
+            if (v in self._variables and
+                type(eval(v, self._variables)) not in [types.ModuleType, types.FunctionType, types.ClassType])
+            ]
         return rv
 
-    def adapter_init(self):
-        return 1
+    def adapter_init():
+        return True
+
+    def init(self):
+        # initialize adapter
+        fmbt._g_actionName = "undefined"
+        rv = self.call(self.adapter_init)
+        return rv
 
     def adapter_execute(self, i, adapter_call_arguments = ()):
         if self._all_types[i-1] == "input":
             try:
                 fmbt._g_actionName = self._all_names[i-1]
-                return self.call(self._all_adapters[i-1], adapter_call_arguments)
+                rv = self.call(self._all_adapters[i-1], adapter_call_arguments)
+                if rv == None: return True
+                else: return rv
             except Exception, exc:
                 if 'adapter_exception_handler' in self._variables:
                     return self.call_exception_handler('adapter_exception_handler', self._all_names[i-1], exc)

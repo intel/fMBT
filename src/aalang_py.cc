@@ -108,7 +108,7 @@ void aalang_py::set_istate(std::string* ist,const char* file,int line,int col)
 void aalang_py::set_ainit(std::string* iai,const char* file,int line,int col)
 {
   std::string r("return 1");
-  s += "\n    def adapter_init(self):\n" + variables +
+  s += "\n    def adapter_init():\n" + variables +
     indent(8, *iai) + "\n" + indent(8, r) + "\n";
 }
 
