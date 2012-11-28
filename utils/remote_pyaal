@@ -159,7 +159,10 @@ class RemoteAALBridge:
                     fmbtstderr("%s" % (e,))
                     error(str(e))
             elif cmd == "mp":
-                put_list(self._aal.getprops())
+                try:    put_list(self._aal.getprops())
+                except Exception, e:
+                    fmbtstderr('Error at a tag: %s: %s\n%s' % (type(e).__name__, e, traceback.format_exc()))
+                    sys.exit(1)
             elif cmd == "mr":
                 try:    self._aal.reset()
                 except Exception, e:

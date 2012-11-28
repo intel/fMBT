@@ -96,22 +96,30 @@ void aalang_py::set_namestr(std::string* _name)
 void aalang_py::set_variables(std::string* var,const char* file,int line,int col)
 {
   variables="        global " + indent(0,*var) + "\n";
+  m_lines_in_vars = std::count(variables.begin(), variables.end(), '\n');
   delete var;
 }
 
 void aalang_py::set_istate(std::string* ist,const char* file,int line,int col)
 {
-  s += "\n    def initial_state():\n" + variables +
+  const std::string funcname("initial_state");
+  s += "\n    def " + funcname + "():\n" + variables +
     indent(8, *ist) + "\n";
+  s += indent(4, funcname + ".func_code = aalmodel.setCodeFileLine(" +
+              funcname + ".func_code, '''" + file + "''', " +
+              to_string(line-m_lines_in_vars) + ")") + "\n";
 }
 
 void aalang_py::set_ainit(std::string* iai,const char* file,int line,int col)
 {
-  std::string r("return 1");
-  s += "\n    def adapter_init():\n" + variables +
+  const std::string r("return 1");
+  const std::string funcname("adapter_init");
+  s += "\n    def " + funcname + "():\n" + variables +
     indent(8, *iai) + "\n" + indent(8, r) + "\n";
+  s += indent(4, funcname + ".func_code = aalmodel.setCodeFileLine(" +
+              funcname + ".func_code, '''" + file + "''', " +
+              to_string(line-m_lines_in_vars) + ")") + "\n";
 }
-
 
 void aalang_py::set_tagname(std::string* name)
 {
@@ -125,9 +133,13 @@ void aalang_py::next_tag()
   for (unsigned int i = 0; i < multiname.size(); i++) {
     s+="\n    tag" + to_string(tag_cnt) + "name = \""+multiname[i]+"\"\n";
     /* tagXguard */
-    s+="    def tag" + to_string(tag_cnt) + "guard():\n" + variables;
+    const std::string funcname("tag" + to_string(tag_cnt) + "guard");
+    s+="    def " + funcname + "():\n" + variables;
     s+="        tag_name = \"" + multiname[i] + "\"\n";
     s+=indent(8,m_guard.first)+"\n";
+    s+=indent(4,funcname + ".func_code = aalmodel.setCodeFileLine(" +
+              funcname + ".func_code, '''" + m_guard.second.first + "''', " +
+              to_string(m_guard.second.second-2-m_lines_in_vars) + ")") + "\n";
     tag_cnt++;
   }
   multiname.clear();
@@ -188,7 +200,7 @@ void aalang_py::next_action()
     if (m_guard.second.second)
       s+=indent(4,funcname + ".func_code = aalmodel.setCodeFileLine(" +
                 funcname + ".func_code, '''" + m_guard.second.first + "''', " +
-                to_string(m_guard.second.second-4) + ")") + "\n";
+                to_string(m_guard.second.second-3-m_lines_in_vars) + ")") + "\n";
 
     /* actionXbody */
     funcname = "action" + acnt + "body";
@@ -199,7 +211,7 @@ void aalang_py::next_action()
     if (m_body.second.second)
       s+=indent(4,funcname + ".func_code = aalmodel.setCodeFileLine(" +
                 funcname + ".func_code, '''" + m_body.second.first + "''', " +
-                to_string(m_body.second.second-4) + ")") + "\n";
+                to_string(m_body.second.second-3-m_lines_in_vars) + ")") + "\n";
 
     /* actionXadapter */
     funcname = "action" + acnt + "adapter";
@@ -215,7 +227,7 @@ void aalang_py::next_action()
     if (m_adapter.second.second)
       s+=indent(4,funcname + ".func_code = aalmodel.setCodeFileLine(" +
                 funcname + ".func_code, '''" + m_adapter.second.first + "''', " +
-                to_string(m_adapter.second.second-4) + ")") + "\n";
+                to_string(m_adapter.second.second-3-m_lines_in_vars) + ")") + "\n";
 
     action_cnt++;
     acnt=to_string(action_cnt);
