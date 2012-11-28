@@ -24,9 +24,12 @@
 #include <string>
 #include <vector>
 
+typedef std::pair<std::string,int> fileline;
+typedef std::pair<std::string,fileline> codefileline;
+
 class aalang_py: public aalang {
 public:
-  aalang_py(): aalang(), name(NULL), action_cnt(1), 
+  aalang_py(): aalang(), name(NULL), action_cnt(1),
                tag_cnt(1), acnt("1"), tag(false) {
         default_body   ="pass";
         default_guard  ="return 1";
@@ -53,9 +56,9 @@ public:
 protected:
   std::string* name;
   std::vector<std::string> multiname;
-  std::string m_guard;
-  std::string m_body;
-  std::string m_adapter;
+  codefileline m_guard;
+  codefileline m_body;
+  codefileline m_adapter;
   int action_cnt;
   int tag_cnt;
   std::string acnt;

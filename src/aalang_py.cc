@@ -21,7 +21,7 @@
 #include "aalang_py.hh"
 #include "helper.hh"
 
-std::string indent(int depth, std::string &s)
+std::string indent(int depth, const std::string &s)
 {
   std::string rv;
 
@@ -47,7 +47,8 @@ std::string indent(int depth, std::string &s)
       // orig indentation is too deep, cut off (depth - offset)
       // spaces
       if (line_end - line_start > offset - depth) {
-        rv += s.substr(line_start + offset - depth, line_end - line_start - offset + depth + 1);
+        rv += s.substr(line_start + offset - depth,
+                       line_end - line_start - offset + depth + 1);
       } else {
         // there is not enough spaces to cut
         rv += "\n";
@@ -126,7 +127,7 @@ void aalang_py::next_tag()
     /* tagXguard */
     s+="    def tag" + to_string(tag_cnt) + "guard():\n" + variables;
     s+="        tag_name = \"" + multiname[i] + "\"\n";
-    s+=indent(8,m_guard)+"\n";
+    s+=indent(8,m_guard.first)+"\n";
     tag_cnt++;
   }
   multiname.clear();
@@ -136,7 +137,7 @@ void aalang_py::next_tag()
 void aalang_py::set_guard(std::string* gua,const char* file,int line,int col)
 {
   default_if_empty(*gua, "return True");
-  m_guard = *gua;
+  m_guard = codefileline(*gua,fileline(file,line));
 }
 
 void aalang_py::set_push(std::string* p,const char* file,int line,int col)
@@ -154,18 +155,19 @@ void aalang_py::set_pop(std::string* p,const char* file,int line,int col)
 void aalang_py::set_body(std::string* bod,const char* file,int line,int col)
 {
   default_if_empty(*bod, "pass");
-  m_body = *bod;
+  m_body = codefileline(*bod,fileline(file,line));
 }
 
 void aalang_py::set_adapter(std::string* ada,const char* file,int line,int col)
 {
   default_if_empty(*ada, "pass");
-  m_adapter = *ada;
+  m_adapter = codefileline(*ada,fileline(file,line));
 }
 
 void aalang_py::next_action()
 {
   for (unsigned int i = 0; i < multiname.size(); i++) {
+    std::string funcname;
     /* actionXname, actionXtype */
     s+="\n    action" + acnt + "name = \"" + multiname[i] + "\"\n"
       +"    action" + acnt + "type = ";
@@ -178,33 +180,42 @@ void aalang_py::next_action()
     }
 
     /* actionXguard */
-    s+="    def action" + acnt + "guard():\n" + variables;
+    funcname = "action" + acnt + "guard";
+    s+="    def " + funcname + "():\n" + variables;
     s+="        action_name = \"" + multiname[i] + "\"\n";
     s+="        action_index = " + to_string(i) + "\n";
-    s+="        try:\n" +
-      indent(12,m_guard) + "\n" +
-      "        except Exception as _aalException:\n" +
-      "            raise _aalException\n";
+    s+=indent(8,m_guard.first) + "\n";
+    if (m_guard.second.second)
+      s+=indent(4,funcname + ".func_code = aalmodel.setCodeFileLine(" +
+                funcname + ".func_code, '''" + m_guard.second.first + "''', " +
+                to_string(m_guard.second.second-4) + ")") + "\n";
 
     /* actionXbody */
-    s+="    def action"+acnt+"body():\n" + variables;
+    funcname = "action" + acnt + "body";
+    s+="    def " + funcname + "():\n" + variables;
     s+="        action_name = \"" + multiname[i] + "\"\n";
     s+="        action_index = " + to_string(i) + "\n";
-    s+="        try:\n" +
-      indent(12,m_body)+"\n"
-      "        except Exception as _aalException:\n"
-      "            raise _aalException\n";
+    s+=indent(8,m_body.first)+"\n";
+    if (m_body.second.second)
+      s+=indent(4,funcname + ".func_code = aalmodel.setCodeFileLine(" +
+                funcname + ".func_code, '''" + m_body.second.first + "''', " +
+                to_string(m_body.second.second-4) + ")") + "\n";
 
     /* actionXadapter */
-    s+="    def action"+acnt+"adapter():\n" + variables;
+    funcname = "action" + acnt + "adapter";
+    s+="    def " + funcname + "():\n" + variables;
     s+="        action_name = \"" + multiname[i] + "\"\n";
     s+="        action_index = " + to_string(i) + "\n";
-    s+=indent(8,m_adapter)+"\n";
+    s+=indent(8,m_adapter.first)+"\n";
     if (this_is_input) {
       s+="        return " +acnt + "\n";
     } else {
       s+="        return False\n";
     }
+    if (m_adapter.second.second)
+      s+=indent(4,funcname + ".func_code = aalmodel.setCodeFileLine(" +
+                funcname + ".func_code, '''" + m_adapter.second.first + "''', " +
+                to_string(m_adapter.second.second-4) + ")") + "\n";
 
     action_cnt++;
     acnt=to_string(action_cnt);

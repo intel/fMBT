@@ -24,7 +24,7 @@
 #include <glib.h>
 #include "helper.hh"
 
-aal_remote::aal_remote(Log&l,std::string& s) 
+aal_remote::aal_remote(Log&l,std::string& s)
   : aal(l,s), read_buf(NULL), read_buf_pos(0),
     d_stdin(NULL), d_stdout(NULL), d_stderr(NULL)
 {
@@ -94,7 +94,7 @@ aal_remote::aal_remote(Log&l,std::string& s)
   free(read_buf);
   read_buf_pos=0;
 
-  fflush(d_stdin);  
+  fflush(d_stdin);
 }
 
 void aal_remote::handle_stderr() {
@@ -103,7 +103,7 @@ void aal_remote::handle_stderr() {
   char* read_buf=NULL;
   size_t read_buf_pos=0;
 
-  if (agetline(&line,&n,d_stderr,read_buf,read_buf_pos,_log)) {
+  if (agetline(&line,&n,d_stderr,read_buf,read_buf_pos,_log) && line) {
     fprintf(stderr,"%s\n",line);
     free(read_buf);
   }
@@ -118,7 +118,7 @@ int aal_remote::adapter_execute(int action,const char* params) {
 
   if (params)
     std::fprintf(d_stdin, "ap%s\n",params);
-  
+
   std::fprintf(d_stdin, "a%i\n", action);
   return getint(d_stdin,d_stdout,_log);
 }
@@ -221,7 +221,7 @@ int aal_remote::observe(std::vector<int> &action, bool block)
     std::fprintf(d_stdin, "aop\n"); // poll
   }
   int action_alternatives = getact(NULL, action, d_stdin, d_stdout,_log);
-  
+
   if (action_alternatives > 0) {
     if (action[0] == Alphabet::SILENCE) {
       action.clear();
@@ -237,7 +237,7 @@ int aal_remote::observe(std::vector<int> &action, bool block)
 namespace {
   aal* al_helper(Log& l, std::string params) {
     std::string remotename(params);
-    unescape_string(remotename); 
+    unescape_string(remotename);
     std::string fullname("aal_remote("+remotename+")");
 
     if (aal::storage==NULL) {
@@ -260,7 +260,7 @@ namespace {
     }
     return NULL;
   }
-  
+
   Model* model_creator(Log& l, std::string params) {
     aal* al=al_helper(l,params);
 
@@ -269,7 +269,7 @@ namespace {
     }
     return NULL;
   }
-  
+
   static ModelFactory  ::Register Mo("aal_remote", model_creator);
   static AdapterFactory::Register Ad("aal_remote", adapter_creator);
 }

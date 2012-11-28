@@ -130,8 +130,8 @@ tstr:   string          {
             obj->set_tagname($2.str);
         } ;
 
-push: 'push' '{' bstr '}' { 
-            obj->set_push($2.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col); 
+push: 'push' '{' bstr '}' {
+            obj->set_push($2.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col);
         } ;
 
 pop:  'pop' '{' bstr '}' { obj->set_pop ($2.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col); } ;
@@ -159,13 +159,13 @@ guard: 'guard' '()' '{' bstr '}' {
             if (guard) {
                 raise_error($n0.start_loc,(Parser*)_parser);
             } else {
-                obj->set_guard($3.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col); guard=true; 
+                obj->set_guard($3.str,$n0.start_loc.pathname,$n3.start_loc.line,$n3.start_loc.col); guard=true;
             }
         } ;
 body: ('body'|'model') '()' '{' bstr '}' { if (body) {
                 raise_error($n0.start_loc,(Parser*)_parser);
             } else {
-                obj->set_body($3.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col);
+                obj->set_body($3.str,$n0.start_loc.pathname,$n3.start_loc.line,$n3.start_loc.col);
                 body=true;
             }
         } ;
@@ -173,7 +173,7 @@ body: ('body'|'model') '()' '{' bstr '}' { if (body) {
 adapter: 'adapter' '()' '{' bstr '}' { if (adapter) {
                 raise_error($n0.start_loc,(Parser*)_parser);
             } else {
-                obj->set_adapter($3.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col);
+                obj->set_adapter($3.str,$n0.start_loc.pathname,$n3.start_loc.line,$n3.start_loc.col);
                 adapter=true;
             }
         };
