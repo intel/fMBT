@@ -68,27 +68,29 @@ std::string indent(int depth, const std::string &s)
 }
 
 std::string python_lineno_wrapper(const std::string& filename,int lineno,
-				  const std::string& funcname,int trim,int ind)
+				  const std::string& funcname,int trim,int ind,
+				  const std::string& human=")")
 {
   if (lineno) {
     return indent(ind,funcname + ".func_code = aalmodel.setCodeFileLine(" +
 		  funcname + ".func_code, '''" + filename + "''', " + 
-		  to_string(lineno-trim) + ")") + "\n";
+		  to_string(lineno-trim) + human ) + "\n";
   }
   return "";
 }
 
 std::string python_lineno_wrapper(const codefileline& cfl,
-				  const std::string& funcname,int trim,int ind)
+				  const std::string& funcname,int trim,int ind,
+				  const std::string& human=")")
 {
   return python_lineno_wrapper(cfl.second.first,cfl.second.second,funcname,
-			       trim,ind);
+			       trim,ind,human);
 }
 
 std::string aalang_py::action_helper(const codefileline& cfl,std::string s,
 			  std::string& funcname,int i)
 {
-  funcname = "action" + acnt + "body";
+  funcname = "action" + acnt + s;
   return "    def " + funcname + "():\n" + variables 
     +    "        action_name = \"" + multiname[i] + "\"\n" 
     +    "        action_index = " + to_string(i) + "\n" 
@@ -161,7 +163,10 @@ void aalang_py::next_tag()
     s+="    def " + funcname + "():\n" + variables;
     s+="        tag_name = \"" + multiname[i] + "\"\n";
     s+=indent(8,m_guard.first)+"\n";
-    s+=python_lineno_wrapper(m_guard,funcname,2+m_lines_in_vars,4);
+
+    s+=python_lineno_wrapper(m_guard,funcname,2+m_lines_in_vars,4,
+			     ", \"guard of tag \\\"" + multiname[i]
+			     + "\\\"\")");
     tag_cnt++;
   }
   multiname.clear();
@@ -214,13 +219,17 @@ void aalang_py::next_action()
     }
 
     /* actionXguard */
-    s+=action_helper(m_adapter,"adapter",funcname,i);
-    s+=python_lineno_wrapper(m_guard,funcname,3+m_lines_in_vars,4);
+
+    s+=action_helper(m_guard,"guard",funcname,i);
+    s+=python_lineno_wrapper(m_guard,funcname,3+m_lines_in_vars,4,
+			     ", \"guard of action \\\"" + multiname[i] +
+			     "\\\"\")");
 
     /* actionXbody */
     s+=action_helper(m_body,"body",funcname,i);
-    s+=python_lineno_wrapper(m_body,funcname,3+m_lines_in_vars,4);
-
+    s+=python_lineno_wrapper(m_body,funcname,3+m_lines_in_vars,4,
+			     ", \"body of action \\\"" + multiname[i] +
+			     "\\\"\")");
     /* actionXadapter */
     s+=action_helper(m_adapter,"adapter",funcname,i);
     if (this_is_input) {
@@ -228,7 +237,9 @@ void aalang_py::next_action()
     } else {
       s+="        return False\n";
     }
-    s+=python_lineno_wrapper(m_adapter,funcname,3+m_lines_in_vars,4);
+    s+=python_lineno_wrapper(m_adapter,funcname,3+m_lines_in_vars,4,
+			     ", \"adapter of action \\\"" + multiname[i]
+			     + "\\\"\")");
 
     action_cnt++;
     acnt=to_string(action_cnt);

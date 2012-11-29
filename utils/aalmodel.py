@@ -6,11 +6,13 @@ import fmbt
 
 SILENCE = -3
 
-def setCodeFileLine(c, filename, lineno):
+def setCodeFileLine(c, filename, lineno, funcname=None):
+    if funcname == None:
+        funcname = c.co_name
     return types.CodeType(
         c.co_argcount, c.co_nlocals, c.co_stacksize, c.co_flags,
         c.co_code, c.co_consts, c.co_names, c.co_varnames,
-        filename, c.co_name, lineno, c.co_lnotab, c.co_freevars)
+        filename, funcname, lineno, c.co_lnotab, c.co_freevars)
 
 class AALModel:
     def __init__(self, model_globals):

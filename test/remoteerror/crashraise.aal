@@ -68,4 +68,7 @@ aal "crashraiserubbish" {
                 return True
         }
     }
+    tag "my tag" {
+        guard() { check_bug("tguard") }
+    }
 }

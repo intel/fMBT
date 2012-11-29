@@ -73,7 +73,7 @@ void *load_lib(const std::string& libname,const std::string& model_filename)
   if (!handle) {
     errormessages += dlerror() + std::string("\n");
     name_candidate=libname+".so";
-    handle=dlopen(name_candidate.c_str(),RTLD_NOW);    
+    handle=dlopen(name_candidate.c_str(),RTLD_NOW);
   }
   if (!handle) {
     errormessages += dlerror() + std::string("\n");
@@ -83,7 +83,7 @@ void *load_lib(const std::string& libname,const std::string& model_filename)
   if (!handle) {
     errormessages += dlerror() + std::string("\n");
     name_candidate="lib"+libname+".so";
-    handle=dlopen(name_candidate.c_str(),RTLD_NOW);    
+    handle=dlopen(name_candidate.c_str(),RTLD_NOW);
   }
   if (!handle) {
     errormessages += dlerror() + std::string("\n");
@@ -131,7 +131,7 @@ bool isInputName(const std::string& name)
 void clear_whitespace(std::string& s){
   std::string white (" \t\f\v\n\r"); /* more whilespace? */
   size_t pos;
-  
+
   pos=s.find_last_not_of(white);
   if (pos==std::string::npos) {
     s.clear();
@@ -139,7 +139,7 @@ void clear_whitespace(std::string& s){
     s.erase(pos+1);
     pos=s.find_first_not_of(white);
     if (pos!=std::string::npos) {
-      s=s.substr(pos);      
+      s=s.substr(pos);
     }
   }
 }
@@ -148,7 +148,7 @@ void clear_whitespace(std::string& s){
 void clear_coding(std::string& s){
   std::string coding ("\"");
   size_t pos;
-  
+
   pos=s.find_last_not_of(coding);
   if (pos==std::string::npos) {
     s.clear();
@@ -156,7 +156,7 @@ void clear_coding(std::string& s){
     s.erase(pos+1);
     pos=s.find_first_not_of(coding);
     if (pos!=std::string::npos) {
-      s=s.substr(pos);      
+      s=s.substr(pos);
     }
   }
 }
@@ -200,13 +200,13 @@ char* unescape_string(char* msg)
     if (msg[i]=='%') {
       char* endp;
       char s[] = {
-	msg[i+1],msg[i+2],0 };
+        msg[i+1],msg[i+2],0 };
       char c=strtol(s,&endp,16);
       if (endp!=s) {
-	msg[j]=c;
-	i+=2;
+        msg[j]=c;
+        i+=2;
       } else {
-	msg[j]=msg[i];
+        msg[j]=msg[i];
       }
     } else {
       msg[j]=msg[i];
@@ -214,7 +214,7 @@ char* unescape_string(char* msg)
     j++;
   }
   msg[j]=0;
-  
+
   return msg;
 }
 
@@ -235,7 +235,7 @@ char* escape_string(const char* msg)
   char* endp=new char[3*len+1];
   char* ret=endp;
   endp[0]=0;
-  
+
   for(int i=0;i<len;i++) {
     char c=msg[i];
     if (isalnum(c)) {
@@ -246,8 +246,8 @@ char* escape_string(const char* msg)
     }
   }
   *endp=0;
-  
-  return ret;  
+
+  return ret;
 #else
   return g_uri_escape_string(msg,NULL,TRUE);
 #endif
@@ -284,11 +284,11 @@ char* readfile(const char* filename,const char* preprocess)
   std::string s(preprocess);
 
   s=s + " " + filename;
-  
+
   if (!g_spawn_command_line_sync(s.c_str(),&out,NULL,&status,NULL)) {
     throw (int)(24);
   }
-  return out;  
+  return out;
  }
 #endif
 
@@ -353,7 +353,7 @@ std::string capsulate(std::string s) {
   }
 
   std::ostringstream t(std::ios::out | std::ios::binary);
-  
+
   if (human_readable) {
     t << ":" << s.length() << ":" << s << "\"";
   } else {
@@ -390,16 +390,16 @@ bool string2vector(char* s,std::vector<int>& a)
 
 #ifndef DROI
 std::string replace(boost::regex& expression,
-		    const char* format_string,
-		    std::string::iterator first,
-		    std::string::iterator last)
+                    const char* format_string,
+                    std::string::iterator first,
+                    std::string::iterator last)
 {
   std::ostringstream t(std::ios::out | std::ios::binary);
   std::ostream_iterator<char> oi(t);
   std::string s;
   boost::regex_replace(oi,first,last,expression,format_string,
-		       boost::match_default | boost::format_all
-		       | boost::format_first_only);
+                       boost::match_default | boost::format_all
+                       | boost::format_first_only);
 
   s=t.str();
   return s;
@@ -458,13 +458,13 @@ std::string to_string(const int cnt,const int* t,
 		      const std::vector<std::string>& st)
 {
   std::string ret;
-  
+
   if (cnt==0) {
     return ret;
   }
 
   ret=st[t[0]];
-  
+
   for(int i=1;i<cnt;i++) {
     ret+=" "+st[t[i]];
   }
@@ -473,7 +473,7 @@ std::string to_string(const int cnt,const int* t,
 }
 
 void strvec(std::vector<std::string>& v,std::string& s,
-	    const std::string& separator)
+            const std::string& separator)
 {
   unsigned long cutpos;
 
@@ -510,6 +510,11 @@ void block(int fd)
 ssize_t nonblock_getline(char **lineptr, size_t *n, FILE *stream,char* &read_buf, size_t &read_buf_pos, const char delimiter)
 {
     int fd = fileno(stream);
+    if (!read_buf) {
+        read_buf = (char*)malloc(MAX_LINE_LENGTH);
+        if (!read_buf) return -2;
+        read_buf_pos = 0;
+    }
     for (;;) {
         /* look for line breaks in buffered string */
         char *p = (char*)memchr(read_buf, delimiter, read_buf_pos);
@@ -536,9 +541,9 @@ ssize_t nonblock_getline(char **lineptr, size_t *n, FILE *stream,char* &read_buf
             return line_length;
         }
         /* nothing found, try reading more content to the buffer */
-        ssize_t bytes_read = read(fd, read_buf + read_buf_pos, 
+        ssize_t bytes_read = read(fd, read_buf + read_buf_pos,
                                   MAX_LINE_LENGTH - read_buf_pos);
-        if (bytes_read == -1) { 
+        if (bytes_read == -1) {
             return -1;
         }
         if (bytes_read == 0) {
@@ -562,29 +567,29 @@ ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
       if (**lineptr=='d') {
         log.debug(*lineptr+1);
         std::free(*lineptr);
-	*lineptr = NULL;
+        *lineptr = NULL;
         log_redirect=true;
       }
       if (**lineptr=='l' || **lineptr=='e') {
         // remote log messages must be url encoded when sent through
         // the remote adapter protocol
-	//log.print("<remote msg=\"%s\"/>\n",*lineptr+1);
+        //log.print("<remote msg=\"%s\"/>\n",*lineptr+1);
 
         if (**lineptr == 'e') {
-	  static const char* m[] = {"<remote msg=\"%s\">\n","%s\n"};
-	  log.error(m, *lineptr+1);
-	} else {
-	  log.print("<remote msg=\"%s\"/>\n",*lineptr+1);
-	}
-	/*
+          static const char* m[] = {"<remote msg=\"%s\">\n","%s\n"};
+          log.error(m, *lineptr+1);
+        } else {
+          log.print("<remote msg=\"%s\"/>\n",*lineptr+1);
+        }
+        /*
         if (**lineptr == 'e')
           fprintf(stderr, "%s\n", unescape_string(*lineptr+1));
-	*/
+        */
         std::free(*lineptr);
         *lineptr = NULL;
         log_redirect=true;
       }
-    }   
+    }
   } while (ret>0 && log_redirect);
   return ret;
 }
@@ -628,15 +633,15 @@ int getint(FILE* out,FILE* in,Log& log)
     if (ret == 0 && line[0] != '0') {
       char *escaped_line = escape_string(line);
       if (escaped_line) {
-	static const char* m[] = { "<remote error=\"I/O error: integer expected, got: %s\"/>\n",
-				   "Remote expected integer, got \"%s\"\n"};
+        static const char* m[] = { "<remote error=\"I/O error: integer expected, got: %s\"/>\n",
+                                   "Remote expected integer, got \"%s\"\n"};
         log.error(m, escaped_line);
         escape_free(escaped_line);
       }
     }
   } else {
     static const char* m[] = { "<remote error=\"I/O error: integer expected, got nothing./>\n",
-			      "Remote expected integer, got nothing\n"};
+                              "Remote expected integer, got nothing\n"};
     log.error(m);
   }
   if (line) {
@@ -655,7 +660,7 @@ int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in,Log& log)
   size_t s=bgetline(&line,&n,in,log);
   if (s) {
     string2vector(line,vec);
-    if (act) 
+    if (act)
       *act = &vec[0];
     ret=vec.size();
   }
@@ -667,7 +672,7 @@ int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in,Log& log)
 }
 
 void split(std::string val,std::string& name,
-		 std::string& param, const char* s)
+                 std::string& param, const char* s)
 {
   unsigned long cutpos = val.find_first_of(s);
 
@@ -686,7 +691,7 @@ void split(std::string val,std::string& name,
 
 
 void regexpmatch(std::string& regexp,std::vector<std::string>& f,
-		 std::vector<int>& result,bool clear,int a)
+                 std::vector<int>& result,bool clear,int a)
 {
 #ifndef DROI
 
@@ -708,7 +713,7 @@ void regexpmatch(std::string& regexp,std::vector<std::string>& f,
 
 int last(std::string& val,char c)
 {
-  int pos=val.length();  
+  int pos=val.length();
   for(;pos>0;pos--) {
     if (val[pos]==c && val[pos-1]!='\\') {
       return pos;
@@ -718,7 +723,7 @@ int last(std::string& val,char c)
 }
 
 void param_cut(std::string val,std::string& name,
-	       std::string& option)
+               std::string& option)
 {
   unsigned pos=0;
   for(;pos<val.length();pos++) {
@@ -730,12 +735,12 @@ void param_cut(std::string val,std::string& name,
     case '(':
       int lstpos = last(val,')');
       if (lstpos>0) {
-	name = val.substr(0,pos);
-	remove_force(name);
-	option = val.substr(pos+1,lstpos-pos-1);
-	remove_force(option);
+        name = val.substr(0,pos);
+        remove_force(name);
+        option = val.substr(pos+1,lstpos-pos-1);
+        remove_force(option);
       } else {
-	// ERROR
+        // ERROR
       }
       return;
       break;
@@ -751,10 +756,10 @@ void commalist(const std::string& s,std::vector<std::string>& vec, bool remove_w
   unsigned pos=0;
   for(;pos<s.length();pos++) {
     switch (s[pos]) {
-    case '\\': 
+    case '\\':
       pos++;
       break;
-    case '(': 
+    case '(':
       depth++;
       break;
     case ')':
@@ -762,11 +767,11 @@ void commalist(const std::string& s,std::vector<std::string>& vec, bool remove_w
       break;
     case ',':
       if (depth==0) {
-	// COMMA!
-	pushme=s.substr(lastend,pos-lastend);
-	remove_force(pushme);
-	vec.push_back(pushme);
-	lastend=pos+1;
+        // COMMA!
+        pushme=s.substr(lastend,pos-lastend);
+        remove_force(pushme);
+        vec.push_back(pushme);
+        lastend=pos+1;
       }
       break;
     }
