@@ -25,7 +25,7 @@
 #include "helper.hh"
 
 aal_remote::aal_remote(Log&l,std::string& s)
-  : aal(l,s), read_buf(NULL), read_buf_pos(0),
+  : aal(l,s),
     d_stdin(NULL), d_stdout(NULL), d_stderr(NULL)
 {
 
@@ -33,6 +33,8 @@ aal_remote::aal_remote(Log&l,std::string& s)
   gchar **argv = NULL;
   gint argc=0;
   GError *gerr=NULL;
+  char* read_buf=NULL;
+  size_t read_buf_pos=0;
 
 
   g_shell_parse_argv(s.c_str(),&argc,&argv,&gerr);
@@ -103,10 +105,15 @@ void aal_remote::handle_stderr() {
   char* read_buf=NULL;
   size_t read_buf_pos=0;
 
-  if (agetline(&line,&n,d_stderr,read_buf,read_buf_pos,_log) && line) {
-    fprintf(stderr,"%s\n",line);
-    free(read_buf);
+  if (nonblock_getline(&line,&n,d_stderr,read_buf,read_buf_pos) && line) {
+    const char * encline = escape_string(line);
+    const char* m[] = {"<remote stderr=\"%s\">\n","%s"};
+    _log.print(m[0], encline);
+    fprintf(stderr, m[1], line);
+    escape_free(encline);
+    free(line);
   }
+  free(read_buf);
 }
 
 int aal_remote::adapter_execute(int action,const char* params) {
