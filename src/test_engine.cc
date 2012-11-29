@@ -186,12 +186,12 @@ Verdict::Verdict Test_engine::stop_test(End_condition* ec)
   return stop_test(ec->verdict,ec->end_reason().c_str());
 }
 
-void Test_engine::log_tags()
+void Test_engine::log_tags(const std::vector<std::string>& tnames)
 {
   Model* model=heuristic.get_model();
   int* tags;
   int cnt=model->getprops(&tags);
-  std::string s=to_string(cnt,tags,model->getSPNames());
+  std::string s=to_string(cnt,tags,tnames);
 
   log.print("<tags enabled=\"%s\"/>\n",s.c_str());
 }
@@ -231,7 +231,14 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 
   log.push("test_engine");
   gettimeofday(&start_time,NULL);
-  log_tags();
+
+  std::vector<std::string> tags=heuristic.get_model()->getSPNames();
+
+  for(unsigned i=0;i<tags.size();i++) {
+    escape_string(tags[i]);
+  }
+
+  log_tags(tags);
   log_status(log, step_count, heuristic.getCoverage());
   while (-1 == (condition_i = matching_end_condition(step_count))) {
     action=0;
@@ -259,7 +266,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 
         return stop_test(Verdict::FAIL, "unexpected output");
       }
-      log_tags();
+      log_tags(tags);
       log_status(log, step_count, heuristic.getCoverage());
       update_coverage(heuristic.getCoverage(), step_count,
                       &last_coverage, &last_step_cov_growth);
@@ -403,7 +410,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 
     }
     } // switch
-    log_tags();
+    log_tags(tags);
     log_status(log, step_count, heuristic.getCoverage());
     update_coverage(heuristic.getCoverage(), step_count,
                     &last_coverage, &last_step_cov_growth);
