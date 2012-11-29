@@ -58,7 +58,8 @@ void  print_vector(std::vector<std::string>& s,const char* prefix,int add);
 std::string to_string(const int t);
 std::string to_string(const unsigned t);
 std::string to_string(const float f);
-std::string to_string(const int cnt, int* t, std::vector<std::string>& st);
+std::string to_string(const int cnt,const int* t,
+		      const std::vector<std::string>& st);
 std::string to_string(const struct timeval&t);
 void  strvec(std::vector<std::string> & v,std::string& s,
 	     const std::string& separator);
