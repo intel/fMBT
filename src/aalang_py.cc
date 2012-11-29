@@ -139,7 +139,9 @@ void aalang_py::next_tag()
     s+=indent(8,m_guard.first)+"\n";
     s+=indent(4,funcname + ".func_code = aalmodel.setCodeFileLine(" +
               funcname + ".func_code, '''" + m_guard.second.first + "''', " +
-              to_string(m_guard.second.second-2-m_lines_in_vars) + ")") + "\n";
+              to_string(m_guard.second.second-2-m_lines_in_vars) +
+              ", \"guard of tag \\\"" + multiname[i] + "\\\"\")") +
+        "\n";
     tag_cnt++;
   }
   multiname.clear();
@@ -200,7 +202,9 @@ void aalang_py::next_action()
     if (m_guard.second.second)
       s+=indent(4,funcname + ".func_code = aalmodel.setCodeFileLine(" +
                 funcname + ".func_code, '''" + m_guard.second.first + "''', " +
-                to_string(m_guard.second.second-3-m_lines_in_vars) + ")") + "\n";
+                to_string(m_guard.second.second-3-m_lines_in_vars) +
+                ", \"guard of action \\\"" + multiname[i] + "\\\"\")") +
+          "\n";
 
     /* actionXbody */
     funcname = "action" + acnt + "body";
@@ -211,7 +215,9 @@ void aalang_py::next_action()
     if (m_body.second.second)
       s+=indent(4,funcname + ".func_code = aalmodel.setCodeFileLine(" +
                 funcname + ".func_code, '''" + m_body.second.first + "''', " +
-                to_string(m_body.second.second-3-m_lines_in_vars) + ")") + "\n";
+                to_string(m_body.second.second-3-m_lines_in_vars) +
+                ", \"body of action \\\"" + multiname[i] + "\\\"\")") +
+          "\n";
 
     /* actionXadapter */
     funcname = "action" + acnt + "adapter";
@@ -227,7 +233,9 @@ void aalang_py::next_action()
     if (m_adapter.second.second)
       s+=indent(4,funcname + ".func_code = aalmodel.setCodeFileLine(" +
                 funcname + ".func_code, '''" + m_adapter.second.first + "''', " +
-                to_string(m_adapter.second.second-3-m_lines_in_vars) + ")") + "\n";
+                to_string(m_adapter.second.second-3-m_lines_in_vars) +
+                ", \"adapter of action \\\"" + multiname[i] + "\\\"\")") +
+          "\n";
 
     action_cnt++;
     acnt=to_string(action_cnt);

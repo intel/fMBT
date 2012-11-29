@@ -378,7 +378,8 @@ if __name__ == "__main__":
         code_with_line_nums = ['%4s: %s' % (num+1, line)
                                for num,line in enumerate(code_lines)]
         _log('\n'.join(code_with_line_nums))
-        fmbtstderr("Executing %s failed: %s: %s" % (aal_filename, type(e).__name__, e))
+        fmbtstderr("Executing %s failed: %s: %s\n%s" %
+                   (aal_filename, type(e).__name__, e, traceback.format_exc()))
         error("executing aal code failed:\n%s\n%s" % (e, traceback.format_exc()))
     atexit.register(lambda: os.remove(aalpy_filename))
 
