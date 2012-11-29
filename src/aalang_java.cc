@@ -22,7 +22,7 @@
 #include "helper.hh"
 
 aalang_java::aalang_java(): aalang(),action_cnt(1), tag_cnt(1), name_cnt(0),
-			    istate(NULL),ainit(NULL), name(NULL), tag(false)
+                            istate(NULL),ainit(NULL), name(NULL), tag(false)
 {
   default_guard="return true;";
   default_body="";
@@ -59,7 +59,7 @@ void aalang_java::set_name(std::string* name)
 }
 
 void aalang_java::set_namestr(std::string* _name)
-{ 
+{
   name=_name;
   s+="public class "+*name+"{\n\t";
 }
@@ -121,14 +121,14 @@ void aalang_java::set_guard(std::string* gua,const char* file,int line,int col)
     s+="boolean action"+to_string(action_cnt)+"_guard() {\n"+
       *gua+"}\n";
   }
-  if (gua!=&default_guard) 
+  if (gua!=&default_guard)
     delete gua;
 }
 
 void aalang_java::set_body(std::string* bod,const char* file,int line,int col)
 {
   s+="void action"+to_string(action_cnt)+"_body() {\n"+*bod+"}\n";
-  if (bod!=&default_body) 
+  if (bod!=&default_body)
     delete bod;
 }
 
@@ -136,7 +136,7 @@ void aalang_java::set_adapter(std::string* ada,const char* file,int line,int col
 {
   s+="int action" + to_string(action_cnt) + "_adapter() {\n" +
     "\tif (true) {\n"+
-      *ada + "\n" + 
+      *ada + "\n" +
     "\t}\n" +
     "\treturn " + to_string(action_cnt) + ";\n"
     "}\n";
@@ -190,7 +190,7 @@ std::string aalang_java::stringify()
       "}\n"
       "\nreturn true;\n}\n\n";
   }
-  
+
 
   if (pop!="") {
     s=s+"\n void pop(){\n"+pop+"\n}\n";
@@ -210,24 +210,24 @@ std::string aalang_java::stringify()
     s=s+"\tint tmp;\n";
     for(int i=1;i<action_cnt;i++) {
       if (anames[i][0]=='o' && preva!=amap[i]) {
-	preva=amap[i];
-	s+="\ttmp=action"+to_string(amap[i])+"_adapter();\n"
-	  "\tif (tmp!=0) { return tmp; }\n";
+        preva=amap[i];
+        s+="\ttmp=action"+to_string(amap[i])+"_adapter();\n"
+          "\tif (tmp!=0) { return tmp; }\n";
       }
     }
   }
 
   s+="\treturn 0;\n"
     "}\n"
- 
+
    " int adapter_execute(int action) {\n"
     "\tswitch(action) {\n";
-  
+
   for(int i=1;i<action_cnt;i++) {
-    if (anames[i][0]=='i') {    
+    if (anames[i][0]=='i') {
       s+="\t\tcase "+to_string(i)+":\n"
-	"\t\treturn action"+to_string(amap[i])+
-	"_adapter();\n";
+        "\t\treturn action"+to_string(amap[i])+
+        "_adapter();\n";
     }
   }
   s=s+"\t\tdefault:\n"
@@ -249,7 +249,7 @@ std::string aalang_java::stringify()
     " int [] getActions() {\n"
     "\tint tmp[] = new int [action_names.length];\n"
     "\tint len=0;\n";
-  
+
   for(int i=1;i<action_cnt;i++) {
     s+="\tif (action"+to_string(amap[i])+"_guard()) {\n"
       "\t\ttmp[len]="+to_string(i)+";\n"
@@ -260,7 +260,7 @@ std::string aalang_java::stringify()
     "\tSystem.arraycopy(tmp,0,ret,0,len);\n"
     "\treturn ret;\n"
     "}\n";
-  
+
   s=s+" int[] getprops() {\n"
     "\tint tmp[] = new int [tag_names.length];\n"
     "\tint len=0;\n";
@@ -279,7 +279,7 @@ std::string aalang_java::stringify()
     "};\n";
 
   factory_register();
-  
+
   return s;
 }
 

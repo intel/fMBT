@@ -59,12 +59,12 @@ public:
       delete this;
     }
   }
-  
+
 
 protected:
   int refcount;
   virtual void write(const char* msg,FILE* f);
-  virtual void write(const char* msg) 
+  virtual void write(const char* msg)
   {
     write(msg,out);
   }

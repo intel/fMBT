@@ -33,19 +33,19 @@ public:
       right=new_coverage(l,subs[1]);
 
       if (left==NULL) {
-	status=false;
-	errormsg="Can't create left coverage ("+subs[0]+")";
+        status=false;
+        errormsg="Can't create left coverage ("+subs[0]+")";
       } else if (left->status==false) {
-	status=false;
-	errormsg="Error in left coverage:"+left->errormsg;
+        status=false;
+        errormsg="Error in left coverage:"+left->errormsg;
       }
 
       if (right==NULL) {
-	status=false;
-	errormsg="Can't create right coverage ("+subs[1]+")";
+        status=false;
+        errormsg="Can't create right coverage ("+subs[1]+")";
       } else if (right->status==false) {
-	status=false;
-	errormsg="Error in right coverage:"+right->errormsg;
+        status=false;
+        errormsg="Error in right coverage:"+right->errormsg;
       }
     } else {
       status=false;
@@ -61,7 +61,7 @@ public:
       delete right;
     }
   }
-  
+
   virtual std::string stringify() {
     return errormsg;
   }
@@ -84,7 +84,7 @@ public:
   virtual bool execute(int action) {
     return left->execute(action) &&
       right->execute(action);
-    
+
   }
 protected:
   std::string cmp;
@@ -192,33 +192,33 @@ public:
       condition=new_coverage(l,subs[0]);
       then_c   =new_coverage(l,subs[1]);
       if (subs.size()==3) {
-	else_c   =new_coverage(l,subs[2]);
+        else_c   =new_coverage(l,subs[2]);
       }
 
       if (condition==NULL) {
-	status=false;
-	errormsg="Can't create condition coverage ("+subs[0]+")";
+        status=false;
+        errormsg="Can't create condition coverage ("+subs[0]+")";
       } else if (condition->status==false) {
-	status=false;
-	errormsg="Error in condition coverage:"+condition->errormsg;
+        status=false;
+        errormsg="Error in condition coverage:"+condition->errormsg;
       }
 
       if (then_c==NULL) {
-	status=false;
-	errormsg="Can't create then coverage ("+subs[1]+")";
+        status=false;
+        errormsg="Can't create then coverage ("+subs[1]+")";
       } else if (then_c->status==false) {
-	status=false;
-	errormsg="Error in then coverage:"+then_c->errormsg;
+        status=false;
+        errormsg="Error in then coverage:"+then_c->errormsg;
       }
 
       if (subs.size()==3) {
-	if (else_c==NULL) {
-	  status=false;
-	  errormsg="Can't create else coverage ("+subs[2]+")";
-	} else if (else_c->status==false) {
-	  status=false;
-	  errormsg="Error in else coverage:"+else_c->errormsg;
-	}
+        if (else_c==NULL) {
+          status=false;
+          errormsg="Can't create else coverage ("+subs[2]+")";
+        } else if (else_c->status==false) {
+          status=false;
+          errormsg="Error in else coverage:"+else_c->errormsg;
+        }
       }
     } else {
       status=false;
@@ -251,7 +251,7 @@ public:
     float cc=condition->getCoverage();
     if (cc>=1.0) {
       if (else_c) {
-	return then_c->getCoverage();
+        return then_c->getCoverage();
       }
       return cc+then_c->getCoverage();
     }

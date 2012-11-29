@@ -38,7 +38,7 @@ void aal::log(const char* format, ...)
     _log.print("\">\n");
   }
 
-  va_end(ap);  
+  va_end(ap);
 }
 
 namespace {
@@ -53,7 +53,7 @@ namespace {
     if (aal::storage->empty() || aal::storage->size()!=1) {
       return NULL;
     }
-    return aal::storage->begin()->second;    
+    return aal::storage->begin()->second;
   }
 
   Adapter* adapter_creator(Log& l, std::string params = "") {
@@ -64,7 +64,7 @@ namespace {
     }
     return NULL;
   }
-  
+
   Model* model_creator(Log& l, std::string params) {
     aal* al=al_helper();
 
@@ -73,7 +73,7 @@ namespace {
     }
     return NULL;
   }
-  
+
   static ModelFactory  ::Register Mo("aal", model_creator);
   static AdapterFactory::Register Ad("aal", adapter_creator);
 }

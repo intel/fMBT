@@ -5,7 +5,8 @@ aal "outputs" {
         fmbt.setAdapterLogTimeFormat("DATETIME %F %T.%f")
     }
 
-    variables { found, exists, filenames, file_exists }
+    variables { found, exists, filenames, \
+                file_exists }
 
     # preview-show-tested-transitions: iChange.*
 
@@ -59,7 +60,7 @@ aal "outputs" {
     }
 
     action "o:Png changed" {
-        guard() { return 1 }
+        guard() {return 1}
         body() {
             found['png'] = not found['png']
         }

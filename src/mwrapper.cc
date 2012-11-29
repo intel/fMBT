@@ -29,7 +29,7 @@ Mwrapper::~Mwrapper()
 
 
 Mwrapper::Mwrapper(Log&l, std::string params, aal* _model):
-  Model(l, params), model(_model)  
+  Model(l, params), model(_model)
 {
   if (model) {
     model->ref();
@@ -44,7 +44,7 @@ Mwrapper::Mwrapper(Log&l, std::string params, aal* _model):
   }
 }
 
-int Mwrapper::getActions(int** actions) { 
+int Mwrapper::getActions(int** actions) {
   if (!status) {
     return 0;
   }
@@ -64,7 +64,7 @@ int Mwrapper::getIActions(int** actions) {
     if (is_output((*actions)[i])) {
       ret--;
       memmove(&(*actions)[i],&(*actions)[i+1],sizeof(int)*
-	      (a-i-1));
+              (a-i-1));
       i--;
       a--;
     }

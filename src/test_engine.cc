@@ -68,14 +68,14 @@ extern "C" {
 #include <cstring>
 
 void Test_engine::print_time(struct timeval& start_time,
-			     struct timeval& total_time)
+                             struct timeval& total_time)
 {
   gettimeofday(&Adapter::current_time,NULL);
   log.print("<current_time time=\"%i.%06i\"/>\n",Adapter::current_time.tv_sec,
             Adapter::current_time.tv_usec);
   timersub(&Adapter::current_time,&start_time,&total_time);
   log.print("<elapsed_time time=\"%i.%06i\"/>\n",total_time.tv_sec,
-	    total_time.tv_usec);
+            total_time.tv_usec);
 }
 
 Test_engine::Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p,std::vector<End_condition*>& ecs)
@@ -197,14 +197,14 @@ void Test_engine::log_tags()
 }
 
 void log_strarray(Log&l,
-		  const char* tag,
-		  std::vector<std::string>& array,
-		  unsigned first_element=1);
+                  const char* tag,
+                  std::vector<std::string>& array,
+                  unsigned first_element=1);
 
 void log_strarray(Log&l,
-		  const char* tag,
-		  std::vector<std::string>& array,
-		  unsigned first_element) {
+                  const char* tag,
+                  std::vector<std::string>& array,
+                  unsigned first_element) {
   for(unsigned i=first_element;i<array.size();i++) {
     char* s=escape_string(array[i].c_str());
     l.print("<%s\"%s\"/>\n",tag,s);
@@ -225,9 +225,9 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
   std::vector<int> actions;
 
   log_strarray(log,"action_name name=",
-	       heuristic.get_model()->getActionNames());
+               heuristic.get_model()->getActionNames());
   log_strarray(log,"tag_name name=",
-	       heuristic.get_model()->getSPNames());
+               heuristic.get_model()->getSPNames());
 
   log.push("test_engine");
   gettimeofday(&start_time,NULL);
@@ -238,12 +238,12 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 
     gettimeofday(&Adapter::current_time,NULL);
     log.print("<current_time time=\"%i.%06i\"/>\n",Adapter::current_time.tv_sec,
-	      Adapter::current_time.tv_usec);
+              Adapter::current_time.tv_usec);
 
     while (adapter.observe(actions)>0) {
 
       if (!adapter.status) {
-	return stop_test(Verdict::ERROR, ("Adapter error"+adapter.errormsg).c_str());
+        return stop_test(Verdict::ERROR, ("Adapter error"+adapter.errormsg).c_str());
       }
 
       step_count++;
@@ -255,9 +255,9 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 
       if (!heuristic.execute(action)) {
         log.debug("Test_engine::run: Error: unexpected output from the SUT: %i '%s'\n",
-		  action, heuristic.getActionName(action).c_str());
+                  action, heuristic.getActionName(action).c_str());
 
-	return stop_test(Verdict::FAIL, "unexpected output");
+        return stop_test(Verdict::FAIL, "unexpected output");
       }
       log_tags();
       log_status(log, step_count, heuristic.getCoverage());
@@ -267,14 +267,14 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       log.print("<current_time time=\"%i.%06i\"/>\n",Adapter::current_time.tv_sec,
                 Adapter::current_time.tv_usec);
       if (-1 != (condition_i = matching_end_condition(step_count,0,action))) {
-	goto out;
+        goto out;
       }
     }
 
     action = heuristic.getIAction();
     if (action >= 0) {
       log.debug("Test_engine::run: test generator suggests executing %i '%s'\n",
-		action, heuristic.getActionName(action).c_str());
+                action, heuristic.getActionName(action).c_str());
     }
 
     step_count++;
@@ -290,17 +290,17 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       log.print("<state type=\"deadlock\"/>\n");
 
       if (-1 != (condition_i = matching_end_condition(step_count,Alphabet::DEADLOCK))) {
-	goto out;
-      }      
+        goto out;
+      }
 
       int ret=adapter.observe(actions,true);
 
       if (!adapter.status) {
-	return stop_test(Verdict::ERROR, ("Adapter error"+adapter.errormsg).c_str());
+        return stop_test(Verdict::ERROR, ("Adapter error"+adapter.errormsg).c_str());
       }
 
       if (ret!=Alphabet::SILENCE && ret!=Alphabet::TIMEOUT) {
-	return stop_test(Verdict::FAIL, "response on deadlock");
+        return stop_test(Verdict::FAIL, "response on deadlock");
       }
       return stop_test(Verdict::PASS, "end of model");
       break;
@@ -311,36 +311,36 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       int value = adapter.observe(actions,true);
 
       if (!adapter.status) {
-	return stop_test(Verdict::ERROR, ("Adapter error"+adapter.errormsg).c_str());
+        return stop_test(Verdict::ERROR, ("Adapter error"+adapter.errormsg).c_str());
       }
 
       log.print("<observe %i/>\n",value);
 
       if (value==Alphabet::TIMEOUT) {
-	actions.resize(1);
-	actions[0] = Alphabet::TIMEOUT;
-	log.print("<TIMEOUT %i %i/>\n",Adapter::current_time.tv_sec,
-		  end_time);
+        actions.resize(1);
+        actions[0] = Alphabet::TIMEOUT;
+        log.print("<TIMEOUT %i %i/>\n",Adapter::current_time.tv_sec,
+                  end_time);
         if (-1 != (condition_i = matching_end_condition(step_count,actions[0])))
           goto out;
-	
-	// TIMEOUT means that testing has run out of time
-	// before adapter observed output. There should have
-	// been a matching end condition that defines the
-	// verdict for this case.
-	// If not, let's return an error.
-	return stop_test(Verdict::ERROR,
-			 "TIMEOUT while communicating with adapter");
+
+        // TIMEOUT means that testing has run out of time
+        // before adapter observed output. There should have
+        // been a matching end condition that defines the
+        // verdict for this case.
+        // If not, let's return an error.
+        return stop_test(Verdict::ERROR,
+                         "TIMEOUT while communicating with adapter");
 
       } else if (value==Alphabet::SILENCE) {
-	actions.resize(1);
-	actions[0] = Alphabet::SILENCE;
-        log.debug("Test_engine::run: SUT remained silent (action %i).\n", action);	
+        actions.resize(1);
+        actions[0] = Alphabet::SILENCE;
+        log.debug("Test_engine::run: SUT remained silent (action %i).\n", action);
       } else {
-	if (!actions.empty()) {
-	  log.debug("Test_engine::run: SUT executed %i '%s'\n",
-		    actions[0],heuristic.getActionName(actions[0]).c_str());
-	}
+        if (!actions.empty()) {
+          log.debug("Test_engine::run: SUT executed %i '%s'\n",
+                    actions[0],heuristic.getActionName(actions[0]).c_str());
+        }
       }
 
       if (actions.empty()) {
@@ -351,7 +351,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       log_adapter_output(log, adapter, action);
       if (!heuristic.execute(action)) {
         log.debug("Test_engine::run: ERROR: action %i not possible in the model.\n", action);
-	log.debug("%s %s",action,heuristic.getActionName(action).c_str(),"broken response");
+        log.debug("%s %s",action,heuristic.getActionName(action).c_str(),"broken response");
         return stop_test(Verdict::FAIL, "unexpected output");
       }
       break;
@@ -364,7 +364,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       adapter.execute(actions);
 
       if (!adapter.status) {
-	return stop_test(Verdict::ERROR, ("Adapter error"+adapter.errormsg).c_str());
+        return stop_test(Verdict::ERROR, ("Adapter error"+adapter.errormsg).c_str());
       }
 
       if (actions.empty()) {
@@ -379,7 +379,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 
       log_adapter_execute(log, adapter, adapter_response);
       log.debug("Test_engine::run: passing adapter response action %i to test generation.\n",
-		adapter_response);
+                adapter_response);
       log.push("adapter_executed");
       log.pop(); // adapter_executed
 
@@ -395,10 +395,10 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
         return stop_test(Verdict::FAIL, msg.c_str());
       }
 
-      // This is here on purpose. We want to check break condition after 
+      // This is here on purpose. We want to check break condition after
       // checking if the response is 'correct'
       if (break_check && -1 != (condition_i = matching_end_condition(step_count,0,adapter_response))) {
-	goto out;
+        goto out;
       }
 
     }
@@ -441,18 +441,18 @@ namespace interactive {
       adapter.execute(actions_v);
       if (actions_v.empty()) {
         fprintf(stderr,"adapter:   [communication failure]\n");
-	return;
+        return;
       } else {
         if (skip_m) adapter_response = actions_v[0];
         else adapter_response = policy.choose(actions_v);
 
-	if ((adapter_response>0) && (adapter_response>=heuristic.get_model()->getActionNames().size())) {
-	  fprintf(stderr,"adapter:   [communication failure %i]\n",adapter_response);
-	  return;
-	} else {
-	  log_adapter_execute(log, adapter, adapter_response);
-	  fprintf(stderr,"adapter:   %s\n", heuristic.getActionName(adapter_response).c_str());
-	}
+        if ((adapter_response>0) && (adapter_response>=heuristic.get_model()->getActionNames().size())) {
+          fprintf(stderr,"adapter:   [communication failure %i]\n",adapter_response);
+          return;
+        } else {
+          log_adapter_execute(log, adapter, adapter_response);
+          fprintf(stderr,"adapter:   %s\n", heuristic.getActionName(adapter_response).c_str());
+        }
       }
     }
 
@@ -509,107 +509,107 @@ void Test_engine::interactive()
       switch (*s) {
 
       case 'c': {
-	// Feel free to improve.
-	End_condition* e=NULL;
-	size_t count=end_conditions.size();
-	end_conditions.insert(end_conditions.begin()+count,
-			      etags.begin(),etags.end());
-	end_conditions.insert(end_conditions.begin()+count+etags.size(),
-			      atags.begin(),atags.end());
+        // Feel free to improve.
+        End_condition* e=NULL;
+        size_t count=end_conditions.size();
+        end_conditions.insert(end_conditions.begin()+count,
+                              etags.begin(),etags.end());
+        end_conditions.insert(end_conditions.begin()+count+etags.size(),
+                              atags.begin(),atags.end());
 
-	num=atoi(s+1);
-	if (num>0) {
-	  e=new End_condition_steps(Verdict::INCONCLUSIVE,breakstr);
-	  e->param_long=step_count+num;
-	  end_conditions.push_back(e);
-	}
+        num=atoi(s+1);
+        if (num>0) {
+          e=new End_condition_steps(Verdict::INCONCLUSIVE,breakstr);
+          e->param_long=step_count+num;
+          end_conditions.push_back(e);
+        }
 
         break_check=true;
         this->run();
         break_check=false;
 
-	end_conditions.erase(end_conditions.begin()+count,end_conditions.end());
-	break;
+        end_conditions.erase(end_conditions.begin()+count,end_conditions.end());
+        break;
       }
       case 'd': {
-	num=std::atoi(s+1);
-	if (num>0 && num<=atags.size()) {
-	  atags.erase(atags.begin()+num-1);
-	}
-	if (s[1]=='d') {
-	  atags.clear();
-	}
-	break;
+        num=std::atoi(s+1);
+        if (num>0 && num<=atags.size()) {
+          atags.erase(atags.begin()+num-1);
+        }
+        if (s[1]=='d') {
+          atags.clear();
+        }
+        break;
       }
       case 'D': {
-	num=std::atoi(s+1);
-	if (num>0 && num<=etags.size()) {
-	  etags.erase(etags.begin()+num-1);
-	}
-	if (s[1]=='D') {
-	  etags.clear();
-	} 
+        num=std::atoi(s+1);
+        if (num>0 && num<=etags.size()) {
+          etags.erase(etags.begin()+num-1);
+        }
+        if (s[1]=='D') {
+          etags.clear();
+        }
         break;
      }
       case 'b': {
-	std::vector<std::string>& ana=heuristic.get_model()->getActionNames();
-	num=std::atoi(s+1);
-	if (num>0 && num<=ana.size()) {
-	  // Add breakpoint
-	  End_condition* e=new End_condition_action(Verdict::INCONCLUSIVE,
-						    breakstr);
-	  e->param_long=num;
-	  atags.push_back(e);
-	} else {
-	  // print action breakpoints
-	  if (s[1]=='b') {
-	    // print numbers
-	    printf("Action breakpoints (%i)\n",(int)atags.size());
-	    for(unsigned i=0;i<atags.size();i++) {
-	      if (atags[i]>0) 
-		printf(" %i: %i\n",i+1,(int)atags[i]->param_long);
-	    }
-	  } else {
-	    // print names
-	    printf("Action breakpoints (%i)\n",(int)atags.size());
-	    for(unsigned i=0;i<atags.size();i++) {
-	      if (atags[i]>0) 
-		printf(" %i: %s\n",i+1,ana[atags[i]->param_long].c_str());
-	    }
-	  }
-	}
-	break;
+        std::vector<std::string>& ana=heuristic.get_model()->getActionNames();
+        num=std::atoi(s+1);
+        if (num>0 && num<=ana.size()) {
+          // Add breakpoint
+          End_condition* e=new End_condition_action(Verdict::INCONCLUSIVE,
+                                                    breakstr);
+          e->param_long=num;
+          atags.push_back(e);
+        } else {
+          // print action breakpoints
+          if (s[1]=='b') {
+            // print numbers
+            printf("Action breakpoints (%i)\n",(int)atags.size());
+            for(unsigned i=0;i<atags.size();i++) {
+              if (atags[i]>0)
+                printf(" %i: %i\n",i+1,(int)atags[i]->param_long);
+            }
+          } else {
+            // print names
+            printf("Action breakpoints (%i)\n",(int)atags.size());
+            for(unsigned i=0;i<atags.size();i++) {
+              if (atags[i]>0)
+                printf(" %i: %s\n",i+1,ana[atags[i]->param_long].c_str());
+            }
+          }
+        }
+        break;
       }
 
       case 'B': {
-	num=std::atoi(s+1);
-	std::vector<std::string>& ana=heuristic.get_model()->getSPNames();
-	unsigned int tag_count=ana.size();
-	if (num>0 && num<=tag_count) {
-	  // Add breakpoint
-	  End_condition* e=new End_condition_tag(Verdict::INCONCLUSIVE,
-						 breakstr);
-	  e->param_long=num;
-	  etags.push_back(e);
-	} else {
-	  // print tag breakpoints
-	  if (s[1]=='B') {
-	    // print numbers
-	    printf("Tag breakpoints (%i)\n",(int)etags.size());
-	    for(unsigned i=0;i<etags.size();i++) {
-	      if (etags[i]>0) 
-		printf(" %i: %i\n",i+1,(int)etags[i]->param_long);
-	    }
-	  } else {
-	    // print names
-	    printf("Tag breakpoints (%i)\n",(int)etags.size());
-	    for(unsigned i=0;i<etags.size();i++) {
-	      if (etags[i]>0) 
-		printf(" %i: %s\n",i+1,ana[etags[i]->param_long].c_str());
-	    }
-	  }
-	}
-	break;
+        num=std::atoi(s+1);
+        std::vector<std::string>& ana=heuristic.get_model()->getSPNames();
+        unsigned int tag_count=ana.size();
+        if (num>0 && num<=tag_count) {
+          // Add breakpoint
+          End_condition* e=new End_condition_tag(Verdict::INCONCLUSIVE,
+                                                 breakstr);
+          e->param_long=num;
+          etags.push_back(e);
+        } else {
+          // print tag breakpoints
+          if (s[1]=='B') {
+            // print numbers
+            printf("Tag breakpoints (%i)\n",(int)etags.size());
+            for(unsigned i=0;i<etags.size();i++) {
+              if (etags[i]>0)
+                printf(" %i: %i\n",i+1,(int)etags[i]->param_long);
+            }
+          } else {
+            // print names
+            printf("Tag breakpoints (%i)\n",(int)etags.size());
+            for(unsigned i=0;i<etags.size();i++) {
+              if (etags[i]>0)
+                printf(" %i: %s\n",i+1,ana[etags[i]->param_long].c_str());
+            }
+          }
+        }
+        break;
       }
 
       case 's': { // commands "s", "s<num>": execute action at current state
@@ -626,15 +626,15 @@ void Test_engine::interactive()
           action_count=current_model->getActions(&actions);
         }
         // print actions available at current state
-	print_vectors(actions,action_count,
-		      current_model->getActionNames(),"s",1);
+        print_vectors(actions,action_count,
+                      current_model->getActionNames(),"s",1);
       }
         break;
       case 'C': { // print coverage
-	printf("coverage %05f\n",heuristic.getCoverage());
-	break;
+        printf("coverage %05f\n",heuristic.getCoverage());
+        break;
       }
-        
+
       case 'e': { // commands "e", "e<num>": execute any action at current adapter
         num=std::atoi(s+1);
         std::vector<std::string>& ca_anames=current_adapter->getAllActions();
@@ -644,11 +644,11 @@ void Test_engine::interactive()
           unsigned action_num=0;
           for (action_num=1; action_num<sca_anames.size(); action_num++)
             if (ca_anames[action_num]==sca_anames[num]) break;
-          
+
           interactive::execute(log, *current_adapter, heuristic, *current_model,
                                action_num, policy,
                                skip_adapter_execute, skip_model_execute);
-          
+
         }
         else {
           for(unsigned i=1;i<sca_anames.size();i++){
@@ -657,7 +657,7 @@ void Test_engine::interactive()
         }
       }
         break;
-        
+
       case 'i': { // starts an input action name?
         std::vector<std::string>& ca_anames=current_adapter->getAllActions();
         unsigned int action_num;
@@ -675,7 +675,7 @@ void Test_engine::interactive()
         }
       }
         break;
-        
+
       case 'a': // commands "a", "a<num>" and "aup"
         num = std::atoi(s+1);
         if (strncmp(s,"aup",3)==0) {
@@ -708,41 +708,41 @@ void Test_engine::interactive()
 
       case 'm':
         num = std::atoi(s+1);
-	if (strncmp(s,"ma",2)==0) {
+        if (strncmp(s,"ma",2)==0) {
           /* List actions in the current model */
           print_vector(current_model->getActionNames(), "", 0);
           break;
         } else
         if (strncmp(s,"mt",2)==0) {
-	  /* List model tags */
-	  print_vector(current_model->getSPNames(),"tag ",0);
-	  break;
-	} else
-	if (strncmp(s,"mc",2)==0) {
-	  /* Show tags at current state */
-	  int* tags = 0;
-	  unsigned int tag_count=current_model->getprops(&tags);	  
-	  print_vectors(tags,tag_count,
-			current_model->getSPNames(),"t",0);
-	  break;
-	} else
-	  if (strncmp(s,"mpush",5)==0) {
-	    current_model->push();
-	    break;
-	  } else 
-	  if (strncmp(s,"mpop",4)==0) {
-	    current_model->pop();
-	    break;
-	  } else 
+          /* List model tags */
+          print_vector(current_model->getSPNames(),"tag ",0);
+          break;
+        } else
+        if (strncmp(s,"mc",2)==0) {
+          /* Show tags at current state */
+          int* tags = 0;
+          unsigned int tag_count=current_model->getprops(&tags);
+          print_vectors(tags,tag_count,
+                        current_model->getSPNames(),"t",0);
+          break;
+        } else
+          if (strncmp(s,"mpush",5)==0) {
+            current_model->push();
+            break;
+          } else
+          if (strncmp(s,"mpop",4)==0) {
+            current_model->pop();
+            break;
+          } else
         if (strncmp(s,"mup",3)==0) {
-	  /* up */
+          /* up */
           if (!current_model->up()) {
             fprintf(stderr,"Can't go up in model tree\n");
           } else {
             current_model=current_model->up();
           }
-	  break;
-	} else
+          break;
+        } else
         if (strlen(s)==1) {
           /* print */
           std::vector<std::string>& model_names=current_model->getModelNames();
@@ -752,8 +752,8 @@ void Test_engine::interactive()
             }
           }
           break;
-        } else 
-	if (num>0) {
+        } else
+        if (num>0) {
           /* switch to <num> */
           /* down */
           if (!current_model->down(num)) {
@@ -804,7 +804,7 @@ void Test_engine::interactive()
                   fprintf(stderr,"%s\n", current_model->getActionName(path[i]).c_str());
               }
           }
-	  break;
+          break;
         } else
         if (strncmp(s,"?c",2) == 0) {
           int num = std::atoi(s+2);
@@ -828,15 +828,15 @@ void Test_engine::interactive()
                "    e       - list executable actions at current adapter\n"
                "    e<num>  - exec action <num> of current adapter\n"
                "    <iname> - exec input action iname (starts with \"i\")\n"
-	       "    b       - print break actions (bb for numerical)\n"
-	       "    b<num>  - break at action <num>\n"
-	       "    d<num>  - delete action break <num>\n"
-	       "    dd      - delete all action breaks\n"
-	       "    B       - print break tags (BB for numerical)\n"
-	       "    B<num>  - break at tag <num>\n"
-	       "    D<num>  - delete tag break <num>\n"
-	       "    DD      - delete all tag breaks\n"
-	       "    c<num>  - run (max num iterations) until break or test exit\n"
+               "    b       - print break actions (bb for numerical)\n"
+               "    b<num>  - break at action <num>\n"
+               "    d<num>  - delete action break <num>\n"
+               "    dd      - delete all action breaks\n"
+               "    B       - print break tags (BB for numerical)\n"
+               "    B<num>  - break at tag <num>\n"
+               "    D<num>  - delete tag break <num>\n"
+               "    DD      - delete all tag breaks\n"
+               "    c<num>  - run (max num iterations) until break or test exit\n"
                "Change adapters/models:\n"
                "    a      - list low-level adapters of current adapter\n"
                "    a<num> - move down to adapter <num>\n"
@@ -844,7 +844,7 @@ void Test_engine::interactive()
                "    m      - list model subcomponents\n"
                "    m<num> - move down to model subcomponent <num>\n"
                "    mup    - move up to parent model\n"
-	       "    mpush  - push current model state to a stack\n"
+               "    mpush  - push current model state to a stack\n"
                "    mpop   - pop model state from a stack\n"
                "Properties of the current model:\n"
                "    ma     - list all actions\n"
@@ -853,8 +853,8 @@ void Test_engine::interactive()
                "Options:\n"
                "    oea[0|1]- get/set executing action in adapter\n"
                "    oem[0|1]- get/set executing action in model\n"
-	       "Other:\n"
-	       "    C      - print coverage\n"
+               "Other:\n"
+               "    C      - print coverage\n"
                "Search:\n"
                "    ?a<num>- search shortest path to execute action <num>\n"
                "    ?c<num>- search path of length <num> for maximal coverage\n"

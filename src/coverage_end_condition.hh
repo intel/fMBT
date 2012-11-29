@@ -31,7 +31,7 @@ public:
       commalist(params,subs);
       val=atoi(subs[0].c_str());
       if (subs.size()==2) {
-	reset_value=atoi(subs[1].c_str());
+        reset_value=atoi(subs[1].c_str());
       }
     }
   }
@@ -44,7 +44,7 @@ public:
   virtual void push() { save.push(count); }
   virtual void pop() { count=save.top(); save.pop(); }
 
-  virtual float getCoverage() { 
+  virtual float getCoverage() {
 
     if (val==-1) {
       return count;
@@ -62,8 +62,8 @@ public:
 
   virtual void set_model(Model* _model) {}
 
-  virtual bool execute(int action) { 
-    count++; 
+  virtual bool execute(int action) {
+    count++;
     if (count==reset_value) {
       count=0;
     }

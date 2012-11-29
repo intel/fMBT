@@ -36,19 +36,19 @@ extern "C" {
 
 extern Conf* conf_obj;
 
-#define RETURN_ERROR_VOID(s) {			\
-    log.pop();					\
-    status=false;				\
-    errormsg=s;					\
-    return;					\
+#define RETURN_ERROR_VOID(s) {                  \
+    log.pop();                                  \
+    status=false;                               \
+    errormsg=s;                                 \
+    return;                                     \
   }
 
-#define RETURN_ERROR_VERDICT(s) {		\
-    log.pop();					\
-    status=false;				\
-    errormsg=s;					\
+#define RETURN_ERROR_VERDICT(s) {               \
+    log.pop();                                  \
+    status=false;                               \
+    errormsg=s;                                 \
     exit_status=-1;                             \
-    return Verdict::ERROR;			\
+    return Verdict::ERROR;                      \
   }
 
 void Conf::load(std::string& name,std::string& content)
@@ -56,7 +56,7 @@ void Conf::load(std::string& name,std::string& content)
   D_Parser *p = new_D_Parser(&parser_tables_conf, 512);
   p->loc.pathname = name.c_str();
   char *s;
-  
+
   Conf* tmp=conf_obj;
   log.push("conf_load");
   log.debug("Conf::load %s",name.c_str());
@@ -98,12 +98,12 @@ void Conf::load(std::string& name,std::string& content)
 
   if (heuristic->status==false)
     RETURN_ERROR_VOID("Error in heuristic \"" + heuristic_name + "\":" +
-		      heuristic->errormsg);
+                      heuristic->errormsg);
 
   if ((model=new_model(log, model_name)) == NULL) {
     RETURN_ERROR_VOID("Creating model loader \"" +
-		      filetype(model_name)
-		      + "\" failed.");
+                      filetype(model_name)
+                      + "\" failed.");
   }
 
   coverage = new_coverage(log,coverage_name);
@@ -111,7 +111,7 @@ void Conf::load(std::string& name,std::string& content)
   if (coverage == NULL)
     RETURN_ERROR_VOID("Creating coverage \"" + coverage_name + "\" failed.");
 
-  if (!coverage->status) 
+  if (!coverage->status)
     RETURN_ERROR_VOID("Coverage error on \"" + coverage_name + "\":" + coverage->errormsg);
 
   if (!model->status || !model->init() || !model->reset())
@@ -134,11 +134,11 @@ void Conf::load(std::string& name,std::string& content)
   /* handle history */
   for(unsigned i=0;i<history.size();i++) {
     History* h=new_history(log,*history[i]);
-    
+
     if (h) {
       h->set_coverage(coverage,model);
       if (!h->status) {
-	RETURN_ERROR_VOID(h->errormsg);
+        RETURN_ERROR_VOID(h->errormsg);
       }
     } else {
       RETURN_ERROR_VOID("Creating history \""+ *history[i] + "\" failed");
@@ -202,16 +202,16 @@ Verdict::Verdict Conf::execute(bool interactive) {
       if (e->counter == End_condition::ACTION) {
         // avoid string comparisons, fetch the index of the tag
         e->param_long = find(model->getActionNames(), (e->param),-1);
-	if (e->param_long==-1) {
-	  RETURN_ERROR_VERDICT("Error in end condition: " + e->stringify());
-	}
+        if (e->param_long==-1) {
+          RETURN_ERROR_VERDICT("Error in end condition: " + e->stringify());
+        }
       }
       if (e->counter == End_condition::STATETAG) {
         // avoid string comparisons, fetch the index of the tag
         e->param_long = find(model->getSPNames(), (e->param),-1);
-	if (e->param_long==-1) {
-	  RETURN_ERROR_VERDICT("Error in end condition: " + e->stringify());
-	}
+        if (e->param_long==-1) {
+          RETURN_ERROR_VERDICT("Error in end condition: " + e->stringify());
+        }
       }
       if (e->counter == End_condition::COVERAGE) {
         end_by_coverage = true;
@@ -234,19 +234,19 @@ Verdict::Verdict Conf::execute(bool interactive) {
     Verdict::Verdict v = engine.run(end_time);
 
     if (!heuristic->status) {
-      fprintf(stderr,"heuristic error %s\n",heuristic->errormsg.c_str());
+      fprintf(stderr,"heuristic error: %s\n",heuristic->errormsg.c_str());
     }
 
     if (!model->status) {
-      fprintf(stderr,"model error %s\n",model->errormsg.c_str());
+      fprintf(stderr,"model error: %s\n",model->errormsg.c_str());
     }
 
     if (!adapter->status) {
-      fprintf(stderr,"adapter error %s\n",adapter->errormsg.c_str());
+      fprintf(stderr,"adapter error: %s\n",adapter->errormsg.c_str());
     }
 
     if (!coverage->status) {
-      fprintf(stderr,"coverage error %s\n",coverage->errormsg.c_str());
+      fprintf(stderr,"coverage error: %s\n",coverage->errormsg.c_str());
     }
     handle_hooks(v);
   }
@@ -265,7 +265,7 @@ void Conf::handle_hooks(Verdict::Verdict v)
     hooklist=&fail_hooks;
     break;
   }
-  case Verdict::PASS: { 
+  case Verdict::PASS: {
     hooklist=&pass_hooks;
     break;
   }
@@ -281,8 +281,8 @@ void Conf::handle_hooks(Verdict::Verdict v)
     // unknown verdict?
   }
   }
-  if (hooklist) 
-    for_each(hooklist->begin(),hooklist->end(),hook_runner);  
+  if (hooklist)
+    for_each(hooklist->begin(),hooklist->end(),hook_runner);
 }
 
 
@@ -320,7 +320,7 @@ Conf::~Conf() {
   for (unsigned int i = 0; i < end_conditions.size(); i++)
     delete end_conditions[i];
   log.pop();
-  if (heuristic) 
+  if (heuristic)
     delete heuristic;
 
   if (adapter)
@@ -349,4 +349,3 @@ Conf::~Conf() {
   for_each(error_hooks.begin(),error_hooks.end(),hook_delete);
 
 }
-
