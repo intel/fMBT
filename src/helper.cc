@@ -658,11 +658,23 @@ int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in,Log& log)
   size_t n;
   int ret=0;
   size_t s=bgetline(&line,&n,in,log);
-  if (s) {
-    string2vector(line,vec);
-    if (act)
-      *act = &vec[0];
-    ret=vec.size();
+  if (s != (size_t)-1 && s > 0 && line) {
+    if (strspn(line, " -0123456789") != s-1) {
+      char *escaped_line = escape_string(line);
+      fprintf(stderr, "size: %d\nstrlen: %d\n", s, strlen(line));
+      if (escaped_line) {
+        static const char* m[] = {
+          "<remote error=\"I/O error: list of actions expected, got: %s\"/>\n",
+          "Remote expected list of actions (integers), got \"%s\"\n"};
+        log.error(m, escaped_line);
+        escape_free(escaped_line);
+      }
+    } else {
+      string2vector(line,vec);
+      if (act)
+        *act = &vec[0];
+      ret=vec.size();
+    }
   }
   if (line) {
     free(line);
