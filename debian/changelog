@@ -1,3 +1,16 @@
+fmbt (0.2.2) natty; urgency=low
+
+  * New coverages (if,lt,le,gt,ge.steps,skip)
+  * fmbt-ucheck fixes (time, ...)
+  * eyenfinger <ask>
+  * fmbt-view and fmbt-editor <ask>
+  * Line number support for aal-c++ and aal-python (easier debugging)
+  * Bugs fixes
+  * AAL models and adapters has own init blocks (initial_state and adapter_init)
+  * Documentation update
+
+ -- Pablo Virolainen <pablo.virolainen@intel.com>  Fri, 30 Nov 2012 09:58:20 +0200
+
 fmbt (0.2.1.999) natty; urgency=low
 
   * Development of new version started
