@@ -1,13 +1,16 @@
 fmbt (0.2.2) natty; urgency=low
 
-  * New coverages (if,lt,le,gt,ge.steps,skip)
-  * fmbt-ucheck fixes (time, ...)
-  * eyenfinger <ask>
-  * fmbt-view and fmbt-editor <ask>
-  * Line number support for aal-c++ and aal-python (easier debugging)
-  * Bugs fixes
-  * AAL models and adapters has own init blocks (initial_state and adapter_init)
-  * Documentation update
+  * New experimental coverages (if, lt, le, gt, ge, steps, skip)
+  * fmbt-ucheck reports start and end times of covered use cases
+  * eyenfinger: enabled multiple simultaneous tests on the same host
+  * fmbt-view: show/hide transitions and visited/orphaned states
+  * fmbt-editor: update previews on save (no timer-based updating)
+  * Debugging improvements:
+    AAL file line numbers in AAL/C++ and AAL/Python errors
+    Unintentional error messages from remote adapters captured
+  * Bug fixes
+  * AAL includes a new block (adapter_init)
+  * Documentation updates
 
  -- Pablo Virolainen <pablo.virolainen@intel.com>  Fri, 30 Nov 2012 09:58:20 +0200
 
