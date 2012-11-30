@@ -573,7 +573,6 @@ ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
       if (**lineptr=='l' || **lineptr=='e') {
         // remote log messages must be url encoded when sent through
         // the remote adapter protocol
-        //log.print("<remote msg=\"%s\"/>\n",*lineptr+1);
 
         if (**lineptr == 'e') {
           static const char* m[] = {"<remote msg=\"%s\">\n","%s\n"};
@@ -581,10 +580,6 @@ ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
         } else {
           log.print("<remote msg=\"%s\"/>\n",*lineptr+1);
         }
-        /*
-        if (**lineptr == 'e')
-          fprintf(stderr, "%s\n", unescape_string(*lineptr+1));
-        */
         std::free(*lineptr);
         *lineptr = NULL;
         log_redirect=true;
@@ -638,9 +633,10 @@ int getint(FILE* out,FILE* in,Log& log)
         log.error(m, escaped_line);
         escape_free(escaped_line);
       }
+      ret=-42;
     }
   } else {
-    static const char* m[] = { "<remote error=\"I/O error: integer expected, got nothing./>\n",
+    static const char* m[] = { "<remote error=\"I/O error: integer expected, got nothing.\"/>\n",
                               "Remote expected integer, got nothing\n"};
     log.error(m);
   }
@@ -656,12 +652,11 @@ int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in,Log& log)
   vec.resize(0);
   char* line=NULL;
   size_t n;
-  int ret=0;
+  int ret=-1;
   size_t s=bgetline(&line,&n,in,log);
   if (s != (size_t)-1 && s > 0 && line) {
     if (strspn(line, " -0123456789") != s-1) {
       char *escaped_line = escape_string(line);
-      fprintf(stderr, "size: %d\nstrlen: %d\n", s, strlen(line));
       if (escaped_line) {
         static const char* m[] = {
           "<remote error=\"I/O error: list of actions expected, got: %s\"/>\n",

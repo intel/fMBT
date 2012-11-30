@@ -186,6 +186,8 @@ bool aal_remote::init() {
 }
 
 int aal_remote::getActions(int** act) {
+  int rv;
+
   while(g_main_context_iteration(NULL,FALSE));
 
   if (!status) {
@@ -195,10 +197,18 @@ int aal_remote::getActions(int** act) {
   handle_stderr();
 
   std::fprintf(d_stdin, "ma\n");
-  return getact(act,actions,d_stdin,d_stdout,_log);
+  if ((rv = getact(act,actions,d_stdin,d_stdout,_log)) >= 0) {
+      return rv;
+  } else {
+      status = false;
+      errormsg = "corrupted list of enabled actions";
+      return 0;
+  }
 }
 
 int aal_remote::getprops(int** pro) {
+  int rv;
+
   while(g_main_context_iteration(NULL,FALSE));
 
   if (!status) {
@@ -208,7 +218,13 @@ int aal_remote::getprops(int** pro) {
   handle_stderr();
 
   std::fprintf(d_stdin, "mp\n");
-  return getact(pro,tags,d_stdin,d_stdout,_log);
+  if ((rv = getact(pro,tags,d_stdin,d_stdout,_log)) >= 0) {
+    return rv;
+  } else {
+    status = false;
+    errormsg = "corrupted list of tags";
+    return 0;
+  }
 }
 
 int aal_remote::observe(std::vector<int> &action, bool block)
@@ -229,6 +245,11 @@ int aal_remote::observe(std::vector<int> &action, bool block)
     std::fprintf(d_stdin, "aop\n"); // poll
   }
   int action_alternatives = getact(NULL, action, d_stdin, d_stdout,_log);
+  if (action_alternatives < 0) {
+      status = false;
+      errormsg = "corrupted list of output actions";
+      return 0;
+  }
 
   if (action_alternatives > 0) {
     if (action[0] == Alphabet::SILENCE) {

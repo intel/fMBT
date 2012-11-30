@@ -103,6 +103,11 @@ void Awrapper::execute(std::vector<int>& action)
 
   int tmp=ada->adapter_execute(aal2ada[action[0]],parameters[action[0]].c_str());
   status=ada->status;
+  if (!status) {
+      errormsg = ada->errormsg;
+      return;
+  }
+
   log.debug("return %i\n",tmp);
   int ret=0;
   if (tmp) {
@@ -110,6 +115,11 @@ void Awrapper::execute(std::vector<int>& action)
     if (!ret) {
       // Let't try without parameter...
       ret=ada2aal[std::pair<int,std::string&>(tmp,es)];
+      if (!ret) {
+        status=false;
+        errormsg="returned action out of range";
+        return;
+      }
     }
   } else {
     // debug message?
@@ -122,6 +132,10 @@ int  Awrapper::observe(std::vector<int> &action,
 		       bool block) {
   int tmp=ada->observe(action,block);
   status=ada->status;
+  if (!status) {
+      errormsg = ada->errormsg;
+      return 0;
+  }
   std::vector<std::string>& wn=ada->getActionNames();
   for(int i=0;i<tmp;i++) {
     int t=ada2aal[action[i],std::pair<int,std::string&>(action[i],es)];

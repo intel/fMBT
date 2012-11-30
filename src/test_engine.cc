@@ -196,8 +196,8 @@ void Test_engine::log_tags(const std::vector<std::string>& tnames)
     return;
   }
 
-  for(unsigned i=0;i<cnt;i++) {
-    if (tags[i]>=tnames.size() ||
+  for(int i=0;i<cnt;i++) {
+    if (tags[i]>=(int)tnames.size() ||
 	tags[i]<0) {
       model->errormsg="tag out of range";
       model->status=false;
@@ -264,7 +264,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
     while (adapter.observe(actions)>0) {
 
       if (!adapter.status) {
-        return stop_test(Verdict::ERROR, ("Adapter error"+adapter.errormsg).c_str());
+        return stop_test(Verdict::ERROR, ("adapter error: "+adapter.errormsg).c_str());
       }
 
       step_count++;
@@ -317,7 +317,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       int ret=adapter.observe(actions,true);
 
       if (!adapter.status) {
-        return stop_test(Verdict::ERROR, ("Adapter error"+adapter.errormsg).c_str());
+        return stop_test(Verdict::ERROR, ("adapter error: "+adapter.errormsg).c_str());
       }
 
       if (ret!=Alphabet::SILENCE && ret!=Alphabet::TIMEOUT) {
@@ -332,7 +332,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       int value = adapter.observe(actions,true);
 
       if (!adapter.status) {
-        return stop_test(Verdict::ERROR, ("Adapter error"+adapter.errormsg).c_str());
+        return stop_test(Verdict::ERROR, ("adapter error: "+adapter.errormsg).c_str());
       }
 
       log.print("<observe %i/>\n",value);
@@ -385,7 +385,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       adapter.execute(actions);
 
       if (!adapter.status) {
-        return stop_test(Verdict::ERROR, ("Adapter error"+adapter.errormsg).c_str());
+        return stop_test(Verdict::ERROR, ("adapter error: "+adapter.errormsg).c_str());
       }
 
       if (actions.empty()) {
