@@ -80,6 +80,11 @@ Syntax:
 
 Available types & parameters:
 
+        aal
+
+                the adapter is implemented by the same AAL instance
+                that is configured as a model.
+
         aal_remote(<command>)
 
                 executes <command> in a child process to invoke an AAL
@@ -116,6 +121,8 @@ Available types & parameters:
                 remote_python and remote_exec.sh (see adapters.txt).
 
 Examples:
+
+        adapter = "aal"
 
         adapter = "aal_remote(remote_pyaal -l aal.log mytest.aal)"
 
