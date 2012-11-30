@@ -191,6 +191,20 @@ void Test_engine::log_tags(const std::vector<std::string>& tnames)
   Model* model=heuristic.get_model();
   int* tags;
   int cnt=model->getprops(&tags);
+
+  if (!model->status) {
+    return;
+  }
+
+  for(unsigned i=0;i<cnt;i++) {
+    if (tags[i]>=tnames.size() ||
+	tags[i]<0) {
+      model->errormsg="tag out of range";
+      model->status=false;
+      return;
+    }
+  }
+
   std::string s=to_string(cnt,tags,tnames);
 
   log.print("<tags enabled=\"%s\"/>\n",s.c_str());
@@ -409,7 +423,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       }
 
     }
-    } // switch
+    }// switch
     log_tags(tags);
     log_status(log, step_count, heuristic.getCoverage());
     update_coverage(heuristic.getCoverage(), step_count,
