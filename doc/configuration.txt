@@ -301,9 +301,17 @@ Available types & parameters:
                 consecutive random test steps in the end of each dozen
                 test steps.
 
-        skip(type(params), type(params)) EXPERIMENTAL
+        skip(type1(params1), type2(params2)) EXPERIMENTAL
 
-                TODO: what this measures?
+                measures type2(params2), but it will not grow until
+                type1(params1) has reached or exceeded 1.0.
+
+                Example:
+
+                skip(steps(100), perm(1))
+
+                will return 0 until 100 steps have been
+                executed. After that, perm(1) starts growing as usual.
 
         lt(type(params), type(params)) EXPERIMENTAL
         le(type(params), type(params)) EXPERIMENTAL
