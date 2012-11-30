@@ -32,6 +32,11 @@ aal "<modelname>" {
         <define initial values for variables>
     }
 
+    adapter_init {
+        <executed after initial_state but before test
+         if this AAL is used as an adapter in the test run>
+    }
+
     action "<name>" [, "<name>"...] {
         guard() {
             <precondition: return true when test step can be executed>
@@ -73,12 +78,14 @@ in use.
 Control flow
 ------------
 
-When a compiled AAL module is loaded by fmbt or its adapter like
-remote_pyaal, the prelude code is executed first. Once loaded, the
-model/adapter is initialised by executing the initial_state
-block. After this the AAL module is ready for test run and the control
-flow is as follows.
-
+When a compiled AAL module is loaded by fmbt or its remote
+model/adapter like remote_pyaal, the prelude code is executed
+first. Once loaded, the module is initialised: if the module is used
+as a model in the test configuration, the initial_state block is
+executed. If it is used as an adapter, the adapter_init block is
+executed. If it is used as both, both blocks will be executed in this
+order. After initialisation the AAL module is ready for test run and
+the control flow is as follows.
 
 Control flow in a simple test run
 
