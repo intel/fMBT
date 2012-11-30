@@ -74,8 +74,12 @@ EOF
             cat fmbt-output.$WHEN.$WHAT.aal.txt >>$LOGFILE
             echo "---- end of fmbt-output.$WHEN.$WHAT.aal.txt ----" >>$LOGFILE
 
-            if [ "$FMBTSTATUS" != "84" ]; then
+            if [ "$WHAT" != "stderr" ] && [ "$FMBTSTATUS" != "84" ]; then
                 echo "fails because: exit status $FMBTSTATUS, expected 84" >>$LOGFILE
+                failure_count=$(( $failure_count + 1 ))
+            fi
+            if [ "$WHAT" == "stderr" ] && [ "$FMBTSTATUS" != "0" ]; then
+                echo "fails because: exit status $FMBTSTATUS, expected 0" >>$LOGFILE
                 failure_count=$(( $failure_count + 1 ))
             fi
             if [ "$WHAT" == "crash" ] && ! grep -q 'Terminated by a signal (11)' fmbt-output.$WHEN.$WHAT.aal.txt; then
