@@ -103,7 +103,7 @@ void History_log::processNode(xmlTextReaderPtr reader)
     if (tag) {
       free(tag);
     }
-    tag=unescape_string((char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"enabled"));
+    tag=(char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"enabled");
     log.debug("FOUND TAG %s\n",tag);
   }
   
@@ -120,6 +120,9 @@ void History_log::processNode(xmlTextReaderPtr reader)
     if (tag!=NULL) {
       std::string t(tag);
       strvec(p,t,separator);
+      for(unsigned i=0;i<p.size();i++) {
+	unescape_string(p[i]);
+      }
     }
 
     std::string a(ver);
@@ -166,9 +169,12 @@ void History_log::send_action()
   std::string t(tag);
 
   std::vector<std::string> props;
-
+  
   if (t!="") {
     strvec(props,t,separator);
+    for(unsigned i=0;i<t.size();i++) {
+      unescape_string(props[i]);
+    }
   }
   send_action(a,props);
   free(tag);

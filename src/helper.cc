@@ -454,7 +454,8 @@ std::string to_string(const int t)
   return ss.str();
 }
 
-std::string to_string(const int cnt, int* t, std::vector<std::string>& st)
+std::string to_string(const int cnt,const int* t,
+		      const std::vector<std::string>& st)
 {
   std::string ret;
 

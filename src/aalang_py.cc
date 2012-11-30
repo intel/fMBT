@@ -67,6 +67,36 @@ std::string indent(int depth, const std::string &s)
   return rv;
 }
 
+std::string python_lineno_wrapper(const std::string& filename,int lineno,
+				  const std::string& funcname,int trim,int ind,
+				  const std::string& human=")")
+{
+  if (lineno) {
+    return indent(ind,funcname + ".func_code = aalmodel.setCodeFileLine(" +
+		  funcname + ".func_code, '''" + filename + "''', " + 
+		  to_string(lineno-trim) + human ) + "\n";
+  }
+  return "";
+}
+
+std::string python_lineno_wrapper(const codefileline& cfl,
+				  const std::string& funcname,int trim,int ind,
+				  const std::string& human=")")
+{
+  return python_lineno_wrapper(cfl.second.first,cfl.second.second,funcname,
+			       trim,ind,human);
+}
+
+std::string aalang_py::action_helper(const codefileline& cfl,std::string s,
+			  std::string& funcname,int i)
+{
+  funcname = "action" + acnt + s;
+  return "    def " + funcname + "():\n" + variables 
+    +    "        action_name = \"" + multiname[i] + "\"\n" 
+    +    "        action_index = " + to_string(i) + "\n" 
+    +    indent(8,cfl.first)+"\n";
+}
+
 void default_if_empty(std::string& s, const std::string& default_value)
 {
   size_t first_nonspace = s.find_first_not_of(" \t\n\r");
@@ -105,9 +135,7 @@ void aalang_py::set_istate(std::string* ist,const char* file,int line,int col)
   const std::string funcname("initial_state");
   s += "\n    def " + funcname + "():\n" + variables +
     indent(8, *ist) + "\n";
-  s += indent(4, funcname + ".func_code = aalmodel.setCodeFileLine(" +
-              funcname + ".func_code, '''" + file + "''', " +
-              to_string(line-m_lines_in_vars) + ")") + "\n";
+  s += python_lineno_wrapper(file,line,funcname,m_lines_in_vars,4);
 }
 
 void aalang_py::set_ainit(std::string* iai,const char* file,int line,int col)
@@ -116,9 +144,7 @@ void aalang_py::set_ainit(std::string* iai,const char* file,int line,int col)
   const std::string funcname("adapter_init");
   s += "\n    def " + funcname + "():\n" + variables +
     indent(8, *iai) + "\n" + indent(8, r) + "\n";
-  s += indent(4, funcname + ".func_code = aalmodel.setCodeFileLine(" +
-              funcname + ".func_code, '''" + file + "''', " +
-              to_string(line-m_lines_in_vars) + ")") + "\n";
+  s += python_lineno_wrapper(file,line,funcname,m_lines_in_vars,4);
 }
 
 void aalang_py::set_tagname(std::string* name)
@@ -137,11 +163,10 @@ void aalang_py::next_tag()
     s+="    def " + funcname + "():\n" + variables;
     s+="        tag_name = \"" + multiname[i] + "\"\n";
     s+=indent(8,m_guard.first)+"\n";
-    s+=indent(4,funcname + ".func_code = aalmodel.setCodeFileLine(" +
-              funcname + ".func_code, '''" + m_guard.second.first + "''', " +
-              to_string(m_guard.second.second-2-m_lines_in_vars) +
-              ", \"guard of tag \\\"" + multiname[i] + "\\\"\")") +
-        "\n";
+
+    s+=python_lineno_wrapper(m_guard,funcname,2+m_lines_in_vars,4,
+			     ", \"guard of tag \\\"" + multiname[i]
+			     + "\\\"\")");
     tag_cnt++;
   }
   multiname.clear();
@@ -194,48 +219,27 @@ void aalang_py::next_action()
     }
 
     /* actionXguard */
-    funcname = "action" + acnt + "guard";
-    s+="    def " + funcname + "():\n" + variables;
-    s+="        action_name = \"" + multiname[i] + "\"\n";
-    s+="        action_index = " + to_string(i) + "\n";
-    s+=indent(8,m_guard.first) + "\n";
-    if (m_guard.second.second)
-      s+=indent(4,funcname + ".func_code = aalmodel.setCodeFileLine(" +
-                funcname + ".func_code, '''" + m_guard.second.first + "''', " +
-                to_string(m_guard.second.second-3-m_lines_in_vars) +
-                ", \"guard of action \\\"" + multiname[i] + "\\\"\")") +
-          "\n";
+
+    s+=action_helper(m_guard,"guard",funcname,i);
+    s+=python_lineno_wrapper(m_guard,funcname,3+m_lines_in_vars,4,
+			     ", \"guard of action \\\"" + multiname[i] +
+			     "\\\"\")");
 
     /* actionXbody */
-    funcname = "action" + acnt + "body";
-    s+="    def " + funcname + "():\n" + variables;
-    s+="        action_name = \"" + multiname[i] + "\"\n";
-    s+="        action_index = " + to_string(i) + "\n";
-    s+=indent(8,m_body.first)+"\n";
-    if (m_body.second.second)
-      s+=indent(4,funcname + ".func_code = aalmodel.setCodeFileLine(" +
-                funcname + ".func_code, '''" + m_body.second.first + "''', " +
-                to_string(m_body.second.second-3-m_lines_in_vars) +
-                ", \"body of action \\\"" + multiname[i] + "\\\"\")") +
-          "\n";
-
+    s+=action_helper(m_body,"body",funcname,i);
+    s+=python_lineno_wrapper(m_body,funcname,3+m_lines_in_vars,4,
+			     ", \"body of action \\\"" + multiname[i] +
+			     "\\\"\")");
     /* actionXadapter */
-    funcname = "action" + acnt + "adapter";
-    s+="    def " + funcname + "():\n" + variables;
-    s+="        action_name = \"" + multiname[i] + "\"\n";
-    s+="        action_index = " + to_string(i) + "\n";
-    s+=indent(8,m_adapter.first)+"\n";
+    s+=action_helper(m_adapter,"adapter",funcname,i);
     if (this_is_input) {
       s+="        return " +acnt + "\n";
     } else {
       s+="        return False\n";
     }
-    if (m_adapter.second.second)
-      s+=indent(4,funcname + ".func_code = aalmodel.setCodeFileLine(" +
-                funcname + ".func_code, '''" + m_adapter.second.first + "''', " +
-                to_string(m_adapter.second.second-3-m_lines_in_vars) +
-                ", \"adapter of action \\\"" + multiname[i] + "\\\"\")") +
-          "\n";
+    s+=python_lineno_wrapper(m_adapter,funcname,3+m_lines_in_vars,4,
+			     ", \"adapter of action \\\"" + multiname[i]
+			     + "\\\"\")");
 
     action_cnt++;
     acnt=to_string(action_cnt);

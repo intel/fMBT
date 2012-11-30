@@ -69,6 +69,9 @@ protected:
   int m_lines_in_vars;
   bool tag;
   bool this_is_input;
+
+  std::string action_helper(const codefileline& cfl,std::string s,
+			    std::string& funcname,int i);
 };
 
 #endif
