@@ -446,7 +446,8 @@ namespace interactive {
         if (skip_m) adapter_response = actions_v[0];
         else adapter_response = policy.choose(actions_v);
 
-        if ((adapter_response>0) && (adapter_response>=heuristic.get_model()->getActionNames().size())) {
+        if ((adapter_response>0) &&
+            (adapter_response>=(int)heuristic.get_model()->getActionNames().size())) {
           fprintf(stderr,"adapter:   [communication failure %i]\n",adapter_response);
           return;
         } else {

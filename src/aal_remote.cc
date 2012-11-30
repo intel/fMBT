@@ -106,11 +106,12 @@ void aal_remote::handle_stderr() {
   size_t read_buf_pos=0;
 
   if (nonblock_getline(&line,&n,d_stderr,read_buf,read_buf_pos) && line) {
-    const char * encline = escape_string(line);
-    const char* m[] = {"<remote stderr=\"%s\">\n","%s"};
-    _log.print(m[0], encline);
-    fprintf(stderr, m[1], line);
-    escape_free(encline);
+    const char * escaped = escape_string(line);
+    if (escaped) {
+        const char* m[] = {"<remote stderr=\"%s\">\n","%s"};
+        _log.error(m, escaped);
+        escape_free(escaped);
+    }
     free(line);
   }
   free(read_buf);

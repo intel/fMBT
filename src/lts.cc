@@ -43,7 +43,7 @@ int Lts::getprops(int** props) {
   if (props && count) {
     *props=&(stateprops[current_state][0]);
   }
-    
+
   return count;
 }
 
@@ -70,27 +70,27 @@ std::string Lts::stringify()
 
   for(int i=1;i<=action_cnt;i++) {
     t << i << " = \"" << action_names[i] << "\"\n";
-  } 
+  }
   t << "End Action_names\n";
 
   if (prop_cnt) {
     t << "Begin State_props" << std::endl;
     for(unsigned i=0;i<prop_names.size();i++) {
       if (prop_names[i]!="") {
-	int c=0;
-	t << "\"" << prop_names[i] << "\" : ";
-	for(unsigned ii=1;ii<=state_cnt;ii++) {
-	  for(unsigned j=0;j<stateprops[ii].size();j++) {
-	    if (stateprops[ii][j]==i) {
-	      if (c) {
-		t << ", ";
-	      }
-	      t << ii;
-	      c++;
-	    }
-	  }
-	}
-	t << ";" << std::endl;
+        int c=0;
+        t << "\"" << prop_names[i] << "\" : ";
+        for(int ii=1;ii<=state_cnt;ii++) {
+          for(unsigned j=0;j<stateprops[ii].size();j++) {
+            if (stateprops[ii][j]==(int)i) {
+              if (c) {
+                t << ", ";
+              }
+              t << ii;
+              c++;
+            }
+          }
+        }
+        t << ";" << std::endl;
       }
     }
 
@@ -103,11 +103,11 @@ std::string Lts::stringify()
     t << " " << i << ":";
     for(int j=0;j<state[i].transitions;j++) {
       t << " " << dstate[j+state[i].first] << ","
-	<< actions[j+state[i].first];
+        << actions[j+state[i].first];
     }
 
     t << ";" << std::endl;
-    
+
   }
   t << "End Transitions\n";
 
@@ -118,7 +118,7 @@ std::string Lts::stringify()
 int Lts::getActions(int** _actions)
 {
   *_actions=&actions[state[current_state].first];
-  
+
   return state[current_state].transitions;
 }
 
@@ -195,12 +195,12 @@ bool Lts::reset()
 
 bool Lts::header_done()
 {
-  
+
   action_names.resize(action_cnt+1); // TAU
-  
+
   actions.reserve(transition_cnt+1);
   dstate.reserve(transition_cnt+1);
-  
+
   state.resize(state_cnt+1);
 
   return true;
@@ -215,14 +215,14 @@ void Lts::add_action(int number,std::string& name)
 }
 
 void Lts::add_transitions(int st,
-			  std::vector<int>& oa,
-			  std::vector<int>& ia,
-			  std::vector<int>& os,
-			  std::vector<int>& is)
+                          std::vector<int>& oa,
+                          std::vector<int>& ia,
+                          std::vector<int>& os,
+                          std::vector<int>& is)
 {
 
   log.debug("Updating state %i",
-	 st);
+         st);
 
   state[st].first=actions.size();
   state[st].transitions=oa.size()+ia.size();
@@ -238,16 +238,16 @@ void Lts::add_transitions(int st,
 int Lts::execute(int action)
 {
   struct _state* st=&state[current_state];
-  
+
   log.debug("Lts::execute: %s trying to execute action %i at state %i",lts_name.c_str(),action,current_state);
-  
+
   log.debug("%i %i",
-	 st->first,
-	 st->transitions);
-  
+         st->first,
+         st->transitions);
+
   for(int i=0;i<st->transitions;i++) {
     log.debug("state[%i] action %i",
-	   current_state,actions[st->first+i]);
+           current_state,actions[st->first+i]);
     if (actions[st->first+i]==action) {
       current_state=dstate[st->first+i];
       log.debug("Lts::execute: %s action found, continuing from state %i",lts_name.c_str(),current_state);

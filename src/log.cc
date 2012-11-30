@@ -44,12 +44,16 @@ void Log::pop() {
 }
 
 #include <stdarg.h>
-void Log::vprint(const char* format,va_list ap,FILE* f)
+void Log::vprint(const char* format,va_list ap,FILE* f,bool urldecode)
 {
   char* msg=NULL;
 
   if (vasprintf(&msg,format,ap)>0) {
-    write(msg,f);
+    if (urldecode) {
+      write(unescape_string(msg), f);
+    } else {
+      write(msg,f);
+    }
     std::free(msg);
   }
   fflush(out);
@@ -79,7 +83,7 @@ void Log::print(const char* format,...)
 void Log::write(int action,const char *name,const char *msg)
 {
   fprintf(out,"Action %i, name \"%s\", msg \"%s\"\n",
-	 action,name,msg);
+         action,name,msg);
 }
 
 void Log::write(const char* msg,FILE* f)
@@ -101,7 +105,7 @@ void Log::error(const char** format,...)
   va_start(ap0, format[0]);
   va_start(ap1, format[1]);
   vprint(format[0],ap0);
-  vprint(format[1],ap1,stderr);
+  vprint(format[1],ap1,stderr,true);
   va_end(ap0);
   va_end(ap1);
 }

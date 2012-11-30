@@ -71,13 +71,13 @@ void Awrapper::set_actions(std::vector<std::string>* _actions)
 
     }
     splitted_actions.push_back(name);
-    
+
     unsigned result=find(wn,(*actions)[i],-1);
 
-    if (result==-1) {
+    if (result==(unsigned)-1) {
       // Let's try it without parameters
       result=find(wn,splitted_actions[i],-1);
-      if (result==-1) {
+      if (result==(unsigned)-1) {
 	//Nope....
 	continue;
       }
@@ -85,7 +85,7 @@ void Awrapper::set_actions(std::vector<std::string>* _actions)
       std::pair<int,std::string&> ind(result,parameters[i]);
       ada2aal[ind]=i;
     }
-    
+
     ada2aal[std::pair<int,std::string&>(result,es)]=i;
     aal2ada[i]=result;
   }

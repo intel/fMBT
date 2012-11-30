@@ -79,14 +79,14 @@ bool Adapter_remote::init()
   for(size_t i=0;i<actions->size();i++) {
     if (urlencode) {
       char* s=g_uri_escape_string((*actions)[i].c_str(),
-				  NULL,false);
+                                  NULL,false);
 
       std::fprintf(d_stdin,"%s\n",s);
       g_free(s);
     } else {
       std::fprintf(d_stdin,"%s\n",(*actions)[i].c_str());
     }
-    
+
   }
 
   nonblock(_stdin);
@@ -131,7 +131,7 @@ readagain:
   while(g_main_context_iteration(NULL,FALSE));
   if ((e=getline(&s,&si,d_stderr)) < 0) {
     static const char* m[] = { "<remote read_error=\"%i,%i,%s\"/>\n",
-			       "remote read error %i, %i,%s\n"};
+                               "remote read error %i, %i,%s\n"};
     log.debug("Adapter_remote::execute reading child processes execution status failed\n");
     log.error(m,e,errno,strerror(errno));
     action.resize(0);
@@ -154,9 +154,12 @@ readagain:
 
   if (!string2vector(s,action) || action.size()==0) {
     // Something wrong...
-    static const char* m[] = { "<remote protocol_error=\"%s\"/>\n",
-			     "%s\n"};
-    log.error(m,s);
+    char* escaped = escape_string(s);
+    if (escaped) {
+      static const char* m[] = { "<remote protocol_error=\"%s\"/>\n","%s\n"};
+      log.error(m,s);
+      escape_free(escaped);
+    }
     action.resize(0);
   }
 

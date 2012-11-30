@@ -20,7 +20,7 @@
 #include "of.hh"
 
 #undef FACTORY_CREATE_PARAMS
-#undef FACTORY_CREATOR_PARAMS 
+#undef FACTORY_CREATOR_PARAMS
 #undef FACTORY_CREATOR_PARAMS2
 
 #define FACTORY_CREATE_PARAMS std::string name, std::string params
@@ -30,7 +30,7 @@
 FACTORY_IMPLEMENTATION(OutputFormat)
 
 #undef FACTORY_CREATE_PARAMS
-#undef FACTORY_CREATOR_PARAMS 
+#undef FACTORY_CREATOR_PARAMS
 #undef FACTORY_CREATOR_PARAMS2
 #undef __factory_h__
 
@@ -61,7 +61,7 @@ void OutputFormat::set_model(Model* m) {
   model=m;
 
   if (status) {
-    for(int i=0;i<covs.size();i++) {
+    for(unsigned int i=0;i<covs.size();i++) {
       if (covs[i]) {
 	covs[i]->set_model(model);
 	if (covs[i]->status==false) {
@@ -73,7 +73,7 @@ void OutputFormat::set_model(Model* m) {
   }
 
   if (status) {
-    for(int i=0;i<rcovs.size();i++) {
+    for(unsigned int i=0;i<rcovs.size();i++) {
       if (rcovs[i]) {
 	rcovs[i]->set_model(model);
 	if (rcovs[i]->status==false) {
@@ -87,11 +87,11 @@ void OutputFormat::set_model(Model* m) {
 }
 
 void OutputFormat::set_model(std::string m)
-{ 
+{
   return;
   /*
   if (status) {
-    
+
     if ((model=new_model(l,m)) == NULL)
       {
 	errormsg="Can't create model \""+m+"\"";
@@ -144,7 +144,7 @@ std::string OutputFormat::handle_history(Log&l,std::string& h)
     if (al) {
       model=dynamic_cast<Model*>(al);
     }
-    
+
     test_verdict=history->test_verdict;
 
     delete cov;
