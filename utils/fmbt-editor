@@ -1334,9 +1334,11 @@ class AALHighlighter(QtGui.QSyntaxHighlighter):
         keywordFormat.setForeground(QtCore.Qt.darkBlue)
         keywordFormat.setFontWeight(QtGui.QFont.Bold)
 
-        keywordPatterns = ["\\baal\\b", "\\bvariables\\b", "\\binitial_state\\b", "\\blanguage\\b",
-                           "\\baction\\b", "\\btag\\b",
-                           "\\bguard\\b", "\\bbody\\b", "\\badapter\\b"]
+        keywordPatterns = [
+            "\\baal\\b", "\\blanguage\\b", "\\bvariables\\b",
+            "\\binitial_state\\b", "\\badapter_init\\b",
+            "\\baction\\b", "\\btag\\b",
+            "\\bguard\\b", "\\bbody\\b", "\\badapter\\b"]
         self.highlightingRules = [(QtCore.QRegExp(pattern), keywordFormat)
                 for pattern in keywordPatterns]
 
