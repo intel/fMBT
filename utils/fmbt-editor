@@ -596,7 +596,7 @@ Keyboard shortcuts:<br>
         imgname = self._gtFileName + ".gted-%stmp.states.png" % (os.getpid(),)
         logparam = []
         try: file(self._logFileName)
-        except: logparam = ""
+        except: logparam = []
         else:
             logparam.append("-l")
             logparam.append(self._logFileName)
