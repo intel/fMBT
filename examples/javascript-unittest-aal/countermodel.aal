@@ -1,0 +1,73 @@
+aal "counter_model" {
+    language: python {
+    }
+
+    # preview-hide-vars:
+    # preview-depth: 5
+    variables {
+        counterExists, expectedValue, js
+    }
+    initial_state {
+        counterExists = False
+        expectedValue = None
+    }
+    adapter_init {
+        global json
+        import fmbtweb
+        import json
+        js = fmbtweb.JS(browser=BROWSER, htmlFile="test.html", pollDelay=0)
+    }
+    action "iCreateCounter:0",
+           "iCreateCounter:42" {
+        guard() { return counterExists == False }
+        body()  {
+            counterExists = True
+            expectedValue = int(action_name.split(":")[1])
+        }
+        adapter() {
+            js.eval("mc = new mycounter(" + action_name.split(':')[1] + ")", waitForResult=False)
+        }
+    }
+    action "iDestroyCounter" {
+        guard() { return counterExists }
+        body() {
+            counterExists = False
+            expectedValue = None
+        }
+        adapter() {
+            js.eval("mc = null", waitForResult=False)
+        }
+    }
+    action "iIncrement" {
+        guard() { return counterExists and expectedValue in [0, 1, 42, 43] }
+        body() {
+            expectedValue += 1
+        }
+        adapter() {
+            js.eval("mc.inc()", waitForResult=False)
+        }
+    }
+    action "iReset" {
+        guard() { return counterExists }
+        body() {
+            expectedValue = 0
+        }
+        adapter() {
+            js.eval("mc.reset()", waitForResult=False)
+        }
+    }
+    action "iCheckCount" {
+        guard() { return counterExists }
+        adapter() {
+            result = js.eval("mc.count()")
+            assert json.loads(result) == expectedValue, \
+                "Got value '%s', expected '%s'" % (result, expectedValue)
+        }
+    }
+    tag "expectedValue == 0",
+        "expectedValue == 1",
+        "expectedValue == 42",
+        "expectedValue == 43" {
+            guard() { return counterExists and eval(tag_name) }
+    }
+}
