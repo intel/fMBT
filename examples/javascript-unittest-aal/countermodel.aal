@@ -5,7 +5,7 @@ aal "counter_model" {
     # preview-hide-vars:
     # preview-depth: 5
     variables {
-        counterExists, expectedValue, js
+        counterExists, expectedValue
     }
     initial_state {
         counterExists = False
@@ -13,6 +13,7 @@ aal "counter_model" {
     }
     adapter_init {
         global json
+        global js
         import fmbtweb
         import json
         js = fmbtweb.JS(browser=BROWSER, htmlFile="test.html", pollDelay=0)
@@ -66,8 +67,10 @@ aal "counter_model" {
     }
     tag "expectedValue == 0",
         "expectedValue == 1",
+        "expectedValue == 2",
         "expectedValue == 42",
-        "expectedValue == 43" {
+        "expectedValue == 43",
+        "expectedValue == 44" {
             guard() { return counterExists and eval(tag_name) }
     }
 }
