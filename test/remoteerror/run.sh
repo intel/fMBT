@@ -51,7 +51,7 @@ for WHEN in "load" "init" "iguard" "iadapter" "ibody" "oguard" "oadapter" "obody
             echo "" >> $LOGFILE
             echo "AAL, heur=$HEURISTIC, when: $WHEN  problem: $WHAT" >> $LOGFILE
 
-            cat > test.$WHEN.$WHAT.aal.conf <<EOF
+            cat > test.$WHEN.$WHAT.$HEURISTIC.aal.conf <<EOF
 model     = "aal_remote(remote_pyaal -l aal.log -c 'BUG=\"$WHEN-$WHAT\"' crashraise.aal)"
 adapter   = "aal_remote(remote_pyaal -l aal.log -c 'BUG=\"$WHEN-$WHAT\"' crashraise.aal)"
 heuristic = "$HEURISTIC"
@@ -61,18 +61,18 @@ on_fail   = "exit(1)"
 on_inconc = "exit(2)"
 on_error  = "exit(84)"
 EOF
-            echo "---- begin of test.$WHEN.$WHAT.aal.conf ----" >>$LOGFILE
-            cat test.$WHEN.$WHAT.aal.conf >>$LOGFILE
-            echo "---- end of test.$WHEN.$WHAT.aal.conf ----" >>$LOGFILE
+            echo "---- begin of test.$WHEN.$WHAT.$HEURISTIC.aal.conf ----" >>$LOGFILE
+            cat test.$WHEN.$WHAT.$HEURISTIC.aal.conf >>$LOGFILE
+            echo "---- end of test.$WHEN.$WHAT.$HEURISTIC.aal.conf ----" >>$LOGFILE
 
             echo "---- begin of fmbt log ----" >>$LOGFILE
-            fmbt test.$WHEN.$WHAT.aal.conf >>$LOGFILE 2>fmbt-output.$WHEN.$WHAT.aal.txt
+            fmbt test.$WHEN.$WHAT.$HEURISTIC.aal.conf >>$LOGFILE 2>fmbt-output.$WHEN.$WHAT.$HEURISTIC.aal.txt
             FMBTSTATUS=$?
             echo "---- end of fmbt log ----" >>$LOGFILE
 
-            echo "---- begin of fmbt-output.$WHEN.$WHAT.aal.txt ----" >>$LOGFILE
-            cat fmbt-output.$WHEN.$WHAT.aal.txt >>$LOGFILE
-            echo "---- end of fmbt-output.$WHEN.$WHAT.aal.txt ----" >>$LOGFILE
+            echo "---- begin of fmbt-output.$WHEN.$WHAT.$HEURISTIC.aal.txt ----" >>$LOGFILE
+            cat fmbt-output.$WHEN.$WHAT.$HEURISTIC.aal.txt >>$LOGFILE
+            echo "---- end of fmbt-output.$WHEN.$WHAT.$HEURISTIC.aal.txt ----" >>$LOGFILE
 
             if [ "$WHAT" != "stderr" ] && [ "$FMBTSTATUS" != "84" ]; then
                 echo "fails because: exit status $FMBTSTATUS, expected 84" >>$LOGFILE
@@ -82,24 +82,24 @@ EOF
                 echo "fails because: exit status $FMBTSTATUS, expected 0" >>$LOGFILE
                 failure_count=$(( $failure_count + 1 ))
             fi
-            if [ "$WHAT" == "crash" ] && ! grep -q 'Terminated by a signal (11)' fmbt-output.$WHEN.$WHAT.aal.txt; then
-                echo "fails because: segmentation fault missing in fmbt-output.$WHEN.$WHAT.aal.txt" >>$LOGFILE
+            if [ "$WHAT" == "crash" ] && ! grep -q 'Terminated by a signal (11)' fmbt-output.$WHEN.$WHAT.$HEURISTIC.aal.txt; then
+                echo "fails because: segmentation fault missing in fmbt-output.$WHEN.$WHAT.$HEURISTIC.aal.txt" >>$LOGFILE
                 failure_count=$(( $failure_count + 1 ))
             fi
-            if [ "$WHAT" == "raise" ] && ! grep -q 'BogusException' fmbt-output.$WHEN.$WHAT.aal.txt; then
-                echo "fails because: raised exception missing in fmbt-output.$WHEN.$WHAT.aal.txt" >>$LOGFILE
+            if [ "$WHAT" == "raise" ] && ! grep -q 'BogusException' fmbt-output.$WHEN.$WHAT.$HEURISTIC.aal.txt; then
+                echo "fails because: raised exception missing in fmbt-output.$WHEN.$WHAT.$HEURISTIC.aal.txt" >>$LOGFILE
                 failure_count=$(( $failure_count + 1 ))
             fi
-            if [ "$WHAT" == "raise" ] && ! grep -q 'check_bug' fmbt-output.$WHEN.$WHAT.aal.txt; then
-                echo "fails because: check_bug function call missing AAL/Python traceback in fmbt-output.$WHEN.$WHAT.aal.txt" >>$LOGFILE
+            if [ "$WHAT" == "raise" ] && ! grep -q 'check_bug' fmbt-output.$WHEN.$WHAT.$HEURISTIC.aal.txt; then
+                echo "fails because: check_bug function call missing AAL/Python traceback in fmbt-output.$WHEN.$WHAT.$HEURISTIC.aal.txt" >>$LOGFILE
                 failure_count=$(( $failure_count + 1 ))
             fi
-            if [ "$WHAT" == "raise" ] && ! grep -q 'raise Exception("BogusException' fmbt-output.$WHEN.$WHAT.aal.txt; then
-                echo "fails because: raise Exception(...) call missing AAL/Python traceback in fmbt-output.$WHEN.$WHAT.aal.txt" >>$LOGFILE
+            if [ "$WHAT" == "raise" ] && ! grep -q 'raise Exception("BogusException' fmbt-output.$WHEN.$WHAT.$HEURISTIC.aal.txt; then
+                echo "fails because: raise Exception(...) call missing AAL/Python traceback in fmbt-output.$WHEN.$WHAT.$HEURISTIC.aal.txt" >>$LOGFILE
                 failure_count=$(( $failure_count + 1 ))
             fi
-            if ( [ "$WHAT" == "stderr" ] || [ "$WHAT" == "stdout" ] ) && ! grep -q 'rubbishFromAAL' fmbt-output.$WHEN.$WHAT.aal.txt; then
-                echo "fails because: rubbish printed from AAL is missing in fmbt-output.$WHEN.$WHAT.aal.txt" >>$LOGFILE
+            if ( [ "$WHAT" == "stderr" ] || [ "$WHAT" == "stdout" ] ) && ! grep -q 'rubbishFromAAL' fmbt-output.$WHEN.$WHAT.$HEURISTIC.aal.txt; then
+                echo "fails because: rubbish printed from AAL is missing in fmbt-output.$WHEN.$WHAT.$HEURISTIC.aal.txt" >>$LOGFILE
                 failure_count=$(( $failure_count + 1 ))
             fi
         done
