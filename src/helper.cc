@@ -393,7 +393,7 @@ bool string2vector(Log& log,char* s,std::vector<int>& a,
   if (ss[0]!='\0' && ss[0]!='\n') {
     if (w) {
       w->status=false;
-      w->errormsg=std::string("nonallowed charaster (")+ss[0]+")";
+      w->errormsg=std::string("Illegal character \"")+ss[0]+"\"";
     }
 
     char *escaped_line = escape_string(ss);

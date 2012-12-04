@@ -45,7 +45,7 @@ void Coverage_Include_base::set_model(Model* _model)
       // regexp?
       std::vector<int> r;
       if (subs[i][0]=='\'' || subs[i][0]=='\"') {
-	// Let's remove first and the last charaster
+	// Let's remove first and the last character
 	subs[i]=subs[i].substr(1,subs[i].length()-2);
       }
       regexpmatch(subs[i],n,r,false);
@@ -55,9 +55,9 @@ void Coverage_Include_base::set_model(Model* _model)
       }
     }
   }
-  
+
   ActionNames.push_back(""); // TAU
-  
+
   for(unsigned i=1;i<n.size();i++) {
     if ((filteractions.find(i)==filteractions.end())==exclude) {
       log.debug("N: %s\n",n[i].c_str());
