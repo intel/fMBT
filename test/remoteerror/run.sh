@@ -146,7 +146,11 @@ EOF
         cat fmbt-output.$WHEN.$WHAT.remote.txt >>$LOGFILE
         echo "---- end of fmbt-output.$WHEN.$WHAT.remote.txt ----" >>$LOGFILE
 
-        if [ "$FMBTSTATUS" != "84" ]; then
+        if [ "$WHEN-$WHAT" == "input-raise" ] && [ "$FMBTSTATUS" != "1" ]; then
+            echo "fails because: exit status $FMBTSTATUS, expected 1" >>$LOGFILE
+            failure_count=$(( $failure_count + 1 ))
+        fi
+        if [ "$WHEN-$WHAT" != "input-raise" ] && [ "$FMBTSTATUS" != "84" ]; then
             echo "fails because: exit status $FMBTSTATUS, expected 84" >>$LOGFILE
             failure_count=$(( $failure_count + 1 ))
         fi
