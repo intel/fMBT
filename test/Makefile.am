@@ -1,4 +1,4 @@
-TESTS = interactivemode/run.sh tutorial/run.sh adapters/run.sh examples/run.sh aalpython/run.sh fmbt-stats/run.sh coverage/run.sh exitvalue/run.sh history/run.sh eyenfinger/run.sh
+TESTS = interactivemode/run.sh tutorial/run.sh adapters/run.sh examples/run.sh aalpython/run.sh fmbt-stats/run.sh coverage/run.sh exitvalue/run.sh history/run.sh eyenfinger/run.sh remoteerror/run.sh
 
 dist_noinst_SCRIPTS = aalpython/run.sh aalpython/test1.py.aal
 
@@ -21,3 +21,5 @@ dist_noinst_SCRIPTS += fmbt-stats/run.sh fmbt-stats/teststeps.py fmbt-stats/mode
 dist_noinst_SCRIPTS += functions.sh
 
 dist_noinst_SCRIPTS += eyenfinger/run.sh eyenfinger/screenshot2.png eyenfinger/screenshot2-icon.png eyenfinger/test.aal.conf eyenfinger/test.py.aal
+
+dist_noinst_SCRIPTS += remoteerror/crashraise.aal remoteerror/crashingsteps.py remoteerror/run.sh

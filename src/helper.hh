@@ -46,7 +46,13 @@ char* escape_string(const char* msg);
 void escape_string(std::string& msg);
 void escape_free(const char* msg);
 std::string removehash(std::string& s);
-bool string2vector(char* s,std::vector<int>& a);
+
+class Writable;
+#include <climits>
+
+bool string2vector(Log& log,char* s,std::vector<int>& a,
+		   int min=-42,int max=INT_MAX,Writable* w=NULL);
+
 #ifndef DROI
 std::string replace(boost::regex& expression,
 		    const char* format_string,
@@ -79,9 +85,11 @@ ssize_t bgetline(char **lineptr, size_t *n, FILE *stream, Log& log);
 void block(int fd);
 void nonblock(int fd);
 
-int getint(FILE* out,FILE* in,Log& log);
+int getint(FILE* out,FILE* in,Log& log,
+	   int min=-42,int max=INT_MAX,Writable* w=NULL);
 
-int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in,Log& log);
+int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in,Log& log,
+	   int min=-42,int max=INT_MAX,Writable* w=NULL);	   
 
 void split(std::string val, std::string& name,
 	   std::string& param, const char* s=":");

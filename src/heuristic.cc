@@ -39,6 +39,8 @@ Heuristic::~Heuristic()
 bool Heuristic::execute(int action)
 {  
   if (!model->execute(action)) {
+    status=model->status;
+    errormsg=model->errormsg;
     log.debug("Heuristic::execute: executing action %i in model failed\n", action);
     return false;
   }

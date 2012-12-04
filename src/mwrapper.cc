@@ -89,7 +89,7 @@ int Mwrapper::getprops(int** props)
 
 int Mwrapper::execute(int action)
 {
-  if (model->model_execute(action)) {
+  if (model->model_execute(action)!=-42) {
     status = model->status;
     return action;
   }

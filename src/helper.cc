@@ -43,6 +43,7 @@
 
 #include "helper.hh"
 #include "log.hh"
+#include "writable.hh"
 
 bool human_readable=true;
 
@@ -365,7 +366,8 @@ std::string capsulate(std::string s) {
   return t.str();
 }
 
-bool string2vector(char* s,std::vector<int>& a)
+bool string2vector(Log& log,char* s,std::vector<int>& a,
+		   int min,int max,Writable* w)
 {
   int v;
   int i=0;
@@ -375,6 +377,13 @@ bool string2vector(char* s,std::vector<int>& a)
   v=strtol(ss,&endp,10);
   a.resize(0);
   while (endp!=ss) {
+    if (v<min||v>max) {
+      if (w) {
+	w->status=false;
+	w->errormsg="out of range";
+      }
+      return false;
+    }
     a.push_back(v);
     ss=endp;
     v=strtol(ss,&endp,10);
@@ -382,6 +391,18 @@ bool string2vector(char* s,std::vector<int>& a)
   }
 
   if (ss[0]!='\0' && ss[0]!='\n') {
+    if (w) {
+      w->status=false;
+      w->errormsg=std::string("Illegal character \"")+ss[0]+"\"";
+    }
+
+    char *escaped_line = escape_string(ss);
+    if (escaped_line) {
+      static const char* m[] = { "<remote error=\"I/O error: integer expected, got: %s\"/>\n",
+				 "Remote expected integer, got \"%s\"\n"};
+      log.error(m, escaped_line);
+      escape_free(escaped_line);
+    }
     return false;
   }
 
@@ -614,7 +635,7 @@ ssize_t bgetline(char **lineptr, size_t *n, FILE *stream, Log& log)
   return ret;
 }
 
-int getint(FILE* out,FILE* in,Log& log)
+int getint(FILE* out,FILE* in,Log& log,int min,int max,Writable* w)
 {
   if (out) {
     fflush(out);
@@ -632,6 +653,10 @@ int getint(FILE* out,FILE* in,Log& log)
                                    "Remote expected integer, got \"%s\"\n"};
         log.error(m, escaped_line);
         escape_free(escaped_line);
+	if (w) {
+	  w->status=false;
+	  w->errormsg="Remote expected integer, got \""+std::string(line)+"\"";
+	}
       }
       ret=-42;
     }
@@ -639,14 +664,25 @@ int getint(FILE* out,FILE* in,Log& log)
     static const char* m[] = { "<remote error=\"I/O error: integer expected, got nothing.\"/>\n",
                               "Remote expected integer, got nothing\n"};
     log.error(m);
+    if (w) {
+      w->status=false;
+      w->errormsg="Remote expected integer, got nothing";
+    }
   }
   if (line) {
     free(line);
   }
+
+  if (w && (ret<min || ret>max)) {
+    w->status=false;
+    w->errormsg="Value out of range";
+  }
+
   return ret;
 }
 
-int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in,Log& log)
+int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in,Log& log,
+	   int min,int max,Writable* w)
 {
   fflush(out);
   vec.resize(0);
@@ -665,7 +701,7 @@ int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in,Log& log)
         escape_free(escaped_line);
       }
     } else {
-      string2vector(line,vec);
+      string2vector(log,line,vec,min,max,w);
       if (act)
         *act = &vec[0];
       ret=vec.size();

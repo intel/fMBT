@@ -275,6 +275,9 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       log_adapter_output(log, adapter, action);
 
       if (!heuristic.execute(action)) {
+	if (!heuristic.status) {
+	  return stop_test(Verdict::ERROR, heuristic.errormsg.c_str());
+	}
         log.debug("Test_engine::run: Error: unexpected output from the SUT: %i '%s'\n",
                   action, heuristic.getActionName(action).c_str());
 
@@ -405,6 +408,9 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       log.pop(); // adapter_executed
 
       if (!heuristic.execute(adapter_response)) {
+	if (!heuristic.status) {
+	  return stop_test(Verdict::ERROR, heuristic.errormsg.c_str());
+	}
         std::string msg = "unexpected response to input \"" +
           heuristic.getActionName(action) + "\": ";
         if (adapter_response == 0) msg += "unidentified result.";
