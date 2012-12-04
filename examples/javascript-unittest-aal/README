@@ -51,7 +51,7 @@ paths from iCreateCounter test steps to iCheckCount. One can find a
 very short path from the previous counter creation to the error from
 the log:
 
-$ fmbt-log -f '$as => $tv' checkvalue.log
+$ fmbt-log -f '$as => $tv' checkcount.log
 iCreateCounter:0 =>
 iCheckCount =>
 iDestroyCounter =>
