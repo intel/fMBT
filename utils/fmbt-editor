@@ -59,6 +59,9 @@ def error(msg, exit_status = 1, gui = False):
 
 PREVIEWTAB_MODEL, PREVIEWTAB_TEST, PREVIEWTAB_DIST, PREVIEWTAB_COV = range(4)
 EDITTAB_GT, EDITTAB_CONF = range(2)
+
+FORMAT_EDITTAB = "%s:%s - F%s"
+
 TR_RE = re.compile("([!]?)T\(\s*([^),]+)\s*,\s*([^\"),]+|\"[^\"]*\")\s*,\s*([^),]+)\s*\)")
 SP_RE = re.compile("([!]?)P\(\s*([^),]+)\s*,\s*([^)]+)\s*\)")
 CF_RE = re.compile("^(model|adapter|heuristic|coverage|history|((on_)?(pass|fail|inconc)))\s*=\s*\"[^\"]+\"\s*$")
@@ -285,7 +288,6 @@ Keyboard shortcuts:<br>
     def _set_gtFileName(self, newname):
         removeTemporaryFiles(self._gtFileName)
         self._gtFileName = str(newname)
-        self.edit.setTabText(EDITTAB_GT, os.path.basename(self._gtFileName) + " - F1")
         if self.gthighlighter:
             self.gthighlighter.setDocument(None)
             del self.gthighlighter
@@ -294,10 +296,11 @@ Keyboard shortcuts:<br>
         elif self._editingAAL():
             self.gthighlighter = AALHighlighter(self.editor.document())
         self._confFileName = None
+        self.updateModelTabText()
 
     def _set_confFileName(self, newname):
         self._confFileName = str(newname)
-        self.edit.setTabText(EDITTAB_CONF, os.path.basename(self._confFileName) + " - F2")
+        self.updateConfTabText()
 
     def newFile(self, path=None):
         if path and path.endswith(".aal"):
@@ -601,7 +604,7 @@ Keyboard shortcuts:<br>
             logparam.append("-l")
             logparam.append(self._logFileName)
         if self._model_ok:
-            if not self._test_ok: logparam = ""
+            if not self._test_ok: logparam = []
             _, _, previewHideTransitions, previewHideUTransitions, previewShowTransitions, previewShowTestedTransitions, previewEraseOrphanedStates, previewEraseUnvisitedStates = self.aalPreviewArguments()
             hideparams = []
             for regexp in previewHideTransitions:
@@ -795,9 +798,13 @@ on_inconc = "exit(2)"
         self.editor = makeScalableEditor(self.edit, self.editor_font)
         self.editor_tabevents = TabCompletionEventFilter(self)
         self.edit.addTab(self.editor, "GT - F1")
+        self.editor.connect(self.editor, QtCore.SIGNAL("cursorPositionChanged()"),
+                            self.updateModelTabText)
 
         self.conf_editor = makeScalableEditor(self.edit, self.editor_font)
         self.edit.addTab(self.conf_editor, "Configuration - F2")
+        self.conf_editor.connect(self.conf_editor, QtCore.SIGNAL("cursorPositionChanged()"),
+                                 self.updateConfTabText)
 
         self.gthighlighter = GTHighlighter(self.editor.document())
         self.confhighlighter = ConfHighlighter(self.conf_editor.document())
@@ -897,6 +904,20 @@ on_inconc = "exit(2)"
             scalable = self.activeImage()
         if scalable:
             scalable._scaleevents.changeScale(0.9)
+
+    def updateModelTabText(self):
+        self.edit.setTabText(EDITTAB_GT,"%s:%s - F1" %
+                             (os.path.basename(self._gtFileName),
+                              self.editor.textCursor().blockNumber() + 1))
+
+    def updateConfTabText(self):
+        if not self._confFileName or self._confFileName.startswith(self._gtFileName + ".gted"):
+            captionFile = "Configuration"
+        else:
+            captionFile = os.path.basename(self._confFileName)
+        self.edit.setTabText(EDITTAB_CONF,"%s:%s - F2" %
+                             (os.path.basename(captionFile),
+                              self.conf_editor.textCursor().blockNumber() + 1))
 
     def find(self, findFlags):
         class FindKeybShortcuts (QtCore.QObject):
