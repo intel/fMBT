@@ -23,6 +23,8 @@
 #include <glib-object.h>
 #include <glib.h>
 #include "helper.hh"
+#include <stdio.h>
+#include <errno.h>
 
 aal_remote::aal_remote(Log&l,std::string& s)
   : aal(l,s),
@@ -128,7 +130,8 @@ int aal_remote::adapter_execute(int action,const char* params) {
     std::fprintf(d_stdin, "ap%s\n",params);
 
   std::fprintf(d_stdin, "a%i\n", action);
-  return getint(d_stdin,d_stdout,_log);
+  return getint(d_stdin,d_stdout,_log,Alphabet::ALPHABET_MIN,
+		actions.size(),this);
 }
 
 int aal_remote::model_execute(int action) {
@@ -141,15 +144,21 @@ int aal_remote::model_execute(int action) {
   handle_stderr();
 
   std::fprintf(d_stdin, "m%i\n", action);
-  return getint(d_stdin,d_stdout,_log);
+  return getint(d_stdin,d_stdout,_log,Alphabet::ALPHABET_MIN,
+		actions.size(),this);
 }
 
 void aal_remote::push() {
   while(g_main_context_iteration(NULL,FALSE));
   if (status) {
     handle_stderr();
-    std::fprintf(d_stdin,"mu\n");
+    if (std::fprintf(d_stdin,"mu\n")!=3) {
+      status=false;
+    }
     fflush(d_stdin);
+    if (fflush(d_stdin)==EBADF) {
+      status=false;
+    }
   }
 }
 
@@ -157,15 +166,19 @@ void aal_remote::pop() {
   while(g_main_context_iteration(NULL,FALSE));
   if (status) {
     handle_stderr();
-    std::fprintf(d_stdin,"mo\n");
-    fflush(d_stdin);
+    if (std::fprintf(d_stdin,"mo\n")!=3) {
+      status=false;
+    }
+    if (fflush(d_stdin)==EBADF) {
+      status=false;
+    }
   }
 }
 
 bool aal_remote::reset() {
   handle_stderr();
   std::fprintf(d_stdin, "mr\n");
-  bool rv = (getint(d_stdin,d_stdout,_log) == 1);
+  bool rv = (getint(d_stdin,d_stdout,_log,0,1,this) == 1);
   if (!rv) {
     errormsg = "aal_remote model failed to reset \"" + params + "\".\n"
       "      (try executing: echo mr | " + params + ")";
@@ -176,7 +189,7 @@ bool aal_remote::reset() {
 
 bool aal_remote::init() {
   std::fprintf(d_stdin, "ai\n");
-  bool rv = (getint(d_stdin,d_stdout,_log) == 1);
+  bool rv = (getint(d_stdin,d_stdout,_log,0,1,this) == 1);
   if (!rv) {
     errormsg = "aal_remote adapter failed to init \"" + params + "\".\n"
       "      (try executing: echo ai | " + params + ")";
@@ -197,7 +210,8 @@ int aal_remote::getActions(int** act) {
   handle_stderr();
 
   std::fprintf(d_stdin, "ma\n");
-  if ((rv = getact(act,actions,d_stdin,d_stdout,_log)) >= 0) {
+  if ((rv = getact(act,actions,d_stdin,d_stdout,_log,
+		   1,action_names.size(),this)) >= 0) {
       return rv;
   } else {
       status = false;
@@ -218,7 +232,8 @@ int aal_remote::getprops(int** pro) {
   handle_stderr();
 
   std::fprintf(d_stdin, "mp\n");
-  if ((rv = getact(pro,tags,d_stdin,d_stdout,_log)) >= 0) {
+  if ((rv = getact(pro,tags,d_stdin,d_stdout,_log,
+		   0,tag_names.size(),this)) >= 0) {
     return rv;
   } else {
     status = false;
@@ -244,7 +259,9 @@ int aal_remote::observe(std::vector<int> &action, bool block)
   } else {
     std::fprintf(d_stdin, "aop\n"); // poll
   }
-  int action_alternatives = getact(NULL, action, d_stdin, d_stdout,_log);
+  int action_alternatives = getact(NULL, action, d_stdin, d_stdout,_log,
+				   Alphabet::ALPHABET_MIN,
+				   action_names.size(),this);
   if (action_alternatives < 0) {
       status = false;
       errormsg = "corrupted list of output actions";

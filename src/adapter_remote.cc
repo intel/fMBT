@@ -152,7 +152,8 @@ readagain:
     goto readagain;
   }
 
-  if (!string2vector(s,action) || action.size()==0) {
+  if (!string2vector(log,s,action,Alphabet::ALPHABET_MIN,
+		     actions->size(),this) || action.size()==0) {
     // Something wrong...
     char* escaped = escape_string(s);
     if (escaped) {
@@ -177,16 +178,17 @@ int Adapter_remote::observe(std::vector<int> &action,bool block)
     while (agetline(&s,&si,d_stdout,read_buf,read_buf_pos,log)<=0) {}
   } else {
     if (agetline(&s,&si,d_stdout,read_buf,read_buf_pos,log)<=0) {
-      return false;
+      return 0;
     }
   }
 
-  string2vector(s,action);
+  string2vector(log,s,action,Alphabet::ALPHABET_MIN,
+		actions->size(),this);
   /*
   log.debug("Adapter_remote::observe: output action number from the SUT: '%s' == %i\n",s,action);
   */
   std::free(s);
-  return true;
+  return action.size();
 }
 
 namespace {

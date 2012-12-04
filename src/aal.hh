@@ -37,10 +37,12 @@ template<class InputIterator, class T>
   }
 
 class aal;
+
+#include "writable.hh"
  
-class aal {
+class aal: public Writable {
 public:
-  aal(Log&l, std::string& _params): refcount(0),_log(l), params(_params) {status=true;_log.ref();};
+  aal(Log&l, std::string& _params): refcount(0),_log(l), params(_params) {_log.ref();};
   virtual ~aal() {_log.unref();};
   virtual int adapter_execute(int action,const char* params)=0;
   virtual int model_execute(int action)  =0;
@@ -98,10 +100,11 @@ protected:
   std::vector<std::string> tag_names; /* tag/state proposition names.. */
   Log& _log;
   std::string params;
-
+  /*
 public:
   std::string errormsg;
   bool status;
+  */
 };
 
 #include "model.hh"

@@ -28,7 +28,8 @@ enum values {
   DEADLOCK = -2,
   SILENCE = -3,
   TIMEOUT = -4,
-  ERROR   = -5  
+  ERROR   = -5,
+  ALPHABET_MIN = ERROR
 };
 
   virtual ~Alphabet() {}
