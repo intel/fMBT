@@ -1,0 +1,69 @@
+This example demonstrates how to test a JavaScript API with
+AAL/Python.
+
+The JavaScript module to be tested is in "mycounter.js".
+
+We used the following recipe to create tests for it:
+
+1. Create an html page that includes the API and fmbtweb.js. See
+   "test.html".
+
+2. Define test steps in Python/AAL. See "countermodel.aal". You can
+   open it in fmbt editor with:
+
+   $ fmbt-editor countermodel.aal smoketest.conf
+
+3. Create a configuration file for the test. There are two of them in
+   this example:
+
+   smoketest.conf   executes every test step at least once. This
+                    does not find the bug in mycounter.js.
+
+   checkcount.conf  tests different sequences from instantiating
+                    a counter to checking the value of the counter.
+                    This finds the bug.
+
+   These test configuration files define which command should be used
+   to launch the browser (look for BROWSER in the test configuration
+   file: it defines global BROWSER variable to Python/AAL).
+
+Run the smoke test:
+
+$ fmbt -l smoketest.log smoketest.conf
+
+And run the checkcount test:
+
+$ fmbt -l checkcount.log checkcount.conf
+
+The JavaScript module contains an bug: reset() does not work if the
+counter value is zero when reset() is called.
+
+The smoke test may still pass, because detecting the bug requires
+first calling reset() when the internal value is zero, and calling
+count() after that. On the other hand, if mycounter instance becomes
+destroyed and reinstantiated between the broken reset() and count(),
+the error will not be found. Thus it is easy to run through every test
+step without finding the bug. Smoke test stops when every test step
+has been executed at least once.
+
+The checkcount test finds the error, as it goes through different
+paths from iCreateCounter test steps to iCheckCount. One can find a
+very short path from the previous counter creation to the error from
+the log:
+
+$ fmbt-log -f '$as => $tv' checkvalue.log
+iCreateCounter:0 =>
+iCheckCount =>
+iDestroyCounter =>
+iCreateCounter:42 =>
+iCheckCount =>
+iDestroyCounter =>
+iCreateCounter:0 =>
+iIncrement =>
+iCheckCount =>
+iDestroyCounter =>
+iCreateCounter:0 =>
+iReset =>
+iCheckCount => error
+
+That is, iCreateCounter:0, iReset, iCheckCount finds the problem.

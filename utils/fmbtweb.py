@@ -49,6 +49,7 @@ import thread
 import threading
 import time
 import urllib
+import os
 
 import BaseHTTPServer
 import SimpleHTTPServer
@@ -143,6 +144,8 @@ class JS:
 
         if browser:
             self.startBrowser(browser)
+        else:
+            self._browserProcess = None
 
         JS._instance = self
 
@@ -169,12 +172,21 @@ class JS:
 
     def startBrowser(self, browser):
         serverAddress = "http://%s:%s" % (self._host, self._port)
-        self._browserCommand = (browser + " " + serverAddress
-                                + ">/dev/null 2>&1")
-        self._browserProcess = subprocess.Popen(
-            self._browserCommand,
-            shell=True,
-            stdin=None, stdout=None, stderr=None)
+        self._browserCommand = [browser, serverAddress]
+        self._wdevnull = file(os.devnull, "w")
+        self._rdevnull = file(os.devnull, "r")
+        try:
+            self._browserProcess = subprocess.Popen(
+                self._browserCommand,
+                stdin=self._rdevnull,
+                stdout=self._wdevnull,
+                stderr=self._wdevnull)
+            if not self._browserProcess.poll() in [None, 0]:
+                raise Exception('browser exited with status %s' %
+                                (self._browserProcess.poll(),))
+        except Exception, e:
+            raise Exception('Failed to launch browser "%s":\n%s' %
+                            (self._browserCommand[0], e))
 
     def eval(self, js, waitForResult=True):
         """Evaluates js in browser. If waitForResult == True
