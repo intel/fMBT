@@ -131,7 +131,7 @@ int aal_remote::adapter_execute(int action,const char* params) {
 
   std::fprintf(d_stdin, "a%i\n", action);
   return getint(d_stdin,d_stdout,_log,Alphabet::ALPHABET_MIN,
-		actions.size(),this);
+		action_names.size(),this);
 }
 
 int aal_remote::model_execute(int action) {
@@ -145,7 +145,7 @@ int aal_remote::model_execute(int action) {
 
   std::fprintf(d_stdin, "m%i\n", action);
   return getint(d_stdin,d_stdout,_log,Alphabet::ALPHABET_MIN,
-		actions.size(),this);
+		action_names.size(),this);
 }
 
 void aal_remote::push() {
