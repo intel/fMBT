@@ -83,7 +83,9 @@ _g_defaultReadWithOCR = True
 # windowsOffsets maps window-id to (x, y) pair.
 _g_windowOffsets = {None: (0,0)}
 # windowsSizes maps window-id to (width, height) pair.
-_g_windowSizes = {}
+_g_windowSizes = {None: (0,0)}
+# screenSize is a (width, height) pair.
+_g_screenSize = (0, 0)
 
 _g_tempdir = tempfile.mkdtemp(prefix="eyenfinger.%s." % (os.getpid(),))
 
@@ -231,6 +233,25 @@ def iSetDefaultReadWithOCR(ocr):
     """
     global _g_defaultReadWithOCR
     _g_defaultReadWithOCR = ocr
+
+def screenSize():
+    """
+    Returns the size of the screen as a pair (width, height).
+    """
+    return _g_screenSize
+
+def windowSize():
+    """
+    Returns the size of the window as a pair (width, height).
+    """
+    return _g_windowSizes[_g_lastWindow]
+
+def windowXY():
+    """
+    Returns screen coordinates of the top-left corner of the window as
+    a pair (x, y).
+    """
+    return _g_windowOffsets[_g_lastWindow]
 
 def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=None):
     """
@@ -830,6 +851,8 @@ def _hocr2words(hocr):
 
 def iUseWindow(windowIdOrName = None):
     global _g_lastWindow
+    global _g_screenSize
+
     if windowIdOrName == None:
         if _g_lastWindow == None:
             _g_lastWindow = iActiveWindow()
@@ -846,10 +869,14 @@ def iUseWindow(windowIdOrName = None):
     offset_x, offset_y, width, height = output.split(" ")
     _g_windowOffsets[_g_lastWindow] = (int(offset_x), int(offset_y))
     _g_windowSizes[_g_lastWindow] = (int(width), int(height))
+    _, output = _runcmd("xwininfo -root | awk '/Width:/{w=$NF}/Height:/{h=$NF}END{print w\" \"h}'")
+    s_width, s_height = output.split(" ")
+    _g_screenSize = (int(s_width), int(s_height))
     return _g_lastWindow
 
 def iUseImageAsWindow(imageFilename):
     global _g_lastWindow
+    global _g_screenSize
 
     if not eye4graphics:
         _log('ERROR: iUseImageAsWindow("%s") called, but eye4graphics not loaded.' % (imageFilename,))
@@ -866,6 +893,7 @@ def iUseImageAsWindow(imageFilename):
 
     _g_windowOffsets[_g_lastWindow] = (0, 0)
     _g_windowSizes[_g_lastWindow] = (int(struct_bbox.right), int(struct_bbox.bottom))
+    _g_screenSize = _g_windowSizes[_g_lastWindow]
     return _g_lastWindow
 
 def iActiveWindow(windowId = None):
