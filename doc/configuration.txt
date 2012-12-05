@@ -257,11 +257,29 @@ Available types & parameters:
 
                 measures the sum of all coverages given as parameters.
 
+        uexecs(from regexp_1 to regexp_2)
+        uinputs(from regexp_1 to regexp_2)
+        upaths(from regexp_1 to regexp_2)
         uwalks(from regexp_1 to regexp_2)
 
-                measures the number of minimal unique walks that start
-                from actions or tags matching regexp_1, and end to
-                actions or tags matching regexp_2.
+                measure the number of minimal unique subtests that
+                start from an action or a tag matching regexp_1, and
+                end to an action or a tag matching
+                regexp_2.
+
+                - Executions are unique if they differ by at least one
+                  action.
+
+                - Inputs are unique if they differ by at least one
+                  input action.
+
+                - Paths are unique if they differ by at least one
+                  state tag at any state.
+
+                - Walks are unique if they differ by at least one
+                  different action or state tag at any state.
+
+                Otherwise they are not considered unique.
 
         walks(from regexp_1 to regexp_2)
 
