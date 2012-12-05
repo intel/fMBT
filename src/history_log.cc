@@ -172,7 +172,7 @@ void History_log::send_action()
   
   if (t!="") {
     strvec(props,t,separator);
-    for(unsigned i=0;i<t.size();i++) {
+    for(unsigned i=0;i<props.size();i++) {
       unescape_string(props[i]);
     }
   }
