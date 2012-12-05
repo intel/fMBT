@@ -64,7 +64,7 @@ class Coverage_uinputs: public Coverage_pathsw {
 public:
   Coverage_uinputs(Log& l,std::string params):
     Coverage_pathsw(l,params) {
-    filter_inputs=true;
+    filter_outputs=true;
     pf=true;
     af=false;
   }
@@ -75,7 +75,7 @@ class Coverage_uexecs: public Coverage_pathsw {
 public:
   Coverage_uexecs(Log& l,std::string params):
     Coverage_pathsw(l,params) {
-    filter_inputs=false;
+    filter_outputs=false;
     pf=true;
     af=false;
   }
@@ -86,7 +86,7 @@ class Coverage_upaths: public Coverage_pathsw {
 public:
   Coverage_upaths(Log& l,std::string params):
     Coverage_pathsw(l,params) {
-    filter_inputs=false;
+    filter_outputs=false;
     pf=false;
     af=true;
   }
@@ -97,7 +97,7 @@ class Coverage_uwalks: public Coverage_pathsw {
 public:
   Coverage_uwalks(Log& l,std::string params):
     Coverage_pathsw(l,params) {
-    filter_inputs=false;
+    filter_outputs=false;
     pf=false;
     af=false;
   }
@@ -108,7 +108,7 @@ class Coverage_uinputswalks: public Coverage_pathsw {
 public:
   Coverage_uinputswalks(Log& l,std::string params):
     Coverage_pathsw(l,params) {
-    filter_inputs=false;
+    filter_outputs=false;
     pf=false;
     af=false;
   }
@@ -120,7 +120,7 @@ class Coverage_inputs: public Coverage_pathsw {
 public:
   Coverage_inputs(Log& l,std::string params):
     Coverage_pathsw(l,params) {
-    filter_inputs=true;
+    filter_outputs=true;
     pf=true;
     af=false;
     unique=false;
@@ -132,7 +132,7 @@ class Coverage_execs: public Coverage_pathsw {
 public:
   Coverage_execs(Log& l,std::string params):
     Coverage_pathsw(l,params) {
-    filter_inputs=false;
+    filter_outputs=false;
     pf=true;
     af=false;
     unique=false;
@@ -144,7 +144,7 @@ class Coverage_paths: public Coverage_pathsw {
 public:
   Coverage_paths(Log& l,std::string params):
     Coverage_pathsw(l,params) {
-    filter_inputs=false;
+    filter_outputs=false;
     pf=false;
     af=true;
     unique=false;
@@ -156,7 +156,7 @@ class Coverage_walks: public Coverage_pathsw {
 public:
   Coverage_walks(Log& l,std::string params):
     Coverage_pathsw(l,params) {
-    filter_inputs=false;
+    filter_outputs=false;
     pf=false;
     af=false;
     unique=false;
@@ -168,7 +168,7 @@ class Coverage_inputswalks: public Coverage_pathsw {
 public:
   Coverage_inputswalks(Log& l,std::string params):
     Coverage_pathsw(l,params) {
-    filter_inputs=false;
+    filter_outputs=false;
     pf=false;
     af=false;
     unique=false;
@@ -178,15 +178,17 @@ public:
 
 void Coverage_paths_base::on_restart(int action,std::vector<int>&p) {
   executed.clear();
-  std::vector<int> pp;
-  if (prop_set(start_action,1,&action)) {
-    executed.push_back(std::pair<int,std::vector<int> >(af?0:action,pf?pp:p));
+  if (filter_outputs==false || !model->is_output(action)) {
+    if (prop_set(start_action,1,&action)) {
+      executed.push_back(std::pair<int,std::vector<int> >(af?0:action,pf?pp:p));
+    }
   }
 }
 
 void Coverage_paths_base::on_online(int action,std::vector<int>&p){
-  std::vector<int> pp;
-  executed.push_back(std::pair<int,std::vector<int> >(af?0:action,pf?pp:p));
+  if (filter_outputs==false || !model->is_output(action)) {
+    executed.push_back(std::pair<int,std::vector<int> >(af?0:action,pf?pp:p));
+  }
 }
 
 FACTORY_DEFAULT_CREATOR(Coverage, Coverage_upaths, "upaths" )

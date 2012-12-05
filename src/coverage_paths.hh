@@ -28,7 +28,7 @@ public:
   Coverage_paths_base(Log&l,std::vector<std::string*>& _from,
 		 std::vector<std::string*>& _to,
 		 std::vector<std::string*>& _drop):
-    Coverage_report(l,_from,_to,_drop), filter_inputs(false),af(false),pf(true),unique(true) {}
+    Coverage_report(l,_from,_to,_drop), filter_outputs(false),af(false),pf(true),unique(true) {}
   
   virtual ~Coverage_paths_base() {}
 
@@ -38,7 +38,7 @@ public:
     }
     return count;
   }
-  bool filter_inputs;
+  bool filter_outputs;
   bool af;
   bool pf;
   bool unique;
@@ -46,6 +46,7 @@ protected:
   virtual void on_restart(int action,std::vector<int>&p);
   virtual void on_online(int action,std::vector<int>&p);
 private:
+  std::vector<int> pp;
 };
 
 #endif
