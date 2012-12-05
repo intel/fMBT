@@ -74,6 +74,7 @@ _g_words = None
 
 _g_lastWindow = None
 
+_g_defaultClickDryRun = False
 _g_defaultIconMatch = 1.0
 _g_defaultIconColorMatch = 1.0
 _g_defaultIconOpacityLimit = 0.0
@@ -183,6 +184,14 @@ def _runcmd(cmd):
 def setPreprocessFilter(preprocess):
     global _g_preprocess
     _g_preprocess = preprocess
+
+def iSetDefaultClickDryRun(dryRun):
+    """
+    Set the default value for optional dryRun parameter for iClick*
+    functions.
+    """
+    global _g_defaultClickDryRun
+    _g_defaultClickDryRun = dryRun
 
 def iSetDefaultIconMatch(match):
     """
@@ -450,7 +459,7 @@ def iVerifyIcon(iconFilename, match=None, colorMatch=None, opacityLimit=None, ca
 
 def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=None,
                colorMatch=None, opacityLimit=None,
-               mouseButton=1, mouseEvent=MOUSEEVENT_CLICK, dryRun=False, capture=None):
+               mouseButton=1, mouseEvent=MOUSEEVENT_CLICK, dryRun=None, capture=None):
     """
     Click coordinates relative to the given icon in previously iRead() image.
 
@@ -513,7 +522,7 @@ def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=None,
 
 
 def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33,
-               mouseButton=1, mouseEvent=1, dryRun=False, capture=None):
+               mouseButton=1, mouseEvent=1, dryRun=None, capture=None):
     """
     Click coordinates relative to the given word in previously iRead() image.
 
@@ -570,7 +579,7 @@ def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33,
 
 
 def iClickBox((left, top, right, bottom), clickPos=(0.5, 0.5),
-              mouseButton=1, mouseEvent=1, dryRun=False,
+              mouseButton=1, mouseEvent=1, dryRun=None,
               capture=None, _captureText=None):
     """
     Click coordinates relative to the given bounding box, default is
@@ -625,7 +634,7 @@ def iClickBox((left, top, right, bottom), clickPos=(0.5, 0.5),
     return (clickedX, clickedY)
 
 
-def iClickWindow((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=False, capture=None):
+def iClickWindow((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, capture=None):
     """
     Click given coordinates in the window.
 
@@ -660,7 +669,7 @@ def iClickWindow((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=False, ca
     return (clickScrX, clickScrY)
 
 
-def iClickScreen((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=False, capture=None):
+def iClickScreen((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, capture=None):
     """
     Click given absolute coordinates on the screen.
 
@@ -694,6 +703,9 @@ def iClickScreen((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=False, ca
 
     if capture:
         drawClickedPoint(_g_origImage, capture, (clickX, clickY))
+
+    if dryRun == None:
+        dryRun = _g_defaultClickDryRun
 
     if not dryRun:
         # use xte from the xautomation package
