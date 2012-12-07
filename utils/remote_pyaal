@@ -69,6 +69,7 @@ import atexit
 import urllib
 import tempfile
 import traceback
+import StringIO
 
 sys.path.append(os.getcwd())
 
@@ -124,6 +125,11 @@ def put_list(list_of_integers):
     msg = " ".join([str(i) for i in list_of_integers])
     if opt_debug: _log("sending: '%s'" % (msg,))
     sys.stdout.write(msg + "\n")
+    sys.stdout.flush()
+
+def put_lts(lts_string):
+    if opt_debug: _log("sending lts")
+    sys.stdout.write("%s\n%s" % (len(lts_string), lts_string))
     sys.stdout.flush()
 
 def get():
@@ -214,6 +220,15 @@ class RemoteAALBridge:
                     error(str(e))
                 else:   put(rv)
                 adapter_call_arguments = []
+            elif cmd.startswith("lts"):
+                lsts_depth = int(cmd[3:])
+                outfilestring = StringIO.StringIO()
+                self._aal.push()
+                aal2lsts(self._aal, outfilestring, lsts_depth)
+                self._aal.pop()
+                outfilestring.seek(0)
+                put_lts(outfilestring.read())
+
             else:
                 error("Unexpected command: \"" + cmd + "\". remote_pyaal works with \"aal_remote\" model.")
             cmd = get().rstrip()
@@ -234,7 +249,6 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]), include_va
     tags.update([(name, []) for name in aal.getSPNames()])
     tagnum_to_name = dict([(num+1, name) for num, name in enumerate(aal.getSPNames())])
 
-    aal.reset()
     initial_state_hidden = aal.state(discard_variables, include_variables)
     initial_state_real = aal.state()
     unhandled_states = {initial_state_real: []} # state to shortest path from istate
@@ -399,5 +413,6 @@ if __name__ == "__main__":
         _log("starting")
         bridge.communicate()
     else:
+        aal.reset()
         aal2lsts(aal, opt_output_fileobj, depth=opt_lsts_depth, discard_variables=set(opt_lsts_hide_vars), include_variables=set(opt_lsts_show_vars))
         opt_output_fileobj.close()
