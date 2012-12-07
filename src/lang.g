@@ -45,6 +45,21 @@ void *ops_cache=&count;
 
 #include "d.h"
 
+char* fixpathname(const char* f) {
+    char* ret=strdup(f);
+    int c=0;
+    for(int i=0;i<strlen(ret);i++) {
+        if (c==2) {
+            ret[i]=0;
+            i=strlen(ret);
+        }
+        if (ret[i]=='"') {
+            c++;
+        }
+    }
+    return ret;
+}
+
 void raise_error(d_loc_t& sl,Parser *p) {
     p->last_syntax_error_line = sl.line;
     p->user.syntax_errors++;
@@ -131,10 +146,13 @@ tstr:   string          {
         } ;
 
 push: 'push' '{' bstr '}' {
+            $n0.start_loc.pathname=fixpathname($n0.start_loc.pathname);
             obj->set_push($2.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col);
         } ;
 
-pop:  'pop' '{' bstr '}' { obj->set_pop ($2.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col); } ;
+pop:  'pop' '{' bstr '}' { 
+            $n0.start_loc.pathname=fixpathname($n0.start_loc.pathname);
+            obj->set_pop ($2.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col); } ;
 
 language: 'language:' cpp    { obj=new aalang_cpp  ; } starter ';'? |
           'language:' java   { obj=new aalang_java ; } starter ';'? |
@@ -145,26 +163,36 @@ cpp: 'C++' | 'cpp' | 'c++';
 java: 'oak' | 'green' | 'java';
 
 starter: |
-        '{' bstr '}' { obj->set_starter($1.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col); };
+        '{' bstr '}' {
+            $n0.start_loc.pathname=fixpathname($n0.start_loc.pathname);
+            obj->set_starter($1.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col); };
 
 python: 'Python' | 'python' | 'py';
 
-variables: 'variables' '{' bstr '}' { obj->set_variables($2.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col); };
+variables: 'variables' '{' bstr '}' {
+            $n0.start_loc.pathname=fixpathname($n0.start_loc.pathname);
+            obj->set_variables($2.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col); };
 
-istate: 'initial_state' '{' bstr '}' { obj->set_istate($2.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col); } ;
+istate: 'initial_state' '{' bstr '}' {
+            $n0.start_loc.pathname=fixpathname($n0.start_loc.pathname);
+            obj->set_istate($2.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col); } ;
 
-ainit: 'adapter_init' '{' bstr '}' { obj->set_ainit($2.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col); } ;
+ainit: 'adapter_init' '{' bstr '}' {
+            $n0.start_loc.pathname=fixpathname($n0.start_loc.pathname);
+            obj->set_ainit($2.str,$n0.start_loc.pathname,$n0.start_loc.line,$n0.start_loc.col); } ;
 
 guard: 'guard' '()' '{' bstr '}' {
             if (guard) {
                 raise_error($n0.start_loc,(Parser*)_parser);
             } else {
+                $n0.start_loc.pathname=fixpathname($n0.start_loc.pathname);
                 obj->set_guard($3.str,$n0.start_loc.pathname,$n3.start_loc.line,$n3.start_loc.col); guard=true;
             }
         } ;
 body: ('body'|'model') '()' '{' bstr '}' { if (body) {
                 raise_error($n0.start_loc,(Parser*)_parser);
             } else {
+                $n0.start_loc.pathname=fixpathname($n0.start_loc.pathname);
                 obj->set_body($3.str,$n0.start_loc.pathname,$n3.start_loc.line,$n3.start_loc.col);
                 body=true;
             }
@@ -173,6 +201,7 @@ body: ('body'|'model') '()' '{' bstr '}' { if (body) {
 adapter: 'adapter' '()' '{' bstr '}' { if (adapter) {
                 raise_error($n0.start_loc,(Parser*)_parser);
             } else {
+                $n0.start_loc.pathname=fixpathname($n0.start_loc.pathname);
                 obj->set_adapter($3.str,$n0.start_loc.pathname,$n3.start_loc.line,$n3.start_loc.col);
                 adapter=true;
             }

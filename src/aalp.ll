@@ -9,7 +9,10 @@
 #include <getopt.h>
 
 std::list<YY_BUFFER_STATE> istack;
+std::list<int> lstack;
+std::list<std::string> fstack;
 std::map<std::string,bool> def;
+int lineno=1;
 
 using namespace std;
 bool echo=true;
@@ -44,9 +47,13 @@ int state=NONE;
     switch (state) {
     case INC: {
       std::string s(yytext+1,strlen(yytext)-2);
+      fprintf(yyout,"# 1 \"%s\"\x0D\x0A",s.c_str(),fstack.size()+1);
       FILE* st=fopen( s.c_str(), "r" );
       if (st) {
 	istack.push_back(YY_CURRENT_BUFFER);
+	lstack.push_back(lineno);
+	fstack.push_back(s);
+	lineno=1;
 	yy_switch_to_buffer(yy_create_buffer( st, YY_BUF_SIZE ) );
       } else {
 	exit(-1);
@@ -116,12 +123,14 @@ int state=NONE;
 }
 
 "\n" {
+  lineno++;
   if (echo)
      fprintf(yyout,"%c",  yytext[0]);
 }
 
 <<EOF>> {
   if (yy_hold_char!='\n') {
+     lineno++;
      fprintf(yyout,"\n");
   }
   if (istack.empty()) {
@@ -129,7 +138,11 @@ int state=NONE;
   } else {
     yy_delete_buffer( YY_CURRENT_BUFFER );
     yy_switch_to_buffer(istack.back());
+    lineno=lstack.back();
     istack.pop_back();
+    lstack.pop_back();
+    fstack.pop_back();
+    fprintf(yyout,"# %i \"%s\"\x0D\x0A",lineno,fstack.back().c_str(),fstack.size());
   }
 }
 
@@ -178,7 +191,10 @@ int main(int argc,char** argv)
   }
 
   if (optind < argc) { // preprocessed file given on command line
+    fstack.push_back(argv[optind]);
     yyset_in(fopen(argv[optind], "r" ));
+  } else {
+    fstack.push_back("/dev/stdin");
   }
   yylex();
   return 0;
