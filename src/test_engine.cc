@@ -26,6 +26,7 @@
 #include <algorithm>
 
 time_t    Test_engine::end_time;
+extern int _push_pop;
 
 #ifdef DROI
 char* READLINE(const char* prompt)
@@ -822,6 +823,7 @@ void Test_engine::interactive()
           int num = std::atoi(s+2);
           int search_depth = 7;
           std::vector<int> path;
+	  _push_pop=search_depth;
           AlgPathToAction alg(search_depth);
           double score = alg.search(*current_model, num, path);
           if (score != 1.0) {
