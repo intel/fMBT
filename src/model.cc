@@ -21,6 +21,8 @@
 #include "helper.hh"
 #include <iostream>
 
+int _push_pop;
+
 FACTORY_IMPLEMENTATION(Model)
 
 Model::Model(Log&l, std::string params_):

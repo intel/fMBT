@@ -24,6 +24,8 @@
 #include <vector>
 #include <algorithm>
 
+extern int _push_pop;
+
 Heuristic_greedy::Heuristic_greedy(Log& l, std::string params) :
   Heuristic(l), m_search_depth(0), m_burst(false)
 {
@@ -112,6 +114,7 @@ int Heuristic_greedy::getIAction()
      * path is fully consumed */
     if (!m_burst || m_path.empty() ) {
       /* Spend more time for better coverage */
+      _push_pop=m_search_depth;
       AlgPathToBestCoverage alg(m_search_depth);
       /* Use precalculated path (m_path) as a hint. */
       std::reverse(m_path.begin(), m_path.end());

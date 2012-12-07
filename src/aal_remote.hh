@@ -25,6 +25,7 @@
 #include "aal.hh"
 #include <glib.h>
 #include "remote.hh"
+#include "lts.hh"
 
 class aal_remote: public aal, public remote {
 public:
@@ -33,6 +34,9 @@ public:
     fclose(d_stdin);
     fclose(d_stdout);
     fclose(d_stderr);
+    if (lts) {
+      delete lts;
+    }
   };
 
   virtual int adapter_execute(int action,const char* params);
@@ -53,6 +57,9 @@ private:
   FILE* d_stdout;
   FILE* d_stderr;
 
+  int accel;
+
+  Lts* lts;
 };
 
 #endif
