@@ -2147,8 +2147,12 @@ white_space(D_Parser *p, d_loc_t *loc, void **p_user_globals) {
 	loc->line = atoi(s) - 1;
 	while (isdigit_(*s)) s++;
 	while (wspace(*s)) s++;
-	if (*s == '"')
+	if (*s == '"') {
+	  s++;
 	  loc->pathname = s;
+	  while (*s!='"' && *s!=0) s++;
+	  loc->pathname = strndup(loc->pathname,s-loc->pathname);
+	}
       } else {
 	s = save;
 	goto Ldone;
