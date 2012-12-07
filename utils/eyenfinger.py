@@ -74,6 +74,7 @@ _g_words = None
 
 _g_lastWindow = None
 
+_g_defaultClickDryRun = False
 _g_defaultIconMatch = 1.0
 _g_defaultIconColorMatch = 1.0
 _g_defaultIconOpacityLimit = 0.0
@@ -82,7 +83,9 @@ _g_defaultReadWithOCR = True
 # windowsOffsets maps window-id to (x, y) pair.
 _g_windowOffsets = {None: (0,0)}
 # windowsSizes maps window-id to (width, height) pair.
-_g_windowSizes = {}
+_g_windowSizes = {None: (0,0)}
+# screenSize is a (width, height) pair.
+_g_screenSize = (0, 0)
 
 _g_tempdir = tempfile.mkdtemp(prefix="eyenfinger.%s." % (os.getpid(),))
 
@@ -184,6 +187,14 @@ def setPreprocessFilter(preprocess):
     global _g_preprocess
     _g_preprocess = preprocess
 
+def iSetDefaultClickDryRun(dryRun):
+    """
+    Set the default value for optional dryRun parameter for iClick*
+    functions.
+    """
+    global _g_defaultClickDryRun
+    _g_defaultClickDryRun = dryRun
+
 def iSetDefaultIconMatch(match):
     """
     Set the default icon matching value, ranging from 0 to 1. The
@@ -222,6 +233,25 @@ def iSetDefaultReadWithOCR(ocr):
     """
     global _g_defaultReadWithOCR
     _g_defaultReadWithOCR = ocr
+
+def screenSize():
+    """
+    Returns the size of the screen as a pair (width, height).
+    """
+    return _g_screenSize
+
+def windowSize():
+    """
+    Returns the size of the window as a pair (width, height).
+    """
+    return _g_windowSizes[_g_lastWindow]
+
+def windowXY():
+    """
+    Returns screen coordinates of the top-left corner of the window as
+    a pair (x, y).
+    """
+    return _g_windowOffsets[_g_lastWindow]
 
 def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=None):
     """
@@ -450,7 +480,7 @@ def iVerifyIcon(iconFilename, match=None, colorMatch=None, opacityLimit=None, ca
 
 def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=None,
                colorMatch=None, opacityLimit=None,
-               mouseButton=1, mouseEvent=MOUSEEVENT_CLICK, dryRun=False, capture=None):
+               mouseButton=1, mouseEvent=MOUSEEVENT_CLICK, dryRun=None, capture=None):
     """
     Click coordinates relative to the given icon in previously iRead() image.
 
@@ -513,7 +543,7 @@ def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=None,
 
 
 def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33,
-               mouseButton=1, mouseEvent=1, dryRun=False, capture=None):
+               mouseButton=1, mouseEvent=1, dryRun=None, capture=None):
     """
     Click coordinates relative to the given word in previously iRead() image.
 
@@ -570,7 +600,7 @@ def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33,
 
 
 def iClickBox((left, top, right, bottom), clickPos=(0.5, 0.5),
-              mouseButton=1, mouseEvent=1, dryRun=False,
+              mouseButton=1, mouseEvent=1, dryRun=None,
               capture=None, _captureText=None):
     """
     Click coordinates relative to the given bounding box, default is
@@ -625,7 +655,7 @@ def iClickBox((left, top, right, bottom), clickPos=(0.5, 0.5),
     return (clickedX, clickedY)
 
 
-def iClickWindow((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=False, capture=None):
+def iClickWindow((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, capture=None):
     """
     Click given coordinates in the window.
 
@@ -660,7 +690,7 @@ def iClickWindow((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=False, ca
     return (clickScrX, clickScrY)
 
 
-def iClickScreen((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=False, capture=None):
+def iClickScreen((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, capture=None):
     """
     Click given absolute coordinates on the screen.
 
@@ -694,6 +724,9 @@ def iClickScreen((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=False, ca
 
     if capture:
         drawClickedPoint(_g_origImage, capture, (clickX, clickY))
+
+    if dryRun == None:
+        dryRun = _g_defaultClickDryRun
 
     if not dryRun:
         # use xte from the xautomation package
@@ -818,6 +851,8 @@ def _hocr2words(hocr):
 
 def iUseWindow(windowIdOrName = None):
     global _g_lastWindow
+    global _g_screenSize
+
     if windowIdOrName == None:
         if _g_lastWindow == None:
             _g_lastWindow = iActiveWindow()
@@ -834,10 +869,14 @@ def iUseWindow(windowIdOrName = None):
     offset_x, offset_y, width, height = output.split(" ")
     _g_windowOffsets[_g_lastWindow] = (int(offset_x), int(offset_y))
     _g_windowSizes[_g_lastWindow] = (int(width), int(height))
+    _, output = _runcmd("xwininfo -root | awk '/Width:/{w=$NF}/Height:/{h=$NF}END{print w\" \"h}'")
+    s_width, s_height = output.split(" ")
+    _g_screenSize = (int(s_width), int(s_height))
     return _g_lastWindow
 
 def iUseImageAsWindow(imageFilename):
     global _g_lastWindow
+    global _g_screenSize
 
     if not eye4graphics:
         _log('ERROR: iUseImageAsWindow("%s") called, but eye4graphics not loaded.' % (imageFilename,))
@@ -854,6 +893,7 @@ def iUseImageAsWindow(imageFilename):
 
     _g_windowOffsets[_g_lastWindow] = (0, 0)
     _g_windowSizes[_g_lastWindow] = (int(struct_bbox.right), int(struct_bbox.bottom))
+    _g_screenSize = _g_windowSizes[_g_lastWindow]
     return _g_lastWindow
 
 def iActiveWindow(windowId = None):
