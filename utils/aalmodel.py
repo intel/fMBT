@@ -71,7 +71,7 @@ class AALModel:
         self._push_variables = [
             v for v in self.initial_state.func_code.co_names
             if (v in self._variables and
-                type(eval(v, self._variables)) not in [types.ModuleType, types.FunctionType, types.ClassType])
+                type(eval(v, self._variables)) not in [types.ModuleType, types.ClassType])
             ]
         return rv
 

@@ -21,7 +21,7 @@
 #include "helper.hh"
 #include <iostream>
 
-int _push_pop;
+int _g_simulation_depth_hint;
 
 FACTORY_IMPLEMENTATION(Model)
 
@@ -61,13 +61,13 @@ bool Model::is_output(int action)
     }
     return false;
   }
-  
+
   for(size_t i=0;i<inputs.size();i++) {
     if (inputs[i]==action) {
       return false;
     }
   }
-  
+
   return true;
 }
 
@@ -77,7 +77,7 @@ void Model::precalc_input_output()
     if (isOutputName(action_names[i])) {
       outputs.push_back(i);
     }
-    
+
     if (isInputName(action_names[i])) {
       inputs.push_back(i);
     }

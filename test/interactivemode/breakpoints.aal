@@ -4,8 +4,6 @@ aal "interactive_breakpoints" {
         import time
         fmbt_launch_command = "fmbt -i simple.conf"
 
-        p = pexpect.spawn(fmbt_launch_command)
-
         def requireOutput(s, timeout=1):
             assert p.expect(s, timeout) == 0
 
@@ -22,6 +20,10 @@ aal "interactive_breakpoints" {
     initial_state {
         abs = 0 # number of action breakpoints
         tbs = 0 # number of tag breakpoints
+    }
+    adapter_init {
+        global p
+        p = pexpect.spawn(fmbt_launch_command)
     }
     action "iAddActionBp" {
         guard() { return abs < 2 }
@@ -56,7 +58,7 @@ aal "interactive_breakpoints" {
             command('d0')
             requireOutput('fMBT>')
             command('bb')
-            requireOutput('Action breakpoints \(%s\)' % (abs,))            
+            requireOutput('Action breakpoints \(%s\)' % (abs,))
         }
     }
     action "iAddTagBp" {

@@ -23,10 +23,11 @@ aal "adapter_exceptions" {
     # preview-hide-vars: 
     # preview-depth: 5
     variables {
-        x
+        x, adapter_exception_handler
     }
     initial_state {
         x = 0
+        adapter_exception_handler = take_same_action
     }
     action "oOutputAction" {
         guard() { return x < 999 }
@@ -40,7 +41,9 @@ aal "adapter_exceptions" {
     action "iStep1" {
         guard() { return x == 0 }
         body()  { x = 1 }
-        adapter() {            
+        adapter() {
+            log("adapter_exception_handler == %s" %
+                (adapter_exception_handler.func_name,))
             raise Exception("hello-from-iStep1")
         }
     }
@@ -48,6 +51,8 @@ aal "adapter_exceptions" {
         guard() { return x == 1 }
         body() { x = 2 }
         adapter() {
+            log("adapter_exception_handler == %s" %
+                (adapter_exception_handler.func_name,))
             global adapter_exception_handler
             adapter_exception_handler = take_output_action
             log("switching handler to %s" % (adapter_exception_handler,))
@@ -61,6 +66,8 @@ aal "adapter_exceptions" {
             x = 3
         }
         adapter() {
+            log("adapter_exception_handler == %s" %
+                (adapter_exception_handler.func_name,))
             # division-by-zero
             i = 1/0
         }
@@ -77,6 +84,8 @@ aal "adapter_exceptions" {
             x = 3
         }
         adapter() {
+            log("adapter_exception_handler == %s" %
+                (adapter_exception_handler.func_name,))
             raise Exception("This is it.")
         }
     }

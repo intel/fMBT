@@ -26,6 +26,8 @@
 #include <algorithm>
 #include <cstdlib>
 
+extern int _g_simulation_depth_hint;
+
 double AlgPathToBestCoverage::search(Model& model, Coverage& coverage, std::vector<int>& path)
 {
     m_coverage = &coverage;
@@ -102,6 +104,16 @@ double AlgBDFS::path_to_best_evaluation(Model& model, std::vector<int>& path, in
     volatile double current_score = evaluate();
     volatile double best_score = 0;
     std::vector<int> hinted_path;
+
+    if (!model.status || !status) {
+        status=false;
+        return 0.0;
+    }
+
+    _g_simulation_depth_hint = depth;
+    model.push();
+    _g_simulation_depth_hint = 0;
+
     if (path.size() > 0) {
         // Path includes a hint to look at this path at first before
         // considering others.
@@ -149,6 +161,7 @@ double AlgBDFS::path_to_best_evaluation(Model& model, std::vector<int>& path, in
     }
 
     best_score = _path_to_best_evaluation(model, path, depth, current_score);
+    model.pop();
 
     if (!model.status || !status) {
       status=false;

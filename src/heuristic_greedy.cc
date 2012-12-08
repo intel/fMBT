@@ -24,7 +24,7 @@
 #include <vector>
 #include <algorithm>
 
-extern int _push_pop;
+extern int _g_simulation_depth_hint;
 
 Heuristic_greedy::Heuristic_greedy(Log& l, std::string params) :
   Heuristic(l), m_search_depth(0), m_burst(false)
@@ -53,7 +53,7 @@ int Heuristic_greedy::getAction()
   int i = model->getActions(&actions);
 
   if (i==0) {
-    return Alphabet::DEADLOCK;      
+    return Alphabet::DEADLOCK;
   }
 
   float* f=new float[i];
@@ -87,7 +87,7 @@ int Heuristic_greedy::getIAction()
   for(int u=0;u<i;u++) {
     log.debug("iaction %i %i",u,actions[u]);
   }
-  
+
   if (i==0) {
     // No input actions. See if there are output actions available.
     i=model->getActions(&actions);
@@ -114,14 +114,13 @@ int Heuristic_greedy::getIAction()
      * path is fully consumed */
     if (!m_burst || m_path.empty() ) {
       /* Spend more time for better coverage */
-      _push_pop=m_search_depth;
       AlgPathToBestCoverage alg(m_search_depth);
       /* Use precalculated path (m_path) as a hint. */
       std::reverse(m_path.begin(), m_path.end());
       double score = alg.search(*model, *my_coverage, m_path);
 
       if (!alg.status) {
-	status=false;
+        status=false;
       }
 
       if (m_path.size() > 0) {
@@ -133,18 +132,18 @@ int Heuristic_greedy::getIAction()
       log.debug("path %i",m_path.back());
       i = model->getIActions(&actions);
       if (i==0) {
-	return Alphabet::ERROR;
+        return Alphabet::ERROR;
       }
       bool broken=true;
       int ret=m_path.back();
       for(int j=0;j<i;j++) {
-	if (actions[j]==ret) {
-	  broken=false;
-	}
+        if (actions[j]==ret) {
+          broken=false;
+        }
       }
       if (broken) {
-	log.print("<ERROR msg=\"%s %i\"/>","trying to return action %i, which is not executable in the model",ret);
-	abort();
+        log.print("<ERROR msg=\"%s %i\"/>","trying to return action %i, which is not executable in the model",ret);
+        abort();
       }
       return m_path.back();
     }

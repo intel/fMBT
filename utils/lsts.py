@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright (c) 2006-2010 Tampere University of Technology
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
 # "Software"), to deal in the Software without restriction, including
@@ -8,10 +8,10 @@
 # distribute, sublicense, and/or sell copies of the Software, and to
 # permit persons to whom the Software is furnished to do so, subject to
 # the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be
 # included in all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -75,9 +75,9 @@ r = lsts.reader(sys.stdin)
 used_actions=[]
 
 for source_state, transition_list in enumerate(r.get_transitions()):
-    
+
     for dest_state, action_number in transition_list:
-        
+
         if not action_number in used_actions:
             used_actions.append( action_number )
             print r.get_actionnames()[ action_number ]
@@ -180,7 +180,7 @@ class lsts:
         self._header.action_cnt=0
         self._header.transition_cnt=0
         self._header.initial_states=0
-        
+
         self._actionnames=[]
         self._transitions=[]
         self._stateprops={} # state prop name -> list of states
@@ -189,11 +189,11 @@ class lsts:
     def set_actionnames(self,actionnames):
         """
         Parameters:
-        
+
         - actionnames is a list of strings
 
         Notes:
-        
+
         This method modifies Action_cnt field in the header.
         """
         if len(actionnames) > 0 and actionnames[0]=="tau":
@@ -202,7 +202,7 @@ class lsts:
             stderr.write('LSTS.PY: warning: set_actionnames did not receive "tau".\n')
             self._actionnames=["tau"]+actionnames
         self._header.action_cnt=len(self._actionnames)-1
-            
+
 
     def set_transitions(self,transitions):
         """
@@ -219,7 +219,7 @@ class lsts:
         len(list)-1.
 
         Notes:
-        
+
         This method modifies State_cnt and Transition_cnt fields in
         the header.
         """
@@ -279,7 +279,7 @@ class writer(lsts):
     def __init__(self,file=None,lsts_object=None):
         """
         Parameters:
-        
+
         - Optional parameter 'file' should provide method
         'write'. Output will be written to this object. Valid objects
         are, for example, files opened for writing and sys.stdout.
@@ -308,8 +308,8 @@ class writer(lsts):
         if file!=None and lsts_object!=None: # write immediately
             self.write()
             self._written_in_constructor=file
-        
-    def write(self,file=None):
+
+    def write(self,file=None,stateprop_order=None):
         """
         Parameters:
 
@@ -321,20 +321,20 @@ class writer(lsts):
         """
         if not file:
             file=self.__file
-            
+
         if self._written_in_constructor==file:
             self._written_in_constructor=None
             return
-        
+
         file.write("Begin Lsts\n\n")
 
         file.write("Begin History\n")
         for num,s in enumerate(self._history):
             file.write("\t"+str(num+1)+"\n")
             file.write("\t\""+s+"\"\n")
-            
+
         file.write("End History\n\n")
-        
+
         file.write("Begin Header\n")
         file.write(" State_cnt = " + str(self._header.state_cnt) + "\n")
         file.write(" Action_cnt = " + str(self._header.action_cnt) + "\n")
@@ -351,15 +351,18 @@ class writer(lsts):
 
         if self._stateprops:
             file.write("Begin State_props\n")
-            propnames=self._stateprops.keys()
-            propnames.sort()
+            if stateprop_order == None:
+                propnames=self._stateprops.keys()
+                propnames.sort()
+            else:
+                propnames = stateprop_order
             for key in propnames:
                 file.write('  "%s" :' % key)
                 for v in self._stateprops[key]:
                     file.write(' %s' % (v+1))
                 file.write(';\n')
             file.write("End State_props\n\n")
-            
+
         file.write("Begin Transitions\n")
         for si,s in enumerate(self._transitions):
             file.write(" "+str(si+1)+":")
@@ -383,12 +386,12 @@ class reader(lsts):
     def __init__(self,file=None):
         """
         Parameters:
-        
+
         - Optional parameter file should provide method 'read'. Valid
         objects are, for example, files opened for reading and
         sys.stdin. If file_object is given, the file is immediately
         read, so there is no need to call read method afterwards."""
-        
+
         lsts.__init__(self)
         self.__already_read=0
         self.__file=file
@@ -432,10 +435,10 @@ class reader(lsts):
             l=l.replace(chr(0x0d),'')
             if l.strip().lower() in secs: # move to the next section
                 sidx=secs.index(l.strip().lower())
-                
+
             elif secs[sidx]=="begin history":
                 self._history.append(l.strip())
-                
+
             elif secs[sidx]=="begin header": # parse a header row
                 res=self.__headerrow.search(l)
                 if res and int(res.group(2))>0:
@@ -453,7 +456,7 @@ class reader(lsts):
                         self._header.state_prop_cnt=int(res.group(2))
                     elif res.group(1).lower()=="initial_states":
                         self._header.initial_states=int(res.group(2))-1 # only one allowed (BAD)
-                        
+
             elif secs[sidx]=="begin action_names": # parse an action name row
                 res=self.__actionnamerow.search(l)
                 if res and int(res.group(1))>0:
@@ -467,7 +470,7 @@ class reader(lsts):
                             # is given in multiple rows
                             actionname_in_multirow=int(res.group(1))
                             self._actionnames[actionname_in_multirow]=res.group(2)
-                        else: # real hack. parse 'number = \n "action name"' 
+                        else: # real hack. parse 'number = \n "action name"'
                             res=self.__actionnamemultirow_start2.search(l)
                             if res:
                                 nextline=file.readline()
@@ -483,7 +486,7 @@ class reader(lsts):
                             if res:
                                 self._actionnames[actionname_in_multirow]+=res.group(1)
                                 actionname_in_multirow=-1
-            
+
             elif secs[sidx]=="begin transitions": # parse a transition row
                 res=self.__transitionrow.search(l)
                 if res and int(res.group(1))>0:
@@ -493,7 +496,7 @@ class reader(lsts):
                             [ (l[i],l[i+1]) for i in range(0,len(l))[::2] ]:
                         self._transitions[starting_state].append(
                             (int(dest_state)-1,int(action_index)) )
-                        
+
             elif secs[sidx]=="begin state_props": # parse state proposition row
                 res=self.__stateproprow.search(l)
                 if res:
@@ -514,7 +517,7 @@ class reader(lsts):
                             proplist.extend(range(*proprange))
                     proplist.sort()
                     self._stateprops[propname]=proplist
-                    
+
             elif secs[sidx]=="begin layout":
                 layout_numbers=l.strip().split()
                 try:
@@ -573,7 +576,7 @@ if __name__=="__main__":
             l=self.s[:self.s.find("\n")+1]
             self.s=self.s[self.s.find("\n")+1:]
             return l
-            
+
     outf1=filu()
     w=writer(outf1)
     w.set_actionnames(["tau","a","b","c"])
@@ -598,5 +601,5 @@ if __name__=="__main__":
         print "-- following LSTS differ:"
         print "---1---"
         print outf1.s
-        print "---2--"        
+        print "---2--"
         print outf2.s

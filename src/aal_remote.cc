@@ -26,7 +26,7 @@
 #include <stdio.h>
 #include <errno.h>
 
-extern int _push_pop;
+extern int _g_simulation_depth_hint;
 
 aal_remote::aal_remote(Log&l,std::string& s)
   : aal(l,s),
@@ -133,66 +133,64 @@ int aal_remote::adapter_execute(int action,const char* params) {
 
   std::fprintf(d_stdin, "a%i\n", action);
   return getint(d_stdin,d_stdout,_log,Alphabet::ALPHABET_MIN,
-		action_names.size(),this);
+                action_names.size(),this);
 }
 
 int aal_remote::model_execute(int action) {
-  while(g_main_context_iteration(NULL,FALSE));
-
   if (!status) {
     return 0;
   }
-
-  handle_stderr();
 
   if (accel>0) {
     return lts->execute(action);
   }
 
+  while(g_main_context_iteration(NULL,FALSE));
+  handle_stderr();
+
   std::fprintf(d_stdin, "m%i\n", action);
   return getint(d_stdin,d_stdout,_log,Alphabet::ALPHABET_MIN,
-		action_names.size(),this);
+                action_names.size(),this);
 }
 
 void aal_remote::push() {
-  while(g_main_context_iteration(NULL,FALSE));
   if (status) {
+    if (accel>0) {
+      accel++;
+      lts->push();
+      return;
+    }
+    while(g_main_context_iteration(NULL,FALSE));
     handle_stderr();
-
-    if (accel==0) {
-      std::string s="lts"+to_string(_push_pop+1)+"\n";
+    if (accel==0 && _g_simulation_depth_hint > 0) {
+      std::string s="lts"+to_string(_g_simulation_depth_hint+1)+"\n";
       if (std::fprintf(d_stdin,s.c_str())!=s.length()) {
-	status=false;
+        status=false;
       }
       fflush(d_stdin);
       if (fflush(d_stdin)==EBADF) {
-	status=false;
+        status=false;
       }
       int r=getint(d_stdin,d_stdout,_log,0,INT_MAX,this);
       if (status && r>0) {
-	char lts_content[r+1];
-	lts_content[r]=0;
-	fread(lts_content,1,r,d_stdout);
-	lts=new Lts(_log,std::string("remote.lts#")+lts_content);
-	if (lts && lts->status && lts->init() && lts->reset() && lts->status) {
-	  accel=1;
-	  return;
-	} else {
-	  if (lts) {
-	    delete lts;
-	    lts=NULL;
-	  }
-	  accel=-1;
-	}
-      } else {
-	accel=-1;
+        char lts_content[r+1];
+        lts_content[r]=0;
+        fread(lts_content,1,r,d_stdout);
+        lts=new Lts(_log,std::string("remote.lts#")+lts_content);
+        if (lts && lts->status && lts->init() && lts->reset() && lts->status) {
+          // accel=1; // causes many LTS generations per step
+          accel=1;
+          return;
+        } else {
+          if (lts) {
+            delete lts;
+            lts=NULL;
+          }
+        }
       }
-    } else {
-      if (accel>0) {
-	accel++;
-	lts->push();
-	return;
-      }
+      handle_stderr();
+      while(g_main_context_iteration(NULL,FALSE));
+      accel=-1; // do not try local lts acceleration another time
     }
 
     if (std::fprintf(d_stdin,"mu\n")!=3) {
@@ -206,23 +204,23 @@ void aal_remote::push() {
 }
 
 void aal_remote::pop() {
-  while(g_main_context_iteration(NULL,FALSE));
   if (status) {
-    handle_stderr();
     if (accel>0) {
       accel--;
       if (accel==0) {
-	delete lts;
-	lts=NULL;
+        delete lts;
+        lts=NULL;
       } else {
-	lts->pop();
+        lts->pop();
       }
     } else {
+      while(g_main_context_iteration(NULL,FALSE));
+      handle_stderr();
       if (std::fprintf(d_stdin,"mo\n")!=3) {
-	status=false;
+        status=false;
       }
       if (fflush(d_stdin)==EBADF) {
-	status=false;
+        status=false;
       }
     }
   }
@@ -254,21 +252,20 @@ bool aal_remote::init() {
 int aal_remote::getActions(int** act) {
   int rv;
 
-  while(g_main_context_iteration(NULL,FALSE));
-
   if (!status) {
     return 0;
   }
-
-  handle_stderr();
 
   if (accel>0) {
     return lts->getActions(act);
   }
 
+  while(g_main_context_iteration(NULL,FALSE));
+  handle_stderr();
+
   std::fprintf(d_stdin, "ma\n");
   if ((rv = getact(act,actions,d_stdin,d_stdout,_log,
-		   1,action_names.size(),this)) >= 0) {
+                   1,action_names.size(),this)) >= 0) {
     return rv;
   }
   status = false;
@@ -279,21 +276,20 @@ int aal_remote::getActions(int** act) {
 int aal_remote::getprops(int** pro) {
   int rv;
 
-  while(g_main_context_iteration(NULL,FALSE));
-
   if (!status) {
     return 0;
   }
-
-  handle_stderr();
 
   if (accel>0) {
     return lts->getprops(pro);
   }
 
+  while(g_main_context_iteration(NULL,FALSE));
+  handle_stderr();
+
   std::fprintf(d_stdin, "mp\n");
   if ((rv = getact(pro,tags,d_stdin,d_stdout,_log,
-		   0,tag_names.size(),this)) >= 0) {
+                   0,tag_names.size(),this)) >= 0) {
     return rv;
   } else {
     status = false;
@@ -320,8 +316,8 @@ int aal_remote::observe(std::vector<int> &action, bool block)
     std::fprintf(d_stdin, "aop\n"); // poll
   }
   int action_alternatives = getact(NULL, action, d_stdin, d_stdout,_log,
-				   Alphabet::ALPHABET_MIN,
-				   action_names.size(),this);
+                                   Alphabet::ALPHABET_MIN,
+                                   action_names.size(),this);
   if (action_alternatives < 0) {
       status = false;
       errormsg = "corrupted list of output actions";

@@ -223,9 +223,14 @@ class RemoteAALBridge:
             elif cmd.startswith("lts"):
                 lsts_depth = int(cmd[3:])
                 outfilestring = StringIO.StringIO()
-                self._aal.push()
-                aal2lsts(self._aal, outfilestring, lsts_depth)
-                self._aal.pop()
+                try:
+                    self._aal.push()
+                    aal2lsts(self._aal, outfilestring, lsts_depth,
+                             include_generation_discontinued_tag = False)
+                    self._aal.pop()
+                except Exception, e:
+                    fmbtstderr('Error on simulation %s: %s\n%s' % (type(e).__name__, e, traceback.format_exc()))
+                    error(str(e))
                 outfilestring.seek(0)
                 put_lts(outfilestring.read())
 
@@ -233,7 +238,8 @@ class RemoteAALBridge:
                 error("Unexpected command: \"" + cmd + "\". remote_pyaal works with \"aal_remote\" model.")
             cmd = get().rstrip()
 
-def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]), include_variables=None):
+def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]),
+             include_variables=None, include_generation_discontinued_tag=True):
     try:
         import lsts
     except:
@@ -298,7 +304,10 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]), include_va
     new_lsts.set_actionnames(actionnames)
     new_lsts.set_transitions(transitions)
     new_lsts.set_stateprops(tags)
-    new_lsts.write(output_fileobj)
+    stateprop_order = aal.getSPNames()
+    if include_generation_discontinued_tag:
+        stateprop_order.append(generation_discontinued_tag)
+    new_lsts.write(output_fileobj, stateprop_order=stateprop_order)
 
 if __name__ == "__main__":
     # Default values for commandline arguments
