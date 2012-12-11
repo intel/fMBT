@@ -17,8 +17,23 @@
 """
 eyenfinger - GUI testing library based on OCR and X event generation
 
-Configuring
------------
+Configuring low-level key presses
+---------------------------------
+
+printEventsFromFile() prints input events from Linux chosen
+/dev/input/eventXX file. Example:
+
+python -c '
+import eyenfinger
+eyenfinger.printEventsFromFile("/dev/input/event0")
+'
+
+Alternatively, you can use device names in /proc/bus/input/devices and
+printEventsFromDevice("device name").
+
+
+Configuring OCR
+---------------
 
 autoconfigure() evaluates number of preprocessing filters to give the
 best result on finding given words from given image. Example:
@@ -61,6 +76,9 @@ import os
 import tempfile
 import atexit
 import shutil
+import ctypes
+import platform
+import struct
 
 _g_preprocess = "-sharpen 5 -filter Mitchell -resize 1920x1600 -level 40%%,70%%,5.0 -sharpen 5"
 
@@ -116,6 +134,14 @@ keys = [
     "t", "u", "v", "w", "x", "y", "z", "braceleft", "bar",
     "braceright"]
 
+# Input keys is a dictionary
+#     keyName -> (input device, keycode)
+#
+# Input device can be either a filename (like /dev/input/event0)
+# or device name (see /proc/bus/input/devices). Keycode is a
+# numeric value.
+_g_inputKeys = {}
+
 class EyenfingerError(Exception):
     pass
 
@@ -170,6 +196,42 @@ except Exception, e:
     Bbox = None
     eye4graphics = None
     _log('Loading icon recognition library failed: "%s".' % (e,))
+
+if platform.architecture()[0] == '64bit':
+    _TimeType = ctypes.c_int64
+else:
+    _TimeType = ctypes.c_int
+
+# See struct input_event in /usr/include/linux/input.h
+class _InputEvent(ctypes.Structure):
+    _fields_ = [('time', _TimeType),
+                ('suseconds', _TimeType),
+                ('type', ctypes.c_uint16),
+                ('code', ctypes.c_uint16),
+                ('value', ctypes.c_int32)]
+_InputEventStructSpec = 'QQHHi'
+
+_EV_KEY = 0x01
+
+def printEventsFromFile(filename):
+    fd = os.open(filename, os.O_RDONLY)
+
+    try:
+        while 1:
+            evString = os.read(fd, ctypes.sizeof(_InputEvent))
+            if not evString: break
+            print "time: %8s, susc: %8s, type: %8s, keyCode:%8s, value:%8s" % \
+                struct.unpack(_InputEventStructSpec, evString)
+    finally:
+        os.close(fd)
+
+def printEventsFromDevice(deviceName):
+    devices = dict(listInputDevices())
+    if not deviceName in devices:
+        error('Unknown device "%s". Available devices: %s' %
+              (deviceName, sorted(devices.keys())))
+    else:
+        printEventsFromFile(devices[deviceName])
 
 def _exitHandler():
     shutil.rmtree(_g_tempdir, ignore_errors=True)
@@ -233,6 +295,15 @@ def iSetDefaultReadWithOCR(ocr):
     """
     global _g_defaultReadWithOCR
     _g_defaultReadWithOCR = ocr
+
+def iSetInputKeys(inputKeys):
+    """
+    Set dictionary that maps key names to pairs (input device,
+    keycode) that will be used when synthesizing low-level input key
+    presses with iInputKey(keyName).
+    """
+    global _g_inputKeys
+    _g_inputKeys = inputKeys
 
 def screenSize():
     """
@@ -776,6 +847,60 @@ def iType(word, delay=0.0):
             args.append("'key %s'" % (char,))
     usdelay = " 'usleep %s' " % (int(delay*1000000),)
     _runcmd("xte %s" % (usdelay.join(args),))
+
+def iInputKey(keyName, hold=0.1, delay=0.0):
+    """
+    Send a keypress of keyName using Linux evdev interface
+    (/dev/input/eventXX).
+
+    Parameters:
+
+        keyName      name of pressed key in keymap.
+                     Use iSetInputKeys() to set a keymap.
+
+        hold         time (in seconds) to hold the key before
+                     releasing. The default is 0.1.
+
+        delay        delay before returning after the keypress.
+
+    Example:
+
+        iSetInputKeys({'Power': ("Power Button", 106)})
+        iInputKey('Power')
+    """
+    device, keycode = _g_inputKeys[keyName]
+    writeKeyPress(deviceFilename(device), keycode, hold=hold, delay=delay)
+
+def deviceFilename(deviceName):
+    devices = dict(listInputDevices())
+    if not deviceName in devices:
+        return deviceName
+    else:
+        return devices[deviceName]
+
+def listInputDevices():
+    nameAndFile = []
+    for l in file("/proc/bus/input/devices"):
+        if l.startswith("N: Name="):
+            nameAndFile.append([l.split('"')[1]])
+        elif l.startswith("H: Handlers=") and "event" in l:
+            nameAndFile[-1].append("/dev/input/event%s" % (l.rsplit("event",1)[1].rstrip(),))
+    return nameAndFile
+
+def writeKeyPress(filename, keyCode, hold=0.1, delay=0.1):
+    fd = os.open(filename, os.O_WRONLY | os.O_NONBLOCK)
+    bytes = os.write(fd, struct.pack(_InputEventStructSpec,
+                                     int(time.time()), 0, _EV_KEY, keyCode, 1))
+    if bytes > 0:
+        bytes += os.write(fd, struct.pack(_InputEventStructSpec,
+                                          0, 0, 0, 0, 0))
+        time.sleep(hold)
+        bytes += os.write(fd, struct.pack(_InputEventStructSpec,
+                                          int(time.time()), 0, _EV_KEY, keyCode, 0))
+        bytes += os.write(fd, struct.pack(_InputEventStructSpec,
+                                          0, 0, 0, 0, 0))
+        time.sleep(delay)
+    os.close(fd)
 
 def findWord(word, detected_words = None, appearance=1):
     """
