@@ -591,6 +591,7 @@ Keyboard shortcuts:<br>
         if change_tab:
             self.preview.setTabIcon(PREVIEWTAB_MODEL,
                                     QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_BrowserReload))
+        self._refreshed_gt = "" # force model update
         self.autoSave()
         asyncRuncmd(self._doGenerateTest,
                     onSuccess=lambda: self.visualiseModel_havingTestGenerated(change_tab))
