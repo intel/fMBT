@@ -498,13 +498,29 @@ Keyboard shortcuts:<br>
                 hide_states_orphaned, hide_states_unvisited)
 
     def showError(self, errorMsg):
+        self.preview_error.clear()
         if "fmbt-aalc: parsing AAL failed" in errorMsg:
             for filename, lineno, whatswrong in re.findall("^(.+):([0-9]+):(.*error.*)", errorMsg):
-                self.preview_error.clear()
-                self.preview_error.insertHtml('<div style="color: darkred;">AAL error in file <filename>%s</filename> line <lineno>%s</lineno></div><br />' % (filename, lineno))
-                self.preview_error.insertHtml('<div style="margin-left: 50 px;">%s</div>' % (whatswrong,))
-                self._previewTabBeforeError = self.preview.currentIndex()
-                self.preview.setCurrentIndex(PREVIEWTAB_ERR)
+                self.preview_error.insertHtml('<table><tr><td style="color: darkred;">AAL error in file <filename>%s</filename> line <lineno>%s</lineno></td></tr>' % (filename, lineno))
+                self.preview_error.insertHtml('<tr><td style="padding-left: 40 px;">%s</td></tr></table>' % (whatswrong,))
+        elif "Traceback (most recent call last)" in errorMsg:
+            inUserCode = False
+            for filename, lineno, location, lineofcode in re.findall('  File "([^"]+)", line ([0-9]+), in (.*)\n(.*)\n', errorMsg):
+                if filename == self._modelFileName:
+                    self.preview_error.insertHtml('<table><tr><td>Traceback (most recent call last)</td></tr>')
+                    inUserCode = True
+                if inUserCode:
+                    self.preview_error.insertHtml('<tr><td style="color:darkred;">File <filename>"%s"</filename>, line <lineno>%s</lineno>, in %s</td></tr>' %
+                                                  (filename, lineno, location))
+                    self.preview_error.insertHtml('<tr><td style="padding-left:40">%s</td></tr>' % (lineofcode,))
+            if inUserCode:
+                self.preview_error.insertHtml('</table>')
+            else:
+                self.preview_error.insertPlainText(errorMsg)
+        else:
+            self.preview_error.insertPlainText(errorMsg)
+        self._previewTabBeforeError = self.preview.currentIndex()
+        self.preview.setCurrentIndex(PREVIEWTAB_ERR)
 
     def autoSave(self):
         """
@@ -535,7 +551,9 @@ Keyboard shortcuts:<br>
                     for v in show_vars: show_hide_args += " -S '%s'" % (v,)
                     for v in hide_vars: show_hide_args += " -H '%s'" % (v,)
                     py2lsts_cmd = "remote_pyaal %s -o '%s'%s --lsts-depth %s '%s'" % (aal_ppflags, self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
-                    validation_exitstatus, _ = self.runcmd(py2lsts_cmd)
+                    validation_exitstatus, output = self.runcmd(py2lsts_cmd)
+                    if validation_exitstatus != 0:
+                        self.showError(output[1])
                 else: # fmbt-aalc returned an error
                     self.showError(output[1])
             elif self._editingGT(): # validate GT
