@@ -96,6 +96,7 @@ _g_defaultClickDryRun = False
 _g_defaultIconMatch = 1.0
 _g_defaultIconColorMatch = 1.0
 _g_defaultIconOpacityLimit = 0.0
+_g_defaultInputKeyDevice = None
 _g_defaultReadWithOCR = True
 
 # windowsOffsets maps window-id to (x, y) pair.
@@ -112,9 +113,8 @@ LOG_FILENAME = _g_tempdir + "/eyenfinger.log"
 
 MOUSEEVENT_MOVE, MOUSEEVENT_CLICK, MOUSEEVENT_DOWN, MOUSEEVENT_UP = range(4)
 
-# This is not complete list by any means.
-# See keysymdef.h.
-keys = [
+# Xkeys contains key names known to X11, see keysymdef.h.
+Xkeys = [
     "BackSpace", "Tab", "Linefeed", "Clear", "Return", "Pause",
     "Scroll_Lock", "Sys_Req", "Escape", "Delete", "Home", "Left",
     "Up", "Right", "Down", "Prior", "Page_Up", "Next", "Page_Down",
@@ -134,13 +134,41 @@ keys = [
     "t", "u", "v", "w", "x", "y", "z", "braceleft", "bar",
     "braceright"]
 
-# Input keys is a dictionary
-#     keyName -> (input device, keycode)
-#
-# Input device can be either a filename (like /dev/input/event0)
-# or device name (see /proc/bus/input/devices). Keycode is a
-# numeric value.
-_g_inputKeys = {}
+# InputKeys contains key names known to input devices, see
+# linux/input.h or http://www.usb.org/developers/hidpage. The order is
+# significant, because keyCode = InputKeys.index(keyName).
+InputKeys = [
+    "RESERVED", "ESC","1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
+    "MINUS", "EQUAL", "BACKSPACE", "TAB",
+    "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P",
+    "LEFTBRACE", "RIGHTBRACE", "ENTER", "LEFTCTRL",
+    "A", "S", "D", "F", "G", "H", "J", "K", "L",
+    "SEMICOLON", "APOSTROPHE", "GRAVE", "LEFTSHIFT", "BACKSLASH",
+    "Z", "X", "C", "V", "B", "N", "M",
+    "COMMA", "DOT", "SLASH", "RIGHTSHIFT", "KPASTERISK", "LEFTALT",
+    "SPACE", "CAPSLOCK",
+    "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10",
+    "NUMLOCK", "SCROLLLOCK",
+    "KP7", "KP8", "KP9", "KPMINUS",
+    "KP4", "KP5", "KP6", "KPPLUS",
+    "KP1", "KP2", "KP3", "KP0", "KPDOT",
+    "undefined0",
+    "ZENKAKUHANKAKU", "102ND", "F11", "F12", "RO",
+    "KATAKANA", "HIRAGANA", "HENKAN", "KATAKANAHIRAGANA", "MUHENKAN",
+    "KPJPCOMMA", "KPENTER", "RIGHTCTRL", "KPSLASH", "SYSRQ", "RIGHTALT",
+    "LINEFEED", "HOME", "UP", "PAGEUP", "LEFT", "RIGHT", "END", "DOWN",
+    "PAGEDOWN", "INSERT", "DELETE", "MACRO",
+    "MUTE", "VOLUMEDOWN", "VOLUMEUP",
+    "POWER",
+    "KPEQUAL", "KPPLUSMINUS", "PAUSE", "SCALE", "KPCOMMA", "HANGEUL",
+    "HANGUEL", "HANJA", "YEN", "LEFTMETA", "RIGHTMETA", "COMPOSE"]
+
+_inputKeyShorthands = {
+    "-": "MINUS", "=": "EQUAL",
+    "[": "LEFTBRACE", "]": "RIGHTBRACE", "\n": "ENTER",
+    ";": "SEMICOLON",
+    ",": "COMMA", ".": "DOT", "/": "SLASH",
+    " ": "SPACE" }
 
 class EyenfingerError(Exception):
     pass
@@ -197,28 +225,29 @@ except Exception, e:
     eye4graphics = None
     _log('Loading icon recognition library failed: "%s".' % (e,))
 
-if platform.architecture()[0] == '64bit':
-    _TimeType = ctypes.c_int64
-else:
-    _TimeType = ctypes.c_int
-
 # See struct input_event in /usr/include/linux/input.h
-class _InputEvent(ctypes.Structure):
-    _fields_ = [('time', _TimeType),
-                ('suseconds', _TimeType),
-                ('type', ctypes.c_uint16),
-                ('code', ctypes.c_uint16),
-                ('value', ctypes.c_int32)]
 _InputEventStructSpec = 'QQHHi'
-
+# Event and keycodes are in input.h, too.
 _EV_KEY = 0x01
+
+# _inputKeyNameCodeMap is a dictionary keyName -> keyCode
+_inputKeyNameCodeMap = {}
+for code, name in enumerate(InputKeys):
+    _inputKeyNameCodeMap[name] = code
+def _inputKeyNameToCode(keyName):
+    if keyName in _inputKeyNameCodeMap:
+        return _inputKeyNameCodeMap[keyName]
+    elif keyName in _inputKeyShorthands:
+        return _inputKeyNameCodeMap[_inputKeyShorthands[keyName]]
+    else:
+        raise ValueError('Invalid key name "%s"' % (keyName,))
 
 def printEventsFromFile(filename):
     fd = os.open(filename, os.O_RDONLY)
 
     try:
         while 1:
-            evString = os.read(fd, ctypes.sizeof(_InputEvent))
+            evString = os.read(fd, struct.calcsize(_InputEventStructSpec))
             if not evString: break
             print "time: %8s, susc: %8s, type: %8s, keyCode:%8s, value:%8s" % \
                 struct.unpack(_InputEventStructSpec, evString)
@@ -226,7 +255,7 @@ def printEventsFromFile(filename):
         os.close(fd)
 
 def printEventsFromDevice(deviceName):
-    devices = dict(listInputDevices())
+    devices = dict(_listInputDevices())
     if not deviceName in devices:
         error('Unknown device "%s". Available devices: %s' %
               (deviceName, sorted(devices.keys())))
@@ -289,21 +318,21 @@ def iSetDefaultIconOpacityLimit(opacityLimit):
     global _g_defaultIconOpacityLimit
     _g_defaultIconOpacityLimit = opacityLimit
 
+def iSetDefaultInputKeyDevice(deviceName):
+    """
+    Use deviceName as a default input device for iInputKey.
+    iSetDefaultInputKeyDevice("/dev/input/event0")
+    iInputKey(["enter"])
+    """
+    global _g_defaultInputKeyDevice
+    _g_defaultInputKeyDevice = deviceName
+
 def iSetDefaultReadWithOCR(ocr):
     """
     Set the default for using OCR when reading images or windows.
     """
     global _g_defaultReadWithOCR
     _g_defaultReadWithOCR = ocr
-
-def iSetInputKeys(inputKeys):
-    """
-    Set dictionary that maps key names to pairs (input device,
-    keycode) that will be used when synthesizing low-level input key
-    presses with iInputKey(keyName).
-    """
-    global _g_inputKeys
-    _g_inputKeys = inputKeys
 
 def screenSize():
     """
@@ -810,8 +839,10 @@ def iType(word, delay=0.0):
 
     Parameters:
         word is either
+
             - a string containing letters and numbers.
               Each letter/number is using press and release events.
+
             - a list that contains
               - keys: each key is sent using press and release events.
               - (key, event)-pairs: the event (either "press" or "release")
@@ -820,7 +851,8 @@ def iType(word, delay=0.0):
                 key1 press, key2 press, ..., keyn press,
                 keyn release, ..., key2 release, key1 release.
 
-            Keys are defined in keysymdef.h.
+            Keys are defined in eyenfinger.Xkeys, for complete list
+            see keysymdef.h.
 
         delay is given as seconds between sent events
 
@@ -848,37 +880,94 @@ def iType(word, delay=0.0):
     usdelay = " 'usleep %s' " % (int(delay*1000000),)
     _runcmd("xte %s" % (usdelay.join(args),))
 
-def iInputKey(keyName, hold=0.1, delay=0.0):
+
+def iInputKey(*args, **kwargs):
     """
-    Send a keypress of keyName using Linux evdev interface
+    Send keypresses using Linux evdev interface
     (/dev/input/eventXX).
+
+    iInputKey(keySpec[, keySpec...], hold=<float>, delay=<float>, device=<str>)
 
     Parameters:
 
-        keyName      name of pressed key in keymap.
-                     Use iSetInputKeys() to set a keymap.
+        keySpec      is one of the following:
+                     - a string of one-character-long key names:
+                       "aesc" will send four keypresses: A, E, S and C.
+
+                     - a list of key names:
+                       ["a", "esc"] will send two keypresses: A and ESC.
+                       Key names are listed in eyenfinger.InputKeys.
+
+                     - an integer:
+                       116 will press the POWER key.
+
+                     - "_" or "^":
+                       only press or release event will be generated
+                       for the next key, respectively.
+
+                     If a key name inside keySpec is prefixed by "_"
+                     or "^", only press or release event is generated
+                     for that key.
 
         hold         time (in seconds) to hold the key before
                      releasing. The default is 0.1.
 
-        delay        delay before returning after the keypress.
+        delay        delay (in seconds) after key release. The default
+                     is 0.1.
 
-    Example:
-
-        iSetInputKeys({'Power': ("Power Button", 106)})
-        iInputKey('Power')
+        device       name of the input device or input event file to
+                     which all key presses are sent. The default can
+                     be set with iSetDefaultInputKeyDevice().  For
+                     instance, "/dev/input/event0" or a name of a
+                     device in /proc/bus/input/devices.
     """
-    device, keycode = _g_inputKeys[keyName]
-    writeKeyPress(deviceFilename(device), keycode, hold=hold, delay=delay)
+    hold = kwargs.get("hold", 0.1)
+    delay = kwargs.get("delay", 0.1)
+    device = kwargs.get("device", _g_defaultInputKeyDevice)
+    inputKeySeq = []
+    press, release = 1, 1
+    for a in args:
+        if a == "_": press, release = 1, 0
+        elif a == "^": press, release = 0, 1
+        elif type(a) == str:
+            for char in a:
+                if char == "_": press, release = 1, 0
+                elif char == "^": press, release = 0, 1
+                else:
+                    inputKeySeq.append((press, release, _inputKeyNameToCode(char.upper())))
+                    press, release = 1, 1
+        elif type(a) in (tuple, list):
+            for keySpec in a:
+                if type(keySpec) == int:
+                    inputKeySeq.append((press, release, keySpec))
+                    press, release = 1, 1
+                else:
+                    if keySpec.startswith("_"):
+                        press, release = 1, 0
+                        keySpec = keySpec[1:]
+                    elif keySpec.startswith("^"):
+                        press, release = 0, 1
+                        keySpec = keySpec[1:]
+                    inputKeySeq.append((press, release, _inputKeyNameToCode(keySpec.upper())))
+                    press, release = 1, 1
+        elif type(a) == int:
+            inputKeySeq.append((press, release, a))
+            press, release = 1, 1
+        else:
+            raise ValueError('Invalid keySpec "%s"' % (a,))
+    if inputKeySeq:
+        _writeInputKeySeq(_g_defaultInputKeyDevice, inputKeySeq, hold=hold, delay=delay)
 
-def deviceFilename(deviceName):
-    devices = dict(listInputDevices())
-    if not deviceName in devices:
+def _deviceFilename(deviceName):
+    if not _deviceFilename.deviceCache:
+        _deviceFilename.deviceCache = dict(_listInputDevices())
+    if not deviceName in _deviceFilename.deviceCache:
         return deviceName
     else:
-        return devices[deviceName]
+        return _deviceFilename.deviceCache[deviceName]
+_deviceFilename.deviceCache = {}
 
-def listInputDevices():
+def _listInputDevices():
     nameAndFile = []
     for l in file("/proc/bus/input/devices"):
         if l.startswith("N: Name="):
@@ -887,19 +976,22 @@ def listInputDevices():
             nameAndFile[-1].append("/dev/input/event%s" % (l.rsplit("event",1)[1].rstrip(),))
     return nameAndFile
 
-def writeKeyPress(filename, keyCode, hold=0.1, delay=0.1):
+def _writeInputKeySeq(filename, keyCodeSeq, hold=0.1, delay=0.1):
     fd = os.open(filename, os.O_WRONLY | os.O_NONBLOCK)
-    bytes = os.write(fd, struct.pack(_InputEventStructSpec,
-                                     int(time.time()), 0, _EV_KEY, keyCode, 1))
-    if bytes > 0:
-        bytes += os.write(fd, struct.pack(_InputEventStructSpec,
-                                          0, 0, 0, 0, 0))
-        time.sleep(hold)
-        bytes += os.write(fd, struct.pack(_InputEventStructSpec,
-                                          int(time.time()), 0, _EV_KEY, keyCode, 0))
-        bytes += os.write(fd, struct.pack(_InputEventStructSpec,
-                                          0, 0, 0, 0, 0))
-        time.sleep(delay)
+    for press, release, keyCode in keyCodeSeq:
+        if press:
+            bytes = os.write(fd, struct.pack(_InputEventStructSpec,
+                                             int(time.time()), 0, _EV_KEY, keyCode, 1))
+            if bytes > 0:
+                bytes += os.write(fd, struct.pack(_InputEventStructSpec,
+                                                  0, 0, 0, 0, 0))
+            time.sleep(hold)
+        if release:
+            bytes += os.write(fd, struct.pack(_InputEventStructSpec,
+                                              int(time.time()), 0, _EV_KEY, keyCode, 0))
+            bytes += os.write(fd, struct.pack(_InputEventStructSpec,
+                                              0, 0, 0, 0, 0))
+            time.sleep(delay)
     os.close(fd)
 
 def findWord(word, detected_words = None, appearance=1):
