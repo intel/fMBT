@@ -262,6 +262,7 @@ class MainWindow(QtGui.QMainWindow):
         self._fileDialogDirectory = None
         self._fileDialogFilter = None
         self._previewTabBeforeError = None
+        self._previewTakeFocusOnTabChange = True
 
     def about(self):
         QtGui.QMessageBox.about(self, "fMBT editor",'''
@@ -887,11 +888,12 @@ on_inconc = "exit(2)"
         self.preview_covimage = QtGui.QLabel(self.preview)
         self.preview_covcont = makeScalableImage(self.preview, self.preview_covimage)
         self.preview.addTab(self.preview_covcont, "Coverage - F8")
-        self.preview.connect(self.preview, QtCore.SIGNAL("currentChanged(int)"),
-                             self.previewTabChanged)
 
         self.preview_error = makeScalableEditor(self.preview, self.editor_font)
         self.preview.addTab(self.preview_error, "Errors - F9")
+
+        self.preview.connect(self.preview, QtCore.SIGNAL("currentChanged(int)"),
+                             self.previewTabChanged)
 
     def activeEditor(self):
         if self.editor.hasFocus():
@@ -1040,10 +1042,14 @@ on_inconc = "exit(2)"
         elif tabIndex == EDITTAB_CONF: self.editConf()
 
     def previewTabChanged(self, tabIndex):
-        if tabIndex == PREVIEWTAB_MODEL: self.visualiseModel()
-        elif tabIndex == PREVIEWTAB_TEST: self.generateTest()
-        elif tabIndex == PREVIEWTAB_DIST: self.plotDistribution()
-        elif tabIndex == PREVIEWTAB_COV: self.plotCoverage()
+        if tabIndex == PREVIEWTAB_MODEL:
+            self.visualiseModel(change_tab = self._previewTakeFocusOnTabChange)
+        elif tabIndex == PREVIEWTAB_TEST:
+            self.generateTest(change_tab = self._previewTakeFocusOnTabChange)
+        elif tabIndex == PREVIEWTAB_DIST:
+            self.plotDistribution(change_tab = self._previewTakeFocusOnTabChange)
+        elif tabIndex == PREVIEWTAB_COV:
+            self.plotCoverage(change_tab = self._previewTakeFocusOnTabChange)
 
     def setupFileMenu(self):
         fileMenu = QtGui.QMenu("&File", self)
@@ -1333,10 +1339,6 @@ on_inconc = "exit(2)"
         # if visualisation pages are hidden, don't refresh
         if self.splitter.sizes()[1] == 0: return
 
-        if self._previewTabBeforeError != None:
-            self.preview.setCurrentIndex(self._previewTabBeforeError)
-            self._previewTabBeforeError = None
-
         self.edit.setTabIcon(EDITTAB_GT, QtGui.QIcon())
         self.edit.setTabIcon(EDITTAB_CONF, QtGui.QIcon())
         self.preview.setTabIcon(PREVIEWTAB_MODEL, QtGui.QIcon())
@@ -1344,6 +1346,12 @@ on_inconc = "exit(2)"
         self.preview.setTabIcon(PREVIEWTAB_DIST, QtGui.QIcon())
         self.preview.setTabIcon(PREVIEWTAB_COV, QtGui.QIcon())
         self.preview.setTabIcon(PREVIEWTAB_ERR, QtGui.QIcon())
+
+        if self._previewTabBeforeError != None:
+            self._previewTakeFocusOnTabChange = False
+            self.preview.setCurrentIndex(self._previewTabBeforeError)
+            self._previewTakeFocusOnTabChange = True
+            self._previewTabBeforeError = None
 
         if self.preview.currentIndex() == PREVIEWTAB_MODEL:
             self.visualiseModel(change_tab = False)
