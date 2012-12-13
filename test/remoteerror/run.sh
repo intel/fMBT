@@ -154,7 +154,8 @@ EOF
             echo "fails because: exit status $FMBTSTATUS, expected 84" >>$LOGFILE
             failure_count=$(( $failure_count + 1 ))
         fi
-        if [ "$WHAT" == "crash" ] && ! grep -q 'Terminated by a signal (11)' fmbt-output.$WHEN.$WHAT.remote.txt; then
+        if [ "$WHAT" == "crash" ] && ! ( grep -q 'Terminated by a signal (11)' fmbt-output.$WHEN.$WHAT.remote.txt || \
+                                         grep -q 'communication failure' fmbt-output.$WHEN.$WHAT.remote.txt ); then
             echo "fails because: segmentation fault missing in fmbt-output.$WHEN.$WHAT.remote.txt" >>$LOGFILE
             failure_count=$(( $failure_count + 1 ))
         elif [ "$WHAT" == "raise" ] && ! grep -q 'BogusException' fmbt-output.$WHEN.$WHAT.remote.txt; then
