@@ -49,6 +49,7 @@ import re
 import os
 import getopt
 import time
+import urllib
 import fmbt_config
 
 def error(msg, exit_status = 1, gui = False):
@@ -502,26 +503,58 @@ Keyboard shortcuts:<br>
         self.preview_error.clear()
         if "fmbt-aalc: parsing AAL failed" in errorMsg:
             for filename, lineno, whatswrong in re.findall("^(.+):([0-9]+):(.*error.*)", errorMsg):
-                self.preview_error.insertHtml('<table><tr><td style="color: darkred;">AAL error in file <filename>%s</filename> line <lineno>%s</lineno></td></tr>' % (filename, lineno))
-                self.preview_error.insertHtml('<tr><td style="padding-left: 40 px;">%s</td></tr></table>' % (whatswrong,))
-        elif "Traceback (most recent call last)" in errorMsg:
-            inUserCode = False
-            for filename, lineno, location, lineofcode in re.findall('  File "([^"]+)", line ([0-9]+), in (.*)\n(.*)\n', errorMsg):
                 if filename == self._modelFileName:
-                    self.preview_error.insertHtml('<table><tr><td>Traceback (most recent call last)</td></tr>')
-                    inUserCode = True
+                    self.preview_error.insertHtml('<table><tr><td style="color: darkred;">AAL error in file <a href="%s:%s">%s</a>, line %s</td></tr>' %
+                                                  (urllib.quote(filename), lineno, filename, lineno))
+                else:
+                    self.preview_error.insertHtml('<table><tr><td style="color: darkred;">AAL error in file %s, line %s</td></tr>' %
+                                                  (filename, lineno))
+                self.preview_error.insertHtml('<tr><td style="padding-left: 40 px;">%s</td></tr></table>' % (whatswrong,))
+        elif "Traceback (most recent call last):" in errorMsg:
+            try:
+                el = errorMsg.split('\n')
+                exceptionString = " " + [l for l in el[el.index("Traceback (most recent call last):")+1:]
+                                         if not l.startswith("  ")][0]
+            except:
+                exceptionString = "Python error."
+            inUserCode = False
+            self.preview_error.insertHtml('<table><tr><td style="color: darkred;">%s<br>Traceback (most recent call last)</td></tr>' % (exceptionString,))
+            for filename, lineno, _, location, lineofcode in re.findall('  File "([^"]+)", line ([0-9]+)(, in (.*))?\n(.*)\n', errorMsg):
+
                 if inUserCode:
-                    self.preview_error.insertHtml('<tr><td style="color:darkred;">File <filename>"%s"</filename>, line <lineno>%s</lineno>, in %s</td></tr>' %
-                                                  (filename, lineno, location))
+                    if filename == self._modelFileName:
+                        self.preview_error.insertHtml('<tr><td style="color:darkred;">File <a href="%s:%s">%s</a>, line %s, in %s</td></tr>' %
+                                                      (urllib.quote(filename), lineno, filename, lineno, location))
+                    elif filename.startswith("/tmp/remote"):
+                        self.preview_error.insertHtml('<tr><td style="color:darkred;">in %s</td></tr>' %
+                                                      (location,))
+                    else:
+                        self.preview_error.insertHtml('<tr><td style="color:darkred;">File %s, line %s, in %s</td></tr>' %
+                                                      (filename, lineno, location))
                     self.preview_error.insertHtml('<tr><td style="padding-left:40">%s</td></tr>' % (lineofcode,))
-            if inUserCode:
-                self.preview_error.insertHtml('</table>')
-            else:
-                self.preview_error.insertPlainText(errorMsg)
-        else:
-            self.preview_error.insertPlainText(errorMsg)
+                # the next step will be user code, could be an included file.
+                if filename.endswith("aalmodel.py") and location == "call":
+                    inUserCode = True
+                elif filename.endswith("remote_pyaal") and location == "<module>" and "exec" in lineofcode:
+                    inUserCode = True
+                print '|%s|\n>%s<\n*%s*\n\n' % (filename, location, lineofcode)
+            self.preview_error.insertHtml('</table>')
+
+        self.preview_error.insertPlainText("\n\nComplete unformatted error output:\n%s" % (errorMsg,))
+        self.preview_error.moveCursor(QtGui.QTextCursor.Start)
         self._previewTabBeforeError = self.preview.currentIndex()
         self.preview.setCurrentIndex(PREVIEWTAB_ERR)
+
+    def errorItemClicked(self, qUrl):
+        filename, lineno = qUrl.toString().rsplit(':',1)
+        lineno = int(lineno)
+        if filename == self._modelFileName:
+            self.editor.moveCursor(QtGui.QTextCursor.Start)
+            for _ in xrange(lineno-1):
+                self.editor.moveCursor(QtGui.QTextCursor.Down, QtGui.QTextCursor.MoveAnchor)
+            self.edit.setCurrentIndex(EDITTAB_GT)
+            self.editor.setFocus()
+
 
     def autoSave(self):
         """
@@ -813,8 +846,8 @@ on_inconc = "exit(2)"
         self.edit.connect(self.edit, QtCore.SIGNAL("currentChanged(int)"),
                           self.editTabChanged)
 
-        def makeScalableEditor(parent, font):
-            editor = QtGui.QTextEdit()
+        def makeScalableEditor(parent, font, EditorClass = QtGui.QTextEdit):
+            editor = EditorClass()
             editor.setUndoRedoEnabled(True)
             editor.setLineWrapMode(editor.NoWrap)
             editor.setFont(font)
@@ -889,7 +922,10 @@ on_inconc = "exit(2)"
         self.preview_covcont = makeScalableImage(self.preview, self.preview_covimage)
         self.preview.addTab(self.preview_covcont, "Coverage - F8")
 
-        self.preview_error = makeScalableEditor(self.preview, self.editor_font)
+        self.preview_error = makeScalableEditor(self.preview, self.editor_font, QtGui.QTextBrowser)
+        self.preview_error.connect(self.preview_error, QtCore.SIGNAL("anchorClicked(QUrl)"),
+                                   self.errorItemClicked)
+        self.preview_error.setOpenLinks(False)
         self.preview.addTab(self.preview_error, "Errors - F9")
 
         self.preview.connect(self.preview, QtCore.SIGNAL("currentChanged(int)"),
