@@ -68,32 +68,32 @@ std::string indent(int depth, const std::string &s)
 }
 
 std::string python_lineno_wrapper(const std::string& filename,int lineno,
-				  const std::string& funcname,int trim,int ind,
-				  const std::string& human=")")
+                                  const std::string& funcname,int trim,int ind,
+                                  const std::string& human=")")
 {
   if (lineno) {
     return indent(ind,funcname + ".func_code = aalmodel.setCodeFileLine(" +
-		  funcname + ".func_code, '''" + filename + "''', " + 
-		  to_string(lineno-trim) + human ) + "\n";
+                  funcname + ".func_code, '''" + filename + "''', " +
+                  to_string(lineno-trim) + human ) + "\n";
   }
   return "";
 }
 
 std::string python_lineno_wrapper(const codefileline& cfl,
-				  const std::string& funcname,int trim,int ind,
-				  const std::string& human=")")
+                                  const std::string& funcname,int trim,int ind,
+                                  const std::string& human=")")
 {
   return python_lineno_wrapper(cfl.second.first,cfl.second.second,funcname,
-			       trim,ind,human);
+                               trim,ind,human);
 }
 
 std::string aalang_py::action_helper(const codefileline& cfl,std::string s,
-			  std::string& funcname,int i)
+                          std::string& funcname,int i)
 {
   funcname = "action" + acnt + s;
-  return "    def " + funcname + "():\n" + variables 
-    +    "        action_name = \"" + multiname[i] + "\"\n" 
-    +    "        action_index = " + to_string(i) + "\n" 
+  return "    def " + funcname + "():\n" + variables
+    +    "        action_name = \"" + multiname[i] + "\"\n"
+    +    "        action_index = " + to_string(i) + "\n"
     +    indent(8,cfl.first)+"\n";
 }
 
@@ -135,7 +135,7 @@ void aalang_py::set_istate(std::string* ist,const char* file,int line,int col)
   const std::string funcname("initial_state");
   s += "\n    def " + funcname + "():\n" + variables +
     indent(8, *ist) + "\n";
-  s += python_lineno_wrapper(file,line,funcname,m_lines_in_vars,4);
+  s += python_lineno_wrapper(file,line,funcname,1+m_lines_in_vars,4);
 }
 
 void aalang_py::set_ainit(std::string* iai,const char* file,int line,int col)
@@ -144,7 +144,7 @@ void aalang_py::set_ainit(std::string* iai,const char* file,int line,int col)
   const std::string funcname("adapter_init");
   s += "\n    def " + funcname + "():\n" + variables +
     indent(8, *iai) + "\n" + indent(8, r) + "\n";
-  s += python_lineno_wrapper(file,line,funcname,m_lines_in_vars,4);
+  s += python_lineno_wrapper(file,line,funcname,1+m_lines_in_vars,4);
 }
 
 void aalang_py::set_tagname(std::string* name)
@@ -165,8 +165,8 @@ void aalang_py::next_tag()
     s+=indent(8,m_guard.first)+"\n";
 
     s+=python_lineno_wrapper(m_guard,funcname,2+m_lines_in_vars,4,
-			     ", \"guard of tag \\\"" + multiname[i]
-			     + "\\\"\")");
+                             ", \"guard of tag \\\"" + multiname[i]
+                             + "\\\"\")");
     tag_cnt++;
   }
   multiname.clear();
@@ -222,14 +222,14 @@ void aalang_py::next_action()
 
     s+=action_helper(m_guard,"guard",funcname,i);
     s+=python_lineno_wrapper(m_guard,funcname,3+m_lines_in_vars,4,
-			     ", \"guard of action \\\"" + multiname[i] +
-			     "\\\"\")");
+                             ", \"guard of action \\\"" + multiname[i] +
+                             "\\\"\")");
 
     /* actionXbody */
     s+=action_helper(m_body,"body",funcname,i);
     s+=python_lineno_wrapper(m_body,funcname,3+m_lines_in_vars,4,
-			     ", \"body of action \\\"" + multiname[i] +
-			     "\\\"\")");
+                             ", \"body of action \\\"" + multiname[i] +
+                             "\\\"\")");
     /* actionXadapter */
     s+=action_helper(m_adapter,"adapter",funcname,i);
     if (this_is_input) {
@@ -238,8 +238,8 @@ void aalang_py::next_action()
       s+="        return False\n";
     }
     s+=python_lineno_wrapper(m_adapter,funcname,3+m_lines_in_vars,4,
-			     ", \"adapter of action \\\"" + multiname[i]
-			     + "\\\"\")");
+                             ", \"adapter of action \\\"" + multiname[i]
+                             + "\\\"\")");
 
     action_cnt++;
     acnt=to_string(action_cnt);
