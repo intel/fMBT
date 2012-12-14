@@ -1,6 +1,17 @@
-fmbt (0.2.2.999) natty; urgency=low
+fmbt (0.3) natty; urgency=low
 
-  * Development of new version started
+  * eyenfinger: new features:
+    iInputKeys(...) can simulate pressing the power button
+    iClickWindow/Screen accept percentages (0.0-1.0) as coordinates
+    screenSize(), windowSize() and windowXY() functions added
+  * fmbt-editor: line numbers and Errors tab added.
+    Errors tab helps locating AAL syntax errors and Python exceptions.
+  * fmbt-aalc: Python traceback shows correct filenames and line numbers.
+  * fmbt + remote_pyaal: huge performance improvement for Python/AAL,
+    this improves generated tests by enabling longer lookaheads.
+  * coverages: uexecs, uinputs and upaths added.
+  * examples: AAL/Python version of JavaScript unittest added.
+  * minor fixes.
 
  -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 3 Dec 2012 15:04:28 +0200
 

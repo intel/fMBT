@@ -1,5 +1,5 @@
 Name:           fmbt
-Version:        0.2.2.999
+Version:        0.3
 Release:        1%{?dist}
 Summary:        free Model-Based Testing tool
 
