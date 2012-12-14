@@ -782,8 +782,23 @@ def iClickWindow((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, cap
                      X and Y coordinates of clicked position on the
                      screen.
     """
-    clickScrX = clickX + _g_windowOffsets[_g_lastWindow][0]
-    clickScrY = clickY + _g_windowOffsets[_g_lastWindow][1]
+
+    # Get the size of the window
+    wndSize = windowSize()
+
+    # Get the position of the window
+    wndPos = windowXY()
+
+    # If coordinates are given as percentages, calculate accordingly
+    if clickX >= 0.0 and clickX < 1.0 and type(clickX) == float: 
+        clickScrX = int(wndSize[0] * clickX) + wndPos[0]
+    else:
+        clickScrX = clickX + wndPos[0]
+
+    if clickY >= 0.0 and clickY < 1.0 and type(clickY) == float:
+        clickScrY = int(wndSize[1] * clickY) + wndPos[1]
+    else:
+        clickScrY = clickY + wndPos[1]
 
     iClickScreen((clickScrX, clickScrY), mouseButton, mouseEvent, dryRun, capture)
 
@@ -821,6 +836,16 @@ def iClickScreen((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, cap
         params = "'mouseup %s'" % (mouseButton,)
     else:
         params = ""
+    
+    # Getting the size of the screen
+    scrnSize = screenSize()
+
+    # If coordinates are given as floats, convert them to percentages
+    if clickX >= 0.0 and clickX <= 1.0 and type(clickX) == float:
+        clickX = int(clickX * scrnSize[0])
+
+    if clickY >= 0.0 and clickY <= 1.0 and type(clickY) == float:
+        clickY = int(clickY * scrnSize[1])
 
     if capture:
         drawClickedPoint(_g_origImage, capture, (clickX, clickY))
