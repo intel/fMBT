@@ -226,7 +226,10 @@ except Exception, e:
     _log('Loading icon recognition library failed: "%s".' % (e,))
 
 # See struct input_event in /usr/include/linux/input.h
-_InputEventStructSpec = 'QQHHi'
+if platform.architecture()[0] == "32bit":
+    _InputEventStructSpec = 'IIHHi'
+else:
+    _InputEventStructSpec = 'QQHHi'
 # Event and keycodes are in input.h, too.
 _EV_KEY = 0x01
 
@@ -242,6 +245,10 @@ def _inputKeyNameToCode(keyName):
     else:
         raise ValueError('Invalid key name "%s"' % (keyName,))
 
+def error(msg, exitstatus=1):
+    sys.stderr.write("eyenfinger: %s\n" % (msg,))
+    sys.exit(1)
+
 def printEventsFromFile(filename):
     fd = os.open(filename, os.O_RDONLY)
 
@@ -249,8 +256,14 @@ def printEventsFromFile(filename):
         while 1:
             evString = os.read(fd, struct.calcsize(_InputEventStructSpec))
             if not evString: break
-            print "time: %8s, susc: %8s, type: %8s, keyCode:%8s, value:%8s" % \
-                struct.unpack(_InputEventStructSpec, evString)
+            tim, tus, typ, cod, val = struct.unpack(_InputEventStructSpec, evString)
+            if cod < len(InputKeys):
+                nam = InputKeys[cod]
+            else:
+                nam = "N/A"
+            print "time: %8s, susc: %8s, type: %8s, keyCode: %5s name: %10s value: %8s" % \
+                (tim, tus, typ, cod, nam, val)
+
     finally:
         os.close(fd)
 
@@ -948,15 +961,16 @@ def iInputKey(*args, **kwargs):
                     elif keySpec.startswith("^"):
                         press, release = 0, 1
                         keySpec = keySpec[1:]
-                    inputKeySeq.append((press, release, _inputKeyNameToCode(keySpec.upper())))
-                    press, release = 1, 1
+                    if keySpec:
+                        inputKeySeq.append((press, release, _inputKeyNameToCode(keySpec.upper())))
+                        press, release = 1, 1
         elif type(a) == int:
             inputKeySeq.append((press, release, a))
             press, release = 1, 1
         else:
             raise ValueError('Invalid keySpec "%s"' % (a,))
     if inputKeySeq:
-        _writeInputKeySeq(_g_defaultInputKeyDevice, inputKeySeq, hold=hold, delay=delay)
+        _writeInputKeySeq(_deviceFilename(device), inputKeySeq, hold=hold, delay=delay)
 
 def _deviceFilename(deviceName):
     if not _deviceFilename.deviceCache:
@@ -977,6 +991,8 @@ def _listInputDevices():
     return nameAndFile
 
 def _writeInputKeySeq(filename, keyCodeSeq, hold=0.1, delay=0.1):
+    if type(filename) != str or len(filename) == 0:
+        raise ValueError('Invalid input device "%s"' % (filename,))
     fd = os.open(filename, os.O_WRONLY | os.O_NONBLOCK)
     for press, release, keyCode in keyCodeSeq:
         if press:
@@ -989,8 +1005,9 @@ def _writeInputKeySeq(filename, keyCodeSeq, hold=0.1, delay=0.1):
         if release:
             bytes += os.write(fd, struct.pack(_InputEventStructSpec,
                                               int(time.time()), 0, _EV_KEY, keyCode, 0))
-            bytes += os.write(fd, struct.pack(_InputEventStructSpec,
-                                              0, 0, 0, 0, 0))
+            if bytes > 0:
+                bytes += os.write(fd, struct.pack(_InputEventStructSpec,
+                                                  0, 0, 0, 0, 0))
             time.sleep(delay)
     os.close(fd)
 
