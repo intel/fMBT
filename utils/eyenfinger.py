@@ -764,6 +764,11 @@ def iClickWindow((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, cap
         (clickX, clickY)
                      coordinates to be clicked inside the window.
                      (0, 0) is the top-left corner of the window.
+                     Integer values are window coordinates. Floating
+                     point values from 0.0 to 1.0 are scaled to window
+                     coordinates: (0.5, 0.5) is the middle of the
+                     window, and (1.0, 1.0) the bottom-right corner of
+                     the window.
 
         mouseButton  mouse button to be synthesized on the event, default is 1.
 
@@ -789,13 +794,13 @@ def iClickWindow((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, cap
     # Get the position of the window
     wndPos = windowXY()
 
-    # If coordinates are given as percentages, calculate accordingly
-    if clickX >= 0.0 and clickX < 1.0 and type(clickX) == float: 
+    # If coordinates are given as percentages, convert to window coordinates
+    if clickX >= 0.0 and clickX <= 1.0 and type(clickX) == float:
         clickScrX = int(wndSize[0] * clickX) + wndPos[0]
     else:
         clickScrX = clickX + wndPos[0]
 
-    if clickY >= 0.0 and clickY < 1.0 and type(clickY) == float:
+    if clickY >= 0.0 and clickY <= 1.0 and type(clickY) == float:
         clickScrY = int(wndSize[1] * clickY) + wndPos[1]
     else:
         clickScrY = clickY + wndPos[1]
@@ -813,7 +818,12 @@ def iClickScreen((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, cap
 
         (clickX, clickY)
                      coordinates to be clicked on the screen. (0, 0)
-                     is the top-left corner of the screen.
+                     is the top-left corner of the screen. Integer
+                     values are screen coordinates. Floating point
+                     values from 0.0 to 1.0 are scaled to screen
+                     coordinates: (0.5, 0.5) is the middle of the
+                     screen, and (1.0, 1.0) the bottom-right corner of
+                     the screen.
 
         mouseButton  mouse button to be synthesized on the event, default is 1.
 
@@ -836,11 +846,11 @@ def iClickScreen((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, cap
         params = "'mouseup %s'" % (mouseButton,)
     else:
         params = ""
-    
+
     # Getting the size of the screen
     scrnSize = screenSize()
 
-    # If coordinates are given as floats, convert them to percentages
+    # If coordinates are given as percentages, convert to screen coordinates
     if clickX >= 0.0 and clickX <= 1.0 and type(clickX) == float:
         clickX = int(clickX * scrnSize[0])
 
