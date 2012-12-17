@@ -23,20 +23,49 @@ export PATH=../../src:../../utils:$PATH
 
 source ../functions.sh
 
-teststep "coverage_weight: generate model"
-fmbt-gt -f t2.gt -o t2.lsts >>$LOGFILE 2>&1 || {
-    testfailed
-    exit 1    
-}
-testpassed
+cat > test-noheur.conf <<EOF
+model = "lsts_remote(fmbt-gt -f model.gt)"
+pass = "steps(100)"
+pass = "coverage(2)"
+EOF
 
-teststep "Heuristic weight"
-echo 'model = "lsts(t2.lsts)"' > test.conf
-echo 'heuristic = "weight(test.weight)"' >> test.conf
-echo 'pass = "steps:5"' >> test.conf
 
+teststep "heuristic weight: all zeros..."
+(cat test-noheur.conf; echo 'heuristic = "weight(test-allzeros.weight)"') > test.conf
 fmbt test.conf -l weight.log >>$LOGFILE 2>&1 || {
     testfailed
 }
 
+if (( "$(fmbt-log weight.log | grep iFoo | wc -l)" < 3 )); then
+    testfailed
+fi
+testpassed
+
+teststep "heuristic weight: only one"
+(cat test-noheur.conf; echo 'heuristic = "weight(test-onlyone.weight)"') > test.conf
+fmbt test.conf -l weight.log >>$LOGFILE 2>&1 || {
+    testfailed
+}
+if (( "$(fmbt-log weight.log | grep iFoo | wc -l)" != 100 )); then
+    testfailed
+fi
+testpassed
+
+teststep "heuristic weight: fifty fifty"
+(cat test-noheur.conf; echo 'heuristic = "weight(test-fiftyfifty.weight)"') > test.conf
+fmbt test.conf -l weight.log >>$LOGFILE 2>&1 || {
+    testfailed
+}
+if (( "$(fmbt-log weight.log | grep iFoo | wc -l)" < 40 )); then
+    echo "too few iFoos in the log" >> $LOGFILE
+    testfailed
+fi
+
+if (( "$(fmbt-log weight.log | grep iBar | wc -l)" < 40 )); then
+    echo "too few iBars in the log" >> $LOGFILE
+    testfailed
+fi
+if (( "$(fmbt-log weight.log | grep iBar | wc -l)" + "$(fmbt-log weight.log | grep iFoo | wc -l)" != 100 )); then
+    testfailed
+fi
 testpassed
