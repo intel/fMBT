@@ -195,9 +195,11 @@ def asyncRuncmd(cmd, onThreadSuccess=lambda: None, onSuccess=lambda: None, onErr
                     self.emit(Async.signal_error)
             else:
                 errors = 0
-                try: cmd()
+                retval = False
+                try:
+                    retval = cmd()
                 except: errors = 1
-                if errors == 0:
+                if errors == 0 and retval != False:
                     onThreadSuccess()
                     self.emit(Async.signal_success)
                 else:
@@ -537,7 +539,6 @@ Keyboard shortcuts:<br>
                     inUserCode = True
                 elif filename.endswith("remote_pyaal") and location == "<module>" and "exec" in lineofcode:
                     inUserCode = True
-                print '|%s|\n>%s<\n*%s*\n\n' % (filename, location, lineofcode)
             self.preview_error.insertHtml('</table>')
         elif "parsing GT failed" in errorMsg:
             try:
@@ -546,6 +547,22 @@ Keyboard shortcuts:<br>
             if lineno:
                 self.preview_error.insertHtml('<table><tr><td style="color: darkred;">GT syntax error in file <a href="%s:%s">%s</a>, line %s</td></tr>' %
                                               (urllib.quote(filename), lineno, filename, lineno))
+                self.preview_error.insertHtml('<tr><td style="padding-left: 40 px;">%s</td></tr></table>' % (whatswrong,))
+        elif "fmbt: Creating" in errorMsg:
+            try:
+                (module, whatswrong) = re.findall('fmbt: Creating ([^"]+)"([^"]+)" failed.', errorMsg)[0]
+                module = module.rstrip()
+            except: module=None
+            if module != None:
+                filename = self._confFileName
+                if module == "end condition":
+                    lookfor_module = "" # "module in line" when looking for lineno
+                else:
+                    lookfor_module = module
+                lineno = [(lineindex+1, line) for lineindex, line in enumerate(file(self._confFileName))
+                          if whatswrong in line and lookfor_module in line and not line.lstrip().startswith("#")][0][0]
+                self.preview_error.insertHtml('<table><tr><td style="color: darkred;">%s error in file <a href="%s:%s">%s</a>, line %s</td></tr>' %
+                                              (module, urllib.quote(filename), lineno, filename, lineno))
                 self.preview_error.insertHtml('<tr><td style="padding-left: 40 px;">%s</td></tr></table>' % (whatswrong,))
         self.preview_error.insertPlainText("\n\nComplete unformatted error output:\n%s" % (errorMsg,))
         self.preview_error.moveCursor(QtGui.QTextCursor.Start)
@@ -561,7 +578,12 @@ Keyboard shortcuts:<br>
                 self.editor.moveCursor(QtGui.QTextCursor.Down, QtGui.QTextCursor.MoveAnchor)
             self.edit.setCurrentIndex(EDITTAB_GT)
             self.editor.setFocus()
-
+        elif filename == self._confFileName:
+            self.conf_editor.moveCursor(QtGui.QTextCursor.Start)
+            for _ in xrange(lineno-1):
+                self.conf_editor.moveCursor(QtGui.QTextCursor.Down, QtGui.QTextCursor.MoveAnchor)
+            self.edit.setCurrentIndex(EDITTAB_CONF)
+            self.conf_editor.setFocus()
 
     def autoSave(self):
         """
@@ -669,7 +691,8 @@ Keyboard shortcuts:<br>
         self._refreshed_gt = "" # force model update
         self.autoSave()
         asyncRuncmd(self._doGenerateTest,
-                    onSuccess=lambda: self.visualiseModel_havingTestGenerated(change_tab))
+                    onSuccess=lambda: self.visualiseModel_havingTestGenerated(change_tab),
+                    onError=lambda: self.showError(self._test_errormsg))
 
     def visualiseModel_havingTestGenerated(self, change_tab):
         imgname = self._modelFileName + ".gted-%stmp.states.png" % (os.getpid(),)
@@ -779,13 +802,15 @@ on_inconc = "exit(2)"
             return
         self._logFileName = self._modelFileName + ".gted-%stmp.log" % (os.getpid(),)
         cmd = "fmbt -l '%s' -o 'adapter=\"dummy\"' '%s'" % (self._logFileName, self._confFileName)
-        fmbt_exitstatus, _ = self.runcmd(cmd)
-        if fmbt_exitstatus == 0:
+        fmbt_exitstatus, output = self.runcmd(cmd)
+        if fmbt_exitstatus == 0 or "pass:" in output[1] or "inconc:" in output[1] or "fail:" in output[1]:
             self._test_ok = True
         elif fmbt_exitstatus == 127:
-            error('Cannot execute "fmbt". Check you fMBT installation and PATH.',gui=0)
+            self.showError('Cannot execute "fmbt". Check you fMBT installation and PATH.')
         else:
             self._test_ok = False
+            self._test_errormsg = output[1]
+            return False
 
     def generateTest(self, change_tab = True):
         if change_tab:
@@ -805,6 +830,9 @@ on_inconc = "exit(2)"
             self.preview_test.setPlainText(''.join([l for l in o[1:]]))
         else:
             self.preview.setTabIcon(PREVIEWTAB_TEST, QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_MessageBoxWarning))
+            if hasattr(self, "_test_errormsg"):
+                self.showError(self._test_errormsg)
+                del self._test_errormsg
 
         if change_tab:
             self.preview.setCurrentIndex(PREVIEWTAB_TEST)
