@@ -38,7 +38,7 @@ float Heuristic_weight::getCoverage() {
   if (my_coverage==NULL) {
     return 0.0;
   }
-  return my_coverage->getCoverage();  
+  return my_coverage->getCoverage();
 }
 
 void Heuristic_weight::add(std::vector<std::string*> p,
@@ -56,8 +56,8 @@ void Heuristic_weight::add(std::vector<std::string*> p,
     regexpmatch(*(a[0]),model->getActionNames(),actions,false);
   }
 
-  if (props.empty()) 
-    props.push_back(0);
+  if (props.empty())
+    props.push_back(-1);
 
   if (actions.empty()) {
     // Some warning?
@@ -66,7 +66,7 @@ void Heuristic_weight::add(std::vector<std::string*> p,
 
   for(unsigned i=0;i<props.size();i++) {
     for(unsigned j=0;j<actions.size();j++) {
-      weights[std::pair<int,int>(props[i],actions[j])]+=w/100;
+      weights[std::pair<int,int>(props[i],actions[j])]+=w/100.0;
     }
   }
 }
@@ -77,24 +77,25 @@ int Heuristic_weight::weight_select(int i,int* actions)
   int p=model->getprops(&props);
   float total=0;
   std::vector<float> f;
-  
+
   f.resize(i);
-  
+
   // Go through props
   for(int j=0;j<p;j++) {
     // Go through actions
     for(int k=0;k<i;k++) {
       float ff=weights[std::pair<int,int>(props[j],actions[k])];
-      f[actions[k]]+=ff;
+      f[k]+=ff;
       total+=ff;
     }
   }
+
 
   // And then without prop
   // Go through actions
   for(int k=0;k<i;k++) {
     float ff=weights[std::pair<int,int>(-1,actions[k])];
-    f[actions[k]]+=ff;
+    f[k]+=ff;
     total+=ff;
   }
 
@@ -105,7 +106,7 @@ int Heuristic_weight::weight_select(int i,int* actions)
 
   float cut=drand48()*total;
   int pos;
-  for(pos=0;cut<f[pos];cut-=f[pos],pos++);
+  for(pos=0;cut>f[pos];cut-=f[pos],pos++);
 
   return pos;
 }
@@ -124,7 +125,7 @@ int Heuristic_weight::getAction()
 
   int pos=weight_select(i,actions);
 
-  return actions[pos]; 
+  return actions[pos];
 }
 
 int Heuristic_weight::getIAction()
@@ -138,7 +139,7 @@ int Heuristic_weight::getIAction()
     // Ok.. no output actions
     i=model->getActions(&actions);
     if (i==0) {
-      return Alphabet::DEADLOCK;      
+      return Alphabet::DEADLOCK;
     }
     return Alphabet::OUTPUT_ONLY;
   }
