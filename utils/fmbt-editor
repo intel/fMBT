@@ -504,10 +504,10 @@ Keyboard shortcuts:<br>
         if "fmbt-aalc: parsing AAL failed" in errorMsg:
             for filename, lineno, whatswrong in re.findall("^(.+):([0-9]+):(.*error.*)", errorMsg):
                 if filename == self._modelFileName:
-                    self.preview_error.insertHtml('<table><tr><td style="color: darkred;">AAL error in file <a href="%s:%s">%s</a>, line %s</td></tr>' %
+                    self.preview_error.insertHtml('<table><tr><td style="color: darkred;">AAL syntax error in file <a href="%s:%s">%s</a>, line %s</td></tr>' %
                                                   (urllib.quote(filename), lineno, filename, lineno))
                 else:
-                    self.preview_error.insertHtml('<table><tr><td style="color: darkred;">AAL error in file %s, line %s</td></tr>' %
+                    self.preview_error.insertHtml('<table><tr><td style="color: darkred;">AAL syntax error in file %s, line %s</td></tr>' %
                                                   (filename, lineno))
                 self.preview_error.insertHtml('<tr><td style="padding-left: 40 px;">%s</td></tr></table>' % (whatswrong,))
         elif "Traceback (most recent call last):" in errorMsg:
@@ -539,7 +539,14 @@ Keyboard shortcuts:<br>
                     inUserCode = True
                 print '|%s|\n>%s<\n*%s*\n\n' % (filename, location, lineofcode)
             self.preview_error.insertHtml('</table>')
-
+        elif "parsing GT failed" in errorMsg:
+            try:
+                (filename, lineno, whatswrong) = re.findall("([^:]+):([0-9]+) syntax error in (.*)", errorMsg)[0]
+            except: lineno = None
+            if lineno:
+                self.preview_error.insertHtml('<table><tr><td style="color: darkred;">GT syntax error in file <a href="%s:%s">%s</a>, line %s</td></tr>' %
+                                              (urllib.quote(filename), lineno, filename, lineno))
+                self.preview_error.insertHtml('<tr><td style="padding-left: 40 px;">%s</td></tr></table>' % (whatswrong,))
         self.preview_error.insertPlainText("\n\nComplete unformatted error output:\n%s" % (errorMsg,))
         self.preview_error.moveCursor(QtGui.QTextCursor.Start)
         self._previewTabBeforeError = self.preview.currentIndex()
@@ -594,8 +601,9 @@ Keyboard shortcuts:<br>
                 self._lstsFileName = self._modelFileName + ".gted-%stmp.lsts" % (os.getpid(),)
                 gt2lsts_cmd = "fmbt-gt -o '%s' -f '%s'" % (self._lstsFileName, self._modelFileName)
                 executed_program = "fmbt-gt"
-                validation_exitstatus, _ = self.runcmd(gt2lsts_cmd)
-
+                validation_exitstatus, output = self.runcmd(gt2lsts_cmd)
+                if validation_exitstatus != 0:
+                    self.showError(output[1])
             else: # validate LSTS (missing)
                 self._lstsFileName = self._modelFileName
                 validation_exitstatus = 0
