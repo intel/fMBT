@@ -1,6 +1,6 @@
 TESTS = interactivemode/run.sh tutorial/run.sh adapters/run.sh examples/run.sh aalpython/run.sh fmbt-stats/run.sh coverage/run.sh exitvalue/run.sh history/run.sh eyenfinger/run.sh remoteerror/run.sh weight/run.sh
 
-dist_noinst_SCRIPTS = aalpython/run.sh aalpython/adapter_exceptions.aal aalpython/adapter_exceptions.conf aalpython/adapter_exceptions.py aalpython/mycounter.py aalpython/outputs.aal aalpython/outputs.conf aalpython/test1.py.aal
+dist_noinst_SCRIPTS = aalpython/run.sh aalpython/adapter_exceptions.aal aalpython/adapter_exceptions.conf aalpython/mycounter.py aalpython/outputs.aal aalpython/test1.py.aal
 
 dist_noinst_SCRIPTS += adapters/run.sh adapters/timer/run.sh adapters/timer/timer.conf adapters/timer/timer.gt adapters/timer/timer.mrules
 
@@ -8,7 +8,7 @@ dist_noinst_SCRIPTS += coverage/run.sh coverage/abc.gt coverage/abc_reg.gt cover
 
 dist_noinst_SCRIPTS += examples/run.sh
 
-dist_noinst_SCRIPTS += exitvalue/run.sh exitvalue/broken-adapter.aal exitvalue/broken-body.aal exitvalue/broken-guard.aal exitvalue/broken-initial_state.aal exitvalue/broken-language.aal exitvalue/broken-missingfunction.gt exitvalue/broken-requiredvalue.gt exitvalue/run_new.sh
+dist_noinst_SCRIPTS += exitvalue/run.sh exitvalue/broken-adapter.aal exitvalue/broken-body.aal exitvalue/broken-guard.aal exitvalue/broken-initial_state.aal exitvalue/broken-language.aal exitvalue/broken-requiredvalue.gt exitvalue/run_new.sh
 
 dist_noinst_SCRIPTS += history/run.sh history/one-step-tests.sh history/one-step-tests.conf history/one-step-tests_old.sh history/abc.gt
 
