@@ -78,7 +78,7 @@ void Conf::load(std::string& name,std::string& content)
     RETURN_ERROR_VOID("Loading \"" + name + "\" failed.");
 
   if (ss=="")
-    RETURN_ERROR_VOID("Empthy configuration");
+    RETURN_ERROR_VOID("Empty configuration");
 
   bool ret=dparse(p,(char*)ss.c_str(),std::strlen(ss.c_str()));
 
@@ -101,7 +101,7 @@ void Conf::load(std::string& name,std::string& content)
                       heuristic->errormsg);
 
   if ((model=new_model(log, model_name)) == NULL) {
-    RETURN_ERROR_VOID("Creating model loader \"" +
+    RETURN_ERROR_VOID("Creating model \"" +
                       filetype(model_name)
                       + "\" failed.");
   }
@@ -112,10 +112,10 @@ void Conf::load(std::string& name,std::string& content)
     RETURN_ERROR_VOID("Creating coverage \"" + coverage_name + "\" failed.");
 
   if (!coverage->status)
-    RETURN_ERROR_VOID("Coverage error on \"" + coverage_name + "\":" + coverage->errormsg);
+    RETURN_ERROR_VOID("Error in coverage \"" + coverage_name + "\": " + coverage->errormsg);
 
   if (!model->status || !model->init() || !model->reset())
-    RETURN_ERROR_VOID("Model error: " + model->stringify());
+    RETURN_ERROR_VOID("Error in model: " + model->stringify());
 
   heuristic->set_coverage(coverage);
 
@@ -141,7 +141,7 @@ void Conf::load(std::string& name,std::string& content)
         RETURN_ERROR_VOID(h->errormsg);
       }
     } else {
-      RETURN_ERROR_VOID("Creating history \""+ *history[i] + "\" failed");
+      RETURN_ERROR_VOID("Creating history \""+ *history[i] + "\" failed.");
     }
   }
 
@@ -308,7 +308,7 @@ void Conf::add_end_condition(Verdict::Verdict v,std::string& s)
 
   if (ec==NULL) {
     status=false;
-    errormsg=errormsg+"Can't create end condition \""+s+"\"\n";
+    errormsg=errormsg+"Creating end condition \""+s+"\" failed.\n";
   } else {
     add_end_condition(ec);
   }
