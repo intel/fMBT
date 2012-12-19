@@ -18,7 +18,7 @@
 
 
 cd "$(dirname "$0")"
-LOGFILE=/tmp/fmbt.test.coverage.log
+LOGFILE=/tmp/fmbt.test.weight.log
 export PATH=../../src:../../utils:$PATH
 
 source ../functions.sh
