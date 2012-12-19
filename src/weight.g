@@ -42,10 +42,10 @@ specs: spec |
 
 spec: osvec ',' strvec ':' int {
             Hw->add(*$0.strvec,*$2.strvec,$4.val);
+        }
+    | strvec ':' int {
+            Hw->add(*(new std::vector<std::string*>),*$0.strvec,$2.val);
         };
-
-opt_drop: { $$.strvec = new std::vector<std::string*>; }
-    | 'drop' strvec { $$.strvec = $1.strvec; } ;
 
 osvec: { $$.strvec = new std::vector<std::string*>; }
     | strvec { $$.strvec = $0.strvec; };

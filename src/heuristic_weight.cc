@@ -49,24 +49,25 @@ void Heuristic_weight::add(std::vector<std::string*> p,
   std::vector<int> actions;
 
   for(unsigned i=0;i<p.size();i++) {
-    regexpmatch(*(p[0]),model->getSPNames(),props,false);
+    regexpmatch(*(p[i]),model->getSPNames(),props,false);
   }
 
   for(unsigned i=0;i<a.size();i++) {
-    regexpmatch(*(a[0]),model->getActionNames(),actions,false);
+    regexpmatch(*(a[i]),model->getActionNames(),actions,false);
   }
 
-  if (props.empty())
+  // List of required propositions is empty =>
+  // don't care about propositions, match all states
+  if (p.empty())
     props.push_back(-1);
 
   if (actions.empty()) {
-    // Some warning?
     return;
   }
 
   for(unsigned i=0;i<props.size();i++) {
     for(unsigned j=0;j<actions.size();j++) {
-      weights[std::pair<int,int>(props[i],actions[j])]+=w/100.0;
+      weights[std::pair<int,int>(props[i],actions[j])]+=w;
     }
   }
 }
@@ -89,7 +90,6 @@ int Heuristic_weight::weight_select(int i,int* actions)
       total+=ff;
     }
   }
-
 
   // And then without prop
   // Go through actions

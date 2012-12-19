@@ -1,0 +1,12 @@
+P(start, "gt:istate")
+->
+P(start, "propo")
+T(start, "iFoo", start)
+T(start, "iBar", start)
+T(start, "iZoo", start)
+T(start, "iTryRareThings", rarethings)
+
+P(rarethings, "rare")
+T(rarethings, "iRareImports", rarethings)
+T(rarethings, "iRareExports", rarethings)
+T(rarethings, "iBackToBusiness", start)

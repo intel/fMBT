@@ -1,3 +1,15 @@
+# Match to iFoo on any state
 , "iFoo": 5
-".*", "iFoo": 5
-"propo","iB.*":10
+
+# Match to iFoo on any state, more convenient notation
+"iFoo": 5
+
+# The following spec will assign weight to actions
+#     iBar and iBackToBusiness
+# on states tagged with "propo".
+"nonexisting-propo" "p.*", "iNonEx.*" "iB.*":10
+
+# iZoo is only available in the initial state, tagged with "propo"
+# only. Therefore these weights should not affect test generation.
+"rare", "iZoo":100
+"nonexist.*", "iZoo": 100
