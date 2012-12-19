@@ -62,4 +62,4 @@ string: "\"([^\"\\]|\\[^])*\"" { $$.str = new std::string($n0.start_loc.s+1,$n0.
 
 int: istr { $$.val = atoi($n0.start_loc.s); };
 
-istr: "[0-9]+";
+istr: "-?[0-9]+";

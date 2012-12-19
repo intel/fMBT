@@ -45,6 +45,7 @@ public:
 protected:
   int weight_select(int i,int* actions);
   std::map<std::pair<int,int>, float> weights;
+  std::map<std::pair<int,int>, int> weight_ids;
 private:
   std::string prm;
 };

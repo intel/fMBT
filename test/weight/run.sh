@@ -31,8 +31,8 @@ EOF
 
 
 teststep "heuristic weight: all zeros..."
-(cat test-noheur.conf; echo 'heuristic = "weight(test-allzeros.weight)"') > test.conf
-fmbt test.conf -l weight.log >>$LOGFILE 2>&1 || {
+(cat test-noheur.conf; echo 'heuristic = "weight(test-allzeros.weight)"') > test-allzeros.conf
+fmbt test-allzeros.conf -l weight.log >>$LOGFILE 2>&1 || {
     testfailed
 }
 
@@ -42,8 +42,8 @@ fi
 testpassed
 
 teststep "heuristic weight: only one"
-(cat test-noheur.conf; echo 'heuristic = "weight(test-onlyone.weight)"') > test.conf
-fmbt test.conf -l weight.log >>$LOGFILE 2>&1 || {
+(cat test-noheur.conf; echo 'heuristic = "weight(test-onlyone.weight)"') > test-onlyone.conf
+fmbt test-onlyone.conf -l weight.log >>$LOGFILE 2>&1 || {
     testfailed
 }
 if (( "$(fmbt-log weight.log | grep iFoo | wc -l)" != 100 )); then
@@ -52,8 +52,8 @@ fi
 testpassed
 
 teststep "heuristic weight: fifty fifty"
-(cat test-noheur.conf; echo 'heuristic = "weight(test-fiftyfifty.weight)"') > test.conf
-fmbt test.conf -l weight.log >>$LOGFILE 2>&1 || {
+(cat test-noheur.conf; echo 'heuristic = "weight(test-fiftyfifty.weight)"') > test-fiftyfifty.conf
+fmbt test-fiftyfifty.conf -l weight.log >>$LOGFILE 2>&1 || {
     testfailed
 }
 if (( "$(fmbt-log weight.log | grep iFoo | wc -l)" < 40 )); then

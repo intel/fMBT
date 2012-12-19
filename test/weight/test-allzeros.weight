@@ -1,1 +1,4 @@
 ,".*":0
+
+# negative weights are handled as zeroes
+,"iFoo": -1000

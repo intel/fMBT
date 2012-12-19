@@ -21,6 +21,7 @@
 #include "helper.hh"
 #include <cstdlib>
 #include <cstring>
+#include <algorithm>
 
 #include "dparse.h"
 extern "C" {
@@ -45,8 +46,10 @@ void Heuristic_weight::add(std::vector<std::string*> p,
 			   std::vector<std::string*> a,
 			   int w)
 {
+  static int weight_id = 0;
   std::vector<int> props;
   std::vector<int> actions;
+  std::vector<int>::iterator it;
 
   for(unsigned i=0;i<p.size();i++) {
     regexpmatch(*(p[i]),model->getSPNames(),props,false);
@@ -55,6 +58,15 @@ void Heuristic_weight::add(std::vector<std::string*> p,
   for(unsigned i=0;i<a.size();i++) {
     regexpmatch(*(a[i]),model->getActionNames(),actions,false);
   }
+
+  // Remove duplicate matches
+  std::sort(actions.begin(), actions.end());
+  it = std::unique(actions.begin(), actions.end());
+  actions.resize(it - actions.begin());
+
+  std::sort(props.begin(), props.end());
+  it = std::unique(props.begin(), props.end());
+  props.resize(it - props.begin());
 
   // List of required propositions is empty =>
   // don't care about propositions, match all states
@@ -68,8 +80,10 @@ void Heuristic_weight::add(std::vector<std::string*> p,
   for(unsigned i=0;i<props.size();i++) {
     for(unsigned j=0;j<actions.size();j++) {
       weights[std::pair<int,int>(props[i],actions[j])]+=w;
+      weight_ids[std::pair<int,int>(props[i],actions[j])]=weight_id;
     }
   }
+  weight_id++;
 }
 
 int Heuristic_weight::weight_select(int i,int* actions)
@@ -78,6 +92,7 @@ int Heuristic_weight::weight_select(int i,int* actions)
   int p=model->getprops(&props);
   float total=0;
   std::vector<float> f;
+  std::map< std::pair<int,int>, bool > seen_weight_ids;
 
   f.resize(i);
 
@@ -85,9 +100,16 @@ int Heuristic_weight::weight_select(int i,int* actions)
   for(int j=0;j<p;j++) {
     // Go through actions
     for(int k=0;k<i;k++) {
-      float ff=weights[std::pair<int,int>(props[j],actions[k])];
-      f[k]+=ff;
-      total+=ff;
+      // Make sure every weight spec has an effect to each enabled
+      // action at most once - even if a weight spec matches to this
+      // state because of multiple state tag hits.
+      std::pair<int,int> pa(props[j],actions[k]);
+      float ff = weights[pa];
+      int id = weight_ids[pa];
+      if (ff != 0.0 && !seen_weight_ids[std::pair<int,int>(actions[k],id)]) {
+        f[k]+=ff;
+        seen_weight_ids[std::pair<int,int>(actions[k],id)] = true;
+      }
     }
   }
 
@@ -96,7 +118,12 @@ int Heuristic_weight::weight_select(int i,int* actions)
   for(int k=0;k<i;k++) {
     float ff=weights[std::pair<int,int>(-1,actions[k])];
     f[k]+=ff;
-    total+=ff;
+  }
+
+  // Make sure there are no negative weights
+  for (int k=0; k<i; k++) {
+    if (f[k] < 0.0) f[k] = 0.0;
+    total += f[k];
   }
 
   // Total weight 0?

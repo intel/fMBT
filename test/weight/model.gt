@@ -1,6 +1,7 @@
 P(start, "gt:istate")
 ->
 P(start, "propo")
+P(start, "p2")
 T(start, "iFoo", start)
 T(start, "iBar", start)
 T(start, "iZoo", start)
