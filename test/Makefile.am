@@ -1,20 +1,20 @@
 TESTS = interactivemode/run.sh tutorial/run.sh adapters/run.sh examples/run.sh aalpython/run.sh fmbt-stats/run.sh coverage/run.sh exitvalue/run.sh history/run.sh eyenfinger/run.sh remoteerror/run.sh weight/run.sh
 
-dist_noinst_SCRIPTS = aalpython/run.sh aalpython/test1.py.aal
+dist_noinst_SCRIPTS = aalpython/run.sh aalpython/adapter_exceptions.aal aalpython/adapter_exceptions.conf aalpython/adapter_exceptions.py aalpython/mycounter.py aalpython/outputs.aal aalpython/outputs.conf aalpython/test1.py.aal
 
-dist_noinst_SCRIPTS += adapters/run.sh
+dist_noinst_SCRIPTS += adapters/run.sh adapters/timer/run.sh adapters/timer/timer.conf adapters/timer/timer.gt adapters/timer/timer.mrules
 
-dist_noinst_SCRIPTS += coverage/run.sh coverage/t1.gt coverage/t2.gt
+dist_noinst_SCRIPTS += coverage/run.sh coverage/abc.gt coverage/abc_reg.gt coverage/coffee.gt coverage/t1.gt coverage/t2.gt coverage/twocounters.aal
 
 dist_noinst_SCRIPTS += examples/run.sh
 
-dist_noinst_SCRIPTS += exitvalue/run.sh
+dist_noinst_SCRIPTS += exitvalue/run.sh exitvalue/broken-adapter.aal exitvalue/broken-body.aal exitvalue/broken-guard.aal exitvalue/broken-initial_state.aal exitvalue/broken-language.aal exitvalue/broken-missingfunction.gt exitvalue/broken-requiredvalue.gt exitvalue/run_new.sh
 
-dist_noinst_SCRIPTS += history/run.sh history/one-step-tests.sh history/one-step-tests.conf history/abc.gt
+dist_noinst_SCRIPTS += history/run.sh history/one-step-tests.sh history/one-step-tests.conf history/one-step-tests_old.sh history/abc.gt
 
 dist_noinst_SCRIPTS += tutorial/run.sh
 
-dist_noinst_SCRIPTS += interactivemode/create-model.sh interactivemode/dummys.mrules interactivemode/fmbt-i.mrules interactivemode/fmbt_i.py interactivemode/run.sh interactivemode/singledummy.mrules interactivemode/test.conf
+dist_noinst_SCRIPTS += interactivemode/breakpoints.aal interactivemode/breakpoints.conf interactivemode/create-model.sh interactivemode/dummys.mrules interactivemode/fmbt-i.mrules interactivemode/fmbt_i.py interactivemode/run.sh interactivemode/singledummy.mrules interactivemode/simple.conf interactivemode/simple.gt interactivemode/test.conf
 
 dist_noinst_SCRIPTS += fmbt-stats/run.sh fmbt-stats/teststeps.py fmbt-stats/model.gt
 
