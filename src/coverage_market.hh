@@ -46,18 +46,22 @@ class Coverage_Market: public Coverage {
 
 public:
   class unit;
-  Coverage_Market(Log& l, std::string& params);
+  Coverage_Market(Log& l, std::string& _params);
   ~Coverage_Market() {
     for(size_t i=0;i<Units.size();i++) {
       delete Units[i];
     }
   }
 
-  virtual void push() {};
-  virtual void pop() {};
+  virtual void push() {
+    for (unsigned int i = 0; i < Units.size(); i++) Units[i]->push();
+  };
+  virtual void pop() {
+    for (unsigned int i = 0; i < Units.size(); i++) Units[i]->pop();
+  };
 
   virtual void history(int action, std::vector<int>& props,
-		       Verdict::Verdict verdict);
+                       Verdict::Verdict verdict);
   virtual bool execute(int action);
   virtual float getCoverage();
 
@@ -70,11 +74,12 @@ public:
   virtual void set_model(Model* _model)
   {
     model=_model;
+    add_requirement(params);
   }
 
   void add_requirement(std::string& req);
 
-  unit* req_rx_action(const char m,const char* action);
+  unit* req_rx_action(const char m,const std::string &action);
 
   void add_unit(unit* u) {
     Units.push_back(u);
@@ -93,7 +98,7 @@ public:
 
   class unit {
   public:
-    val& get_value() { 
+    val& get_value() {
       return value;
     }
     virtual ~unit() {}
@@ -148,7 +153,7 @@ public:
     }
   protected:
   };
-  
+
   class unit_or: public unit_dual {
   public:
     unit_or(unit* l,unit* r) : unit_dual(l,r) {}
@@ -158,13 +163,13 @@ public:
       val vl=left->get_value();
       val vr=right->get_value();
       /* ???? */
-      value.first = 
-	MAX(vl.first/vl.second,
-	    vr.first/vr.second)*(vl.second+vr.second);
+      value.first =
+        MAX(vl.first/vl.second,
+            vr.first/vr.second)*(vl.second+vr.second);
       value.second=vl.second+vr.second;
     }
   protected:
-    
+
   };
 
   class unit_not: public unit {
@@ -174,7 +179,7 @@ public:
     virtual void push() {
       child->push();
     }
-    
+
     virtual void pop() {
       child->pop();
     }
@@ -186,6 +191,7 @@ public:
     }
 
     virtual void update() {
+      child->update();
       val v=child->get_value();
       value.first=v.second-v.first;
       value.second=v.second;
@@ -199,11 +205,13 @@ public:
     unit_then(unit* l,unit* r) : unit_dual(l,r) {}
     virtual void execute(int action) {
       // if left, then right
+      left->update();
       val v=left->get_value();
       if (v.first==v.second) {
-	right->execute(action);
+        right->execute(action);
+      } else {
+        left->execute(action);
       }
-      left->execute(action);
     }
 
     virtual void update() {
@@ -213,14 +221,14 @@ public:
       val vr=right->get_value();
       /* ???? */
       value.first=vl.first+vr.first;
-      value.second=vl.second+vr.second;      
+      value.second=vl.second+vr.second;
     }
   protected:
-    
+
   };
 
   class unit_leaf: public unit {
-  public:    
+  public:
     unit_leaf(int action, int count=1) : my_action(action) {
       value.second=count;
     }
@@ -237,13 +245,13 @@ public:
 
     virtual void execute(int action) {
       if (action==my_action) {
-	if (value.first<value.second) {
-	  value.first++;
-	}
+        if (value.first<value.second) {
+          value.first++;
+        }
       }
     }
     virtual void update() {
-      
+
     }
   protected:
     int my_action;
@@ -251,13 +259,13 @@ public:
   };
 
 protected:
-  
   std::vector<Model*> models;
 
   std::vector<unit*> Units;
 
   std::multimap<int,char*> map;
 
+  std::string params;
 };
 
 

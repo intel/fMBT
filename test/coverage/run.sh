@@ -221,6 +221,59 @@ if grep -q iCancelOrder uwalks-steps-seen.txt; then
 fi
 testpassed
 
+teststep "coverage usecase..."
+cat > usecase.conf <<EOF
+model     = "lsts_remote(fmbt-gt -f 'coffee.gt')"
+heuristic = "lookahead(5)"
+coverage  = "usecase(all 'iChoose.*' then ('iCh.*Cash' and 'iCh.*Credit'))"
+pass      = "coverage(1.0)"
+inconc    = "steps(20)"
+on_pass   = "exit(0)"
+on_fail   = "exit(1)"
+on_inconc = "exit(2)"
+EOF
+if ! fmbt -l usecase.log usecase.conf 2>usecase-verdict.txt; then
+    cat usecase.conf >>$LOGFILE
+    tail -n 20 usecase.log >>$LOGFILE
+    echo "failed because fmbt usecase.conf was expected to pass." >>$LOGFILE
+    testfailed
+fi
+if [ "$(fmbt-log usecase.log | grep iChooseCash | wc -l)" != "2" ] ||
+   [ "$(fmbt-log usecase.log | grep iChooseCredit | wc -l)" != "2" ]; then
+    cat usecase.conf >>$LOGFILE
+    tail -n 20 usecase.log >>$LOGFILE
+    echo "failed because exactly two iChooseCash and iChooseCredit actions expected." >>$LOGFILE
+    testfailed
+fi
+cat > usecase.conf <<EOF
+model     = "lsts_remote(fmbt-gt -f 'coffee.gt')"
+heuristic = "lookahead(5)"
+coverage  = "usecase((not 'iCancelPayment' and 'iChooseCash' and 'iChooseCredit') then 'iCancelOrder')"
+pass      = "coverage(1.0)"
+inconc    = "steps(20)"
+on_pass   = "exit(0)"
+on_fail   = "exit(1)"
+on_inconc = "exit(2)"
+EOF
+if ! fmbt -l usecase.log usecase.conf 2>usecase-verdict.txt; then
+    cat usecase.conf >>$LOGFILE
+    tail -n 20 usecase.log >>$LOGFILE
+    echo "failed because fmbt usecase.conf was expected to pass." >>$LOGFILE
+    testfailed
+fi
+if [ "$(fmbt-log usecase.log | grep iChooseCash | wc -l)" != "1" ] ||
+   [ "$(fmbt-log usecase.log | grep iChooseCredit | wc -l)" != "1" ] ||
+   [ "$(fmbt-log usecase.log | grep iCancelPayment | wc -l)" != "1" ] ||
+   [ "$(fmbt-log usecase.log | grep iCancelOrder | wc -l)" != "1" ] ; then
+    cat usecase.conf >>$LOGFILE
+    tail -n 20 usecase.log >>$LOGFILE
+    echo "failed because exactly one of iChooseCash, iChooseCredit, iCancelPayment and iCancelOrder expected." >>$LOGFILE
+    testfailed
+fi
+
+testpassed
+
+
 teststep "coverage sum..."
 cat > sum.conf <<EOF
 model     = "lsts_remote(fmbt-gt -f coffee.gt)"

@@ -44,7 +44,7 @@ public:
   //! Returns the name of the given action
   virtual std::string& getActionName(int action);
 
-  /*! 
+  /*!
    * Returns the number of actions executable in the current state.
    * The (out) parameter refers to the array containing the actions.
    * Data might become invalid/corrupted after executing an action
@@ -76,7 +76,7 @@ public:
   //! Pop a state from the stack and set it as a current state
   virtual void pop()                    =0;
 
-  /* Let's hope this won't be called too often with large 
+  /* Let's hope this won't be called too often with large
    * number of outputs/inputs..
    */
   bool is_output(int action);
@@ -89,7 +89,7 @@ public:
 
   void precalc_input_output();
 
-  virtual int action_number(std::string& s);
+  virtual int action_number(const std::string& s);
 
   virtual Model* up();
   virtual Model* down(unsigned int a);

@@ -19,16 +19,17 @@
 
 #include "coverage_market.hh"
 #include "model.hh"
+#include "helper.hh"
 #include <regex.h>
 
-Coverage_Market::Coverage_Market(Log& l, std::string& params) :
+Coverage_Market::Coverage_Market(Log& l, std::string& _params) :
     Coverage(l)
 {
-    add_requirement(params);
+  params = _params;
 }
 
 void Coverage_Market::history(int action,
-			      std::vector<int>& props, 
+			      std::vector<int>& props,
 			      Verdict::Verdict verdict)
 {
   if (action) {
@@ -50,15 +51,15 @@ bool Coverage_Market::execute(int action)
   return true;
 }
 
-
 float Coverage_Market::getCoverage()
 {
   val v,tmp;
-  
+
   v.first=0;
   v.second=0;
 
   for(size_t i=0;i<Units.size();i++) {
+    Units[i]->update();
     tmp=Units[i]->get_value();
     v.first+=tmp.first;
     v.second+=tmp.second;
@@ -71,12 +72,11 @@ float Coverage_Market::getCoverage()
   return 0;
 }
 
-
 int Coverage_Market::fitness(int* action,int n,float* fitness)
 {
   float m=-1;
   int pos=-1;
-  
+
   for(int i=0;i<n;i++) {
     val b(0,0);
     val e(0,0);
@@ -97,7 +97,7 @@ int Coverage_Market::fitness(int* action,int n,float* fitness)
       Units[j]->pop();
       Units[j]->update();
     }
-    log.debug("(%i:%i) (%i:%i)\n",b.first,b.second, 
+    log.debug("(%i:%i) (%i:%i)\n",b.first,b.second,
 	   e.first,e.second);
     if (b.second) {
       fitness[i]=((float)(e.first-b.first))/((float)(b.second));
@@ -109,7 +109,7 @@ int Coverage_Market::fitness(int* action,int n,float* fitness)
       m=fitness[i];
     }
   }
-  
+
   return pos;
 }
 
@@ -122,7 +122,7 @@ extern Coverage_Market* cobj;
 
 void Coverage_Market::add_requirement(std::string& req)
 {
-  cobj=this;  
+  cobj=this;
   D_Parser *p = new_D_Parser(&parser_tables_covlang, 32);
   bool ret=dparse(p,(char*)req.c_str(),req.length());
   ret=p->syntax_errors==0 && ret;
@@ -130,48 +130,41 @@ void Coverage_Market::add_requirement(std::string& req)
   free_D_Parser(p);
 }
 
-Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const char* action) {
-  /* m(ode) == a|e */
+Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const std::string &action) {
+  /* m(ode) == a|e
+     a(ll): cover all matching actions
+     e(xists): cover any of matching actions
+  */
   if (!status) {
     return NULL;
   }
-  std::vector<std::string> &names(model->getActionNames());
-  regex_t rx;
-
   Coverage_Market::unit* u=NULL;
 
   if (m) {
-    if (regcomp(&rx,action,0)) {
-      errormsg=std::string("Something wrong with RexExp \"")+std::string(action)+std::string("\"");
-      status=false;
+    std::vector<int> actions;
+    regexpmatch(action, model->getActionNames(), actions, false);
+
+    if (actions.empty()) {
+      errormsg = "No actions matching \"" + action + "\"";
+      status = false;
       return NULL;
     }
-    
-    for(size_t i=0;i<names.size();i++) {
-      
-      if (regexec(&rx,names[i].c_str(),0,0,0)==0) {
-	/* Match */
-	/*
-	log.debug("RegExp \"%s\" matched to str \"%s\"\n",
-	       action,names[i].c_str());
-	*/
-	if (u) {
-	  if (m=='e') {
-	    u=new Coverage_Market::unit_or(u,new Coverage_Market::unit_leaf(i));
-	  } else {
-	    u=new Coverage_Market::unit_and(u,new Coverage_Market::unit_leaf(i));	  
-	  }
-	} else {
-	  u=new Coverage_Market::unit_leaf(i);
-	}
+
+    for(unsigned int i=0; i < actions.size(); i++) {
+      if (u) {
+        if (m=='e') {
+          u=new Coverage_Market::unit_or(u,new Coverage_Market::unit_leaf(actions[i]));
+        } else {
+          u=new Coverage_Market::unit_and(u,new Coverage_Market::unit_leaf(actions[i]));
+        }
+      } else {
+        u=new Coverage_Market::unit_leaf(actions[i]);
       }
     }
-    regfree(&rx);
   } else {
-    std::string s(action);
-    int an = model->action_number(s);
+    int an = model->action_number(action.c_str());
     if (an<=0) {
-      errormsg=std::string("No such action \"")+s+std::string("\"");
+      errormsg="No such action \"" + action + "\"";
       status=false;
     }
     u = new Coverage_Market::unit_leaf(an);
@@ -182,7 +175,7 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const char* a
     status=false;
   }
 
-  return u;  
+  return u;
 }
 
-FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Market, "covlang")
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Market, "usecase")

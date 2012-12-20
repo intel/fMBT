@@ -308,6 +308,22 @@ Available types & parameters:
 
                 Otherwise they are not considered unique.
 
+        usecase(<expression>)
+
+                measures percentage of coverage of the coverage
+                language expression. Expressions are built from
+
+                - action-regexps, possibly prefixed by "any" or "all".
+                  If no prefix is given, the default is to cover "any"
+                  action matching the action-regexp.
+
+                - "and", "or", "then" operators and parenthesis
+
+                Examples:
+
+                    usecase('iBuyCar' then ('iUseCash' or 'iUseCredit'))
+                    usecase(all 'iUse(Cash|Credit)')
+
         walks(from regexp_1 to regexp_2)
 
                 like uwalks, but not restricted to unique walks only.
@@ -386,13 +402,6 @@ Available types & parameters:
                 returns the value of type3(params3) if type1(params1)
                 is less than 1.0. Otherwise returns the value of
                 type2(params2).
-
-        covlang(<expression>) EXPERIMENTAL
-
-                measures coverage of the given coverage language
-                expression. The expression is formed by combining "a
-                actionname", "e action-regexp" with "and", "or" and
-                "then" operators and parenthesis.
 
 Examples:
 

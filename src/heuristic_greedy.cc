@@ -142,7 +142,8 @@ int Heuristic_greedy::getIAction()
         }
       }
       if (broken) {
-        log.print("<ERROR msg=\"%s %i\"/>","trying to return action %i, which is not executable in the model",ret);
+        log.print("<ERROR msg=\"%s (%s)\"/>","suggesting disabled action",
+                  model->getActionName(ret).c_str());
         abort();
       }
       return m_path.back();

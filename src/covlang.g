@@ -38,10 +38,11 @@ expr: node             { $$.u = $0.u; }
     | node "or" expr   { $$.u = new Coverage_Market::unit_or  ($0.u,$2.u); }
     | node "then" expr { $$.u = new Coverage_Market::unit_then($0.u,$2.u); };
 
-node: actionname       { $$.u = cobj->req_rx_action(0,$0.str->c_str()); delete $0.str; $0.str=NULL; } 
-    | 'a' actionname   { $$.type='a'; $$.u = cobj->req_rx_action($$.type,$1.str->c_str()); delete $0.str; $0.str=NULL; } 
-    | 'e' actionname   { $$.type='e'; $$.u = cobj->req_rx_action($$.type,$1.str->c_str()); delete $0.str; $0.str=NULL; } 
-    | '(' expr ')'     { $$.u = $1.u; } 
+node: actionname       { $$.type='e'; $$.u = cobj->req_rx_action($$.type,*$0.str); delete $0.str; $0.str=NULL; }
+    | ('a' | 'A' | 'all' ) actionname   { $$.type='a'; $$.u = cobj->req_rx_action($$.type,*$1.str); delete $0.str; $0.str=NULL; }
+    | ('e' | 'E' | 'any' ) actionname   { $$.type='e'; $$.u = cobj->req_rx_action($$.type,*$1.str); delete $0.str; $0.str=NULL; }
+    | '(' expr ')'     { $$.u = $1.u; }
     | "not" node       { $$.u = new Coverage_Market::unit_not($1.u); } ;
 
-actionname: "\"([^\"\\]|\\[^])*\"" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); $$.type=0; };
+actionname: "\"([^\"\\]|\\[^])*\"" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); }
+          | "\'([^\'\\]|\\[^])*\'" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); } ;

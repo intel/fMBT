@@ -164,7 +164,7 @@ void aal_remote::push() {
     handle_stderr();
     if (accel==0 && _g_simulation_depth_hint > 0) {
       std::string s="lts"+to_string(_g_simulation_depth_hint+1)+"\n";
-      if (std::fprintf(d_stdin,s.c_str())!=s.length()) {
+      if (std::fprintf(d_stdin,s.c_str())!=(int)s.length()) {
         status=false;
       }
       fflush(d_stdin);

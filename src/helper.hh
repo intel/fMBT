@@ -89,12 +89,12 @@ int getint(FILE* out,FILE* in,Log& log,
 	   int min=-42,int max=INT_MAX,Writable* w=NULL);
 
 int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in,Log& log,
-	   int min=-42,int max=INT_MAX,Writable* w=NULL);	   
+	   int min=-42,int max=INT_MAX,Writable* w=NULL);
 
 void split(std::string val, std::string& name,
 	   std::string& param, const char* s=":");
 
-void regexpmatch(std::string& regexp,std::vector<std::string>& f,
+void regexpmatch(const std::string& regexp,std::vector<std::string>& f,
 		 std::vector<int>& result,bool clear=true,int a=1);
 
 void param_cut(std::string val,std::string& name,

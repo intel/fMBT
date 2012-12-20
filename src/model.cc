@@ -84,7 +84,7 @@ void Model::precalc_input_output()
   }
 }
 
-int Model::action_number(std::string& s)
+int Model::action_number(const std::string& s)
 {
   for(size_t i=0;i<action_names.size();i++) {
     if (action_names[i]==s) {

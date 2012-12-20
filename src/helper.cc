@@ -733,7 +733,7 @@ void split(std::string val,std::string& name,
 #endif
 
 
-void regexpmatch(std::string& regexp,std::vector<std::string>& f,
+void regexpmatch(const std::string& regexp,std::vector<std::string>& f,
                  std::vector<int>& result,bool clear,int a)
 {
 #ifndef DROI
