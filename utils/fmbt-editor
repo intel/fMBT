@@ -285,8 +285,9 @@ Keyboard shortcuts:<br>
 <tr><td><i>Ctrl++</i></td><td>Zoom in active view</td></tr>
 <tr><td><i>Ctrl+-</i></td><td>Zoom out active view</td></tr>
 <tr><td><i>Ctrl+wheel</i><td></td>Zoom in/out active view</td></tr>
-<tr><td><i>Shift+F4<i></td><td>Grow preview tabs on the right</td></tr>
-<tr><td><i>Shift+F5<i></td><td>Grow editor tabs on the left</td></tr>
+<tr><td><i>Ctrl+T</i></td><td>Toggle preview position (left/bottom)</td></tr>
+<tr><td><i>Shift+F4<i></td><td>Grow preview tabs</td></tr>
+<tr><td><i>Shift+F5<i></td><td>Grow editor tabs</td></tr>
 </table>
 ''')
 
@@ -927,6 +928,7 @@ on_inconc = "exit(2)"
             container = QtGui.QWidget(parent)
             layout = QtGui.QHBoxLayout()
             container.setLayout(layout)
+            container.setStyleSheet("background-color:white;")
 
             image.setSizePolicy(QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.Ignored)
             image.setScaledContents(True)
