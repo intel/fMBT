@@ -1,6 +1,6 @@
 Name:           fmbt
-Version:        0.3
-Release:        1%{?dist}
+Version:        0.4
+Release:        0.rc0.<CI_CNT>.<B_CNT>
 Summary:        free Model-Based Testing tool
 
 License:        lgpl
