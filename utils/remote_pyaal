@@ -63,9 +63,11 @@ import sys
 import os
 import getopt
 import commands
+import inspect
 import time
 import fmbt
 import atexit
+import re
 import urllib
 import tempfile
 import traceback
@@ -238,6 +240,30 @@ class RemoteAALBridge:
                 error("Unexpected command: \"" + cmd + "\". remote_pyaal works with \"aal_remote\" model.")
             cmd = get().rstrip()
 
+def format_syntaxerror():
+    """modify last exception filename and line number if it's AAL"""
+    redefline = re.compile('    def [a-z0-9_]+\(\):')
+    recodefileline = re.compile('setCodeFileLine\(.*\'\'\'(.*)\'\'\', ([-0-9]+)[^0-9]')
+    exc_type, exc_value, exc_tb = sys.exc_info()
+    tb_tuples = traceback.extract_tb(exc_tb)
+    filename, syntaxerrorlineno = exc_value.filename, exc_value.lineno
+    try:
+        fullsource = file(filename).read()
+        fullsourcelines = fullsource.split('\n')
+        # syntax error is inside the block that starts on line deflineno
+        defline = redefline.findall('\n'.join(fullsourcelines[:syntaxerrorlineno-1]))[-1]
+        deflineno = fullsourcelines.index(defline) + 1
+        # that block defined is in an aal file given on next setCodeFileLine
+        codefile, aalblockstart = recodefileline.findall('\n'.join(fullsourcelines[syntaxerrorlineno-1:]))[0]
+        aalblocklineno = syntaxerrorlineno - deflineno
+        exc_value.lineno = int(aalblockstart) + aalblocklineno
+        exc_value.filename = codefile
+        exc_value.args = (exc_value.args[0],
+                          (exc_value.filename, exc_value.lineno, exc_value.args[1][2], exc_value.args[1][3]))
+        sys.last_value = exc_value
+    except:
+        pass
+
 def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]),
              include_variables=None, include_generation_discontinued_tag=True):
     try:
@@ -397,6 +423,8 @@ if __name__ == "__main__":
     try:
         exec file(aalpy_filename)
     except Exception as e:
+        if isinstance(e, SyntaxError):
+            format_syntaxerror()
         code_lines = aal_code.split('\n')
         code_with_line_nums = ['%4s: %s' % (num+1, line)
                                for num,line in enumerate(code_lines)]
