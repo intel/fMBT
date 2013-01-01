@@ -238,7 +238,6 @@ class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
 
-        self._refreshed_gt = ""
         self._refreshed_conf = ""
 
         self._modelFileName = "noname.gt"
@@ -586,59 +585,55 @@ Keyboard shortcuts:<br>
             self.edit.setCurrentIndex(EDITTAB_CONF)
             self.conf_editor.setFocus()
 
-    def autoSave(self):
+    def saveAndValidateModel(self):
         """
         Save unsaved contents, convert gt to lsts if possible.
         Update self._model_ok (false iff conversion fails).
         """
-        saved = 0
         gt_contents = self.editor.toPlainText()
-        if self._refreshed_gt != gt_contents:
-            file(self._modelFileName, "w").write(_deleteTrailingWhitespace(gt_contents))
-            self._refreshed_gt = gt_contents
-            saved += 1
-            if self._editingAAL(): # validate AAL
-                self._aalcFileName = self._modelFileName + ".gted-%stmp.py" % (os.getpid(),)
-                self._lstsFileName = self._modelFileName + ".gted-%stmp.lsts" % (os.getpid(),)
-                # Pick up preprocessor arguments from remote_pyaal command line
-                aal_ppflags = ""
-                conf_lines = str(self.conf_editor.toPlainText()).split('\n')
-                for l in conf_lines:
-                    if "model" in l: aal_ppflags=' '.join(
-                        ["'-D%s'" % f for f in re.findall('-D ?([^ ]*)', l)])
-                aal2py_cmd = "fmbt-aalc %s -o '%s' %s" % (aal_ppflags, self._aalcFileName, self._modelFileName)
-                executed_program = "fmbt-aalc"
-                validation_exitstatus, output = self.runcmd(aal2py_cmd)
-                if validation_exitstatus == 0:
-                    show_hide_args = ""
-                    [show_vars, hide_vars], preview_depth, _, _, _, _, _, _ = self.aalPreviewArguments()
-                    for v in show_vars: show_hide_args += " -S '%s'" % (v,)
-                    for v in hide_vars: show_hide_args += " -H '%s'" % (v,)
-                    py2lsts_cmd = "remote_pyaal %s -o '%s'%s --lsts-depth %s '%s'" % (aal_ppflags, self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
-                    validation_exitstatus, output = self.runcmd(py2lsts_cmd)
-                    if validation_exitstatus != 0:
-                        self.showError(output[1])
-                else: # fmbt-aalc returned an error
-                    self.showError(output[1])
-            elif self._editingGT(): # validate GT
-                self._lstsFileName = self._modelFileName + ".gted-%stmp.lsts" % (os.getpid(),)
-                gt2lsts_cmd = "fmbt-gt -o '%s' -f '%s'" % (self._lstsFileName, self._modelFileName)
-                executed_program = "fmbt-gt"
-                validation_exitstatus, output = self.runcmd(gt2lsts_cmd)
+        file(self._modelFileName, "w").write(_deleteTrailingWhitespace(gt_contents))
+        if self._editingAAL(): # validate AAL
+            self._aalcFileName = self._modelFileName + ".gted-%stmp.py" % (os.getpid(),)
+            self._lstsFileName = self._modelFileName + ".gted-%stmp.lsts" % (os.getpid(),)
+            # Pick up preprocessor arguments from remote_pyaal command line
+            aal_ppflags = ""
+            conf_lines = str(self.conf_editor.toPlainText()).split('\n')
+            for l in conf_lines:
+                if "model" in l: aal_ppflags=' '.join(
+                    ["'-D%s'" % f for f in re.findall('-D ?([^ ]*)', l)])
+            aal2py_cmd = "fmbt-aalc %s -o '%s' %s" % (aal_ppflags, self._aalcFileName, self._modelFileName)
+            executed_program = "fmbt-aalc"
+            validation_exitstatus, output = self.runcmd(aal2py_cmd)
+            if validation_exitstatus == 0:
+                show_hide_args = ""
+                [show_vars, hide_vars], preview_depth, _, _, _, _, _, _ = self.aalPreviewArguments()
+                for v in show_vars: show_hide_args += " -S '%s'" % (v,)
+                for v in hide_vars: show_hide_args += " -H '%s'" % (v,)
+                py2lsts_cmd = "remote_pyaal %s -o '%s'%s --lsts-depth %s '%s'" % (aal_ppflags, self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
+                validation_exitstatus, output = self.runcmd(py2lsts_cmd)
                 if validation_exitstatus != 0:
                     self.showError(output[1])
-            else: # validate LSTS (missing)
-                self._lstsFileName = self._modelFileName
-                validation_exitstatus = 0
+            else: # fmbt-aalc returned an error
+                self.showError(output[1])
+        elif self._editingGT(): # validate GT
+            self._lstsFileName = self._modelFileName + ".gted-%stmp.lsts" % (os.getpid(),)
+            gt2lsts_cmd = "fmbt-gt -o '%s' -f '%s'" % (self._lstsFileName, self._modelFileName)
+            executed_program = "fmbt-gt"
+            validation_exitstatus, output = self.runcmd(gt2lsts_cmd)
+            if validation_exitstatus != 0:
+                self.showError(output[1])
+        else: # validate LSTS (missing)
+            self._lstsFileName = self._modelFileName
+            validation_exitstatus = 0
 
-            if validation_exitstatus == 0:
-                self.edit.setTabIcon(0, QtGui.QIcon())
-                self._model_ok = True
-            elif validation_exitstatus == 127:
-                error('Cannot execute "%s". Check your fMBT installation or PATH.' % (executed_program,), gui=1)
-            else:
-                self.edit.setTabIcon(0, QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_MessageBoxWarning))
-                self._model_ok = False
+        if validation_exitstatus == 0:
+            self.edit.setTabIcon(0, QtGui.QIcon())
+            self._model_ok = True
+        elif validation_exitstatus == 127:
+            error('Cannot execute "%s". Check your fMBT installation or PATH.' % (executed_program,), gui=1)
+        else:
+            self.edit.setTabIcon(0, QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_MessageBoxWarning))
+            self._model_ok = False
         conf_contents = str(self.conf_editor.toPlainText()).strip()
         if self._refreshed_conf != conf_contents:
             if conf_contents == "":
@@ -646,8 +641,7 @@ Keyboard shortcuts:<br>
             else:
                 file(self._confFileName, "w").write(_deleteTrailingWhitespace(conf_contents))
             self._refreshed_conf = conf_contents
-            saved += 2
-        return saved
+        return self._model_ok
 
     def pixmapLoader(self, previewtab, filename):
         # previewtab is one of 'model', 'dist', 'cov'
@@ -689,8 +683,8 @@ Keyboard shortcuts:<br>
         if change_tab:
             self.preview.setTabIcon(PREVIEWTAB_MODEL,
                                     QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_BrowserReload))
-        self._refreshed_gt = "" # force model update
-        self.autoSave()
+        if not self.saveAndValidateModel():
+            return
         asyncRuncmd(self._doGenerateTest,
                     onSuccess=lambda: self.visualiseModel_havingTestGenerated(change_tab),
                     onError=lambda: self.showError(self._test_errormsg))
@@ -734,7 +728,8 @@ Keyboard shortcuts:<br>
             print "display '%s'" % (imgname,)
 
     def plotDistribution(self, change_tab = True):
-        self.autoSave()
+        if not self.saveAndValidateModel():
+            return
         self._doGenerateTest()
         if self._model_ok and self._test_ok:
             self._distFileName = self._modelFileName + ".gted-%stmp.dist.png" % (os.getpid(),)
@@ -751,7 +746,8 @@ Keyboard shortcuts:<br>
             print "display '%s'" % (self._distFileName,)
 
     def plotCoverage(self, change_tab = True):
-        self.autoSave()
+        if not self.saveAndValidateModel():
+            return
         self._doGenerateTest()
         if self._model_ok and self._test_ok:
             self._covFileName = self._modelFileName + ".gted-%stmp.cov.png" % (os.getpid(),)
@@ -782,7 +778,7 @@ Keyboard shortcuts:<br>
             elif self._editingAAL():
                 modelspec="aal_remote(remote_pyaal -l %s.gted-%stmp.aal.log '%s')" % (
                     self._modelFileName, os.getpid(), self._modelFileName)
-                lookahead = 3
+                lookahead = 4
             else:
                 modelspec="lsts_remote(fmbt-gt -f '%s')" % (self._modelFileName,)
                 lookahead = 4
@@ -806,8 +802,10 @@ on_inconc = "exit(2)"
         fmbt_exitstatus, output = self.runcmd(cmd)
         if fmbt_exitstatus == 0 or "pass:" in output[1] or "inconc:" in output[1] or "fail:" in output[1]:
             self._test_ok = True
+            self._test_errormsg = ""
         elif fmbt_exitstatus == 127:
-            self.showError('Cannot execute "fmbt". Check you fMBT installation and PATH.')
+            self._test_ok = False
+            self._test_errormsg = 'Cannot execute "fmbt". Check your fMBT installation and PATH.'
         else:
             self._test_ok = False
             self._test_errormsg = output[1]
@@ -817,10 +815,11 @@ on_inconc = "exit(2)"
         if change_tab:
             self.preview.setTabIcon(PREVIEWTAB_TEST,
                                     QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_BrowserReload))
-        self.autoSave()
+        if not self.saveAndValidateModel():
+            return
         asyncRuncmd(self._doGenerateTest,
                     onSuccess=lambda: self.generateTest_havingTestGenerated(change_tab),
-                    onError = lambda: self.generateTest_havingTestGenerated(change_tab))
+                    onError=lambda: self.showError(self._test_errormsg))
 
     def generateTest_havingTestGenerated(self, change_tab):
         if self._model_ok and self._test_ok:
@@ -1422,22 +1421,16 @@ on_inconc = "exit(2)"
         self.preview.setTabIcon(PREVIEWTAB_ERR, QtGui.QIcon())
         self.preview_error.clear()
 
+        self._previewTakeFocusOnTabChange = False
         if self._previewTabBeforeError != None:
-            self._previewTakeFocusOnTabChange = False
-            self.preview.setCurrentIndex(self._previewTabBeforeError)
-            self._previewTakeFocusOnTabChange = True
+            _t = self._previewTabBeforeError
             self._previewTabBeforeError = None
-
-        if self.preview.currentIndex() == PREVIEWTAB_MODEL:
-            self.visualiseModel(change_tab = False)
-        elif self.preview.currentIndex() == PREVIEWTAB_TEST:
-            self.generateTest(change_tab = False)
-        elif self.preview.currentIndex() == PREVIEWTAB_DIST:
-            self.plotDistribution(change_tab = False)
-        elif self.preview.currentIndex() == PREVIEWTAB_COV:
-            self.plotCoverage(change_tab = False)
-        elif self.preview.currentIndex() == PREVIEWTAB_ERR:
-            pass
+            self.preview.setCurrentIndex(_t)
+        else:
+            if self.preview.currentIndex() == PREVIEWTAB_ERR:
+                self.saveAndValidateModel()
+            self.previewTabChanged(self.preview.currentIndex())
+        self._previewTakeFocusOnTabChange = True
 
 class GTHighlighter(QtGui.QSyntaxHighlighter):
     def __init__(self, parent=None):
