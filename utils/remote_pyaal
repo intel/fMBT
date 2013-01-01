@@ -419,6 +419,7 @@ if __name__ == "__main__":
     aalpy_fd, aalpy_filename = tempfile.mkstemp(suffix='.py', prefix='remote_pyaal.')
     os.write(aalpy_fd, aal_code)
     os.close(aalpy_fd)
+    atexit.register(lambda: os.remove(aalpy_filename))
 
     try:
         exec file(aalpy_filename)
@@ -432,8 +433,6 @@ if __name__ == "__main__":
         fmbtstderr("Executing %s failed: %s: %s\n%s" %
                    (aal_filename, type(e).__name__, e, traceback.format_exc()))
         error("executing aal code failed:\n%s\n%s" % (e, traceback.format_exc()))
-    atexit.register(lambda: os.remove(aalpy_filename))
-
 
     try:
         # Generated AAL code exports generated AAL class as "Model".

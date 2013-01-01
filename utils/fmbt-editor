@@ -42,12 +42,15 @@ Options:
         fmbt-editor -Q-geometry -Q800x600
 """
 
+import atexit
 import sys
 import subprocess
 import commands
 import re
 import os
 import getopt
+import shutil
+import tempfile
 import time
 import urllib
 import fmbt_config
@@ -226,21 +229,19 @@ def asyncRuncmd(cmd, onThreadSuccess=lambda: None, onSuccess=lambda: None, onErr
 asyncRuncmd.running = {}
 asyncRuncmd.finished = {}
 
-def removeTemporaryFiles(basefilename):
-    for tmps in ["lsts", "conf", "states.png", "dist.png", "cov.png",
-                 "py", "log", "aal.log"]:
-        tmpfilename = basefilename + ".gted-%stmp." % (os.getpid(),) + tmps
-        try: os.remove(tmpfilename)
-        except: pass
+_g_tempdir = None
+def removeTemporaryFiles(basefilename = None):
+    if _g_tempdir:
+        shutil.rmtree(_g_tempdir, ignore_errors=True)
+    if basefilename != None:
+        os.mkdir(_g_tempdir)
 
 class MainWindow(QtGui.QMainWindow):
 
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
 
-        self._refreshed_conf = ""
-
-        self._modelFileName = "noname.gt"
+        self._modelFileName = _g_tempdir + os.sep + "noname.gt"
         self._confFileName = None
         self._logFileName = None
 
@@ -254,7 +255,7 @@ class MainWindow(QtGui.QMainWindow):
         self.setupHelpMenu()
 
         self.setupEditor()
-        self._set_modelFileName("noname.gt")
+        self._set_modelFileName(self._modelFileName)
 
         self.setCentralWidget(self.mainwidget)
         self.setWindowTitle("fMBT editor")
@@ -302,6 +303,7 @@ Keyboard shortcuts:<br>
             self.gthighlighter = AALHighlighter(self.editor.document())
         self._confFileName = None
         self.updateModelTabText()
+        self.updateModelInConfFile()
 
     def _set_confFileName(self, newname):
         self._confFileName = str(newname)
@@ -314,7 +316,7 @@ Keyboard shortcuts:<br>
         self.editor.moveCursor(QtGui.QTextCursor.End)
         self.editor.setFocus()
         if not path:
-            self._set_modelFileName("noname.gt")
+            self._set_modelFileName(_g_tempdir + os.sep + "noname.gt")
         else:
             self._set_modelFileName(path)
         self.refreshImages()
@@ -341,7 +343,7 @@ Keyboard shortcuts:<br>
         self.editor.moveCursor(QtGui.QTextCursor.NextCharacter)
         self.editor.setFocus()
         if not path:
-            self._set_modelFileName("noname.py.aal")
+            self._set_modelFileName(_g_tempdir + os.sep + "noname.aal")
         else:
             self._set_modelFileName(path)
         self.refreshImages()
@@ -354,12 +356,15 @@ Keyboard shortcuts:<br>
 
     def saveFile(self):
         if self.edit.currentIndex() == EDITTAB_GT:
-            print "[saving '%s']" % (self._modelFileName,)
-            file(self._modelFileName, "w").write(_deleteTrailingWhitespace(self.editor.toPlainText()))
-            if self._menuOptionUpdateOnSave.isChecked():
-                self.refreshImages()
+            if self._modelFileName.startswith(_g_tempdir):
+                self.saveFileAs()
+            else:
+                print "[saving '%s']" % (self._modelFileName,)
+                file(self._modelFileName, "w").write(_deleteTrailingWhitespace(self.editor.toPlainText()))
+                if self._menuOptionUpdateOnSave.isChecked():
+                    self.refreshImages()
         else:
-            if not self._confFileName or self._confFileName.startswith(self._modelFileName):
+            if not self._confFileName or self._confFileName.startswith(_g_tempdir):
                 self.saveFileAs()
             else:
                 print "[saving '%s']" % (self._confFileName,)
@@ -414,7 +419,7 @@ Keyboard shortcuts:<br>
                 dialog.setDirectory(os.getcwd())
             if self.edit.currentIndex() == EDITTAB_GT:
                 dialog.setWindowTitle("Open model")
-                dialog.setNameFilters(["fMBT GT commands (*.gt)","fMBT AAL models (*.aal)","State machines (*.lsts)"])
+                dialog.setNameFilters(["fMBT AAL models (*.aal)", "fMBT GT commands (*.gt)", "State machines (*.lsts)"])
                 if self._fileDialogFilter:
                     dialog.selectNameFilter(self._fileDialogFilter)
                 dialog.exec_()
@@ -593,8 +598,8 @@ Keyboard shortcuts:<br>
         gt_contents = self.editor.toPlainText()
         file(self._modelFileName, "w").write(_deleteTrailingWhitespace(gt_contents))
         if self._editingAAL(): # validate AAL
-            self._aalcFileName = self._modelFileName + ".gted-%stmp.py" % (os.getpid(),)
-            self._lstsFileName = self._modelFileName + ".gted-%stmp.lsts" % (os.getpid(),)
+            self._aalcFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".py"
+            self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
             # Pick up preprocessor arguments from remote_pyaal command line
             aal_ppflags = ""
             conf_lines = str(self.conf_editor.toPlainText()).split('\n')
@@ -616,7 +621,7 @@ Keyboard shortcuts:<br>
             else: # fmbt-aalc returned an error
                 self.showError(output[1])
         elif self._editingGT(): # validate GT
-            self._lstsFileName = self._modelFileName + ".gted-%stmp.lsts" % (os.getpid(),)
+            self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
             gt2lsts_cmd = "fmbt-gt -o '%s' -f '%s'" % (self._lstsFileName, self._modelFileName)
             executed_program = "fmbt-gt"
             validation_exitstatus, output = self.runcmd(gt2lsts_cmd)
@@ -635,12 +640,10 @@ Keyboard shortcuts:<br>
             self.edit.setTabIcon(0, QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_MessageBoxWarning))
             self._model_ok = False
         conf_contents = str(self.conf_editor.toPlainText()).strip()
-        if self._refreshed_conf != conf_contents:
-            if conf_contents == "":
-                self._doGenerateConf()
-            else:
-                file(self._confFileName, "w").write(_deleteTrailingWhitespace(conf_contents))
-            self._refreshed_conf = conf_contents
+        if conf_contents == "" or not self._confFileName:
+            self._doGenerateConf()
+        else:
+            file(self._confFileName, "w").write(_deleteTrailingWhitespace(conf_contents))
         return self._model_ok
 
     def pixmapLoader(self, previewtab, filename):
@@ -690,7 +693,7 @@ Keyboard shortcuts:<br>
                     onError=lambda: self.showError(self._test_errormsg))
 
     def visualiseModel_havingTestGenerated(self, change_tab):
-        imgname = self._modelFileName + ".gted-%stmp.states.png" % (os.getpid(),)
+        imgname = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".states.png"
         logparam = []
         try: file(self._logFileName)
         except: logparam = []
@@ -732,7 +735,7 @@ Keyboard shortcuts:<br>
             return
         self._doGenerateTest()
         if self._model_ok and self._test_ok:
-            self._distFileName = self._modelFileName + ".gted-%stmp.dist.png" % (os.getpid(),)
+            self._distFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".dist.png"
             cmd = "fmbt-stats -f dist:next,sort -p '%s' -o /dev/null '%s'" % (
                 self._distFileName, self._logFileName)
             asyncRuncmd(cmd,
@@ -750,7 +753,7 @@ Keyboard shortcuts:<br>
             return
         self._doGenerateTest()
         if self._model_ok and self._test_ok:
-            self._covFileName = self._modelFileName + ".gted-%stmp.cov.png" % (os.getpid(),)
+            self._covFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".cov.png"
             cmd = "fmbt-stats -f cov:steps -p '%s' -o /dev/null '%s'" % (
                 self._covFileName, self._logFileName)
             asyncRuncmd(cmd,
@@ -762,26 +765,27 @@ Keyboard shortcuts:<br>
             self.preview_covimage.setFocus()
             print "display '%s'" % (self._covFileName,)
 
+    def _generateModelSpec(self):
+        if self._editingLSTS():
+            modelspec="lsts(%s)" % (self._lstsFileName,)
+        elif self._editingAAL():
+            modelspec="aal_remote(remote_pyaal -l %s.log '%s')" % (
+                (self._modelFileName, self._modelFileName))
+        else:
+            modelspec="lsts_remote(fmbt-gt -f '%s')" % (self._modelFileName,)
+        return modelspec
+
     def _doGenerateConf(self):
         """ runnable in non-UI thread """
-        filename = self._modelFileName
         if not self._confFileName:
-            self._confFileName = self._modelFileName + ".gted-%stmp.conf" % (os.getpid(),)
+            self._confFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".conf"
         regenerate = False
         try:
-            if file(self._confFileName).read().strip() == "": regenerate=True
-        except: regenerate=True
+            if file(self._confFileName).read().strip() == "": regenerate = True
+        except: regenerate = True
         if regenerate:
-            if self._editingLSTS():
-                modelspec="lsts(%s)" % (self._lstsFileName,)
-                lookahead = 4
-            elif self._editingAAL():
-                modelspec="aal_remote(remote_pyaal -l %s.gted-%stmp.aal.log '%s')" % (
-                    self._modelFileName, os.getpid(), self._modelFileName)
-                lookahead = 4
-            else:
-                modelspec="lsts_remote(fmbt-gt -f '%s')" % (self._modelFileName,)
-                lookahead = 4
+            modelspec = self._generateModelSpec()
+            lookahead = 4
             file(self._confFileName, "w").write("""model     = "%s"
 heuristic = "lookahead(%s)"
 coverage  = "perm(2)"
@@ -797,7 +801,7 @@ on_inconc = "exit(2)"
         if not self._model_ok:
             self._test_ok = False
             return
-        self._logFileName = self._modelFileName + ".gted-%stmp.log" % (os.getpid(),)
+        self._logFileName = _g_tempdir + os.sep + os.path.basename(self._confFileName) + ".log"
         cmd = "fmbt -l '%s' -o 'adapter=\"dummy\"' '%s'" % (self._logFileName, self._confFileName)
         fmbt_exitstatus, output = self.runcmd(cmd)
         if fmbt_exitstatus == 0 or "pass:" in output[1] or "inconc:" in output[1] or "fail:" in output[1]:
@@ -1025,13 +1029,22 @@ on_inconc = "exit(2)"
                               self.editor.textCursor().blockNumber() + 1))
 
     def updateConfTabText(self):
-        if not self._confFileName or self._confFileName.startswith(self._modelFileName + ".gted"):
+        if not self._confFileName or self._confFileName.startswith(_g_tempdir):
             captionFile = "Configuration"
         else:
             captionFile = os.path.basename(self._confFileName)
         self.edit.setTabText(EDITTAB_CONF,"%s:%s - F2" %
                              (os.path.basename(captionFile),
                               self.conf_editor.textCursor().blockNumber() + 1))
+
+    def updateModelInConfFile(self):
+        newLines = []
+        for line in str(self.conf_editor.toPlainText()).split('\n'):
+            if line.startswith('model'):
+                newLines.append('model     = "%s"' % (self._generateModelSpec(),))
+            else:
+                newLines.append(line)
+        self.conf_editor.setPlainText('\n'.join(newLines))
 
     def find(self, findFlags):
         class FindKeybShortcuts (QtCore.QObject):
@@ -1045,7 +1058,8 @@ on_inconc = "exit(2)"
                           event.key() == QtCore.Qt.Key_R):
                         self.findPrev()
                         return True
-                    elif event.key() == QtCore.Qt.Key_Escape:
+                    elif event.key() == QtCore.Qt.Key_Escape or event.key() == QtCore.Qt.Key_Return:
+                        self.findDialog.hide()
                         self.activateWindow()
                         return False
                     else:
@@ -1074,7 +1088,9 @@ on_inconc = "exit(2)"
             self.findTextWidget.connect(self.findTextWidget,
                                         QtCore.SIGNAL("textEdited(QString)"),
                                         self.findTextChanged)
-        if not self.findDialog.isVisible():
+        if self.findDialog.isVisible():
+            self.findDialog.activateWindow()
+        else:
             self.findFrom = self.activeEditor()
 
             self.findReplaceWith = None
@@ -1563,9 +1579,16 @@ class ConfHighlighter(QtGui.QSyntaxHighlighter):
 
         self.setCurrentBlockState(0)
 
+def _exitHandler():
+    removeTemporaryFiles()
+atexit.register(_exitHandler)
+
 if __name__ == '__main__':
 
     app = QtGui.QApplication(sys.argv[:1] + opt_qt)
+
+    _g_tempdir = tempfile.mkdtemp(prefix="fmbt-editor.%s." % (os.getpid(),))
+
     window = MainWindow()
     window.resize(640, 512)
 
