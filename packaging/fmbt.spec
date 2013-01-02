@@ -134,14 +134,6 @@ Requires: %{name}-examples
 %description all
 Meta package for installing all fMBT packages
 
-%package for-aalpython-tests
-Summary: Meta package for generating and running AAL/Python tests
-Requires: %{name}-adapters-remote
-Requires: %{name}-core
-
-%description for-aalpython-tests
-Meta package for generating and running AAL/Python tests
-
 %prep
 %setup -q
 ./autogen.sh
