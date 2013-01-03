@@ -80,13 +80,13 @@ AAL_GUARDRE   = re.compile('guard()\s*{')
 AAL_BODYRE    = re.compile('body()\s*{')
 AAL_ADAPTERRE = re.compile('adapter()\s*{')
 
-GT_HIDESHOWRE = re.compile(' preview-(show|hide)-(vars|variables):(.*)')
-GT_HIDESHOWTRANRE = re.compile(' preview-(show|hide)-(trans|transitions):(.*)')
-GT_HIDEUNTRAVTRANRE = re.compile(' preview-hide-untested-(trans|transitions):(.*)')
-GT_SHOWTRAVTRANRE = re.compile(' preview-show-tested-(trans|transitions):(.*)')
-GT_HIDESTATES = re.compile(' preview-hide-states:((unvisited)|(orphaned)|,| )*')
+GT_HIDESHOWRE = re.compile('[ #]preview-(show|hide)-(vars|variables):(.*)')
+GT_HIDESHOWTRANRE = re.compile('[ #]preview-(show|hide)-(trans|transitions):(.*)')
+GT_HIDEUNTRAVTRANRE = re.compile('[ #]preview-hide-untested-(trans|transitions):(.*)')
+GT_SHOWTRAVTRANRE = re.compile('[ #]preview-show-tested-(trans|transitions):(.*)')
+GT_HIDESTATES = re.compile('[ #]preview-hide-states:((unvisited)|(orphaned)|,| )*')
 
-GT_DEPTHRE = re.compile(' preview-depth:(.*)')
+GT_DEPTHRE = re.compile('[ #]preview-depth:(.*)')
 
 def isModelFile(filename):
     if filename.lower().endswith(".conf"):
