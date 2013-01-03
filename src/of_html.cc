@@ -23,6 +23,7 @@
 #include "model.hh"
 
 #include <map>
+#include <sstream>
 
 std::string OutputFormat_Html::header()
 {
@@ -51,7 +52,7 @@ std::string OutputFormat_Html::header()
 std::string OutputFormat_Html::footer() {
   return "</table>";
 }
-  
+
 
 std::string OutputFormat_Html::format_covs()
 {
@@ -75,7 +76,7 @@ std::string OutputFormat_Html::format_covs()
    different orders */
 
 bool vcmp (const std::vector<std::pair<int,std::vector<int> > >& lhs,
-	   const std::vector<std::pair<int,std::vector<int> > >& rhs)
+           const std::vector<std::pair<int,std::vector<int> > >& rhs)
 {
   if (lhs.size()==rhs.size()) {
     return lhs<rhs;
@@ -86,13 +87,17 @@ bool vcmp (const std::vector<std::pair<int,std::vector<int> > >& lhs,
 
 std::string OutputFormat_Html::report()
 {
-  std::string ret("<table border=\"2\"><tr><th>Name</th><th>trace</th></tr>\n");
+  std::ostringstream html;
+
+  html << "<table border=\"2\">"
+       << "<tr><th>Name</th><th>trace</th></tr>\n";
+
   std::vector<std::string>& an(model->getActionNames());
-  
+
   for(unsigned i=0;i<reportnames.size();i++) {
 
     bool(*cmprp)(const std::vector<std::pair<int,std::vector<int> > >&,
-		 const std::vector<std::pair<int,std::vector<int> > >&) = vcmp;
+                 const std::vector<std::pair<int,std::vector<int> > >&) = vcmp;
 
     std::vector<std::vector<std::pair<int,std::vector<int> > > >& traces(rcovs[i]->traces);
     std::map<std::vector<std::pair<int,std::vector<int> > > , int, bool(*)(const std::vector<std::pair<int,std::vector<int> > >&,const std::vector<std::pair<int,std::vector<int> > >&) > cnt(cmprp);
@@ -101,23 +106,37 @@ std::string OutputFormat_Html::report()
       cnt[traces[j]]++;
     }
 
-    ret=ret+"<tr><td><a href=\"javascript:showHide('ID"+to_string(i)+"')\"><table><tr><td>" + reportnames[i]+"</td></tr><tr><td>Number of executed tests:"+to_string((unsigned)traces.size())+"</td></tr><tr><td>unique tests:"+to_string(unsigned(cnt.size()))+"</td></tr></table></a></td>";
-    ret=ret+"<td>\n<div id=\"ID"+to_string(i)+"\">\n"+
-      "<table border=\"4\">";
+    html << "<tr><td><a href=\"javascript:showHide('ID"
+         << to_string(i)
+         << "')\"><table><tr><td>"
+         << reportnames[i]
+         << "</td></tr><tr><td>Number of executed tests:"
+         << to_string((unsigned)traces.size())
+         << "</td></tr><tr><td>unique tests:"
+         << to_string(unsigned(cnt.size()))
+         << "</td></tr></table></a></td>"
+            "<td>\n<div id=\"ID"
+         << to_string(i)
+         << "\">\n"
+         << "<table border=\"4\">";
 
     for(std::map<std::vector<std::pair<int,std::vector<int> > >,int>::iterator j=cnt.begin();
-	j!=cnt.end();j++) {
+        j!=cnt.end();j++) {
 
-      ret=ret+"<td valign=\"top\">\n"
-	"<table border=\"0\">\n"
-	"<caption>Count:"+to_string((unsigned)j->second)+"</caption><td>";
-      ret=ret+"\n<ol>\n";
+      html << "<td valign=\"top\">\n"
+           << "<table border=\"0\">\n"
+           << "<caption>Count:"
+           << to_string((unsigned)j->second)
+           << "</caption><td>"
+           << "\n<ol>\n";
+
       const std::vector<std::pair<int,std::vector<int> > >& t(j->first);
       for(unsigned k=0; k<t.size();k++) {
-	ret=ret+"<li>"+an[t[k].first];
+        html << "<li>"
+             << an[t[k].first];
       }
-      ret=ret+"</ol>\n";
-      ret=ret+"</td></tr></table></td>";
+      html << "</ol>\n"
+           << "</td></tr></table></td>";
     }
 
     /*
@@ -126,18 +145,18 @@ std::string OutputFormat_Html::report()
       ret=ret+"\n<ol>\n";
       std::vector<int>& t(traces[j]);
       for(unsigned k=0; k<t.size();k++) {
-	ret=ret+"<li>"+an[t[k]];
+        ret=ret+"<li>"+an[t[k]];
       }
       ret=ret+"</ol>\n";
       ret=ret+"</td>";
     }
     */
-    ret=ret+"</table>\n"
-      "</div>\n</tr>";
-    
+    html << "</table>\n"
+         << "</div>\n</tr>";
+
   }
-  ret=ret+"</table>";
-  return ret;
+  html << "</table>";
+  return html.str();
 }
 
 FACTORY_DEFAULT_CREATOR(OutputFormat, OutputFormat_Html, "html")

@@ -21,6 +21,8 @@
 #include "coverage.hh"
 #include "helper.hh"
 
+#include <sstream>
+
 std::string OutputFormat_Csv::CRLF("\x0D\x0A");
 
 std::string OutputFormat_Csv::csv_escape(std::string& s)
@@ -31,42 +33,43 @@ std::string OutputFormat_Csv::csv_escape(std::string& s)
 
 std::string OutputFormat_Csv::format_covs()
 {
-  std::string ret;
+  std::ostringstream csv;
   std::string pre;
 
   //testname
-  ret=csv_escape(testnames.back());
+  csv << csv_escape(testnames.back());
 
   //verdict
-  ret=ret+",";
+  csv << ",";
 
-  pre=ret;
+  pre = csv.str();
 
   if (!covnames.empty()) {
     for(unsigned i=0;i<covnames.size()-1;i++) {
-      if (covs[i]) 
-	ret=ret+","+to_string(covs[i]->getCoverage());
+      if (covs[i])
+        csv << "," << to_string(covs[i]->getCoverage());
     }
     if (covnames.size()>0) {
-      ret=ret+","+to_string(covs[covnames.size()-1]->getCoverage());
+      csv << "," << to_string(covs[covnames.size()-1]->getCoverage());
     }
   }
 
-  ret+=CRLF;
+  csv << CRLF;
 
   if (!reportnames.empty()) {
     for(unsigned i=0;i<reportnames.size();i++) {
       if (rcovs[i]->times.empty()) {
-	printf("No end time for %i???\n",i);
+        printf("No end time for %i???\n",i);
       } else {
-	for(unsigned j=0;j<rcovs[i]->times.size();j++) {
-	  ret+=pre+"\""+reportnames[i];
-	  ret=ret+"\","+to_string(rcovs[i]->times[j].first)+","+to_string(rcovs[i]->times[j].second) + CRLF;
-	}
+        for(unsigned j=0;j<rcovs[i]->times.size();j++) {
+          csv << pre << "\"" << reportnames[i]
+              << "\"," << to_string(rcovs[i]->times[j].first)
+              << "," << to_string(rcovs[i]->times[j].second) << CRLF;
+        }
       }
     }
   }
-  return ret;
+  return csv.str();
 }
 
 FACTORY_DEFAULT_CREATOR(OutputFormat, OutputFormat_Csv, "csv")
