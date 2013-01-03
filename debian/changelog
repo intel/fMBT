@@ -1,8 +1,20 @@
-fmbt (0.4-0.rc0) natty; urgency=low
+fmbt (0.4-1) natty; urgency=low
 
-  * Development version
+  * fmbt-editor: improvements and fixes.
+    Python syntax errors shown on the Errors tab.
+    GT syntax errors shown on the Errors tab.
+    Automatic tab changing and updating issues resolved.
+    Temporary files are not created into the working directory anymore.
+  * heuristics: "weight" test generation heuristic added.
+    Action weights enable generating tests according to usage profiles,
+    like sent messages are 80 % SMS, 10 % GTalk, 10 % Skype.
+  * coverages: "usecase" coverage added.
+    The usecase coverage enables making sure that certain use cases
+    will be covered by generated tests.
+  * a major bug fixed in include/exclude heuristics.
+  * minor fixes.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Thu, 20 Dec 2012 12:30:00 +0200
+ -- Antti Kervinen <antti.kervinen@intel.com>  Thu, 3 Jan 2013 16:10:00 +0200
 
 fmbt (0.3) natty; urgency=low
 
