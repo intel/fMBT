@@ -73,8 +73,3 @@ Package: fmbt-all
 Architecture: all
 Depends: fmbt-editor (= ${binary:Version}), fmbt-examples (= ${binary:Version}), fmbt-doc (= ${binary:Version}), fmbt-adapter-eyenfinger (= ${binary:Version})
 Description: Meta package for installing all fMBT packages
-
-Package: fmbt-for-aalpython-tests
-Architecture: all
-Depends: fmbt-core (= ${binary:Version}), fmbt-adapters-remote (= ${binary:Version})
-Description: Meta package for generating and running AAL/Python tests

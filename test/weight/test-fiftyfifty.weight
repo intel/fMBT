@@ -1,9 +1,9 @@
 # Match to iFoo on any state - this adds weight 5 to iFoo only once
-, "iFoo" "iFo.*" "iF.*" "i[A-F]oo": 5
+, "iFoo\(\)" "iFo.*" "iF.*" "i[A-F]oo.*": 5
 
 # Match to iFoo on any state, more convenient notation without the
 # comma. This adds 5 to iFoo, making its weight total 10.
-"iFoo": 5
+"iFoo()": 5
 
 # The following spec will assign weight to actions
 #     iBar and iBackToBusiness
