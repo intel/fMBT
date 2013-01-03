@@ -746,7 +746,7 @@ void regexpmatch(const std::string& regexp,std::vector<std::string>& f,
   }
 
   for(unsigned int i=0;i<f.size();i++) {
-    if(boost::regex_match(f[i].c_str(), what, expression)) {
+    if (regexp == f[i] || boost::regex_match(f[i].c_str(), what, expression)) {
       result.push_back(a*i);
     }
   }
