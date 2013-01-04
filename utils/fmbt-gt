@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Copyright (c) 2006-2010 Tampere University of Technology
 # Copyright (c) 2011- Intel Corporation
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
 # "Software"), to deal in the Software without restriction, including
@@ -9,10 +9,10 @@
 # distribute, sublicense, and/or sell copies of the Software, and to
 # permit persons to whom the Software is furnished to do so, subject to
 # the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be
 # included in all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -359,9 +359,9 @@ class ReqRule(object):
     def __str__(self):
         return "REQ[%s]" % self.expression
     def evaluate(self):
-        try: 
+        try:
             t=eval(self.expression)
-        except Exception,e: 
+        except Exception,e:
             raise GTError("Cannot evaluate: '%s'" % self.expression)
         if not t in [True,False]:
             raise GTError("Expression '%s' did not return boolean value." % self.expression)
@@ -387,7 +387,7 @@ class PrintRule(object):
     def __init__(self,message):
         self.message=message
         self.is_abstract=0
-        
+
     def __str__(self):
         return "OUT[%s]" % self.message
 
@@ -451,6 +451,17 @@ def parse_rulestr(s, filename):
         return 0
     # end of subfunction
 
+    def getfileline(s, defaultfile):
+        filename = defaultfile
+        lineno = 0
+        for line in s.split('\n'):
+            try:
+                lineno, filename = re.findall('^# ([0-9]+) "([^"]+)"\s*$',line)[0]
+                lineno = int(lineno)-1
+            except:
+                lineno += 1
+        return filename, lineno
+
     r=Rule()
 
     #s=s.replace('\\\n',' ').replace('\n',' ')
@@ -463,10 +474,16 @@ def parse_rulestr(s, filename):
         s=s[applym.end(1):]
         debugmsg(s)
 
+    ss = re.sub("(^|\n)[ ]*#.*(?=$|\n)","",s,re.MULTILINE).replace('\n','').replace('\r','')
+    if len(ss.strip()) == 0:
+        # empty rule, do nothing
+        return None
+
     o=separator.match(s)
     if not o:
         bad_line = s[:s.find('\n')]
-        print >>sys.stderr, "%s:%s syntax error: '->' missing in rule '%s'" % (filename, 1, bad_line)
+        fname, lineno = getfileline(s[:s.find('\n')], filename)
+        print >>sys.stderr, "%s:%s syntax error: '->' missing in rule '%s'" % (fname, 1, bad_line)
         raise GTError("parsing GT failed.")
     slhs=o.group(1)
     srhs=o.group(2)
@@ -480,7 +497,8 @@ def parse_rulestr(s, filename):
             bad_line = slhs[len(slhs)-n: len(slhs)-n + next_linefeed]
         else:
             bad_line = slhs[len(slhs)-n:].rstrip()
-        print >>sys.stderr, "%s:%s syntax error in '%s'" % (filename, line_number, bad_line)
+        fname, lineno = getfileline(slhs[:len(slhs)-n], filename)
+        print >>sys.stderr, "%s:%s syntax error in '%s'" % (fname, lineno, bad_line)
         raise GTError("parsing GT failed.")
     # Parse the right-hand side of the rule
     n=parse_string(srhs,r.rhs)
@@ -491,7 +509,8 @@ def parse_rulestr(s, filename):
             bad_line = srhs[len(srhs)-n: len(srhs)-n + next_linefeed]
         else:
             bad_line = srhs[len(srhs)-n:].rstrip()
-        print >>sys.stderr, "%s:%s syntax error in '%s'" % (filename, line_number, bad_line)
+        fname, lineno = getfileline(slhs + srhs[:len(srhs)-n], filename)
+        print >>sys.stderr, "%s:%s syntax error in '%s'" % (fname, lineno, bad_line)
         raise GTError("parsing GT failed.")
     return r
 
@@ -531,7 +550,7 @@ def create_datastructures(l):
 
     istatesymbol='%s'%int(l.get_header().initial_states)
     initial_state='"%s"'%istatesymbol
-    
+
     tr=[] # list of Transitions
     pr=[Proposition(istatesymbol,'gt:istate')] # list of Propositions
     ac=[] # list of action names (strings)
@@ -578,7 +597,7 @@ def create_lsts(lstsdata, keep_actionnames=None, keep_propositionnames=()):
     newlsts=lsts.writer()
 
     if keep_actionnames != None:
-        if keep_actionnames == [] or keep_actionnames[0] != "tau": 
+        if keep_actionnames == [] or keep_actionnames[0] != "tau":
             actionnames = ["tau"] + keep_actionnames
         else:
             actionnames = keep_actionnames
@@ -609,7 +628,7 @@ def create_lsts(lstsdata, keep_actionnames=None, keep_propositionnames=()):
             acnum=actionnames.index(t.action)
 
             ds='"%s"'%t.dest
-            
+
             if not ds in found_states:
                 found_states[ds]=len(found_states)
                 transitions.append([])
@@ -617,7 +636,7 @@ def create_lsts(lstsdata, keep_actionnames=None, keep_propositionnames=()):
                     # there are leaving transitions from ds
                     statestack.append(ds)
             dsnum=found_states[ds]
-            
+
             transitions[ssnum].append((dsnum,acnum))
 
     newlsts.set_actionnames(actionnames)
@@ -650,7 +669,7 @@ def instantiate_trrule(lstsdata,r,which_hand_side,next_regex):
     1. dictionary { symbol: list_of_new_values }
     2. list of instantiations of rule r
     3. the number of next regular expression
-    
+
     If the dict is not empty, the syms in the dict should be instanted
     right away and then the same rule should be instantiated again. If
     the dict is empty, and the list includes a rule, the rule is
@@ -730,7 +749,7 @@ def instantiate_trrule(lstsdata,r,which_hand_side,next_regex):
             pass
         return retdict,retlist,next_regex
     # end of function expand_position
-    
+
     retdict={}
     retlist=[]
 
@@ -762,7 +781,7 @@ def instantiate_trrule(lstsdata,r,which_hand_side,next_regex):
                     if (r.action=='"%s"'%t.action) and (r.dest=='"%s"'%t.dest) ]:
                 # debugmsg("No matching dest state for rule '%s'" % r)
                 return {},[],next_regex
-    
+
     # Now rule r specifies unambiguously a single transition
     return {},[r],next_regex
 
@@ -891,7 +910,7 @@ def instantiate_rule(lstsdata,absrule):
         for elt in absrule.lhs + absrule.rhs:
             replaced+=instantiate_symbol_in_element(elt,symbol,replacement)
         return replaced
-                    
+
     # end of instantiate_symbol
 
     def copy_and_replace(rule,oldsubrule,newsubrule):
@@ -1029,7 +1048,7 @@ def instantiate_rule(lstsdata,absrule):
                         abs_rules.append(new_absrule)
                     # this rule can now be forgotten,
                     # we just added a bit less abstract rule(s) to abs_rules.
-                    break 
+                    break
         else: # did not break out from while => absrule is concrete
             # add concrete rule if it is unique
             if not str(absrule) in concrete_rules_hash:
@@ -1148,25 +1167,27 @@ def gt(input_fileobj,output_fileobj,keep_labels,rules):
         except Exception,e:
             raise GTError("Could not read input lsts from '%s'%s%s" % \
                               (str(input_fileobj),os.linesep,e))
-    
+
     # the rest of command line arguments are handled as rules.
 
     all_rules=[parse_rulestr(s, filename) for (s, filename) in rules]
-    
+
     next_lsts=inlsts
 
     # 1. Convert handled lsts to a handy datastructure
     lstsdata=create_datastructures( next_lsts )
-    
+
     # Every rule will be handled separately
-    # and applied in the order of appearance.    
+    # and applied in the order of appearance.
     for rule in all_rules:
+
+        if rule == None: continue
 
         if debugflag:
             debugmsg(str(lstsdata),1)
 
         if rule.apply_spec=='once:': # this is the default.
-        
+
             # 2. Instantiate the rule to a set of concrete rules:
             # - free variables are given exact values
             # - regular expressions are matched and
@@ -1181,7 +1202,7 @@ def gt(input_fileobj,output_fileobj,keep_labels,rules):
                 conc_rules=instantiate_rule(lstsdata,rule)
                 if not conc_rules: break
                 lstsdata=apply_rules(conc_rules,lstsdata)
-            
+
     if outfile:
         if keep_labels == 1:
             actionnames = []
@@ -1195,7 +1216,7 @@ def gt(input_fileobj,output_fileobj,keep_labels,rules):
             for pr in lstsdata.pr_hash.keys():
                 if not pr[1:-1] in stateprops:
                     stateprops.append(pr[1:-1])
-            outlsts = create_lsts(lstsdata, 
+            outlsts = create_lsts(lstsdata,
                                 keep_actionnames = actionnames,
                                 keep_propositionnames = stateprops)
         else:
