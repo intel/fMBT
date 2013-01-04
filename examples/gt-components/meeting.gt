@@ -1,0 +1,46 @@
+# This example demonstrates how fmbt-aalp (fMBT's AAL preprocessor)
+# can be used for
+#
+# 1. splitting a GT model into several files.
+#
+# 2. including optional parts into the GT model using
+#    fmbt-aalp's -D parameter, see meeting.conf.
+
+# Remove X from the preview-hide-transitions below to
+# limit the set of visualised transitions.
+# Xpreview-hide-transitions: iGet.*|iEnd.*|iCont.*
+
+P(start, "gt:istate")
+->
+T(start, "iStartMeeting", meeting)
+P(meeting, "AllowQuestions")
+
+# If "-D chat" is given to fmbt-aalp in the configuration,
+# add iChat transition to the initial state.
+^ifdef "chat"
+T(start, "iChat", start)
+^endif
+
+# Always include transitions from endmeeting.gt.inc.
+^include "endmeeting.gt.inc"
+
+# If "-D present" is given, include transitions from
+# present.gt.inc, too.
+^ifdef "present"
+^include "present.gt.inc"
+^endif
+
+# If "qa" is defined, include a GT rule from question.gt.
+# Single quotes separate this from the GT rule defined
+# in this file so far. The effect is that question.gt is
+# a new rule, not only an addition to the left-hand-side
+# of the GT rule so far, like previous includes.
+^ifdef "qa"
+'
+^include "question.gt"
+'
+^endif
+
+# In order to see the result after preprocessing, run
+# fmbt-aalp on the command line. For instance,
+# $ fmbt-aalp -D present meeting.gt

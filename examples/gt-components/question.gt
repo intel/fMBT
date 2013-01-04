@@ -1,0 +1,5 @@
+P(s, "AllowQuestions")
+->
+T(s, "iAskQuestion", asked)
+T(asked, "iGetAnswer", s)
+T(asked, "iContinueWithoutAnswer", s)

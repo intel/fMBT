@@ -1,0 +1,7 @@
+This example demonstrates how fmbt-aalp can be used for splitting a GT
+model into several files, and how wanted GT model components can be
+picked up into the model in the test configuration.
+
+Run the example as follows:
+
+$ fmbt-editor meeting.gt meeting.conf

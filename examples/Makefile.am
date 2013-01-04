@@ -1,4 +1,8 @@
+examplesaalcomponentsdir = @docdir@/examples/aal-components
+
 examplescppdir = @docdir@/examples/c++-unittest
+
+examplesgtcomponentsdir = @docdir@/examples/gt-components
 
 examplesjsdir = @docdir@/examples/javascript-unittest
 
@@ -12,6 +16,13 @@ examplescoursecamerapygtdir = @docdir@/examples/fmbtcourse-camera-pygt
 
 examplesofflinetestsuitedir = @docdir@/examples/offline-test-suite
 
+dist_examplesaalcomponents_DATA =	\
+	aal-components/basesystem.aal	\
+	aal-components/calc.actions	\
+	aal-components/clock.actions	\
+	aal-components/fullsystem.conf	\
+	aal-components/README
+
 dist_examplescpp_DATA = \
 	c++-unittest/Makefile			\
 	c++-unittest/mycounter.cc		\
@@ -19,6 +30,14 @@ dist_examplescpp_DATA = \
 	c++-unittest/mycountertest.cc.aal	\
 	c++-unittest/README			\
 	c++-unittest/test.conf
+
+dist_examplesgtcomponents_DATA =	\
+	gt-components/endmeeting.gt.inc \
+	gt-components/meeting.conf	\
+	gt-components/meeting.gt	\
+	gt-components/present.gt.inc	\
+	gt-components/question.gt	\
+	gt-components/README
 
 dist_examplesjs_DATA = \
 	javascript-unittest/mycounter.js		\
