@@ -1,3 +1,9 @@
+fmbt (0.5-0) natty; urgency=low
+
+  * Development version
+
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 4 Jan 2013 14:10:00 +0200
+
 fmbt (0.4-1) natty; urgency=low
 
   * fmbt-editor: improvements and fixes.
