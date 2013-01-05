@@ -68,6 +68,8 @@ FORMAT_EDITTAB = "%s:%s - F%s"
 
 TR_RE = re.compile("([!]?)T\(\s*([^),]+)\s*,\s*([^\"),]+|\"[^\"]*\")\s*,\s*([^),]+)\s*\)")
 SP_RE = re.compile("([!]?)P\(\s*([^),]+)\s*,\s*([^)]+)\s*\)")
+NEWRULE_RE = re.compile("[ ]*'[ ]*")
+AALP_RE = re.compile('^[ ]*(\^((ifdef|include)[ ]+"[^"]+")|\^endif)\s*$')
 CF_RE = re.compile("^(model|adapter|heuristic|coverage|history|((on_)?(pass|fail|inconc)))\s*=\s*\"[^\"]+\"\s*$")
 
 AAL_AALRE     = re.compile('aal\s"[^"]*"\s*{')
@@ -622,8 +624,14 @@ Keyboard shortcuts:<br>
                 self.showError(output[1])
         elif self._editingGT(): # validate GT
             self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
-            gt2lsts_cmd = "fmbt-gt -o '%s' -f '%s'" % (self._lstsFileName, self._modelFileName)
-            executed_program = "fmbt-gt"
+            gt2lsts_cmd = ""
+            if self._modelSpec().startswith("lsts_remote"):
+                try: gt2lsts_cmd = re.findall("lsts_remote[ ]*\((.*)\)", self._modelSpec())[0]
+                except: gt2lsts_cmd = ""
+            if gt2lsts_cmd == "":
+                gt2lsts_cmd = "fmbt-gt -f '%s'" % (self._modelFileName,)
+            gt2lsts_cmd += " > '%s'" % (self._lstsFileName,)
+            executed_program = gt2lsts_cmd
             validation_exitstatus, output = self.runcmd(gt2lsts_cmd)
             if validation_exitstatus != 0:
                 self.showError(output[1])
@@ -773,6 +781,13 @@ Keyboard shortcuts:<br>
                 (self._modelFileName, self._modelFileName))
         else:
             modelspec="lsts_remote(fmbt-gt -f '%s')" % (self._modelFileName,)
+        return modelspec
+
+    def _modelSpec(self):
+        try:
+            modelspec = re.findall('model[ ]*=[ ]*"(.*)"[ ]*', str(self.conf_editor.toPlainText()))[0]
+        except:
+            return ""
         return modelspec
 
     def _doGenerateConf(self):
@@ -1173,7 +1188,7 @@ on_inconc = "exit(2)"
     def setupCommandsMenu(self):
         commandMenu = QtGui.QMenu("&Commands", self)
         self.menuBar().addMenu(commandMenu)
-        commandMenu.addAction("Edit &GT",
+        commandMenu.addAction("Edit &Model",
                               lambda: (self.edit.setCurrentIndex(EDITTAB_GT),
                                        self.editor.setFocus()),
                               "F1")
@@ -1455,7 +1470,7 @@ class GTHighlighter(QtGui.QSyntaxHighlighter):
         keywordFormat.setForeground(QtCore.Qt.darkBlue)
         keywordFormat.setFontWeight(QtGui.QFont.Bold)
 
-        keywordPatterns = ["\\bT\\b", "\\bP\\b", "->"]
+        keywordPatterns = ["\\bT\\b", "\\bP\\b", "->", "\^ifdef\\b", "\^endif\\b", "\^include\\b"]
         self.highlightingRules = [(QtCore.QRegExp(pattern), keywordFormat)
                 for pattern in keywordPatterns]
 
@@ -1480,11 +1495,13 @@ class GTHighlighter(QtGui.QSyntaxHighlighter):
         text = str(text)
         if not TR_RE.findall(text):
             if not SP_RE.findall(text):
-                if not text.startswith("#"):
-                    if not text.strip() == "->":
-                        self.setFormat(0, len(text), self._usualErrorsFormat)
-                        self.setCurrentBlockState(0)
-                        return
+                if not AALP_RE.findall(text):
+                    if not NEWRULE_RE.findall(text):
+                        if not text.startswith("#"):
+                            if not text.strip() == "->":
+                                self.setFormat(0, len(text), self._usualErrorsFormat)
+                                self.setCurrentBlockState(0)
+                                return
 
         for pattern, format in self.highlightingRules:
             expression = QtCore.QRegExp(pattern)

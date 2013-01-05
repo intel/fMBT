@@ -47,7 +47,7 @@ int state=NONE;
     switch (state) {
     case INC: {
       std::string s(yytext+1,strlen(yytext)-2);
-      fprintf(yyout,"# 1 \"%s\"\x0D\x0A",s.c_str(),fstack.size()+1);
+      fprintf(yyout,"# 1 \"%s\"\x0A",s.c_str(),fstack.size()+1);
       FILE* st=fopen( s.c_str(), "r" );
       if (st) {
 	istack.push_back(YY_CURRENT_BUFFER);
@@ -59,7 +59,7 @@ int state=NONE;
 	exit(-1);
       }
       break;
-    }   
+    }
     case DEF: {
       std::string s(yytext+1,strlen(yytext)-2);
       def[s]=true;
@@ -67,7 +67,7 @@ int state=NONE;
     }
     case UND: {
       std::string s(yytext+1,strlen(yytext)-2);
-      def[s]=false;      
+      def[s]=false;
       break;
     }
     case IF: {
@@ -118,7 +118,7 @@ int state=NONE;
 }
 
 [^\n] {
-  if (echo) 
+  if (echo)
      fprintf(yyout,"%c",  yytext[0]);
 }
 
@@ -142,7 +142,7 @@ int state=NONE;
     istack.pop_back();
     lstack.pop_back();
     fstack.pop_back();
-    fprintf(yyout,"# %i \"%s\"\x0D\x0A",lineno,fstack.back().c_str(),fstack.size());
+    fprintf(yyout,"# %i \"%s\"\x0A",lineno,fstack.back().c_str(),fstack.size());
   }
 }
 
