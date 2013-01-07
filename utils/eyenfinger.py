@@ -351,19 +351,27 @@ def screenSize():
     """
     Returns the size of the screen as a pair (width, height).
     """
+    if _g_screenSize == (0, 0):
+        _getScreenSize()
     return _g_screenSize
 
 def windowSize():
     """
     Returns the size of the window as a pair (width, height).
+    Choose a window first, for instance with iRead() or iUseWindow().
     """
+    if _g_lastWindow == None:
+        raise BadWindowName("undefined window")
     return _g_windowSizes[_g_lastWindow]
 
 def windowXY():
     """
     Returns screen coordinates of the top-left corner of the window as
     a pair (x, y).
+    Choose a window first, for instance with iRead() or iUseWindow().
     """
+    if _g_lastWindow == None:
+        raise BadWindowName("undefined window")
     return _g_windowOffsets[_g_lastWindow]
 
 def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=None):
@@ -1118,9 +1126,14 @@ def _hocr2words(hocr):
                          (bbox_left, bbox_top, bbox_right, bbox_bottom)))
     return rv
 
+def _getScreenSize():
+    global _g_screenSize
+    _, output = _runcmd("xwininfo -root | awk '/Width:/{w=$NF}/Height:/{h=$NF}END{print w\" \"h}'")
+    s_width, s_height = output.split(" ")
+    _g_screenSize = (int(s_width), int(s_height))
+
 def iUseWindow(windowIdOrName = None):
     global _g_lastWindow
-    global _g_screenSize
 
     if windowIdOrName == None:
         if _g_lastWindow == None:
@@ -1138,9 +1151,7 @@ def iUseWindow(windowIdOrName = None):
     offset_x, offset_y, width, height = output.split(" ")
     _g_windowOffsets[_g_lastWindow] = (int(offset_x), int(offset_y))
     _g_windowSizes[_g_lastWindow] = (int(width), int(height))
-    _, output = _runcmd("xwininfo -root | awk '/Width:/{w=$NF}/Height:/{h=$NF}END{print w\" \"h}'")
-    s_width, s_height = output.split(" ")
-    _g_screenSize = (int(s_width), int(s_height))
+    _getScreenSize()
     return _g_lastWindow
 
 def iUseImageAsWindow(imageFilename):
