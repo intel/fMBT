@@ -27,13 +27,27 @@
 #include "helper.hh"
 
 History_log::History_log(Log& l, std::string params) :
-  History(l,params), alphabet_done(false), act(NULL), tag(NULL), c(NULL), a(NULL), file(params)
+  History(l,params), alphabet_done(false), act(NULL), tag(NULL), c(NULL), a(NULL), myes(NULL), file(params)
 {
   separator=std::string(" ");
   anames.push_back("");
   tnames.push_back("");
   a = new Alphabet_impl(anames,tnames);
 }
+
+History_log::~History_log()
+{
+  if (act) 
+    free(act);
+  if (tag)
+    free(tag);
+  // This should be deleted by someone else...
+  /*
+  if (myes)
+    delete myes;
+  */
+}
+
 
 void History_log::processNode(xmlTextReaderPtr reader)
 {
@@ -44,8 +58,8 @@ void History_log::processNode(xmlTextReaderPtr reader)
     if (!alphabet_done) {
       alphabet_done=true;
       if (model_from_log) {
-	l.ref();
-	myes=new Model_yes(l,"");
+	log.ref();
+	myes=new Model_yes(log,"");
 	myes->set_model(a);
 	c->set_model(myes);
       }
@@ -59,6 +73,7 @@ void History_log::processNode(xmlTextReaderPtr reader)
       if (aname!=NULL) {
 	anames.push_back(aname);
 	free(aname);
+	aname=NULL;
       }
     }
 
@@ -68,6 +83,7 @@ void History_log::processNode(xmlTextReaderPtr reader)
       if (tname!=NULL) {
 	tnames.push_back(tname);
 	free(tname);
+	tname=NULL;
       }
     }
 
@@ -84,6 +100,7 @@ void History_log::processNode(xmlTextReaderPtr reader)
       current_time.tv_usec=usec;
     }
     free(time);
+    time=NULL;
   }
 
   if ((xmlTextReaderDepth(reader)==3) &&
@@ -128,6 +145,7 @@ void History_log::processNode(xmlTextReaderPtr reader)
     std::string a(ver);
     test_verdict=ver;
     free(ver);
+    ver=NULL;
     send_action(a,p,true);
   }
 }

@@ -40,7 +40,7 @@ public:
   static struct timeval current_time;
   std::string test_verdict;
 protected:
-  Log log;
+  Log& log;
 };
 
 FACTORY_DECLARATION(History)
