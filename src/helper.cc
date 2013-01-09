@@ -646,7 +646,7 @@ int getint(FILE* out,FILE* in,Log& log,int min,int max,Writable* w)
   ssize_t s=bgetline(&line,&n,in,log);
   if (s && s != -1) {
     ret=atoi(line);
-    if (ret == 0 && line[0] != '0') {
+    if (strspn(line,"-0123456789") != s-1 || (ret == 0 && line[0] != '0')) {
       char *escaped_line = escape_string(line);
       if (escaped_line) {
         static const char* m[] = { "<remote error=\"I/O error: integer expected, got: %s\"/>\n",
