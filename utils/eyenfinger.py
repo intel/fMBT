@@ -888,6 +888,89 @@ def iClickScreen((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, cap
         # use xte from the xautomation package
         _runcmd("xte 'mousemove %s %s' %s" % (clickX, clickY, params))
 
+def iSwipeScreen(listOfCoordinates, duration=0.5, intermediatePoints=0, dryRun=None):
+    """
+    Generates swipeing movements on the screen.
+
+    Parameters:
+
+        listOfCoordinates
+                     The coordinates through which the cursor moves. 
+                     Integer values are screen coordinates. Floating point
+                     values from 0.0 to 1.0 are scaled to screen
+                     coordinates: (0.5, 0.5) is the middle of the
+                     screen, and (1.0, 1.0) the bottom-right corner of
+                     the screen.
+
+        duration     how much it takes for the swipe to be completed.
+
+        intermediatePoints
+                     the number of steps in which the swiping executes.
+ 
+        dryRun       if True, does not synthesize events. Still
+                     illustrates the coordinates through which the cursor
+                     goes. 
+ 
+    """
+    # The params list to be fed to xte
+    params = []
+
+    # Calculating the time to sleep pere step	
+    step = float(duration) / (intermediatePoints * len(listOfCoordinates) + 1)
+    
+    # Get the dimensions of the screen
+    screenWidth, screenHeight = screenSize()
+
+    # Function to convert percentage/float values to integer coordinates
+    def coordsToInt((x,y)):
+        rv = []
+        if 0.0 <= x <= 1.0 and type(x) == float:
+            rv.append(int(round(x * screenWidth)))
+        else: 
+            rv.append(int(x))
+
+        if 0.0 <= y <= 1.0 and type(y) == float:
+            rv.append(int(round(y * screenHeight)))
+        else: 
+            rv.append(int(y))
+
+        return tuple(rv)
+
+    # The list of coordinates through which the cursor has to go
+    goThroughCoordinates = []
+
+    for pos in xrange(len(listOfCoordinates)):
+        x, y = coordsToInt(listOfCoordinates[pos])
+        goThroughCoordinates.append((x,y))
+
+        if pos == len(listOfCoordinates) - 1: 
+            break # last coordinate added
+
+        nextX, nextY = coordsToInt(listOfCoordinates[pos+1])
+        (x,y), (nextX, nextY) = (x, y), (nextX, nextY)
+
+        for ip in range(intermediatePoints):
+            goThroughCoordinates.append(
+                (int(round(x + (nextX-x)*(ip+1)/float(intermediatePoints+1))),
+                 int(round(y + (nextY-y)*(ip+1)/float(intermediatePoints+1))))) 
+
+    if not dryRun:
+	    # Build the params list. First, move the mouse to the first coordinate
+	    params.append("'mousemove %d %d '" % (goThroughCoordinates[0][0], goThroughCoordinates[0][1]))
+	    # Simulate mouse down event
+	    params.append("'mousedown 1 '")
+	    # Move the cursor through coordinates
+	    for i in range(1, len(goThroughCoordinates)):
+		params.append("'usleep %d '" % (step * 1000000,))
+		params.append("'mousemove %d %d '" % (goThroughCoordinates[i][0], goThroughCoordinates[i][1]))  
+
+	    # At the end of swipeing, release the mouse
+	    params.append("'mouseup 1'") 
+
+	    # Perform the swipe 
+	    _runcmd("xte %s" % (" ".join(params),))  
+
+    return goThroughCoordinates
 
 def iType(word, delay=0.0):
     """
