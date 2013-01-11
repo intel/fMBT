@@ -7,10 +7,10 @@ CXXFLAGS += -DFAULTY
 LOGFILE=shortener.log
 fail.log: test.log
 	$(RM) pass
-	./shortener.sh test.log >>$LOGFILE 2>&1 # should run 178 rounds and find error trace with 24 steps
+	./shortener.sh test.conf test.log >> ${LOGFILE} 2>&1 # should run 178 rounds and find error trace with 24 steps
 	cp fail.log fail_pass1.log # Let's try to get an even shorter trace
 # should find it in the 2nd round. It is the minimal.
-	./shortener.sh fail_pass1.log  >>$LOGFILE 2>&1
+	./shortener.sh test.conf fail_pass1.log  >> ${LOGFILE} 2>&1
 # So. It will take 180 rounds to get the minimal error trace.
 # Shortening the error trace is taking on my dev machine about 2½mins
 
