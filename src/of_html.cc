@@ -106,6 +106,17 @@ std::string OutputFormat_Html::report()
       cnt[traces[j]]++;
     }
 
+    struct timeval time_tmp;
+    struct timeval time_consumed={0,0};
+
+    for(unsigned j=0;j<rcovs[i]->times.size();j++) {
+      struct timeval t1=rcovs[i]->times[j].second;
+      struct timeval t2=rcovs[i]->times[j].first;
+      timersub(&t1,&t2,
+	       &time_tmp);
+      timeradd(&time_consumed,&time_tmp,&time_consumed);
+    }
+
     html << "<tr><td><a href=\"javascript:showHide('ID"
          << to_string(i)
          << "')\"><table><tr><td>"
@@ -114,6 +125,9 @@ std::string OutputFormat_Html::report()
          << to_string((unsigned)traces.size())
          << "</td></tr><tr><td>unique tests:"
          << to_string(unsigned(cnt.size()))
+
+         << "</td></tr><tr><td>time used:"
+	 << to_string(time_consumed)
          << "</td></tr></table></a></td>"
             "<td>\n<div id=\"ID"
          << to_string(i)
