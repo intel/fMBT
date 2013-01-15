@@ -287,6 +287,25 @@ def _runcmd(cmd):
     _log("stderr: " + p.stderr.read())
     return p.wait(), output
 
+def _coordsToInt((x,y), (width, height)=(None, None)):
+    """
+    Convert percentages to screen coordinates
+    """
+    if (width == None or height == None):
+        width, height = screenSize()
+
+    if 0.0 <= x <= 1.0 and type(x) == float:
+        x = int(round(x * width))
+    else:
+        x = int(x)
+
+    if 0.0 <= y <= 1.0 and type(y) == float:
+        y = int(round(y * height))
+    else:
+        y = int(y)
+
+    return (x, y)
+
 def setPreprocessFilter(preprocess):
     global _g_preprocess
     _g_preprocess = preprocess
@@ -812,22 +831,16 @@ def iClickWindow((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, cap
     # Get the size of the window
     wndSize = windowSize()
 
+    (clickX, clickY) = _coordsToInt((clickX, clickY), wndSize)
+
     # Get the position of the window
     wndPos = windowXY()
 
     # If coordinates are given as percentages, convert to window coordinates
-    if clickX >= 0.0 and clickX <= 1.0 and type(clickX) == float:
-        clickScrX = int(wndSize[0] * clickX) + wndPos[0]
-    else:
-        clickScrX = clickX + wndPos[0]
-
-    if clickY >= 0.0 and clickY <= 1.0 and type(clickY) == float:
-        clickScrY = int(wndSize[1] * clickY) + wndPos[1]
-    else:
-        clickScrY = clickY + wndPos[1]
+    clickScrX = clickX + wndPos[0]
+    clickScrY = clickY + wndPos[1]
 
     iClickScreen((clickScrX, clickScrY), mouseButton, mouseEvent, dryRun, capture)
-
     return (clickScrX, clickScrY)
 
 
@@ -868,15 +881,7 @@ def iClickScreen((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, cap
     else:
         params = ""
 
-    # Getting the size of the screen
-    scrnSize = screenSize()
-
-    # If coordinates are given as percentages, convert to screen coordinates
-    if clickX >= 0.0 and clickX <= 1.0 and type(clickX) == float:
-        clickX = int(clickX * scrnSize[0])
-
-    if clickY >= 0.0 and clickY <= 1.0 and type(clickY) == float:
-        clickY = int(clickY * scrnSize[1])
+    clickX, clickY = _coordsToInt((clickX, clickY))
 
     if capture:
         drawClickedPoint(_g_origImage, capture, (clickX, clickY))
@@ -888,87 +893,87 @@ def iClickScreen((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, cap
         # use xte from the xautomation package
         _runcmd("xte 'mousemove %s %s' %s" % (clickX, clickY, params))
 
-def iSwipeScreen(listOfCoordinates, duration=0.5, intermediatePoints=0, dryRun=None):
+def iGestureScreen(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdAfterGesture=0.0, intermediatePoints=0, dryRun=None):
     """
-    Generates swipeing movements on the screen.
+    Synthesizes a gesture on the screen.
 
     Parameters:
 
         listOfCoordinates
-                     The coordinates through which the cursor moves. 
-                     Integer values are screen coordinates. Floating point
-                     values from 0.0 to 1.0 are scaled to screen
+                     The coordinates through which the cursor moves.
+                     Integer values are screen coordinates. Floating
+                     point values from 0.0 to 1.0 are scaled to screen
                      coordinates: (0.5, 0.5) is the middle of the
                      screen, and (1.0, 1.0) the bottom-right corner of
                      the screen.
 
-        duration     how much it takes for the swipe to be completed.
+        duration     gesture time in seconds, excluding
+                     holdBeforeGesture and holdAfterGesture times.
+
+        holdBeforeGesture
+                     time in seconds to keep mouse down before the
+                     gesture.
+
+        holdAfterGesture
+                     time in seconds to keep mouse down after the
+                     gesture.
 
         intermediatePoints
-                     the number of steps in which the swiping executes.
- 
+                     the number of intermediate points to be added
+                     between each of the coordinates. Intermediate
+                     points are added to straight lines between start
+                     and end points.
+
         dryRun       if True, does not synthesize events. Still
                      illustrates the coordinates through which the cursor
-                     goes. 
- 
+                     goes.
     """
     # The params list to be fed to xte
     params = []
-
-    # Calculating the time to sleep pere step	
-    step = float(duration) / (intermediatePoints * len(listOfCoordinates) + 1)
-    
-    # Get the dimensions of the screen
-    screenWidth, screenHeight = screenSize()
-
-    # Function to convert percentage/float values to integer coordinates
-    def coordsToInt((x,y)):
-        rv = []
-        if 0.0 <= x <= 1.0 and type(x) == float:
-            rv.append(int(round(x * screenWidth)))
-        else: 
-            rv.append(int(x))
-
-        if 0.0 <= y <= 1.0 and type(y) == float:
-            rv.append(int(round(y * screenHeight)))
-        else: 
-            rv.append(int(y))
-
-        return tuple(rv)
 
     # The list of coordinates through which the cursor has to go
     goThroughCoordinates = []
 
     for pos in xrange(len(listOfCoordinates)):
-        x, y = coordsToInt(listOfCoordinates[pos])
+        x, y = _coordsToInt(listOfCoordinates[pos])
         goThroughCoordinates.append((x,y))
 
-        if pos == len(listOfCoordinates) - 1: 
+        if pos == len(listOfCoordinates) - 1:
             break # last coordinate added
 
-        nextX, nextY = coordsToInt(listOfCoordinates[pos+1])
+        nextX, nextY = _coordsToInt(listOfCoordinates[pos+1])
         (x,y), (nextX, nextY) = (x, y), (nextX, nextY)
 
         for ip in range(intermediatePoints):
             goThroughCoordinates.append(
                 (int(round(x + (nextX-x)*(ip+1)/float(intermediatePoints+1))),
-                 int(round(y + (nextY-y)*(ip+1)/float(intermediatePoints+1))))) 
+                 int(round(y + (nextY-y)*(ip+1)/float(intermediatePoints+1)))))
+
+    # Calculate the time (in micro seconds) to sleep between moves.
+    if len(goThroughCoordinates) > 1:
+        moveDelay = 1000000 * float(duration) / (len(goThroughCoordinates)-1)
+    else:
+        moveDelay = 0
 
     if not dryRun:
-	    # Build the params list. First, move the mouse to the first coordinate
-	    params.append("'mousemove %d %d '" % (goThroughCoordinates[0][0], goThroughCoordinates[0][1]))
-	    # Simulate mouse down event
-	    params.append("'mousedown 1 '")
-	    # Move the cursor through coordinates
-	    for i in range(1, len(goThroughCoordinates)):
-		params.append("'usleep %d '" % (step * 1000000,))
-		params.append("'mousemove %d %d '" % (goThroughCoordinates[i][0], goThroughCoordinates[i][1]))  
+        # Build the params list.
+        params.append("'mousemove %d %d'" % goThroughCoordinates[0])
+        params.append("'mousedown 1 '")
 
-	    # At the end of swipeing, release the mouse
-	    params.append("'mouseup 1'") 
+        if holdBeforeGesture > 0:
+            params.append("'usleep %d'" % (holdBeforeGesture * 1000000,))
 
-	    # Perform the swipe 
-	    _runcmd("xte %s" % (" ".join(params),))  
+        for i in xrange(1, len(goThroughCoordinates)):
+            params.append("'usleep %d'" % (moveDelay,))
+            params.append("'mousemove %d %d'" % goThroughCoordinates[i])
+
+        if holdAfterGesture > 0:
+            params.append("'usleep %d'" % (holdAfterGesture * 1000000,))
+
+        params.append("'mouseup 1'")
+
+        # Perform the gesture
+        _runcmd("xte %s" % (" ".join(params),))
 
     return goThroughCoordinates
 
