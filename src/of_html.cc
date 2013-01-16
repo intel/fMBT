@@ -24,6 +24,7 @@
 
 #include <map>
 #include <sstream>
+#include <algorithm>
 
 std::string OutputFormat_Html::header()
 {
@@ -84,6 +85,11 @@ bool vcmp (const std::vector<std::pair<int,std::vector<int> > >& lhs,
   return lhs.size()<rhs.size();
 }
 
+bool mytimercmp(struct timeval t1,
+		struct timeval t2)
+{
+  return timercmp(&t1,&t2,<);
+}
 
 std::string OutputFormat_Html::report()
 {
@@ -109,12 +115,35 @@ std::string OutputFormat_Html::report()
     struct timeval time_tmp;
     struct timeval time_consumed={0,0};
 
+    struct timeval average_time={0,0};
+
+    std::vector<struct timeval> t;
+
     for(unsigned j=0;j<rcovs[i]->times.size();j++) {
       struct timeval t1=rcovs[i]->times[j].second;
       struct timeval t2=rcovs[i]->times[j].first;
       timersub(&t1,&t2,
 	       &time_tmp);
+      t.push_back(time_tmp);
       timeradd(&time_consumed,&time_tmp,&time_consumed);
+    }
+
+    if (rcovs[i]->times.size()) {
+      average_time.tv_sec=time_consumed.tv_sec/rcovs[i]->times.size();
+      average_time.tv_usec=(((time_consumed.tv_sec%rcovs[i]->times.size())*1000000)+time_consumed.tv_usec)/rcovs[i]->times.size();
+    }
+
+    float variance=0;
+
+    for(unsigned j=0;j<rcovs[i]->times.size();j++) {
+      timersub(&t[j],&average_time,&time_tmp);
+
+      float tmp=time_tmp.tv_sec+(1.0*time_tmp.tv_usec)/1000000.0;
+      variance+=tmp*tmp;
+    }
+
+    if (rcovs[i]->times.size()) {
+      variance=variance/rcovs[i]->times.size();
     }
 
     html << "<tr><td><a href=\"javascript:showHide('ID"
@@ -127,8 +156,14 @@ std::string OutputFormat_Html::report()
          << to_string(unsigned(cnt.size()))
 
          << "</td></tr><tr><td>time used:"
-	 << to_string(time_consumed)
-         << "</td></tr></table></a></td>"
+	 << to_string(time_consumed) << " Variance:" << to_string(variance) << " Average:" << to_string(average_time);
+
+    if (rcovs[i]->times.size()) {
+      html << " Min:" << to_string(*min_element(t.begin(),t.end(),mytimercmp))
+	   << " Max:" << to_string(*max_element(t.begin(),t.end(),mytimercmp));
+    }
+
+    html << "</td></tr></table></a></td>"
             "<td>\n<div id=\"ID"
          << to_string(i)
          << "\">\n"
