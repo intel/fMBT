@@ -1,0 +1,99 @@
+===================
+fMBT test reporting
+===================
+
+
+fMBT reporting utilities
+------------------------
+
+fmbt-log        prints selected properties of test steps in logs
+
+fmbt-stats      prints test step statistics from logs
+
+fmbt-ucheck     reports use cases covered in logs (EXPERIMENTAL)
+
+
+fmbt-log
+--------
+
+fmbt-log prints selected properties of every test step in the test
+log.
+
+Example:
+
+$ fmbt-log -f 'step: $sn\nexecuted: $ax\ncoverage: $sc\n' test.log
+step: 0
+executed:
+coverage: 0.000000
+
+step: 1
+executed: iPause
+coverage: 0.125000
+
+step: 2
+executed: iContinue
+coverage: 0.250000
+
+Run fmbt-log -h to see other parameters and names of properties.
+
+
+fmbt-stats
+----------
+
+fmbt-stats prints and plots various statistics on executed test steps.
+
+Example:
+
+$ fmbt-stats -f times test.log
+# Test step execution times
+# min[ms]   med[ms]   max[ms] total[ms]     count "action"
+ 1060.033  1060.033  1060.033      1060         1 "iNextSong"
+ 1061.203  1061.203  1061.203      1061         1 "iPrevSong"
+ 1061.649  1061.649  1061.649      1062         1 "iNewPlaylist"
+ 1063.375  1063.375  1063.375      1063         1 "iAddSong"
+ 1062.426  1068.188  1068.188      2131         2 "iPrevSong - already first"
+ 1067.631  1069.052  1069.604      4274         4 "iNextSong - already last"
+ 1070.678  1073.225  1080.774      9676         9 "iPause"
+ 1070.172  1074.260  1082.338      9686         9 "iContinue"
+
+Statistics can be saved in plain text (seen above), CSV and HTML
+formats, and they can be plotted.
+
+See fmbt-stats -h for help.
+
+
+fmbt-ucheck (EXPERIMENTAL)
+--------------------------
+
+fmbt-ucheck looks for use cases in test log. It reports number of
+times each use case has been executed, and lists all variations how
+each use case has been tested.
+
+Example:
+
+1. Define use case(s) to be reported.
+$ cat > report.uc <<EOF
+
+report "pause song" from 'iPause' to 'iContinue'
+
+report "switch song during playback" from 'iContinue' to 'iNextSong' 'iPrevSong' drop 'iPause'
+EOF
+
+2. Create an HTML report:
+$ fmbt-ucheck -u report.uc -f html -o report.html test.log
+
+
+The syntax for a use case definition is:
+
+report "name" from 'AT' ['AT'...] to 'AT' ['AT'...] [drop 'AT' ['AT...']]
+
+where each AT is an action, a state tag, or a regular expression that
+matches either of them.
+
+Tested instance of a use case is a minimal sequence of actions that
+
+1. starts with any of the "from" actions or tags
+
+2. ends to any of the "to" actions or tags
+
+3. does not include any actions or tags listed after "drop".
