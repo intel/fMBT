@@ -34,11 +34,13 @@ typedef struct _node {
 OutputFormat* uconf_obj;
 }
 
-conf_file: model (usecase|testcase)+;
+conf_file: model (usecase|testcase|notice)+;
 
 model: 'model' '=' string { uconf_obj->set_model(*$2.str); delete $2.str; } | ;
 
 usecase: string '=' string { uconf_obj->add_uc(*$0.str,*$2.str); delete $0.str; delete $2.str; } ;
+
+notice: 'notice' string string { uconf_obj->add_notice(*$1.str,*$2.str); delete $0.str; delete $2.str; } ;
 
 testcase: 'report' string 'from' strvec 'to' strvec opt_drop { uconf_obj->add_report(*$1.str,
                 *$3.strvec,

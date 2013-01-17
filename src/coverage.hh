@@ -49,6 +49,7 @@ public:
 
 protected:
   Model* model;
+public:
   Log& log;
 };
 

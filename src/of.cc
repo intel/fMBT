@@ -39,6 +39,7 @@ FACTORY_IMPLEMENTATION(OutputFormat)
 #include "helper.hh"
 #include "history_log.hh"
 #include "coverage_of.hh"
+#include "coverage_notice.hh"
 
 OutputFormat::~OutputFormat() {
   for(unsigned i=0;i<covs.size();i++) {
@@ -170,6 +171,22 @@ void OutputFormat::add_uc(std::string& name,
     } else {
       add_uc(name,coverage);
     }
+  }
+}
+
+void OutputFormat::add_notice(std::string& name,
+			      std::string& cov)
+{
+  if (status) {
+    reportnames.push_back(name);
+    Coverage_report* c=new Coverage_notice(l,cov,std::string(""));
+    if (c->status==false) {
+      status=false;
+      errormsg=errormsg+" Report failure:"+c->errormsg;
+    } else {
+      // c->set_model(model);
+    }
+    rcovs.push_back(c);
   }
 }
 
