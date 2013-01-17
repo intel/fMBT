@@ -20,6 +20,8 @@
 #define __helper_hh__
 #include <string>
 #include <vector>
+#include <sys/time.h>
+#include <time.h>
 
 #ifndef DROI
 #include <boost/regex.hpp>
@@ -105,6 +107,8 @@ void remove_force(std::string& s);
 class EndHook;
 void hook_runner(EndHook* e);
 void sdel(std::vector<std::string*>* strvec);
+
+void gettime(struct timeval *tv);
 
 #define MAX_LINE_LENGTH (1024*16)
 

@@ -835,3 +835,10 @@ void sdel(std::vector<std::string*>* strvec)
     }
     delete strvec;
 }
+
+void gettime(struct timeval *tv)
+{
+  struct timespec tp;
+  clock_gettime(CLOCK_REALTIME,&tp);
+  TIMESPEC_TO_TIMEVAL(tv,&tp);
+}

@@ -26,6 +26,7 @@
 #include "alphabet.hh"
 #include "factory.hh"
 #include "log.hh"
+#include "helper.hh"
 #include <sys/time.h>
 
 /* Creating and initialising an adapter is a call sequence
@@ -118,16 +119,16 @@ protected:
 
 FACTORY_DECLARATION(Adapter)
 
-#define CHECK_TIMEOUT {                      \
-  gettimeofday(&Adapter::current_time,NULL); \
-  if (Test_engine::end_time != -1) {         \
-    struct timeval tv;                       \
-    tv.tv_sec=Test_engine::end_time;         \
-    tv.tv_usec=0;                            \
-    if (!timercmp(&current_time,&tv,<)) {    \
-      return Alphabet::TIMEOUT;		     \
-    }                                        \
-  }                                          \
+#define CHECK_TIMEOUT {                            \
+  gettime(&Adapter::current_time);                 \
+  if (Test_engine::end_time != -1) {               \
+    struct timeval tv;                             \
+    tv.tv_sec=Test_engine::end_time;               \
+    tv.tv_usec=0;                                  \
+    if (!timercmp(&current_time,&tv,<)) {          \
+      return Alphabet::TIMEOUT;		           \
+    }                                              \
+  }                                                \
 }
 
 Adapter* new_adapter(Log&, std::string&);
