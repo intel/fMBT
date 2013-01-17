@@ -71,6 +71,7 @@ bool Coverage_notice::execute(int action)
 				 std::pair<timeval,timeval>,
 				 std::vector<std::pair<int,std::vector<int> > > > > &
 		     cpair) {
+      float f=cpair.first .first ->getCoverage();
       
       cpair.first .first ->execute(action);
       cpair.first .second->execute(action);
@@ -78,17 +79,21 @@ bool Coverage_notice::execute(int action)
       float f1=cpair.first .first ->getCoverage();
       float f2=cpair.first .second->getCoverage();
 
+      if (f==0.0 && f1>0) {
+	// Start of the trace
+	cpair.second.first.first=History::current_time;
+	// We need to create an other instance...
+	r->foo();	
+      }
+
       if (f1>0) {
 	std::vector<int> t;
 	cpair.second.second.push_back(std::pair<int,std::vector<int> >(action,t));
 	if (f1>=f2) {
-
-	  printf("coverage passed... %04f %04f\n",f1,f2);
+	  r->log.debug("coverage passed... %04f %04f\n",f1,f2);
 
 	  cpair.second.first.second=History::current_time;
 	  // trace found!
-
-	  printf("%s %s\n", to_string(cpair.second.first.first).c_str(), to_string(cpair.second.first.second).c_str());
 
 	  r->traces.push_back(cpair.second.second);
 	  r->tcount[cpair.second.second]++;
@@ -102,13 +107,10 @@ bool Coverage_notice::execute(int action)
 	  }
 	  cpair.first.first =NULL;
 	  cpair.first.second=NULL;
-
 	  // Now we need to erase iterator.
-
 	}
-	r->foo();
       } else {
-	cpair.second.first.first=History::current_time;
+	// ??
       }
     }
     int action;
@@ -119,6 +121,8 @@ bool Coverage_notice::execute(int action)
   callobject.action=action;
   callobject.model =model;
   callobject.r     =this;
+
+  int ff=0;
   
   std::list<std::pair<std::pair<Coverage*,Coverage*>,
 		      std::pair<
@@ -130,6 +134,7 @@ bool Coverage_notice::execute(int action)
   //for_each doesn't work for some reason and I'm too lazy to figure out why. Most likely it's my fault.
 
   for(i1=subcovs.begin();i1!=subcovs.end();i1++) {
+    ff++;
     callobject(*i1);
   }
 
