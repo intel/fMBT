@@ -95,6 +95,11 @@ std::string OutputFormat_Html::report()
 {
   std::ostringstream html;
 
+
+  /*
+   * The code is ugly. Sorry.
+   */
+
   html << "<table border=\"2\">"
        << "<tr><th>Name</th><th>trace</th></tr>\n";
 
@@ -188,18 +193,6 @@ std::string OutputFormat_Html::report()
            << "</td></tr></table></td>";
     }
 
-    /*
-    for(unsigned j=0;j<traces.size();j++) {
-      ret=ret+"<td>";
-      ret=ret+"\n<ol>\n";
-      std::vector<int>& t(traces[j]);
-      for(unsigned k=0; k<t.size();k++) {
-        ret=ret+"<li>"+an[t[k]];
-      }
-      ret=ret+"</ol>\n";
-      ret=ret+"</td>";
-    }
-    */
     html << "</table>\n"
          << "</div>\n</tr>";
 
