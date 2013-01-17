@@ -48,7 +48,7 @@ fmbt_LDADD                     = d/libdparse.a
 fmbt_ucheck_LDADD              = d/libdparse.a
 fmbt_droid_LDADD               = d/libdparse.a
 fmbt_cparsers_la_LIBADD        = d/libdparse.a
-remote_adapter_loader_LDADD    = d/libdparse.a
+remote_adapter_loader_LDADD    = d/libdparse.a -lrt
 fmbt_aalc_LDADD                = d/libdparse.a
 fmbt_log2lsts_LDADD   	       = d/libdparse.a
 
