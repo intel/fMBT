@@ -25,9 +25,11 @@ public:
   }
 
   virtual ~Model_yes() {
+    /*
     if (model) {
       delete model;
     }
+    */
     model=NULL;
   }
 
