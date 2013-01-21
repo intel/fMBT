@@ -737,17 +737,24 @@ void regexpmatch(const std::string& regexp,std::vector<std::string>& f,
                  std::vector<int>& result,bool clear,int a)
 {
 #ifndef DROI
-
-  boost::regex expression(regexp);
-  boost::cmatch what;
-
   if (clear) {
     result.clear();
   }
-
-  for(unsigned int i=0;i<f.size();i++) {
-    if (regexp == f[i] || boost::regex_match(f[i].c_str(), what, expression)) {
-      result.push_back(a*i);
+  try {
+    boost::regex expression(regexp);
+    boost::cmatch what;
+        
+    for(unsigned int i=0;i<f.size();i++) {
+      if (regexp == f[i] || boost::regex_match(f[i].c_str(), what, expression)) {
+	result.push_back(a*i);
+      }
+    }
+  } catch (...) {
+    printf("Exception...\n");
+    for(unsigned int i=0;i<f.size();i++) {
+      if (regexp == f[i]) {
+	result.push_back(a*i);
+      }
     }
   }
 
