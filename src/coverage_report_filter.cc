@@ -27,7 +27,6 @@ FACTORY_CREATE(Coverage_report_filter)
 class Coverage_report_filter_last: public Coverage_report_filter {
 public:
   Coverage_report_filter_last(Log&l,std::string param): Coverage_report_filter(l,param) {
-    last=true;
   }
   virtual ~Coverage_report_filter_last() {
   }
@@ -35,9 +34,10 @@ public:
   virtual bool execute(int action) {
     if (sub) {
       sub->execute(action);
+
       if (sub->traces.size()>len) {
-	traces.clear();
-	times .clear();
+	traces.resize(len);
+	times .resize(len);
 	copy(sub->traces.end() -len ,sub->traces.end() ,traces.begin());
 	copy(sub->times. end() -len ,sub->times .end() ,times. begin());
       } else {
@@ -54,7 +54,6 @@ public:
   Coverage_report_filter_first(Log&l,std::string param):
     Coverage_report_filter(l,param)
   {
-    last=false;
   }
   
   virtual ~Coverage_report_filter_first() {
@@ -64,9 +63,9 @@ public:
     if (sub) {
       sub->execute(action);
     
-      if (traces.size()>len) {
-	traces.clear();
-	times .clear();
+      if (sub->traces.size()>len) {
+	traces.resize(len);
+	times .resize(len);
 	copy(sub->traces.begin() ,sub->traces.begin()+len ,traces.begin());
 	copy(sub->times. begin() ,sub->times .begin()+len ,times. begin());
       } else {
@@ -77,6 +76,66 @@ public:
     return true;
   }
 };
+
+
+class Coverage_report_filter_longer: public Coverage_report_filter {
+public:
+  Coverage_report_filter_longer(Log&l,std::string param):
+    Coverage_report_filter(l,param)
+  {
+  }
+  
+  virtual ~Coverage_report_filter_longer() {
+  }
+
+  virtual bool execute(int action) {
+    if (sub) {
+      sub->execute(action);
+      traces.clear();
+      times .clear();
+      
+      for(unsigned i=0;i<sub->traces.size();i++) {
+	if (sub->traces[i].size()>=len) {
+	  traces.push_back(sub->traces[i]);
+	  times .push_back(sub->times [i]);
+	}
+      }
+
+    }    
+    return true;
+  }
+  
+};
+
+class Coverage_report_filter_shorter: public Coverage_report_filter {
+public:
+  Coverage_report_filter_shorter(Log&l,std::string param):
+    Coverage_report_filter(l,param)
+  {
+  }
+  
+  virtual ~Coverage_report_filter_shorter() {
+  }
+
+  virtual bool execute(int action) {
+    if (sub) {
+      sub->execute(action);
+      traces.clear();
+      times .clear();
+      
+      for(unsigned i=0;i<sub->traces.size();i++) {
+	if (sub->traces[i].size()<len) {
+	  traces.push_back(sub->traces[i]);
+	  times .push_back(sub->times [i]);
+	}
+      }
+
+    }    
+    return true;
+  }
+  
+};
+
 
 Coverage_report_filter* new_coveragereportfilter(Log& l, std::string& s) {
   std::string name,option;
@@ -101,3 +160,6 @@ Coverage_report_filter* new_coveragereportfilter(Log& l, std::string& s) {
 
 FACTORY_DEFAULT_CREATOR(Coverage_report_filter, Coverage_report_filter_first, "first" )
 FACTORY_DEFAULT_CREATOR(Coverage_report_filter, Coverage_report_filter_last , "last"  )
+
+FACTORY_DEFAULT_CREATOR(Coverage_report_filter, Coverage_report_filter_longer, "longer" )
+FACTORY_DEFAULT_CREATOR(Coverage_report_filter, Coverage_report_filter_shorter, "shorter" )

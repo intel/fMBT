@@ -75,7 +75,6 @@ protected:
 public:
   Coverage_report* sub;
 protected:
-  bool last;
   int len;
 };
 
