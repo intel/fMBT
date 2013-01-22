@@ -454,10 +454,16 @@ std::string to_string(const float f)
 
 #include <iomanip>
 
-std::string to_string(const struct timeval&t)
+std::string to_string(const struct timeval&t,bool minutes)
 {
   std::stringstream ss;
-  ss << t.tv_sec << "." << std::setfill('0') << std::setw(6) << t.tv_usec;
+  int sec=t.tv_sec%60;
+  int min=t.tv_sec/60;
+  if (min>0 && minutes) {
+    ss << min << "min " << sec << "." << std::setfill('0') << std::setw(6) << t.tv_usec << "s";
+  } else {
+    ss << t.tv_sec << "." << std::setfill('0') << std::setw(6) << t.tv_usec;
+  }
   return ss.str();
 }
 
@@ -788,7 +794,7 @@ void param_cut(std::string val,std::string& name,
         name = val.substr(0,pos);
         remove_force(name);
         option = val.substr(pos+1,lstpos-pos-1);
-        remove_force(option);
+        //remove_force(option);
       } else {
         // ERROR
       }

@@ -161,11 +161,11 @@ std::string OutputFormat_Html::report()
          << to_string(unsigned(cnt.size()))
 
          << "</td></tr><tr><td>time used:"
-	 << to_string(time_consumed) << " Variance:" << to_string(variance) << " Average:" << to_string(average_time);
+	 << to_string(time_consumed,true) << " Variance:" << to_string(variance) << " Average:" << to_string(average_time,true);
 
     if (rcovs[i]->times.size()) {
-      html << " Min:" << to_string(*min_element(t.begin(),t.end(),mytimercmp))
-	   << " Max:" << to_string(*max_element(t.begin(),t.end(),mytimercmp));
+      html << " Min:" << to_string(*min_element(t.begin(),t.end(),mytimercmp),true)
+	   << " Max:" << to_string(*max_element(t.begin(),t.end(),mytimercmp),true);
     }
 
     html << "</td></tr></table></a></td>"
