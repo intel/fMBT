@@ -36,6 +36,7 @@ public:
   Coverage_report_filter(Log&l,std::string params):Coverage_report(l,dummy,
 								   dummy,dummy)
   {
+    sub=NULL;
     std::vector<std::string> s;
     commalist(params,s);
     if(s.size()>0) {
@@ -48,7 +49,10 @@ public:
 
   void set_sub(Coverage_report* _s) {
     if (sub) {
-      //sub->set_sub(_s);
+      Coverage_report_filter* f=
+	dynamic_cast<Coverage_report_filter*>(sub);
+      if (f)
+	f->set_sub(_s);
     } else {
       sub=_s;
     }
@@ -56,6 +60,13 @@ public:
 
   virtual ~Coverage_report_filter() {
     delete sub;
+  }
+
+  void set_model(Model* _model)
+  {
+    Coverage::set_model(_model);
+    if (sub)
+      sub->set_model(_model);
   }
 
   //bool execute(int action);

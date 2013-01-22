@@ -32,7 +32,7 @@ public:
   virtual ~Coverage_report_filter_last() {
   }
 
-  bool execute(int action) {
+  virtual bool execute(int action) {
     if (sub) {
       sub->execute(action);
       if (sub->traces.size()>len) {
@@ -60,7 +60,7 @@ public:
   virtual ~Coverage_report_filter_first() {
   }
 
-  bool execute(int action) {
+  virtual bool execute(int action) {
     if (sub) {
       sub->execute(action);
     
@@ -69,6 +69,9 @@ public:
 	times .clear();
 	copy(sub->traces.begin() ,sub->traces.begin()+len ,traces.begin());
 	copy(sub->times. begin() ,sub->times .begin()+len ,times. begin());
+      } else {
+	traces=sub->traces;
+	times =sub->times ;
       }
     }
     return true;
