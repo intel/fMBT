@@ -36,17 +36,19 @@ OutputFormat* uconf_obj;
 
 conf_file: model (usecase|testcase|notice)+;
 
+filter: string { $$.str=$0.str; } | { $$.str = new std::string(""); } ;
+
 model: 'model' '=' string { uconf_obj->set_model(*$2.str); delete $2.str; } | ;
 
 usecase: string '=' string { uconf_obj->add_uc(*$0.str,*$2.str); delete $0.str; delete $2.str; } ;
 
-notice: 'notice' string string { uconf_obj->add_notice(*$1.str,*$2.str); delete $0.str; delete $2.str; } ;
+notice: filter 'notice' string string { uconf_obj->add_notice(*$2.str,*$3.str); delete $2.str; delete $3.str; } ;
 
-testcase: 'report' string 'from' strvec 'to' strvec opt_drop { uconf_obj->add_report(*$1.str,
-                *$3.strvec,
-                *$5.strvec,
-                *$6.strvec);
-            delete $1.str;
+testcase: filter 'report' string 'from' strvec 'to' strvec opt_drop { uconf_obj->add_report(*$2.str,
+                *$4.strvec,
+                *$6.strvec,
+                *$7.strvec);
+            delete $2.str;
             /*
             sdel($3.strvec);
             sdel($5.strvec);

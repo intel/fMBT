@@ -174,7 +174,8 @@ void OutputFormat::add_uc(std::string& name,
   }
 }
 
-void OutputFormat::add_notice(std::string& name,
+void OutputFormat::add_notice(std::string filter,
+			      std::string& name,
 			      std::string& cov)
 {
   if (status) {
@@ -190,7 +191,8 @@ void OutputFormat::add_notice(std::string& name,
   }
 }
 
-void OutputFormat::add_report(std::string& name,
+void OutputFormat::add_report(std::string filter,
+			      std::string& name,
 			      std::vector<std::string*>& from,
 			      std::vector<std::string*>& to,
 			      std::vector<std::string*>& drop)

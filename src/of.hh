@@ -57,9 +57,11 @@ public:
   virtual std::string header() { return "";}
   virtual std::string footer() { return "";}
 
-  void add_notice(std::string& name,
+  void add_notice(std::string filter,
+		  std::string& name,
 		  std::string& cov);
-  virtual void add_report(std::string& name,
+  virtual void add_report(std::string filter,
+			  std::string& name,
 			  std::vector<std::string*>& from,
 			  std::vector<std::string*>& to,
 			  std::vector<std::string*>& drop);
