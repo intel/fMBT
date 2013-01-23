@@ -33,6 +33,11 @@ Options:
         do not show previews of model or generated tests. Required if
         fMBT tools are not installed.
 
+  -P, --preview-only
+        hide editor tabs, update preview tabs based on polling given
+        model and configuration files and files possibly included to
+        them.
+
   -q, --qt-bindings=<Python Qt4 binding library>
         import QtCore and QtGui from the given binding library instead
         of PySide. Example: fmbt-editor -q PyQt4.
@@ -56,7 +61,7 @@ import urllib
 import fmbt_config
 
 def error(msg, exit_status = 1, gui = False):
-    sys.stderr.write("%s: %s\n" % (sys.argv[0], msg))
+    sys.stderr.write("%s: %s\n" % (os.path.basename(sys.argv[0]), msg))
     if gui:
         QtGui.QMessageBox.critical(None, "fmbt-editor error", msg)
     sys.exit(exit_status)
@@ -104,14 +109,15 @@ def isModelFile(filename):
 # Parse command line, see which Python Qt4 bindings to import
 
 opt_hide_preview = False
+opt_preview_only = False
 opt_modelfile    = None
 opt_conffile     = None
 opt_qt_bindings  = "PySide"
 opt_qt           = []
 
 opts, remainder = getopt.getopt(
-    sys.argv[1:], 'Vhpq:Q:',
-    ["version", "help", "no-preview", "qt-bindings=", "qt="])
+    sys.argv[1:], 'VhpPq:Q:',
+    ["version", "help", "no-preview", "preview-only", "qt-bindings=", "qt="])
 
 for opt, arg in opts:
     if opt in ["-h", "--help"]:
@@ -121,7 +127,11 @@ for opt, arg in opts:
         print "Version " + fmbt_config.fmbt_version
         sys.exit(0)
     elif opt in ["-p", "--no-preview"]:
+        if opt_preview_only: error("Invalid parameter combination: -p and -P")
         opt_hide_preview = True
+    elif opt in ["-P", "--preview-only"]:
+        if opt_hide_preview: error("Invalid parameter combination: -p and -P")
+        opt_preview_only = True
     elif opt in ["-q", "--qt-bindings"]:
         opt_qt_bindings = arg
     elif opt in ["-Q", "--qt"]:
@@ -254,6 +264,8 @@ class MainWindow(QtGui.QMainWindow):
         self._confFileName = None
         self._logFileName = None
 
+        self._previewOnlyMode = False
+
         self._model_ok = False
         self._test_ok = False
 
@@ -364,6 +376,7 @@ Keyboard shortcuts:<br>
         self._doGenerateConf()
 
     def saveFile(self):
+        if self._previewOnlyMode: return
         if self.edit.currentIndex() == EDITTAB_GT:
             if self._modelFileName.startswith(_g_tempdir):
                 self.saveFileAs()
@@ -607,8 +620,9 @@ Keyboard shortcuts:<br>
         Update self._model_ok (false iff conversion fails).
         """
         self.storeModelEditorActiveFile()
-        for filename in self._modelEditorFiles:
-            file(filename, "w").write(_deleteTrailingWhitespace(self._modelEditorFiles[filename][1]))
+        if not self._previewOnlyMode:
+            for filename in self._modelEditorFiles:
+                file(filename, "w").write(_deleteTrailingWhitespace(self._modelEditorFiles[filename][1]))
         if self._editingAAL(): # validate AAL
             self._aalcFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".py"
             self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
@@ -661,7 +675,8 @@ Keyboard shortcuts:<br>
         if conf_contents == "" or not self._confFileName:
             self._doGenerateConf()
         else:
-            file(self._confFileName, "w").write(_deleteTrailingWhitespace(conf_contents))
+            if not self._previewOnlyMode:
+                file(self._confFileName, "w").write(_deleteTrailingWhitespace(conf_contents))
         return self._model_ok
 
     def pixmapLoader(self, previewtab, filename):
@@ -1558,6 +1573,33 @@ on_inconc = "exit(2)"
             self.previewTabChanged(self.preview.currentIndex())
         self._previewTakeFocusOnTabChange = True
 
+    def previewOnlyModeRefreshImages(self, retry=2):
+        try:
+            self.editor.setPlainText(file(self._modelFileName).read())
+            self.conf_editor.setPlainText(file(self._confFileName).read())
+            self.refreshImages()
+        except Exception, e:
+            print "Preview-only update failed:", e
+
+    def previewOnlyModePoll(self):
+        sources = []
+        for f in self._previewOnlyWatchFiles:
+            try: sources.append(file(f).read())
+            except: sources.append("")
+        if self._previewOnlyLastSources and self._previewOnlyLastSources != sources:
+            self.previewOnlyModeRefreshImages()
+        self._previewOnlyLastSources = sources
+        QtCore.QTimer.singleShot(1000, self.previewOnlyModePoll)
+
+    def previewOnlyModeEnter(self):
+        self._previewOnlyMode = True
+        self._previewOnlyWatchFiles = list(self._relatedModelFiles()) + [self._confFileName]
+        self._previewOnlyLastSources = None
+        # QFileSystemWatcher does not work nicely as it loses inotify
+        # watches when an editor (like emacs) replaces edited file
+        # with a new one. Solution: traditional polling.
+        QtCore.QTimer.singleShot(2000, self.previewOnlyModePoll)
+
 class GTHighlighter(QtGui.QSyntaxHighlighter):
     def __init__(self, parent=None):
         super(GTHighlighter, self).__init__(parent)
@@ -1733,6 +1775,10 @@ if __name__ == '__main__':
             error('cannot open file "%s"' % (opt_conffile,))
 
     if opt_hide_preview: window.preview.hide()
+
+    if opt_preview_only:
+        window.edit.hide()
+        window.previewOnlyModeEnter()
 
     window.show()
 
