@@ -90,6 +90,8 @@ GT_HIDESTATES = re.compile('[ #]preview-hide-states:((unvisited)|(orphaned)|,| )
 
 GT_DEPTHRE = re.compile('[ #]preview-depth:(.*)')
 
+PP_INCLUDEFILE = r = re.compile('^\s*\^include\s*"([^"]*)"', re.MULTILINE)
+
 def isModelFile(filename):
     if filename.lower().endswith(".conf"):
         return False
@@ -149,6 +151,9 @@ except Exception, e:
 
 def _deleteTrailingWhitespace(multilineString):
     return '\n'.join([line.rstrip() for line in str(multilineString).split('\n')])
+
+def _parseIncludedFiles(string):
+    return PP_INCLUDEFILE.findall(string)
 
 class MyScaleEvents(QtCore.QObject):
     """
@@ -244,6 +249,8 @@ class MainWindow(QtGui.QMainWindow):
         super(MainWindow, self).__init__(parent)
 
         self._modelFileName = _g_tempdir + os.sep + "noname.gt"
+
+        self._modelEditorFiles = {}
         self._confFileName = None
         self._logFileName = None
 
@@ -261,8 +268,6 @@ class MainWindow(QtGui.QMainWindow):
 
         self.setCentralWidget(self.mainwidget)
         self.setWindowTitle("fMBT editor")
-
-        self._last_keypress = time.time() - 10
 
         self._fileDialogDirectory = None
         self._fileDialogFilter = None
@@ -304,6 +309,8 @@ Keyboard shortcuts:<br>
         elif self._editingAAL():
             self.gthighlighter = AALHighlighter(self.editor.document())
         self._confFileName = None
+        self._modelEditorFiles = {}
+        self._modelEditorActiveFile = self._modelFileName
         self.updateModelTabText()
         self.updateModelInConfFile()
 
@@ -361,8 +368,8 @@ Keyboard shortcuts:<br>
             if self._modelFileName.startswith(_g_tempdir):
                 self.saveFileAs()
             else:
-                print "[saving '%s']" % (self._modelFileName,)
-                file(self._modelFileName, "w").write(_deleteTrailingWhitespace(self.editor.toPlainText()))
+                print "[saving '%s']" % (self._modelEditorActiveFile,)
+                file(self._modelEditorActiveFile, "w").write(_deleteTrailingWhitespace(self.editor.toPlainText()))
                 if self._menuOptionUpdateOnSave.isChecked():
                     self.refreshImages()
         else:
@@ -512,7 +519,7 @@ Keyboard shortcuts:<br>
         self.preview_error.clear()
         if "fmbt-aalc: parsing AAL failed" in errorMsg:
             for filename, lineno, whatswrong in re.findall("^(.+):([0-9]+):(.*error.*)", errorMsg):
-                if filename == self._modelFileName:
+                if filename == self._modelFileName or filename in self._modelEditorFiles:
                     self.preview_error.insertHtml('<table><tr><td style="color: darkred;">AAL syntax error in file <a href="%s:%s">%s</a>, line %s</td></tr>' %
                                                   (urllib.quote(filename), lineno, filename, lineno))
                 else:
@@ -531,7 +538,7 @@ Keyboard shortcuts:<br>
             for filename, lineno, _, location, lineofcode in re.findall('  File "([^"]+)", line ([0-9]+)(, in (.*))?\n(.*)\n', errorMsg):
 
                 if inUserCode:
-                    if filename == self._modelFileName:
+                    if filename == self._modelFileName or filename in self._modelEditorFiles:
                         self.preview_error.insertHtml('<tr><td style="color:darkred;">File <a href="%s:%s">%s</a>, line %s, in %s</td></tr>' %
                                                       (urllib.quote(filename), lineno, filename, lineno, location))
                     elif filename.startswith("/tmp/remote"):
@@ -576,19 +583,21 @@ Keyboard shortcuts:<br>
         self._previewTabBeforeError = self.preview.currentIndex()
         self.preview.setCurrentIndex(PREVIEWTAB_ERR)
 
+    def editorGotoLine(self, editorObj, lineno):
+        editorObj.moveCursor(QtGui.QTextCursor.Start)
+        for _ in xrange(lineno-1):
+            editorObj.moveCursor(QtGui.QTextCursor.Down, QtGui.QTextCursor.MoveAnchor)
+
     def errorItemClicked(self, qUrl):
         filename, lineno = qUrl.toString().rsplit(':',1)
         lineno = int(lineno)
-        if filename == self._modelFileName:
-            self.editor.moveCursor(QtGui.QTextCursor.Start)
-            for _ in xrange(lineno-1):
-                self.editor.moveCursor(QtGui.QTextCursor.Down, QtGui.QTextCursor.MoveAnchor)
+        if filename == self._modelFileName or filename in self._relatedModelFiles():
+            self.switchToModelEditorFile(filename)
+            self.editorGotoLine(self.editor, lineno)
             self.edit.setCurrentIndex(EDITTAB_GT)
             self.editor.setFocus()
         elif filename == self._confFileName:
-            self.conf_editor.moveCursor(QtGui.QTextCursor.Start)
-            for _ in xrange(lineno-1):
-                self.conf_editor.moveCursor(QtGui.QTextCursor.Down, QtGui.QTextCursor.MoveAnchor)
+            self.editorGotoLine(self.conf_editor, lineno)
             self.edit.setCurrentIndex(EDITTAB_CONF)
             self.conf_editor.setFocus()
 
@@ -597,8 +606,9 @@ Keyboard shortcuts:<br>
         Save unsaved contents, convert gt to lsts if possible.
         Update self._model_ok (false iff conversion fails).
         """
-        gt_contents = self.editor.toPlainText()
-        file(self._modelFileName, "w").write(_deleteTrailingWhitespace(gt_contents))
+        self.storeModelEditorActiveFile()
+        for filename in self._modelEditorFiles:
+            file(filename, "w").write(_deleteTrailingWhitespace(self._modelEditorFiles[filename][1]))
         if self._editingAAL(): # validate AAL
             self._aalcFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".py"
             self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
@@ -876,7 +886,6 @@ on_inconc = "exit(2)"
                 self.parent._iterate_index = -1
             def eventFilter(self, obj, event):
                 if event.type() != QtCore.QEvent.KeyPress: return False
-                self.parent._last_keypress = time.time()
                 if event.key() == QtCore.Qt.Key_Tab and self.parent.edit.currentIndex() == EDITTAB_GT:
                     self.parent._iterate_index += 1
                     self.parent.completion()
@@ -892,6 +901,22 @@ on_inconc = "exit(2)"
                 return False
         self._keypress_eventFilter = TabCompletionEventFilter(self)
 
+        class TabBarEventFilter(QtCore.QObject):
+            def __init__(self, parent, tabWidget):
+                QtCore.QObject.__init__(self, parent)
+                self.parent = parent
+                self.tabWidget = tabWidget
+            def eventFilter(self, obj, event):
+                if event.type() != QtCore.QEvent.MouseButtonPress:
+                    return False
+                tabBar = self.tabWidget.tabBar()
+                for tabIndex in xrange(tabBar.count()):
+                    if (tabBar.tabRect(tabIndex).contains(event.pos()) and
+                        self.tabWidget.currentIndex() == tabIndex == EDITTAB_GT):
+                        self.parent.chooseModelEditorFile()
+                        return True
+                return False
+
         self.mainwidget = QtGui.QWidget()
         self.layout = QtGui.QHBoxLayout()
         self.mainwidget.setLayout(self.layout)
@@ -900,6 +925,7 @@ on_inconc = "exit(2)"
         self.edit = QtGui.QTabWidget()
         self.edit.connect(self.edit, QtCore.SIGNAL("currentChanged(int)"),
                           self.editTabChanged)
+        self.edit.installEventFilter(TabBarEventFilter(self, self.edit))
 
         def makeScalableEditor(parent, font, EditorClass = QtGui.QTextEdit):
             editor = EditorClass()
@@ -920,7 +946,7 @@ on_inconc = "exit(2)"
 
         self.editor = makeScalableEditor(self.edit, self.editor_font)
         self.editor_tabevents = TabCompletionEventFilter(self)
-        self.edit.addTab(self.editor, "GT - F1")
+        self.edit.addTab(self.editor, "Model - F1")
         self.editor.connect(self.editor, QtCore.SIGNAL("cursorPositionChanged()"),
                             self.updateModelTabText)
 
@@ -1039,9 +1065,12 @@ on_inconc = "exit(2)"
             scalable._scaleevents.changeScale(0.9)
 
     def updateModelTabText(self):
-        self.edit.setTabText(EDITTAB_GT,"%s:%s - F1" %
-                             (os.path.basename(self._modelFileName),
-                              self.editor.textCursor().blockNumber() + 1))
+        if len(self._relatedModelFiles()) > 1: extra = " (more) "
+        else: extra = ""
+        tabText = "%s:%s%s - F1" % (os.path.basename(self._modelEditorActiveFile),
+                                    self.editor.textCursor().blockNumber() + 1,
+                                    extra)
+        self.edit.setTabText(EDITTAB_GT, tabText)
 
     def updateConfTabText(self):
         if not self._confFileName or self._confFileName.startswith(_g_tempdir):
@@ -1158,8 +1187,8 @@ on_inconc = "exit(2)"
     def setupFileMenu(self):
         fileMenu = QtGui.QMenu("&File", self)
         self.menuBar().addMenu(fileMenu)
-        fileMenu.addAction("&New GT", self.newFile, "Ctrl+N")
-        fileMenu.addAction("New AA&L", self.newFileAAL)
+        fileMenu.addAction("&New AAL/Python model", self.newFileAAL, "Ctrl+N")
+        fileMenu.addAction("New &GT model", self.newFile)
         fileMenu.addAction("&Open...", self.openFile, "Ctrl+O")
         fileMenu.addAction("&Save", self.saveFile, "Ctrl+S")
         fileMenu.addAction("Save &As...", self.saveFileAs)
@@ -1189,33 +1218,19 @@ on_inconc = "exit(2)"
         commandMenu = QtGui.QMenu("&Commands", self)
         self.menuBar().addMenu(commandMenu)
         commandMenu.addAction("Edit &Model",
-                              lambda: (self.edit.setCurrentIndex(EDITTAB_GT),
-                                       self.editor.setFocus()),
-                              "F1")
+                              lambda: self.activateEditorTab(EDITTAB_GT), "F1")
         commandMenu.addAction("Edit &Configuration",
-                              lambda: (self.edit.setCurrentIndex(EDITTAB_CONF),
-                                       self.conf_editor.setFocus()),
-                              "F2")
+                              lambda: self.activateEditorTab(EDITTAB_CONF), "F2")
         commandMenu.addAction("&Visualise model",
-                              lambda: (self.preview.setCurrentIndex(PREVIEWTAB_MODEL),
-                                       self.preview_modelimage.setFocus()),
-                              "F5")
+                              lambda: self.activatePreviewTab(PREVIEWTAB_MODEL), "F5")
         commandMenu.addAction("&Generate test",
-                              lambda: (self.preview.setCurrentIndex(PREVIEWTAB_TEST),
-                                       self.preview_test.setFocus()),
-                              "F6")
+                              lambda: self.activatePreviewTab(PREVIEWTAB_TEST), "F6")
         commandMenu.addAction("&Test step distribution",
-                              lambda: (self.preview.setCurrentIndex(PREVIEWTAB_DIST),
-                                       self.preview_distimage.setFocus()),
-                              "F7")
+                              lambda: self.activatePreviewTab(PREVIEWTAB_DIST), "F7")
         commandMenu.addAction("C&overage",
-                              lambda: (self.preview.setCurrentIndex(PREVIEWTAB_COV),
-                                       self.preview_covimage.setFocus()),
-                              "F8")
+                              lambda: self.activatePreviewTab(PREVIEWTAB_COV), "F8")
         commandMenu.addAction("&Errors",
-                              lambda: (self.preview.setCurrentIndex(PREVIEWTAB_ERR),
-                                       self.preview_error.setFocus()),
-                              "F9")
+                              lambda: self.activatePreviewTab(PREVIEWTAB_ERR), "F9")
         commandMenu.addSeparator()
         self._menuOptionUpdateOnSave = QtGui.QAction("&Update preview on Save", self)
         self._menuOptionUpdateOnSave.setCheckable(True)
@@ -1226,6 +1241,81 @@ on_inconc = "exit(2)"
         helpMenu = QtGui.QMenu("&Help", self)
         self.menuBar().addMenu(helpMenu)
         helpMenu.addAction("&About", self.about)
+
+    def activateEditorTab(self, tab):
+        if tab == EDITTAB_GT:
+            if self.edit.currentIndex() == EDITTAB_GT:
+                self.chooseModelEditorFile()
+            else:
+                self.edit.setCurrentIndex(EDITTAB_GT)
+                self.editor.setFocus()
+        elif tab == EDITTAB_CONF:
+            self.edit.setCurrentIndex(EDITTAB_CONF)
+            self.conf_editor.setFocus()
+
+    def activatePreviewTab(self, tab):
+        if tab == PREVIEWTAB_MODEL:
+            self.preview.setCurrentIndex(PREVIEWTAB_MODEL)
+            self.preview_modelimage.setFocus()
+        elif tab == PREVIEWTAB_TEST:
+            self.preview.setCurrentIndex(PREVIEWTAB_TEST)
+            self.preview_test.setFocus()
+        elif tab == PREVIEWTAB_DIST:
+            self.preview.setCurrentIndex(PREVIEWTAB_DIST)
+            self.preview_distimage.setFocus()
+        elif tab == PREVIEWTAB_COV:
+            self.preview.setCurrentIndex(PREVIEWTAB_COV)
+            self.preview_covimage.setFocus()
+        elif tab == PREVIEWTAB_ERR:
+            self.preview.setCurrentIndex(PREVIEWTAB_ERR)
+            self.preview_error.setFocus()
+
+    def _relatedModelFiles(self):
+        includedFiles = _parseIncludedFiles(self.editor.toPlainText())
+        if self._modelFileName != self._modelEditorActiveFile:
+            includedFiles.extend(_parseIncludedFiles(self._modelSource()))
+        includedFiles.append(self._modelEditorActiveFile)
+        includedFiles.append(self._modelFileName)
+        return set(includedFiles)
+
+    def _modelSource(self):
+        if self._modelFileName == self._modelEditorActiveFile:
+            return self.editor.toPlainText()
+        else:
+            return self._modelEditorFiles[self._modelFileName][1]
+
+    def chooseModelEditorFile(self):
+        # interactive choose between base model and included model files
+        modelFiles = self._relatedModelFiles()
+        if len(modelFiles) == 1:
+            return
+
+        menu = QtGui.QMenu()
+        for filename in sorted(modelFiles):
+            menu.addAction(filename, lambda: None)
+        m = menu.exec_(self.editor.mapToGlobal(QtCore.QPoint(0,0)))
+
+        if m == None or m.text() == self._modelEditorActiveFile:
+            return
+        self.switchToModelEditorFile(m.text())
+
+    def switchToModelEditorFile(self, newActiveFile):
+        self.storeModelEditorActiveFile()
+
+        if not newActiveFile in self._modelEditorFiles:
+            try:
+                self._modelEditorFiles[newActiveFile] = (1, file(newActiveFile).read())
+            except:
+                self._modelEditorFiles[newActiveFile] = (1, "")
+        self.editor.setPlainText(self._modelEditorFiles[newActiveFile][1])
+        self.editorGotoLine(self.editor, self._modelEditorFiles[newActiveFile][0])
+        self._modelEditorActiveFile = newActiveFile
+        self.updateModelTabText()
+
+    def storeModelEditorActiveFile(self):
+        self._modelEditorFiles[self._modelEditorActiveFile] = (
+            self.editor.textCursor().blockNumber() + 1,
+            self.editor.toPlainText())
 
     def growTabs(self, grow):
         sizes = self.splitter.sizes()
@@ -1394,6 +1484,11 @@ on_inconc = "exit(2)"
                 }
 
             currentBlock, blockStartIndex = parserishAAL(pt, pos)
+            if currentBlock == None and self._modelEditorActiveFile != self._modelFileName:
+                # AAL block is not in an included model file
+                # use it as default
+                currentBlock = 'aal'
+                blockStartIndex = -4
             if currentBlock in ['aal', 'action', 'tag', 'guard']:
                 indentation_depth = blockStartIndex - pt[:blockStartIndex].rfind('\n') + 3
                 for suggestion in suggestions[currentBlock]:
