@@ -1633,8 +1633,10 @@ class AALHighlighter(QtGui.QSyntaxHighlighter):
         singleLineCommentFormat.setForeground(QtCore.Qt.darkMagenta)
         self.highlightingRules.append((QtCore.QRegExp("#[^\n]*"),
                 singleLineCommentFormat))
+        self._black = QtGui.QColor().black()
 
     def highlightBlock(self, text):
+        highlightedSomething = False
         for pattern, format in self.highlightingRules:
             expression = QtCore.QRegExp(pattern)
             index = expression.indexIn(text)
@@ -1643,8 +1645,12 @@ class AALHighlighter(QtGui.QSyntaxHighlighter):
                 length = expression.matchedLength()
                 self.setFormat(index, length, format)
                 index = expression.indexIn(text, index + length)
-
-        self.setCurrentBlockState(0)
+                highlightedSomething = True
+        # workaround QSyntaxHighlighter + QTextEditor problem that
+        # hides some (random) lines: when no formatting is present,
+        # format always something
+        if not highlightedSomething:
+            self.setFormat(0, len(str(text)), self._black)
 
 class ConfHighlighter(QtGui.QSyntaxHighlighter):
     def __init__(self, parent=None):
@@ -1675,6 +1681,7 @@ class ConfHighlighter(QtGui.QSyntaxHighlighter):
 
     def highlightBlock(self, text):
         text = str(text)
+        highlightedSomething = False
         if not CF_RE.match(text):
             if not text.startswith("#"):
                 self.setFormat(0, len(text), self._usualErrorsFormat)
@@ -1687,9 +1694,14 @@ class ConfHighlighter(QtGui.QSyntaxHighlighter):
             while index >= 0:
                 length = expression.matchedLength()
                 self.setFormat(index, length, format)
+                highlightedSomething = True
                 index = expression.indexIn(text, index + length)
 
-        self.setCurrentBlockState(0)
+        # workaround QSyntaxHighlighter + QTextEditor problem that
+        # hides some (random) lines: when no formatting is present,
+        # format always something
+        if not highlightedSomething:
+            self.setFormat(0, len(text), self._black)
 
 def _exitHandler():
     removeTemporaryFiles()
