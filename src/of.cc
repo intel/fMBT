@@ -40,6 +40,7 @@ FACTORY_IMPLEMENTATION(OutputFormat)
 #include "history_log.hh"
 #include "coverage_of.hh"
 #include "coverage_notice.hh"
+#include "coverage_report_filter.hh"
 
 OutputFormat::~OutputFormat() {
   for(unsigned i=0;i<covs.size();i++) {
@@ -181,6 +182,13 @@ void OutputFormat::add_notice(std::string filter,
   if (status) {
     reportnames.push_back(name);
     Coverage_report* c=new Coverage_notice(l,cov,std::string(""));
+
+    if (filter.length()>0) {
+      Coverage_report_filter* cc=new_coveragereportfilter(l,filter);
+      cc->set_sub(c);
+      c=cc;
+    }
+
     if (c->status==false) {
       status=false;
       errormsg=errormsg+" Report failure:"+c->errormsg;
@@ -200,6 +208,13 @@ void OutputFormat::add_report(std::string filter,
   if (status) {
     reportnames.push_back(name);
     Coverage_report* c=new Coverage_report(l,from,to,drop);
+
+    if (filter.length()>0) {
+      Coverage_report_filter* cc=new_coveragereportfilter(l,filter);
+      cc->set_sub(c);
+      c=cc;
+    }
+        
     if (c->status==false) {
       status=false;
       errormsg=errormsg+" Report failure:"+c->errormsg;

@@ -57,7 +57,8 @@ testcase: 'report' filter string 'from' strvec 'to' strvec opt_drop { uconf_obj-
             sdel($5.strvec);
             sdel($6.strvec);
             */
-        };
+        } |
+        'report' filter string string { uconf_obj->add_notice(*$1.str,*$2.str,*$3.str); delete $1.str; delete $2.str; delete $3.str; } ;
 
 opt_drop: { $$.strvec = new std::vector<std::string*>; }
     | 'drop' strvec { $$.strvec = $1.strvec; } ;
