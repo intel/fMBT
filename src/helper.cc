@@ -168,6 +168,10 @@ void remove_force(std::string& s)
   for(unsigned i=0;i<s.size();i++) {
     switch (s[i]) {
     case '\\': {
+      i++;
+      if (i<s.size()) {
+	ss=ss+s[i];
+      }
       break;
     }
     default: {
@@ -794,7 +798,7 @@ void param_cut(std::string val,std::string& name,
         name = val.substr(0,pos);
         remove_force(name);
         option = val.substr(pos+1,lstpos-pos-1);
-        //remove_force(option);
+        remove_force(option);
       } else {
         // ERROR
       }
@@ -825,7 +829,7 @@ void commalist(const std::string& s,std::vector<std::string>& vec, bool remove_w
       if (depth==0) {
         // COMMA!
         pushme=s.substr(lastend,pos-lastend);
-        remove_force(pushme);
+        //remove_force(pushme);
         vec.push_back(pushme);
         lastend=pos+1;
       }
