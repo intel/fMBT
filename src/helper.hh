@@ -20,6 +20,8 @@
 #define __helper_hh__
 #include <string>
 #include <vector>
+#include <sys/time.h>
+#include <time.h>
 
 #ifndef DROI
 #include <boost/regex.hpp>
@@ -66,7 +68,7 @@ std::string to_string(const unsigned t);
 std::string to_string(const float f);
 std::string to_string(const int cnt,const int* t,
 		      const std::vector<std::string>& st);
-std::string to_string(const struct timeval&t);
+std::string to_string(const struct timeval&t,bool minutes=false);
 void  strvec(std::vector<std::string> & v,std::string& s,
 	     const std::string& separator);
 
@@ -105,6 +107,8 @@ void remove_force(std::string& s);
 class EndHook;
 void hook_runner(EndHook* e);
 void sdel(std::vector<std::string*>* strvec);
+
+void gettime(struct timeval *tv);
 
 #define MAX_LINE_LENGTH (1024*16)
 

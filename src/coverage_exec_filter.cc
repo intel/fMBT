@@ -33,6 +33,9 @@ void Coverage_exec_filter::mhandler
  std::vector<int>& tag)
 {
   for(unsigned i=0;i<from.size();i++) {
+    // uneascape 
+    remove_force(*from[i]);
+
     int pos=find(sp,*from[i],-1);
     if (pos<0) {
       pos=model->action_number(*(from[i]));

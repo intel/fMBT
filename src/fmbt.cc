@@ -28,6 +28,8 @@
 #include <cstdlib>
 #include <signal.h>
 #include "coverage.hh"
+#include "adapter.hh"
+#include "model.hh"
 
 #include "verdict.hh"
 #include "config.h"
@@ -89,7 +91,7 @@ int main(int argc,char * const argv[])
     {0, 0, 0, 0}
   };
 
-  while ((c = getopt_long (argc, argv, "DEL:heil:qCo:V", long_opts, NULL)) != -1)
+  while ((c = getopt_long (argc, argv, "DEL:heil:qCo:VAM", long_opts, NULL)) != -1)
     switch (c)
     {
     case 'V':
@@ -107,6 +109,36 @@ int main(int argc,char * const argv[])
       if (CoverageFactory::creators) {
 	i=CoverageFactory::creators->begin();
 	e=CoverageFactory::creators->end();
+	
+	for(;i!=e;i++) {
+	  printf("%s\n",i->first.c_str());
+	}
+      }
+    }
+      return 0;
+      break;
+    case 'A': {
+      /* For debugging. print adapter modules */
+      std::map<std::string, AdapterFactory::creator>::iterator i;
+      std::map<std::string, AdapterFactory::creator>::iterator e;
+      if (AdapterFactory::creators) {
+	i=AdapterFactory::creators->begin();
+	e=AdapterFactory::creators->end();
+	
+	for(;i!=e;i++) {
+	  printf("%s\n",i->first.c_str());
+	}
+      }
+    }
+      return 0;
+      break;
+    case 'M': {
+      /* For debugging. print model modules */
+      std::map<std::string, ModelFactory::creator>::iterator i;
+      std::map<std::string, ModelFactory::creator>::iterator e;
+      if (ModelFactory::creators) {
+	i=ModelFactory::creators->begin();
+	e=ModelFactory::creators->end();
 	
 	for(;i!=e;i++) {
 	  printf("%s\n",i->first.c_str());

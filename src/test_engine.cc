@@ -70,7 +70,7 @@ extern "C" {
 void Test_engine::print_time(struct timeval& start_time,
                              struct timeval& total_time)
 {
-  gettimeofday(&Adapter::current_time,NULL);
+  gettime(&Adapter::current_time);
   log.print("<current_time time=\"%i.%06i\"/>\n",Adapter::current_time.tv_sec,
             Adapter::current_time.tv_usec);
   timersub(&Adapter::current_time,&start_time,&total_time);
@@ -244,7 +244,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
                heuristic.get_model()->getSPNames());
 
   log.push("test_engine");
-  gettimeofday(&start_time,NULL);
+  gettime(&start_time);
 
   std::vector<std::string> tags=heuristic.get_model()->getSPNames();
 
@@ -257,7 +257,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
   while (-1 == (condition_i = matching_end_condition(step_count))) {
     action=0;
 
-    gettimeofday(&Adapter::current_time,NULL);
+    gettime(&Adapter::current_time);
     log.print("<current_time time=\"%i.%06i\"/>\n",Adapter::current_time.tv_sec,
               Adapter::current_time.tv_usec);
 
@@ -287,7 +287,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       log_status(log, step_count, heuristic.getCoverage());
       update_coverage(heuristic.getCoverage(), step_count,
                       &last_coverage, &last_step_cov_growth);
-      gettimeofday(&Adapter::current_time,NULL);
+      gettime(&Adapter::current_time);
       log.print("<current_time time=\"%i.%06i\"/>\n",Adapter::current_time.tv_sec,
                 Adapter::current_time.tv_usec);
       if (-1 != (condition_i = matching_end_condition(step_count,0,action))) {

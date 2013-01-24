@@ -82,8 +82,6 @@ int main(int argc,char * const argv[])
 
   l=new Log_null();
 
-  l->ref();
-
   static struct option long_opts[] = {
     {"help", no_argument, 0, 'h'},
     {"version", no_argument, 0, 'V'},
@@ -213,6 +211,9 @@ int main(int argc,char * const argv[])
     fclose(outfile);
 
   delete of;
-  delete l;
+  l->unref();
+
+  
+
   return 0;
 }

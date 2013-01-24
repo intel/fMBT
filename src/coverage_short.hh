@@ -1,6 +1,6 @@
 /*
  * fMBT, free Model Based Testing tool
- * Copyright (c) 2011, Intel Corporation.
+ * Copyright (c) 2012,2013 Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU Lesser General Public License,
@@ -16,48 +16,48 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#ifndef __coverage_hh__
-#define __coverage_hh__
 
-#include "factory.hh"
-#include "writable.hh"
-#include "log.hh"
-#include "verdict.hh"
+/* Coverage_Short returns 1/(1+atoi(proposition)) of the currente state
+ * Usable with model created by relax2.py, in which case 
+ */
+
+#ifndef __coverage_short_hh__
+#define __coverage_short_hh__
+
+#include <stack>
+
+#include "coverage.hh"
+
+#include <map>
+#include <vector>
+#include <bitset>
+#include <cstdlib>
+#include <list>
 
 class Model;
 
-class Coverage: public Writable {
+class Coverage_Short: public Coverage {
 
 public:
-  Coverage(Log& l);
-  virtual ~Coverage();
-  virtual void push()=0;
-  virtual void pop()=0;
+  class unit;
+  Coverage_Short(Log& l, std::string& params);
+
+  virtual void push();
+  virtual void pop();
 
   virtual void history(int action, std::vector<int>& props,
- 		       Verdict::Verdict verdict) {
-    if (action) 
-      execute(action);
-  }
-  virtual bool execute(int action)=0;
-  virtual float getCoverage()=0;
+		       Verdict::Verdict verdict);
+  virtual bool execute(int action);
+  virtual float getCoverage();
 
-  virtual std::string stringify();
+  virtual int fitness(int* actions,int n, float* fitness);
 
-  virtual int fitness(int* actions,int n, float* fitness)=0;
-  virtual void set_model(Model* _model); // for input alphabet
+  virtual void set_model(Model* _model);
 
 protected:
-  Model* model;
-public:
-  Log& log;
+  std::string params;
+  int props_total;
 };
 
-FACTORY_DECLARATION(Coverage)
-
-Coverage* new_coverage(Log&, std::string&);
-
-#include "model.hh"
 
 #endif
-

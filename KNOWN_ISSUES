@@ -1,0 +1,14 @@
+On Ubuntu 11.04 and Ubuntu 11.10 valgrind will complain about sse42 optimised version of strspn.
+
+==30949== Conditional jump or move depends on uninitialised value(s)
+==30949==    at 0x6F3F80E: __strspn_sse42 (strspn-c.c:142)
+==30949==    by 0x452E75: getact(int**, std::vector<int, std::allocator<int> >&, _IO_FILE*, _IO_FILE*, Log&, int, int, Writable*) (helper.cc:694)
+==30949==    by 0x4CBA29: aal_remote::getprops(int**) (aal_remote.cc:291)
+==30949==    by 0x4ADA20: Mwrapper::getprops(int**) (mwrapper.cc:85)
+==30949==    by 0x44AB48: Test_engine::log_tags(std::vector<std::string, std::allocator<std::string> > const&) (test_engine.cc:193)
+==30949==    by 0x44B2B2: Test_engine::run(long) (test_engine.cc:255)
+==30949==    by 0x4B60A8: Conf::execute(bool) (conf.cc:234)
+==30949==    by 0x448A23: main (fmbt.cc:191)
+
+
+Escaping on coverage definition is not clear. Some times escaping works, usually not. Needs to be fixed.

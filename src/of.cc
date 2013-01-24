@@ -39,6 +39,8 @@ FACTORY_IMPLEMENTATION(OutputFormat)
 #include "helper.hh"
 #include "history_log.hh"
 #include "coverage_of.hh"
+#include "coverage_notice.hh"
+#include "coverage_report_filter.hh"
 
 OutputFormat::~OutputFormat() {
   for(unsigned i=0;i<covs.size();i++) {
@@ -52,9 +54,13 @@ OutputFormat::~OutputFormat() {
   for(unsigned i=0;i<testruns.size();i++) {
     delete testruns[i];
   }
+
   if (model)
     delete model;
+
   model=NULL;
+
+  
 }
 
 void OutputFormat::set_model(Model* m) {
@@ -148,7 +154,7 @@ std::string OutputFormat::handle_history(Log&l,std::string& h)
     test_verdict=history->test_verdict;
 
     delete cov;
-    //delete history;
+    delete history;
     return format_covs();
   } else {
     return "";
@@ -169,7 +175,32 @@ void OutputFormat::add_uc(std::string& name,
   }
 }
 
-void OutputFormat::add_report(std::string& name,
+void OutputFormat::add_notice(std::string filter,
+			      std::string& name,
+			      std::string& cov)
+{
+  if (status) {
+    reportnames.push_back(name);
+    Coverage_report* c=new Coverage_notice(l,cov,std::string(""));
+
+    if (filter.length()>0) {
+      Coverage_report_filter* cc=new_coveragereportfilter(l,filter);
+      cc->set_sub(c);
+      c=cc;
+    }
+
+    if (c->status==false) {
+      status=false;
+      errormsg=errormsg+" Report failure:"+c->errormsg;
+    } else {
+      // c->set_model(model);
+    }
+    rcovs.push_back(c);
+  }
+}
+
+void OutputFormat::add_report(std::string filter,
+			      std::string& name,
 			      std::vector<std::string*>& from,
 			      std::vector<std::string*>& to,
 			      std::vector<std::string*>& drop)
@@ -177,6 +208,13 @@ void OutputFormat::add_report(std::string& name,
   if (status) {
     reportnames.push_back(name);
     Coverage_report* c=new Coverage_report(l,from,to,drop);
+
+    if (filter.length()>0) {
+      Coverage_report_filter* cc=new_coveragereportfilter(l,filter);
+      cc->set_sub(c);
+      c=cc;
+    }
+        
     if (c->status==false) {
       status=false;
       errormsg=errormsg+" Report failure:"+c->errormsg;

@@ -25,16 +25,14 @@
 
 #include "alphabet_impl.hh"
 #include "model_yes.hh"
-#include "log_null.hh"
 
 class History_log: public History {
 public:
   History_log(Log& l, std::string params = "");
-  virtual ~History_log() {};
+  virtual ~History_log();
   virtual Alphabet* set_coverage(Coverage*,Alphabet* alpha);
 
 protected:
-  Log_null l;
   int alphabet_done;
   char* act;
   char* tag;

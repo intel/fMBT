@@ -78,20 +78,20 @@ SHORTENER_CONF="shortener.conf"
 STOP_AT_STEP=$(fmbt-log -f '$sn' tmp.log | tail -n 1)
 grep "^model" "$ORIG_CONF"                   > "$SHORTENER_CONF"
 grep "^adapter" "$ORIG_CONF"                >> "$SHORTENER_CONF"
-echo 'coverage = "mapper:shortener.crules"' >> "$SHORTENER_CONF"
+echo 'coverage = "mapper(shortener.crules)"' >> "$SHORTENER_CONF"
 echo ''                                     >> "$SHORTENER_CONF"
-echo 'pass = "coverage:1.0"'                >> "$SHORTENER_CONF"
-echo "inconc = \"steps:$STOP_AT_STEP\""     >> "$SHORTENER_CONF"
+echo 'pass = "coverage(1.0)"'                >> "$SHORTENER_CONF"
+echo "inconc = \"steps($STOP_AT_STEP)\""     >> "$SHORTENER_CONF"
 echo ''                                     >> "$SHORTENER_CONF"
-echo 'on_fail   = "exit:1"'                 >> "$SHORTENER_CONF"
-echo 'on_pass   = "exit:2"'                 >> "$SHORTENER_CONF"
-echo 'on_inconc = "exit:3"'                 >> "$SHORTENER_CONF"
-echo 'on_error  = "exit:4"'                 >> "$SHORTENER_CONF"
+echo 'on_fail   = "exit(1)"'                 >> "$SHORTENER_CONF"
+echo 'on_pass   = "exit(2)"'                 >> "$SHORTENER_CONF"
+echo 'on_inconc = "exit(3)"'                 >> "$SHORTENER_CONF"
+echo 'on_error  = "exit(4)"'                 >> "$SHORTENER_CONF"
 
 # Generate shortener crules for passing error trace candidate
 # model to the "short" coverage module.
 cat > shortener.crules <<EOF
-1 = "lsts%3aout.lsts:short"
+1 = "short,lsts(out.lsts)"
 
 "(.*)"              -> (1, "(\$1)")
 EOF
@@ -112,7 +112,9 @@ do
 ($current-$start)/$c"|bc
     eval $SETUP_CMD
 
-    fmbt -l tmp.log "$SHORTENER_CONF" -o heuristic\ \=\"lookahead:$heuristic\"
+    heuristic=1
+
+    fmbt -l tmp.log "$SHORTENER_CONF" -o heuristic\ \=\"lookahead\($heuristic\)\"
     result=$?
     
     printf "length "

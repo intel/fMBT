@@ -1,6 +1,6 @@
 /*
  * fMBT, free Model Based Testing tool
- * Copyright (c) 2011, Intel Corporation.
+ * Copyright (c) 2013, Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU Lesser General Public License,
@@ -16,35 +16,39 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#ifndef __history_hh__
-#define __history_hh__
+#ifndef __coverage_notice_hh__
+#define __coverage_notice_hh__
 
-#include <vector>
-#include <string>
+#include "coverage_report.hh"
+#include "coverage_const.hh"
 
-#include "factory.hh"
-#include "writable.hh"
-#include "coverage.hh"
-#include "alphabet.hh"
 #include <sys/time.h>
+#include <stack>
+#include <utility>
 
-class Log;
-
-class History: public Writable {
+class Coverage_notice: public Coverage_report {
 public:
-  History(Log& l, std::string params = "") : log(l) {test_verdict="N/A";log.ref();}
-  virtual ~History() {log.unref();};
+  Coverage_notice(Log&l,std::string _cc1,std::string _cc2);
+  virtual ~Coverage_notice();
 
-  virtual Alphabet* set_coverage(Coverage*,Alphabet* alpha) =0;
+  virtual bool execute(int action);
 
-  static struct timeval current_time;
-  std::string test_verdict;
-protected:
-  Log& log;
+  virtual void set_model(Model* _model)
+  {
+    Coverage_report::set_model(_model);
+    foo();
+  }
+
+  void foo();
+
+  std::string cc1,cc2;
+  
+  std::list<std::pair<std::pair<Coverage*,Coverage*>,
+		      std::pair<
+			std::pair<struct timeval,struct timeval>,
+			std::vector<std::pair<int,std::vector<int> > > > > > subcovs;
+
+  Coverage_Const const1;
 };
-
-FACTORY_DECLARATION(History)
-
-History* new_history(Log&, std::string&);
 
 #endif

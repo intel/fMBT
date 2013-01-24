@@ -168,6 +168,10 @@ void remove_force(std::string& s)
   for(unsigned i=0;i<s.size();i++) {
     switch (s[i]) {
     case '\\': {
+      i++;
+      if (i<s.size()) {
+	ss=ss+s[i];
+      }
       break;
     }
     default: {
@@ -454,10 +458,16 @@ std::string to_string(const float f)
 
 #include <iomanip>
 
-std::string to_string(const struct timeval&t)
+std::string to_string(const struct timeval&t,bool minutes)
 {
   std::stringstream ss;
-  ss << t.tv_sec << "." << std::setfill('0') << std::setw(6) << t.tv_usec;
+  int sec=t.tv_sec%60;
+  int min=t.tv_sec/60;
+  if (min>0 && minutes) {
+    ss << min << "min " << sec << "." << std::setfill('0') << std::setw(6) << t.tv_usec << "s";
+  } else {
+    ss << t.tv_sec << "." << std::setfill('0') << std::setw(6) << t.tv_usec;
+  }
   return ss.str();
 }
 
@@ -646,7 +656,7 @@ int getint(FILE* out,FILE* in,Log& log,int min,int max,Writable* w)
   ssize_t s=bgetline(&line,&n,in,log);
   if (s && s != -1) {
     ret=atoi(line);
-    if (strspn(line,"-0123456789") != s-1 || (ret == 0 && line[0] != '0')) {
+    if ((int)strspn(line,"-0123456789") != s-1 || (ret == 0 && line[0] != '0')) {
       char *escaped_line = escape_string(line);
       if (escaped_line) {
         static const char* m[] = { "<remote error=\"I/O error: integer expected, got: %s\"/>\n",
@@ -737,17 +747,24 @@ void regexpmatch(const std::string& regexp,std::vector<std::string>& f,
                  std::vector<int>& result,bool clear,int a)
 {
 #ifndef DROI
-
-  boost::regex expression(regexp);
-  boost::cmatch what;
-
   if (clear) {
     result.clear();
   }
+  try {
+    boost::regex expression(regexp);
+    boost::cmatch what;
 
-  for(unsigned int i=0;i<f.size();i++) {
-    if (regexp == f[i] || boost::regex_match(f[i].c_str(), what, expression)) {
-      result.push_back(a*i);
+    for(unsigned int i=0;i<f.size();i++) {
+      if (regexp == f[i] || boost::regex_match(f[i].c_str(), what, expression)) {
+	result.push_back(a*i);
+      }
+    }
+  } catch (...) {
+    printf("Exception...\n");
+    for(unsigned int i=0;i<f.size();i++) {
+      if (regexp == f[i]) {
+	result.push_back(a*i);
+      }
     }
   }
 
@@ -812,7 +829,7 @@ void commalist(const std::string& s,std::vector<std::string>& vec, bool remove_w
       if (depth==0) {
         // COMMA!
         pushme=s.substr(lastend,pos-lastend);
-        remove_force(pushme);
+        //remove_force(pushme);
         vec.push_back(pushme);
         lastend=pos+1;
       }
@@ -834,4 +851,11 @@ void sdel(std::vector<std::string*>* strvec)
         delete (*strvec)[i];
     }
     delete strvec;
+}
+
+void gettime(struct timeval *tv)
+{
+  struct timespec tp;
+  clock_gettime(CLOCK_REALTIME,&tp);
+  TIMESPEC_TO_TIMEVAL(tv,&tp);
 }

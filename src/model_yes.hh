@@ -25,12 +25,12 @@ public:
   }
 
   virtual ~Model_yes() {
-    model=NULL;
     /*
     if (model) {
       delete model;
     }
     */
+    model=NULL;
   }
 
   virtual int getActions(int** _act) {
