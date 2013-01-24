@@ -59,6 +59,7 @@ void Coverage_notice::foo()
     errormsg="Can't create coverage \""+cc1+"\"";
     return;
   }
+  c1->on_report=true;
   c1->set_model(model);
 
   if (!c1->status) {
