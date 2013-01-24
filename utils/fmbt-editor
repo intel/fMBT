@@ -95,7 +95,7 @@ GT_HIDESTATES = re.compile('[ #]preview-hide-states:((unvisited)|(orphaned)|,| )
 
 GT_DEPTHRE = re.compile('[ #]preview-depth:(.*)')
 
-PP_INCLUDEFILE = r = re.compile('^\s*\^include\s*"([^"]*)"', re.MULTILINE)
+PP_INCLUDEFILE = r = re.compile('^\s*\^include\s*"([^"]*)"\s*$', re.MULTILINE)
 
 def isModelFile(filename):
     if filename.lower().endswith(".conf"):
