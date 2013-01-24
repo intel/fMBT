@@ -45,10 +45,33 @@ void Coverage_notice::foo()
     c2=&const1;
   } else {
     c2=new_coverage(log,cc2);
+    if (c2==NULL) {
+      status=false;
+      errormsg="Can't create coverage \""+cc2+"\"";
+      return;
+    }
     c2->set_model(model);
   }
   c1=new_coverage(log,cc1);
+
+  if (c1==NULL) {
+    status=false;
+    errormsg="Can't create coverage \""+cc1+"\"";
+    return;
+  }
   c1->set_model(model);
+
+  if (!c1->status) {
+    status=false;
+    errormsg="Submodel failure \""+cc1+"\":"+c1->errormsg;
+    return;
+  }
+
+  if (!c2->status) {
+    status=false;
+    errormsg="Submodel failure \""+cc2+"\":"+c2->errormsg;
+  }
+
   std::vector<std::pair<int,std::vector<int> > > m;
   
   subcovs.push_front(std::pair<std::pair<Coverage*,Coverage*>,

@@ -51,6 +51,7 @@ Coverage::Coverage(Log& l) :
   model(NULL), log(l)
 {
   log.ref();
+  on_report=false;
 }
 
 Coverage::~Coverage()
