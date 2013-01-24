@@ -173,12 +173,12 @@ void aal_remote::push() {
       }
       int r=getint(d_stdin,d_stdout,_log,0,INT_MAX,this);
       if (status && r>0) {
-        char lts_content[r+1];
+        char* lts_content = new char[r+1];
         lts_content[r]=0;
         fread(lts_content,1,r,d_stdout);
         lts=new Lts(_log,std::string("remote.lts#")+lts_content);
+        delete[] lts_content;
         if (lts && lts->status && lts->init() && lts->reset() && lts->status) {
-          // accel=1; // causes many LTS generations per step
           accel=1;
           return;
         } else {
