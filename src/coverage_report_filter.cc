@@ -36,13 +36,13 @@ public:
       sub->execute(action);
 
       if (sub->traces.size()>len) {
-	traces.resize(len);
-	times .resize(len);
-	copy(sub->traces.end() -len ,sub->traces.end() ,traces.begin());
-	copy(sub->times. end() -len ,sub->times .end() ,times. begin());
+        traces.resize(len);
+        times .resize(len);
+        copy(sub->traces.end() -len ,sub->traces.end() ,traces.begin());
+        copy(sub->times. end() -len ,sub->times .end() ,times. begin());
       } else {
-	traces=sub->traces;
-	times=sub->times;
+        traces=sub->traces;
+        times=sub->times;
       }
     }
     return true;
@@ -55,22 +55,22 @@ public:
     Coverage_report_filter(l,param)
   {
   }
-  
+
   virtual ~Coverage_report_filter_first() {
   }
 
   virtual bool execute(int action) {
     if (sub) {
       sub->execute(action);
-    
+
       if (sub->traces.size()>len) {
-	traces.resize(len);
-	times .resize(len);
-	copy(sub->traces.begin() ,sub->traces.begin()+len ,traces.begin());
-	copy(sub->times. begin() ,sub->times .begin()+len ,times. begin());
+        traces.resize(len);
+        times .resize(len);
+        copy(sub->traces.begin() ,sub->traces.begin()+len ,traces.begin());
+        copy(sub->times. begin() ,sub->times .begin()+len ,times. begin());
       } else {
-	traces=sub->traces;
-	times =sub->times ;
+        traces=sub->traces;
+        times =sub->times ;
       }
     }
     return true;
@@ -84,7 +84,7 @@ public:
     Coverage_report_filter(l,param)
   {
   }
-  
+
   virtual ~Coverage_report_filter_longer() {
   }
 
@@ -93,18 +93,18 @@ public:
       sub->execute(action);
       traces.clear();
       times .clear();
-      
+
       for(unsigned i=0;i<sub->traces.size();i++) {
-	if (sub->traces[i].size()>=len) {
-	  traces.push_back(sub->traces[i]);
-	  times .push_back(sub->times [i]);
-	}
+        if (sub->traces[i].size()>=len) {
+          traces.push_back(sub->traces[i]);
+          times .push_back(sub->times [i]);
+        }
       }
 
-    }    
+    }
     return true;
   }
-  
+
 };
 
 class Coverage_report_filter_shorter: public Coverage_report_filter {
@@ -113,7 +113,7 @@ public:
     Coverage_report_filter(l,param)
   {
   }
-  
+
   virtual ~Coverage_report_filter_shorter() {
   }
 
@@ -122,18 +122,18 @@ public:
       sub->execute(action);
       traces.clear();
       times .clear();
-      
+
       for(unsigned i=0;i<sub->traces.size();i++) {
-	if (sub->traces[i].size()<len) {
-	  traces.push_back(sub->traces[i]);
-	  times .push_back(sub->times [i]);
-	}
+        if (sub->traces[i].size()<len) {
+          traces.push_back(sub->traces[i]);
+          times .push_back(sub->times [i]);
+        }
       }
 
-    }    
+    }
     return true;
   }
-  
+
 };
 
 
@@ -152,7 +152,7 @@ Coverage_report_filter* new_coveragereportfilter(Log& l, std::string& s) {
 
   if (ret) {
     fprintf(stderr,"DEPRECATED COVERAGE SYNTAX. %s\nNew syntax is %s(%s)\n",
-	    s.c_str(),name.c_str(),option.c_str());
+            s.c_str(),name.c_str(),option.c_str());
   }
   return ret;
 }

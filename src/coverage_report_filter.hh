@@ -34,7 +34,7 @@ Coverage_report_filter* new_coveragereportfilter(Log& l, std::string& s);
 class Coverage_report_filter: public Coverage_report {
 public:
   Coverage_report_filter(Log&l,std::string params):Coverage_report(l,dummy,
-								   dummy,dummy)
+                                                                   dummy,dummy)
   {
     sub=NULL;
     std::vector<std::string> s;
@@ -42,7 +42,7 @@ public:
     if(s.size()>0) {
       len=atoi(s[0].c_str());
       if (s.size()==2) {
-	sub=new_coveragereportfilter(l,s[1]);
+        sub=new_coveragereportfilter(l,s[1]);
       }
     }
   }
@@ -50,9 +50,9 @@ public:
   void set_sub(Coverage_report* _s) {
     if (sub) {
       Coverage_report_filter* f=
-	dynamic_cast<Coverage_report_filter*>(sub);
+        dynamic_cast<Coverage_report_filter*>(sub);
       if (f)
-	f->set_sub(_s);
+        f->set_sub(_s);
     } else {
       sub=_s;
     }
@@ -75,7 +75,7 @@ protected:
 public:
   Coverage_report* sub;
 protected:
-  int len;
+  unsigned int len;
 };
 
 FACTORY_DECLARATION(Coverage_report_filter)
