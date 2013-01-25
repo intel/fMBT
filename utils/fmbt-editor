@@ -106,6 +106,12 @@ def isModelFile(filename):
         return True
     return True
 
+def launchSeparatePreviewer():
+    argv1 = sys.argv[:] # copy
+    if '-p' in argv1: argv1.remove('-p')
+    if '--no-preview' in argv1: argv1.remove('--no-preview')
+    subprocess.Popen(argv1)
+
 # Parse command line, see which Python Qt4 bindings to import
 
 opt_hide_preview = False
@@ -127,11 +133,17 @@ for opt, arg in opts:
         print "Version " + fmbt_config.fmbt_version
         sys.exit(0)
     elif opt in ["-p", "--no-preview"]:
-        if opt_preview_only: error("Invalid parameter combination: -p and -P")
+        if opt_preview_only:
+            launchSeparatePreviewer()
+            opt_preview_only = False
         opt_hide_preview = True
     elif opt in ["-P", "--preview-only"]:
-        if opt_hide_preview: error("Invalid parameter combination: -p and -P")
-        opt_preview_only = True
+        if opt_hide_preview:
+            launchSeparatePreviewer()
+            opt_hide_preview = True
+            opt_preview_only = False
+        else:
+            opt_preview_only = True
     elif opt in ["-q", "--qt-bindings"]:
         opt_qt_bindings = arg
     elif opt in ["-Q", "--qt"]:
@@ -1248,20 +1260,22 @@ on_inconc = "exit(2)"
     def setupCommandsMenu(self):
         commandMenu = QtGui.QMenu("&Commands", self)
         self.menuBar().addMenu(commandMenu)
-        commandMenu.addAction("Edit &Model",
-                              lambda: self.activateEditorTab(EDITTAB_GT), "F1")
-        commandMenu.addAction("Edit &Configuration",
-                              lambda: self.activateEditorTab(EDITTAB_CONF), "F2")
-        commandMenu.addAction("&Visualise model",
-                              lambda: self.activatePreviewTab(PREVIEWTAB_MODEL), "F5")
-        commandMenu.addAction("&Generate test",
-                              lambda: self.activatePreviewTab(PREVIEWTAB_TEST), "F6")
-        commandMenu.addAction("&Test step distribution",
-                              lambda: self.activatePreviewTab(PREVIEWTAB_DIST), "F7")
-        commandMenu.addAction("C&overage",
-                              lambda: self.activatePreviewTab(PREVIEWTAB_COV), "F8")
-        commandMenu.addAction("&Errors",
-                              lambda: self.activatePreviewTab(PREVIEWTAB_ERR), "F9")
+        if opt_preview_only == False:
+            commandMenu.addAction("Edit &Model",
+                                  lambda: self.activateEditorTab(EDITTAB_GT), "F1")
+            commandMenu.addAction("Edit &Configuration",
+                                  lambda: self.activateEditorTab(EDITTAB_CONF), "F2")
+        if opt_hide_preview == False:
+            commandMenu.addAction("&Visualise model",
+                                  lambda: self.activatePreviewTab(PREVIEWTAB_MODEL), "F5")
+            commandMenu.addAction("&Generate test",
+                                  lambda: self.activatePreviewTab(PREVIEWTAB_TEST), "F6")
+            commandMenu.addAction("&Test step distribution",
+                                  lambda: self.activatePreviewTab(PREVIEWTAB_DIST), "F7")
+            commandMenu.addAction("C&overage",
+                                  lambda: self.activatePreviewTab(PREVIEWTAB_COV), "F8")
+            commandMenu.addAction("&Errors",
+                                  lambda: self.activatePreviewTab(PREVIEWTAB_ERR), "F9")
 
     def setupHelpMenu(self):
         helpMenu = QtGui.QMenu("&Help", self)
