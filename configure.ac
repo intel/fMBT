@@ -17,6 +17,7 @@ AC_CONFIG_HEADERS([config.h])
 PKG_CHECK_MODULES([LIBEDIT], [libedit], [],
     AC_MSG_FAILURE([libedit required.]))
 
+AC_CHECK_LIB([rt], [clock_gettime])
 
 AC_ARG_ENABLE(android, AC_HELP_STRING([--enable-android],
     [enable building fmbt_droid]), [enable_android=${enableval}])
