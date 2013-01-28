@@ -893,7 +893,7 @@ def iClickScreen((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, cap
         # use xte from the xautomation package
         _runcmd("xte 'mousemove %s %s' %s" % (clickX, clickY, params))
 
-def iGestureScreen(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdAfterGesture=0.0, intermediatePoints=0, dryRun=None):
+def iGestureScreen(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdAfterGesture=0.0, intermediatePoints=0, capture=None, dryRun=None):
     """
     Synthesizes a gesture on the screen.
 
@@ -924,6 +924,10 @@ def iGestureScreen(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdA
                      points are added to straight lines between start
                      and end points.
 
+        capture      name of file where the last screenshot with
+                     the points through which the cursors passes is
+                     saved. The default is None (nothing is saved).
+
         dryRun       if True, does not synthesize events. Still
                      illustrates the coordinates through which the cursor
                      goes.
@@ -943,7 +947,7 @@ def iGestureScreen(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdA
 
         nextX, nextY = _coordsToInt(listOfCoordinates[pos+1])
         (x,y), (nextX, nextY) = (x, y), (nextX, nextY)
-
+                
         for ip in range(intermediatePoints):
             goThroughCoordinates.append(
                 (int(round(x + (nextX-x)*(ip+1)/float(intermediatePoints+1))),
@@ -974,6 +978,10 @@ def iGestureScreen(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdA
 
         # Perform the gesture
         _runcmd("xte %s" % (" ".join(params),))
+
+    if capture:
+        intCoordinates = [ _coordsToInt(point) for point in listOfCoordinates ]
+        drawLines(_g_origImage, capture, intCoordinates, goThroughCoordinates)
 
     return goThroughCoordinates
 
@@ -1277,6 +1285,9 @@ def drawWords(inputfilename, outputfilename, words, detected_words):
     Draw boxes around words detected in inputfilename that match to
     given words. Result is saved to outputfilename.
     """
+    if inputfilename == None:
+        return
+
     draw_commands = ""
     for w in words:
         score, dw = findWord(w, detected_words)
@@ -1296,6 +1307,9 @@ def drawWords(inputfilename, outputfilename, words, detected_words):
     _runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))
 
 def drawIcon(inputfilename, outputfilename, iconFilename, bbox, color='green'):
+    if inputfilename == None:
+        return
+
     left, top, right, bottom = bbox[0], bbox[1], bbox[2], bbox[3]
     draw_commands = """ -stroke %s -fill blue -draw "fill-opacity 0.2 rectangle %s,%s %s,%s" """ % (color, left, top, right, bottom)
     draw_commands += """ -stroke none -fill %s -draw "text %s,%s '%s'" """ % (
@@ -1306,6 +1320,9 @@ def drawClickedPoint(inputfilename, outputfilename, clickedXY):
     """
     clickedXY contains absolute screen coordinates
     """
+    if inputfilename == None:
+        return
+
     x, y = clickedXY
     x -= _g_windowOffsets[_g_lastWindow][0]
     y -= _g_windowOffsets[_g_lastWindow][1]
@@ -1313,6 +1330,50 @@ def drawClickedPoint(inputfilename, outputfilename, clickedXY):
         x, y, x + 20, y)
     draw_commands += """ -stroke none -fill red -draw "point %s,%s" """ % (x, y)
     _runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))
+
+def _screenToWindow(x,y):
+    """
+    Converts from absolute coordinats to window coordinates
+    """
+    offsetX = _g_windowOffsets[_g_lastWindow][0]
+    offsetY = _g_windowOffsets[_g_lastWindow][1]
+
+    return (x-offsetX, y-offsetY)
+
+def drawLines(inputfilename, outputfilename, orig_coordinates, final_coordinates):
+    """
+    coordinates contains the coordinates connected by lines
+    """
+    if inputfilename == None:
+        return
+
+    # The command which will be run
+    drawCommand = ''
+    
+    for pos in xrange(len(final_coordinates)-1):
+        # Get the pair coordinates
+        (x, y) = (final_coordinates[pos][0], final_coordinates[pos][1])
+        (nextX, nextY) = (final_coordinates[pos+1][0], final_coordinates[pos+1][1])
+
+        # Convert to window coordinates
+        (drawX, drawY) = _screenToWindow(x,y)
+        (drawnextX, drawnextY) = _screenToWindow(nextX, nextY)
+
+        # Draw a pair of circles. User-given points are blue
+        if (x, y) in orig_coordinates:
+            drawCommand +=  "-fill blue -stroke red -draw 'fill-opacity 0.2 circle %d, %d %d, %d' " % (drawX, drawY, drawX-5, drawY-5)
+        # Computer-generated points are white
+        else:
+            drawCommand +=  "-fill white -stroke red -draw 'fill-opacity 0.2 circle %d, %d %d, %d' " % (drawX, drawY, drawX-5, drawY-5)    
+
+        # Draw the line between the points
+        drawCommand += "-stroke black -draw 'line %d, %d, %d, %d' " % (drawX, drawY, drawnextX, drawnextY)
+
+    lastIndex = len(final_coordinates)-1
+    (finalX, finalY) = _screenToWindow(final_coordinates[lastIndex][0], final_coordinates[lastIndex][1])
+    drawCommand +=  "-fill blue -stroke red -draw 'fill-opacity 0.2 circle %d, %d %d, %d' " % (finalX, finalY, finalX-5, finalY-5)            
+
+    _runcmd("convert %s %s %s" % (inputfilename, drawCommand, outputfilename))
 
 def evaluatePreprocessFilter(imageFilename, ppfilter, words):
     """
