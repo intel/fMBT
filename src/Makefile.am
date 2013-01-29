@@ -88,7 +88,7 @@ xrules_extended.g.d_parser.cc: xrules_extended.g d/libdparse.a
 	d/make_dparser -o xrules_extended.g.d_parser.cc -i xrules_extended ./$(VPATH)/xrules_extended.g
 
 covlang.g.d_parser.cc: covlang.g d/libdparse.a
-	d/make_dparser -o covlang.g.d_parser.cc -i covlang ./$(VPATH)/covlang.g
+	d/make_dparser -A -o covlang.g.d_parser.cc -i covlang ./$(VPATH)/covlang.g
 
 uconf.g.d_parser.cc: uconf.g d/libdparse.a
 	d/make_dparser -o uconf.g.d_parser.cc -i uconf ./$(VPATH)/uconf.g
