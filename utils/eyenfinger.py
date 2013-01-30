@@ -985,6 +985,48 @@ def iGestureScreen(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdA
 
     return goThroughCoordinates
 
+def iGestureWindow(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdAfterGesture=0.0, intermediatePoints=0, capture=None, dryRun=None):
+    """
+    Synthesizes a gesture on the window.
+
+    Parameters:
+
+        listOfCoordinates
+                     The coordinates through which the cursor moves.
+                     Integer values are window coordinates. Floating
+                     point values from 0.0 to 1.0 are scaled to window
+                     coordinates: (0.5, 0.5) is the middle of the
+                     window, and (1.0, 1.0) the bottom-right corner of
+                     the window.
+
+        duration     gesture time in seconds, excluding
+                     holdBeforeGesture and holdAfterGesture times.
+
+        holdBeforeGesture
+                     time in seconds to keep mouse down before the
+                     gesture.
+
+        holdAfterGesture
+                     time in seconds to keep mouse down after the
+                     gesture.
+
+        intermediatePoints
+                     the number of intermediate points to be added
+                     between each of the coordinates. Intermediate
+                     points are added to straight lines between start
+                     and end points.
+
+        capture      name of file where the last screenshot with
+                     the points through which the cursors passes is
+                     saved. The default is None (nothing is saved).
+
+        dryRun       if True, does not synthesize events. Still
+                     illustrates the coordinates through which the cursor
+                     goes.
+    """
+    screenCoordinates = [ _windowToScreen(*_coordsToInt((x,y),windowSize())) for (x,y) in listOfCoordinates ]
+    return iGestureScreen(screenCoordinates, duration, holdBeforeGesture, holdAfterGesture, intermediatePoints, capture, dryRun)
+
 def iType(word, delay=0.0):
     """
     Send keypress events.
@@ -1258,6 +1300,9 @@ def iUseImageAsWindow(imageFilename):
         _log('ERROR: iUseImageAsWindow("%s") called, but eye4graphics not loaded.' % (imageFilename,))
         raise EyenfingerError("eye4graphics not available")
 
+    if not os.access(imageFilename, os.R_OK):
+        raise BadSourceImage("The input file could not be read or not present.")
+
     _g_lastWindow = imageFilename
 
     struct_bbox = Bbox(0,0,0,0,0)
@@ -1339,6 +1384,15 @@ def _screenToWindow(x,y):
     offsetY = _g_windowOffsets[_g_lastWindow][1]
 
     return (x-offsetX, y-offsetY)
+
+def _windowToScreen(x,y):
+    """
+    Converts from window coordinates to screen coordinates
+    """
+    offsetX = _g_windowOffsets[_g_lastWindow][0]
+    offsetY = _g_windowOffsets[_g_lastWindow][1]
+
+    return (x+offsetX, y+offsetY)
 
 def drawLines(inputfilename, outputfilename, orig_coordinates, final_coordinates):
     """
