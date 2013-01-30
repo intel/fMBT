@@ -947,7 +947,7 @@ def iGestureScreen(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdA
 
         nextX, nextY = _coordsToInt(listOfCoordinates[pos+1])
         (x,y), (nextX, nextY) = (x, y), (nextX, nextY)
-                
+
         for ip in range(intermediatePoints):
             goThroughCoordinates.append(
                 (int(round(x + (nextX-x)*(ip+1)/float(intermediatePoints+1))),
@@ -984,6 +984,48 @@ def iGestureScreen(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdA
         drawLines(_g_origImage, capture, intCoordinates, goThroughCoordinates)
 
     return goThroughCoordinates
+
+def iGestureWindow(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdAfterGesture=0.0, intermediatePoints=0, capture=None, dryRun=None):
+    """
+    Synthesizes a gesture on the window.
+
+    Parameters:
+
+        listOfCoordinates
+                     The coordinates through which the cursor moves.
+                     Integer values are window coordinates. Floating
+                     point values from 0.0 to 1.0 are scaled to window
+                     coordinates: (0.5, 0.5) is the middle of the
+                     window, and (1.0, 1.0) the bottom-right corner of
+                     the window.
+
+        duration     gesture time in seconds, excluding
+                     holdBeforeGesture and holdAfterGesture times.
+
+        holdBeforeGesture
+                     time in seconds to keep mouse down before the
+                     gesture.
+
+        holdAfterGesture
+                     time in seconds to keep mouse down after the
+                     gesture.
+
+        intermediatePoints
+                     the number of intermediate points to be added
+                     between each of the coordinates. Intermediate
+                     points are added to straight lines between start
+                     and end points.
+
+        capture      name of file where the last screenshot with
+                     the points through which the cursors passes is
+                     saved. The default is None (nothing is saved).
+
+        dryRun       if True, does not synthesize events. Still
+                     illustrates the coordinates through which the cursor
+                     goes.
+    """
+    screenCoordinates = [ _windowToScreen(*_coordsToInt((x,y),windowSize())) for (x,y) in listOfCoordinates ]
+    return iGestureScreen(screenCoordinates, duration, holdBeforeGesture, holdAfterGesture, intermediatePoints, capture, dryRun)
 
 def iType(word, delay=0.0):
     """
@@ -1258,6 +1300,9 @@ def iUseImageAsWindow(imageFilename):
         _log('ERROR: iUseImageAsWindow("%s") called, but eye4graphics not loaded.' % (imageFilename,))
         raise EyenfingerError("eye4graphics not available")
 
+    if not os.access(imageFilename, os.R_OK):
+        raise BadSourceImage("The input file could not be read or not present.")
+
     _g_lastWindow = imageFilename
 
     struct_bbox = Bbox(0,0,0,0,0)
@@ -1340,6 +1385,15 @@ def _screenToWindow(x,y):
 
     return (x-offsetX, y-offsetY)
 
+def _windowToScreen(x,y):
+    """
+    Converts from window coordinates to screen coordinates
+    """
+    offsetX = _g_windowOffsets[_g_lastWindow][0]
+    offsetY = _g_windowOffsets[_g_lastWindow][1]
+
+    return (x+offsetX, y+offsetY)
+
 def drawLines(inputfilename, outputfilename, orig_coordinates, final_coordinates):
     """
     coordinates contains the coordinates connected by lines
@@ -1349,7 +1403,7 @@ def drawLines(inputfilename, outputfilename, orig_coordinates, final_coordinates
 
     # The command which will be run
     drawCommand = ''
-    
+
     for pos in xrange(len(final_coordinates)-1):
         # Get the pair coordinates
         (x, y) = (final_coordinates[pos][0], final_coordinates[pos][1])
@@ -1364,14 +1418,15 @@ def drawLines(inputfilename, outputfilename, orig_coordinates, final_coordinates
             drawCommand +=  "-fill blue -stroke red -draw 'fill-opacity 0.2 circle %d, %d %d, %d' " % (drawX, drawY, drawX-5, drawY-5)
         # Computer-generated points are white
         else:
-            drawCommand +=  "-fill white -stroke red -draw 'fill-opacity 0.2 circle %d, %d %d, %d' " % (drawX, drawY, drawX-5, drawY-5)    
+            drawCommand +=  "-fill white -stroke red -draw 'fill-opacity 0.2 circle %d, %d %d, %d' " % (drawX, drawY, drawX-5, drawY-5)
 
         # Draw the line between the points
         drawCommand += "-stroke black -draw 'line %d, %d, %d, %d' " % (drawX, drawY, drawnextX, drawnextY)
 
-    lastIndex = len(final_coordinates)-1
-    (finalX, finalY) = _screenToWindow(final_coordinates[lastIndex][0], final_coordinates[lastIndex][1])
-    drawCommand +=  "-fill blue -stroke red -draw 'fill-opacity 0.2 circle %d, %d %d, %d' " % (finalX, finalY, finalX-5, finalY-5)            
+    if len(final_coordinates) > 0:
+        lastIndex = len(final_coordinates)-1
+        (finalX, finalY) = _screenToWindow(final_coordinates[lastIndex][0], final_coordinates[lastIndex][1])
+        drawCommand +=  "-fill blue -stroke red -draw 'fill-opacity 0.2 circle %d, %d %d, %d' " % (finalX, finalY, finalX-5, finalY-5)
 
     _runcmd("convert %s %s %s" % (inputfilename, drawCommand, outputfilename))
 
