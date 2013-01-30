@@ -947,7 +947,7 @@ def iGestureScreen(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdA
 
         nextX, nextY = _coordsToInt(listOfCoordinates[pos+1])
         (x,y), (nextX, nextY) = (x, y), (nextX, nextY)
-                
+
         for ip in range(intermediatePoints):
             goThroughCoordinates.append(
                 (int(round(x + (nextX-x)*(ip+1)/float(intermediatePoints+1))),
@@ -1403,7 +1403,7 @@ def drawLines(inputfilename, outputfilename, orig_coordinates, final_coordinates
 
     # The command which will be run
     drawCommand = ''
-    
+
     for pos in xrange(len(final_coordinates)-1):
         # Get the pair coordinates
         (x, y) = (final_coordinates[pos][0], final_coordinates[pos][1])
@@ -1418,14 +1418,15 @@ def drawLines(inputfilename, outputfilename, orig_coordinates, final_coordinates
             drawCommand +=  "-fill blue -stroke red -draw 'fill-opacity 0.2 circle %d, %d %d, %d' " % (drawX, drawY, drawX-5, drawY-5)
         # Computer-generated points are white
         else:
-            drawCommand +=  "-fill white -stroke red -draw 'fill-opacity 0.2 circle %d, %d %d, %d' " % (drawX, drawY, drawX-5, drawY-5)    
+            drawCommand +=  "-fill white -stroke red -draw 'fill-opacity 0.2 circle %d, %d %d, %d' " % (drawX, drawY, drawX-5, drawY-5)
 
         # Draw the line between the points
         drawCommand += "-stroke black -draw 'line %d, %d, %d, %d' " % (drawX, drawY, drawnextX, drawnextY)
 
-    lastIndex = len(final_coordinates)-1
-    (finalX, finalY) = _screenToWindow(final_coordinates[lastIndex][0], final_coordinates[lastIndex][1])
-    drawCommand +=  "-fill blue -stroke red -draw 'fill-opacity 0.2 circle %d, %d %d, %d' " % (finalX, finalY, finalX-5, finalY-5)            
+    if len(final_coordinates) > 0:
+        lastIndex = len(final_coordinates)-1
+        (finalX, finalY) = _screenToWindow(final_coordinates[lastIndex][0], final_coordinates[lastIndex][1])
+        drawCommand +=  "-fill blue -stroke red -draw 'fill-opacity 0.2 circle %d, %d %d, %d' " % (finalX, finalY, finalX-5, finalY-5)
 
     _runcmd("convert %s %s %s" % (inputfilename, drawCommand, outputfilename))
 
