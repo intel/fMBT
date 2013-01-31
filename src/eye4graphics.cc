@@ -30,6 +30,8 @@ using namespace Magick;
 
 #define INCOMPARABLE -1
 
+#define MIN(a,b) (((a)<(b))?(a):(b))
+
 inline bool same_color(const PixelPacket *p1, const PixelPacket *p2,
                        const int colorDiff, const unsigned char skipTransparency)
 {
@@ -209,6 +211,7 @@ long normdiag_error(int hayxsize,int neex,int neey,int x,int y,
  *     0         - icon not found
  */
 int iconsearch(std::vector<BoundingBox>& retval,
+               const BoundingBox& searchArea,
                Image& haystack,
                Image& needle,
                const int threshold,
@@ -239,9 +242,16 @@ int iconsearch(std::vector<BoundingBox>& retval,
         haystack.type(GrayscaleType);
         needle.type(GrayscaleType);
     }
-    int hayx = haystack.columns(), hayy = haystack.rows();
-    int neex = needle.columns(), neey = needle.rows();
-    const PixelPacket *hay_pixel=haystack.getConstPixels(0,0,hayx,hayy);
+    int hayx = haystack.columns();
+    int hayy = haystack.rows();
+    int neex = needle.columns();
+    int neey = needle.rows();
+
+    hayx = MIN(hayx, searchArea.right - searchArea.left);
+    hayy = MIN(hayy, searchArea.bottom - searchArea.top);
+
+    const PixelPacket *hay_pixel=haystack.getConstPixels(
+        searchArea.left, searchArea.top, hayx, hayy);
     const PixelPacket *nee_pixel=needle.getConstPixels(0,0,neex,neey);
 
     if (threshold == 0) {
@@ -254,10 +264,10 @@ int iconsearch(std::vector<BoundingBox>& retval,
                                        colorDiff,
                                        skipTransparency)) {
                     BoundingBox bbox;
-                    bbox.left = x;
-                    bbox.top = y;
-                    bbox.right = x + neex;
-                    bbox.bottom = y + neey;
+                    bbox.left = x + searchArea.left;
+                    bbox.top = y + searchArea.top;
+                    bbox.right = bbox.left + neex;
+                    bbox.bottom = bbox.top + neey;
                     bbox.error = 0;
                     retval.push_back(bbox);
                     match_count++;
@@ -266,7 +276,7 @@ int iconsearch(std::vector<BoundingBox>& retval,
         }
         return match_count > 0 ? 1 : 0;
     }
-    
+
     /* Fuzzy match */
     /* sweep diagonal */
     int samples = 16;
@@ -341,11 +351,12 @@ int findSingleIcon(BoundingBox* bbox,
 
     int retval = 0;
 
-    bbox->left   = -1;
-    bbox->top    = -1;
-    bbox->right  = -1;
-    bbox->bottom = -1;
     bbox->error  = -1;
+    BoundingBox searchArea = *bbox;
+    bbox->left = -1;
+    bbox->top = -1;
+    bbox->right = -1;
+    bbox->bottom = -1;
 
     try { haystack = new Image(imagefile); }
     catch(ErrorFileOpen e) {
@@ -359,7 +370,7 @@ int findSingleIcon(BoundingBox* bbox,
     }
 
     std::vector<BoundingBox> found;
-    if (iconsearch(found, *haystack, *needle, threshold, colorMatch, opacityLimit) > 0
+    if (iconsearch(found, searchArea, *haystack, *needle, threshold, colorMatch, opacityLimit) > 0
         && found.size() > 0) {
         *bbox = found[0];
         if (bbox->error > threshold)
@@ -384,7 +395,7 @@ int imageDimensions(BoundingBox* bbox,
     bbox->right  = -1;
     bbox->bottom = -1;
     bbox->error  = 0;
-    
+
     try { image = new Image(imagefile); }
     catch(ErrorFileOpen e) {
         return -3;
