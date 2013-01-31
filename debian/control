@@ -69,7 +69,7 @@ Depends: ${misc:Depends}
 Description: fMBT examples
  various fMBT examples
 
-Package: fmbt-all
+Package: fmbt
 Architecture: all
 Depends: fmbt-editor (= ${binary:Version}), fmbt-examples (= ${binary:Version}), fmbt-doc (= ${binary:Version}), fmbt-adapter-eyenfinger (= ${binary:Version})
 Description: Meta package for installing all fMBT packages
