@@ -183,15 +183,21 @@ void OutputFormat::add_notice(std::string filter,
     reportnames.push_back(name);
     Coverage_report* c=new Coverage_notice(l,cov,std::string(""));
 
+    if (!c->status) {
+      status=false;
+      errormsg=errormsg+" Notice failure:"+c->errormsg;
+      return;
+    }
+
     if (filter.length()>0) {
       Coverage_report_filter* cc=new_coveragereportfilter(l,filter);
       cc->set_sub(c);
       c=cc;
     }
 
-    if (c->status==false) {
+    if (!c->status) {
       status=false;
-      errormsg=errormsg+" Report failure:"+c->errormsg;
+      errormsg=errormsg+" Notice failure:"+c->errormsg;
     } else {
       // c->set_model(model);
     }
@@ -208,6 +214,12 @@ void OutputFormat::add_report(std::string filter,
   if (status) {
     reportnames.push_back(name);
     Coverage_report* c=new Coverage_report(l,from,to,drop);
+
+    if (!c->status) {
+      status=false;
+      errormsg=errormsg+" Report failure:"+c->errormsg;
+      return;
+    }
 
     if (filter.length()>0) {
       Coverage_report_filter* cc=new_coveragereportfilter(l,filter);

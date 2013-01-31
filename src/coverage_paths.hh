@@ -34,9 +34,9 @@ public:
 
   virtual float getCoverage() { 
     if (unique) {
-      return tcount.size();
+      return (on_report&&online?0.5:0.0)+tcount.size();
     }
-    return count;
+    return (on_report&&online?0.5:0.0)+count;
   }
   bool filter_outputs;
   bool af;

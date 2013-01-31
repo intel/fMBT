@@ -124,9 +124,12 @@ void Coverage_Market::add_requirement(std::string& req)
 {
   cobj=this;
   D_Parser *p = new_D_Parser(&parser_tables_covlang, 32);
-  bool ret=dparse(p,(char*)req.c_str(),req.length());
-  ret=p->syntax_errors==0 && ret;
-  status&=ret;
+  D_ParseNode* ret=dparse(p,(char*)req.c_str(),req.length());
+  status=p->syntax_errors==0;
+
+  if (ret) {
+    free_D_ParseNode(p, ret);
+  }
   free_D_Parser(p);
 }
 

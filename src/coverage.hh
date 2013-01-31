@@ -51,6 +51,7 @@ protected:
   Model* model;
 public:
   Log& log;
+  bool on_report;
 };
 
 FACTORY_DECLARATION(Coverage)
