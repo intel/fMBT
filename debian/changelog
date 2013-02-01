@@ -1,8 +1,19 @@
-fmbt (0.5-0) natty; urgency=low
+fmbt (0.5-1) natty; urgency=low
 
-  * Development version
+  * reporting: experimental fmbt-ucheck tool for reporting tested cases
+    Example in doc/reporting.txt.
+  * fmbt-editor: improvements and fixes.
+    Support editing multifile models.
+    Support for --preview-only mode (use your favourite editor).
+    Experimental support for editing in one and previewing in
+    another window (-p -P).
+  * modeling: enabled splitting GT models into multiple files
+    examples/gt-components demonstrates this.
+  * eyenfinger: new functions: iGestureScreen and iGestureWindow
+  * fixes: memory leaks, regular expression errors, remote adapter errors,
+    fmbt-editor missing lines in long AAL files.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 4 Jan 2013 14:10:00 +0200
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 31 Jan 2013 11:42:00 +0200
 
 fmbt (0.4-1) natty; urgency=low
 

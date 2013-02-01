@@ -1,0 +1,103 @@
+aal "mplayertest" {
+    language: python {
+        import pexpect
+        import commands
+        from time import sleep
+
+        response_time = 1.0 # seconds, mplayer should respond to commands within this time
+
+        def launchMplayer():
+            global mplayer
+            mplayer = pexpect.spawn("mplayer -idle -slave -quiet 1.mp3 2.mp3")
+            sleep(response_time)
+
+        def command(cmd):
+            log("mplayer command: " + cmd)
+            mplayer.write(cmd + "\n")
+            sleep(response_time)
+            log("mplayer response: " + mplayer.read_nonblocking(4096, 0))
+
+        def openedMP3File():
+            return int(commands.getoutput("basename $(ls -l /proc/" + str(mplayer.pid) +
+                "/fd | awk '/mp3/{print $NF}') .mp3"))
+
+        def playing():
+            cmd = "pacmd list | grep RUNNING"
+            status, output = commands.getstatusoutput(cmd)
+            return 0 == status
+    }
+
+    # preview-show-vars: song
+    # preview-depth: 2
+    variables {
+        state, song, songcount
+    }
+    initial_state {
+        state = "playing" # either "playing" or "paused"
+        song = 1          # number of the song being played
+        songcount = 2     # number of songs in current playlist
+    }
+    adapter_init {
+        launchMplayer()
+    }
+
+    action "iPause" {
+        guard() { return state == "playing" }
+        body()  { state = "paused" }
+        adapter() {
+            assert playing(), "song not played before pausing"
+            assert openedMP3File() == song, "wrong song played"
+            command("pause")
+            assert not playing(), "pausing failed"
+        }
+    }
+    action "iContinue" {
+        guard() { return state == "paused" }
+        body()  { state = "playing" }
+        adapter() {
+            assert not playing(), "song not paused before continuing"
+            command("pause")
+            assert playing(), "continuing failed"
+            assert openedMP3File() == song, "wrong song played"
+        }
+    }
+    action "iNextSong" {
+        guard()   { return song < songcount }
+        body()    { song += 1 }
+        adapter() { command("pausing_keep pt_step 1") }
+    }
+    action "iPrevSong" {
+        guard()   { return song > 1 }
+        body()    { song -= 1 }
+        adapter() { command("pausing_keep pt_step -1") }
+    }
+    action "iNextSong - already last" {
+        guard()   { return song == songcount }
+        adapter() { command("pausing_keep pt_step 1") }
+    }
+    action "iPrevSong - already first" {
+        guard()   { return song == 1 }
+        adapter() { command("pausing_keep pt_step -1") }
+    }
+    action "iAddSong" {
+        guard() { return songcount < 3 }
+        body()  { songcount += 1 }
+        adapter() { command("pausing_keep loadfile " + str(songcount+1) + ".mp3 1" ) }
+    }
+    action "iNewPlaylist" {
+        body()  {
+            songcount = 1
+            song = 1
+        }
+        adapter() { command("pausing_keep loadfile 1.mp3" ) }
+    }
+    tag "playing", "paused" {
+        guard() { return state == tag_name }
+    }
+    tag "song==1", "song==2", "song==3" {
+        guard() { return eval(tag_name)}
+    }
+    tag  "songcount==1", "songcount==2", "songcount==3" {
+        guard() { return eval(tag_name) }
+    }
+}
