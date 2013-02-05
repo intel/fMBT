@@ -44,7 +44,8 @@ Coverage_Restart::Coverage_Restart(Log& lo, std::string& params): Coverage(lo),l
     break;
   case 2:
     l=s[0];
-    r=s[1];    
+    r=s[1];
+    break;
   default:
     status=false;
     return;
