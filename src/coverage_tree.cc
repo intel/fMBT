@@ -91,7 +91,11 @@ void Coverage_Tree::history(int action,std::vector<int>& props,
 
 Coverage_Tree::~Coverage_Tree()
 {
-  pop();
+  if (push_depth) {
+    pop();
+  } else {
+    abort();
+  }
 }
 
 bool Coverage_Tree::execute(int action)
