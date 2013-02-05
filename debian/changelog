@@ -75,15 +75,15 @@ fmbt (0.2.1.999) natty; urgency=low
 fmbt (0.2.1) natty; urgency=low
 
   * eyenfinger:
-	New functions: iClickBox, iClickWindow, iClickScreen
-	Pixel-perfect matching params: colorMatch, opacityLimit
-	iSetDefault* functions set default values for optional params.
-	API change: iVerify* and iClick* functions return coordinates.
+    - New functions: iClickBox, iClickWindow, iClickScreen
+    - Pixel-perfect matching params: colorMatch, opacityLimit
+    - iSetDefault* functions set default values for optional params.
+    - API change: iVerify* and iClick* functions return coordinates.
   * eyenfinger performance improvements
   * configurable adapter log format for remote_python and AAL/Python
   * new coverages:
-	walks and uwalks: measure (unique) tests
-	min, sum: join measured coverages
+    - walks and uwalks: measure (unique) tests
+    - min, sum: join measured coverages
   * many bugs and memory leaks fixed
 
  -- Antti Kervinen <antti.kervinen@intel.com>  Thu, 08 Nov 2012 17:07:01 +0200
