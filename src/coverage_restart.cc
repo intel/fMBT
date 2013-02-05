@@ -101,21 +101,13 @@ void Coverage_Restart::pop()
   psave.pop_back();
 
   if (right!=csave.back()) {
-
-    if (push_depth) {
-      right->pop();
-    }
-
     delete right;
-    right=csave.back();
+    right=csave.back();    
   }
+
   csave.pop_back();
 
   if (left!=csave.back()) {
-
-    if (push_depth) {
-      left->pop();
-    }
     delete left;
     left=csave.back();
   }
@@ -160,17 +152,18 @@ bool Coverage_Restart::execute(int action)
   if (status) {
     if (left->getCoverage()>=right->getCoverage()) {
       previous+=right->getCoverage();
+      if (push_depth) {
+	left->pop();
+	right->pop();
+      }
+
       if (csave.empty() || right!=csave.back()) {
-
-	if (push_depth) {
-	  left->pop();
-	  right->pop();
-	}
-
 	delete right;
 	delete left;
       }
-      new_left_right();      
+
+      new_left_right();
+
       if (push_depth) {
 	left->push();
 	right->push();
