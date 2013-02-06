@@ -55,6 +55,13 @@ Description: fMBT remote adapters
  Generic remote adapters for running shell script,
  Python expressions and Javascript.
 
+Package: fmbt-adapter-android
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, fmbt-adapter-eyenfinger (= ${binary:Version})
+Description: fMBT adapter for Android GUI testing through USB
+ Provides fmbtandroid.py, a Python library for Android GUI testing.
+ The library needs Android Debug Bridge (adb).
+
 Package: fmbt-adapter-eyenfinger
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, x11-apps, imagemagick, tesseract-ocr, xautomation
@@ -78,6 +85,6 @@ Description: fMBT examples
 
 Package: fmbt
 Architecture: all
-Depends: fmbt-editor (>= ${source:Version}), fmbt-examples (= ${binary:Version}), fmbt-doc (= ${binary:Version}), fmbt-adapter-eyenfinger (>= ${source:Version}), ${misc:Depends}
+Depends: fmbt-editor (>= ${source:Version}), fmbt-examples (= ${binary:Version}), fmbt-doc (= ${binary:Version}), fmbt-adapter-android (>= ${source:Version}), ${misc:Depends}
 Description: Meta package for installing all fMBT packages
  Meta package that brings in all fMBT tools, adapters and examples.
