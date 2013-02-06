@@ -42,8 +42,8 @@
 """
 This library provides a test interface to Android devices.
 
-Device class implements a test interface that is based on adb and
-a Android monkey.
+Device class implements a test interface that is based on Android
+Debug Bridge (adb) and Android monkey.
 
 Device's refreshScreenshot() returns a Screenshot object, from which
 bitmaps can be searched for.
@@ -51,6 +51,8 @@ bitmaps can be searched for.
 Device's refreshView() returns a View object, from which UI elements
 can be searched according to their id, class, text and other
 properties.
+
+Using this library requires that adb is in PATH.
 
 Tips & tricks
 -------------
