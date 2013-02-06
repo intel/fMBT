@@ -30,7 +30,8 @@ extern "C" {
      * findSingleIcon
      *
      * Parameters:
-     *   - bbox for returning found icon's bounding box
+     *   - bbox (in/out)- in: search area in haystack and
+     *                    out: found icon's bounding box
      *   - imagefile    - name of image to be searched from (haystack)
      *   - iconfile     - name of icon to be search for (needle)
      *   - threshold    - max. acceptable error.

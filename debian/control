@@ -35,13 +35,18 @@ Package: fmbt-editor
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, python-pyside, fmbt-adapters-remote (= ${binary:Version}), fmbt-core (= ${binary:Version}), fmbt-coreutils (= ${binary:Version}), fmbt-utils (= ${binary:Version})
 Description: fMBT editor
- fMBT editor program
+ fmbt-editor for
+ - editing AAL/Python models
+ - editing GT models
+ - editing test configurations
+ - previewing tests (even if you'd use your favourite editor)
+ - visualizing models and test coverage.
 
 Package: fmbt-python
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, python
 Description: fMBT Python bindings
- Common Python libraries for various fMBT components
+ Common Python libraries for various fMBT components.
 
 Package: fmbt-adapters-remote
 Architecture: any
@@ -61,15 +66,18 @@ Architecture: all
 Section: doc
 Depends: ${misc:Depends}
 Description: fMBT documentation
- fMBT full documentation.
+ fMBT documentation:
+ - aal_python.txt     AAL/Python modeling language reference
+ - configuration.txt  Test configuration file reference
 
 Package: fmbt-examples
 Architecture: all
 Depends: ${misc:Depends}
 Description: fMBT examples
- various fMBT examples
+ Various fMBT examples.
 
 Package: fmbt
 Architecture: all
-Depends: fmbt-editor (= ${binary:Version}), fmbt-examples (= ${binary:Version}), fmbt-doc (= ${binary:Version}), fmbt-adapter-eyenfinger (= ${binary:Version}), ${misc:Depends}
+Depends: fmbt-editor (>= ${source:Version}), fmbt-examples (= ${binary:Version}), fmbt-doc (= ${binary:Version}), fmbt-adapter-eyenfinger (>= ${source:Version}), ${misc:Depends}
 Description: Meta package for installing all fMBT packages
+ Meta package that brings in all fMBT tools, adapters and examples.

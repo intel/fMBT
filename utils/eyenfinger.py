@@ -531,7 +531,7 @@ def iVerifyWord(word, match=0.33, appearance=1, capture=None):
     return ((score, matching_word), _g_words[matching_word][appearance-1][2])
 
 
-def iVerifyIcon(iconFilename, match=None, colorMatch=None, opacityLimit=None, capture=None, _origin="iVerifyIcon"):
+def iVerifyIcon(iconFilename, match=None, colorMatch=None, opacityLimit=None, capture=None, area=(0.0, 0.0, 1.0, 1.0), _origin="iVerifyIcon"):
     """
     Verify that icon can be found from previously iRead() image.
 
@@ -553,6 +553,13 @@ def iVerifyIcon(iconFilename, match=None, colorMatch=None, opacityLimit=None, ca
 
         capture        save image with verified icon highlighted
                        to this file. Default: None (nothing is saved).
+
+        area           rectangle (left, top, right, bottom). Search
+                       icon inside this rectangle only. Values can be
+                       absolute coordinates, or floats in range [0.0,
+                       1.0] that will be scaled to image dimensions.
+                       The default is (0.0, 0.0, 1.0, 1.0), that is
+                       full rectangle.
 
     Returns pair: (score, (left, top, right, bottom)), where
 
@@ -588,7 +595,13 @@ def iVerifyIcon(iconFilename, match=None, colorMatch=None, opacityLimit=None, ca
         _log('ERROR %s("%s"): invalid opacityLimit value, must be between 0 and 1. ' % (_origin, iconFilename,))
         raise ValueError("invalid opacityLimit value: %s, should be 0 <= opacityLimit <= 1.0" % (opacityLimit,))
 
-    struct_bbox = Bbox(0,0,0,0,0)
+    if area[0] > area[2] or area[1] >= area[3]:
+        raise ValueError("invalid area: %s, should be rectangle (left, top, right, bottom)" % (area,))
+
+    leftTopRightBottomZero = (_coordsToInt((area[0], area[1]), windowSize()) +
+                               _coordsToInt((area[2], area[3]), windowSize()) +
+                               (0,))
+    struct_bbox = Bbox(*leftTopRightBottomZero)
     threshold = int((1.0-match)*20)
     err = eye4graphics.findSingleIcon(ctypes.byref(struct_bbox),
                                       _g_origImage, iconFilename, threshold,
@@ -613,7 +626,7 @@ def iVerifyIcon(iconFilename, match=None, colorMatch=None, opacityLimit=None, ca
         score = 1.0
 
     if capture:
-        drawIcon(_g_origImage, capture, iconFilename, bbox)
+        drawIcon(_g_origImage, capture, iconFilename, bbox, area=leftTopRightBottomZero[:4])
 
     return (score, bbox)
 
@@ -1351,12 +1364,14 @@ def drawWords(inputfilename, outputfilename, words, detected_words):
             color, left, bottom+10, score)
     _runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))
 
-def drawIcon(inputfilename, outputfilename, iconFilename, bbox, color='green'):
+def drawIcon(inputfilename, outputfilename, iconFilename, bbox, color='green', area=None):
     if inputfilename == None:
         return
 
     left, top, right, bottom = bbox[0], bbox[1], bbox[2], bbox[3]
     draw_commands = """ -stroke %s -fill blue -draw "fill-opacity 0.2 rectangle %s,%s %s,%s" """ % (color, left, top, right, bottom)
+    if area != None:
+        draw_commands += """ -stroke yellow -draw "fill-opacity 0.0 rectangle %s,%s %s,%s" """ % (area[0]-1, area[1]-1, area[2], area[3])
     draw_commands += """ -stroke none -fill %s -draw "text %s,%s '%s'" """ % (
         color, left, top, iconFilename)
     _runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))

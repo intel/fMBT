@@ -1,56 +1,62 @@
-fmbt (0.5-1) natty; urgency=low
+fmbt (0.6-0.rc0) unstable; urgency=low
+
+  * Development version
+
+ -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 05 Jan 2013 09:42:00 +0200
+
+fmbt (0.5-1) unstable; urgency=low
 
   * reporting: experimental fmbt-ucheck tool for reporting tested cases
-    Example in doc/reporting.txt.
+    - Example in doc/reporting.txt.
   * fmbt-editor: improvements and fixes.
-    Support editing multifile models.
-    Support for --preview-only mode (use your favourite editor).
-    Experimental support for editing in one and previewing in
-    another window (-p -P).
+    - Support editing multifile models.
+    - Support for --preview-only mode (use your favourite editor).
+    - Experimental support for editing in one and previewing in
+      another window (-p -P).
   * modeling: enabled splitting GT models into multiple files
-    examples/gt-components demonstrates this.
+    - examples/gt-components demonstrates this.
   * eyenfinger: new functions: iGestureScreen and iGestureWindow
   * fixes: memory leaks, regular expression errors, remote adapter errors,
-    fmbt-editor missing lines in long AAL files.
+    - fmbt-editor missing lines in long AAL files.
 
  -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 31 Jan 2013 11:42:00 +0200
 
-fmbt (0.4-1) natty; urgency=low
+fmbt (0.4-1) unstable; urgency=low
 
   * fmbt-editor: improvements and fixes.
-    Python syntax errors shown on the Errors tab.
-    GT syntax errors shown on the Errors tab.
-    Automatic tab changing and updating issues resolved.
-    Temporary files are not created into the working directory anymore.
+    - Python syntax errors shown on the Errors tab.
+    - GT syntax errors shown on the Errors tab.
+    - Automatic tab changing and updating issues resolved.
+    - Temporary files are not created into the working directory anymore.
   * heuristics: "weight" test generation heuristic added.
-    Action weights enable generating tests according to usage profiles,
-    like sent messages are 80 % SMS, 10 % GTalk, 10 % Skype.
+    - Action weights enable generating tests according to usage profiles,
+      like sent messages are 80 % SMS, 10 % GTalk, 10 % Skype.
   * coverages: "usecase" coverage added.
-    The usecase coverage enables making sure that certain use cases
-    will be covered by generated tests.
+    - The usecase coverage enables making sure that certain use cases
+      will be covered by generated tests.
   * a major bug fixed in include/exclude heuristics.
   * minor fixes.
 
  -- Antti Kervinen <antti.kervinen@intel.com>  Thu, 3 Jan 2013 16:10:00 +0200
 
-fmbt (0.3) natty; urgency=low
+fmbt (0.3) unstable; urgency=low
 
   * eyenfinger: new features:
-    iInputKeys(...) can simulate pressing the power button
-    iClickWindow/Screen accept percentages (0.0-1.0) as coordinates
-    screenSize(), windowSize() and windowXY() functions added
+    - iInputKeys(...) can simulate pressing the power button
+    - iClickWindow/Screen accept percentages (0.0-1.0) as coordinates
+    - screenSize(), windowSize() and windowXY() functions added
   * fmbt-editor: line numbers and Errors tab added.
-    Errors tab helps locating AAL syntax errors and Python exceptions.
+    - Errors tab helps locating AAL syntax errors and Python exceptions.
   * fmbt-aalc: Python traceback shows correct filenames and line numbers.
   * fmbt + remote_pyaal: huge performance improvement for Python/AAL,
-    this improves generated tests by enabling longer lookaheads.
+    - this improves generated tests by enabling longer lookaheads.
   * coverages: uexecs, uinputs and upaths added.
   * examples: AAL/Python version of JavaScript unittest added.
   * minor fixes.
 
  -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 3 Dec 2012 15:04:28 +0200
 
-fmbt (0.2.2) natty; urgency=low
+fmbt (0.2.2) unstable; urgency=low
 
   * New experimental coverages (if, lt, le, gt, ge, steps, skip)
   * fmbt-ucheck reports start and end times of covered use cases
@@ -58,21 +64,21 @@ fmbt (0.2.2) natty; urgency=low
   * fmbt-view: show/hide transitions and visited/orphaned states
   * fmbt-editor: update previews on save (no timer-based updating)
   * Debugging improvements:
-    AAL file line numbers in AAL/C++ and AAL/Python errors
-    Unintentional error messages from remote adapters captured
+    - AAL file line numbers in AAL/C++ and AAL/Python errors
+    - Unintentional error messages from remote adapters captured
   * Bug fixes
   * AAL includes a new block (adapter_init)
   * Documentation updates
 
  -- Pablo Virolainen <pablo.virolainen@intel.com>  Fri, 30 Nov 2012 09:58:20 +0200
 
-fmbt (0.2.1.999) natty; urgency=low
+fmbt (0.2.1.999) unstable; urgency=low
 
   * Development of new version started
 
  -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 13 Nov 2012 13:00:00 +0200
 
-fmbt (0.2.1) natty; urgency=low
+fmbt (0.2.1) unstable; urgency=low
 
   * eyenfinger:
     - New functions: iClickBox, iClickWindow, iClickScreen
@@ -88,7 +94,7 @@ fmbt (0.2.1) natty; urgency=low
 
  -- Antti Kervinen <antti.kervinen@intel.com>  Thu, 08 Nov 2012 17:07:01 +0200
 
-fmbt (0.2.0) natty; urgency=low
+fmbt (0.2.0) unstable; urgency=low
 
   * heuristics: exclude/include actions.
   * coverage: exclude/include actions.
@@ -97,21 +103,21 @@ fmbt (0.2.0) natty; urgency=low
 
  -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 10 Oct 2012 16:03:25 +0300
 
-fmbt (0.1.2) natty; urgency=low
+fmbt (0.1.2) unstable; urgency=low
 
   * Error messages from remote adapters printed to stderr.
   * Bug fixes.
 
  -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 29 Aug 2012 15:42:51 +0300
 
-fmbt (0.1.1) natty; urgency=low
+fmbt (0.1.1) unstable; urgency=low
 
   * Fixed memory leaks, bugs and removed dead code.
   * NEW: Interactive mode breakpoints.
 
  -- Pablo Virolainen <pablo.virolainen@intel.com>  Fri, 03 Aug 2012 15:39:31 +0300
 
-fmbt (0.1.0) natty; urgency=low
+fmbt (0.1.0) unstable; urgency=low
 
   * fmbt-editor cut/copy/paste/zoom in/zoom out.
   * eyenfinger offers iClickIcon and iVerifyIcon.
@@ -121,7 +127,7 @@ fmbt (0.1.0) natty; urgency=low
 
  -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 27 Jun 2012 10:18:05 +0300
 
-fmbt (0.1-rc14) natty; urgency=low
+fmbt (0.1-rc14) unstable; urgency=low
 
   * Lots of bugs executed and buried.
   * AAL function parameter support.
@@ -133,7 +139,7 @@ fmbt (0.1-rc14) natty; urgency=low
 
  -- Pablo Virolainen <pablo.virolainen@intel.com>  Fri, 01 Jun 2012 17:20:53 +0300
 
-fmbt (0.1-rc13) natty; urgency=low
+fmbt (0.1-rc13) unstable; urgency=low
 
   * Lots of bugs killed.
   * fmbt-stats: eps, gif, svg, png, html, csv
