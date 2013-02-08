@@ -326,8 +326,8 @@ class Device(object):
         if self._conn: hw = self._conn._monkeyCommand("getvar build.device")[1]
         else: hw = "nohardware"
         self.hardware        = self._conf.value("general", "hardware", hw)
-        self.bitmapPath       = self._conf.value("paths", "bitmapPath", self._fmbtAndroidHomeDir + os.sep + "bitmaps" + os.sep + self.hardware + "-" + self.platformVersion())
-        self.screenshotDir  = self._conf.value("paths", "screenshotDir", self._fmbtAndroidHomeDir + os.sep + "screenshots-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+        self.bitmapPath       = self._conf.value("paths", "bitmapPath", self._fmbtAndroidHomeDir + os.sep + "bitmaps" + os.sep + self.hardware + "-" + self.platformVersion() + ":.")
+        self.screenshotDir  = self._conf.value("paths", "screenshotDir", self._fmbtAndroidHomeDir + os.sep + "screenshots")
         if not os.path.isdir(self.screenshotDir):
             try:
                 os.makedirs(self.screenshotDir)
