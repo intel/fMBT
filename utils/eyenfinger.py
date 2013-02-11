@@ -1489,17 +1489,16 @@ def autoconfigure(imageFilename, words):
     image_width = _g_windowSizes[_g_lastWindow][0]
 
     resize_filters = ['Mitchell', 'Catrom', 'Hermite', 'Gaussian']
-    levels = [(20, 30), (20, 40), (20, 50),
-              (30, 30), (30, 40), (30, 50),
-              (40, 40), (40, 50), (40, 60),
-              (50, 50), (50, 60), (50, 70),
-              (60, 60), (60, 70), (60, 80)]
+    levels = [(20, 20), (50, 50), (80, 80), (5, 5), (95, 95),
+              (30, 30), (40, 40), (60, 60), (70, 70), (60, 60),
+              (10, 30), (20, 40), (30, 50), (40, 60), (50, 70),
+              (60, 80), (70, 90), (80, 100), (90, 100), (95, 100)]
 
-    zoom = [2]
+    zoom = [1, 2]
 
     for f in resize_filters:
-        for blevel, wlevel in levels:
-            for z in zoom:
+        for z in zoom:
+            for blevel, wlevel in levels:
                 evaluatePreprocessFilter(
                     imageFilename,
                     "-sharpen 5 -filter %s -resize %sx -sharpen 5 -level %s%%,%s%%,3.0 -sharpen 5" % (f, z * image_width, blevel, wlevel),

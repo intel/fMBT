@@ -149,6 +149,11 @@ import uu
 import eyenfinger
 import fmbt
 
+_OCRPREPROCESS = [
+    '-sharpen 5 -level 60%,60%,1.0 -filter Mitchell -resize 1440x',
+    '-sharpen 5 -level 90%,100%,3.0 -filter Mitchell -resize 720x -sharpen 5'
+    ]
+
 def _adapterLog(msg):
     fmbt.adapterlog("fmbtandroid: %s" % (msg,))
 
@@ -756,6 +761,7 @@ class Device(object):
 
         Returns True if successful, otherwise False.
         """
+        x, y = self.intCoords((x, y))
         if long and hold == None:
             hold = self._longTapHoldTime
         if hold > 0.0:
@@ -798,6 +804,35 @@ class Device(object):
         """
         return self.tap(viewItem.coords(), **tapKwArgs)
 
+    def tapOcrText(self, word, match=1.0, preprocess=None, **tapKwArgs):
+        """
+        Find the given word from the latest screenshot using OCR, and
+        tap it.
+
+        Parameters:
+
+          word (string):
+                  the word to be tapped.
+
+          match (float, optional):
+                  minimum match score in range [0.0, 1.0].
+                  The default is 1.0 (exact match).
+
+          preprocess (string, optional):
+                  preprocess filter to be used in OCR for better
+                  result. Refer to eyenfinger.autoconfigure to search
+                  for a good one.
+
+          long, hold (optional):
+                  refer to tap documentation.
+
+          Returns True if successful, otherwise False.
+        """
+        assert self._lastScreenshot != None, "Screenshot required."
+        items = self._lastScreenshot.findItemsByOCR(word, match=match, preprocess=preprocess)
+        if len(items) == 0: return False
+        return self.tapItem(items[0], **tapKwArgs)
+
     def tapText(self, text, partial=False, **tapKwArgs):
         """
         Find an item with given text from the latest view, and tap it.
@@ -832,6 +867,32 @@ class Device(object):
 
     def type(self, text):
         return self._conn.sendType(text)
+
+    def verifyOcrText(self, word, match=1.0, preprocess=None):
+        """
+        Verify using OCR that the last screenshot contains the given word.
+
+        Parameters:
+
+          word (string):
+                  the word to be searched for.
+
+          match (float, optional):
+                  minimum match score in range [0.0, 1.0].
+                  The default is 1.0 (exact match).
+
+          preprocess (string, optional):
+                  preprocess filter to be used in OCR for better
+                  result. Refer to eyenfinger.autoconfigure to search
+                  for a good one.
+
+          long, hold (optional):
+                  refer to tap documentation.
+
+          Returns True if successful, otherwise False.
+        """
+        assert self._lastScreenshot != None, "Screenshot required."
+        return self._lastScreenshot.findItemsByOCR(word, match=match, preprocess=preprocess) != []
 
     def verifyText(self, text, partial=False):
         """
@@ -1072,6 +1133,18 @@ class Screenshot(object):
         # If new screenshot is taken, this screenshot object disappears.
         # => cache all search hits
         self._cache = {}
+        self._ocrWords = None
+        self._ocrPreprocess = _OCRPREPROCESS
+
+    def dumpOcrWords(self, preprocess=None):
+        self._assumeOcrWords(preprocess=preprocess)
+        w = []
+        for ppfilter in self._ocrWords:
+            for word in self._ocrWords[ppfilter]:
+                for appearance, (wid, middle, bbox) in enumerate(self._ocrWords[ppfilter][word]):
+                    (x1, y1, x2, y2) = bbox
+                    w.append((word, x1, y1))
+        return sorted(w, key=lambda i:(i[2], i[1]))
 
     def filename(self):
         return self._filename
@@ -1082,24 +1155,54 @@ class Screenshot(object):
             return self._cache[(bitmap, colorMatch)]
         eyenfinger.iRead(source=self._filename, ocr=False)
         try:
-            score, (x1, y1, x2, y2) = eyenfinger.iVerifyIcon(bitmap, colorMatch=colorMatch, opacityLimit=.95, area=area)
-            foundItem = ViewItem(
-                "bitmap", None, 0,
-                {"layout:mLeft": x1,
-                 "layout:mTop": y1,
-                 "layout:getHeight()": y2-y1,
-                 "layout:getWidth()": x2-x1,
-                 "screenshot": self._filename,
-                 "bitmap": bitmap},
-                None, "")
+            score, bbox = eyenfinger.iVerifyIcon(bitmap, colorMatch=colorMatch, opacityLimit=.95, area=area)
+            foundItem = self._item("bitmap", bbox, bitmap=bitmap)
             self._cache[(bitmap, colorMatch)] = [foundItem]
         except eyenfinger.BadMatch:
             _adapterLog('findItemsByBitmap no match for "%s" in "%s"' % (bitmap, self._filename))
             self._cache[(bitmap, colorMatch)] = []
         return self._cache[(bitmap, colorMatch)]
 
+    def findItemsByOCR(self, text, preprocess=None, match=1.0):
+        self._assumeOcrWords(preprocess=preprocess)
+        for ppfilter in self._ocrWords.keys():
+            try:
+                eyenfinger._g_words = self._ocrWords[ppfilter]
+                (score, word), bbox = eyenfinger.iVerifyWord(text, match=match)
+                break
+            except eyenfinger.BadMatch:
+                continue
+        else:
+            return []
+        return [self._item("OCR word", bbox, ocrFind=text, ocrFound=word)]
+
     def save(self, fileOrDirName):
         shutil.copy(self._filename, fileOrDirName)
+
+    def _assumeOcrWords(self, preprocess=None):
+        if self._ocrWords == None:
+            if preprocess == None:
+                preprocess = self._ocrPreprocess
+            if not type(preprocess) in (list, tuple):
+                preprocess = [preprocess]
+            self._ocrWords = {}
+            for ppfilter in preprocess:
+                eyenfinger.iRead(source=self._filename, ocr=True, preprocess=ppfilter)
+                self._ocrWords[ppfilter] = eyenfinger._g_words
+
+    def _item(self, className, (x1, y1, x2, y2), bitmap=None, ocrFind=None, ocrFound=None):
+        return ViewItem(
+            className, None, 0,
+            {"layout:mLeft": x1,
+             "layout:mTop": y1,
+             "layout:getHeight()": y2-y1,
+             "layout:getWidth()": x2-x1,
+             "screenshot": self._filename,
+             "bitmap": bitmap,
+             "ocrFind": ocrFind,
+             "ocrFound": ocrFound,
+             },
+            None, "")
 
     def __str__(self):
         return 'Screenshot(filename="%s")' % (self._filename,)
