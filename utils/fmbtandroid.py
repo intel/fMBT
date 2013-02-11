@@ -74,7 +74,7 @@ print fmbtandroid.Device().refreshView().dumpTree()
 Save generated device ini for modifications
 
 import fmbtandroid
-file("/tmp/mydevice.ini", "w").write(fmbtandroid.Device().dumpDeviceIni())
+file("/tmp/mydevice.ini", "w").write(fmbtandroid.Device().dumpIni())
 
 * * *
 
@@ -237,9 +237,9 @@ class Device(object):
                   ini. Connect to the device with a serial number
                   given in this file. The default is None.
 
-        To create an ini file for a device, use dumpDeviceIni. Example:
+        To create an ini file for a device, use dumpIni. Example:
 
-        file("/tmp/test.ini", "w").write(fmbtandroid.Device().dumpDeviceIni())
+        file("/tmp/test.ini", "w").write(fmbtandroid.Device().dumpIni())
         """
         self._fmbtAndroidHomeDir = os.getenv("FMBTANDROIDHOME", os.getcwd())
 
@@ -374,7 +374,7 @@ class Device(object):
             import gc
             gc.collect()
 
-    def dumpDeviceIni(self):
+    def dumpIni(self):
         """
         Returns contents of current device configuration as a string (in
         INI format).
