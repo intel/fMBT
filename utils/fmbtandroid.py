@@ -829,7 +829,7 @@ class Device(object):
           Returns True if successful, otherwise False.
         """
         assert self._lastScreenshot != None, "Screenshot required."
-        items = self._lastScreenshot.findItemsByOCR(word, match=match, preprocess=preprocess)
+        items = self._lastScreenshot.findItemsByOcr(word, match=match, preprocess=preprocess)
         if len(items) == 0: return False
         return self.tapItem(items[0], **tapKwArgs)
 
