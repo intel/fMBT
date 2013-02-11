@@ -892,7 +892,7 @@ class Device(object):
           Returns True if successful, otherwise False.
         """
         assert self._lastScreenshot != None, "Screenshot required."
-        return self._lastScreenshot.findItemsByOCR(word, match=match, preprocess=preprocess) != []
+        return self._lastScreenshot.findItemsByOcr(word, match=match, preprocess=preprocess) != []
 
     def verifyText(self, text, partial=False):
         """
@@ -1163,7 +1163,7 @@ class Screenshot(object):
             self._cache[(bitmap, colorMatch)] = []
         return self._cache[(bitmap, colorMatch)]
 
-    def findItemsByOCR(self, text, preprocess=None, match=1.0):
+    def findItemsByOcr(self, text, preprocess=None, match=1.0):
         self._assumeOcrWords(preprocess=preprocess)
         for ppfilter in self._ocrWords.keys():
             try:
