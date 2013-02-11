@@ -538,6 +538,38 @@ class Device(object):
         """
         return self.pressKey("KEYCODE_VOLUME_DOWN", **pressKeyKwArgs)
 
+    def reboot(self, reconnect=True, firstBoot=False):
+        """
+        Reboot the device.
+
+        Parameters
+
+          reconnect (boolean, optional)
+                  If True, do not return until the device has been
+                  connected after boot. Otherwise return once reboot
+                  command has been sent. The default is True.
+
+          firstBoot (boolean, optional)
+                  If True, the device boots like it would have been
+                  flashed. Requires that "adb root" works. The default
+                  is False.
+
+        Returns True on success, otherwise False.
+        """
+        return self._conn.reboot(reconnect, firstBoot, 120)
+
+    def reconnect(self):
+        """
+        Close connections to the device and reconnect.
+        """
+        del self._conn
+        try:
+            self._conn = _AndroidDeviceConnection(self.serialNumber)
+            return True
+        except Exception, e:
+            _adapterLog("reconnect failed: %s" % (e,))
+            return False
+
     def refreshScreenshot(self, forcedScreenshot=None):
         """
         Takes new screenshot from the device and updates latest
@@ -1372,10 +1404,10 @@ class _AndroidDeviceConnection:
         for c in setupCommands:
             self._runSetupCmd(c)
 
-    def _resetMonkey(self, retry=3):
+    def _resetMonkey(self, timeout=3, pollDelay=.25):
         self._runSetupCmd("shell monkey --port 1080", None)
-        time.sleep(.25)
-        endTime = time.time() + retry
+        time.sleep(pollDelay)
+        endTime = time.time() + timeout
 
         while time.time() < endTime:
             self._runSetupCmd("forward tcp:%s tcp:1080" % (self._m_port,), 0)
@@ -1390,7 +1422,7 @@ class _AndroidDeviceConnection:
                     return True
             except Exception, e:
                 pass
-            time.sleep(.25)
+            time.sleep(pollDelay)
         if self._stopOnError:
             msg = 'Android monkey error: cannot connect to "adb shell monkey --port 1080" to device %s' % (self._serialNumber)
             _adapterLog(msg)
@@ -1419,6 +1451,31 @@ class _AndroidDeviceConnection:
                 return self._monkeyCommand(command, retry=retry-1)
             else:
                 raise AndroidConnectionError('Android monkey socket connection lost while sending command "%s"' % (command,))
+
+    def reboot(self, reconnect, firstBootAfterFlashing, timeout):
+        if firstBootAfterFlashing:
+            self._runAdb("root")
+            time.sleep(2)
+            self._runAdb("shell rm /data/data/com.android.launcher/shared_prefs/com.android.launcher2.prefs.xml")
+
+        self._runAdb("reboot")
+        _adapterLog("rebooting " + self._serialNumber)
+
+        if reconnect:
+            self._runAdb("wait-for-device")
+            endTime = time.time() + timeout
+            while time.time() < endTime:
+                try:
+                    if self._resetMonkey(timeout=1, pollDelay=1):
+                        break
+                except AndroidConnectionError:
+                    pass
+                time.sleep(1)
+            else:
+                _adapterLog("reboot: reconnecting to " + self._serialNumber + " failed")
+                return False
+            self._resetWindow()
+        return True
 
     def recvVariable(self, variableName):
         ok, value = self._monkeyCommand("getvar " + variableName)
