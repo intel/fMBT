@@ -87,7 +87,7 @@ d.pressHome()
 * * *
 
 Open screenlock by swiping lock.png bitmap on the display to the
-east. The lock.png file needs to be in imagePath defined in
+east. The lock.png file needs to be in bitmapPath defined in
 mydevice.ini.
 
 import fmbtandroid
@@ -245,7 +245,7 @@ class Device(object):
 
         self._screenSize = None
         self._platformVersion = None
-        self._lastView = View(self, "")
+        self._lastView = None
         self._lastScreenshot = None
         self._longPressHoldTime = 2.0
         self._longTapHoldTime = 2.0
@@ -326,14 +326,14 @@ class Device(object):
         if self._conn: hw = self._conn._monkeyCommand("getvar build.device")[1]
         else: hw = "nohardware"
         self.hardware        = self._conf.value("general", "hardware", hw)
-        self.imagePath       = self._conf.value("paths", "imagePath", self._fmbtAndroidHomeDir + os.sep + "bitmaps" + os.sep + self.hardware + "-" + self.platformVersion())
-        self.screenshotPath  = self._conf.value("paths", "screenshotPath", self._fmbtAndroidHomeDir + os.sep + "screenshots-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
-        if not os.path.isdir(self.screenshotPath):
+        self.bitmapPath       = self._conf.value("paths", "bitmapPath", self._fmbtAndroidHomeDir + os.sep + "bitmaps" + os.sep + self.hardware + "-" + self.platformVersion() + ":.")
+        self.screenshotDir  = self._conf.value("paths", "screenshotDir", self._fmbtAndroidHomeDir + os.sep + "screenshots")
+        if not os.path.isdir(self.screenshotDir):
             try:
-                os.makedirs(self.screenshotPath)
-                _adapterLog('created directory "%s" for screenshots' % (self.screenshotPath,))
+                os.makedirs(self.screenshotDir)
+                _adapterLog('created directory "%s" for screenshots' % (self.screenshotDir,))
             except Exception, e:
-                _adapterLog('creating directory "%s" for screenshots failed: %s' (self.screenshotPath, e))
+                _adapterLog('creating directory "%s" for screenshots failed: %s' (self.screenshotDir, e))
                 raise
 
         # Caches
@@ -553,11 +553,11 @@ class Device(object):
         """
         if forcedScreenshot != None:
             if type(forcedScreenshot) == str:
-                self._lastScreenshot = Screenshot(None, imagePath=forcedScreenshot, pathSolver=self._bitmapFilename)
+                self._lastScreenshot = Screenshot(None, screenshotDir=forcedScreenshot, pathSolver=self._bitmapFilename)
             else:
                 self._lastScreenshot = forcedScreenshot
         else:
-            self._lastScreenshot = Screenshot(self._conn, imagePath=self.screenshotPath, pathSolver=self._bitmapFilename)
+            self._lastScreenshot = Screenshot(self._conn, screenshotDir=self.screenshotDir, pathSolver=self._bitmapFilename)
         return self._lastScreenshot
 
     def refreshView(self):
@@ -572,7 +572,7 @@ class Device(object):
             dump = self._conn.recvViewData()
             if dump == None: # dump unreadable
                 return None
-            view = View(self, dump)
+            view = View(self.screenshotDir, self.serialNumber, dump)
             if len(view.errors()) > 0 and retryCount < self._PARSE_VIEW_RETRY_LIMIT:
                 _adapterLog("refreshView parse errors:\n    %s" % ("\n    ".join(view.errors(),)))
                 retryCount += 1
@@ -680,6 +680,7 @@ class Device(object):
 
         Returns True on success, False if sending input failed.
         """
+        assert self._lastScreenshot != None, "Screenshot required."
         items = self._lastScreenshot.findItemsByBitmap(bitmap, colorMatch=colorMatch, area=area)
         if len(items) == 0:
             _adapterLog("swipeBitmap: bitmap %s not found from %s" % (bitmap, self._lastScreenshot.filename()))
@@ -740,6 +741,7 @@ class Device(object):
         """
         Find a bitmap from the latest screenshot, and tap it.
         """
+        assert self._lastScreenshot != None, "Screenshot required."
         items = self._lastScreenshot.findItemsByBitmap(bitmap)
         if len(items) == 0:
             _adapterLog("tapBitmap: bitmap %s not found from %s" % (bitmap, self._lastScreenshot.filename()))
@@ -750,6 +752,7 @@ class Device(object):
         """
         Find an item with given id from the latest view, and tap it.
         """
+        assert self._lastView != None, "View required."
         items = self._lastView.findItemsById(viewItemId, count=1)
         if len(items) > 0:
             return self.tapItem(items[0], **tapKwArgs)
@@ -778,6 +781,7 @@ class Device(object):
 
         Returns True if successful, otherwise False.
         """
+        assert self._lastView != None, "View required."
         items = self._lastView.findItemsByText(text, partial=partial, count=1)
         if len(items) == 0: return False
         return self.tapItem(items[0], **tapKwArgs)
@@ -812,6 +816,7 @@ class Device(object):
                   text, otherwise match only if item text is equal to
                   the given text. The default is False (exact match).
         """
+        assert self._lastView != None, "View required."
         return self._lastView.findItemsByText(text, partial=partial, count=1) != []
 
     def verifyBitmap(self, bitmap, colorMatch=1.0, area=(0.0, 0.0, 1.0, 1.0)):
@@ -839,6 +844,7 @@ class Device(object):
                   dimensions. The default is (0.0, 0.0, 1.0, 1.0),
                   that is, search everywhere in the screenshot.
         """
+        assert self._lastScreenshot != None, "Screenshot required."
         if self._lastScreenshot == None:
             return False
         return self._lastScreenshot.findItemsByBitmap(bitmap, colorMatch=colorMatch, area=area) != []
@@ -945,7 +951,7 @@ class Device(object):
         else:
             path = []
 
-            for singleDir in self.imagePath.split(":"):
+            for singleDir in self.bitmapPath.split(":"):
                 if not singleDir.startswith("/"):
                     path.append(os.path.join(self._fmbtAndroidHomeDir, singleDir))
                 else:
@@ -957,7 +963,7 @@ class Device(object):
                 break
 
         if checkReadable and not os.access(retval, os.R_OK):
-            raise ValueError('Bitmap "%s" not readable in imagePath %s' % (bitmap, ':'.join(path)))
+            raise ValueError('Bitmap "%s" not readable in bitmapPath %s' % (bitmap, ':'.join(path)))
         return retval
 
     def _loadDeviceAndTestINIs(self, homeDir, deviceName, iniFile):
@@ -1022,13 +1028,13 @@ class Screenshot(object):
     Screenshot class takes and holds a screenshot (bitmap) of device
     display, or a forced bitmap file if device connection is not given.
     """
-    def __init__(self, deviceConn, imagePath=None, pathSolver=None):
+    def __init__(self, deviceConn, screenshotDir=None, pathSolver=None):
         if deviceConn:
             self._conn = deviceConn
-            self._filename = self._conn.screenshot(imagePath=imagePath)
+            self._filename = self._conn.screenshot(screenshotDir=screenshotDir)
         else:
             self._conn = None
-            self._filename = imagePath
+            self._filename = screenshotDir
         self._pathSolver = pathSolver
         # The bitmap held inside screenshot object is never updated.
         # If new screenshot is taken, this screenshot object disappears.
@@ -1125,19 +1131,17 @@ class View(object):
     the dump to a hierarchy of ViewItems. find* methods enable searching
     for ViewItems based on their properties.
     """
-    def __init__(self, device, dump):
-        self._device = device
+    def __init__(self, screenshotDir, serialNumber, dump):
+        self.screenshotDir = screenshotDir
+        self.serialNumber = serialNumber
         self._viewItems = []
         self._errors = []
         self._lineRegEx = re.compile("(?P<indent>\s*)(?P<class>[\w.$]+)@(?P<id>[0-9A-Fa-f]{8} )(?P<properties>.*)")
         self._olderAndroidLineRegEx = re.compile("(?P<indent>\s*)(?P<class>[\w.$]+)@(?P<id>\w)(?P<properties>.*)")
         self._propRegEx = re.compile("(?P<prop>(?P<name>[^=]+)=(?P<len>\d+),)(?P<data>[^\s]* ?)")
         self._dump = dump
-        if hasattr(self._device, "screenshotPath"):
-            self._rawDumpFilename = self._device.screenshotPath + os.sep + _filenameTimestamp() + "-" + self._device.serialNumber + ".view"
-            file(self._rawDumpFilename, "w").write(self._dump)
-        else:
-            self._rawDumpFilename = None
+        self._rawDumpFilename = self.screenshotDir + os.sep + _filenameTimestamp() + "-" + self.serialNumber + ".view"
+        file(self._rawDumpFilename, "w").write(self._dump)
         self._parseDump(dump)
 
     def viewItems(self): return self._viewItems
@@ -1474,7 +1478,7 @@ class _AndroidDeviceConnection:
     def sendType(self, text):
         return self._monkeyCommand("type " + text)[0]
 
-    def screenshot(self, imagePath=None, imageFilename=None):
+    def screenshot(self, screenshotDir=None, imageFilename=None):
         """
         Capture a screenshot and copy the image file to given path or
         system temp folder.
@@ -1491,19 +1495,19 @@ class _AndroidDeviceConnection:
 
         if status != 0: return None
 
-        if imagePath == None:
+        if screenshotDir == None:
             status, _, _ = self._runAdb(['pull', remotefile, tempfile.gettempdir()], 0)
         else:
-            status, _, _ = self._runAdb(['pull', remotefile, os.path.join(imagePath, filename)], 0)
+            status, _, _ = self._runAdb(['pull', remotefile, os.path.join(screenshotDir, filename)], 0)
 
         if status != 0: return None
 
         status, _, _ = self._runAdb(['shell','rm', remotefile], 0)
 
-        if imagePath == None:
+        if screenshotDir == None:
             return os.path.join(tempfile.gettempdir(), filename)
         else:
-            return os.path.join(imagePath, filename)
+            return os.path.join(screenshotDir, filename)
 
     def shellSOE(self, shellCommand):
         fd, filename = tempfile.mkstemp(prefix="fmbtandroid-shellcmd-")
