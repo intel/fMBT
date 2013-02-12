@@ -324,6 +324,13 @@ following special comments understood by the editor.
         expression and the transitions have been executed in the
         generated test.
 
+Other previewer options are:
+
+# preview-image-path: <list of directories separated by colons>
+
+        In order to show images on tooltips, look for them from
+        directories listed in preview-image-path.
+
 
 Special variables and functions in AAL/Python
 ---------------------------------------------
