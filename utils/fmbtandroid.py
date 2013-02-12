@@ -74,7 +74,7 @@ print fmbtandroid.Device().refreshView().dumpTree()
 Save generated device ini for modifications
 
 import fmbtandroid
-file("/tmp/mydevice.ini", "w").write(fmbtandroid.Device().dumpDeviceIni())
+file("/tmp/mydevice.ini", "w").write(fmbtandroid.Device().dumpIni())
 
 * * *
 
@@ -149,6 +149,11 @@ import uu
 import eyenfinger
 import fmbt
 
+_OCRPREPROCESS = [
+    '-sharpen 5 -level 60%,60%,1.0 -filter Mitchell -resize 1440x',
+    '-sharpen 5 -level 90%,100%,3.0 -filter Mitchell -resize 720x -sharpen 5'
+    ]
+
 def _adapterLog(msg):
     fmbt.adapterlog("fmbtandroid: %s" % (msg,))
 
@@ -169,7 +174,8 @@ def _run(command, expectedExitStatus = None):
     try:
         p = subprocess.Popen(command, shell=shell,
                              stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
+                             stderr=subprocess.PIPE,
+                             close_fds=True)
         if expectedExitStatus != None:
             out, err = p.communicate()
         else:
@@ -237,9 +243,9 @@ class Device(object):
                   ini. Connect to the device with a serial number
                   given in this file. The default is None.
 
-        To create an ini file for a device, use dumpDeviceIni. Example:
+        To create an ini file for a device, use dumpIni. Example:
 
-        file("/tmp/test.ini", "w").write(fmbtandroid.Device().dumpDeviceIni())
+        file("/tmp/test.ini", "w").write(fmbtandroid.Device().dumpIni())
         """
         self._fmbtAndroidHomeDir = os.getenv("FMBTANDROIDHOME", os.getcwd())
 
@@ -374,7 +380,7 @@ class Device(object):
             import gc
             gc.collect()
 
-    def dumpDeviceIni(self):
+    def dumpIni(self):
         """
         Returns contents of current device configuration as a string (in
         INI format).
@@ -537,6 +543,38 @@ class Device(object):
         Optional parameters are the same as for pressKey.
         """
         return self.pressKey("KEYCODE_VOLUME_DOWN", **pressKeyKwArgs)
+
+    def reboot(self, reconnect=True, firstBoot=False):
+        """
+        Reboot the device.
+
+        Parameters
+
+          reconnect (boolean, optional)
+                  If True, do not return until the device has been
+                  connected after boot. Otherwise return once reboot
+                  command has been sent. The default is True.
+
+          firstBoot (boolean, optional)
+                  If True, the device boots like it would have been
+                  flashed. Requires that "adb root" works. The default
+                  is False.
+
+        Returns True on success, otherwise False.
+        """
+        return self._conn.reboot(reconnect, firstBoot, 120)
+
+    def reconnect(self):
+        """
+        Close connections to the device and reconnect.
+        """
+        del self._conn
+        try:
+            self._conn = _AndroidDeviceConnection(self.serialNumber)
+            return True
+        except Exception, e:
+            _adapterLog("reconnect failed: %s" % (e,))
+            return False
 
     def refreshScreenshot(self, forcedScreenshot=None):
         """
@@ -724,6 +762,7 @@ class Device(object):
 
         Returns True if successful, otherwise False.
         """
+        x, y = self.intCoords((x, y))
         if long and hold == None:
             hold = self._longTapHoldTime
         if hold > 0.0:
@@ -766,6 +805,35 @@ class Device(object):
         """
         return self.tap(viewItem.coords(), **tapKwArgs)
 
+    def tapOcrText(self, word, match=1.0, preprocess=None, **tapKwArgs):
+        """
+        Find the given word from the latest screenshot using OCR, and
+        tap it.
+
+        Parameters:
+
+          word (string):
+                  the word to be tapped.
+
+          match (float, optional):
+                  minimum match score in range [0.0, 1.0].
+                  The default is 1.0 (exact match).
+
+          preprocess (string, optional):
+                  preprocess filter to be used in OCR for better
+                  result. Refer to eyenfinger.autoconfigure to search
+                  for a good one.
+
+          long, hold (optional):
+                  refer to tap documentation.
+
+          Returns True if successful, otherwise False.
+        """
+        assert self._lastScreenshot != None, "Screenshot required."
+        items = self._lastScreenshot.findItemsByOcr(word, match=match, preprocess=preprocess)
+        if len(items) == 0: return False
+        return self.tapItem(items[0], **tapKwArgs)
+
     def tapText(self, text, partial=False, **tapKwArgs):
         """
         Find an item with given text from the latest view, and tap it.
@@ -800,6 +868,32 @@ class Device(object):
 
     def type(self, text):
         return self._conn.sendType(text)
+
+    def verifyOcrText(self, word, match=1.0, preprocess=None):
+        """
+        Verify using OCR that the last screenshot contains the given word.
+
+        Parameters:
+
+          word (string):
+                  the word to be searched for.
+
+          match (float, optional):
+                  minimum match score in range [0.0, 1.0].
+                  The default is 1.0 (exact match).
+
+          preprocess (string, optional):
+                  preprocess filter to be used in OCR for better
+                  result. Refer to eyenfinger.autoconfigure to search
+                  for a good one.
+
+          long, hold (optional):
+                  refer to tap documentation.
+
+          Returns True if successful, otherwise False.
+        """
+        assert self._lastScreenshot != None, "Screenshot required."
+        return self._lastScreenshot.findItemsByOcr(word, match=match, preprocess=preprocess) != []
 
     def verifyText(self, text, partial=False):
         """
@@ -1040,6 +1134,18 @@ class Screenshot(object):
         # If new screenshot is taken, this screenshot object disappears.
         # => cache all search hits
         self._cache = {}
+        self._ocrWords = None
+        self._ocrPreprocess = _OCRPREPROCESS
+
+    def dumpOcrWords(self, preprocess=None):
+        self._assumeOcrWords(preprocess=preprocess)
+        w = []
+        for ppfilter in self._ocrWords:
+            for word in self._ocrWords[ppfilter]:
+                for appearance, (wid, middle, bbox) in enumerate(self._ocrWords[ppfilter][word]):
+                    (x1, y1, x2, y2) = bbox
+                    w.append((word, x1, y1))
+        return sorted(w, key=lambda i:(i[2], i[1]))
 
     def filename(self):
         return self._filename
@@ -1050,24 +1156,54 @@ class Screenshot(object):
             return self._cache[(bitmap, colorMatch)]
         eyenfinger.iRead(source=self._filename, ocr=False)
         try:
-            score, (x1, y1, x2, y2) = eyenfinger.iVerifyIcon(bitmap, colorMatch=colorMatch, opacityLimit=.95, area=area)
-            foundItem = ViewItem(
-                "bitmap", None, 0,
-                {"layout:mLeft": x1,
-                 "layout:mTop": y1,
-                 "layout:getHeight()": y2-y1,
-                 "layout:getWidth()": x2-x1,
-                 "screenshot": self._filename,
-                 "bitmap": bitmap},
-                None, "")
+            score, bbox = eyenfinger.iVerifyIcon(bitmap, colorMatch=colorMatch, opacityLimit=.95, area=area)
+            foundItem = self._item("bitmap", bbox, bitmap=bitmap)
             self._cache[(bitmap, colorMatch)] = [foundItem]
         except eyenfinger.BadMatch:
             _adapterLog('findItemsByBitmap no match for "%s" in "%s"' % (bitmap, self._filename))
             self._cache[(bitmap, colorMatch)] = []
         return self._cache[(bitmap, colorMatch)]
 
+    def findItemsByOcr(self, text, preprocess=None, match=1.0):
+        self._assumeOcrWords(preprocess=preprocess)
+        for ppfilter in self._ocrWords.keys():
+            try:
+                eyenfinger._g_words = self._ocrWords[ppfilter]
+                (score, word), bbox = eyenfinger.iVerifyWord(text, match=match)
+                break
+            except eyenfinger.BadMatch:
+                continue
+        else:
+            return []
+        return [self._item("OCR word", bbox, ocrFind=text, ocrFound=word)]
+
     def save(self, fileOrDirName):
         shutil.copy(self._filename, fileOrDirName)
+
+    def _assumeOcrWords(self, preprocess=None):
+        if self._ocrWords == None:
+            if preprocess == None:
+                preprocess = self._ocrPreprocess
+            if not type(preprocess) in (list, tuple):
+                preprocess = [preprocess]
+            self._ocrWords = {}
+            for ppfilter in preprocess:
+                eyenfinger.iRead(source=self._filename, ocr=True, preprocess=ppfilter)
+                self._ocrWords[ppfilter] = eyenfinger._g_words
+
+    def _item(self, className, (x1, y1, x2, y2), bitmap=None, ocrFind=None, ocrFound=None):
+        return ViewItem(
+            className, None, 0,
+            {"layout:mLeft": x1,
+             "layout:mTop": y1,
+             "layout:getHeight()": y2-y1,
+             "layout:getWidth()": x2-x1,
+             "screenshot": self._filename,
+             "bitmap": bitmap,
+             "ocrFind": ocrFind,
+             "ocrFound": ocrFound,
+             },
+            None, "")
 
     def __str__(self):
         return 'Screenshot(filename="%s")' % (self._filename,)
@@ -1205,12 +1341,10 @@ class View(object):
         """
         if partial:
             c = lambda item: (
-                item.properties().get("text:mText", "").find(text) != -1 and
-                item.visible() )
+                item.properties().get("text:mText", "").find(text) != -1 )
         else:
             c = lambda item: (
-                item.properties().get("text:mText", None) == text and
-                item.visible() )
+                item.properties().get("text:mText", None) == text )
         return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
 
     def findItemsById(self, id, count=-1, searchRootItem=None, searchItems=None):
@@ -1372,10 +1506,10 @@ class _AndroidDeviceConnection:
         for c in setupCommands:
             self._runSetupCmd(c)
 
-    def _resetMonkey(self, retry=3):
+    def _resetMonkey(self, timeout=3, pollDelay=.25):
         self._runSetupCmd("shell monkey --port 1080", None)
-        time.sleep(.25)
-        endTime = time.time() + retry
+        time.sleep(pollDelay)
+        endTime = time.time() + timeout
 
         while time.time() < endTime:
             self._runSetupCmd("forward tcp:%s tcp:1080" % (self._m_port,), 0)
@@ -1390,7 +1524,7 @@ class _AndroidDeviceConnection:
                     return True
             except Exception, e:
                 pass
-            time.sleep(.25)
+            time.sleep(pollDelay)
         if self._stopOnError:
             msg = 'Android monkey error: cannot connect to "adb shell monkey --port 1080" to device %s' % (self._serialNumber)
             _adapterLog(msg)
@@ -1419,6 +1553,31 @@ class _AndroidDeviceConnection:
                 return self._monkeyCommand(command, retry=retry-1)
             else:
                 raise AndroidConnectionError('Android monkey socket connection lost while sending command "%s"' % (command,))
+
+    def reboot(self, reconnect, firstBootAfterFlashing, timeout):
+        if firstBootAfterFlashing:
+            self._runAdb("root")
+            time.sleep(2)
+            self._runAdb("shell rm /data/data/com.android.launcher/shared_prefs/com.android.launcher2.prefs.xml")
+
+        self._runAdb("reboot")
+        _adapterLog("rebooting " + self._serialNumber)
+
+        if reconnect:
+            self._runAdb("wait-for-device")
+            endTime = time.time() + timeout
+            while time.time() < endTime:
+                try:
+                    if self._resetMonkey(timeout=1, pollDelay=1):
+                        break
+                except AndroidConnectionError:
+                    pass
+                time.sleep(1)
+            else:
+                _adapterLog("reboot: reconnecting to " + self._serialNumber + " failed")
+                return False
+            self._resetWindow()
+        return True
 
     def recvVariable(self, variableName):
         ok, value = self._monkeyCommand("getvar " + variableName)

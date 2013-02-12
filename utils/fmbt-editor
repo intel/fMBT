@@ -92,6 +92,7 @@ GT_HIDESHOWTRANRE = re.compile('[ #]preview-(show|hide)-(trans|transitions):(.*)
 GT_HIDEUNTRAVTRANRE = re.compile('[ #]preview-hide-untested-(trans|transitions):(.*)')
 GT_SHOWTRAVTRANRE = re.compile('[ #]preview-show-tested-(trans|transitions):(.*)')
 GT_HIDESTATES = re.compile('[ #]preview-hide-states:((unvisited)|(orphaned)|,| )*')
+GT_IMAGEPATHRE = re.compile('[ #]preview-image-path:(.*)')
 
 GT_DEPTHRE = re.compile('[ #]preview-depth:(.*)')
 
@@ -183,17 +184,51 @@ class MyScaleEvents(QtCore.QObject):
     attrowner's attribute "wheel_scale" accordingly. Finally call
     attrowner's wheel_scale_changed().
     """
-    def __init__(self, parent, attrowner, min_scale, max_scale):
-        QtCore.QObject.__init__(self, parent)
-        self.min_scale = min_scale
-        self.max_scale = max_scale
-        self.attrowner = attrowner
+    def __init__(self, mainwindow, attrowner, min_scale, max_scale):
+        QtCore.QObject.__init__(self, mainwindow)
+        self.min_scale  = min_scale
+        self.max_scale  = max_scale
+        self.attrowner  = attrowner
+        self.mainwindow = mainwindow
+        self.visibleTip = None
     def changeScale(self, coefficient):
         self.attrowner.wheel_scale *= coefficient
         if self.attrowner.wheel_scale < self.min_scale: self.attrowner.wheel_scale = self.min_scale
         elif self.attrowner.wheel_scale > self.max_scale: self.attrowner.wheel_scale = self.max_scale
         self.attrowner.wheel_scale_changed()
     def eventFilter(self, obj, event):
+        if event.type() == QtCore.QEvent.ToolTip:
+            if not hasattr(self.attrowner, 'cursorForPosition'):
+                return False
+            cursor = self.attrowner.cursorForPosition(event.pos())
+            pos = cursor.positionInBlock()
+            lineno = cursor.blockNumber()
+            cursor.select(QtGui.QTextCursor.LineUnderCursor)
+            l = cursor.selectedText()
+            start = l.rfind('"', 0, pos)
+            end = l.find('"', pos)
+            if -1 < start < end:
+                quotedString = l[start+1:end]
+                if self.visibleTip == (lineno, quotedString):
+                    return True
+                QtGui.QToolTip.hideText()
+                if quotedString.lower().rsplit(".")[-1] in ["png", "jpg"]:
+                    # tooltip for an image file
+                    filename = quotedString
+                    path = ':'.join([s.strip() for s in GT_IMAGEPATHRE.findall(self.mainwindow._modelSources())])
+                    for d in path.split(':'):
+                        filepath = os.path.join(d, filename)
+                        if os.access(filepath, os.R_OK):
+                            QtGui.QToolTip.showText(event.globalPos(), '%s<br><img src="%s">' % (filepath, filepath))
+                            break
+                    else:
+                        QtGui.QToolTip.showText(event.globalPos(), '%s<br>not in found in<br># preview-image-path:...' % (filename,))
+                    self.visibleTip = (lineno, quotedString)
+            else:
+                self.visibleTip = None
+                QtGui.QToolTip.hideText()
+            return True
+
         if event.type() == QtCore.QEvent.Wheel and event.modifiers() == QtCore.Qt.ControlModifier:
             coefficient = 1.0 + event.delta() / 1440.0
             self.changeScale(coefficient)
@@ -961,7 +996,7 @@ on_inconc = "exit(2)"
             editor.setUndoRedoEnabled(True)
             editor.setLineWrapMode(editor.NoWrap)
             editor.setFont(font)
-            editor._scaleevents = MyScaleEvents(editor, editor, 0.1, 2.0)
+            editor._scaleevents = MyScaleEvents(self, editor, 0.1, 2.0)
             editor.wheel_scale = 1.0
             editor.wheel_scale_changed = lambda: (font.setPointSize(editor.wheel_scale * 12.0), editor.setFont(font))
             editor.installEventFilter(editor._scaleevents)
@@ -1009,7 +1044,7 @@ on_inconc = "exit(2)"
 
             area = QtGui.QScrollArea(container)
             area.setWidget(image)
-            image._scaleevents = MyScaleEvents(area, area, 0.1, 1.0)
+            image._scaleevents = MyScaleEvents(self, area, 0.1, 1.0)
             area.wheel_scale = 1.0
             area.wheel_scale_changed = lambda: image.resize(area.wheel_scale * image.pixmap().size())
             area.installEventFilter(image._scaleevents)
@@ -1323,6 +1358,9 @@ on_inconc = "exit(2)"
             return self.editor.toPlainText()
         else:
             return self._modelEditorFiles[self._modelFileName][1]
+
+    def _modelSources(self):
+        return "\n".join([f[1] for f in self._modelEditorFiles.values()])
 
     def chooseModelEditorFile(self):
         # interactive choose between base model and included model files
