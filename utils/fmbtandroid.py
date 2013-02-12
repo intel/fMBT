@@ -673,13 +673,13 @@ class Device(object):
         """
         smsCommand = ('am start -a android.intent.action.SENDTO ' +
                       '-d sms:%s --es sms_body "%s"' +
-                      '--ez exit_on_sent true')  % (number, message)
+                      ' --ez exit_on_sent true')  % (number, message)
         status, out, err = self.shellSOE(smsCommand)
         if status != 0:
             _logFailedCommand("sms", smsCommand, status, out, err)
             return False
         _adapterLog("SMS command returned %s" % (out + err,))
-        time.sleep(1)
+        time.sleep(2)
         self.pressKey("KEYCODE_DPAD_RIGHT")
         time.sleep(1)
         self.pressKey("KEYCODE_ENTER")
