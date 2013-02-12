@@ -150,8 +150,8 @@ import eyenfinger
 import fmbt
 
 _OCRPREPROCESS = [
-    '-sharpen 5 -level 60%,60%,1.0 -filter Mitchell -resize 1440x',
-    '-sharpen 5 -level 90%,100%,3.0 -filter Mitchell -resize 720x -sharpen 5'
+    '-sharpen 5 -level 60%%,60%%,1.0 -filter Mitchell %(zoom)s',
+    '-sharpen 5 -level 90%%,100%%,3.0 -filter Mitchell -sharpen 5'
     ]
 
 def _adapterLog(msg):
@@ -591,11 +591,15 @@ class Device(object):
         """
         if forcedScreenshot != None:
             if type(forcedScreenshot) == str:
-                self._lastScreenshot = Screenshot(None, screenshotDir=forcedScreenshot, pathSolver=self._bitmapFilename)
+                self._lastScreenshot = Screenshot(
+                    None, screenshotDir=forcedScreenshot,
+                    pathSolver=self._bitmapFilename, screenSize=self.screenSize())
             else:
                 self._lastScreenshot = forcedScreenshot
         else:
-            self._lastScreenshot = Screenshot(self._conn, screenshotDir=self.screenshotDir, pathSolver=self._bitmapFilename)
+            self._lastScreenshot = Screenshot(
+                self._conn, screenshotDir=self.screenshotDir,
+                pathSolver=self._bitmapFilename, screenSize=self.screenSize())
         return self._lastScreenshot
 
     def refreshView(self):
@@ -1122,7 +1126,7 @@ class Screenshot(object):
     Screenshot class takes and holds a screenshot (bitmap) of device
     display, or a forced bitmap file if device connection is not given.
     """
-    def __init__(self, deviceConn, screenshotDir=None, pathSolver=None):
+    def __init__(self, deviceConn, screenshotDir=None, pathSolver=None, screenSize=None):
         if deviceConn:
             self._conn = deviceConn
             self._filename = self._conn.screenshot(screenshotDir=screenshotDir)
@@ -1130,6 +1134,7 @@ class Screenshot(object):
             self._conn = None
             self._filename = screenshotDir
         self._pathSolver = pathSolver
+        self._screenSize = screenSize
         # The bitmap held inside screenshot object is never updated.
         # If new screenshot is taken, this screenshot object disappears.
         # => cache all search hits
@@ -1145,7 +1150,7 @@ class Screenshot(object):
                 for appearance, (wid, middle, bbox) in enumerate(self._ocrWords[ppfilter][word]):
                     (x1, y1, x2, y2) = bbox
                     w.append((word, x1, y1))
-        return sorted(w, key=lambda i:(i[2], i[1]))
+        return sorted(set(w), key=lambda i:(i[2]/8, i[1]))
 
     def filename(self):
         return self._filename
@@ -1188,7 +1193,8 @@ class Screenshot(object):
                 preprocess = [preprocess]
             self._ocrWords = {}
             for ppfilter in preprocess:
-                eyenfinger.iRead(source=self._filename, ocr=True, preprocess=ppfilter)
+                pp = ppfilter % { "zoom": "-resize %sx" % (self._screenSize[0] * 2) }
+                eyenfinger.iRead(source=self._filename, ocr=True, preprocess=pp)
                 self._ocrWords[ppfilter] = eyenfinger._g_words
 
     def _item(self, className, (x1, y1, x2, y2), bitmap=None, ocrFind=None, ocrFound=None):
