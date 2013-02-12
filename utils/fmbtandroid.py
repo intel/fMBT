@@ -174,7 +174,8 @@ def _run(command, expectedExitStatus = None):
     try:
         p = subprocess.Popen(command, shell=shell,
                              stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
+                             stderr=subprocess.PIPE,
+                             close_fds=True)
         if expectedExitStatus != None:
             out, err = p.communicate()
         else:
@@ -1340,12 +1341,10 @@ class View(object):
         """
         if partial:
             c = lambda item: (
-                item.properties().get("text:mText", "").find(text) != -1 and
-                item.visible() )
+                item.properties().get("text:mText", "").find(text) != -1 )
         else:
             c = lambda item: (
-                item.properties().get("text:mText", None) == text and
-                item.visible() )
+                item.properties().get("text:mText", None) == text )
         return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
 
     def findItemsById(self, id, count=-1, searchRootItem=None, searchItems=None):
