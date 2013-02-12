@@ -671,9 +671,9 @@ class Device(object):
 
         Returns True on success, otherwise False.
         """
-        smsCommand = ("am start -a android.intent.action.SENDTO " +
-                      "-d 'sms:%s' --es 'sms_body %s' " +
-                      "--ez exit_on_sent true")  % (number, message)
+        smsCommand = ('am start -a android.intent.action.SENDTO ' +
+                      '-d sms:%s --es sms_body "%s"' +
+                      '--ez exit_on_sent true')  % (number, message)
         status, out, err = self.shellSOE(smsCommand)
         if status != 0:
             _logFailedCommand("sms", smsCommand, status, out, err)
