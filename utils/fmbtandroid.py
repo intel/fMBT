@@ -669,17 +669,25 @@ class Device(object):
         """
         Send message using SMS to given number.
 
+        Parameters:
+
+          number (string)
+                  phone number to which the SMS will be sent
+
+          message (string)
+                  the message to be sent.
+
         Returns True on success, otherwise False.
         """
-        smsCommand = ("am start -a android.intent.action.SENDTO " +
-                      "-d 'sms:%s' --es 'sms_body %s' " +
-                      "--ez exit_on_sent true")  % (number, message)
+        smsCommand = ('am start -a android.intent.action.SENDTO ' +
+                      '-d sms:%s --es sms_body "%s"' +
+                      ' --ez exit_on_sent true')  % (number, message)
         status, out, err = self.shellSOE(smsCommand)
         if status != 0:
             _logFailedCommand("sms", smsCommand, status, out, err)
             return False
         _adapterLog("SMS command returned %s" % (out + err,))
-        time.sleep(1)
+        time.sleep(2)
         self.pressKey("KEYCODE_DPAD_RIGHT")
         time.sleep(1)
         self.pressKey("KEYCODE_ENTER")
@@ -1467,9 +1475,17 @@ class _AndroidDeviceConnection:
     def __init__(self, serialNumber, stopOnError=True):
         self._serialNumber = serialNumber
         self._stopOnError = stopOnError
+        self._shellSupportsTar = False
         try:
             self._resetMonkey()
             self._resetWindow()
+
+            # check supported features
+            outputLines = self._runAdb("shell tar")[1].splitlines()
+            if len(outputLines) == 1 and "bin" in outputLines[0]:
+                self._shellSupportsTar = False
+            else:
+                self._shellSupportsTar = True
         finally:
             # Next _AndroidDeviceConnection instance will use different ports
             self._w_port = _AndroidDeviceConnection._w_port
@@ -1680,22 +1696,34 @@ class _AndroidDeviceConnection:
         os.write(fd, shellCommand + "\n")
         os.close(fd)
         self._runAdb("push %s %s" % (filename, remotename), 0)
-        # do everything we can in one command to minimise adb commands:
-        # execute command, record results, package, print uuencoded package and remove remote temp files
-        cmd = "shell 'source %s >%s.out 2>%s.err; echo $? > %s.status; cd %s; tar cf - %s.out %s.err %s.status | uuencode %s.tar; rm -f %s*'" % (
-            ((remotename,) * 4) + (os.path.dirname(remotename),) + ((os.path.basename(remotename),) * 5))
-        status, output, error = self._runAdb(cmd, 0)
-        file(filename, "w").write(output)
-        uu.decode(filename, out_file=filename + ".tar")
-        import tarfile
-        tar = tarfile.open(filename + ".tar")
-        basename = os.path.basename(filename)
-        stdout = tar.extractfile(basename + ".out").read()
-        stderr = tar.extractfile(basename + ".err").read()
-        try: exitstatus = int(tar.extractfile(basename + ".status").read())
-        except: exitstatus = None
-        os.remove(filename)
-        os.remove(filename + ".tar")
+        cmd = "shell 'source %s >%s.out 2>%s.err; echo $? > %s.status" % ((remotename,)*4)
+        if self._shellSupportsTar:
+            # do everything we can in one command to minimise adb
+            # commands: execute command, record results, package,
+            # print uuencoded package and remove remote temp files
+            cmd += "; cd %s; tar czf - %s.out %s.err %s.status | uuencode %s.tar.gz; rm -f %s*'" % (
+                (os.path.dirname(remotename),) + ((os.path.basename(remotename),) * 5))
+            status, output, error = self._runAdb(cmd, 0)
+            file(filename, "w").write(output)
+            uu.decode(filename, out_file=filename + ".tar.gz")
+            import tarfile
+            tar = tarfile.open(filename + ".tar.gz")
+            basename = os.path.basename(filename)
+            stdout = tar.extractfile(basename + ".out").read()
+            stderr = tar.extractfile(basename + ".err").read()
+            try: exitstatus = int(tar.extractfile(basename + ".status").read())
+            except: exitstatus = None
+            os.remove(filename)
+            os.remove(filename + ".tar.gz")
+        else:
+            # need to pull files one by one, slow.
+            cmd += "'"
+            self._runAdb(cmd, 0)
+            stdout = self._cat(remotename + ".out")
+            stderr = self._cat(remotename + ".err")
+            try: exitstatus = int(self._cat(remotename + ".status"))
+            except: exitstatus = None
+            self._runAdb("shell rm -f %s.out %s.err %.status" % ((remotename,)*3))
         return exitstatus, stdout, stderr
 
     def recvViewData(self, retry=3):
