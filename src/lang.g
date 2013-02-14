@@ -88,7 +88,7 @@ int bstr_scan(char *ops, void *ops_cache, d_loc_t *loc,
 }
 }
 
-aal: comment* aal_start header+ ( act | tag | comment )* '}' ;
+aal: comment* aal_start header+ ( ( act | tag) (act | tag | comment )* )? '}' comment* ;
 
 aal_start: 'aal' string '{' language {
             obj->set_namestr($1.str);
