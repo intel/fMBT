@@ -125,7 +125,7 @@ void Coverage_Market::add_requirement(std::string& req)
   cobj=this;
   D_Parser *p = new_D_Parser(&parser_tables_covlang, 32);
   D_ParseNode* ret=dparse(p,(char*)req.c_str(),req.length());
-  status=p->syntax_errors==0;
+  status&=p->syntax_errors==0;
 
   if (ret) {
     free_D_ParseNode(p, ret);
@@ -169,8 +169,10 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const std::st
     if (an<=0) {
       errormsg="No such action \"" + action + "\"";
       status=false;
+      u = new Coverage_Market::unit_leaf(0);
+    } else {
+      u = new Coverage_Market::unit_leaf(an);
     }
-    u = new Coverage_Market::unit_leaf(an);
   }
 
   if (u==NULL) {
