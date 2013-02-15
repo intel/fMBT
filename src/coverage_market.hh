@@ -106,12 +106,18 @@ public:
     virtual void update()=0;
     virtual void push()=0;
     virtual void pop()=0;
+    virtual void reset() {}
     val value;
   };
 
   class unit_dual: public unit {
   public:
     unit_dual(unit* l,unit* r):left(l),right(r) {
+    }
+
+    virtual void reset() {
+      left->reset();
+      right->reset();
     }
 
     virtual void push() {
@@ -175,6 +181,11 @@ public:
   public:
     unit_not(unit *c):child(c) {
     }
+
+    virtual void reset() {
+      child->reset();
+    }
+
     virtual void push() {
       child->push();
     }
@@ -232,6 +243,10 @@ public:
       value.second=count;
     }
 
+    virtual void reset() {
+      value.first=0;
+    }
+
     virtual void push() {
       st.push(value);
     }
@@ -241,7 +256,6 @@ public:
       st.pop();
     }
 
-
     virtual void execute(int action) {
       if (action==my_action) {
         if (value.first<value.second) {
@@ -249,9 +263,10 @@ public:
         }
       }
     }
-    virtual void update() {
 
+    virtual void update() {
     }
+
   protected:
     int my_action;
     std::stack<val> st;
@@ -260,8 +275,10 @@ public:
   class unit_mult: public unit {
   public:
     unit_mult(unit* l,int i): child(l),max(i),count(0) {
-      fprintf(stderr,"mult %i\n",max);
-      child->push();
+    }
+
+    virtual void reset() {
+      count=0;
     }
 
     virtual void push() {
@@ -289,16 +306,12 @@ public:
       child->update();
       val v=child->get_value();
       if (v.first==v.second) {
-	child->pop();
-	child->push();
+	child->reset();
+	child->update();
 	count++;
       }
       value.second=max*v.second;
       value.first=count*v.second+v.first;
-
-      if (value.first>value.second) {
-	abort();
-      }
 
     }
     
