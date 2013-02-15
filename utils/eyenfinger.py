@@ -93,6 +93,7 @@ _g_words = None
 _g_lastWindow = None
 
 _g_defaultClickDryRun = False
+_g_defaultDelayedDrawing = False
 _g_defaultIconMatch = 1.0
 _g_defaultIconColorMatch = 1.0
 _g_defaultIconOpacityLimit = 0.0
@@ -287,6 +288,34 @@ def _runcmd(cmd):
     _log("stderr: " + p.stderr.read())
     return p.wait(), output
 
+def _runDrawCmd(inputfilename, cmd, outputfilename):
+    if not _g_defaultDelayedDrawing:
+        return _runcmd("convert %s %s %s" % (inputfilename, cmd, outputfilename))
+    # Do delayed drawing to save test execution time. If the output
+    # file does not exist, just copy inputfile to outputfile and start
+    # logging delayed draw commands to
+    # outputfile.delayeddraw. Otherwise append latest command to
+    # outputfile.delayeddraw.
+    delayedCmd = "convert %s %s %s\n" % (outputfilename, cmd, outputfilename)
+    delayedDrawFilename = outputfilename + ".delayeddraw"
+    try:
+        if os.access(outputfilename, os.R_OK) == False:
+                shutil.copy(inputfilename, outputfilename)
+                file(delayedDrawFilename, "w").write(delayedCmd)
+        else:
+            file(delayedDrawFilename, "a").write(delayedCmd)
+    except:
+        _log("error on delayed drawing: %s" % (delayedCmd,))
+        raise
+    _log("delayed drawing: %s" % (delayedCmd,))
+    return (0, "")
+
+def _safeForShell(s):
+    # convert all non-ascii and bad chars to _
+    try: s = unicode(s, "utf-8")
+    except: pass
+    return ''.join([(c, "_")[ord(c)>128 or c in "'\"\\`"] for c in s])
+
 def _coordsToInt((x,y), (width, height)=(None, None)):
     """
     Convert percentages to screen coordinates
@@ -317,6 +346,26 @@ def iSetDefaultClickDryRun(dryRun):
     """
     global _g_defaultClickDryRun
     _g_defaultClickDryRun = dryRun
+
+def iSetDefaultDelayedDrawing(delayedDrawing):
+    """
+    Set the default for delaying drawing operations on captured
+    screenshots.
+
+    If delayedDrawing == False, drawing actions on screenshots (like
+    highlighting icon and clicked coordinates) takes place during the
+    function execution (like iClickIcon).
+
+    If delayedDrawing == True, the screenshot is saved without
+    highlighted areas, and <screenshot filename>.delayeddraw file
+    contains all draw commands that can be executed after the test
+    run. This may save a lot test execution time and CPU on the device
+    that runs eyenfinger.
+
+    The default is False.
+    """
+    global _g_defaultDelayedDrawing
+    _g_defaultDelayedDrawing = delayedDrawing
 
 def iSetDefaultIconMatch(match):
     """
@@ -1359,10 +1408,10 @@ def drawWords(inputfilename, outputfilename, words, detected_words):
         draw_commands += """ -stroke %s -fill blue -draw "fill-opacity 0.2 rectangle %s,%s %s,%s" """ % (
             color, left, top, right, bottom)
         draw_commands += """ -stroke none -fill %s -draw "text %s,%s '%s'" """ % (
-            color, left, top, w)
+            color, left, top, _safeForShell(w))
         draw_commands += """ -stroke none -fill %s -draw "text %s,%s '%.2f'" """ % (
             color, left, bottom+10, score)
-    _runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))
+    _runDrawCmd(inputfilename, draw_commands, outputfilename)
 
 def drawIcon(inputfilename, outputfilename, iconFilename, bbox, color='green', area=None):
     if inputfilename == None:
@@ -1374,7 +1423,7 @@ def drawIcon(inputfilename, outputfilename, iconFilename, bbox, color='green', a
         draw_commands += """ -stroke yellow -draw "fill-opacity 0.0 rectangle %s,%s %s,%s" """ % (area[0]-1, area[1]-1, area[2], area[3])
     draw_commands += """ -stroke none -fill %s -draw "text %s,%s '%s'" """ % (
         color, left, top, iconFilename)
-    _runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))
+    _runDrawCmd(inputfilename, draw_commands, outputfilename)
 
 def drawClickedPoint(inputfilename, outputfilename, clickedXY):
     """
@@ -1389,7 +1438,7 @@ def drawClickedPoint(inputfilename, outputfilename, clickedXY):
     draw_commands = """ -stroke red -fill blue -draw "fill-opacity 0.2 circle %s,%s %s,%s" """ % (
         x, y, x + 20, y)
     draw_commands += """ -stroke none -fill red -draw "point %s,%s" """ % (x, y)
-    _runcmd("convert %s %s %s" % (inputfilename, draw_commands, outputfilename))
+    _runDrawCmd(inputfilename, draw_commands, outputfilename)
 
 def _screenToWindow(x,y):
     """
@@ -1443,7 +1492,7 @@ def drawLines(inputfilename, outputfilename, orig_coordinates, final_coordinates
         (finalX, finalY) = _screenToWindow(final_coordinates[lastIndex][0], final_coordinates[lastIndex][1])
         drawCommand +=  "-fill blue -stroke red -draw 'fill-opacity 0.2 circle %d, %d %d, %d' " % (finalX, finalY, finalX-5, finalY-5)
 
-    _runcmd("convert %s %s %s" % (inputfilename, drawCommand, outputfilename))
+    _runDrawCmd(inputfilename, drawCommand, outputfilename)
 
 def evaluatePreprocessFilter(imageFilename, ppfilter, words):
     """
@@ -1491,14 +1540,18 @@ def autoconfigure(imageFilename, words):
     resize_filters = ['Mitchell', 'Catrom', 'Hermite', 'Gaussian']
     levels = [(20, 20), (50, 50), (80, 80), (5, 5), (95, 95),
               (30, 30), (40, 40), (60, 60), (70, 70), (60, 60),
-              (10, 30), (20, 40), (30, 50), (40, 60), (50, 70),
-              (60, 80), (70, 90), (80, 100), (90, 100), (95, 100)]
+              (10, 30), (30, 50), (50, 70), (70, 90), (80, 100)]
 
     zoom = [1, 2]
 
     for f in resize_filters:
         for z in zoom:
             for blevel, wlevel in levels:
+                evaluatePreprocessFilter(
+                    imageFilename,
+                    "-sharpen 5 -level %s%%,%s%%,3.0 -sharpen 5" % (blevel, wlevel),
+                    words)
+
                 evaluatePreprocessFilter(
                     imageFilename,
                     "-sharpen 5 -filter %s -resize %sx -sharpen 5 -level %s%%,%s%%,3.0 -sharpen 5" % (f, z * image_width, blevel, wlevel),
