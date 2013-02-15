@@ -400,9 +400,12 @@ class Device(object):
     def close(self):
         if hasattr(self, "_conn"):
             del self._conn
+        if hasattr(self, "_lastView"):
             del self._lastView
-            import gc
-            gc.collect()
+        if hasattr(self, "_lastScreenshot"):
+            del self._lastScreenshot
+        import gc
+        gc.collect()
 
     def dumpIni(self):
         """
@@ -629,13 +632,33 @@ class Device(object):
                 screenSize=self.screenSize())
         return self._lastScreenshot
 
-    def refreshView(self):
+    def refreshView(self, forcedView=None):
         """
         (Re)reads view items on display and updates the latest View
         object.
 
+        Parameters:
+
+          forcedView (View or filename, optional):
+                use given View object or view file instead of reading
+                items from the device.
+
         Returns created View object.
         """
+        def formatErrors(errors):
+            return "refreshView parse errors:\n    %s" % (
+                "\n    ".join(["line %s: %s error: %s" % e for e in errors]),)
+
+        if forcedView != None:
+            if isinstance(forcedView, View):
+                self._lastView = forcedView
+            elif type(forcedView) == str:
+                self._lastView = View(self.screenshotDir, self.serialNumber, file(forcedView).read())
+                _adapterLog(formatErrors(self._lastView.errors()))
+            else:
+                raise ValueError("forcedView must be a View object or a filename")
+            return self._lastView
+
         retryCount = 0
         while True:
             dump = self._conn.recvViewData()
@@ -643,7 +666,7 @@ class Device(object):
                 return None
             view = View(self.screenshotDir, self.serialNumber, dump)
             if len(view.errors()) > 0 and retryCount < self._PARSE_VIEW_RETRY_LIMIT:
-                _adapterLog("refreshView parse errors:\n    %s" % ("\n    ".join(view.errors(),)))
+                _adapterLog(formatErrors(view.errors()))
                 retryCount += 1
                 time.sleep(0.2) # sleep before retry
             else:
@@ -1332,7 +1355,9 @@ class View(object):
         self._dump = dump
         self._rawDumpFilename = self.screenshotDir + os.sep + _filenameTimestamp() + "-" + self.serialNumber + ".view"
         file(self._rawDumpFilename, "w").write(self._dump)
-        self._parseDump(dump)
+        try: self._parseDump(dump)
+        except Exception, e:
+            self._errors.append((-1, "", "Parser error"))
 
     def viewItems(self): return self._viewItems
     def errors(self): return self._errors
@@ -1417,6 +1442,9 @@ class View(object):
     def findItemsByRawProps(self, s, count=-1, searchRootItem=None, searchItems=None):
         c = lambda item: item._rawProps.find(s) != -1
         return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
+
+    def save(self, fileOrDirName):
+        shutil.copy(self._rawDumpFilename, fileOrDirName)
 
     def _parseDump(self, dump):
         """
