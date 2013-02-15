@@ -106,7 +106,6 @@ public:
     virtual void update()=0;
     virtual void push()=0;
     virtual void pop()=0;
-  protected:
     val value;
   };
 
@@ -256,6 +255,58 @@ public:
   protected:
     int my_action;
     std::stack<val> st;
+  };
+
+  class unit_mult: public unit {
+  public:
+    unit_mult(unit* l,int i): child(l),max(i),count(0) {
+      fprintf(stderr,"mult %i\n",max);
+      child->push();
+    }
+
+    virtual void push() {
+      child->push();
+      st.push(count);
+    }
+
+    virtual void pop() {
+      child->pop();
+      count=st.top();
+      st.pop();
+    }
+
+    virtual ~unit_mult() {
+      child->pop();
+      delete child;
+    }
+
+    virtual void execute(int action) {
+      if (count<max)
+	child->execute(action);
+    }
+
+    virtual void update() {
+      child->update();
+      val v=child->get_value();
+      if (v.first==v.second) {
+	child->pop();
+	child->push();
+	count++;
+      }
+      value.second=max*v.second;
+      value.first=count*v.second+v.first;
+
+      if (value.first>value.second) {
+	abort();
+      }
+
+    }
+    
+  protected:
+    unit* child;
+    int max;
+    int count;
+    std::stack<int> st;
   };
 
 protected:
