@@ -200,6 +200,30 @@ def _run(command, expectedExitStatus = None):
 
     return (exitStatus, out, err)
 
+def _bitmapPathSolver(fmbtAndroidHomeDir, bitmapPath):
+    def _solver(bitmap, checkReadable=True):
+        if bitmap.startswith("/") or os.access(bitmap, os.R_OK):
+            path = [os.path.dirname(bitmap)]
+            bitmap = os.path.basename(bitmap)
+        else:
+            path = []
+
+            for singleDir in bitmapPath.split(":"):
+                if not singleDir.startswith("/"):
+                    path.append(os.path.join(fmbtAndroidHomeDir, singleDir))
+                else:
+                    path.append(singleDir)
+
+        for singleDir in path:
+            retval = os.path.join(singleDir, bitmap)
+            if not checkReadable or os.access(retval, os.R_OK):
+                break
+
+        if checkReadable and not os.access(retval, os.R_OK):
+            raise ValueError('Bitmap "%s" not readable in bitmapPath %s' % (bitmap, ':'.join(path)))
+        return retval
+    return _solver
+
 class Device(object):
     """
     The Device class provides
@@ -592,14 +616,17 @@ class Device(object):
         if forcedScreenshot != None:
             if type(forcedScreenshot) == str:
                 self._lastScreenshot = Screenshot(
-                    None, screenshotDir=forcedScreenshot,
-                    pathSolver=self._bitmapFilename, screenSize=self.screenSize())
+                    screenshotFile=forcedScreenshot,
+                    pathSolver=_bitmapPathSolver(self._fmbtAndroidHomeDir, self.bitmapPath),
+                    screenSize=self.screenSize())
             else:
                 self._lastScreenshot = forcedScreenshot
         else:
+            screenshotFile = self._conn.screenshot(screenshotDir=self.screenshotDir)
             self._lastScreenshot = Screenshot(
-                self._conn, screenshotDir=self.screenshotDir,
-                pathSolver=self._bitmapFilename, screenSize=self.screenSize())
+                screenshotFile=screenshotFile,
+                pathSolver=_bitmapPathSolver(self._fmbtAndroidHomeDir, self.bitmapPath),
+                screenSize=self.screenSize())
         return self._lastScreenshot
 
     def refreshView(self):
@@ -692,6 +719,21 @@ class Device(object):
         time.sleep(1)
         self.pressKey("KEYCODE_ENTER")
         return True
+
+    def supportsView(self):
+        """
+        Check if connected device supports reading view data.
+
+        View data is needed by refreshView(), view(), verifyText() and
+        waitText(). It is produced by Android window dump.
+
+        Returns True if view data can be read, otherwise False.
+        """
+        try:
+            self._conn.recvViewData()
+            return True
+        except AndroidConnectionError:
+            return False
 
     def swipe(self, (x, y), direction, **dragKwArgs):
         """
@@ -1134,13 +1176,8 @@ class Screenshot(object):
     Screenshot class takes and holds a screenshot (bitmap) of device
     display, or a forced bitmap file if device connection is not given.
     """
-    def __init__(self, deviceConn, screenshotDir=None, pathSolver=None, screenSize=None):
-        if deviceConn:
-            self._conn = deviceConn
-            self._filename = self._conn.screenshot(screenshotDir=screenshotDir)
-        else:
-            self._conn = None
-            self._filename = screenshotDir
+    def __init__(self, screenshotFile=None, pathSolver=None, screenSize=None):
+        self._filename = screenshotFile
         self._pathSolver = pathSolver
         self._screenSize = screenSize
         # The bitmap held inside screenshot object is never updated.
@@ -1235,6 +1272,9 @@ class ViewItem(object):
         self._children = []
         self._bbox = []
         self._rawProps = ""
+        if not "scrolling:mScrollX" in self._p:
+            self._p["scrolling:mScrollX"] = 0
+            self._p["scrolling:mScrollY"] = 0
     def addChild(self,child): self._children.append(child)
     def bbox(self):
         if self._bbox == []:
@@ -1735,7 +1775,7 @@ class _AndroidDeviceConnection:
             # DUMP -1: get foreground window info
             if self._windowSocket.sendall("DUMP -1\n") == 0:
                 # LOG: readGUI cannot write to window socket
-                raise Exception("writing socket failed")
+                raise AdapterConnectionError("writing socket failed")
 
             # Read until a "DONE" line
             data = ""
