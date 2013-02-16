@@ -88,7 +88,7 @@ int bstr_scan(char *ops, void *ops_cache, d_loc_t *loc,
 }
 }
 
-aal: aal_start header+ ( act | tag | comment )* '}' ;
+aal: comment* aal_start header+ ( ( act | tag) (act | tag | comment )* )? '}' comment* ;
 
 aal_start: 'aal' string '{' language {
             obj->set_namestr($1.str);
@@ -134,7 +134,7 @@ push: 'push' '{' bstr '}' {
             obj->set_push($2.str,$n2.start_loc.pathname,$n2.start_loc.line,$n2.start_loc.col);
         } ;
 
-pop:  'pop' '{' bstr '}' { 
+pop:  'pop' '{' bstr '}' {
             obj->set_pop ($2.str,$n2.start_loc.pathname,$n2.start_loc.line,$n2.start_loc.col); } ;
 
 language: 'language:' cpp    { obj=new aalang_cpp  ; } starter ';'? |

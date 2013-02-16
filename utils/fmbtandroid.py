@@ -200,6 +200,30 @@ def _run(command, expectedExitStatus = None):
 
     return (exitStatus, out, err)
 
+def _bitmapPathSolver(fmbtAndroidHomeDir, bitmapPath):
+    def _solver(bitmap, checkReadable=True):
+        if bitmap.startswith("/") or os.access(bitmap, os.R_OK):
+            path = [os.path.dirname(bitmap)]
+            bitmap = os.path.basename(bitmap)
+        else:
+            path = []
+
+            for singleDir in bitmapPath.split(":"):
+                if not singleDir.startswith("/"):
+                    path.append(os.path.join(fmbtAndroidHomeDir, singleDir))
+                else:
+                    path.append(singleDir)
+
+        for singleDir in path:
+            retval = os.path.join(singleDir, bitmap)
+            if not checkReadable or os.access(retval, os.R_OK):
+                break
+
+        if checkReadable and not os.access(retval, os.R_OK):
+            raise ValueError('Bitmap "%s" not readable in bitmapPath %s' % (bitmap, ':'.join(path)))
+        return retval
+    return _solver
+
 class Device(object):
     """
     The Device class provides
@@ -376,9 +400,12 @@ class Device(object):
     def close(self):
         if hasattr(self, "_conn"):
             del self._conn
+        if hasattr(self, "_lastView"):
             del self._lastView
-            import gc
-            gc.collect()
+        if hasattr(self, "_lastScreenshot"):
+            del self._lastScreenshot
+        import gc
+        gc.collect()
 
     def dumpIni(self):
         """
@@ -592,23 +619,46 @@ class Device(object):
         if forcedScreenshot != None:
             if type(forcedScreenshot) == str:
                 self._lastScreenshot = Screenshot(
-                    None, screenshotDir=forcedScreenshot,
-                    pathSolver=self._bitmapFilename, screenSize=self.screenSize())
+                    screenshotFile=forcedScreenshot,
+                    pathSolver=_bitmapPathSolver(self._fmbtAndroidHomeDir, self.bitmapPath),
+                    screenSize=self.screenSize())
             else:
                 self._lastScreenshot = forcedScreenshot
         else:
+            screenshotFile = self._conn.screenshot(screenshotDir=self.screenshotDir)
             self._lastScreenshot = Screenshot(
-                self._conn, screenshotDir=self.screenshotDir,
-                pathSolver=self._bitmapFilename, screenSize=self.screenSize())
+                screenshotFile=screenshotFile,
+                pathSolver=_bitmapPathSolver(self._fmbtAndroidHomeDir, self.bitmapPath),
+                screenSize=self.screenSize())
         return self._lastScreenshot
 
-    def refreshView(self):
+    def refreshView(self, forcedView=None):
         """
         (Re)reads view items on display and updates the latest View
         object.
 
+        Parameters:
+
+          forcedView (View or filename, optional):
+                use given View object or view file instead of reading
+                items from the device.
+
         Returns created View object.
         """
+        def formatErrors(errors):
+            return "refreshView parse errors:\n    %s" % (
+                "\n    ".join(["line %s: %s error: %s" % e for e in errors]),)
+
+        if forcedView != None:
+            if isinstance(forcedView, View):
+                self._lastView = forcedView
+            elif type(forcedView) == str:
+                self._lastView = View(self.screenshotDir, self.serialNumber, file(forcedView).read())
+                _adapterLog(formatErrors(self._lastView.errors()))
+            else:
+                raise ValueError("forcedView must be a View object or a filename")
+            return self._lastView
+
         retryCount = 0
         while True:
             dump = self._conn.recvViewData()
@@ -616,7 +666,7 @@ class Device(object):
                 return None
             view = View(self.screenshotDir, self.serialNumber, dump)
             if len(view.errors()) > 0 and retryCount < self._PARSE_VIEW_RETRY_LIMIT:
-                _adapterLog("refreshView parse errors:\n    %s" % ("\n    ".join(view.errors(),)))
+                _adapterLog(formatErrors(view.errors()))
                 retryCount += 1
                 time.sleep(0.2) # sleep before retry
             else:
@@ -692,6 +742,21 @@ class Device(object):
         time.sleep(1)
         self.pressKey("KEYCODE_ENTER")
         return True
+
+    def supportsView(self):
+        """
+        Check if connected device supports reading view data.
+
+        View data is needed by refreshView(), view(), verifyText() and
+        waitText(). It is produced by Android window dump.
+
+        Returns True if view data can be read, otherwise False.
+        """
+        try:
+            self._conn.recvViewData()
+            return True
+        except AndroidConnectionError:
+            return False
 
     def swipe(self, (x, y), direction, **dragKwArgs):
         """
@@ -1134,13 +1199,8 @@ class Screenshot(object):
     Screenshot class takes and holds a screenshot (bitmap) of device
     display, or a forced bitmap file if device connection is not given.
     """
-    def __init__(self, deviceConn, screenshotDir=None, pathSolver=None, screenSize=None):
-        if deviceConn:
-            self._conn = deviceConn
-            self._filename = self._conn.screenshot(screenshotDir=screenshotDir)
-        else:
-            self._conn = None
-            self._filename = screenshotDir
+    def __init__(self, screenshotFile=None, pathSolver=None, screenSize=None):
+        self._filename = screenshotFile
         self._pathSolver = pathSolver
         self._screenSize = screenSize
         # The bitmap held inside screenshot object is never updated.
@@ -1235,6 +1295,9 @@ class ViewItem(object):
         self._children = []
         self._bbox = []
         self._rawProps = ""
+        if not "scrolling:mScrollX" in self._p:
+            self._p["scrolling:mScrollX"] = 0
+            self._p["scrolling:mScrollY"] = 0
     def addChild(self,child): self._children.append(child)
     def bbox(self):
         if self._bbox == []:
@@ -1292,7 +1355,9 @@ class View(object):
         self._dump = dump
         self._rawDumpFilename = self.screenshotDir + os.sep + _filenameTimestamp() + "-" + self.serialNumber + ".view"
         file(self._rawDumpFilename, "w").write(self._dump)
-        self._parseDump(dump)
+        try: self._parseDump(dump)
+        except Exception, e:
+            self._errors.append((-1, "", "Parser error"))
 
     def viewItems(self): return self._viewItems
     def errors(self): return self._errors
@@ -1377,6 +1442,9 @@ class View(object):
     def findItemsByRawProps(self, s, count=-1, searchRootItem=None, searchItems=None):
         c = lambda item: item._rawProps.find(s) != -1
         return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
+
+    def save(self, fileOrDirName):
+        shutil.copy(self._rawDumpFilename, fileOrDirName)
 
     def _parseDump(self, dump):
         """
@@ -1735,7 +1803,7 @@ class _AndroidDeviceConnection:
             # DUMP -1: get foreground window info
             if self._windowSocket.sendall("DUMP -1\n") == 0:
                 # LOG: readGUI cannot write to window socket
-                raise Exception("writing socket failed")
+                raise AdapterConnectionError("writing socket failed")
 
             # Read until a "DONE" line
             data = ""
