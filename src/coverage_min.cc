@@ -24,8 +24,6 @@
 Coverage_Min::Coverage_Min(Log& l, std::string& _params,unit* _u) :
   Coverage(l), params(_params),u(_u)
 {
-  std::string name,option;
-
   std::vector<std::string> s;
   commalist(params,s);
 
@@ -33,7 +31,7 @@ Coverage_Min::Coverage_Min(Log& l, std::string& _params,unit* _u) :
     Coverage* cov=new_coverage(log,s[i]);
     if (cov==NULL) {
       status=false;
-      errormsg=std::string("Can't create coverage ")+name+"("+option+")";
+      errormsg=std::string("Can't create coverage "+s[i]);
       return;
     }
     coverages.push_back(cov);
