@@ -41,7 +41,7 @@ Coverage_Market::unit* inthelper(Coverage_Market::unit* u,
         dynamic_cast<Coverage_Market::unit_leaf*>(u);
 
     if (ul) {
-        ul->value.second=count;
+        ul->value.second*=count;
         return u;
     }   
 
