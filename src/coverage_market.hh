@@ -274,7 +274,7 @@ public:
 
   class unit_mult: public unit {
   public:
-    unit_mult(unit* l,int i): child(l),max(i),count(0) {
+    unit_mult(unit* l,int i): max(i),child(l),count(0) {
     }
 
     virtual void reset() {
@@ -297,8 +297,10 @@ public:
     }
 
     virtual void execute(int action) {
+      update();
       if (count<max)
 	child->execute(action);
+      update();
     }
 
     virtual void update() {
@@ -314,9 +316,9 @@ public:
 
     }
     
+    int max;
   protected:
     unit* child;
-    int max;
     int count;
     std::stack<int> st;
   };
