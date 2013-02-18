@@ -293,7 +293,6 @@ public:
     }
 
     virtual ~unit_mult() {
-      child->pop();
       delete child;
     }
 
