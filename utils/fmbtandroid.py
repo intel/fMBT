@@ -196,7 +196,10 @@ def _run(command, expectedExitStatus = None):
             msg = 'Unexpected exit status %s from command "%s".\n    Output: %s\n    Error: %s' % (
                 exitStatus, command, out, err)
             _adapterLog(msg)
-            raise Exception(msg)
+            if "error: device not found" in err:
+                raise AndroidDeviceNotFound(msg)
+            else:
+                raise Exception(msg)
 
     return (exitStatus, out, err)
 
@@ -1830,3 +1833,4 @@ class _AndroidDeviceConnection:
 
 class AndroidConnectionError(Exception): pass
 class AndroidConnectionLost(AndroidConnectionError): pass
+class AndroidDeviceNotFound(AndroidConnectionError): pass

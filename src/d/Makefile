@@ -38,9 +38,7 @@ ifeq ($(ARCH),i686)
   ARCH = x86
 endif
 
-ifeq ($(ARCH),x86_64)
-  CFLAGS += -fPIC
-endif
+CFLAGS += -fPIC
 
 ifeq ($(OS_TYPE),CYGWIN)
 GC_CFLAGS += -L/usr/local/lib
@@ -92,7 +90,7 @@ ifdef D_PROFILE
 CFLAGS += -pg
 endif
 
-LIBS += -lm 
+LIBS += -lm
 
 AUX_FILES = d/Makefile d/COPYRIGHT d/README d/CHANGES d/4calc.g d/4calc.in d/my.g d/my.c d/index.html d/manual.html d/faq.html d/make_dparser.1 d/make_dparser.cat
 TESTS = $(shell ls tests/*g tests/*[0-9] tests/*.check tests/*.flags)
@@ -101,7 +99,7 @@ PYTHON_FILES = d/python/Makefile d/python/*.py d/python/*.c d/python/*.h d/pytho
 VERILOG_FILES = d/verilog/Makefile d/verilog/verilog.g d/verilog/README d/verilog/ambig.c \
 d/verilog/main.c d/verilog/vparse.c d/verilog/vparse.h d/verilog/verilog_tests
 TAR_FILES = $(AUX_FILES) $(TEST_FILES) $(PYTHON_FILES) $(VERILOG_FILES) d/BUILD_VERSION \
-d/grammar.g d/sample.g d/my.g 
+d/grammar.g d/sample.g d/my.g
 
 LIB_SRCS = arg.c parse.c scan.c symtab.c util.c read_binary.c dparse_tree.c
 LIB_OBJS = $(LIB_SRCS:%.c=%.o)
@@ -172,7 +170,7 @@ deinstall:
 	rm $(MANPAGES:%=$(PREFIX)/man/man1/%)
 
 make_dparser: $(MAKE_PARSER_OBJS) $(LIBRARIES)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ version.c $(LIBS) 
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ version.c $(LIBS)
 
 $(LIBDPARSE): $(LIB_OBJS)
 	ar cruv $@ $^
@@ -211,7 +209,7 @@ build_version:
 	mv BUILD_VERSION.tmp BUILD_VERSION
 
 tar:
-	(cd ..;tar czf d-$(RELEASE)-src.tar.gz d/*.c d/*.h $(TAR_FILES)) 
+	(cd ..;tar czf d-$(RELEASE)-src.tar.gz d/*.c d/*.h $(TAR_FILES))
 
 bintar:
 	(cd ..;tar czf d-$(RELEASE)-$(OS_TYPE)-bin.tar.gz $(AUX_FILES) $(LIBRARIES:%=d/%) $(INCLUDES:%=d/%) $(EXECUTABLE_FILES:%=d/%))
