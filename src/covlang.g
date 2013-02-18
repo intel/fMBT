@@ -43,7 +43,15 @@ Coverage_Market::unit* inthelper(Coverage_Market::unit* u,
     if (ul) {
         ul->value.second*=count;
         return u;
-    }   
+    }
+
+    Coverage_Market::unit_mult* um=
+        dynamic_cast<Coverage_Market::unit_mult*>(u);
+
+    if (um) {
+        um->max*=count;
+        return u;
+    }
 
     return new Coverage_Market::unit_mult(u,count);
 }
