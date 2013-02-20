@@ -25,6 +25,7 @@ typedef struct _node {
   char type;
   std::string* str;
   Coverage_Market::unit* u;
+  int i;
 } cnode;
 #define D_ParseNode_User cnode
 Coverage_Market* cobj;
@@ -33,6 +34,28 @@ Coverage_Market* cobj;
 #include "helper.hh"
 
 extern D_ParserTables parser_tables_covlang;
+
+Coverage_Market::unit* inthelper(Coverage_Market::unit* u,
+                                 int count) {
+    Coverage_Market::unit_leaf* ul = 
+        dynamic_cast<Coverage_Market::unit_leaf*>(u);
+
+    if (ul) {
+        ul->value.second*=count;
+        return u;
+    }
+
+    Coverage_Market::unit_mult* um=
+        dynamic_cast<Coverage_Market::unit_mult*>(u);
+
+    if (um) {
+        um->max*=count;
+        return u;
+    }
+
+    return new Coverage_Market::unit_mult(u,count);
+}
+
 }
 
 begin: expr { cobj->add_unit($0.u); };
@@ -40,13 +63,15 @@ begin: expr { cobj->add_unit($0.u); };
 expr: node             { $$.u = $0.u; }
     | node "and" expr  { $$.u = new Coverage_Market::unit_and ($0.u,$2.u); }
     | node "or" expr   { $$.u = new Coverage_Market::unit_or  ($0.u,$2.u); }
-    | node "then" expr { $$.u = new Coverage_Market::unit_then($0.u,$2.u); };
+    | node "then" expr { $$.u = new Coverage_Market::unit_then($0.u,$2.u); } ;
 
 node: actionname       { $$.type='e'; $$.u = cobj->req_rx_action($$.type,*$0.str); delete $0.str; $0.str=NULL; }
     | ('a' | 'A' | 'all' ) actionname   { $$.type='a'; $$.u = cobj->req_rx_action($$.type,*$1.str); delete $0.str; $0.str=NULL; }
     | ('e' | 'E' | 'any' ) actionname   { $$.type='e'; $$.u = cobj->req_rx_action($$.type,*$1.str); delete $0.str; $0.str=NULL; }
     | '(' expr ')'     { $$.u = $1.u; }
     | "not" node       { $$.u = new Coverage_Market::unit_not($1.u); } 
+    | uint '*' node    { $$.u = inthelper($2.u,$0.i); }
+    | node '*' uint    { $$.u = inthelper($0.u,$2.i); }
     | 'file' '(' name ')' [
             char* ss=strndup($n2.start_loc.s+1, $n2.end-$n2.start_loc.s-2);
             char* bb=readfile(ss);
@@ -76,3 +101,7 @@ node: actionname       { $$.type='e'; $$.u = cobj->req_rx_action($$.type,*$0.str
 actionname: name { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); } ;
 
 name: "\"([^\"\\]|\\[^])*\"" |  "\'([^\'\\]|\\[^])*\'";
+
+uint: istr { $$.i = atoi($n0.start_loc.s); };
+
+istr: "[0-9]+";
