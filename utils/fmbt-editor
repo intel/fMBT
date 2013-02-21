@@ -549,7 +549,7 @@ Keyboard shortcuts:<br>
         hide_states_orphaned = False
         hide_states_unvisited = False
         preview_depth = 5
-        pt = str(self.editor.toPlainText())
+        pt = self._modelSources() + self._modelSource()
         for show_or_hide, _, var in GT_HIDESHOWRE.findall(pt):
             correct_list = ['show', 'hide'].index(show_or_hide)
             for v in var.replace(',', ' ').split():
