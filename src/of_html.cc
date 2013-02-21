@@ -26,50 +26,88 @@
 #include <sstream>
 #include <algorithm>
 
+static const std::string bodyId = "top";
+static const std::string headerId = "header";
+static const std::string contentClass = "content";
+static const std::string summaryClass = "text total_summary";
+static const std::string reportTableClass = "matrix";
+static const std::string tdVerdictClass = "uc_verdict";
+static const std::string divListingClass = "text uc_listing";
+static const std::string testNameClass = "uc_name";
+static const std::string divFiguresClass = "text uc_figures";
+static const std::string trNameClass = "name";
+static const std::string tdNameValueClass = "name_value";
+static const std::string trExecutedClass = "executed";
+static const std::string tdExecutedValueClass = "executed_value";
+static const std::string trUniqClass = "uniq";
+static const std::string tdUniqTotalClass = "uc_total_uniq_tests";
+static const std::string tdUniqValueClass = "uc_total_uniq_tests_value";
+static const std::string trTimeClass = "time_used";
+static const std::string tdTimeValueClass = "time_used_value";
+static const std::string trAverageClass = "average";
+static const std::string tdAverageValueClass = "average_value";
+static const std::string trMinClass = "min";
+static const std::string tdMinValueClass = "min_value";
+static const std::string trMaxClass = "max";
+static const std::string tdMaxValueClass = "max_value";
+static const std::string divDetailedClass = "uc_detailed_results";
+static const std::string divCountHeadClass = "uc_count_head";
+static const std::string divStepsClass = "uc_steps";
+
 std::string OutputFormat_Html::header()
 {
   std::string script(
-    "<SCRIPT LANGUAGE=\"JavaScript\">\n"
-    "<!--\n"
-    "function showHide(elementid){\n"
-    "if (document.getElementById(elementid).style.display == 'none'){\n"
-    "document.getElementById(elementid).style.display = '';\n"
-    "} else {\n"
-    "document.getElementById(elementid).style.display = 'none';\n"
-    "}\n"
-    "} \n"
-    "//-->\n"
-    "</SCRIPT>\n");
-  std::string ret("<html><header>"+script+"</header>");
-  ret+="<body>";
-  ret+="<table border=\"1\">\n<tr><th>UC</th>\n<th>verdict</th>\n";
+    "    <SCRIPT>\n"
+    "        <!--\n"
+    "        function showHide(elementid){\n"
+    "        if (document.getElementById(elementid).style.display == 'none'){\n"
+    "        document.getElementById(elementid).style.display = '';\n"
+    "        } else {\n"
+    "        document.getElementById(elementid).style.display = 'none';\n"
+    "        }\n"
+    "        } \n"
+    "        //-->\n"
+    "    </SCRIPT>\n");
+  std::string style("    <style>\n        td { vertical-align: top}\n    </style>\n");
+  std::string meta("<meta charset=\"utf-8\">\n");
+  std::string ret("<!DOCTYPE html>\n    <head>\n"+meta+script+style+"    \n    <title>Use Case Report</title>\n    </head>\n");
+  ret+="    <body id=\"" + bodyId +"\"\n";
+  ret+="        <div id=\"" + headerId +"\">\n";
+  ret+="            <h1>Use Case Report</h1>\n";
+  ret+="        </div>\n";
+  ret+="        <div class=\"" + contentClass + "\">\n";
+  ret+="            <div class=\"" + summaryClass + "\">\n";
+  ret+="                <h2>Report Summary</h2>\n";
+  ret+="                <table class=\"" + reportTableClass + "\" border=\"1\">\n";
+  ret+="                    <tr><td>UC</td>\n";
+  ret+="                        <td>Verdict</td>\n";
   for(unsigned i=0;i<covnames.size();i++) {
-    ret=ret+"<th>"+covnames[i]+"</th>\n";
+    ret=ret+"                        <td>"+covnames[i]+"</td>\n";
   }
-  ret=ret+"</tr>\n";
+  ret+="                    </tr>\n";
   return ret;
 }
 
 std::string OutputFormat_Html::footer() {
-  return "</table>";
+  return "            </div>\n\n\n";
 }
 
 
 std::string OutputFormat_Html::format_covs()
 {
-  std::string ret("<tr>\n");
+  std::string ret("                    <tr>\n");
 
   //testname
-  ret=ret+"<td>"+testnames.back()+"</td>";
+  ret+="                        <td>"+testnames.back()+"</td>\n";
 
   //verdict
-  ret=ret+"<td>"+test_verdict+"</td>\n";
+  ret+="                        <td class=\"" + tdVerdictClass + "\">"+test_verdict+"</td>\n";
 
   for(unsigned i=0;i<covnames.size();i++) {
-    ret=ret+"<td>"+to_string(covs[i]->getCoverage())+
-      "</td>\n";
+    ret+= "                        <td>"+to_string(covs[i]->getCoverage())+
+          "</td>\n";
   }
-  return ret+"</tr>\n";
+  return ret+"                    </tr>\n                </table>\n";
 }
 
 
@@ -95,13 +133,9 @@ std::string OutputFormat_Html::report()
 {
   std::ostringstream html;
 
-
-  /*
-   * The code is ugly. Sorry.
-   */
-
-  html << "<table border=\"2\">"
-       << "<tr><th>Name</th><th>trace</th></tr>\n";
+  html << "            <div class=\"" + divListingClass + "\">\n"
+       << "                <h2>Use Cases</h2>\n"
+       << "                <ul>\n";      
 
   std::vector<std::string>& an(model->getActionNames());
 
@@ -151,53 +185,93 @@ std::string OutputFormat_Html::report()
       variance=variance/rcovs[i]->times.size();
     }
 
-    html << "<tr><td><a href=\"javascript:showHide('ID"
-         << to_string(i)
-         << "')\"><table><tr><td>"
-         << reportnames[i]
-         << "</td></tr><tr><td>Number of executed tests:"
-         << to_string((unsigned)traces.size())
-         << "</td></tr><tr><td>unique tests:"
-         << to_string(unsigned(cnt.size()))
-
-         << "</td></tr><tr><td>time used:"
-	 << to_string(time_consumed,true) << " Variance:" << to_string(variance) << " Average:" << to_string(average_time,true);
+    html << "                    <li><a class=\"" + testNameClass + "\" href=\"javascript:showHide('ID" << to_string(i) << "')\"> Show/Hide Test</a>\n"
+         << "                        <div class=\"" + divFiguresClass + "\">\n"
+         << "                            <table class=\"" + reportTableClass + "\">\n"
+         << "                                <tr class=\"" + trNameClass + "\">\n"
+         << "                                    <td>Name</td>\n"
+         << "                                    <td class=\"" + tdNameValueClass + "\">" << reportnames[i] << "</td>\n"
+         << "                                </tr>\n" 
+         << "                                <tr class=\"" + trExecutedClass + "\">\n" 
+         << "                                    <td>Number of executed tests:</td>\n"
+         << "                                    <td class=\"" + tdExecutedValueClass + "\">" << to_string((unsigned)traces.size()) << "</td>\n"
+         << "                                </tr>\n"
+         << "                                <tr class=\"" + trUniqClass + "\">\n" 
+         << "                                    <td class=\"" + tdUniqTotalClass + "\">Unique tests: </td>\n"
+         << "                                    <td class=\"" + tdUniqValueClass + "\">" << to_string(unsigned(cnt.size())) << "</td>\n"
+         << "                                </tr>\n"
+         << "                                <tr class=\"" + trTimeClass + "\">\n"
+         << "                                    <td>Time used: </td>\n"
+         << "                                    <td class=\"" + tdTimeValueClass + "\">" << to_string(time_consumed,true)
+         << "</td>\n"
+         << "                                </tr>\n" 
+         << "                                <tr class=\"" + trAverageClass + "\">\n"
+         << "                                    <td>Average: </td>\n"
+         << "                                    <td class=\"" + tdAverageValueClass + "\">" << to_string(average_time,true)
+         << "</td>\n"
+         << "                                </tr>\n";
 
     if (rcovs[i]->times.size()) {
-      html << " Min:" << to_string(*min_element(t.begin(),t.end(),mytimercmp),true)
-	   << " Max:" << to_string(*max_element(t.begin(),t.end(),mytimercmp),true);
+      html << "                                <tr class=\"" + trMinClass + "\">\n"
+           << "                                    <td>Min: </td>\n"
+           << "                                    <td class=\"" + tdMinValueClass + "\">" << to_string(*min_element(t.begin(),t.end(),mytimercmp),true) << "</td>\n"
+           << "                                </tr>\n"
+	   << "                                <tr class=\"" + trMaxClass + "\">\n"
+           << "                                    <td>Max: </td>\n"
+           << "                                    <td class=\"" + tdMaxValueClass + "\">" << to_string(*max_element(t.begin(),t.end(),mytimercmp),true) << "</td>\n"
+           << "                                </tr>\n";
     }
 
-    html << "</td></tr></table></a></td>"
-            "<td>\n<div id=\"ID"
+    html << "                             </table>\n"
+         << "                        </div>\n";
+
+    html << "                        <div class=\"" + divDetailedClass + "\" id=\"ID"
          << to_string(i)
-         << "\">\n"
-         << "<table border=\"4\">";
+         << "\">\n";
+    if((unsigned)traces.size() > 0)
+    {
+         html << "                            <table>\n"
+              << "                                <tr>\n";
+    }
 
     for(std::map<std::vector<std::pair<int,std::vector<int> > >,int>::iterator j=cnt.begin();
         j!=cnt.end();j++) {
 
-      html << "<td valign=\"top\">\n"
-           << "<table border=\"0\">\n"
-           << "<caption>Count:"
-           << to_string((unsigned)j->second)
-           << "</caption><td>"
-           << "\n<ol>\n";
+      html << "                                    <td>\n" 
+           << "                                        <div class=\"" + divCountHeadClass + "\">" 
+           << "  Count: " << "<span class=\"uc_count\">" << to_string((unsigned)j->second) <<"</span></div>\n"
+           << "                                        <div class=\"" + divStepsClass + "\">\n"
+           << "                                            <ol>\n";
 
       const std::vector<std::pair<int,std::vector<int> > >& t(j->first);
       for(unsigned k=0; k<t.size();k++) {
-        html << "<li>"
-             << an[t[k].first];
+        html << "                                              <li>"
+             << an[t[k].first]
+             << "</li>\n";
       }
-      html << "</ol>\n"
-           << "</td></tr></table></td>";
+      html << "                                            </ol>\n"
+           << "                                         </div>\n"
+           << "                                     </td>\n";
     }
 
-    html << "</table>\n"
-         << "</div>\n</tr>";
-
+    if((unsigned)traces.size() > 0)
+    {
+        html << "                                </tr>\n"
+             << "                            </table>\n" 
+             << "                        </div>\n";
+    }
+    else
+    {
+        html << "                        </div>\n";             
+    }
+        html << "                    </li>\n";
   }
-  html << "</table>";
+  html << "                </ul>\n" 
+       << "            </div>\n"
+       << "        </div>\n"
+       << "<script>for(j=0; j<=" << reportnames.size() << "; j++) { showHide('ID'+j.toString())} </script>\n"
+       << "    </body>\n"
+       << "</html>";
   return html.str();
 }
 
