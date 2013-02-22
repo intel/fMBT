@@ -1,8 +1,17 @@
-fmbt (0.6-0.rc0) unstable; urgency=low
+fmbt (0.6-1) unstable; urgency=low
 
-  * Development version
+  * fmbtandroid: Python module for Android device UI testing
+    - Verify, tap and swipe bitmaps and view elements by their properties.
+    - Verify and tap words using OCR on screenshots (EXPERIMENTAL).
+    - Test multiple devices, test calling from one device to another.
+    - Docs: python -c 'import fmbtandroid; help(fmbtandroid)'.
+  * coverages: "usecase" coverage language has multiplication operator.
+    - example: (10 * 'iUseCash' and 10 * 'iUseCredit')
+      tests ten times cash and ten times credit payment.
+  * reporting: fmbt-ucheck HTML output improved.
+  * fixes: usecase errors, unexpected output actions from AAL.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 05 Feb 2013 09:42:00 +0200
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 22 Feb 2013 13:42:00 +0200
 
 fmbt (0.5-1) unstable; urgency=low
 
