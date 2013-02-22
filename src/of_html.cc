@@ -60,18 +60,21 @@ std::string OutputFormat_Html::header()
     "    <SCRIPT>\n"
     "        <!--\n"
     "        function showHide(elementid){\n"
-    "        if (document.getElementById(elementid).style.display == 'none'){\n"
-    "        document.getElementById(elementid).style.display = '';\n"
+    "        if (document.getElementById(elementid).style.display != 'inline'){\n"
+    "        document.getElementById(elementid).style.display = 'inline';\n"
     "        } else {\n"
     "        document.getElementById(elementid).style.display = 'none';\n"
     "        }\n"
     "        } \n"
     "        //-->\n"
     "    </SCRIPT>\n");
-  std::string style("    <style>\n        td { vertical-align: top}\n    </style>\n");
+  std::string style("    <style>\n"
+                    "        td { vertical-align: top }\n"
+                    "        ." + divDetailedClass + " { display: none }\n"
+                    "    </style>\n");
   std::string meta("<meta charset=\"utf-8\">\n");
   std::string ret("<!DOCTYPE html>\n    <head>\n"+meta+script+style+"    \n    <title>Use Case Report</title>\n    </head>\n");
-  ret+="    <body id=\"" + bodyId +"\"\n";
+  ret+="    <body id=\"" + bodyId +"\">\n";
   ret+="        <div id=\"" + headerId +"\">\n";
   ret+="            <h1>Use Case Report</h1>\n";
   ret+="        </div>\n";
@@ -124,7 +127,7 @@ bool vcmp (const std::vector<std::pair<int,std::vector<int> > >& lhs,
 }
 
 bool mytimercmp(struct timeval t1,
-		struct timeval t2)
+                struct timeval t2)
 {
   return timercmp(&t1,&t2,<);
 }
@@ -135,7 +138,7 @@ std::string OutputFormat_Html::report()
 
   html << "            <div class=\"" + divListingClass + "\">\n"
        << "                <h2>Use Cases</h2>\n"
-       << "                <ul>\n";      
+       << "                <ul>\n";
 
   std::vector<std::string>& an(model->getActionNames());
 
@@ -162,7 +165,7 @@ std::string OutputFormat_Html::report()
       struct timeval t1=rcovs[i]->times[j].second;
       struct timeval t2=rcovs[i]->times[j].first;
       timersub(&t1,&t2,
-	       &time_tmp);
+               &time_tmp);
       t.push_back(time_tmp);
       timeradd(&time_consumed,&time_tmp,&time_consumed);
     }
@@ -185,39 +188,35 @@ std::string OutputFormat_Html::report()
       variance=variance/rcovs[i]->times.size();
     }
 
-    html << "                    <li><a class=\"" + testNameClass + "\" href=\"javascript:showHide('ID" << to_string(i) << "')\"> Show/Hide Test</a>\n"
+    html << "                    <li><a href=\"javascript:showHide('ID" << to_string(i) << "')\" class=\"" + trNameClass + "\">" << reportnames[i] << "</a>\n"
          << "                        <div class=\"" + divFiguresClass + "\">\n"
          << "                            <table class=\"" + reportTableClass + "\">\n"
-         << "                                <tr class=\"" + trNameClass + "\">\n"
-         << "                                    <td>Name</td>\n"
-         << "                                    <td class=\"" + tdNameValueClass + "\">" << reportnames[i] << "</td>\n"
-         << "                                </tr>\n" 
-         << "                                <tr class=\"" + trExecutedClass + "\">\n" 
-         << "                                    <td>Number of executed tests:</td>\n"
+         << "                                <tr class=\"" + trExecutedClass + "\">\n"
+         << "                                    <td>Total count:</td>\n"
          << "                                    <td class=\"" + tdExecutedValueClass + "\">" << to_string((unsigned)traces.size()) << "</td>\n"
          << "                                </tr>\n"
-         << "                                <tr class=\"" + trUniqClass + "\">\n" 
-         << "                                    <td class=\"" + tdUniqTotalClass + "\">Unique tests: </td>\n"
+         << "                                <tr class=\"" + trUniqClass + "\">\n"
+         << "                                    <td class=\"" + tdUniqTotalClass + "\">Unique count:</td>\n"
          << "                                    <td class=\"" + tdUniqValueClass + "\">" << to_string(unsigned(cnt.size())) << "</td>\n"
          << "                                </tr>\n"
          << "                                <tr class=\"" + trTimeClass + "\">\n"
-         << "                                    <td>Time used: </td>\n"
+         << "                                    <td>Total time:</td>\n"
          << "                                    <td class=\"" + tdTimeValueClass + "\">" << to_string(time_consumed,true)
          << "</td>\n"
-         << "                                </tr>\n" 
+         << "                                </tr>\n"
          << "                                <tr class=\"" + trAverageClass + "\">\n"
-         << "                                    <td>Average: </td>\n"
+         << "                                    <td>Average time:</td>\n"
          << "                                    <td class=\"" + tdAverageValueClass + "\">" << to_string(average_time,true)
          << "</td>\n"
          << "                                </tr>\n";
 
     if (rcovs[i]->times.size()) {
       html << "                                <tr class=\"" + trMinClass + "\">\n"
-           << "                                    <td>Min: </td>\n"
+           << "                                    <td>Min. time:</td>\n"
            << "                                    <td class=\"" + tdMinValueClass + "\">" << to_string(*min_element(t.begin(),t.end(),mytimercmp),true) << "</td>\n"
            << "                                </tr>\n"
-	   << "                                <tr class=\"" + trMaxClass + "\">\n"
-           << "                                    <td>Max: </td>\n"
+           << "                                <tr class=\"" + trMaxClass + "\">\n"
+           << "                                    <td>Max. time:</td>\n"
            << "                                    <td class=\"" + tdMaxValueClass + "\">" << to_string(*max_element(t.begin(),t.end(),mytimercmp),true) << "</td>\n"
            << "                                </tr>\n";
     }
@@ -237,9 +236,9 @@ std::string OutputFormat_Html::report()
     for(std::map<std::vector<std::pair<int,std::vector<int> > >,int>::iterator j=cnt.begin();
         j!=cnt.end();j++) {
 
-      html << "                                    <td>\n" 
-           << "                                        <div class=\"" + divCountHeadClass + "\">" 
-           << "  Count: " << "<span class=\"uc_count\">" << to_string((unsigned)j->second) <<"</span></div>\n"
+      html << "                                    <td>\n"
+           << "                                        <div class=\"" + divCountHeadClass + "\">"
+           << "Count: " << "<span class=\"uc_count\">" << to_string((unsigned)j->second) <<"</span></div>\n"
            << "                                        <div class=\"" + divStepsClass + "\">\n"
            << "                                            <ol>\n";
 
@@ -257,19 +256,18 @@ std::string OutputFormat_Html::report()
     if((unsigned)traces.size() > 0)
     {
         html << "                                </tr>\n"
-             << "                            </table>\n" 
+             << "                            </table>\n"
              << "                        </div>\n";
     }
     else
     {
-        html << "                        </div>\n";             
+        html << "                        </div>\n";
     }
         html << "                    </li>\n";
   }
-  html << "                </ul>\n" 
+  html << "                </ul>\n"
        << "            </div>\n"
        << "        </div>\n"
-       << "<script>for(j=0; j<=" << reportnames.size() << "; j++) { showHide('ID'+j.toString())} </script>\n"
        << "    </body>\n"
        << "</html>";
   return html.str();
