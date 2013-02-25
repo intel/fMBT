@@ -26,13 +26,13 @@ noinst_HEADERS += conf.g lts.g mrules.g covlang.g xrules.g lang.g uconf.g filter
 
 noinst_HEADERS += Android.mk Application.mk
 
-fmbt_CPPFLAGS                  = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0  libxml-2.0` $(JVMCFLAGS)
-fmbt_ucheck_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0 libxml-2.0`
+fmbt_CPPFLAGS                  = -Wall -pedantic -fPIC -I ./d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0  libxml-2.0` $(JVMCFLAGS)
+fmbt_ucheck_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0 libxml-2.0`
 fmbt_droid_CPPFLAGS            = -Wall -pedantic -fPIC -I d -I `pwd` -DDROI
 remote_adapter_loader_CPPFLAGS = -Wall -pedantic -I d -DDROI
-fmbt_cparsers_la_CPPFLAGS      = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DCAPI
+fmbt_cparsers_la_CPPFLAGS      = -Wall -pedantic -fPIC -I ./d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DCAPI
 eye4graphics_la_CPPFLAGS       = -Wall -fPIC -I `pwd` `pkg-config --cflags Magick++`
-fmbt_aalc_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./$(VPATH)/d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DINCDIR=\"${pkgincludedir}\"
+fmbt_aalc_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DINCDIR=\"${pkgincludedir}\"
 fmbt_log2lsts_CPPFLAGS	       = -Wall -pedantic -fPIC -I d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0 libxml-2.0`
 
 fmbt_LDFLAGS                   = -g $(JVMLDFLAGS) `pkg-config --libs glib-2.0 gobject-2.0 libedit libxml-2.0` -lboost_regex -Wl,-E -ldl
@@ -57,7 +57,7 @@ dsources = d/baseline d/BUILD_VERSION d/calc d/CHANGES d/COPYRIGHT d/Makefile d/
 noinst_HEADERS += $(dsources)
 
 d/libdparse.a:
-	(mkdir d 2>/dev/null && cp -r $(VPATH)/d .) || true # qnd way to for VPATH build
+	(mkdir d 2>/dev/null && cp -r d .) || true # qnd way to for VPATH build
 	cd d; $(MAKE) make_dparser libdparse.a
 
 # Building d/libdparse.a creates make_dparser, too. On the other hand,
@@ -67,40 +67,40 @@ d/libdparse.a:
 # following rules depend on d/libdparse.a, yet they need
 # d/make_dparser.
 weight.g.d_parser.cc: weight.g d/libdparse.a
-	d/make_dparser -o weight.g.d_parser.cc -i weight ./$(VPATH)/weight.g
+	d/make_dparser -o weight.g.d_parser.cc -i weight ./weight.g
 
 lang.g.d_parser.cc: lang.g d/libdparse.a
-	d/make_dparser -o lang.g.d_parser.cc -i lang ./$(VPATH)/lang.g
+	d/make_dparser -o lang.g.d_parser.cc -i lang ./lang.g
 
 mrules.g.d_parser.cc: mrules.g d/libdparse.a
-	d/make_dparser -o mrules.g.d_parser.cc -i mrules ./$(VPATH)/mrules.g
+	d/make_dparser -o mrules.g.d_parser.cc -i mrules ./mrules.g
 
 conf.g.d_parser.cc: conf.g d/libdparse.a
-	d/make_dparser -o conf.g.d_parser.cc -i conf ./$(VPATH)/conf.g
+	d/make_dparser -o conf.g.d_parser.cc -i conf ./conf.g
 
 lts.g.d_parser.cc: lts.g d/libdparse.a
-	d/make_dparser -o lts.g.d_parser.cc -i lts ./$(VPATH)/lts.g
+	d/make_dparser -o lts.g.d_parser.cc -i lts ./lts.g
 
 xrules.g.d_parser.cc: xrules.g d/libdparse.a
-	d/make_dparser -o xrules.g.d_parser.cc -i xrules ./$(VPATH)/xrules.g
+	d/make_dparser -o xrules.g.d_parser.cc -i xrules ./xrules.g
 
 xrules_extended.g.d_parser.cc: xrules_extended.g d/libdparse.a
-	d/make_dparser -o xrules_extended.g.d_parser.cc -i xrules_extended ./$(VPATH)/xrules_extended.g
+	d/make_dparser -o xrules_extended.g.d_parser.cc -i xrules_extended ./xrules_extended.g
 
 covlang.g.d_parser.cc: covlang.g d/libdparse.a
-	d/make_dparser -A -o covlang.g.d_parser.cc -i covlang ./$(VPATH)/covlang.g
+	d/make_dparser -A -o covlang.g.d_parser.cc -i covlang ./covlang.g
 
 uconf.g.d_parser.cc: uconf.g d/libdparse.a
-	d/make_dparser -o uconf.g.d_parser.cc -i uconf ./$(VPATH)/uconf.g
+	d/make_dparser -o uconf.g.d_parser.cc -i uconf ./uconf.g
 
 filter.g.d_parser.cc: filter.g d/libdparse.a
-	d/make_dparser -o filter.g.d_parser.cc -i filter ./$(VPATH)/filter.g
+	d/make_dparser -o filter.g.d_parser.cc -i filter ./filter.g
 
 set.g.d_parser.cc: set.g d/libdparse.a
-	d/make_dparser -o set.g.d_parser.cc -i set ./$(VPATH)/set.g
+	d/make_dparser -o set.g.d_parser.cc -i set ./set.g
 
 paths.g.d_parser.cc: paths.g d/libdparse.a
-	d/make_dparser -o paths.g.d_parser.cc -i paths ./$(VPATH)/paths.g
+	d/make_dparser -o paths.g.d_parser.cc -i paths ./paths.g
 
 
 ##########################################
