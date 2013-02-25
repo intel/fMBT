@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2012, Intel Corporation.
+# Copyright (c) 2012, 2013 Intel Corporation.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU Lesser General Public License,
@@ -270,9 +270,44 @@ if [ "$(fmbt-log usecase.log | grep iChooseCash | wc -l)" != "1" ] ||
     echo "failed because exactly one of iChooseCash, iChooseCredit, iCancelPayment and iCancelOrder expected." >>$LOGFILE
     testfailed
 fi
-
 testpassed
 
+teststep "coverage usecase, multiply..."
+cat > usecase-multiply.conf <<EOF
+model     = "lsts_remote(fmbt-gt -f 'coffee.gt')"
+heuristic = "lookahead(5)"
+coverage  = "usecase(3 * (all 'iChoose.*') then 0 * 'i.*' then 2 * ('iOrder.*' or 'iCancelOrder') * 2)"
+pass      = "coverage(1.0)"
+inconc    = "steps(20)"
+on_pass   = "exit(0)"
+on_fail   = "exit(1)"
+on_inconc = "exit(2)"
+EOF
+if ! fmbt -l usecase-multiply.log usecase-multiply.conf 2>usecase-multiply-verdict.txt; then
+    cat usecase-multiply.conf >>$LOGFILE
+    tail -n 20 usecase-multiply.log >>$LOGFILE
+    echo "failed because fmbt usecase-multiply.conf was expected to pass." >>$LOGFILE
+    testfailed
+fi
+if [ "$(fmbt-log usecase-multiply.log | grep iChooseCash | wc -l)" != "3" ] ||
+   [ "$(fmbt-log usecase-multiply.log | grep iChooseCredit | wc -l)" != "3" ]; then
+    cat usecase-multiply.conf >>$LOGFILE
+    tail -n 20 usecase-multiply.log >>$LOGFILE
+    echo "failed because exactly three iChooseCash and iChooseCredit actions expected." >>$LOGFILE
+    testfailed
+fi
+if [ "$(fmbt-log -f '$ax' usecase-multiply.log | tail -n 4 | grep iOrderCoffee | wc -l)" != "2" ] ||
+   [ "$(fmbt-log -f '$as' usecase-multiply.log | tail -n 4 | grep iCancelOrder | wc -l)" != "2" ]; then
+    cat usecase-multiply.conf >>$LOGFILE
+    tail -n 20 usecase-multiply.log >>$LOGFILE
+    echo "failed because usecase-multiply.log should have ended with iCancelOrder, iOrderCoffee, iCancelOrder, iOrderCoffee." >>$LOGFILE
+    testfailed
+fi
+if [ "$(fmbt-log -f '$ax' usecase-multiply.log | wc -l)" != "17" ]; then
+    echo "failed because usecase-multiply contains too many steps. 17 is the optimal." >>$LOGFILE
+    testfailed
+fi
+testpassed
 
 teststep "coverage sum..."
 cat > sum.conf <<EOF

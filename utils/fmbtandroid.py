@@ -150,7 +150,7 @@ import eyenfinger
 import fmbt
 
 _OCRPREPROCESS = [
-    '-sharpen 5 -level 60%%,60%%,1.0 -filter Mitchell %(zoom)s',
+    '-sharpen 5 -filter Mitchell %(zoom)s -sharpen 5 -level 60%%,60%%,3.0 -sharpen 5',
     '-sharpen 5 -level 90%%,100%%,3.0 -filter Mitchell -sharpen 5'
     ]
 
@@ -856,12 +856,25 @@ class Device(object):
         else:
             return self._conn.sendTap(x, y)
 
-    def tapBitmap(self, bitmap, **tapKwArgs):
+    def tapBitmap(self, bitmap, colorMatch=1.0, area=(0.0, 0.0, 1.0, 1.0), **tapKwArgs):
         """
         Find a bitmap from the latest screenshot, and tap it.
+
+        Parameters:
+
+          bitmap (string):
+                  filename of the bitmap to be tapped.
+
+          colorMatch, area (optional):
+                  refer to verifyBitmap documentation.
+
+          long, hold (optional):
+                  refer to tap documentation.
+
+        Returns True if successful, otherwise False.
         """
         assert self._lastScreenshot != None, "Screenshot required."
-        items = self._lastScreenshot.findItemsByBitmap(bitmap)
+        items = self._lastScreenshot.findItemsByBitmap(bitmap, colorMatch=colorMatch, area=area)
         if len(items) == 0:
             _adapterLog("tapBitmap: bitmap %s not found from %s" % (bitmap, self._lastScreenshot.filename()))
             return False

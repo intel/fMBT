@@ -60,11 +60,11 @@ if ! fmbt-ucheck -f csv -u report_cases.uc -o report.csv reliability.log >> $LOG
     echo "unexpected exitstatus $? from fmbt-ucheck -f csv..." >>$LOGFILE
     testfailed
 fi
-if ! grep PLAYING report.html | grep 20 >> $LOGFILE 2>&1; then
+if ! grep -A5 PLAYING report.html | grep executed_value | grep 20 >> $LOGFILE 2>&1; then
     echo "checking 20 PLAYING reports in html failed" >>$LOGFILE
     testfailed
 fi
-if ! grep PAUSED report.html | grep 20 >> $LOGFILE 2>&1; then
+if ! grep -A5 PAUSED report.html | grep executed_value | grep 20 >> $LOGFILE 2>&1; then
     echo "checking 20 PAUSED reports in html failed" >>$LOGFILE
     testfailed
 fi

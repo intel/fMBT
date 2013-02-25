@@ -310,19 +310,30 @@ Available types & parameters:
 
         usecase(<expression>)
 
-                measures percentage of coverage of the coverage
-                language expression. Expressions are built from
+                measures percentage of coverage of the <expression>
+                that is given in coverage language. Valid expressions
+                are:
 
-                - action-regexps, possibly prefixed by "any" or "all".
-                  If no prefix is given, the default is to cover "any"
-                  action matching the action-regexp.
+                - quoted action-regexps, possibly prefixed by "any" or
+                  "all" keyword.  If no prefix is given, the default
+                  is to cover "any" action matching the action-regexp.
 
-                - "and", "or", "then" operators and parenthesis
+                - two expressions combined with "and", "or" or "then"
+                  operator.
+
+                - "not" <expression>, meaning that <expression> must
+                  not be covered. (EXPERIMENTAL)
+
+                - expressions in parenthesis.
+
+                - <number> * <expression>, meaning that <expression>
+                  needs to be covered <number> of times.
 
                 Examples:
 
-                    usecase('iBuyCar' then ('iUseCash' or 'iUseCredit'))
                     usecase(all 'iUse(Cash|Credit)')
+                    usecase('iBuyCar' then ('iUseCash' or 'iUseCredit'))
+                    usecase((5 * 'iUseCash') and (10 * 'iUseCredit'))
 
         walks(from regexp_1 to regexp_2)
 
