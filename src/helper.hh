@@ -41,6 +41,7 @@ void  clear_coding(std::string& s);
 std::string filetype(std::string& s);
 #ifndef DROI
 char* readfile(const char* filename,const char* preprocess);
+char* readfile(const char* filename,const char* preprocess,int& status);
 #endif
 char* readfile(const char* filename);
 std::string capsulate(std::string s);

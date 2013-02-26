@@ -56,6 +56,7 @@ int state=NONE;
 	lineno=1;
 	yy_switch_to_buffer(yy_create_buffer( st, YY_BUF_SIZE ) );
       } else {
+      	fprintf(stderr,"No such file \"%s\"\n",s.c_str());
 	exit(-1);
       }
       break;

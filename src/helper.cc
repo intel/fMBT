@@ -279,8 +279,13 @@ std::string removehash(std::string& s)
 #ifndef DROI
 char* readfile(const char* filename,const char* preprocess)
 {
-  char* out=NULL;
   int status;
+  return readfile(filename,preprocess,status);
+}
+
+char* readfile(const char* filename,const char* preprocess,int& status)
+{
+  char* out=NULL;
 
   if (preprocess==NULL) {
     return readfile(filename);
@@ -293,6 +298,7 @@ char* readfile(const char* filename,const char* preprocess)
   if (!g_spawn_command_line_sync(s.c_str(),&out,NULL,&status,NULL)) {
     throw (int)(24);
   }
+
   return out;
  }
 #endif
