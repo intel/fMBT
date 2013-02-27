@@ -89,7 +89,7 @@ class AALModel:
             try:
                 fmbt._g_actionName = self._all_names[i-1]
                 rv = self.call(self._all_adapters[i-1], adapter_call_arguments)
-                if rv == None: return True
+                if rv == None: return i
                 else: return rv
             except Exception, exc:
                 if 'adapter_exception_handler' in self._variables:
