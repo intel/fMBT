@@ -23,6 +23,7 @@ class AALModel:
         self._all_types = self._get_all("type", "action")
         self._all_tagnames = self._get_all("name", "tag")
         self._all_tagguards = self._get_all("guard", "tag")
+        self._all_tagadapters = self._get_all("adapter", "tag")
         self._variables = model_globals
         self._variables['action'] = lambda name: self._all_names.index(name) + 1
         self._variables['name'] = lambda name: self._all_names.index(name)
@@ -100,6 +101,10 @@ class AALModel:
             self._log("AAL model: adapter_execute for an output action in AAL." +
                       "This should take place in observe().\n")
             return 0
+
+    def tag_execute(self, a):
+        # self._all_tagadapters
+        return 0
 
     def model_execute(self, i):
         fmbt._g_actionName = self._all_names[i-1]

@@ -45,6 +45,28 @@ bool Awrapper::init()
   return ada->init();
 }
 
+void Awrapper::set_tags(std::vector<std::string>* _tags)
+{
+  Adapter::set_tags(_tags);
+
+  if (!status) {
+    return;
+  }
+
+ std::vector<std::string>& wn=ada->getSPNames();
+
+  for(unsigned i=1;i<tags->size();i++) {
+
+    unsigned result=find(wn,(*tags)[i],-1);
+   
+    if (result==(unsigned)-1) {
+      continue;
+    }
+
+    tagaal2ada[i]=result;
+  }
+}
+
 void Awrapper::set_actions(std::vector<std::string>* _actions)
 {
   Adapter::set_actions(_actions);
@@ -126,6 +148,21 @@ void Awrapper::execute(std::vector<int>& action)
   }
   action.resize(1);
   action[0]=ret;
+}
+
+int Awrapper::check_tags(int* tag,int len)
+{
+  std::vector<int> _tags;
+
+  // Think about the mapping....
+  for(int i=0;i<len;i++) {
+    if (tagaal2ada.find(i)!=tagaal2ada.end()) {
+      _tags.push_back(tag[i]);
+    }
+  }
+  if (_tags.size()) 
+    return ada->check_tags(_tags);
+  return 0;
 }
 
 int  Awrapper::observe(std::vector<int> &action,

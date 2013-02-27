@@ -30,7 +30,8 @@ typedef std::pair<std::string,fileline> codefileline;
 class aalang_py: public aalang {
 public:
   aalang_py(): aalang(), name(NULL), action_cnt(1),
-               tag_cnt(1), acnt("1"), m_lines_in_vars(0), tag(false) {
+               tag_cnt(1), acnt("1"), m_lines_in_vars(0), tag(false),
+	       adapter(false) {
         default_body   ="pass";
         default_guard  ="return 1";
         default_adapter="pass";
@@ -68,6 +69,7 @@ protected:
   std::string variables;
   int m_lines_in_vars;
   bool tag;
+  bool adapter;
   bool this_is_input;
 
   std::string action_helper(const codefileline& cfl,std::string s,

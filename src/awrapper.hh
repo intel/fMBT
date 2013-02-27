@@ -32,14 +32,18 @@ public:
   Awrapper(Log&l, std::string params, aal* _ada);
   virtual ~Awrapper();
   virtual void set_actions(std::vector<std::string>* _actions);
+  virtual void set_tags(std::vector<std::string>* _tags);
+  virtual bool init();
 
   virtual void execute(std::vector<int>& action);
   virtual int  observe(std::vector<int> &action,bool block=false);
-  virtual bool init();
+  virtual int check_tags(int* tag,int len);
 protected:
   static std::string es;
   std::map<std::pair<int,std::string&>, int > ada2aal;
   std::map<int,int> aal2ada;
+  std::map<int,int> tagaal2ada;
+
   aal* ada;
   std::map<int,std::string> parameters;
 };

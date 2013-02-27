@@ -152,6 +152,7 @@ void aalang_py::set_tagname(std::string* name)
   multiname.push_back(*name);
   delete name;
   tag = true;
+  adapter = false;
 }
 
 void aalang_py::next_tag()
@@ -167,10 +168,24 @@ void aalang_py::next_tag()
     s+=python_lineno_wrapper(m_guard,funcname,2+m_lines_in_vars,4,
                              ", \"guard of tag \\\"" + multiname[i]
                              + "\\\"\")");
+
+    if (adapter) {
+      const std::string funcname("tag" + to_string(tag_cnt) + "adapter");
+
+      s+="    def " + funcname + "():\n" + variables;
+      s+="        tag_name = \"" + multiname[i] + "\"\n";
+      s+=indent(8,m_adapter.first)+"\n";
+
+      s+=python_lineno_wrapper(m_adapter,funcname,2+m_lines_in_vars,4,
+			       ", \"adapter of tag \\\"" + multiname[i]
+			       + "\\\"\")");
+    }
+
     tag_cnt++;
   }
   multiname.clear();
   tag = false;
+  adapter = false;
 }
 
 void aalang_py::set_guard(std::string* gua,const char* file,int line,int col)
@@ -199,6 +214,7 @@ void aalang_py::set_body(std::string* bod,const char* file,int line,int col)
 
 void aalang_py::set_adapter(std::string* ada,const char* file,int line,int col)
 {
+  adapter = true;
   default_if_empty(*ada, "pass");
   m_adapter = codefileline(*ada,fileline(file,line));
 }

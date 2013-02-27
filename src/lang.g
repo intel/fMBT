@@ -121,7 +121,14 @@ astr:   string          {
             obj->set_name($2.str);
         } ;
 
-tag: 'tag' tstr { guard=false;body=false;adapter=false; } '{' comment* guard  comment* '}' { obj->next_tag(); };
+tag_content: 
+        comment* guard  comment* adapter comment* |
+        comment* guard  comment* |
+        comment* adapter comment* guard comment*;
+
+
+
+tag: 'tag' tstr { guard=false;body=false;adapter=false; } '{' tag_content '}' { obj->next_tag(); };
 
 tstr:   string          {
             obj->set_tagname($0.str);

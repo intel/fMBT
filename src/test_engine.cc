@@ -195,7 +195,7 @@ void Test_engine::log_tags(const std::vector<std::string>& tnames)
   if (!model->status) {
     return;
   }
-
+    
   for(int i=0;i<cnt;i++) {
     if (tags[i]>=(int)tnames.size() ||
 	tags[i]<0) {
@@ -203,6 +203,13 @@ void Test_engine::log_tags(const std::vector<std::string>& tnames)
       model->status=false;
       return;
     }
+  }
+
+  if (cnt) {
+    if (adapter.check_tags(tags,cnt)) {
+	model->status=false;
+	model->errormsg="Adapter and Model disagrees about the tags";
+      }
   }
 
   std::string s=to_string(cnt,tags,tnames);
@@ -283,6 +290,9 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 
         return stop_test(Verdict::FAIL, "unexpected output");
       }
+
+      
+
       log_tags(tags);
       log_status(log, step_count, heuristic.getCoverage());
       update_coverage(heuristic.getCoverage(), step_count,

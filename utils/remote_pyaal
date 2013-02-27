@@ -201,6 +201,9 @@ class RemoteAALBridge:
                 except Exception, e:
                     fmbtstderr('Error when waiting for outputs: %s: %s\n%s' % (type(e).__name__, e, traceback.format_exc()))
                     error(str(e))
+            elif cmd[0] == "act"
+                rv = self.aal.tag_execute(cmd[1:])
+                put(rv)
             elif cmd[0] == "m":
                 action_number = int(cmd[1:])
                 try:

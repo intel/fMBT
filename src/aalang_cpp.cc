@@ -151,12 +151,19 @@ void aalang_cpp::set_body(std::string* bod,const char* file,int line,int col)
 
 void aalang_cpp::set_adapter(std::string* ada,const char* file,int line,int col)
 {
-  s+=to_line(file,line)+"int action" + to_string(action_cnt) + "_adapter(const char* param) {\n" +
+  if (tag) {
+    s+=to_line(file,line)+"int tag" + to_string(tag_cnt) + "_adapter() {\n" +
+      *ada + "\n"
+      "\treturn " + to_string(tag_cnt) + ";\n"
+      "}\n";    
+  } else {
+    s+=to_line(file,line)+"int action" + to_string(action_cnt) + "_adapter(const char* param) {\n" +
       *ada + "\n"
       "\treturn " + to_string(action_cnt) + ";\n"
       "}\n";
+  }
   if (ada!=&default_adapter)
-      delete ada;
+    delete ada;
 }
 
 void aalang_cpp::next_action()

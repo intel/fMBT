@@ -51,6 +51,7 @@ public:
   Adapter(Log& l, std::string params = "");
   virtual ~Adapter();
   virtual void set_actions(std::vector<std::string>* _actions);
+  virtual void set_tags(std::vector<std::string>* _tags);
   virtual bool init();
 
   /** \brief execute an action and report results
@@ -89,6 +90,7 @@ public:
    */
   virtual int observe(std::vector<int> &action, bool block = false) = 0;
 
+  virtual int check_tags(int* tag,int len);
   /* Adapter stack / tree setup and browsing API */
   void setparent(Adapter* a);
   virtual Adapter* up();
@@ -111,6 +113,7 @@ public:
 protected:
   Log& log;
   std::vector<std::string>* actions;
+  std::vector<std::string>* tags;
 
   std::vector<const char*> unames;
   Adapter* parent;
