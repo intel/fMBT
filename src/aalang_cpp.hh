@@ -64,6 +64,7 @@ protected:
   std::string push;
   std::string pop;
   bool tag;
+  std::map<bool,int> tag_adapter;
 };
 
 #endif

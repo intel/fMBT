@@ -131,6 +131,8 @@ void Conf::load(std::string& name,std::string& content)
     return;
   }
 
+  adapter->set_tags(&model->getSPNames());
+
   /* handle history */
   for(unsigned i=0;i<history.size();i++) {
     History* h=new_history(log,*history[i]);

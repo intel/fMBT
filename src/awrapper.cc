@@ -58,11 +58,11 @@ void Awrapper::set_tags(std::vector<std::string>* _tags)
   for(unsigned i=1;i<tags->size();i++) {
 
     unsigned result=find(wn,(*tags)[i],-1);
-   
+
     if (result==(unsigned)-1) {
       continue;
     }
-
+    
     tagaal2ada[i]=result;
   }
 }
@@ -156,12 +156,14 @@ int Awrapper::check_tags(int* tag,int len)
 
   // Think about the mapping....
   for(int i=0;i<len;i++) {
-    if (tagaal2ada.find(i)!=tagaal2ada.end()) {
-      _tags.push_back(tag[i]);
+
+    if (tagaal2ada.find(tag[i])!=tagaal2ada.end()) {
+      _tags.push_back(tagaal2ada[tag[i]]);
     }
   }
-  if (_tags.size()) 
+  if (_tags.size()>0) {
     return ada->check_tags(_tags);
+  }
   return 0;
 }
 
