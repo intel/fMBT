@@ -227,6 +227,13 @@ def _bitmapPathSolver(fmbtAndroidHomeDir, bitmapPath):
         return retval
     return _solver
 
+def _bitmapKwArgs(colorMatch=None, opacityLimit=None, area=None):
+    bitmapKwArgs = {}
+    if colorMatch != None: bitmapKwArgs['colorMatch'] = colorMatch
+    if opacityLimit != None: bitmapKwArgs['opacityLimit'] = opacityLimit
+    if area != None: bitmapKwArgs['area'] = area
+    return bitmapKwArgs
+
 class Device(object):
     """
     The Device class provides
@@ -782,14 +789,20 @@ class Device(object):
             raise Exception(msg)
         return self.drag((x, y), (x2, y2), **dragKwArgs)
 
-    def swipeBitmap(self, bitmap, direction, colorMatch=1.0, area=(0.0, 0.0, 1.0, 1.0), **dragKwArgs):
+    def swipeBitmap(self, bitmap, direction, colorMatch=None, opacityLimit=None, area=None, **dragKwArgs):
         """
         swipe starting from bitmap to direction ("n", "s", "e", or
         "w"). Swipe ends to the edge of the screen.
 
         Parameters:
 
-          colorMatch, area
+          bitmap (string)
+                  bitmap from which swipe starts
+
+          direction (string)
+                  "n", "s", "e" or "w"
+
+          colorMatch, opacityLimit, area (optional)
                   refer to verifyBitmap documentation.
 
           delayBeforeMoves, delayBetweenMoves, delayAfterMoves,
@@ -799,7 +812,7 @@ class Device(object):
         Returns True on success, False if sending input failed.
         """
         assert self._lastScreenshot != None, "Screenshot required."
-        items = self._lastScreenshot.findItemsByBitmap(bitmap, colorMatch=colorMatch, area=area)
+        items = self._lastScreenshot.findItemsByBitmap(bitmap, **_bitmapKwArgs(colorMatch, opacityLimit, area))
         if len(items) == 0:
             _adapterLog("swipeBitmap: bitmap %s not found from %s" % (bitmap, self._lastScreenshot.filename()))
             return False
@@ -856,7 +869,7 @@ class Device(object):
         else:
             return self._conn.sendTap(x, y)
 
-    def tapBitmap(self, bitmap, colorMatch=1.0, area=(0.0, 0.0, 1.0, 1.0), **tapKwArgs):
+    def tapBitmap(self, bitmap, colorMatch=None, opacityLimit=None, area=None, **tapKwArgs):
         """
         Find a bitmap from the latest screenshot, and tap it.
 
@@ -865,7 +878,7 @@ class Device(object):
           bitmap (string):
                   filename of the bitmap to be tapped.
 
-          colorMatch, area (optional):
+          colorMatch, opacityLimit, area (optional):
                   refer to verifyBitmap documentation.
 
           long, hold (optional):
@@ -874,7 +887,7 @@ class Device(object):
         Returns True if successful, otherwise False.
         """
         assert self._lastScreenshot != None, "Screenshot required."
-        items = self._lastScreenshot.findItemsByBitmap(bitmap, colorMatch=colorMatch, area=area)
+        items = self._lastScreenshot.findItemsByBitmap(bitmap, **_bitmapKwArgs(colorMatch, opacityLimit, area))
         if len(items) == 0:
             _adapterLog("tapBitmap: bitmap %s not found from %s" % (bitmap, self._lastScreenshot.filename()))
             return False
@@ -1006,7 +1019,7 @@ class Device(object):
         assert self._lastView != None, "View required."
         return self._lastView.findItemsByText(text, partial=partial, count=1) != []
 
-    def verifyBitmap(self, bitmap, colorMatch=1.0, area=(0.0, 0.0, 1.0, 1.0)):
+    def verifyBitmap(self, bitmap, colorMatch=None, opacityLimit=None, area=None):
         """
         Verify that bitmap is present in the last screenshot.
 
@@ -1023,6 +1036,15 @@ class Device(object):
                   corresponding pixel's RGB component in the
                   screenshot.
 
+          opacityLimit (float, optional):
+                  threshold for comparing pixels with non-zero alpha
+                  channel. 0.0 requires exact match independently of
+                  the opacity. Pixels less opaque than the given
+                  threshold are skipped in match comparison. The
+                  default is 0.95, that is, almost any non-zero alpha
+                  channel value on a pixel makes it always match to a
+                  whatever color on the screenshot.
+
           area ((left, top, right, bottom), optional):
                   search bitmap from the given area only. Left, top
                   right and bottom are either absolute coordinates
@@ -1034,7 +1056,7 @@ class Device(object):
         assert self._lastScreenshot != None, "Screenshot required."
         if self._lastScreenshot == None:
             return False
-        return self._lastScreenshot.findItemsByBitmap(bitmap, colorMatch=colorMatch, area=area) != []
+        return self._lastScreenshot.findItemsByBitmap(bitmap, **_bitmapKwArgs(colorMatch, opacityLimit, area)) != []
 
     def view(self):
         """
@@ -1080,7 +1102,7 @@ class Device(object):
                 return True
         return False
 
-    def waitBitmap(self, bitmap, colorMatch=None, area=None, **waitKwArgs):
+    def waitBitmap(self, bitmap, colorMatch=None, opacityLimit=None, area=None, **waitKwArgs):
         """
         Wait until bitmap appears on screen.
 
@@ -1089,7 +1111,7 @@ class Device(object):
           bitmap (string):
                   filename of the bitmap to be waited for.
 
-          colorMatch, area (optional):
+          colorMatch, opacityLimit, area (optional):
                   refer to verifyBitmap documentation.
 
           waitTime, pollDelay (float, optional):
@@ -1100,11 +1122,9 @@ class Device(object):
 
         Updates the last screenshot.
         """
-        verifyBitmapKwArgs = {}
-        if colorMatch != None: verifyBitmapKwArgs['colorMatch'] = colorMatch
-        if area != None: verifyBitmapKwArgs['area'] = area
+
         return self.wait(self.refreshScreenshot,
-                         self.verifyBitmap, (bitmap,), verifyBitmapKwArgs,
+                         self.verifyBitmap, (bitmap,), _bitmapKwArgs(colorMatch, opacityLimit, area),
                          **waitKwArgs)
 
     def waitText(self, text, partial=False, **waitKwArgs):
@@ -1239,19 +1259,19 @@ class Screenshot(object):
     def filename(self):
         return self._filename
 
-    def findItemsByBitmap(self, bitmap, colorMatch=1.0, area=(0.0, 0.0, 1.0, 1.0)):
+    def findItemsByBitmap(self, bitmap, colorMatch=1.0, opacityLimit=.95, area=(0.0, 0.0, 1.0, 1.0)):
         bitmap = self._pathSolver(bitmap)
         if (bitmap, colorMatch) in self._cache:
-            return self._cache[(bitmap, colorMatch)]
+            return self._cache[(bitmap, colorMatch, opacityLimit, area)]
         eyenfinger.iRead(source=self._filename, ocr=False)
         try:
-            score, bbox = eyenfinger.iVerifyIcon(bitmap, colorMatch=colorMatch, opacityLimit=.95, area=area)
+            score, bbox = eyenfinger.iVerifyIcon(bitmap, colorMatch=colorMatch, opacityLimit=opacityLimit, area=area)
             foundItem = self._item("bitmap", bbox, bitmap=bitmap)
-            self._cache[(bitmap, colorMatch)] = [foundItem]
+            self._cache[(bitmap, colorMatch, opacityLimit, area)] = [foundItem]
         except eyenfinger.BadMatch:
             _adapterLog('findItemsByBitmap no match for "%s" in "%s"' % (bitmap, self._filename))
-            self._cache[(bitmap, colorMatch)] = []
-        return self._cache[(bitmap, colorMatch)]
+            self._cache[(bitmap, colorMatch, opacityLimit, area)] = []
+        return self._cache[(bitmap, colorMatch, opacityLimit, area)]
 
     def findItemsByOcr(self, text, preprocess=None, match=1.0):
         self._assumeOcrWords(preprocess=preprocess)
