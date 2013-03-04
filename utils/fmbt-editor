@@ -1557,7 +1557,8 @@ on_inconc = "exit(2)"
                 'action': [('guard() { return }', 0, 1),
                            ('body() {\n    \n}', 1, 0),
                            ('adapter() {\n    \n}', 1, 0)],
-                'tag': [('guard() { return }', 0, 1)],
+                'tag': [('guard() { return }', 0, 1),
+                        ('adapter() {\n    \n}', 1, 0)],
                 'guard': [('return ', 0, 0)]
                 }
 

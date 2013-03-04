@@ -102,9 +102,9 @@ class AALModel:
                       "This should take place in observe().\n")
             return 0
 
-    def tag_execute(self, a):
-        # self._all_tagadapters
-        return 0
+    def tag_execute(self, i):
+        rv = self.call(self._all_tagadapters[i-1])
+        return rv
 
     def model_execute(self, i):
         fmbt._g_actionName = self._all_names[i-1]

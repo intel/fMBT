@@ -201,9 +201,23 @@ class RemoteAALBridge:
                 except Exception, e:
                     fmbtstderr('Error when waiting for outputs: %s: %s\n%s' % (type(e).__name__, e, traceback.format_exc()))
                     error(str(e))
-            elif cmd[0] == "act"
-                rv = self.aal.tag_execute(cmd[1:])
-                put(rv)
+            elif cmd.startswith("act"): # adapter check tags
+                # If the adapter of a tag does not return "True" or
+                # None, report the number of the first failing tag.
+                failing_tags = []
+                for tag_number in [int(n) for n in cmd[3:].strip().split()]:
+                    try:
+                        rv = self._aal.tag_execute(tag_number)
+                        if not (rv or rv == None):
+                            fmbtstderr('adapter() of tag "%s" returned %s' % (tag_names[tag_number-1], rv))
+                            failing_tags.append(tag_number)
+                    except Exception, e:
+                        fmbtstderr('Error at adapter() of tag "%s": %s\n%s' % (tag_names[tag_number-1], e, traceback.format_exc()))
+                        error(str(e))
+                if failing_tags:
+                    put(failing_tags[0])
+                else:
+                    put(0)
             elif cmd[0] == "m":
                 action_number = int(cmd[1:])
                 try:
@@ -220,6 +234,9 @@ class RemoteAALBridge:
                 try:
                     rv = self._aal.adapter_execute(action_number,
                                                    adapter_call_arguments)
+                    if (type(rv) == int and (rv == 0 or rv > len(action_names))) or (type(rv) != int and (not rv or rv != None)):
+                        fmbtstderr('adapter() of action "%s" returned %s' % (action_names[action_number-1], rv))
+                        rv = 0
                 except Exception, e:
                     fmbtstderr('Error at adapter() of "%s": %s: %s\n%s' % (action_names[action_number-1], type(e).__name__, e, traceback.format_exc()))
                     error(str(e))
