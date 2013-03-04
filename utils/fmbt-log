@@ -154,7 +154,8 @@ if __name__ == '__main__':
         elif opt in ['-f', '--format']:
             output_format = arg
         elif opt in ['-t', '--time-format']:
-            fields['$st'][3] = lambda s: datetime.datetime.fromtimestamp(float(s)).strftime(arg)
+            time_format = arg
+            fields['$st'][3] = lambda s: datetime.datetime.fromtimestamp(float(s)).strftime(time_format)
         elif opt in ['-o', '--output'] and not arg in ['', '-']:
             output_file_obj = file(arg, 'w')
 
