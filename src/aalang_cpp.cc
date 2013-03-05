@@ -78,6 +78,7 @@ void aalang_cpp::set_namestr(std::string* _name)
 
 void aalang_cpp::set_variables(std::string* var,const char* file,int line,int col)
 {
+  s+=to_line(file,line-1); // -1 because we add the comment variables
   s+="//variables\n"+*var+"\n";
   delete var;
 }
