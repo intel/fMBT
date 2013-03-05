@@ -212,7 +212,9 @@ int Test_engine::verify_tags(const std::vector<std::string>& tnames)
     std::vector<int> t;
     int failing_tag = adapter.check_tags(tags,cnt,t);
 
-    m_verdict_msg = "verifying tags " ;
+    if (t.size()) { 
+      m_verdict_msg = "verifying tags ";
+    }
     for(int i=0;i<t.size();i++) {
       m_verdict_msg+="\""+heuristic.get_model()->getSPNames()[t[i]]+"\" ";
     }

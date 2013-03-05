@@ -594,10 +594,11 @@ Keyboard shortcuts:<br>
                                          if not l.startswith("  ")][0]
             except:
                 exceptionString = "Python error."
-            inUserCode = False
+            inUserCode = True
             self.preview_error.insertHtml('<table><tr><td style="color: darkred;">%s<br>Traceback (most recent call last)</td></tr>' % (exceptionString,))
             for filename, lineno, _, location, lineofcode in re.findall('  File "([^"]+)", line ([0-9]+)(, in (.*))?\n(.*)\n', errorMsg):
-
+                if filename.endswith('remote_pyaal') or filename.endswith('aalmodel.py'):
+                    inUserCode = False
                 if inUserCode:
                     if filename == self._modelFileName or filename in self._modelEditorFiles:
                         self.preview_error.insertHtml('<tr><td style="color:darkred;">File <a href="%s:%s">%s</a>, line %s, in %s</td></tr>' %
@@ -856,6 +857,11 @@ Keyboard shortcuts:<br>
             modelspec="lsts_remote(fmbt-gt -f '%s')" % (self._modelFileName,)
         return modelspec
 
+    def _generateAdapterSpec(self):
+        if self._editingAAL(): adapterspec = 'adapter   = "aal"'
+        else: adapterspec = '# adapter = "define your adapter here"'
+        return adapterspec
+
     def _modelSpec(self):
         try:
             modelspec = re.findall('model[ ]*=[ ]*"(.*)"[ ]*', str(self.conf_editor.toPlainText()))[0]
@@ -873,15 +879,17 @@ Keyboard shortcuts:<br>
         except: regenerate = True
         if regenerate:
             modelspec = self._generateModelSpec()
+            adapterspec = self._generateAdapterSpec()
             lookahead = 4
             file(self._confFileName, "w").write("""model     = "%s"
+%s
 heuristic = "lookahead(%s)"
 coverage  = "perm(2)"
 pass      = "steps(20)"
 on_pass   = "exit(0)"
 on_fail   = "exit(1)"
 on_inconc = "exit(2)"
-""" % (modelspec, lookahead))
+""" % (modelspec, adapterspec, lookahead))
 
     def _doGenerateTest(self):
         """ runnable in non-UI thread """
@@ -1147,9 +1155,14 @@ on_inconc = "exit(2)"
 
     def updateModelInConfFile(self):
         newLines = []
-        for line in str(self.conf_editor.toPlainText()).split('\n'):
+        confLines = str(self.conf_editor.toPlainText()).split('\n')
+        for line in confLines:
             if line.startswith('model'):
                 newLines.append('model     = "%s"' % (self._generateModelSpec(),))
+            elif (line.startswith('# adapter = "define your adapter here"') and
+                  [l for l in confLines if l.startswith('adapter')] == []) or (
+                line.startswith('adapter   = "aal"')):
+                newLines.append(self._generateAdapterSpec())
             else:
                 newLines.append(line)
         self.conf_editor.setPlainText('\n'.join(newLines))

@@ -164,23 +164,23 @@ class RemoteAALBridge:
                 try:
                     put_list(self._aal.getActions())
                 except Exception, e:
-                    fmbtstderr("%s" % (e,))
+                    fmbtstderr('Error when evaluating guards of actions: %s: %s\n%s' % (type(e).__name__, e, format_pythonaalexception()))
                     error(str(e))
             elif cmd == "mp":
                 try:    put_list(self._aal.getprops())
                 except Exception, e:
-                    fmbtstderr('Error at a tag: %s: %s\n%s' % (type(e).__name__, e, traceback.format_exc()))
+                    fmbtstderr('Error at a tag: %s: %s\n%s' % (type(e).__name__, e, format_pythonaalexception()))
                     error(str(e))
             elif cmd == "mr":
                 try:    self._aal.reset()
                 except Exception, e:
-                    fmbtstderr('Error at initial_state(): %s: %s\n%s' % (type(e).__name__, e, traceback.format_exc()))
+                    fmbtstderr('Error at initial_state(): %s: %s\n%s' % (type(e).__name__, e, format_pythonaalexception()))
                     put(0)
                 else:   put(1)
             elif cmd == "ai":
                 try: rv = self._aal.init()
                 except Exception, e:
-                    fmbtstderr('Error at adapter_init(): %s: %s\n%s' % (type(e).__name__, e, traceback.format_exc()))
+                    fmbtstderr('Error at adapter_init(): %s: %s\n%s' % (type(e).__name__, e, format_pythonaalexception()))
                     put(0)
                 else:
                     if rv or rv == None: put(1)
@@ -193,13 +193,13 @@ class RemoteAALBridge:
                 try:
                     put_list(self._aal.observe(False))
                 except Exception, e:
-                    fmbtstderr('Error when polling outputs: %s: %s\n%s' % (type(e).__name__, e, traceback.format_exc()))
+                    fmbtstderr('Error when polling outputs: %s: %s\n%s' % (type(e).__name__, e, format_pythonaalexception()))
                     error(str(e))
             elif cmd == "aob":
                 try:
                     put_list(self._aal.observe(True))
                 except Exception, e:
-                    fmbtstderr('Error when waiting for outputs: %s: %s\n%s' % (type(e).__name__, e, traceback.format_exc()))
+                    fmbtstderr('Error when waiting for outputs: %s: %s\n%s' % (type(e).__name__, e, format_pythonaalexception()))
                     error(str(e))
             elif cmd.startswith("act"): # adapter check tags
                 # If the adapter of a tag does not return "True" or
@@ -212,15 +212,20 @@ class RemoteAALBridge:
                             fmbtstderr('adapter() of tag "%s" returned %s' % (tag_names[tag_number-1], rv))
                             failing_tags.append(tag_number)
                     except Exception, e:
-                        fmbtstderr('Error at adapter() of tag "%s": %s\n%s' % (tag_names[tag_number-1], e, traceback.format_exc()))
-                        error(str(e))
+                        if isinstance(e, AssertionError): msg = "Assertion failure"
+                        else: msg = "Error"
+                        fmbtstderr('%s at adapter() of tag "%s": %s\n%s' % (msg, tag_names[tag_number-1], e, format_pythonaalexception()))
+                        if isinstance(e, AssertionError):
+                            failing_tags.append(tag_number)
+                        else:
+                            error(str(e))
                 put_list(failing_tags)
             elif cmd[0] == "m":
                 action_number = int(cmd[1:])
                 try:
                     rv = self._aal.model_execute(action_number)
                 except Exception, e:
-                    fmbtstderr('Error at body() of "%s": %s: %s\n%s' % (action_names[action_number-1], type(e).__name__, e, traceback.format_exc()))
+                    fmbtstderr('Error at body() of "%s": %s: %s\n%s' % (action_names[action_number-1], type(e).__name__, e, format_pythonaalexception()))
                     error(str(e))
                 else:
                     put(rv)
@@ -235,9 +240,14 @@ class RemoteAALBridge:
                         fmbtstderr('adapter() of action "%s" returned %s' % (action_names[action_number-1], rv))
                         rv = 0
                 except Exception, e:
-                    fmbtstderr('Error at adapter() of "%s": %s: %s\n%s' % (action_names[action_number-1], type(e).__name__, e, traceback.format_exc()))
-                    error(str(e))
-                else:   put(rv)
+                    if isinstance(e, AssertionError): msg = "Assertion failure"
+                    else: msg = "Error"
+                    fmbtstderr('%s at adapter() of "%s": %s: %s\n%s' % (msg, action_names[action_number-1], type(e).__name__, e, format_pythonaalexception()))
+                    if isinstance(e, AssertionError):
+                        rv = 0
+                    else:
+                        error(str(e))
+                put(rv)
                 adapter_call_arguments = []
             elif cmd.startswith("lts"):
                 lsts_depth = int(cmd[3:])
@@ -248,7 +258,7 @@ class RemoteAALBridge:
                              include_generation_discontinued_tag = False)
                     self._aal.pop()
                 except Exception, e:
-                    fmbtstderr('Error on simulation %s: %s\n%s' % (type(e).__name__, e, traceback.format_exc()))
+                    fmbtstderr('Error on simulation %s: %s\n%s' % (type(e).__name__, e, format_pythonaalexception()))
                     error(str(e))
                 outfilestring.seek(0)
                 put_lts(outfilestring.read())
@@ -256,6 +266,21 @@ class RemoteAALBridge:
             else:
                 error("Unexpected command: \"" + cmd + "\". remote_pyaal works with \"aal_remote\" model.")
             cmd = get().rstrip()
+
+def format_pythonaalexception():
+    if opt_debug:
+        # return full tracebacks including framework code
+        return traceback.format_exc()
+    exc_type, exc_value, exc_tb = sys.exc_info()
+    tb = traceback.extract_tb(exc_tb)
+    tb.reverse()
+    new_tb = []
+    for file_line_module_code in tb:
+        if file_line_module_code[0].endswith("aalmodel.py"):
+            break
+        new_tb.append(file_line_module_code)
+    new_tb.reverse()
+    return 'Traceback (most recent call last):\n' + ''.join(traceback.format_list(new_tb))
 
 def format_syntaxerror():
     """modify last exception filename and line number if it's AAL"""
@@ -456,7 +481,7 @@ if __name__ == "__main__":
         # Model is inherited from AALModel in aalmodel.py.
         aal = Model()
     except Exception as e:
-        error("error when instantiating Model(): %s\n%s" % (e, traceback.format_exc()))
+        error("Error when instantiating Model(): %s\n%s" % (e, traceback.format_exc()))
     aal._log = _log
     aal.timeout = opt_timeout
     aal._variables['fmbtlog'] = fmbtlog
@@ -467,5 +492,8 @@ if __name__ == "__main__":
         bridge.communicate()
     else:
         aal.reset()
-        aal2lsts(aal, opt_output_fileobj, depth=opt_lsts_depth, discard_variables=set(opt_lsts_hide_vars), include_variables=set(opt_lsts_show_vars))
+        try:
+            aal2lsts(aal, opt_output_fileobj, depth=opt_lsts_depth, discard_variables=set(opt_lsts_hide_vars), include_variables=set(opt_lsts_show_vars))
+        except Exception, e:
+            fmbtstderr('Error on simulation %s: %s\n%s' % (type(e).__name__, e, format_pythonaalexception()))
         opt_output_fileobj.close()

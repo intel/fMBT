@@ -93,7 +93,7 @@ class AALModel:
                 if rv == None: return i
                 else: return rv
             except Exception, exc:
-                if 'adapter_exception_handler' in self._variables:
+                if not isinstance(exc, AssertionError) and 'adapter_exception_handler' in self._variables:
                     return self.call_exception_handler('adapter_exception_handler', self._all_names[i-1], exc)
                 else:
                     raise
@@ -118,13 +118,9 @@ class AALModel:
 
     def getActions(self):
         enabled_actions = []
-        try:
-            for index, guard in enumerate(self._all_guards):
-                fmbt._g_actionName = self._all_names[index]
-                if self.call(guard): enabled_actions.append(index + 1)
-        except Exception, e:
-            raise Exception('Error at guard() of "%s": %s: %s\n%s' % (
-                self._all_names[index], type(e).__name__, e, traceback.format_exc()))
+        for index, guard in enumerate(self._all_guards):
+            fmbt._g_actionName = self._all_names[index]
+            if self.call(guard): enabled_actions.append(index + 1)
         return enabled_actions
 
     def getIActions(self):
