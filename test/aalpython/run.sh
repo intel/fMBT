@@ -116,8 +116,14 @@ iStep2 - change handler
 oOutputAction
 error
 EOF
-fmbt adapter_exceptions.conf 2>adapter_exception_handler.stderr | fmbt-log > observed-steps.txt || testfailed
-diff -u expected-steps.txt observed-steps.txt >>$LOGFILE || testfailed
+fmbt adapter_exceptions.conf 2>adapter_exception_handler.stderr | fmbt-log > observed-steps.txt || {
+    echo "failed because: non-zero exit status from fmbt-log: $?" >>$LOGFILE
+    testfailed
+}
+diff -u expected-steps.txt observed-steps.txt >>$LOGFILE || {
+    echo "failed because: expected-steps.txt and observed-steps.txt differ" >>$LOGFILE
+    testfailed
+}
 if ! grep -q 'raise Exception("unrecoverable error!")' adapter_exception_handler.stderr; then
     cat adapter_exception_handler.stderr >>$LOGFILE
     echo "fails because: AAL line that raised exception not shown in stderr" >>$LOGFILE
@@ -126,7 +132,10 @@ fi
 testpassed
 
 teststep "remote_pyaal adapter() blocks of tags..."
-fmbt tags-fail.conf 2>tags-fail.stderr >tags-fail.stdout && testfailed
+fmbt tags-fail.conf 2>tags-fail.stderr >tags-fail.stdout && {
+    echo "fails because: non-zero exit status from 'fmbt tags-fail.conf' expected" >>$LOGFILE
+    testfailed
+}
 if egrep -q 'tNoSubdir|tNoDir|tDirExists' tags-fail.stderr; then
     cat tags-fail.stderr >>$LOGFILE
     echo "fails because: wrong tag(s) mentioned in stderr" >>$LOGFILE
@@ -147,9 +156,11 @@ if ! ( grep 'tSubdirExists' tags-fail.stdout | grep -q Assertion ); then
     echo "fails because: Assertion failure with the tag not mentioned in stdout" >>$LOGFILE
     testfailed
 fi
-
-fmbt tags.conf 2>tags.stderr >tags.stdout || testfailed
-if [ "$(wc -l tags.stderr)" != "1" ]; then
+fmbt tags.conf 2>tags.stderr >tags.stdout || {
+    echo "fails because: exit status zero expected from 'fmbt tags.conf'" >>$LOGFILE
+    testfailed
+}
+if [ "$(wc -l < tags.stderr)" != "1" ]; then
     cat tags.stderr >>$LOGFILE
     echo "fails because: unnecessary output in stderr"
     testfailed
