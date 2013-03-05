@@ -65,8 +65,9 @@ public:
     return 0;
   }
 
-  virtual int check_tags(std::vector<int>& tag) {
+  virtual int check_tags(std::vector<int>& tag,std::vector<int>& t) {
     // Default implementation...
+    t.resize(0);
     return 0;
   }
 

@@ -298,8 +298,9 @@ int aal_remote::getprops(int** pro) {
   }
 }
 
-int aal_remote::check_tags(std::vector<int>& tag)
+int aal_remote::check_tags(std::vector<int>& tag,std::vector<int>& t)
 {
+  int rv;
   while(g_main_context_iteration(NULL,FALSE));
 
   if (!status) {
@@ -315,9 +316,14 @@ int aal_remote::check_tags(std::vector<int>& tag)
   }
 
   std::fprintf(d_stdin, "act%s\n",s.c_str());
-  
-  return getint(d_stdin,d_stdout,_log,0,
-		1,this);  
+
+  if ((rv = getact(NULL,t,d_stdin,d_stdout,_log,
+                   0,tag_names.size(),this)) >= 0) {
+    return rv;
+  }
+  status = false;
+  errormsg = "corrupted list of failed tags";
+  return 0;
 }
 
 int aal_remote::observe(std::vector<int> &action, bool block)

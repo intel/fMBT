@@ -274,7 +274,7 @@ std::string aalang_cpp::stringify()
     "\treturn actions.size();\n"
     "}\n";
   
-  s=s+"virtual int check_tags(std::vector<int>& tag) {\n";
+  s=s+"virtual int check_tags(std::vector<int>& tag,std::vector<int>& t) {\nt.resize(0);\n";
 
   for(int i=0;i<tag_cnt;i++) {
     if (tag_adapter[i]) {
@@ -283,13 +283,13 @@ std::string aalang_cpp::stringify()
       s=s+"if (std::find(tag.begin(),tag.end(),"+tnr+")!=tag.end()) {\n"
 	"// Tag"+tnr+" adapter\n"+
 	"if (!tag"+tnr+"_adapter()) {\n"+
-	"  return "+tnr+";\n"+
+	"  t.push_back("+tnr+");\n"+
 	"}\n"+
 	"}\n";
     }
   }
 
-  s=s+"\nreturn 0;\n}\n";
+  s=s+"\nreturn t.size();\n}\n";
 
   s=s+"virtual int getprops(int** props) {\n"
     "\ttags.clear();\n";
