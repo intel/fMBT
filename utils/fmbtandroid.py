@@ -501,6 +501,14 @@ class Device(object):
                 self._platformVersion = "nosoftware"
         return self._platformVersion
 
+    def pressAppSwitch(self, **pressKeyKwArgs):
+        """
+        Press the app switch button.
+
+        Optional parameters are the same as for pressKey.
+        """
+        return self.pressKey("KEYCODE_APP_SWITCH", **pressKeyKwArgs)
+
     def pressBack(self, **pressKeyKwArgs):
         """
         Press the back button.
