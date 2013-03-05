@@ -125,13 +125,22 @@ void Conf::load(std::string& name,std::string& content)
 
   adapter = new_adapter(log, adapter_name);
 
-  if (adapter && !adapter->status) {
+  if (adapter == NULL)
+    RETURN_ERROR_VOID("Creating adapter \"" + adapter_name + "\" failed.");
+
+  if (!adapter->status) {
     status=false;
     errormsg=adapter->errormsg;
     return;
   }
 
   adapter->set_tags(&model->getSPNames());
+
+  if (!adapter->status) {
+    status=false;
+    errormsg=adapter->errormsg;
+    return;
+  }
 
   /* handle history */
   for(unsigned i=0;i<history.size();i++) {
@@ -146,9 +155,6 @@ void Conf::load(std::string& name,std::string& content)
       RETURN_ERROR_VOID("Creating history \""+ *history[i] + "\" failed.");
     }
   }
-
-  if (adapter == NULL)
-    RETURN_ERROR_VOID("Creating adapter \"" + adapter_name + "\" failed.");
 
   adapter->set_actions(&model->getActionNames());
 
