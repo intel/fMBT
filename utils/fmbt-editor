@@ -594,10 +594,11 @@ Keyboard shortcuts:<br>
                                          if not l.startswith("  ")][0]
             except:
                 exceptionString = "Python error."
-            inUserCode = False
+            inUserCode = True
             self.preview_error.insertHtml('<table><tr><td style="color: darkred;">%s<br>Traceback (most recent call last)</td></tr>' % (exceptionString,))
             for filename, lineno, _, location, lineofcode in re.findall('  File "([^"]+)", line ([0-9]+)(, in (.*))?\n(.*)\n', errorMsg):
-
+                if filename.endswith('remote_pyaal') or filename.endswith('aalmodel.py'):
+                    inUserCode = False
                 if inUserCode:
                     if filename == self._modelFileName or filename in self._modelEditorFiles:
                         self.preview_error.insertHtml('<tr><td style="color:darkred;">File <a href="%s:%s">%s</a>, line %s, in %s</td></tr>' %
