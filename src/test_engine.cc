@@ -211,11 +211,12 @@ int Test_engine::verify_tags(const std::vector<std::string>& tnames)
   if (cnt) {
     int failing_tag = adapter.check_tags(tags,cnt);
 
-    m_verdict_msg = "verifying tag \"" +
-      heuristic.get_model()->getSPNames()[failing_tag] +
-      "\" failed.";
-
-    return failing_tag;
+    if (failing_tag > 0) {
+      m_verdict_msg = "verifying tag \"" +
+        heuristic.get_model()->getSPNames()[failing_tag] +
+        "\" failed.";
+      return failing_tag;
+    }
   }
   return 0;
 }

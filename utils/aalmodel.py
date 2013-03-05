@@ -76,7 +76,7 @@ class AALModel:
             ]
         return rv
 
-    def adapter_init(self):
+    def adapter_init():
         return True
 
     def init(self):
