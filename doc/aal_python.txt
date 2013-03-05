@@ -52,7 +52,10 @@ aal "<modelname>" {
 
     tag "<name>" {
         guard() {
-            <precondition: return true to tag states>
+            <precondition: return True to tag a state with this tag>
+        }
+        adapter() {
+            <validate state: code to be executed on states with this tag>
         }
     }...
 }
@@ -78,36 +81,74 @@ in use.
 Control flow
 ------------
 
+The main loop in test generation and execution is:
+
+0. Initialise: first the model, then the adapter.
+
+1. Validate the current state (check every tag on this state).
+
+2. Listen to output actions.
+   If an output action is observed, execute it and go to step 1.
+
+3. Choose and execute an enabled input action, then go to step 1.
+
+
+Initialisation
+
 When a compiled AAL module is loaded by fmbt or its remote
-model/adapter like remote_pyaal, the prelude code is executed
-first. Once loaded, the module is initialised: if the module is used
-as a model in the test configuration, the initial_state block is
-executed. If it is used as an adapter, the adapter_init block is
-executed. If it is used as both, both blocks will be executed in this
-order. After initialisation the AAL module is ready for test run and
-the control flow is as follows.
+model/adapter like remote_pyaal, the prelude code (see the AAL syntax
+above) is executed first. Once loaded, the module is initialised: if
+the AAL module is used as a model in the test configuration, the
+initial_state block is executed. If it is used as an adapter, the
+adapter_init block is executed. If it is used as both, both blocks
+will be executed in this order.
 
-Control flow in a simple test run
 
-Let us consider a simple case first:
+State validation
 
-- Test generation heuristic is random or lookahead without parameters
-  (that is, test execution will not be simulated).
+First, guard() blocks of all tags are evaluated to find which of them
+are True in the current state. After that, adapter() blocks of those
+tags are executed where guard() returned True.
 
-- The same AAL code is used as a model and an adapter in the test
-  configuration.
+If the adapter() block of a tag returns False or raises an
+AssertionError, state validation has failed, and the test will fail
+after all tags have been validated. If the adapter() block raises some
+other Exception, the test will stop with an error. Otherwise,
+validating the state in the perspective of the tag has succeeded.
 
-- AAL contains only input actions.
 
-First, the test generator evaluates guard() of every input action. If
-there are multiname actions, their guard() is evaluated for each name
-separately.
+Listening to outputs
 
-Once the generator has decided the next step among actions whose
-guards returned true, it executes the adapter() block of the chosen
-action. If executed successfully, the generator finally executes the
-body() block of the action. The next round starts by evaluating
-guards() again.
+First, adapter() blocks of all output actions are executed. If the
+adapter() of an action returns False (or None), output was not
+observed and nothing else is done to the action. If the adapter()
+block of the action returns True, output corresponding to this action
+was observed. The observation is validated by executing the guard() of
+the action.
+
+If the guard() returns True, observation is allowed in the current
+state. The model is updated by executing the body() block of the
+action. If the guard() returns False, the test will fail due to
+observing the output in a state where it must not appear.
+
+If the adapter() block raises an error, the test stops with an error.
+
+
+Choosing and executing an enabled input action
+
+In the simple case (no simulation), guard() blocks of all input
+actions are executed. One of the actions whose guard() returned True
+will be chosen.
+
+Next, the adapter() of the chosen action is executed. If the adapter()
+returns None or True, execution of this action is considered
+successful. If the adapter() returns False or raises AssertionError,
+test will fail due to unsuccessful execution of the action. If the
+adapter() raises some other exception, the test will fail with an
+error.
+
+If execution was successful, the model is updated by executing the
+body() block of the action.
 
 
 Control flow in case of simulation
@@ -117,14 +158,15 @@ if test configuration defines heuristic lookhead(n) with n > 0. In
 simulation the generator calls guard() blocks of all input actions,
 then for each enabled action it:
 
-1. pushes the values of variables into a stack.
+1. Pushes the values of variables into a stack.
 
-2. executes the body() block of the action in simulation turn. This
-   may change the values of variables.
+2. Simulates the execution of the action by updating the model as if
+   the action has been successfully tested: by executing its body()
+   block. This may change the values of variables.
 
-3. simulates executions of next n-1 steps similarly.
+3. Simulates executions of next n-1 steps similarly.
 
-4. pops the original values of variables from the stack.
+4. Pops the original values of variables from the stack.
 
 Finally the algorithm chooses the next step, executes the adapter()
 and, in case of success, the body() of the chosen action as in the
@@ -139,20 +181,26 @@ of the chosen action is sent to configured adapter. In case of
 successful execution, body() of the chosen test step is executed.
 
 
-Control flow when AAL is used only an adapter
+Control flow when AAL is used only as an adapter
 
 guard() and body() blocks are never executed. Adapter() blocks are
 executed in the order in which they have been chosen by the test
 generator.
 
 
-Control flow when adapter() returns a different action
+Control flow when the adapter() of an action returns a different action
 
-body() of the action returned (reported) by the adapter is executed,
-instead of body() of the suggested action.
+In addition to True, None and False, the adapter() block of an action
+is allowed to return an integer. The integer is the action that the
+adapter reports to be executed - instead of the action whose adapter()
+block was executed. This enables reacting to non-deterministic events.
+
+If the adapter() returns an integer (an action), the body() of the
+action returned (reported) action is executed, instead of body() of
+the suggested action.
 
 
-Control flow when adapter() raises an exception
+Control flow when the adapter() of an action raises an exception
 
 If adapter_exception_hander() is not defined, this is an execution of
 an unidentified action and test fails. If the handler is defined, it
@@ -207,7 +255,7 @@ remote_pyaal is an fMBT utility that enables using AAL/Python models
 and adapters in test configuration. For instance, test configuration
 
 model   = "aal_remote(remote_pyaal -l aal.log example.aal)"
-adapter = "aal_remote(remote_pyaal -l aal.log example.aal)"
+adapter = "aal"
 
 uses the same AAL/Python model/adapter instance as both model and
 adapter.
@@ -265,12 +313,13 @@ $ fmbt-aalc example.aal > example.py
 remote_pyaal
 ------------
 
-remote_pyaal implements remote AAL model/adapter interface. It can
-load a model/adapter from both AAL/Python and pure Python produced
-by fmbt-aalc.
+remote_pyaal implements remote AAL model/adapter interface. It loads a
+model/adapter from AAL/Python source or pure Python produced by
+fmbt-aalc.
 
-remote_pyaal can convert AAL/Python models into finite statemachines,
-too. It outputs the state machine in LSTS format to a file given
+remote_pyaal can convert AAL/Python models into finite state machines,
+too. It outputs the state machine in LSTS (labelled state transition
+system) format.
 
 
 fmbt-editor
@@ -335,9 +384,9 @@ Other previewer options are:
 Special variables and functions in AAL/Python
 ---------------------------------------------
 
-action_name - string that contains the name of the action.
+action_name - string that contains the name of an action.
 
-        Available: in guard(), body() and action() blocks.
+        Available: in guard(), body() and action() blocks of actions.
 
         Example: Actions "iLogin:Alice" and "iLogin:Bob" can be
         executed when "Alice" or "Bob" is not yet logged in.
@@ -353,8 +402,14 @@ action_name - string that contains the name of the action.
             }
         }
 
+tag_name - string that contains the name of a tag.
 
-action(name) - function that returns corresponding action (id)
+        Available: in guard() and action() blocks of tags.
+
+        Example: TODO
+
+
+action(name) - function that returns corresponding action (integer)
 
         Available: TODO
 
