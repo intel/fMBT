@@ -149,6 +149,7 @@ int main(int argc,char** argv) {
   }
 
   char *s;
+  int status=0;
   D_Parser *p = new_D_Parser(&parser_tables_lang, 5120);
 
   p->loc.pathname = argv[optind];
@@ -156,8 +157,12 @@ int main(int argc,char** argv) {
   if (prep_command=="") {
     s=readfile(argv[optind]);
   } else {
-    s=readfile(argv[optind],prep_command.c_str());
+    s=readfile(argv[optind],prep_command.c_str(),status);
+    if (status) {
+      error(1,0,"Preprocessing failure \"%s\".",argv[optind]);      
+    }
   }
+
   if (!s)
     error(1,0,"cannot read input file \"%s\".",argv[optind]);
 

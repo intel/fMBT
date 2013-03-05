@@ -49,7 +49,6 @@ public:
   virtual void empty_adapter() {
     set_adapter(&default_adapter,"default",0,0);
   }
-  
   virtual void next_action() = 0;
   virtual std::string stringify() = 0;
   virtual void set_starter(std::string* st,const char*, int, int) = 0;

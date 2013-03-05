@@ -298,6 +298,28 @@ int aal_remote::getprops(int** pro) {
   }
 }
 
+int aal_remote::check_tags(std::vector<int>& tag)
+{
+  while(g_main_context_iteration(NULL,FALSE));
+
+  if (!status) {
+    return 0;
+  }
+
+  handle_stderr();
+
+  std::string s;
+
+  for(size_t i=0;i<tag.size();i++) {
+    s=s+" "+to_string(tag[i]);
+  }
+
+  std::fprintf(d_stdin, "act%s\n",s.c_str());
+  
+  return getint(d_stdin,d_stdout,_log,0,
+		1,this);  
+}
+
 int aal_remote::observe(std::vector<int> &action, bool block)
 {
   while(g_main_context_iteration(NULL,FALSE));

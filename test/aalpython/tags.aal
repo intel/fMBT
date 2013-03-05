@@ -1,0 +1,125 @@
+aal "filesystemtest" {
+    language: python {
+        import os
+        import shutil
+        DIRNAME = "/tmp/fmbt.aalpython.testdir"
+        SUBDIRNAME = "/tmp/fmbt.aalpython.testdir/subdir"
+    }
+
+    # preview-hide-vars:
+    # preview-depth: 5
+    variables {
+        dir_exists, subdir_exists
+    }
+    initial_state {
+        dir_exists = False
+        subdir_exists = False
+    }
+    adapter_init {
+        try: shutil.rmtree(DIRNAME)
+        except OSError: pass
+    }
+    action "iMkDir:Ok" {
+        guard() { return not dir_exists }
+        adapter() {
+            os.mkdir(DIRNAME)
+        }
+        body()  {
+            dir_exists = True
+        }
+    }
+    action "iMkDir:AlreadyExists" {
+        guard() { return dir_exists }
+        adapter() {
+            try: os.mkdir(DIRNAME)
+            except OSError, e:
+                assert "File exists" in str(e), "Wrong exception: %s" % (e,)
+                return
+            assert False, "Exception expected"
+        }
+    }
+    action "iRmDir:Ok" {
+        guard() { return dir_exists and not subdir_exists }
+        adapter() {
+            os.rmdir(DIRNAME)
+        }
+        body() {
+            dir_exists = False
+        }
+    }
+    action "iRmDir:NoSuchFile" {
+        guard() { return not dir_exists }
+        adapter() {
+            try: os.rmdir(DIRNAME)
+            except OSError, e:
+                assert "No such file" in str(e), "Wrong exception %s" % (e,)
+                return
+            assert False, "Exception expected"
+        }
+    }
+    action "iRmDir:NotEmpty" {
+        guard() { return subdir_exists }
+        adapter() {
+            try: os.rmdir(DIRNAME)
+            except OSError, e:
+                assert "not empty" in str(e), "Wrong exception: %s" % (e,)
+                return
+            assert False, "Exception expected"
+        }
+    }
+
+    action "iMkSubDir:Ok" {
+        guard() { return dir_exists and not subdir_exists}
+        adapter() {
+            if not "mkSubDirFails" in globals():
+                os.mkdir(SUBDIRNAME)
+        }
+        body() {
+            subdir_exists = True
+        }
+    }
+    action "iRmSubDir:Ok" {
+        guard() { return subdir_exists }
+        adapter() {
+            os.rmdir(SUBDIRNAME)
+        }
+        body() {
+            subdir_exists = False
+        }
+    }
+    action "iRmSubDir:NoSuchFile" {
+        guard() { return not subdir_exists }
+        adapter() {
+            try: os.rmdir(SUBDIRNAME)
+            except OSError, e:
+                assert "No such file" in str(e), "Wrong exception %s" % (e,)
+                return
+            assert False, "Exception expected"
+        }
+    }
+
+    tag "tDirExists" {
+        guard() { return dir_exists }
+        adapter() {
+            assert os.access(DIRNAME, os.R_OK), "%s does not exist" % (DIRNAME,)
+        }
+    }
+    tag "tNoDir" {
+        guard() { return not dir_exists }
+        adapter() {
+            assert not os.access(DIRNAME, os.R_OK), "%s exists" % (DIRNAME,)
+        }
+    }
+    tag "tSubdirExists" {
+        guard() { return subdir_exists }
+        adapter() {
+            assert os.access(SUBDIRNAME, os.R_OK), "%s does not exist" % (SUBDIRNAME,)
+        }
+    }
+    tag "tNoSubdir" {
+        guard() { return not subdir_exists }
+        adapter() {
+            assert not os.access(SUBDIRNAME, os.R_OK), "%s exists" % (SUBDIRNAME,)
+        }
+    }
+}

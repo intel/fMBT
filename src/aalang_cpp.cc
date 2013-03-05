@@ -151,12 +151,20 @@ void aalang_cpp::set_body(std::string* bod,const char* file,int line,int col)
 
 void aalang_cpp::set_adapter(std::string* ada,const char* file,int line,int col)
 {
-  s+=to_line(file,line)+"int action" + to_string(action_cnt) + "_adapter(const char* param) {\n" +
+  if (tag) {
+    tag_adapter[tag_cnt]=true;
+    s+=to_line(file,line)+"int tag" + to_string(tag_cnt) + "_adapter() {\n" +
+      *ada + "\n"
+      "\treturn " + to_string(tag_cnt) + ";\n"
+      "}\n";    
+  } else {
+    s+=to_line(file,line)+"int action" + to_string(action_cnt) + "_adapter(const char* param) {\n" +
       *ada + "\n"
       "\treturn " + to_string(action_cnt) + ";\n"
       "}\n";
+  }
   if (ada!=&default_adapter)
-      delete ada;
+    delete ada;
 }
 
 void aalang_cpp::next_action()
@@ -265,8 +273,25 @@ std::string aalang_cpp::stringify()
     "\treturn actions.size();\n"
     "}\n";
   
+  s=s+"virtual int check_tags(std::vector<int>& tag) {\n";
+
+  for(int i=0;i<tag_cnt;i++) {
+    if (tag_adapter[i]) {
+
+      std::string tnr=to_string(i);
+      s=s+"if (std::find(tag.begin(),tag.end(),"+tnr+")!=tag.end()) {\n"
+	"// Tag"+tnr+" adapter\n"+
+	"if (!tag"+tnr+"_adapter()) {\n"+
+	"  return "+tnr+";\n"+
+	"}\n"+
+	"}\n";
+    }
+  }
+
+  s=s+"\nreturn 0;\n}\n";
+
   s=s+"virtual int getprops(int** props) {\n"
-    "tags.clear();\n";
+    "\ttags.clear();\n";
 
   for(int i=1;i<tag_cnt;i++) {
     s+="\tif (tag"+to_string(tmap[i])+"_guard()) {\n"

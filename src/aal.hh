@@ -65,6 +65,11 @@ public:
     return 0;
   }
 
+  virtual int check_tags(std::vector<int>& tag) {
+    // Default implementation...
+    return 0;
+  }
+
   virtual int  observe(std::vector<int> &action,bool block=false) {
     return 0;
   }

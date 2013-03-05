@@ -27,7 +27,7 @@ int Adapter::sleeptime = 0;
 FACTORY_IMPLEMENTATION(Adapter)
 
 Adapter::Adapter(Log& l, std::string params) :
-log(l), actions(NULL), parent(NULL)
+log(l), actions(NULL), tags(NULL), parent(NULL)
 {
   log.ref();
 }
@@ -49,9 +49,19 @@ void Adapter::set_actions(std::vector<std::string>* _actions)
   unames.resize(actions->size()+1);
 }
 
+void Adapter::set_tags(std::vector<std::string>* _tags)
+{
+  tags = _tags;
+}
+
 bool Adapter::init()
 {
   return true;
+}
+
+int Adapter::check_tags(int* tag,int len)
+{
+  return 0;
 }
 
 Adapter* Adapter::up()

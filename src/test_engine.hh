@@ -47,7 +47,7 @@ public:
   const std::string& reason_msg();
   Verdict::Verdict verdict();
 protected:
-  void log_tags(const std::vector<std::string>& tnames);
+  int verify_tags(const std::vector<std::string>& tnames);
   void print_time(struct timeval& start_time,
 		  struct timeval& total_time);
   Verdict::Verdict stop_test(End_condition* ec);

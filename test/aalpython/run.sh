@@ -124,3 +124,34 @@ if ! grep -q 'raise Exception("unrecoverable error!")' adapter_exception_handler
     testfailed
 fi
 testpassed
+
+teststep "remote_pyaal adapter() blocks of tags..."
+fmbt tags-fail.conf 2>tags-fail.stderr >tags-fail.stdout && testfailed
+if egrep -q 'tNoSubdir|tNoDir|tDirExists' tags-fail.stderr; then
+    cat tags-fail.stderr >>$LOGFILE
+    echo "fails because: wrong tag(s) mentioned in stderr" >>$LOGFILE
+    testfailed
+fi
+if ! grep -q 'tSubdirExists' tags-fail.stderr; then
+    cat tags-fail.stderr >>$LOGFILE
+    echo "fails because: failing tag not mentioned in stderr" >>$LOGFILE
+    testfailed
+fi
+if ! grep -q 'tSubdirExists' tags-fail.stderr; then
+    cat tags-fail.stderr >>$LOGFILE
+    echo "fails because: failing tag not mentioned in stderr" >>$LOGFILE
+    testfailed
+fi
+if ! ( grep 'tSubdirExists' tags-fail.stdout | grep -q Assertion ); then
+    cat tags-fail.stdout >>$LOGFILE
+    echo "fails because: Assertion failure with the tag not mentioned in stdout" >>$LOGFILE
+    testfailed
+fi
+
+fmbt tags.conf 2>tags.stderr >tags.stdout || testfailed
+if [ "$(wc -l tags.stderr)" != "1" ]; then
+    cat tags.stderr >>$LOGFILE
+    echo "fails because: unnecessary output in stderr"
+    testfailed
+fi
+testpassed

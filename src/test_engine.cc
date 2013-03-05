@@ -186,28 +186,39 @@ Verdict::Verdict Test_engine::stop_test(End_condition* ec)
   return stop_test(ec->verdict,ec->end_reason().c_str());
 }
 
-void Test_engine::log_tags(const std::vector<std::string>& tnames)
+int Test_engine::verify_tags(const std::vector<std::string>& tnames)
 {
   Model* model=heuristic.get_model();
   int* tags;
   int cnt=model->getprops(&tags);
 
   if (!model->status) {
-    return;
+    return 0;
   }
 
   for(int i=0;i<cnt;i++) {
     if (tags[i]>=(int)tnames.size() ||
-	tags[i]<0) {
+        tags[i]<0) {
       model->errormsg="tag out of range";
       model->status=false;
-      return;
+      return 0;
     }
   }
 
   std::string s=to_string(cnt,tags,tnames);
-
   log.print("<tags enabled=\"%s\"/>\n",s.c_str());
+
+  if (cnt) {
+    int failing_tag = adapter.check_tags(tags,cnt);
+
+    if (failing_tag > 0) {
+      m_verdict_msg = "verifying tag \"" +
+        heuristic.get_model()->getSPNames()[failing_tag] +
+        "\" failed.";
+      return failing_tag;
+    }
+  }
+  return 0;
 }
 
 void log_strarray(Log&l,
@@ -252,7 +263,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
     escape_string(tags[i]);
   }
 
-  log_tags(tags);
+  if (verify_tags(tags) > 0) return stop_test(Verdict::FAIL, m_verdict_msg.c_str());
   log_status(log, step_count, heuristic.getCoverage());
   while (-1 == (condition_i = matching_end_condition(step_count))) {
     action=0;
@@ -275,15 +286,16 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       log_adapter_output(log, adapter, action);
 
       if (!heuristic.execute(action)) {
-	if (!heuristic.status) {
-	  return stop_test(Verdict::ERROR, heuristic.errormsg.c_str());
-	}
+        if (!heuristic.status) {
+          return stop_test(Verdict::ERROR, heuristic.errormsg.c_str());
+        }
         log.debug("Test_engine::run: Error: unexpected output from the SUT: %i '%s'\n",
                   action, heuristic.getActionName(action).c_str());
 
         return stop_test(Verdict::FAIL, "unexpected output");
       }
-      log_tags(tags);
+
+      if (verify_tags(tags) > 0) return stop_test(Verdict::FAIL, m_verdict_msg.c_str());
       log_status(log, step_count, heuristic.getCoverage());
       update_coverage(heuristic.getCoverage(), step_count,
                       &last_coverage, &last_step_cov_growth);
@@ -408,9 +420,9 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
       log.pop(); // adapter_executed
 
       if (!heuristic.execute(adapter_response)) {
-	if (!heuristic.status) {
-	  return stop_test(Verdict::ERROR, heuristic.errormsg.c_str());
-	}
+        if (!heuristic.status) {
+          return stop_test(Verdict::ERROR, heuristic.errormsg.c_str());
+        }
         std::string msg = "unexpected response to input \"" +
           heuristic.getActionName(action) + "\": ";
         if (adapter_response == 0) msg += "unidentified result.";
@@ -430,7 +442,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 
     }
     }// switch
-    log_tags(tags);
+    if (verify_tags(tags) > 0) return stop_test(Verdict::FAIL, m_verdict_msg.c_str());
     log_status(log, step_count, heuristic.getCoverage());
     update_coverage(heuristic.getCoverage(), step_count,
                     &last_coverage, &last_step_cov_growth);

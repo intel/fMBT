@@ -49,6 +49,7 @@ public:
   virtual void pop();
   virtual int getprops(int** props);
 
+  virtual int check_tags(std::vector<int>& tag);
   virtual int observe(std::vector<int> &action,bool block=false);
 private:
   void handle_stderr();
