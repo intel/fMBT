@@ -48,7 +48,10 @@ conf_entry: model               |
             on_error            |
             on_fail             |
             on_pass             |
-            on_inconc           ;
+            on_inconc           |
+            tag_checking        ;
+
+tag_checking: 'tag_checking' '=' string { conf_obj->set_tag_checking(*$2.str); delete $2.str; } ;
 
 model: 'model' '=' string { conf_obj->set_model(*$2.str); delete $2.str; } ;
 

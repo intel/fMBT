@@ -43,6 +43,7 @@ class Conf:public Writable {
      adapter_name("dummy"), end_time(-1),
      on_error("exit(1)"), on_fail("interactive"),
      on_pass("exit(0)"), on_inconc("exit(1)"),
+     tag_checking("strict"),
      heuristic(NULL), model(NULL),
      adapter(NULL),coverage(NULL)
   {
@@ -59,6 +60,10 @@ class Conf:public Writable {
 
   }
   virtual ~Conf();
+
+  void set_tag_checking(std::string& s) {
+    tag_checking=s;
+  }
 
   void set_model(std::string& s) {
     //split(s, model_name, model_param);
@@ -142,6 +147,7 @@ class Conf:public Writable {
   time_t end_time;
 
   std::string on_error, on_fail, on_pass, on_inconc;
+  std::string tag_checking;
 
   Heuristic* heuristic;
   Model* model;
