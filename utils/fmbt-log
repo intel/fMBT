@@ -44,6 +44,10 @@ Options:
           $tr - reason for the verdict
           $tt - total test runtime [s]
 
+  -s, --separator=<string>
+          separator between values of multivalue fields,
+          for instance $tg and $al. The default is '; '.
+
   -t, --time-format=<fmt>
           fmt defines how timestamps are formatted. See
           strftime manual for details. %f gives microseconds.
@@ -59,6 +63,8 @@ import getopt
 import urllib2
 import fmbt_config
 import datetime
+
+VALUE_SEPARATOR = '; '
 
 def identity_formatter(s):
     return s
@@ -91,11 +97,17 @@ def extract(input_file_obj, output_file_obj, output_format, raw):
     # 2. write the stuff in requested format to output_file_obj
 
     def pick(line, field_values):
-        _, delimiter, fieldindex, formatter = field_values
+        unique_prefix, delimiter, fieldindex, formatter = field_values
         if raw == 1:
             contents = line.split(delimiter)[fieldindex]
         else:
-            try: contents = formatter(urllib2.unquote(line.split(delimiter)[fieldindex]))
+            try:
+                if unique_prefix == "<tags enabled=":
+                    values = [formatter(urllib2.unquote(v))
+                              for v in line.split(delimiter)[fieldindex].split(' ')]
+                    contents = VALUE_SEPARATOR.join(values)
+                else:
+                    contents = formatter(urllib2.unquote(line.split(delimiter)[fieldindex]))
             except: contents = '<syntax error>'
         return contents
 
@@ -117,7 +129,7 @@ def extract(input_file_obj, output_file_obj, output_format, raw):
             ('</test_engine>' in line)):
             printable_data = {}
             for field in parsed_data:
-                printable_data[field] = '; '.join(parsed_data[field])
+                printable_data[field] = VALUE_SEPARATOR.join(parsed_data[field])
             ppoutput = output_format % printable_data
             parsed_data = clean_data()
         elif ((parsed_data['$al'] != [] and '%($al)' in output_format) or
@@ -140,8 +152,8 @@ if __name__ == '__main__':
     option_raw = 0
 
     opts, remainder = getopt.getopt(
-        sys.argv[1:], 'hrf:o:t:v',
-        ['help', 'raw', 'format=', 'output=', 'time-format=', "version"])
+        sys.argv[1:], 'hrf:o:s:t:v',
+        ['help', 'raw', 'format=', 'output=', 'separator=', 'time-format=', 'version'])
     for opt, arg in opts:
         if opt in ['-h', '--help']:
             print __doc__
@@ -153,6 +165,8 @@ if __name__ == '__main__':
             option_raw = 1
         elif opt in ['-f', '--format']:
             output_format = arg
+        elif opt in ['-s', '--separator']:
+            VALUE_SEPARATOR = arg
         elif opt in ['-t', '--time-format']:
             time_format = arg
             fields['$st'][3] = lambda s: datetime.datetime.fromtimestamp(float(s)).strftime(time_format)
