@@ -293,17 +293,6 @@ void Conf::handle_hooks(Verdict::Verdict v)
     for_each(hooklist->begin(),hooklist->end(),hook_runner);
 }
 
-
-/*
-  void Conf::set_exitvalue(std::string& s)
-  {
-  std::string cmd;
-  std::string value;
-  split(s,cmd,value);
-  exit_status=atoi(value.c_str());
-  }
-*/
-
 void Conf::set_observe_sleep(std::string &s)
 {
   Adapter::sleeptime=atoi(s.c_str());

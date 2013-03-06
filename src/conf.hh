@@ -127,20 +127,12 @@ class Conf:public Writable {
   int exit_status;
   bool exit_interactive;
  protected:
-  //void set_exitvalue(std::string& s);
   std::list<EndHook*> pass_hooks,fail_hooks,inc_hooks,error_hooks;
   std::vector<std::string*> history;
   std::string model_name;
-  //std::string model_param;
-
   std::string heuristic_name;
-  //std::string heuristic_param;
-
   std::string coverage_name;
-  //std::string coverage_param;
-
   std::string adapter_name;
-  //std::string adapter_param;
 
   std::vector<End_condition*> end_conditions;
 
