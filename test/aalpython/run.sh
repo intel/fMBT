@@ -165,4 +165,29 @@ if [ "$(wc -l < tags.stderr)" != "1" ]; then
     echo "fails because: unnecessary output in stderr"
     testfailed
 fi
+
+testpassed
+
+teststep "remote_pyaal adapter() blocks of tags skipping"
+if ! fmbt tags-notagadapters.conf 2>tags-notagadapters.stderr >tags-notagadapters.stdout ; then
+    echo "fails because: zero exit status from 'fmbt tags-notagadapters.conf' expected" >>$LOGFILE
+    testfailed
+fi
+
+testpassed
+
+teststep "remote_pyaal adapter() tags-fail_include_pass.conf "
+if ! fmbt tags-fail_include_pass.conf 2>tags-fail_include_pass.stderr >tags-fail_include_pass.stdout ; then
+    echo "fails because: zero exit status from 'fmbt tags-fail_include_pass.conf' expected" >>$LOGFILE
+    testfailed
+fi
+
+testpassed
+
+teststep "remote_pyaal adapter() tags-fail_exclude.conf "
+fmbt tags-fail_exclude.conf 2>tags-fail_exclude.stderr >tags-fail_exclude.stdout && {
+    echo "fails because: non-zero exit status from 'fmbt tags-fail_exclude.conf' expected" >>$LOGFILE
+    testfailed
+}
+
 testpassed
