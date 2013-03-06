@@ -815,6 +815,22 @@ void param_cut(std::string val,std::string& name,
   name=val;
 }
 
+void strlist(std::vector<std::string>& s)
+{
+  for(unsigned i=0;i<s.size();i++) {
+    size_t len=s[i].length();
+    if (len>2) {
+      if ((s[i][0]=='"' && 
+	   s[i][len-1]=='"') ||
+	  (s[i][0]=='\'' && 
+	   s[i][len-1]=='\'')) {
+	s[i]=s[i].substr(1,len-2);
+      }
+    }
+    remove_force(s[i]);
+  }
+}
+
 void commalist(const std::string& s,std::vector<std::string>& vec, bool remove_whitespace) {
   int depth=0;
   int lastend=0;

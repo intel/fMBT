@@ -35,7 +35,6 @@ extern "C" {
 }
 
 extern Conf* conf_obj;
-
 #define RETURN_ERROR_VOID(s) {                  \
     log.pop();                                  \
     status=false;                               \
@@ -202,6 +201,7 @@ Verdict::Verdict Conf::execute(bool interactive) {
 
   // Validate and finish existing end_conditions
   {
+    bool end_by_tagverify = false;
     bool end_by_coverage = false;
     for (unsigned int i = 0; i < end_conditions.size(); i++) {
       End_condition* e = end_conditions[i];
@@ -221,6 +221,11 @@ Verdict::Verdict Conf::execute(bool interactive) {
           RETURN_ERROR_VERDICT("Error in end condition: " + e->stringify());
         }
       }
+      if (e->counter == End_condition::TAGVERIFY) {
+        end_by_tagverify = true;
+	((End_condition_tagverify*) e)
+	  ->evaluate_filter(model->getSPNames());
+      }
       if (e->counter == End_condition::COVERAGE) {
         end_by_coverage = true;
       }
@@ -232,6 +237,9 @@ Verdict::Verdict Conf::execute(bool interactive) {
     if (!end_by_coverage) {
       end_conditions.push_back(new End_condition_coverage(Verdict::PASS, "1.0"));
     }
+    if (!end_by_tagverify && !disable_tagverify) {
+      end_conditions.push_back(new End_condition_tagverify(Verdict::FAIL, ""));
+    }
   }
 
   Test_engine engine(*heuristic,*adapter,log,policy,end_conditions);
@@ -239,7 +247,7 @@ Verdict::Verdict Conf::execute(bool interactive) {
   if (interactive) {
     engine.interactive();
   } else {
-    Verdict::Verdict v = engine.run(end_time);
+    Verdict::Verdict v = engine.run(end_time,disable_tagverify);
 
     if (!heuristic->status) {
       fprintf(stderr,"heuristic error: %s\n",heuristic->errormsg.c_str());

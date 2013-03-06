@@ -40,13 +40,14 @@ public:
     NOPROGRESS,
     DEADLOCK,
     ACTION,
-    STATUS
+    STATUS,
+    TAGVERIFY
   } Counter;
 
   End_condition(Verdict::Verdict v, const std::string& p);
   virtual ~End_condition();
 
-  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic)=0;
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags)=0;
   virtual const std::string& end_reason() {
     return er;
   }
@@ -61,8 +62,6 @@ public:
 
   std::string er;
 };
-
-
 
 class End_condition_steps: public End_condition {
 public:
@@ -86,7 +85,7 @@ public:
     }
   }
   virtual ~End_condition_steps() {}
-  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic) {
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags) {
     if (param_long > -1 && step_count >= param_long) return true;
     return false;
   }
@@ -114,7 +113,7 @@ public:
     }
   }
   virtual ~End_condition_coverage() {}
-  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic) {
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags) {
       if (heuristic.getCoverage() >= param_float) return true;
     return false;
   }
@@ -129,7 +128,7 @@ public:
     status = true;    
   }
   virtual ~End_condition_tag() {}
-  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic);
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags);
 };
 
 class End_condition_duration: public End_condition {
@@ -175,7 +174,7 @@ public:
 #endif
   }
   virtual ~End_condition_duration() {}
-  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic);
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags);
 };
 
 
@@ -189,7 +188,7 @@ public:
     status = true;
   }
   virtual ~End_condition_noprogress() {}
-  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic) {
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags) {
     if (step_count - last_step_cov_growth >= param_long) return true;
 
     return false;
@@ -206,7 +205,7 @@ public:
     status = true;
   }
   virtual ~End_condition_deadlock() {}
-  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic) {
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags) {
     if (state==Alphabet::DEADLOCK) {
       return true;
     }
@@ -223,7 +222,7 @@ public:
     status = true;
   }
   virtual ~End_status_error() {}
-  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic);
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags);
 };
 
 class End_condition_action: public End_condition {
@@ -235,11 +234,26 @@ public:
     status = true;
   }
   virtual ~End_condition_action() {}
-  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic) {
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags) {
     if ((action>=0) && (action==param_long)) return true;
 
     return false;
   }
+};
+
+
+class End_condition_tagverify: public End_condition {
+public:
+  End_condition_tagverify(Verdict::Verdict v, const std::string& p):
+    End_condition(v,p) {
+    counter = TAGVERIFY;
+    status = true;
+  }
+  bool evaluate_filter(std::vector<std::string>& tags);
+  bool evaluate_filter(std::vector<std::string>& tags,std::string& s);
+  virtual ~End_condition_tagverify() {}
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags);
+  std::vector<int> filter;
 };
 
 #undef FACTORY_CREATE_PARAMS

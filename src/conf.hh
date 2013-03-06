@@ -43,9 +43,9 @@ class Conf:public Writable {
      adapter_name("dummy"), end_time(-1),
      on_error("exit(1)"), on_fail("interactive"),
      on_pass("exit(0)"), on_inconc("exit(1)"),
-     tag_checking("strict"),
      heuristic(NULL), model(NULL),
-     adapter(NULL),coverage(NULL)
+     adapter(NULL),coverage(NULL),
+     disable_tagverify(false)
   {
     log.push("fmbt_log");
     log.set_debug(debug_enabled);
@@ -61,8 +61,8 @@ class Conf:public Writable {
   }
   virtual ~Conf();
 
-  void set_tag_checking(std::string& s) {
-    tag_checking=s;
+  void disable_tagchecking() {
+    disable_tagverify=true;
   }
 
   void set_model(std::string& s) {
@@ -139,12 +139,12 @@ class Conf:public Writable {
   time_t end_time;
 
   std::string on_error, on_fail, on_pass, on_inconc;
-  std::string tag_checking;
 
   Heuristic* heuristic;
   Model* model;
   Adapter* adapter;
   Coverage* coverage;
+  bool disable_tagverify;
 };
 
 #endif
