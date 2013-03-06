@@ -1072,7 +1072,7 @@ class Device(object):
         """
         return self._lastView
 
-    def wait(self, refreshFunc, waitFunc, waitFuncArgs, waitFuncKwargs={}, waitTime = 5.0, pollDelay = 1.0):
+    def wait(self, refreshFunc, waitFunc, waitFuncArgs=(), waitFuncKwargs={}, waitTime = 5.0, pollDelay = 1.0):
         """
         Wait until waitFunc returns True or waitTime has expired.
 
