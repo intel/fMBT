@@ -732,29 +732,42 @@ void Test_engine::interactive()
         break;
 
       case 'a': // commands "a", "a<num>" and "aup"
-        num = std::atoi(s+1);
-        if (strncmp(s,"aup",3)==0) {
-          // do up in the adapter tree
-          if (!current_adapter->up()) {
-            fprintf(stderr,"Can't go up in adapter tree\n");
-          } else {
-            current_adapter=current_adapter->up();
-          }
-        } else if (strnlen(s,2)==1) {
-          std::vector<std::string>& adapter_names=current_adapter->getAdapterNames();
-          for(unsigned int i=0;i<adapter_names.size();i++) {
-            if (adapter_names[i]!=std::string("")) {
-              fprintf(stderr,"a%i:%s\n",i,adapter_names[i].c_str());
-            }
-          }
-        } else {
-          num=std::atoi(s+1);
-          if (!current_adapter->down(num)) {
-            fprintf(stderr,"Can't change to adapter %i\n",num);
-          } else {
-            current_adapter=current_adapter->down(num);
-          }
-        }
+	if (strncmp(s,"at",2)==0) {
+	  num=std::atoi(s+2);
+	  int cnt=1;
+	  mismatch_tags.clear();
+	  int failing_tags = adapter.check_tags((int*)&num,cnt,mismatch_tags);
+
+	  for(int i=0;i<mismatch_tags.size();i++) {
+	    fprintf(stderr,"Tag %s (%i) fails\n",
+		    heuristic.get_model()
+		    ->getSPNames()[mismatch_tags[i]].c_str(),
+		    mismatch_tags[i]);	    
+	  }
+	} else {
+	  if (strncmp(s,"aup",3)==0) {
+	    // do up in the adapter tree
+	    if (!current_adapter->up()) {
+	      fprintf(stderr,"Can't go up in adapter tree\n");
+	    } else {
+	      current_adapter=current_adapter->up();
+	    }
+	  } else if (strnlen(s,2)==1) {
+	    std::vector<std::string>& adapter_names=current_adapter->getAdapterNames();
+	    for(unsigned int i=0;i<adapter_names.size();i++) {
+	      if (adapter_names[i]!=std::string("")) {
+		fprintf(stderr,"a%i:%s\n",i,adapter_names[i].c_str());
+	      }
+	    }
+	  } else {
+	    num=std::atoi(s+1);
+	    if (!current_adapter->down(num)) {
+	      fprintf(stderr,"Can't change to adapter %i\n",num);
+	    } else {
+	      current_adapter=current_adapter->down(num);
+	    }
+	  }
+	}
         break;
 
       case 'q': // command "q": quit
