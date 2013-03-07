@@ -109,6 +109,20 @@ grep -q '^DATETIME' pyaal.log || {
     testfailed
 }
 
+teststep "remote_pyaal changing model in adapter..."
+fmbt changing_model_in_adapter.conf >changing_model_in_adapter.stdout 2>changing_model_in_adapter.stderr;
+exit_status=$?
+if [ ! "$exit_status" == "1" ]; then
+    echo "failed because: exit status 1 expected, got $exit_status" >>$LOGFILE
+    testfailed
+fi
+fmbt-log  -f '$as -> $ax\n$tv $tr' changing_model_in_adapter.stdout > changing_model_in_adapter.observed
+if ! diff -u changing_model_in_adapter.expected changing_model_in_adapter.observed >>$LOGFILE; then
+    echo "failed because: expected and observed log output differ" >>$LOGFILE
+    testfailed
+fi
+testpassed
+
 teststep "remote_pyaal adapter_exception_handler..."
 cat > expected-steps.txt <<EOF
 iStep1

@@ -1,0 +1,33 @@
+aal "enabled_actions" {
+    language: python {}
+
+    # preview-hide-vars:
+    # preview-depth: 5
+    variables {
+        x
+    }
+    initial_state {
+        x = 0
+    }
+    action "iIncSix" {
+        guard() { return x < 3 }
+        body()  { x += 1 }
+        adapter() {
+            x += 5
+        }
+    }
+    action "iDecOne" {
+        guard() { return x == 6 }
+        adapter() {
+            x -= 1
+            return action("iFive")
+        }
+    }
+    action "iFive" {
+        guard() { return x == 5 }
+        adapter() {
+            x = 4
+            return action("iIncSix")
+        }
+    }
+}
