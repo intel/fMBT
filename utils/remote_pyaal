@@ -177,6 +177,10 @@ class RemoteAALBridge:
                     fmbtstderr('Error at initial_state(): %s: %s\n%s' % (type(e).__name__, e, format_pythonaalexception()))
                     put(0)
                 else:   put(1)
+            elif cmd == "mu":
+                self._aal.push()
+            elif cmd == "mo":
+                self._aal.pop()
             elif cmd == "ai":
                 try: rv = self._aal.init()
                 except Exception, e:
@@ -185,10 +189,6 @@ class RemoteAALBridge:
                 else:
                     if rv or rv == None: put(1)
                     else: put(0)
-            elif cmd == "mu":
-                self._aal.push()
-            elif cmd == "mo":
-                self._aal.pop()
             elif cmd == "aop":
                 try:
                     put_list(self._aal.observe(False))

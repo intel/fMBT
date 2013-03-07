@@ -129,34 +129,48 @@ double AlgBDFS::path_to_best_evaluation(Model& model, std::vector<int>& path, in
         // - If maximal growth rate is known, search starting with a
         //   good "so far best score" is able to drop unnecessary
         //   lookups. (Not implemented)
-        for (unsigned int i = 0; i < path.size(); i++) doExecute(path[i]);
 
-        std::vector<int> additional_path;
-
-        if (!model.status || !status) {
-          status=false;
-          return 0.0;
+        int invalid_step = -1;
+        for (unsigned int i = 0; i < path.size(); i++) {
+            doExecute(path[i]);
+            if (status == false) {
+                invalid_step = i;
+                status = true;
+            }
+            if (!model.status) {
+                status = false;
+                return 0.0;
+            }
         }
 
-        best_score = _path_to_best_evaluation(model, additional_path, depth - path.size(), current_score);
+        if (invalid_step > -1) {
+            // Hinted path is no more valid, throw it away.
+            path.resize(0);
+            for (int i = invalid_step; i > -1; i--)
+                undoExecute();
+        } else {
+            std::vector<int> additional_path;
 
-        if (!model.status || !status) {
-          status=false;
-          return 0.0;
-        }
+            best_score = _path_to_best_evaluation(model, additional_path, depth - path.size(), current_score);
 
-        for (unsigned int i = 0; i < path.size(); i++) undoExecute();
+            if (!model.status || !status) {
+                status=false;
+                return 0.0;
+            }
 
-        if (!model.status || !status) {
-          status=false;
-          return 0.0;
-        }
+            for (unsigned int i = 0; i < path.size(); i++) undoExecute();
 
-        if (best_score > current_score) {
-            hinted_path = path;
-            for (int i = additional_path.size() - 1; i >= 0; i--)
-                hinted_path.push_back(additional_path[i]);
-            current_score = best_score;
+            if (!model.status || !status) {
+                status=false;
+                return 0.0;
+            }
+
+            if (best_score > current_score) {
+                hinted_path = path;
+                for (int i = additional_path.size() - 1; i >= 0; i--)
+                    hinted_path.push_back(additional_path[i]);
+                current_score = best_score;
+            }
         }
     }
 

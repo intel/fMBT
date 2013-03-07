@@ -1,0 +1,6 @@
+iIncSix -> iIncSix
+ 
+iDecOne -> iFive
+ 
+iFive -> iIncSix
+fail unexpected response to input "iFive": "iIncSix".

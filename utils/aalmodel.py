@@ -30,6 +30,7 @@ class AALModel:
         self._variables['variable'] = lambda varname: self._variables[varname]
         self._variables['assign'] = lambda varname, v: self._variables.__setitem__(varname, v)
         self._stack = []
+        self._enabled_actions_stack = [set()]
         fmbt._g_testStep = 1
 
     def _get_all(self, property_name, itemtype):
@@ -93,7 +94,7 @@ class AALModel:
                 if rv == None: return i
                 else: return rv
             except Exception, exc:
-                if not isinstance(exc, AssertionError) and 'adapter_exception_handler' in self._variables:
+                if 'adapter_exception_handler' in self._variables:
                     return self.call_exception_handler('adapter_exception_handler', self._all_names[i-1], exc)
                 else:
                     raise
@@ -108,7 +109,7 @@ class AALModel:
 
     def model_execute(self, i):
         fmbt._g_actionName = self._all_names[i-1]
-        if self.call(self._all_guards[i-1]):
+        if i in self._enabled_actions_stack[-1] or self.call(self._all_guards[i-1]):
             self.call(self._all_bodies[i-1])
             if len(self._stack) == 0:
                 fmbt._g_testStep += 1
@@ -121,6 +122,7 @@ class AALModel:
         for index, guard in enumerate(self._all_guards):
             fmbt._g_actionName = self._all_names[index]
             if self.call(guard): enabled_actions.append(index + 1)
+        self._enabled_actions_stack[-1] = set(enabled_actions)
         return enabled_actions
 
     def getIActions(self):
@@ -133,6 +135,7 @@ class AALModel:
         except Exception, e:
             raise Exception('Error at guard() of "%s": %s: %s' % (
                 self._all_names[index], type(e).__name__, e))
+        self._enabled_actions_stack[-1].update(enabled_iactions)
         return enabled_iactions
 
     def getprops(self):
@@ -155,11 +158,13 @@ class AALModel:
         for varname in self._push_variables:
             stack_element[varname] = copy.deepcopy(self._variables[varname])
         self._stack.append(stack_element)
+        self._enabled_actions_stack.append(set())
 
     def pop(self):
         stack_element = self._stack.pop()
         for varname in stack_element:
             self._variables[varname] = stack_element[varname]
+        self._enabled_actions_stack.pop()
 
     def state(self, discard_variables = set([]), include_variables=None):
         """

@@ -20,6 +20,25 @@
 
 int Policy::choose(std::vector<int>& actions)
 {
+  /* This code & AAL has a problem:
+
+     If executing an adapter() block of an action has changed the
+     state of the model, we should be able to choose execute following
+     action types in addition to obvious actions enabled in both
+     states:
+
+     1. actions whose guard() was true *before* the adapter() block,
+     but is not after the block.
+
+     2. actions whose guard() became true as a result of executing the
+     adapter(), but was not true before.
+
+     Current implementation cannot cope with that. Therefore the
+     chooser returns blindly the first action for now, and expects AAL
+     model_execute to take care of this.
+
+     Perhaps it is time to throw away Policy::choose.
+
   int* act=NULL;
 
   if (!actions.empty()) {
@@ -32,6 +51,7 @@ int Policy::choose(std::vector<int>& actions)
       }
     }
   }
+  */
   if (!actions.empty()) {
     return actions[0];
   }
