@@ -186,14 +186,16 @@ Verdict::Verdict Test_engine::stop_test(End_condition* ec)
   return stop_test(ec->verdict,ec->end_reason().c_str());
 }
 
-int Test_engine::verify_tags(const std::vector<std::string>& tnames)
+void Test_engine::verify_tags(const std::vector<std::string>& tnames)
 {
   Model* model=heuristic.get_model();
   int* tags;
   int cnt=model->getprops(&tags);
 
+  mismatch_tags.clear();
+
   if (!model->status) {
-    return 0;
+    return;
   }
 
   for(int i=0;i<cnt;i++) {
@@ -201,24 +203,31 @@ int Test_engine::verify_tags(const std::vector<std::string>& tnames)
         tags[i]<0) {
       model->errormsg="tag out of range";
       model->status=false;
-      return 0;
+      return;
     }
+  }
+
+  if (tagverify_disabled) {
+    return;
   }
 
   std::string s=to_string(cnt,tags,tnames);
   log.print("<tags enabled=\"%s\"/>\n",s.c_str());
 
   if (cnt) {
-    int failing_tag = adapter.check_tags(tags,cnt);
-
-    if (failing_tag > 0) {
-      m_verdict_msg = "verifying tag \"" +
-        heuristic.get_model()->getSPNames()[failing_tag] +
-        "\" failed.";
-      return failing_tag;
+    int failing_tag = adapter.check_tags(tags,cnt,mismatch_tags);
+    /*
+    if (mismatch_tags.size()) { 
+      m_verdict_msg = "verifying tags ";
     }
+    for(int i=0;i<mismatch_tags.size();i++) {
+      m_verdict_msg+="\""+heuristic.get_model()->getSPNames()[mismatch_tags[i]]+"\" ";
+    }
+    m_verdict_msg+="failed.";
+    //return failing_tag;
+    */
   }
-  return 0;
+  return;
 }
 
 void log_strarray(Log&l,
@@ -238,10 +247,12 @@ void log_strarray(Log&l,
 }
 
 
-Verdict::Verdict Test_engine::run(time_t _end_time)
+Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
 {
   float last_coverage = heuristic.getCoverage();
   end_time=_end_time;
+
+  tagverify_disabled=disable_tagverify;
 
   int condition_i = -1; /* index of end condition that is stopping the run */
 
@@ -263,7 +274,8 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
     escape_string(tags[i]);
   }
 
-  if (verify_tags(tags) > 0) return stop_test(Verdict::FAIL, m_verdict_msg.c_str());
+  //if (verify_tags(tags) > 0) return stop_test(Verdict::FAIL, m_verdict_msg.c_str());
+  verify_tags(tags);
   log_status(log, step_count, heuristic.getCoverage());
   while (-1 == (condition_i = matching_end_condition(step_count))) {
     action=0;
@@ -295,7 +307,9 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
         return stop_test(Verdict::FAIL, "unexpected output");
       }
 
-      if (verify_tags(tags) > 0) return stop_test(Verdict::FAIL, m_verdict_msg.c_str());
+      //if (verify_tags(tags) > 0) return stop_test(Verdict::FAIL, m_verdict_msg.c_str());
+      verify_tags(tags);
+
       log_status(log, step_count, heuristic.getCoverage());
       update_coverage(heuristic.getCoverage(), step_count,
                       &last_coverage, &last_step_cov_growth);
@@ -442,7 +456,8 @@ Verdict::Verdict Test_engine::run(time_t _end_time)
 
     }
     }// switch
-    if (verify_tags(tags) > 0) return stop_test(Verdict::FAIL, m_verdict_msg.c_str());
+    //if (verify_tags(tags) > 0) return stop_test(Verdict::FAIL, m_verdict_msg.c_str());
+    verify_tags(tags);
     log_status(log, step_count, heuristic.getCoverage());
     update_coverage(heuristic.getCoverage(), step_count,
                     &last_coverage, &last_step_cov_growth);
@@ -565,7 +580,7 @@ void Test_engine::interactive()
         }
 
         break_check=true;
-        this->run();
+        this->run(-1,tagverify_disabled);
         break_check=false;
 
         end_conditions.erase(end_conditions.begin()+count,end_conditions.end());
@@ -912,8 +927,19 @@ int Test_engine::matching_end_condition(int step_count,int state, int action)
 
     End_condition* e = end_conditions[cond_i];
 
-    if (e->match(step_count,state,action,last_step_cov_growth,heuristic)) {
-      return cond_i;
+    if (e->match(step_count,state,action,last_step_cov_growth,heuristic,
+		 mismatch_tags)) {
+      if (e->verdict == Verdict::NOTIFY) {
+	if (e->notify_step<step_count) {
+	  e->notify_step=step_count;
+	  std::string me_reason_msg=e->end_reason().c_str();
+	  escape_string(me_reason_msg);
+	  log.print("<notice reason=\"%s\"/>\n",
+		    me_reason_msg.c_str());	  
+	}
+      } else {
+	return cond_i;
+      }
     }
   }
   return -1;

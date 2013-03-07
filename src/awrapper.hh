@@ -37,12 +37,13 @@ public:
 
   virtual void execute(std::vector<int>& action);
   virtual int  observe(std::vector<int> &action,bool block=false);
-  virtual int check_tags(int* tag,int len);
+  virtual int check_tags(int* tag,int len,std::vector<int>& t);
 protected:
   static std::string es;
   std::map<std::pair<int,std::string&>, int > ada2aal;
   std::map<int,int> aal2ada;
   std::map<int,int> tagaal2ada;
+  std::map<int,int> tagada2aal;
 
   aal* ada;
   std::map<int,std::string> parameters;

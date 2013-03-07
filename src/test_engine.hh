@@ -32,7 +32,7 @@ class Test_engine {
 public:
   Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p, std::vector<End_condition*>& ecs);
   virtual ~Test_engine();
-  Verdict::Verdict run(time_t _end_time=-1);
+  Verdict::Verdict run(time_t _end_time=-1,bool disable_tagverify=false);
   void interactive();
 
   /*
@@ -47,7 +47,7 @@ public:
   const std::string& reason_msg();
   Verdict::Verdict verdict();
 protected:
-  int verify_tags(const std::vector<std::string>& tnames);
+  void verify_tags(const std::vector<std::string>& tnames);
   void print_time(struct timeval& start_time,
 		  struct timeval& total_time);
   Verdict::Verdict stop_test(End_condition* ec);
@@ -70,6 +70,9 @@ protected:
   struct timeval start_time;
   struct timeval total_time;
   bool break_check;
+
+  std::vector<int> mismatch_tags;
+  bool        tagverify_disabled;
 };
 
 #endif

@@ -44,7 +44,8 @@ class Conf:public Writable {
      on_error("exit(1)"), on_fail("interactive"),
      on_pass("exit(0)"), on_inconc("exit(1)"),
      heuristic(NULL), model(NULL),
-     adapter(NULL),coverage(NULL)
+     adapter(NULL),coverage(NULL),
+     disable_tagverify(false)
   {
     log.push("fmbt_log");
     log.set_debug(debug_enabled);
@@ -59,6 +60,10 @@ class Conf:public Writable {
 
   }
   virtual ~Conf();
+
+  void disable_tagchecking() {
+    disable_tagverify=true;
+  }
 
   void set_model(std::string& s) {
     //split(s, model_name, model_param);
@@ -122,20 +127,12 @@ class Conf:public Writable {
   int exit_status;
   bool exit_interactive;
  protected:
-  //void set_exitvalue(std::string& s);
   std::list<EndHook*> pass_hooks,fail_hooks,inc_hooks,error_hooks;
   std::vector<std::string*> history;
   std::string model_name;
-  //std::string model_param;
-
   std::string heuristic_name;
-  //std::string heuristic_param;
-
   std::string coverage_name;
-  //std::string coverage_param;
-
   std::string adapter_name;
-  //std::string adapter_param;
 
   std::vector<End_condition*> end_conditions;
 
@@ -147,6 +144,7 @@ class Conf:public Writable {
   Model* model;
   Adapter* adapter;
   Coverage* coverage;
+  bool disable_tagverify;
 };
 
 #endif

@@ -219,10 +219,7 @@ class RemoteAALBridge:
                             failing_tags.append(tag_number)
                         else:
                             error(str(e))
-                if failing_tags:
-                    put(failing_tags[0])
-                else:
-                    put(0)
+                put_list(failing_tags)
             elif cmd[0] == "m":
                 action_number = int(cmd[1:])
                 try:

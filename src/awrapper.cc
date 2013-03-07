@@ -64,6 +64,8 @@ void Awrapper::set_tags(std::vector<std::string>* _tags)
     }
     
     tagaal2ada[i]=result;
+    tagada2aal[result]=i;
+
   }
 }
 
@@ -150,7 +152,7 @@ void Awrapper::execute(std::vector<int>& action)
   action[0]=ret;
 }
 
-int Awrapper::check_tags(int* tag,int len)
+int Awrapper::check_tags(int* tag,int len,std::vector<int>& t)
 {
   std::vector<int> _tags;
 
@@ -162,7 +164,11 @@ int Awrapper::check_tags(int* tag,int len)
     }
   }
   if (_tags.size()>0) {
-    return ada->check_tags(_tags);
+    int ret=ada->check_tags(_tags,t);
+    for(int i=0;i<t.size();i++) {
+      t[i]=tagada2aal[t[i]];
+    }
+    return ret;
   }
   return 0;
 }

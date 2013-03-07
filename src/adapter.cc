@@ -59,8 +59,9 @@ bool Adapter::init()
   return true;
 }
 
-int Adapter::check_tags(int* tag,int len)
+int Adapter::check_tags(int* tag,int len,std::vector<int>& t)
 {
+  t.resize(0);
   return 0;
 }
 

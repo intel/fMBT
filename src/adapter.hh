@@ -90,7 +90,7 @@ public:
    */
   virtual int observe(std::vector<int> &action, bool block = false) = 0;
 
-  virtual int check_tags(int* tag,int len);
+  virtual int check_tags(int* tag,int len,std::vector<int>& t);
   /* Adapter stack / tree setup and browsing API */
   void setparent(Adapter* a);
   virtual Adapter* up();

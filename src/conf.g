@@ -48,7 +48,10 @@ conf_entry: model               |
             on_error            |
             on_fail             |
             on_pass             |
-            on_inconc           ;
+            on_inconc           |
+            tag_checking        ;
+
+tag_checking: 'disable_tag_checking' { conf_obj->disable_tagchecking(); } ;
 
 model: 'model' '=' string { conf_obj->set_model(*$2.str); delete $2.str; } ;
 
@@ -62,7 +65,7 @@ engine_cov: 'engine.cov' '=' float {
             fprintf(stderr, "Warning: (test configuration) engine.cov is to be DEPRECATED. Use\n");
             fprintf(stderr, "pass = \"coverage:%f\"\n", $2.f);
             fprintf(stderr, "instead.\n");
-            { 
+            {
               std::ostringstream o;
               o << $2.f;
               std::string s(o.str());
@@ -75,10 +78,10 @@ engine_count: 'engine.count' '=' int {
             fprintf(stderr, "Warning: (test configuration) engine.count is to be DEPRECATED. Use\n");
             fprintf(stderr, "pass = \"steps:%d\"\n", $2.val);
             fprintf(stderr, "instead.\n");
-            { 
+            {
               std::ostringstream o;
-              o << $2.val; 
-              std::string s(o.str());             
+              o << $2.val;
+              std::string s(o.str());
               conf_obj->add_end_condition(
                 new End_condition_steps(Verdict::PASS,s));
              }
@@ -118,20 +121,22 @@ on_inconc: 'on_inconc' '=' string { conf_obj->set_on_inconc(*$2.str); delete $2.
 
 on_error: 'on_error' '=' string { conf_obj->set_on_error(*$2.str); delete $2.str; };
 
-verdict: pass {          $$.val=Verdict::PASS; } 
+verdict: pass {          $$.val=Verdict::PASS; }
         | fail {         $$.val=Verdict::FAIL; }
-        | inconclusive { $$.val=Verdict::INCONCLUSIVE; } ;
+        | inconclusive { $$.val=Verdict::INCONCLUSIVE; }
+        | notify       { $$.val=Verdict::NOTIFY; } ;
 
 pass: 'pass' ;
 fail: 'fail' ;
 inconclusive: 'inconc' | 'inconclusive' | 'exit' ;
+notify: 'notify' ;
 
 string: "\"([^\"\\]|\\[^])*\"" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); } |
         "\'([^\'\\]|\\[^])*\'" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); } ;
 
 int: istr { $$.val = atoi($n0.start_loc.s); };
 
-float: "[\-+]?([0-9]+\.[0-9]*|\.[0-9]+)([eE][\-+]?[0-9]+)?" 
+float: "[\-+]?([0-9]+\.[0-9]*|\.[0-9]+)([eE][\-+]?[0-9]+)?"
         {
             $$.f = atof($n0.start_loc.s);
         } | int { $$.f = $0.val; } ;

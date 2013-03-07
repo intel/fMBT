@@ -78,6 +78,16 @@ aal "filesystemtest" {
             subdir_exists = True
         }
     }
+    action "iMkSubDir:AlreadyExists" {
+        guard() { return subdir_exists }
+        adapter() {
+            try: os.mkdir(SUBDIRNAME)
+            except OSError, e:
+                assert "File exists" in str(e), "Wrong exception: %s" % (e,)
+                return
+            assert False, "Exception expected"
+        }
+    }
     action "iRmSubDir:Ok" {
         guard() { return subdir_exists }
         adapter() {
@@ -101,24 +111,28 @@ aal "filesystemtest" {
     tag "tDirExists" {
         guard() { return dir_exists }
         adapter() {
+            assert not "allTagsFail" in globals()
             assert os.access(DIRNAME, os.R_OK), "%s does not exist" % (DIRNAME,)
         }
     }
     tag "tNoDir" {
         guard() { return not dir_exists }
         adapter() {
+            assert not "allTagsFail" in globals()
             assert not os.access(DIRNAME, os.R_OK), "%s exists" % (DIRNAME,)
         }
     }
     tag "tSubdirExists" {
         guard() { return subdir_exists }
         adapter() {
+            assert not "allTagsFail" in globals()
             assert os.access(SUBDIRNAME, os.R_OK), "%s does not exist" % (SUBDIRNAME,)
         }
     }
     tag "tNoSubdir" {
         guard() { return not subdir_exists }
         adapter() {
+            assert not "allTagsFail" in globals()
             assert not os.access(SUBDIRNAME, os.R_OK), "%s exists" % (SUBDIRNAME,)
         }
     }
