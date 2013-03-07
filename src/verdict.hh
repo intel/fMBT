@@ -26,6 +26,7 @@ namespace Verdict {
                    FAIL = 0,
                    PASS,
                    INCONCLUSIVE,
+		   NOTIFY,
                    ERROR } Verdict;
 
 }

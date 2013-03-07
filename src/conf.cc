@@ -293,6 +293,10 @@ void Conf::handle_hooks(Verdict::Verdict v)
     hooklist=&error_hooks;
     break;
   }
+  case Verdict::NOTIFY: {
+    abort();
+    break;
+  }
   default: {
     // unknown verdict?
   }

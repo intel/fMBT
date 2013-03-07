@@ -929,7 +929,17 @@ int Test_engine::matching_end_condition(int step_count,int state, int action)
 
     if (e->match(step_count,state,action,last_step_cov_growth,heuristic,
 		 mismatch_tags)) {
-      return cond_i;
+      if (e->verdict == Verdict::NOTIFY) {
+	if (e->param_long<step_count) {
+	  e->param_long=step_count;
+	  std::string me_reason_msg=e->end_reason().c_str();
+	  escape_string(me_reason_msg);
+	  log.print("<notice reason=\"%s\"/>\n",
+		    me_reason_msg.c_str());	  
+	}
+      } else {
+	return cond_i;
+      }
     }
   }
   return -1;

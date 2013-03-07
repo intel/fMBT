@@ -123,11 +123,13 @@ on_error: 'on_error' '=' string { conf_obj->set_on_error(*$2.str); delete $2.str
 
 verdict: pass {          $$.val=Verdict::PASS; } 
         | fail {         $$.val=Verdict::FAIL; }
-        | inconclusive { $$.val=Verdict::INCONCLUSIVE; } ;
+        | inconclusive { $$.val=Verdict::INCONCLUSIVE; } 
+        | notify       { $$.val=Verdict::NOTIFY; } ;
 
 pass: 'pass' ;
 fail: 'fail' ;
 inconclusive: 'inconc' | 'inconclusive' | 'exit' ;
+notify: 'notify' ;
 
 string: "\"([^\"\\]|\\[^])*\"" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); } |
         "\'([^\'\\]|\\[^])*\'" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); } ;
