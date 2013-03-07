@@ -61,6 +61,7 @@ public:
   time_t param_time;
 
   std::string er;
+  int  notify_step;
 };
 
 class End_condition_steps: public End_condition {

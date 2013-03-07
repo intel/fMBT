@@ -29,7 +29,7 @@
 
 End_condition::End_condition(Verdict::Verdict v, const std::string& p)
   : verdict(v), param(p),
-    param_float(-1.0), param_long(-1), param_time(-1)
+    param_float(-1.0), param_long(-1), param_time(-1),notify_step(-1)
 {
 }
 
@@ -154,7 +154,6 @@ bool End_condition_tagverify::evaluate_filter(std::vector<std::string>& tags,std
     find(tags,f,tmp);
     for(unsigned i=0;i<tags.size();i++) {
       if (std::find(tmp.begin(),tmp.end(),i)==tmp.end()) {
-	printf("%s %i\n",tags[i].c_str(),i);
 	filter.push_back(i);
       }
     }
