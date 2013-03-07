@@ -1778,7 +1778,9 @@ class ConfHighlighter(QtGui.QSyntaxHighlighter):
         keywordFormat.setForeground(QtCore.Qt.darkBlue)
         keywordFormat.setFontWeight(QtGui.QFont.Bold)
 
-        keywordPatterns = ["^model\\b", "^adapter\\b", "^heuristic\\b",
+        keywordPatterns = ["^model\\b", "^adapter\\b",
+                           "^disable_tag_checking\\b",
+                           "^heuristic\\b",
                            "^coverage\\b", "^history\\b",
                            "^(on_)?(pass|fail|inconc)\\b"]
 
@@ -1802,7 +1804,7 @@ class ConfHighlighter(QtGui.QSyntaxHighlighter):
         text = str(text)
         highlightedSomething = False
         if not CF_RE.match(text):
-            if not text.startswith("#"):
+            if not text.startswith("#") and text != "disable_tag_checking":
                 self.setFormat(0, len(text), self._usualErrorsFormat)
                 self.setCurrentBlockState(0)
                 return

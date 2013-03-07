@@ -53,7 +53,7 @@ End_condition* new_end_condition(Verdict::Verdict v,const std::string& s)
   //Let's try old thing.
   split(s, name, option);
   ret = End_conditionFactory::create(v,name,option);
-  
+
   if (ret) {
       fprintf(stderr,
 	      "DEPRECATED END CONDITION SYNTAX. %s\nNew syntax is %s(%s)\n",
@@ -78,7 +78,7 @@ bool End_condition_duration::match(int step_count,int state, int action,int last
       (Adapter::current_time.tv_sec == param_time
        && Adapter::current_time.tv_usec >= param_long)
       ) return true;
-  
+
   return false;
 }
 
@@ -147,7 +147,7 @@ bool End_condition_tagverify::evaluate_filter(std::vector<std::string>& tags,std
   std::vector<std::string> f;
   param_cut(s,name,option);
   commalist(option,f);
-  
+
   if (name=="include") {
     std::vector<int> tmp;
     strlist(f);
@@ -189,4 +189,4 @@ FACTORY_DEFAULT_CREATOR(End_condition, End_condition_duration,  "duration")
 FACTORY_DEFAULT_CREATOR(End_condition, End_condition_noprogress,"noprogress")
 FACTORY_DEFAULT_CREATOR(End_condition, End_condition_noprogress,"no_progress")
 FACTORY_DEFAULT_CREATOR(End_condition, End_condition_deadlock,  "deadlock")
-FACTORY_DEFAULT_CREATOR(End_condition, End_condition_tagverify, "tagverify")
+FACTORY_DEFAULT_CREATOR(End_condition, End_condition_tagverify, "failing_tag")
