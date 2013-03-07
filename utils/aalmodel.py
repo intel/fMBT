@@ -94,7 +94,7 @@ class AALModel:
                 if rv == None: return i
                 else: return rv
             except Exception, exc:
-                if not isinstance(exc, AssertionError) and 'adapter_exception_handler' in self._variables:
+                if 'adapter_exception_handler' in self._variables:
                     return self.call_exception_handler('adapter_exception_handler', self._all_names[i-1], exc)
                 else:
                     raise
