@@ -595,11 +595,16 @@ def stats_tagdist(arg, testlog_fileobj, output_fileobj, plot_filename):
         return output_table
 
     arg_list = arg.split(",")
+    if arg_list[0] not in ['from', 'to']:
+        error('illegal first argument: "%s"' % (arg_list[0],))
     opt_next = (arg_list[0] == 'from')
     opt_prev = (arg_list[0] == 'to')
+    if not (opt_next or opt_prev): opt_next = True
     if len(arg_list)>1:
         if arg_list[1].startswith('tags='):
-            opt_regex = re.compile(arg_list[1].split('=')[1])
+            regex = arg_list[1].split('=',1)[1]
+            try: opt_regex = re.compile(regex)
+            except: error('illegal regular expression "%s".' % (regex,))
         else:
             error('illegal argument "%s".' % (arg_list[1],))
     else:
