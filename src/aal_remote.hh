@@ -31,9 +31,15 @@ class aal_remote: public aal, public remote {
 public:
   aal_remote(Log&l,std::string&);
   virtual ~aal_remote() {
-    fclose(d_stdin);
-    fclose(d_stdout);
-    fclose(d_stderr);
+    if (d_stdin) {
+      fclose(d_stdin);
+    }
+    if (d_stdout) {
+      fclose(d_stdout);
+    }
+    if (d_stderr) {
+      fclose(d_stderr);
+    }
     if (lts) {
       delete lts;
     }
