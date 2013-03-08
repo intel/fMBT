@@ -881,3 +881,20 @@ void gettime(struct timeval *tv)
   clock_gettime(CLOCK_REALTIME,&tp);
   TIMESPEC_TO_TIMEVAL(tv,&tp);
 }
+
+void find(std::vector<std::string>& from,std::vector<std::string>& what,std::vector<int>& result)
+{
+  for(unsigned i=0;i<what.size();i++) {
+    int p=find(from,what[i]);
+
+      if (p) {
+	result.push_back(p);
+      } else {
+	std::vector<int> r;
+	regexpmatch(what[i],from,r,false);
+	for(unsigned j=0;j<r.size();j++) {
+	  result.push_back(r[j]);
+	}
+      }
+  }
+}

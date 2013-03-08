@@ -51,7 +51,8 @@ conf_entry: model               |
             on_inconc           |
             tag_checking        ;
 
-tag_checking: 'disable_tag_checking' { conf_obj->disable_tagchecking(); } ;
+tag_checking: 'disable_tag_checking' { conf_obj->disable_tagchecking(); } 
+            | 'disable_tag_checking' '=' string { conf_obj->disable_tagchecking(*$2.str); delete $2.str; } ;
 
 model: 'model' '=' string { conf_obj->set_model(*$2.str); delete $2.str; } ;
 

@@ -141,6 +141,24 @@ void Conf::load(std::string& name,std::string& content)
     return;
   }
 
+  // Parse adapter-tags filter (if any)
+  for(unsigned i=0;i<disable_tags.size();i++) {
+    std::vector<std::string>& tags=model->getSPNames();
+    std::vector<std::string> f;
+    commalist(disable_tags[i],f);
+    std::vector<int> tmp;
+    find(tags,f,tmp);
+    for(unsigned i=0;i<tags.size();i++) {
+      if (std::find(tmp.begin(),tmp.end(),i)==tmp.end()) {
+	disabled_tags[i]=true;
+      }
+    }
+
+  }
+
+  // Free some memory.
+  disable_tags.clear();
+
   /* handle history */
   for(unsigned i=0;i<history.size();i++) {
     History* h=new_history(log,*history[i]);
@@ -164,6 +182,10 @@ void Conf::load(std::string& name,std::string& content)
     RETURN_ERROR_VOID("Adapter error: " + adapter->stringify());
 
   log.pop();
+}
+
+void Conf::disable_tagchecking(std::string& s) {
+  disable_tags.push_back(s);
 }
 
 #include <sstream>
@@ -242,7 +264,7 @@ Verdict::Verdict Conf::execute(bool interactive) {
     }
   }
 
-  Test_engine engine(*heuristic,*adapter,log,policy,end_conditions);
+  Test_engine engine(*heuristic,*adapter,log,policy,end_conditions,disabled_tags);
 
   if (interactive) {
     engine.interactive();

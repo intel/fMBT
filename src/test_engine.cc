@@ -78,7 +78,7 @@ void Test_engine::print_time(struct timeval& start_time,
             total_time.tv_usec);
 }
 
-Test_engine::Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p,std::vector<End_condition*>& ecs)
+Test_engine::Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p,std::vector<End_condition*>& ecs,std::map<int,bool>& _disabled_tags)
   : step_count(0),
     heuristic(h),
     adapter(a),
@@ -89,7 +89,8 @@ Test_engine::Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p,std::vector<En
     m_verdict(Verdict::UNDEFINED),
     m_verdict_msg("undefined"),
     m_reason_msg("undefined"),
-    break_check(false)
+    break_check(false),
+    disabled_tags(_disabled_tags)
 {
   p.set_model(h.get_model());
 }
@@ -214,8 +215,18 @@ void Test_engine::verify_tags(const std::vector<std::string>& tnames)
   std::string s=to_string(cnt,tags,tnames);
   log.print("<tags enabled=\"%s\"/>\n",s.c_str());
 
-  if (cnt) {
-    int failing_tag = adapter.check_tags(tags,cnt,mismatch_tags);
+  std::vector<int> t;
+  for(int i=0;i<cnt;i++) {
+    if (disabled_tags[tags[i]]) {
+      t.push_back(tags[i]);
+    }
+  }
+
+  cnt=t.size();  
+  tags=&t[0];
+
+  if (cnt) {    
+    adapter.check_tags(tags,cnt,mismatch_tags);
     /*
     if (mismatch_tags.size()) { 
       m_verdict_msg = "verifying tags ";
@@ -738,7 +749,7 @@ void Test_engine::interactive()
 	  mismatch_tags.clear();
 	  int failing_tags = adapter.check_tags((int*)&num,cnt,mismatch_tags);
 
-	  for(int i=0;i<mismatch_tags.size();i++) {
+	  for(unsigned i=0;i<mismatch_tags.size();i++) {
 	    fprintf(stderr,"Tag %s (%i) fails\n",
 		    heuristic.get_model()
 		    ->getSPNames()[mismatch_tags[i]].c_str(),

@@ -61,6 +61,8 @@ class Conf:public Writable {
   }
   virtual ~Conf();
 
+  void disable_tagchecking(std::string&);
+
   void disable_tagchecking() {
     disable_tagverify=true;
   }
@@ -145,6 +147,8 @@ class Conf:public Writable {
   Adapter* adapter;
   Coverage* coverage;
   bool disable_tagverify;
+  std::map<int,bool> disabled_tags;
+  std::vector<std::string> disable_tags;
 };
 
 #endif

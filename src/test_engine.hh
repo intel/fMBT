@@ -30,7 +30,7 @@
 
 class Test_engine {
 public:
-  Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p, std::vector<End_condition*>& ecs);
+  Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p, std::vector<End_condition*>& ecs,std::map<int,bool>& _disable_tags);
   virtual ~Test_engine();
   Verdict::Verdict run(time_t _end_time=-1,bool disable_tagverify=false);
   void interactive();
@@ -73,6 +73,7 @@ protected:
 
   std::vector<int> mismatch_tags;
   bool        tagverify_disabled;
+  std::map<int,bool>& disabled_tags;
 };
 
 #endif
