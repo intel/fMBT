@@ -548,6 +548,14 @@ Available measures, values and conditions:
                 for instance, "1.5 secs", "1 hour 30 minutes", "2
                 days", "1 week", or "2012-06-24 15:30".
 
+        failing_tag[(<include-exclude>)]
+
+                finish with the verdict if a tag check fails.
+                include('tagname'[, 'tagname'...]) and
+                exclude('tagname'[, 'tagname'...]) can be used
+                to scope the behaviour only to certain tags.
+                Include/exclude behaviour is EXPERIMENTAL.
+
         no_progress(<integer>)
 
                 finish with the verdict if <integer> test steps have
@@ -615,3 +623,11 @@ Examples:
         on_inconc = "exit(2)"
 
         on_error  = "exit(42)"
+
+
+Other
+-----
+
+disable_tag_checking
+
+        never execute adapter() blocks of tags.

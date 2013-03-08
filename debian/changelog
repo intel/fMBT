@@ -1,8 +1,16 @@
-fmbt (0.7-0.rc0) unstable; urgency=low
+fmbt (0.7-1) unstable; urgency=low
 
-  * Development version
+  * AAL: state verification enabled by adapter() blocks in tags
+  * configuration: disable tag checking, failing_tag end condition
+  * documentation: AAL/Python improved, tag adapter blocks added.
+  * fmbt-editor: support for adapter() blocks in tags.
+  * fmbtandroid:
+    - opacityLimit parameter added to bitmap comparisons.
+    - pressAppSwitch method added.
+  * reporting: fmbt-stats prints action-tag statistics.
+  * fixes and improvements. Many of them.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 26 Feb 2013 08:42:00 +0200
+ -- Antti Kervinen <antti.kervinen@intel.com>  Thu, 07 Mar 2013 17:42:00 +0200
 
 fmbt (0.6-1) unstable; urgency=low
 

@@ -176,32 +176,61 @@ fmbt tags.conf 2>tags.stderr >tags.stdout || {
 }
 if [ "$(wc -l < tags.stderr)" != "1" ]; then
     cat tags.stderr >>$LOGFILE
-    echo "fails because: unnecessary output in stderr"
+    echo "fails because: unnecessary output in stderr" >>$LOGFILE
     testfailed
 fi
 
-testpassed
-
-teststep "remote_pyaal adapter() blocks of tags skipping"
-if ! fmbt tags-notagadapters.conf 2>tags-notagadapters.stderr >tags-notagadapters.stdout ; then
-    echo "fails because: zero exit status from 'fmbt tags-notagadapters.conf' expected" >>$LOGFILE
+(cat tags-allfail.conf; echo ; echo 'disable_tag_checking') > tags-nofails.conf
+if ! fmbt tags-nofails.conf 2>tags-nofails.stderr >tags-nofails.stdout; then
+    echo "fails because: zero exit status from 'fmbt tags-nofails.conf' expected" >>$LOGFILE
+    testfailed
+fi
+if grep -q Assertion tags-nofails.stdout || grep -q Assertion tags-nofails.stderr ; then
+    cat tags-nofails.stderr >>$LOGFILE
+    echo "fails because: 'fmbt tags-nofails.conf' found assertion failures" >>$LOGFILE
+    testfailed
+fi
+if fmbt tags-allfail.conf 2>tags-allfail.stderr >tags-allfail.stdout; then
+    echo "fails because: non-zero exit status from 'fmbt tags-allfail.conf' expected" >>$LOGFILE
+    testfailed
+fi
+if ! grep -q 'fail: verifying tags "tNoDir" "tNoSubdir" failed.' tags-allfail.stderr; then
+    cat tags-allfail.stderr >>$LOGFILE
+    echo "fails because: 'fmbt tags-allfail.conf' did not notice two tags failing." >>$LOGFILE
+    testfailed
+fi
+if ! grep Traceback tags-allfail.stdout | wc -l | grep -q 2; then
+    cat tags-allfail.stdout >>$LOGFILE
+    echo "fails because: 'fmbt tags-allfail.conf' did not have two tracebacks in the log." >>$LOGFILE
     testfailed
 fi
 
-testpassed
-
-teststep "remote_pyaal adapter() tags-fail_include_pass.conf "
-if ! fmbt tags-fail_include_pass.conf 2>tags-fail_include_pass.stderr >tags-fail_include_pass.stdout ; then
-    echo "fails because: zero exit status from 'fmbt tags-fail_include_pass.conf' expected" >>$LOGFILE
+(cat tags-fail.conf; echo; echo 'pass="failing_tag(include('"'tSubdirExists'"')"') >> tags-fail-inc.conf
+if ! fmbt tags-fail-inc.conf 2>tags-fail-inc.stderr >tags-fail-inc.stdout; then
+    echo "fails because: zero exit status from 'fmbt tags-fail.conf' expected" >>$LOGFILE
     testfailed
 fi
-
-testpassed
-
-teststep "remote_pyaal adapter() tags-fail_exclude.conf "
-fmbt tags-fail_exclude.conf 2>tags-fail_exclude.stderr >tags-fail_exclude.stdout && {
-    echo "fails because: non-zero exit status from 'fmbt tags-fail_exclude.conf' expected" >>$LOGFILE
+if ! grep -q 'pass: verifying tags "tSubdirExists" failed.' tags-fail-inc.stderr; then
+    cat tags-fail-inc.stderr >>$LOGFILE
+    echo "fails because: 'fmbt tags-fail-inc.conf' did not pass due to failing tag" >>$LOGFILE
     testfailed
-}
-
+fi
+(cat tags-allfail.conf; echo; ) > tags-allfail-ex.conf
+cat >>tags-allfail-ex.conf <<EOF
+inconc="failing_tag(exclude('tNoDir', 'tNoSubdir'))"
+EOF
+if fmbt tags-allfail-ex.conf 2>tags-allfail-ex.stderr >tags-allfail-ex.stdout; then
+    echo "fails because: non-zero exit status from 'fmbt tags-allfail-ex.conf' expected" >>$LOGFILE
+    testfailed
+fi
+if grep inconclusive tags-allfail-ex.stderr | egrep -q -e 'tNoDir|tNoSubdir' ; then
+    echo "--- conf ---" >>$LOGFILE
+    cat tags-allfail-ex.conf >>$LOGFILE
+    echo >> $LOGFILE
+    echo "--- stderr ---" >>$LOGFILE
+    cat tags-allfail-ex.stderr >>$LOGFILE
+    echo "---" >>$LOGFILE
+    echo "fails because: in 'fmbt tags-allfail-ex.conf' an excluded tag stopped the test" >>$LOGFILE
+    testfailed
+fi
 testpassed
