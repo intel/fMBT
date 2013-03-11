@@ -898,3 +898,27 @@ void find(std::vector<std::string>& from,std::vector<std::string>& what,std::vec
       }
   }
 }
+
+std::string envstr(const char* name)
+{
+  return envstr(name,name);
+}
+
+std::string envstr(const char* name,const char* default_str)
+{
+  char *_val=getenv(name);
+  if (_val) {
+    return std::string(_val);
+  }
+  return std::string(default_str);
+}
+
+void envstr(const char* name,std::string& val)
+{
+  char *_val=getenv(name);
+
+  if (_val) {
+    val=_val;
+  }
+
+}

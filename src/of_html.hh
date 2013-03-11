@@ -32,6 +32,35 @@ public:
   virtual std::string format_covs();
   virtual std::string report();
 private:
+  static std::string bodyId ;// "top");
+  static std::string headerId ;// "header");
+  static std::string contentClass ;// "content");
+  static std::string summaryClass ;// "text total_summary");
+  static std::string reportTableClass ;// "matrix");
+  static std::string tdVerdictClass ;// "uc_verdict");
+  static std::string divListingClass ;// "text uc_listing");
+  static std::string testNameClass ;// "uc_name");
+  static std::string divFiguresClass ;// "text uc_figures");
+  static std::string trNameClass ;// "name");
+  static std::string tdNameValueClass ;// "name_value");
+  static std::string trExecutedClass ;// "executed");
+  static std::string tdExecutedValueClass ;// "executed_value");
+  static std::string trUniqClass ;// "uniq");
+  static std::string tdUniqTotalClass ;// "uc_total_uniq_tests");
+  static std::string tdUniqValueClass ;// "uc_total_uniq_tests_value");
+  static std::string trTimeClass ;// "time_used");
+  static std::string tdTimeValueClass ;// "time_used_value");
+  static std::string trAverageClass ;// "average");
+  static std::string tdAverageValueClass ;// "average_value");
+  static std::string trMinClass ;// "min");
+  static std::string tdMinValueClass ;// "min_value");
+  static std::string trMaxClass ;// "max");
+  static std::string tdMaxValueClass ;// "max_value");
+  static std::string divDetailedClass ;// "uc_detailed_results");
+  static std::string divCountHeadClass ;// "uc_count_head");
+  static std::string divStepsClass ;// "uc_steps");
+  static std::string stylefile;//"<LINK href(\"fmbt.css\" rel(\"stylesheet\" type(\"text/css>\"");
+
 };
 
 #endif

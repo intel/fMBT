@@ -26,33 +26,34 @@
 #include <sstream>
 #include <algorithm>
 
-static const std::string bodyId = "top";
-static const std::string headerId = "header";
-static const std::string contentClass = "content";
-static const std::string summaryClass = "text total_summary";
-static const std::string reportTableClass = "matrix";
-static const std::string tdVerdictClass = "uc_verdict";
-static const std::string divListingClass = "text uc_listing";
-static const std::string testNameClass = "uc_name";
-static const std::string divFiguresClass = "text uc_figures";
-static const std::string trNameClass = "name";
-static const std::string tdNameValueClass = "name_value";
-static const std::string trExecutedClass = "executed";
-static const std::string tdExecutedValueClass = "executed_value";
-static const std::string trUniqClass = "uniq";
-static const std::string tdUniqTotalClass = "uc_total_uniq_tests";
-static const std::string tdUniqValueClass = "uc_total_uniq_tests_value";
-static const std::string trTimeClass = "time_used";
-static const std::string tdTimeValueClass = "time_used_value";
-static const std::string trAverageClass = "average";
-static const std::string tdAverageValueClass = "average_value";
-static const std::string trMinClass = "min";
-static const std::string tdMinValueClass = "min_value";
-static const std::string trMaxClass = "max";
-static const std::string tdMaxValueClass = "max_value";
-static const std::string divDetailedClass = "uc_detailed_results";
-static const std::string divCountHeadClass = "uc_count_head";
-static const std::string divStepsClass = "uc_steps";
+std::string OutputFormat_Html::bodyId=envstr("bodyId","top");
+std::string OutputFormat_Html::headerId=envstr("headerId","header");
+std::string OutputFormat_Html::contentClass=envstr("contentClass","content");
+std::string OutputFormat_Html::summaryClass=envstr("summaryClass","text total_summary");
+std::string OutputFormat_Html::reportTableClass=envstr("reportTableClass","matrix");
+std::string OutputFormat_Html::tdVerdictClass=envstr("tdVerdictClass","uc_verdict");
+std::string OutputFormat_Html::divListingClass=envstr("divListingClass","text uc_listing");
+std::string OutputFormat_Html::testNameClass=envstr("testNameClass","uc_name");
+std::string OutputFormat_Html::divFiguresClass=envstr("divFiguresClass","text uc_figures");
+std::string OutputFormat_Html::trNameClass=envstr("tdNameClass","name");
+std::string OutputFormat_Html::tdNameValueClass=envstr("tdNameValueClass","name_value");
+std::string OutputFormat_Html::trExecutedClass=envstr("tdExecutedClass","executed");
+std::string OutputFormat_Html::tdExecutedValueClass=envstr("tdExecutedValueClass","executed_value");
+std::string OutputFormat_Html::trUniqClass=envstr("trUniqClass","uniq");
+std::string OutputFormat_Html::tdUniqTotalClass=envstr("tdUniqTotalClass","uc_total_uniq_tests");
+std::string OutputFormat_Html::tdUniqValueClass=envstr("tdUniqValueClass","uc_total_uniq_tests_value");
+std::string OutputFormat_Html::trTimeClass=envstr("tdTimeClass","time_used");
+std::string OutputFormat_Html::tdTimeValueClass=envstr("tdTimeValueClass","time_used_value");
+std::string OutputFormat_Html::trAverageClass=envstr("trAverageClass","average");
+std::string OutputFormat_Html::tdAverageValueClass=envstr("tdAverageValueClass","average_value");
+std::string OutputFormat_Html::trMinClass=envstr("trMinClass","min");
+std::string OutputFormat_Html::tdMinValueClass=envstr("tdMinValueClass","min_value");
+std::string OutputFormat_Html::trMaxClass=envstr("trMaxClass","max");
+std::string OutputFormat_Html::tdMaxValueClass=envstr("trMaxValueClass","max_value");
+std::string OutputFormat_Html::divDetailedClass=envstr("divDetailedClass","uc_detailed_results");
+std::string OutputFormat_Html::divCountHeadClass=envstr("divCountHeadClass","uc_count_head");
+std::string OutputFormat_Html::divStepsClass=envstr("divStepsClass","uc_steps");
+std::string OutputFormat_Html::stylefile=envstr("stylefile","");
 
 std::string OutputFormat_Html::header()
 {
@@ -72,8 +73,14 @@ std::string OutputFormat_Html::header()
                     "        td { vertical-align: top }\n"
                     "        ." + divDetailedClass + " { display: none }\n"
                     "    </style>\n");
+
+
   std::string meta("<meta charset=\"utf-8\">\n");
-  std::string ret("<!DOCTYPE html>\n    <head>\n"+meta+script+style+"    \n    <title>Use Case Report</title>\n    </head>\n");
+  std::string stf;
+  if (stylefile.length()>0) {
+    stf=std::string("<LINK href(\"")+stylefile+"\" rel(\"stylesheet\" type(\"text/css>\"";
+  }
+  std::string ret("<!DOCTYPE html>\n    <head>\n"+meta+script+style+stf+"    \n    <title>Use Case Report</title>\n    </head>\n");
   ret+="    <body id=\"" + bodyId +"\">\n";
   ret+="        <div id=\"" + headerId +"\">\n";
   ret+="            <h1>Use Case Report</h1>\n";

@@ -115,6 +115,10 @@ void sdel(std::vector<std::string*>* strvec);
 
 void gettime(struct timeval *tv);
 
+void envstr(const char* name,std::string& val);
+std::string envstr(const char* name,const char* default_str);
+std::string envstr(const char* name);
+
 #define MAX_LINE_LENGTH (1024*16)
 
 #endif
