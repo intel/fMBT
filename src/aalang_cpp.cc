@@ -21,6 +21,18 @@
 #include "aalang_cpp.hh"
 #include "helper.hh"
 
+std::string to_call(std::list<std::string>& l) {
+  std::string ret="(" + l.front();
+
+  std::list<std::string>::iterator i=l.begin();
+  i++;
+  for(;i!=l.end();i++) {
+    ret=ret + " && " + *i;
+  }
+  ret = ret + ")";
+  return ret;
+}
+
 aalang_cpp::aalang_cpp(): aalang(),action_cnt(1), tag_cnt(1), name_cnt(0),
 			  istate(NULL),ainit(NULL), name(NULL), tag(false)
 {
@@ -59,8 +71,20 @@ void aalang_cpp::set_starter(std::string* st,const char* file,int line,int col)
   delete st;
 }
 
-void aalang_cpp::set_name(std::string* name)
+void aalang_cpp::set_name(std::string* name,bool first)
 {
+  if (first) {
+    tstack.push_back(tag);
+    tag=false;
+    name_cnt_stack.push_back(name_cnt);
+    name_cnt=0;
+  }
+
+  if (name_cnt==0) {
+    guard_call_construct.push_back("action"+to_string(action_cnt)+"_guard()");
+    action_guard_call.push_back(to_call(guard_call_construct));
+  }
+
   s+="\n//action"+to_string(action_cnt)+": \""+*name+"\"\n";
   anames.push_back(*name);
   aname.back().push_back(*name);
@@ -111,8 +135,18 @@ void aalang_cpp::set_pop(std::string* p,const char* file,int line,int col)
   delete p;
 }
 
-void aalang_cpp::set_tagname(std::string* name)
+void aalang_cpp::set_tagname(std::string* name,bool first)
 {
+  if (first) {
+    name_cnt_stack.push_back(name_cnt);
+    name_cnt=0;
+    tstack.push_back(tag);
+  }
+
+  if (name_cnt==0) {
+    guard_call_construct.push_back("tag"+to_string(tag_cnt)+"_guard()");
+    tag_guard_call.push_back(to_call(guard_call_construct));
+  }
   s+="\n//tag"+to_string(tag_cnt)+": \""+*name+"\"\n";
   tname.back().push_back(*name);
   delete name;
@@ -127,7 +161,11 @@ void aalang_cpp::next_tag()
   tname.push_back(t);
   tag_cnt+=name_cnt;
   name_cnt=0;
-  tag=false;
+  tag=tstack.back();
+  tstack.pop_back();
+  guard_call_construct.pop_back();
+  name_cnt=name_cnt_stack.back();
+  name_cnt_stack.pop_back();
 }
 
 void aalang_cpp::set_guard(std::string* gua,const char* file,int line,int col)
@@ -174,6 +212,11 @@ void aalang_cpp::next_action()
   aname.push_back(t);
   action_cnt+=name_cnt;
   name_cnt=0;
+  tag=tstack.back();
+  tstack.pop_back();
+  guard_call_construct.pop_back();
+  name_cnt=name_cnt_stack.back();
+  name_cnt_stack.pop_back();
 }
 
 std::string aalang_cpp::stringify()
@@ -266,8 +309,8 @@ std::string aalang_cpp::stringify()
     "actions.clear();\n";
   
   for(int i=1;i<action_cnt;i++) {
-    s+="\tif (action"+to_string(amap[i])+"_guard()) {\n"
-      "\t\tactions.push_back("+to_string(i)+");\n"
+    s+="\tif ( " + action_guard_call[amap[i]-1] + ") {\n"
+     "\t\tactions.push_back("+to_string(i)+");\n"
       "\t}\n";
   }
   s=s+"\t*act = &actions[0];\n"
@@ -295,7 +338,7 @@ std::string aalang_cpp::stringify()
     "\ttags.clear();\n";
 
   for(int i=1;i<tag_cnt;i++) {
-    s+="\tif (tag"+to_string(tmap[i])+"_guard()) {\n"
+    s+="\tif ( " + tag_guard_call[tmap[i]-1] + ") {\n"
       "\t\ttags.push_back("+to_string(i)+");\n"
       "\t}\n";
   }

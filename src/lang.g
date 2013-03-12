@@ -37,7 +37,9 @@ typedef struct _node {
 std::vector<std::string> aname;
 
 bool adapter,body,guard;
+#include <stack>
 
+std::stack<bool> abg_stack;
 int count=1;
 
 char *ops;
@@ -99,7 +101,11 @@ header: variables | ainit | istate | push | pop | comment;
 comment: '#' "[^\n]*" { } ;
 
 
-act: 'action' astr { guard=false;body=false;adapter=false; } '{' ab '}' {
+act: 'action' astr {
+            abg_stack.push(guard);
+            abg_stack.push(body);
+            abg_stack.push(adapter);
+            guard=false;body=false;adapter=false; } '{' ab '}' {
             if (!guard) {
                 obj->empty_guard();
             }
@@ -110,31 +116,41 @@ act: 'action' astr { guard=false;body=false;adapter=false; } '{' ab '}' {
                 obj->empty_adapter();
             }
             obj->next_action();
+            adapter=abg_stack.top();abg_stack.pop();
+            body=abg_stack.top();abg_stack.pop();
+            guard=abg_stack.top();abg_stack.pop();
         };
 
-ab: (comment|guard|body|adapter)*;
+ab: (comment|guard|body|adapter|tag|act)*;
 
 astr:   string          {
-            obj->set_name($0.str);
+            obj->set_name($0.str,true);
         } |
         astr ',' string {
             obj->set_name($2.str);
         } ;
 
-tag_content: (comment|guard|adapter)*;
+tag_content: (comment|guard|adapter|tag|act)*;
 
-tag: 'tag' tstr { guard=false;body=true;adapter=false; } '{' tag_content '}' {
-      if (!guard) {
-        obj->empty_guard();
-      }
-      if (!adapter) {
-        obj->empty_adapter();
-      }
-      obj->next_tag();
-    };
+tag: 'tag' tstr {
+            abg_stack.push(guard);
+            abg_stack.push(body);
+            abg_stack.push(adapter);
+            guard=false;body=true;adapter=false; } '{' tag_content '}' {
+            if (!guard) {
+                obj->empty_guard();
+            }
+            if (!adapter) {
+                obj->empty_adapter();
+            }
+            obj->next_tag();
+            adapter=abg_stack.top();abg_stack.pop();
+            body=abg_stack.top();abg_stack.pop();
+            guard=abg_stack.top();abg_stack.pop();
+        };
 
 tstr:   string          {
-            obj->set_tagname($0.str);
+            obj->set_tagname($0.str,true);
         } |
         tstr ',' string {
             obj->set_tagname($2.str);

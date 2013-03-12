@@ -48,7 +48,7 @@ void aalang_java::set_starter(std::string* st,const char* file,int line,int col)
   delete st;
 }
 
-void aalang_java::set_name(std::string* name)
+void aalang_java::set_name(std::string* name,bool first)
 {
   s+="\n//action"+to_string(action_cnt)+": \""+*name+"\"\n";
   anames.push_back(*name);
@@ -93,7 +93,7 @@ void aalang_java::set_pop(std::string* p,const char* file,int line,int col)
   delete p;
 }
 
-void aalang_java::set_tagname(std::string* name)
+void aalang_java::set_tagname(std::string* name,bool first)
 {
   s+="\n//tag"+to_string(tag_cnt)+": \""+*name+"\"\n";
   tname.back().push_back(*name);

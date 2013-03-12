@@ -109,7 +109,7 @@ void aalang_py::set_starter(std::string* st,const char* file,int line,int col)
 }
 
 
-void aalang_py::set_name(std::string* name)
+void aalang_py::set_name(std::string* name,bool first)
 {
   multiname.push_back(*name);
 }
@@ -147,7 +147,7 @@ void aalang_py::set_ainit(std::string* iai,const char* file,int line,int col)
   s += python_lineno_wrapper(file,line,funcname,1+m_lines_in_vars,4);
 }
 
-void aalang_py::set_tagname(std::string* name)
+void aalang_py::set_tagname(std::string* name,bool first)
 {
   multiname.push_back(*name);
   delete name;

@@ -26,10 +26,10 @@ class aalang {
 public:
   aalang() {}
   virtual ~aalang() {};
-  virtual void set_name(std::string* name)     = 0;
-  virtual void set_namestr(std::string* name)  = 0;
-  virtual void set_tagname(std::string* name)  = 0;
-  virtual void next_tag()                      = 0;
+  virtual void set_name(std::string* name,bool first=false)        = 0;
+  virtual void set_namestr(std::string* name)                      = 0;
+  virtual void set_tagname(std::string* name,bool first=false)     = 0;
+  virtual void next_tag()                                          = 0;
   virtual void set_variables(std::string* var,const char*,int,int) = 0;
   virtual void set_istate(std::string* ist,const char*,int,int)    = 0;
   virtual void set_ainit(std::string* iai,const char*,int,int)     = 0;

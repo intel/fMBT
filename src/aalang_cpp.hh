@@ -30,9 +30,9 @@ class aalang_cpp: public aalang {
 public:
   aalang_cpp();
   virtual ~aalang_cpp();
-  virtual void set_name(std::string* _name);
+  virtual void set_name(std::string* _name,bool first=false);
   virtual void set_namestr(std::string* name);
-  virtual void set_tagname(std::string* name);
+  virtual void set_tagname(std::string* name,bool first=false);
   virtual void next_tag();
   virtual void set_variables(std::string* var,const char*,int,int);
   virtual void set_istate(std::string* ist,const char*,int,int);
@@ -54,6 +54,9 @@ protected:
   std::vector<std::string> anames;
   std::list<std::vector<std::string> > aname;
   std::list<std::vector<std::string> > tname;
+  std::list<std::string> guard_call_construct;
+  std::vector<std::string> tag_guard_call;
+  std::vector<std::string> action_guard_call;
   std::string s;
   int action_cnt;
   int tag_cnt;
@@ -65,6 +68,8 @@ protected:
   std::string pop;
   bool tag;
   std::map<bool,int> tag_adapter;
+  std::list<bool> tstack;
+  std::list<int> name_cnt_stack;
 };
 
 #endif
