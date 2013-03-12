@@ -111,6 +111,15 @@ void aalang_py::set_starter(std::string* st,const char* file,int line,int col)
 
 void aalang_py::set_name(std::string* name,bool first)
 {
+  if (first) {
+    ma_stack.push_back(multiname);
+    ta_stack.push_back(tag);
+    ta_stack.push_back(adapter);
+    multiname.clear();
+    tag = false;
+    adapter = false;
+  }
+
   multiname.push_back(*name);
 }
 
@@ -125,7 +134,10 @@ void aalang_py::set_namestr(std::string* _name)
 
 void aalang_py::set_variables(std::string* var,const char* file,int line,int col)
 {
-  variables="        global " + indent(0,*var) + "\n";
+  std::string ivar = indent(0,*var);
+  if (ivar!="") {
+    variables="        global " + indent(0,*var) + "\n";
+  }
   m_lines_in_vars = std::count(variables.begin(), variables.end(), '\n');
   delete var;
 }
@@ -149,28 +161,39 @@ void aalang_py::set_ainit(std::string* iai,const char* file,int line,int col)
 
 void aalang_py::set_tagname(std::string* name,bool first)
 {
+  if (first) {
+    ma_stack.push_back(multiname);
+    ta_stack.push_back(tag);
+    ta_stack.push_back(adapter);
+    multiname.clear();
+    tag = true;
+    adapter = false;
+  }
+
   multiname.push_back(*name);
+
   delete name;
-  tag = true;
-  adapter = false;
 }
 
 void aalang_py::next_tag()
 {
   for (unsigned int i = 0; i < multiname.size(); i++) {
-    s+="\n    tag" + to_string(tag_cnt) + "name = \""+multiname[i]+"\"\n";
+    s+="\n    tag" + tcnt + "name = \""+multiname[i]+"\"\n";
     /* tagXguard */
-    const std::string funcname("tag" + to_string(tag_cnt) + "guard");
+    const std::string funcname("tag" + tcnt + "guard");
     s+="    def " + funcname + "():\n" + variables;
     s+="        tag_name = \"" + multiname[i] + "\"\n";
     s+=indent(8,m_guard.first)+"\n";
+
+    // tag?guard.requires=[...];
+    s+="    tag" + tcnt + "guard.requires=[" + requires + "]\n";
 
     s+=python_lineno_wrapper(m_guard,funcname,2+m_lines_in_vars,4,
                              ", \"guard of tag \\\"" + multiname[i]
                              + "\\\"\")");
 
     if (adapter) {
-      const std::string funcname("tag" + to_string(tag_cnt) + "adapter");
+      const std::string funcname("tag" + tcnt + "adapter");
 
       s+="    def " + funcname + "():\n" + variables;
       s+="        tag_name = \"" + multiname[i] + "\"\n";
@@ -180,12 +203,13 @@ void aalang_py::next_tag()
 			       ", \"adapter of tag \\\"" + multiname[i]
 			       + "\\\"\")");
     }
-
     tag_cnt++;
+    tcnt=to_string(tag_cnt);    
   }
   multiname.clear();
-  tag = false;
-  adapter = false;
+  adapter = ta_stack.back(); ta_stack.pop_back();
+  tag =  ta_stack.back(); ta_stack.pop_back();
+  multiname = ma_stack.back(); ma_stack.pop_back();
 }
 
 void aalang_py::set_guard(std::string* gua,const char* file,int line,int col)
@@ -223,6 +247,7 @@ void aalang_py::next_action()
 {
   for (unsigned int i = 0; i < multiname.size(); i++) {
     std::string funcname;
+
     /* actionXname, actionXtype */
     s+="\n    action" + acnt + "name = \"" + multiname[i] + "\"\n"
       +"    action" + acnt + "type = ";
@@ -237,6 +262,10 @@ void aalang_py::next_action()
     /* actionXguard */
 
     s+=action_helper(m_guard,"guard",funcname,i);
+
+    // action + acnt + guard.requires=[...];
+    s+="    action" + acnt + "guard.requires=[" + requires + "]\n";
+
     s+=python_lineno_wrapper(m_guard,funcname,3+m_lines_in_vars,4,
                              ", \"guard of action \\\"" + multiname[i] +
                              "\\\"\")");
@@ -261,6 +290,10 @@ void aalang_py::next_action()
     acnt=to_string(action_cnt);
   }
   multiname.clear();
+
+  adapter = ta_stack.back(); ta_stack.pop_back();
+  tag =  ta_stack.back(); ta_stack.pop_back();
+  multiname = ma_stack.back(); ma_stack.pop_back();
 }
 
 std::string aalang_py::stringify()

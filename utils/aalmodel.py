@@ -43,6 +43,9 @@ class AALModel:
 
     def call(self, func, call_arguments = ()):
         try:
+            if hasattr(func,"requires"):
+                for prerequire in func.requires:
+                    if not prerequire(): return False
             args = []
             for arg in call_arguments:
                 if arg == '':
