@@ -31,7 +31,7 @@ typedef std::pair<std::string,fileline> codefileline;
 class aalang_py: public aalang {
 public:
   aalang_py(): aalang(), name(NULL), action_cnt(1),
-               tag_cnt(1), acnt("1"),tcnt("1"), m_lines_in_vars(0), tag(false),
+               tag_cnt(1), /*acnt("1"),tcnt("1"),*/ m_lines_in_vars(0), tag(false),
 	       adapter(false) {
         default_body   ="pass";
         default_guard  ="return 1";
@@ -57,14 +57,14 @@ public:
   virtual std::string stringify();
 protected:
   std::string* name;
-  std::vector<std::string> multiname;
+  std::vector<std::pair<std::string,int> > multiname;
   codefileline m_guard;
   codefileline m_body;
   codefileline m_adapter;
   int action_cnt;
   int tag_cnt;
-  std::string acnt;
-  std::string tcnt;
+  //std::string acnt;
+  //std::string tcnt;
   std::string s;
   std::string push;
   std::string pop;
@@ -78,10 +78,10 @@ protected:
   std::string requires;
 
   std::list<bool> ta_stack;
-  std::list<std::vector<std::string> > ma_stack;
+  std::list<std::vector<std::pair<std::string,int > > > ma_stack;
 
   std::string action_helper(const codefileline& cfl,std::string s,
-			    std::string& funcname,int i);
+			    std::string& funcname,int i,std::string& acnt);
 };
 
 #endif
