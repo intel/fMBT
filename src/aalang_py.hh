@@ -24,6 +24,7 @@
 #include <string>
 #include <vector>
 #include <list>
+#include <stack>
 
 typedef std::pair<std::string,int> fileline;
 typedef std::pair<std::string,fileline> codefileline;
@@ -79,6 +80,7 @@ protected:
 
   std::list<bool> ta_stack;
   std::list<std::vector<std::pair<std::string,int > > > ma_stack;
+  std::stack<codefileline> ma_save;
 
   std::string action_helper(const codefileline& cfl,std::string s,
 			    std::string& funcname,int i,std::string& acnt);

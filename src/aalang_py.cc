@@ -25,16 +25,18 @@ std::string to_list(std::list<std::string>& l) {
   if (l.begin()==l.end()) {
     return "";
   }
-  std::string ret= l.front();
+  std::string ret="\"" +  l.back() + "\"";
 
+  /*
   std::list<std::string>::iterator i=l.begin();
   if (i==l.end()) {
     return ret;
   }
   i++;
   for(;i!=l.end();i++) {
-    ret=ret + " , " + *i;
+    ret=ret + " , " + "\"" + *i + "(\"";
   }
+  */
   return ret;
 }
 
@@ -129,6 +131,9 @@ void aalang_py::set_starter(std::string* st,const char* file,int line,int col)
 void aalang_py::set_name(std::string* name,bool first)
 {
   if (first) {
+    ma_save.push(m_guard);
+    ma_save.push(m_body);
+    ma_save.push(m_adapter);
     ma_stack.push_back(multiname);
     ta_stack.push_back(tag);
     ta_stack.push_back(adapter);
@@ -185,6 +190,9 @@ void aalang_py::set_ainit(std::string* iai,const char* file,int line,int col)
 void aalang_py::set_tagname(std::string* name,bool first)
 {
   if (first) {
+    ma_save.push(m_guard);
+    ma_save.push(m_body);
+    ma_save.push(m_adapter);
     ma_stack.push_back(multiname);
     ta_stack.push_back(tag);
     ta_stack.push_back(adapter);
@@ -247,6 +255,10 @@ void aalang_py::next_tag()
   adapter = ta_stack.back(); ta_stack.pop_back();
   tag =  ta_stack.back(); ta_stack.pop_back();
   multiname = ma_stack.back(); ma_stack.pop_back();
+
+  m_adapter=ma_save.top();ma_save.pop();
+  m_body   =ma_save.top();ma_save.pop();
+  m_guard  =ma_save.top();ma_save.pop();
 }
 
 void aalang_py::set_guard(std::string* gua,const char* file,int line,int col)
@@ -337,6 +349,10 @@ void aalang_py::next_action()
   adapter = ta_stack.back(); ta_stack.pop_back();
   tag =  ta_stack.back(); ta_stack.pop_back();
   multiname = ma_stack.back(); ma_stack.pop_back();
+
+  m_adapter=ma_save.top();ma_save.pop();
+  m_body   =ma_save.top();ma_save.pop();
+  m_guard  =ma_save.top();ma_save.pop();
 }
 
 std::string aalang_py::stringify()
