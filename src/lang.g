@@ -101,7 +101,7 @@ header: variables | ainit | istate | push | pop | comment;
 comment: '#' "[^\n]*" { } ;
 
 
-act: 'action' astr {
+act: ( 'action' astr | 'input' istr | 'output' ostr ) {
             abg_stack.push(guard);
             abg_stack.push(body);
             abg_stack.push(adapter);
@@ -119,7 +119,7 @@ act: 'action' astr {
             adapter=abg_stack.top();abg_stack.pop();
             body=abg_stack.top();abg_stack.pop();
             guard=abg_stack.top();abg_stack.pop();
-        };
+        } ;
 
 ab: (comment|guard|body|adapter|tag|act)*;
 
@@ -129,6 +129,29 @@ astr:   string          {
         astr ',' string {
             obj->set_name($2.str);
         } ;
+
+istr:   string          {
+            std::string* tmp=new std::string("i" + *$0.str);
+            delete $0.str;
+            obj->set_name(tmp,true);
+        } |
+        istr ',' string {
+            std::string* tmp=new std::string("i" + *$2.str);
+            delete $2.str;
+            obj->set_name($2.str);
+        } ;
+
+ostr:   string          {
+            std::string* tmp=new std::string("o" + *$0.str);
+            delete $0.str;
+            obj->set_name(tmp,true);
+        } |
+        ostr ',' string {
+            std::string* tmp=new std::string("o" + *$2.str);
+            delete $2.str;
+            obj->set_name($2.str);
+        } ;
+
 
 tag_content: (comment|guard|adapter|tag|act)*;
 
