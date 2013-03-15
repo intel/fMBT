@@ -512,6 +512,9 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
             _g_origImage, preprocess, _g_readImage,
             _g_readImage, SCREENSHOT_FILENAME))
 
+    if not os.access(SCREENSHOT_FILENAME + ".html", os.R_OK):
+        raise NoOCRResults("HOCR output missing. Tesseract OCR 3.02 or greater required.")
+
     # store every word and its coordinates
     _g_words = _hocr2words(file(SCREENSHOT_FILENAME + ".html").read())
 
