@@ -91,6 +91,7 @@ AAL_GUARDRE   = re.compile('guard()\s*{')
 AAL_BODYRE    = re.compile('body()\s*{')
 AAL_ADAPTERRE = re.compile('adapter()\s*{')
 
+GT_COLLAPSETAGS = re.compile('[ #]preview-collapse-tags:(.*)')
 GT_HIDESHOWRE = re.compile('[ #]preview-(show|hide)-(vars|variables):(.*)')
 GT_HIDESHOWTRANRE = re.compile('[ #]preview-(show|hide)-(trans|transitions):(.*)')
 GT_HIDEUNTRAVTRANRE = re.compile('[ #]preview-hide-untested-(trans|transitions):(.*)')
@@ -314,6 +315,7 @@ class MainWindow(QtGui.QMainWindow):
         self._modelEditorFiles = {}
         self._confFileName = None
         self._logFileName = None
+        self._tagfilter = {}
 
         self._previewOnlyMode = False
 
@@ -552,8 +554,12 @@ Keyboard shortcuts:<br>
         show_traversed_transitions = []
         hide_states_orphaned = False
         hide_states_unvisited = False
+        collapse_tags = []
         preview_depth = 5
         pt = self._modelSources() + self._modelSource()
+        for var in GT_COLLAPSETAGS.findall(pt):
+            for v in var.replace(',', ' ').split():
+                collapse_tags.append(v)
         for show_or_hide, _, var in GT_HIDESHOWRE.findall(pt):
             correct_list = ['show', 'hide'].index(show_or_hide)
             for v in var.replace(',', ' ').split():
@@ -578,7 +584,7 @@ Keyboard shortcuts:<br>
         return (show_and_hide, preview_depth,
                 hide_transitions, hide_untraversed_transitions,
                 show_transitions, show_traversed_transitions,
-                hide_states_orphaned, hide_states_unvisited)
+                hide_states_orphaned, hide_states_unvisited,collapse_tags)
 
     def showError(self, errorMsg):
         self.preview_error.clear()
@@ -690,9 +696,22 @@ Keyboard shortcuts:<br>
             validation_exitstatus, output = self.runcmd(aal2py_cmd)
             if validation_exitstatus == 0:
                 show_hide_args = ""
-                [show_vars, hide_vars], preview_depth, _, _, _, _, _, _ = self.aalPreviewArguments()
+                collapse = []
+                [show_vars, hide_vars], preview_depth, _, _, _, _, _, _, collapse = self.aalPreviewArguments()
                 for v in show_vars: show_hide_args += " -S '%s'" % (v,)
                 for v in hide_vars: show_hide_args += " -H '%s'" % (v,)
+                for tag in collapse:
+                    show_hide_args += " -T '%s'" % tag
+
+                for tag in self._tagfilter.keys():
+                    if self._tagfilter[tag].isChecked():
+                        show_hide_args += " -T '%s'" % tag
+
+
+                for tag in self._tagfilter.keys():
+                    if self._tagfilter[tag].isChecked():
+                        show_hide_args += " -T '%s'" % tag
+
                 py2lsts_cmd = "remote_pyaal %s -o '%s'%s --lsts-depth %s '%s'" % (aal_ppflags, self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
                 validation_exitstatus, output = self.runcmd(py2lsts_cmd)
                 if validation_exitstatus != 0:
@@ -788,7 +807,7 @@ Keyboard shortcuts:<br>
             logparam.append(self._logFileName)
         if self._model_ok:
             if not self._test_ok: logparam = []
-            _, _, previewHideTransitions, previewHideUTransitions, previewShowTransitions, previewShowTestedTransitions, previewEraseOrphanedStates, previewEraseUnvisitedStates = self.aalPreviewArguments()
+            _, _, previewHideTransitions, previewHideUTransitions, previewShowTransitions, previewShowTestedTransitions, previewEraseOrphanedStates, previewEraseUnvisitedStates,_ = self.aalPreviewArguments()
             hideparams = []
             for regexp in previewHideTransitions:
                 hideparams.append("-e")
@@ -806,6 +825,7 @@ Keyboard shortcuts:<br>
                 hideparams.append("-O")
             if previewEraseUnvisitedStates:
                 hideparams.append("-U")
+
             cmd = ["fmbt-view", "-f", "png"] + logparam + hideparams + ["-o", imgname, self._lstsFileName]
             asyncRuncmd(cmd,
                         onThreadSuccess = self.pixmapLoader("model", imgname),
@@ -993,14 +1013,28 @@ on_inconc = "exit(2)"
                         return True
                 return False
 
+        class PreviewBarEventFilter(QtCore.QObject):
+            def __init__(self, parent, tabWidget):
+                QtCore.QObject.__init__(self, parent)
+                self.parent = parent
+                self.tabWidget = tabWidget
+            def eventFilter(self, obj, event):
+                if event.type() != QtCore.QEvent.MouseButtonPress:
+                    return False
+                tabBar = self.tabWidget.tabBar()
+                for tabIndex in xrange(tabBar.count()):
+                    if (tabBar.tabRect(tabIndex).contains(event.pos()) and
+                        self.tabWidget.currentIndex() == tabIndex == PREVIEWTAB_MODEL):
+                        self.parent.chooseTagFilter()
+                        return True 
+                return False
+
         self.mainwidget = QtGui.QWidget()
         self.layout = QtGui.QHBoxLayout()
         self.mainwidget.setLayout(self.layout)
 
         # Setup editor tabs
         self.edit = QtGui.QTabWidget()
-        self.edit.connect(self.edit, QtCore.SIGNAL("currentChanged(int)"),
-                          self.editTabChanged)
         self.edit.installEventFilter(TabBarEventFilter(self, self.edit))
 
         def makeScalableEditor(parent, font, EditorClass = QtGui.QTextEdit):
@@ -1040,6 +1074,9 @@ on_inconc = "exit(2)"
 
         # Setup preview tabs
         self.preview = QtGui.QTabWidget()
+        self.preview.connect(self.preview, QtCore.SIGNAL("currentChanged(int)"),
+                             self.editTabChanged)
+        self.preview.installEventFilter(PreviewBarEventFilter(self, self.preview))
 
         self.splitter.addWidget(self.preview)
         self._editorsOnLeft = True
@@ -1285,6 +1322,24 @@ on_inconc = "exit(2)"
         editMenu.addAction("Find (next)", self.findNext, "Ctrl+F")
         editMenu.addAction("Find (previous)", self.findPrev, "Ctrl+R")
 
+    def chooseTagFilter(self):
+        # interactive choose between base model and included model files
+        tags = [ "FG:Browser", "FG:Settingsapp" ]
+
+        menu = QtGui.QMenu()
+        for tag in sorted(tags):
+            option = None
+            if tag in self._tagfilter:
+                option = self._tagfilter[tag]
+            else:
+                option = QtGui.QAction(tag,self)
+                option.setCheckable(True)
+                option.setChecked(False)
+                self._tagfilter[tag]=option
+            menu.addAction(option)
+        menu.exec_(self.preview_modelcont.mapToGlobal(QtCore.QPoint(0,0)))
+#        PREVIEWTAB_MODEL
+
     def setupOptionsMenu(self):
         optionsMenu = QtGui.QMenu("&Options")
         self.menuBar().addMenu(optionsMenu)
@@ -1298,6 +1353,12 @@ on_inconc = "exit(2)"
         self._menuOptionTabCompletion.setCheckable(True)
         self._menuOptionTabCompletion.setChecked(True)
         optionsMenu.addAction(self._menuOptionTabCompletion)
+
+        self._menuOptionRunTestOnSUT = QtGui.QAction("&Run test on device", self)
+        self._menuOptionRunTestOnSUT.setCheckable(False)
+        self._menuOptionRunTestOnSUT.setChecked(False)
+        optionsMenu.addAction(self._menuOptionRunTestOnSUT)
+
 
     def setupViewMenu(self):
         viewMenu = QtGui.QMenu("&View", self)
