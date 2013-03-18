@@ -31,6 +31,14 @@
 
 #include "aalang.hh"
 #include "config.h"
+
+
+#include "aalang_tag.hh"
+#include "aalang_action.hh"
+
+extern aalang* obj;
+
+
 #ifndef DROI
 #include <error.h>
 #else
@@ -59,6 +67,7 @@ void print_usage()
     "    -o     output to a file (defaults to stdout)\n"
     "    -c     compile (needs to have output file)\n"
     "    -D     define preprocessor flag\n"
+    "    -l <tag|action> print <tag|action> known by the inputfile\n"
     );
 }
 
@@ -106,9 +115,24 @@ int main(int argc,char** argv) {
     {0, 0, 0, 0}
   };
 
-  while ((c = getopt_long (argc, argv, "B:b:hco:D:V", long_opts, NULL)) != -1) {
+  while ((c = getopt_long (argc, argv, "B:b:hco:D:Vl:", long_opts, NULL)) != -1) {
     switch (c)
       {
+      case 'l':
+	if (obj) {
+	  printf("Only on -l parameter supported\n");
+	  print_usage();
+	  return 3;
+	}
+	if (strcmp(optarg,"tag")==0) {
+	  obj=new aalang_tag;
+	  break;
+	}
+	if (strcmp(optarg,"action")==0) {
+	  obj=new aalang_action;
+	  break;
+	}
+	break;	
       case 'V':
         printf("Version: "VERSION"\n");
         return 0;
