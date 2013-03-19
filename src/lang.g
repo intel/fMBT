@@ -186,9 +186,9 @@ push: 'push' '{' bstr '}' {
 pop:  'pop' '{' bstr '}' {
             obj->set_pop ($2.str,$n2.start_loc.pathname,$n2.start_loc.line,$n2.start_loc.col); } ;
 
-language: 'language:' cpp    { obj=new aalang_cpp  ; } starter ';'? |
-          'language:' java   { obj=new aalang_java ; } starter ';'? |
-          'language:' python { obj=new aalang_py   ; } starter ';'? ;
+language: 'language:' cpp    { if (!obj) obj=new aalang_cpp  ; } starter ';'? |
+          'language:' java   { if (!obj) obj=new aalang_java ; } starter ';'? |
+          'language:' python { if (!obj) obj=new aalang_py   ; } starter ';'? ;
 
 cpp: 'C++' | 'cpp' | 'c++';
 

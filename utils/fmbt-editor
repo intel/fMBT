@@ -83,7 +83,7 @@ AAL_ACTIONRE  = re.compile('action\s"[^{]*"\s*{')
 AAL_ACTIONREI = re.compile('{\s*"[^}]*"\s*noitca')
 
 AAL_INPUTRE   = re.compile('input\s"[^{]*"\s*{')
-AAL_OUTPUT    = re.compile('input\s"[^{]*"\s*{')
+AAL_OUTPUTRE  = re.compile('output\s"[^{]*"\s*{')
 
 AAL_TAGRE     = re.compile('tag\s"[^{]*"\s*{')
 AAL_TAGREI    = re.compile('{\s*"[^"]*"\s*gat')
@@ -120,6 +120,7 @@ def launchSeparatePreviewer():
 
 # Parse command line, see which Python Qt4 bindings to import
 
+model_tags       = []
 opt_hide_preview = False
 opt_preview_only = False
 opt_modelfile    = None
@@ -673,6 +674,16 @@ Keyboard shortcuts:<br>
             self.edit.setCurrentIndex(EDITTAB_CONF)
             self.conf_editor.setFocus()
 
+    def getaalcpparams(self,conf_lines):
+        aal_ppflags = ""
+        for l in conf_lines:
+            if "model" in l: aal_ppflags=' '.join(
+                ["'-D%s'" % f for f in re.findall('-D ?([^ ]*)', l)])
+        return aal_ppflags
+
+    def getaal2py_cmd(self,aal_ppflags):
+        return "fmbt-aalc %s -o '%s' %s" % (aal_ppflags, self._aalcFileName, self._modelFileName)
+
     def saveAndValidateModel(self):
         """
         Save unsaved contents, convert gt to lsts if possible.
@@ -686,15 +697,20 @@ Keyboard shortcuts:<br>
             self._aalcFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".py"
             self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
             # Pick up preprocessor arguments from remote_pyaal command line
-            aal_ppflags = ""
             conf_lines = str(self.conf_editor.toPlainText()).split('\n')
-            for l in conf_lines:
-                if "model" in l: aal_ppflags=' '.join(
-                    ["'-D%s'" % f for f in re.findall('-D ?([^ ]*)', l)])
-            aal2py_cmd = "fmbt-aalc %s -o '%s' %s" % (aal_ppflags, self._aalcFileName, self._modelFileName)
+            aal_ppflags = self.getaalcpparams(conf_lines)
+            aal2py_cmd = self.getaal2py_cmd(aal_ppflags)
             executed_program = "fmbt-aalc"
             validation_exitstatus, output = self.runcmd(aal2py_cmd)
             if validation_exitstatus == 0:
+                global model_tags
+                aal2tag_cmd = "fmbt-aalc %s %s -l tag" % (aal_ppflags, self._modelFileName)
+                tags_exitstatus, tags_output = self.runcmd(aal2tag_cmd)
+                if tags_exitstatus == 0:
+                    model_tags = []
+                    for tag in tags_output[0].split('\n'):
+                        if tag:
+                            model_tags.append(tag)
                 show_hide_args = ""
                 collapse = []
                 [show_vars, hide_vars], preview_depth, _, _, _, _, _, _, collapse = self.aalPreviewArguments()
@@ -702,11 +718,6 @@ Keyboard shortcuts:<br>
                 for v in hide_vars: show_hide_args += " -H '%s'" % (v,)
                 for tag in collapse:
                     show_hide_args += " -T '%s'" % tag
-
-                for tag in self._tagfilter.keys():
-                    if self._tagfilter[tag].isChecked():
-                        show_hide_args += " -T '%s'" % tag
-
 
                 for tag in self._tagfilter.keys():
                     if self._tagfilter[tag].isChecked():
@@ -1322,12 +1333,16 @@ on_inconc = "exit(2)"
         editMenu.addAction("Find (next)", self.findNext, "Ctrl+F")
         editMenu.addAction("Find (previous)", self.findPrev, "Ctrl+R")
 
+    def changed_event(self):
+        print "CHANGED!"
+        self.refreshImages()
+
     def chooseTagFilter(self):
         # interactive choose between base model and included model files
-        tags = [ "FG:Browser", "FG:Settingsapp" ]
+        global model_tags
 
         menu = QtGui.QMenu()
-        for tag in sorted(tags):
+        for tag in sorted(model_tags):
             option = None
             if tag in self._tagfilter:
                 option = self._tagfilter[tag]
@@ -1335,6 +1350,7 @@ on_inconc = "exit(2)"
                 option = QtGui.QAction(tag,self)
                 option.setCheckable(True)
                 option.setChecked(False)
+                option.changed.connect(self.changed_event)
                 self._tagfilter[tag]=option
             menu.addAction(option)
         menu.exec_(self.preview_modelcont.mapToGlobal(QtCore.QPoint(0,0)))
