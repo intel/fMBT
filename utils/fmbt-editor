@@ -722,8 +722,11 @@ Keyboard shortcuts:<br>
                 for tag in self._tagfilter.keys():
                     if self._tagfilter[tag].isChecked():
                         show_hide_args += " -T '%s'" % tag
-
-                py2lsts_cmd = "remote_pyaal %s -o '%s'%s --lsts-depth %s '%s'" % (aal_ppflags, self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
+                py2lsts_cmd = ""
+                if self._menuOptionCFFD.isChecked():
+                    py2lsts_cmd = "remote_pyaal -o - %s %s --lsts-depth %s '%s'|tvt.CFFD_normalize - '%s'" % (aal_ppflags, show_hide_args, preview_depth, self._aalcFileName, self._lstsFileName)
+                else:
+                    py2lsts_cmd = "remote_pyaal %s -o '%s'%s --lsts-depth %s '%s'" % (aal_ppflags, self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
                 validation_exitstatus, output = self.runcmd(py2lsts_cmd)
                 if validation_exitstatus != 0:
                     self.showError(output[1])
@@ -1369,6 +1372,11 @@ on_inconc = "exit(2)"
         self._menuOptionTabCompletion.setCheckable(True)
         self._menuOptionTabCompletion.setChecked(True)
         optionsMenu.addAction(self._menuOptionTabCompletion)
+
+        self._menuOptionCFFD = QtGui.QAction("&CFFD normalize visualization", self)
+        self._menuOptionCFFD.setCheckable(True)
+        self._menuOptionCFFD.setChecked(False)
+        optionsMenu.addAction(self._menuOptionCFFD)
 
         self._menuOptionRunTestOnSUT = QtGui.QAction("&Run test on device", self)
         self._menuOptionRunTestOnSUT.setCheckable(False)
