@@ -874,8 +874,15 @@ Keyboard shortcuts:<br>
         self._doGenerateTest()
         if self._model_ok and self._test_ok:
             self._covFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".cov.png"
-            cmd = "fmbt-stats -f cov:steps -p '%s' -o /dev/null '%s'" % (
-                self._covFileName, self._logFileName)
+            extra = ""
+            if self._menuOptionCoverageE.isChecked():
+                extra = "-E "
+            covtype = "steps"
+            if self._menuOptionCoverageX.isChecked():
+                covtype = "time"
+
+            cmd = "fmbt-stats %s -f cov:%s -p '%s' -o /dev/null '%s'" % (
+                extra, covtype, self._covFileName, self._logFileName)
             asyncRuncmd(cmd,
                         onThreadSuccess = self.pixmapLoader("cov", self._covFileName),
                         onSuccess = self.pixmapViewer("cov"),
@@ -1377,6 +1384,19 @@ on_inconc = "exit(2)"
         self._menuOptionCFFD.setCheckable(True)
         self._menuOptionCFFD.setChecked(False)
         optionsMenu.addAction(self._menuOptionCFFD)
+        self._menuOptionCFFD.changed.connect(self.changed_event)
+
+        self._menuOptionCoverageE = QtGui.QAction("&Coverage E", self)
+        self._menuOptionCoverageE.setCheckable(True)
+        self._menuOptionCoverageE.setChecked(False)
+        optionsMenu.addAction(self._menuOptionCoverageE)
+        self._menuOptionCoverageE.changed.connect(self.changed_event)
+
+        self._menuOptionCoverageX = QtGui.QAction("Coverage X time", self)
+        self._menuOptionCoverageX.setCheckable(True)
+        self._menuOptionCoverageX.setChecked(False)
+        optionsMenu.addAction(self._menuOptionCoverageX)
+        self._menuOptionCoverageX.changed.connect(self.changed_event)
 
         self._menuOptionRunTestOnSUT = QtGui.QAction("&Run test on device", self)
         self._menuOptionRunTestOnSUT.setCheckable(False)

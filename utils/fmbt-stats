@@ -89,6 +89,8 @@ import fmbt_config
 
 MAXSPEED=100000
 
+print_every_step = False
+
 def error(msg):
     sys.stderr.write('fmbt-stats: ' + msg + '\n')
     sys.exit(1)
@@ -227,6 +229,7 @@ def finish_plotting(plot_datafilename, gnuplot_commands):
     os.remove(plot_datafilename)
 
 def stats_cov(arg, testlog_fileobj, output_fileobj, plot_filename):
+    global print_every_step
     if arg not in ["time", "steps"]:
         error('syntax error in coverage arguments "%s", expected "time" or "steps"' % (arg,))
     xaxis = arg
@@ -261,17 +264,25 @@ def stats_cov(arg, testlog_fileobj, output_fileobj, plot_filename):
     data_cov_xaxis = []
     if xaxis == "steps":
         last_coverage = -1
+        i = 0
         for i, ct in enumerate(coverage_timestamp):
-            if ct[0] != last_coverage:
+            if print_every_step or ct[0] != last_coverage:
                 data_cov_xaxis.append((ct[0], i+1))
                 last_coverage = ct[0]
     else:
         last_coverage = -1
         start_time = coverage_timestamp[0][1]
+        prev_appended = False
+        t = 1
         for c, t in coverage_timestamp:
-            if c != last_coverage:
+            if print_every_step or c != last_coverage:
                 data_cov_xaxis.append((c, t - start_time))
                 last_coverage = c
+                prev_appended = True
+            else:
+                prev_appended = False
+        if not prev_appended:
+            data_cov_xaxis.append((last_coverage, t - start_time))
 
     write_output_file(output_fileobj, format_data, data_cov_xaxis)
 
@@ -693,12 +704,14 @@ if __name__ == '__main__':
     opt_debug = False
 
     opts, remainder = getopt.getopt(
-        sys.argv[1:], 'dhf:o:p:V',
+        sys.argv[1:], 'dhf:o:p:VE',
         ['debug', 'help', 'format=', 'output=', 'plot=', 'version'])
     for opt, arg in opts:
         if opt in ['-h', '--help']:
             print __doc__
             sys.exit(0)
+        elif opt in ['-E']:
+            print_every_step = True            
         elif opt in ['-V', '--version']:
             print "Version " + fmbt_config.fmbt_version
             sys.exit(0)
