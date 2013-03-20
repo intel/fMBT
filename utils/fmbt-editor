@@ -1397,12 +1397,10 @@ on_inconc = "exit(2)"
         self._menuOptionCoverageX.setChecked(False)
         optionsMenu.addAction(self._menuOptionCoverageX)
         self._menuOptionCoverageX.changed.connect(self.changed_event)
-
-        self._menuOptionRunTestOnSUT = QtGui.QAction("&Run test on device", self)
-        self._menuOptionRunTestOnSUT.setCheckable(False)
-        self._menuOptionRunTestOnSUT.setChecked(False)
-        optionsMenu.addAction(self._menuOptionRunTestOnSUT)
-
+#        self._menuOptionRunTestOnSUT = QtGui.QAction("&Run test on device", self)
+#        self._menuOptionRunTestOnSUT.setCheckable(False)
+#        self._menuOptionRunTestOnSUT.setChecked(False)
+#        optionsMenu.addAction(self._menuOptionRunTestOnSUT)
 
     def setupViewMenu(self):
         viewMenu = QtGui.QMenu("&View", self)
