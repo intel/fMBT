@@ -724,7 +724,7 @@ Keyboard shortcuts:<br>
                         show_hide_args += " -T '%s'" % tag
                 py2lsts_cmd = ""
                 if self._menuOptionCFFD.isChecked():
-                    py2lsts_cmd = "remote_pyaal -o - %s %s --lsts-depth %s '%s'|tvt.CFFD_normalize - '%s'" % (aal_ppflags, show_hide_args, preview_depth, self._aalcFileName, self._lstsFileName)
+                    py2lsts_cmd = "remote_pyaal -o - %s %s --lsts-depth %s '%s'|tvt.CFFD_normalize - -|fmbt-gt -i - -o '%s'" % (aal_ppflags, show_hide_args, preview_depth, self._aalcFileName, self._lstsFileName)
                 else:
                     py2lsts_cmd = "remote_pyaal %s -o '%s'%s --lsts-depth %s '%s'" % (aal_ppflags, self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
                 validation_exitstatus, output = self.runcmd(py2lsts_cmd)
