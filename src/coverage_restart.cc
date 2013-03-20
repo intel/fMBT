@@ -26,10 +26,7 @@ void Coverage_Restart::new_left_right()
   left=new_coverage(log,l);
   right=new_coverage(log,r);
 
-  if (push_depth) {
-    left->push();
-    right->push();
-  }
+  push_depth = 0;
 }
 
 Coverage_Restart::Coverage_Restart(Log& lo, std::string& params): Coverage(lo),left(NULL),right(NULL),previous(0.0),push_depth(0) {
@@ -69,18 +66,15 @@ void Coverage_Restart::push()
 {
   if (!status) return;
 
-  push_depth++;
-
-  // Broken!
-
   csave.push_back(left);
   csave.push_back(right);
   psave.push_back(previous);
+  pdsave.push_back(push_depth);
 
   left->push();
   right->push();
-
-
+  push_depth++;
+  
   if (!left->status || !right->status) {
     status=false;
   }
@@ -90,12 +84,14 @@ void Coverage_Restart::pop()
 {
   if (!status) return;
 
-  push_depth--;
+  if (push_depth) {
+    push_depth--;
+    left->pop();
+    right->pop();
+  }
 
-  // Broken!
-
-  left->pop();
-  right->pop();
+  push_depth=pdsave.back();
+  pdsave.pop_back();
 
   previous=psave.back();
   psave.pop_back();
@@ -163,11 +159,6 @@ bool Coverage_Restart::execute(int action)
       }
 
       new_left_right();
-
-      if (push_depth) {
-	left->push();
-	right->push();
-      }
       set_model(model);
     }
 

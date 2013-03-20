@@ -50,6 +50,7 @@ protected:
   Coverage* left,*right;
 
   std::list<Coverage* > csave;
+  std::list<int> pdsave;
   std::list<float> psave;
   float previous;
   int push_depth;
