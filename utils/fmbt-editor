@@ -47,6 +47,7 @@ Options:
         fmbt-editor -Q-geometry -Q800x600
 """
 
+import distutils.spawn
 import atexit
 import sys
 import subprocess
@@ -59,6 +60,8 @@ import tempfile
 import time
 import urllib
 import fmbt_config
+
+HASTVT = False
 
 def error(msg, exit_status = 1, gui = False):
     sys.stderr.write("%s: %s\n" % (os.path.basename(sys.argv[0]), msg))
@@ -340,6 +343,8 @@ class MainWindow(QtGui.QMainWindow):
         self._fileDialogFilter = None
         self._previewTabBeforeError = None
         self._previewTakeFocusOnTabChange = True
+
+        self.setupTestLogMenu()
 
     def about(self):
         QtGui.QMessageBox.about(self, "fMBT editor",'''
@@ -969,8 +974,12 @@ on_inconc = "exit(2)"
     def generateTest_havingTestGenerated(self, change_tab):
         if self._model_ok and self._test_ok:
             self.preview.setTabIcon(PREVIEWTAB_TEST, QtGui.QIcon())
-            p = subprocess.Popen("fmbt-log -f '$sn$tv\t$ax$tr' '%s'"
-                             % (self._logFileName,), shell=True, stdout=subprocess.PIPE)
+            fmbt_log_format = "'$sn$tv\t$ax$tr'"
+#            if self.preview_test_stepnumber.isChecked():
+#                fmbt_log_format = 
+
+            p = subprocess.Popen("fmbt-log -f '%s''%s'"
+                             % (fmbt_log_format,self._logFileName,), shell=True, stdout=subprocess.PIPE)
             o = p.stdout.readlines()
             self.preview_test.setPlainText(''.join([l for l in o[1:]]))
         else:
@@ -995,6 +1004,7 @@ on_inconc = "exit(2)"
         self.conf_editor.setFocus()
 
     def setupEditor(self):
+        global HASTVT
         class TabCompletionEventFilter(QtCore.QObject):
             def __init__(self, parent):
                 QtCore.QObject.__init__(self, parent)
@@ -1050,6 +1060,23 @@ on_inconc = "exit(2)"
                         return True 
                 return False
 
+        class PreviewBarCoverageEventFilter(QtCore.QObject):
+            def __init__(self, parent, tabWidget):
+                QtCore.QObject.__init__(self, parent)
+                self.parent = parent
+                self.tabWidget = tabWidget
+            def eventFilter(self, obj, event):
+                if event.type() != QtCore.QEvent.MouseButtonPress:
+                    return False
+                tabBar = self.tabWidget.tabBar()
+                for tabIndex in xrange(tabBar.count()):
+                    if (tabBar.tabRect(tabIndex).contains(event.pos()) and
+                        self.tabWidget.currentIndex() == tabIndex == PREVIEWTAB_TEST):
+                        self.parent.preview_test_menu_exec()
+                        return True 
+                return False
+
+
         self.mainwidget = QtGui.QWidget()
         self.layout = QtGui.QHBoxLayout()
         self.mainwidget.setLayout(self.layout)
@@ -1097,7 +1124,10 @@ on_inconc = "exit(2)"
         self.preview = QtGui.QTabWidget()
         self.preview.connect(self.preview, QtCore.SIGNAL("currentChanged(int)"),
                              self.editTabChanged)
-        self.preview.installEventFilter(PreviewBarEventFilter(self, self.preview))
+        if HASTVT:
+            self.preview.installEventFilter(PreviewBarEventFilter(self, self.preview))
+
+        self.preview.installEventFilter(PreviewBarCoverageEventFilter(self, self.preview))
 
         self.splitter.addWidget(self.preview)
         self._editorsOnLeft = True
@@ -1366,7 +1396,30 @@ on_inconc = "exit(2)"
         menu.exec_(self.preview_modelcont.mapToGlobal(QtCore.QPoint(0,0)))
 #        PREVIEWTAB_MODEL
 
+    def setupTestLogMenu(self):
+        self.preview_test_menu = QtGui.QMenu()
+
+        self.preview_test_stepnumber=QtGui.QAction("Step number", self)
+        self.preview_test_stepnumber.setCheckable(True)
+        self.preview_test_stepnumber.setChecked(True)
+        self.preview_test_menu.addAction(self.preview_test_stepnumber)
+
+        self.preview_test_coverage=QtGui.QAction("coverage", self)
+        self.preview_test_coverage.setCheckable(True)
+        self.preview_test_coverage.setChecked(False)
+        self.preview_test_menu.addAction(self.preview_test_coverage)
+
+        self.preview_test_action=QtGui.QAction("action", self)
+        self.preview_test_action.setCheckable(True)
+        self.preview_test_action.setChecked(True)
+        self.preview_test_menu.addAction(self.preview_test_action)
+
+
+    def preview_test_menu_exec(self):
+        self.preview_test_menu.exec_(self.preview_test.mapToGlobal(QtCore.QPoint(30,0)))
+
     def setupOptionsMenu(self):
+        global HASTVT
         optionsMenu = QtGui.QMenu("&Options")
         self.menuBar().addMenu(optionsMenu)
 
@@ -1383,8 +1436,9 @@ on_inconc = "exit(2)"
         self._menuOptionCFFD = QtGui.QAction("&CFFD normalize visualization", self)
         self._menuOptionCFFD.setCheckable(True)
         self._menuOptionCFFD.setChecked(False)
-        optionsMenu.addAction(self._menuOptionCFFD)
-        self._menuOptionCFFD.changed.connect(self.changed_event)
+        if HASTVT:
+            optionsMenu.addAction(self._menuOptionCFFD)
+            self._menuOptionCFFD.changed.connect(self.changed_event)
 
         self._menuOptionCoverageE = QtGui.QAction("&Coverage E", self)
         self._menuOptionCoverageE.setCheckable(True)
@@ -1397,6 +1451,7 @@ on_inconc = "exit(2)"
         self._menuOptionCoverageX.setChecked(False)
         optionsMenu.addAction(self._menuOptionCoverageX)
         self._menuOptionCoverageX.changed.connect(self.changed_event)
+
 #        self._menuOptionRunTestOnSUT = QtGui.QAction("&Run test on device", self)
 #        self._menuOptionRunTestOnSUT.setCheckable(False)
 #        self._menuOptionRunTestOnSUT.setChecked(False)
@@ -1944,6 +1999,9 @@ atexit.register(_exitHandler)
 if __name__ == '__main__':
 
     app = QtGui.QApplication(sys.argv[:1] + opt_qt)
+
+    if distutils.spawn.find_executable("tvt.CFFD_normalize") != None:
+        HASTVT = False
 
     _g_tempdir = tempfile.mkdtemp(prefix="fmbt-editor.%s." % (os.getpid(),))
 
