@@ -37,6 +37,7 @@ Options:
           $mn - mapper adapter number
           $ms - suggested action after renaming in mapper adapter
           $sn - number of test step
+          $sb - coverage before the test step
           $sc - coverage after the test step
           $st - time stamp of test step
           $tg - tags at state
@@ -69,6 +70,11 @@ VALUE_SEPARATOR = '; '
 def identity_formatter(s):
     return s
 
+def already_done_formatter(s):
+    already_done_formatter.saved = s
+    return None
+already_done_formatter.saved = "undefined"
+
 def TAU_formatter(s):
    if s == "TAU": return "[unidentified action]"
    return s
@@ -81,6 +87,7 @@ fields = {
     '$ms' : ['<redirect id=', '"', 5, identity_formatter],
     '$mc' : ['<redirect id=', '"', 3, identity_formatter],
     '$mn' : ['<redirect id=', '"', 1, identity_formatter],
+    '$sb' : ['<status steps=', '"', 3, already_done_formatter],
     '$sc' : ['<status steps=', '"', 3, identity_formatter],
     '$sn' : ['<status steps=', '"', 1, identity_formatter],
     '$st' : ['<current_time time=', '"', 1, identity_formatter],
@@ -103,15 +110,18 @@ def extract(input_file_obj, output_file_obj, output_format, raw):
         else:
             try:
                 if unique_prefix == "<tags enabled=":
-                    values = [formatter(urllib2.unquote(v))
-                              for v in line.split(delimiter)[fieldindex].split(' ')]
+                    values = [ formatter(urllib2.unquote(v))
+                               for v in line.split(delimiter)[fieldindex].split(' ')]
                     contents = VALUE_SEPARATOR.join(values)
                 else:
                     contents = formatter(urllib2.unquote(line.split(delimiter)[fieldindex]))
             except: contents = '<syntax error>'
         return contents
 
-    clean_data = lambda: dict([(field, []) for field in fields])
+    def clean_data():
+        d = dict([(field, []) for field in fields])
+        d['$sb'] = [already_done_formatter.saved]
+        return d
 
     empty_row = output_format % dict([(field, '') for field in fields])
 
@@ -120,17 +130,20 @@ def extract(input_file_obj, output_file_obj, output_format, raw):
         for field in fields:
             match = fields[field][0]
             if match in line:
-                parsed_data[field].append(pick(line, fields[field]))
+                found_value = pick(line, fields[field])
+                if found_value != None:
+                    parsed_data[field].append(found_value)
 
         # a test step done, print values
         ppoutput = ""
         if (('<status steps=' in line) or
-            ('<stop verdict' in line) or
+            # ('<stop verdict' in line) or
             ('</test_engine>' in line)):
             printable_data = {}
             for field in parsed_data:
                 printable_data[field] = VALUE_SEPARATOR.join(parsed_data[field])
-            ppoutput = output_format % printable_data
+            if not '<status steps="0"' in line:
+                ppoutput = output_format % printable_data
             parsed_data = clean_data()
         elif ((parsed_data['$al'] != [] and '%($al)' in output_format) or
               (parsed_data['$am'] != [] and '%($am)' in output_format)):

@@ -975,32 +975,23 @@ on_inconc = "exit(2)"
         if self._model_ok and self._test_ok:
             self.preview.setTabIcon(PREVIEWTAB_TEST, QtGui.QIcon())
             fmbt_log_format = ""
-            extras = ["$tv","$tr","","",""]
-            count = 0
             if self.preview_test_stepnumber.isChecked():
-                fmbt_log_format = "$sn%s\t" % extras[count]
-                count += 1
-            if self.preview_test_coverage.isChecked():
-                fmbt_log_format = "%s$sc%s\t" % (fmbt_log_format, extras[count])
-                count += 1
-            if self.preview_test_action.isChecked():
-                fmbt_log_format = "%s$ax%s\t" % (fmbt_log_format, extras[count])
-                count += 1
+                fmbt_log_format += "$sn\t"
+            else:
+                fmbt_log_format += "\t"
             if self.preview_test_timestamp.isChecked():
-                fmbt_log_format = "%s$st%s\t" % (fmbt_log_format, extras[count])
-                count += 1
-            if count == 0:
-                fmbt_log_format = extras[count]
-                count += 1
-            while (count < 2):
-                fmbt_log_format = "%s\t%s" % (fmbt_log_format, extras[count])
-                count += 1
+                fmbt_log_format += "$st\t"
+            if self.preview_test_coverage.isChecked():
+                fmbt_log_format += "$sb\t"
+            if self.preview_test_action.isChecked():
+                fmbt_log_format += "$ax\t"
+            fmbt_log_format = fmbt_log_format[:-1]
 
-            print "fmbt-log -f '%s' '%s'" % (fmbt_log_format,self._logFileName,)
-            p = subprocess.Popen("fmbt-log -f '%s' '%s'"
-                             % (fmbt_log_format,self._logFileName,), shell=True, stdout=subprocess.PIPE)
+            fmbt_log_cmd = """fmbt-log -t "%%T.%%f" -f '$tv%s$tr' '%s'""" % (fmbt_log_format,self._logFileName,)
+            print fmbt_log_cmd
+            p = subprocess.Popen(fmbt_log_cmd, shell=True, stdout=subprocess.PIPE)
             o = p.stdout.readlines()
-            self.preview_test.setPlainText(''.join([l for l in o[1:]]))
+            self.preview_test.setPlainText(''.join([l for l in o]))
         else:
             self.preview.setTabIcon(PREVIEWTAB_TEST, QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_MessageBoxWarning))
             if hasattr(self, "_test_errormsg"):
@@ -1079,7 +1070,7 @@ on_inconc = "exit(2)"
                     if (tabBar.tabRect(tabIndex).contains(event.pos()) and
                         self.tabWidget.currentIndex() == tabIndex == PREVIEWTAB_MODEL):
                         self.parent.chooseTagFilter()
-                        return True 
+                        return True
                 return False
 
         class PreviewBarCoverageEventFilter(QtCore.QObject):
@@ -1095,9 +1086,8 @@ on_inconc = "exit(2)"
                     if (tabBar.tabRect(tabIndex).contains(event.pos()) and
                         self.tabWidget.currentIndex() == tabIndex == PREVIEWTAB_TEST):
                         self.parent.preview_test_menu_exec()
-                        return True 
+                        return True
                 return False
-
 
         self.mainwidget = QtGui.QWidget()
         self.layout = QtGui.QHBoxLayout()
@@ -1144,8 +1134,6 @@ on_inconc = "exit(2)"
 
         # Setup preview tabs
         self.preview = QtGui.QTabWidget()
-        self.preview.connect(self.preview, QtCore.SIGNAL("currentChanged(int)"),
-                             self.editTabChanged)
         if HASTVT:
             self.preview.installEventFilter(PreviewBarEventFilter(self, self.preview))
 
@@ -1361,10 +1349,6 @@ on_inconc = "exit(2)"
                     self.findFromPlainText.count(text)))
         self.findCanReplace = None
 
-    def editTabChanged(self, tabIndex):
-        if tabIndex == EDITTAB_GT: self.editGT()
-        elif tabIndex == EDITTAB_CONF: self.editConf()
-
     def previewTabChanged(self, tabIndex):
         if tabIndex == PREVIEWTAB_MODEL:
             self.visualiseModel(change_tab = self._previewTakeFocusOnTabChange)
@@ -1426,25 +1410,22 @@ on_inconc = "exit(2)"
         self.preview_test_stepnumber.setChecked(True)
         self.preview_test_menu.addAction(self.preview_test_stepnumber)
         self.preview_test_stepnumber.changed.connect(self.changed_event)
-        
-        self.preview_test_coverage=QtGui.QAction("coverage", self)
-        self.preview_test_coverage.setCheckable(True)
-        self.preview_test_coverage.setChecked(False)
-        self.preview_test_menu.addAction(self.preview_test_coverage)
-        self.preview_test_coverage.changed.connect(self.changed_event)
-        
-        self.preview_test_action=QtGui.QAction("action", self)
-        self.preview_test_action.setCheckable(True)
-        self.preview_test_action.setChecked(True)
-        self.preview_test_menu.addAction(self.preview_test_action)
-        self.preview_test_action.changed.connect(self.changed_event)
 
-        self.preview_test_timestamp=QtGui.QAction("timestamp", self)
+        self.preview_test_timestamp=QtGui.QAction("Timestamp", self)
         self.preview_test_timestamp.setCheckable(True)
         self.preview_test_timestamp.setChecked(False)
         self.preview_test_menu.addAction(self.preview_test_timestamp)
         self.preview_test_timestamp.changed.connect(self.changed_event)
 
+        self.preview_test_coverage=QtGui.QAction("Coverage", self)
+        self.preview_test_coverage.setCheckable(True)
+        self.preview_test_coverage.setChecked(False)
+        self.preview_test_menu.addAction(self.preview_test_coverage)
+        self.preview_test_coverage.changed.connect(self.changed_event)
+
+        self.preview_test_action=QtGui.QAction("Action", self)
+        self.preview_test_action.setCheckable(True)
+        self.preview_test_action.setChecked(True)
 
     def preview_test_menu_exec(self):
         self.preview_test_menu.exec_(self.preview_test.mapToGlobal(QtCore.QPoint(30,0)))
