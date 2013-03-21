@@ -974,11 +974,30 @@ on_inconc = "exit(2)"
     def generateTest_havingTestGenerated(self, change_tab):
         if self._model_ok and self._test_ok:
             self.preview.setTabIcon(PREVIEWTAB_TEST, QtGui.QIcon())
-            fmbt_log_format = "'$sn$tv\t$ax$tr'"
-#            if self.preview_test_stepnumber.isChecked():
-#                fmbt_log_format = 
+            fmbt_log_format = ""
+            extras = ["$tv","$tr","","",""]
+            count = 0
+            if self.preview_test_stepnumber.isChecked():
+                fmbt_log_format = "$sn%s\t" % extras[count]
+                count += 1
+            if self.preview_test_coverage.isChecked():
+                fmbt_log_format = "%s$sc%s\t" % (fmbt_log_format, extras[count])
+                count += 1
+            if self.preview_test_action.isChecked():
+                fmbt_log_format = "%s$ax%s\t" % (fmbt_log_format, extras[count])
+                count += 1
+            if self.preview_test_timestamp.isChecked():
+                fmbt_log_format = "%s$st%s\t" % (fmbt_log_format, extras[count])
+                count += 1
+            if count == 0:
+                fmbt_log_format = extras[count]
+                count += 1
+            while (count < 2):
+                fmbt_log_format = "%s\t%s" % (fmbt_log_format, extras[count])
+                count += 1
 
-            p = subprocess.Popen("fmbt-log -f '%s''%s'"
+            print "fmbt-log -f '%s' '%s'" % (fmbt_log_format,self._logFileName,)
+            p = subprocess.Popen("fmbt-log -f '%s' '%s'"
                              % (fmbt_log_format,self._logFileName,), shell=True, stdout=subprocess.PIPE)
             o = p.stdout.readlines()
             self.preview_test.setPlainText(''.join([l for l in o[1:]]))
@@ -998,8 +1017,11 @@ on_inconc = "exit(2)"
 
     def editConf(self):
         if str(self.conf_editor.toPlainText()).strip() == "":
+            print "gererating conf"
             self._doGenerateConf()
             self.conf_editor.setPlainText(file(self._confFileName).read())
+        else:
+            print "not generating conf '%s'" % str(self.conf_editor.toPlainText()).strip()
         self.edit.setCurrentIndex(EDITTAB_CONF)
         self.conf_editor.setFocus()
 
@@ -1403,16 +1425,25 @@ on_inconc = "exit(2)"
         self.preview_test_stepnumber.setCheckable(True)
         self.preview_test_stepnumber.setChecked(True)
         self.preview_test_menu.addAction(self.preview_test_stepnumber)
-
+        self.preview_test_stepnumber.changed.connect(self.changed_event)
+        
         self.preview_test_coverage=QtGui.QAction("coverage", self)
         self.preview_test_coverage.setCheckable(True)
         self.preview_test_coverage.setChecked(False)
         self.preview_test_menu.addAction(self.preview_test_coverage)
-
+        self.preview_test_coverage.changed.connect(self.changed_event)
+        
         self.preview_test_action=QtGui.QAction("action", self)
         self.preview_test_action.setCheckable(True)
         self.preview_test_action.setChecked(True)
         self.preview_test_menu.addAction(self.preview_test_action)
+        self.preview_test_action.changed.connect(self.changed_event)
+
+        self.preview_test_timestamp=QtGui.QAction("timestamp", self)
+        self.preview_test_timestamp.setCheckable(True)
+        self.preview_test_timestamp.setChecked(False)
+        self.preview_test_menu.addAction(self.preview_test_timestamp)
+        self.preview_test_timestamp.changed.connect(self.changed_event)
 
 
     def preview_test_menu_exec(self):
@@ -2001,7 +2032,7 @@ if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv[:1] + opt_qt)
 
     if distutils.spawn.find_executable("tvt.CFFD_normalize") != None:
-        HASTVT = False
+        HASTVT = True
 
     _g_tempdir = tempfile.mkdtemp(prefix="fmbt-editor.%s." % (os.getpid(),))
 
