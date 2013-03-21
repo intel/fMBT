@@ -24,9 +24,15 @@
 
 class aalang {
 public:
+  enum ANAMETYPE {
+    DEFACTION,
+    IACT,
+    OBSERVE
+  };
+
   aalang() {}
   virtual ~aalang() {};
-  virtual void set_name(std::string* name,bool first=false)        = 0;
+  virtual void set_name(std::string* name,bool first=false,ANAMETYPE t=DEFACTION) = 0;
   virtual void set_namestr(std::string* name)                      = 0;
   virtual void set_tagname(std::string* name,bool first=false)     = 0;
   virtual void next_tag()                                          = 0;

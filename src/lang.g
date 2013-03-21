@@ -131,25 +131,25 @@ astr:   string          {
         } ;
 
 istr:   string          {
-            std::string* tmp=new std::string("i" + *$0.str);
+            std::string* tmp=new std::string("i:" + *$0.str);
             delete $0.str;
-            obj->set_name(tmp,true);
+            obj->set_name(tmp,true,aalang::IACT);
         } |
         istr ',' string {
-            std::string* tmp=new std::string("i" + *$2.str);
+            std::string* tmp=new std::string("i:" + *$2.str);
             delete $2.str;
-            obj->set_name($2.str);
+            obj->set_name($2.str,false,aalang::IACT);
         } ;
 
 ostr:   string          {
-            std::string* tmp=new std::string("o" + *$0.str);
+            std::string* tmp=new std::string("o:" + *$0.str);
             delete $0.str;
-            obj->set_name(tmp,true);
+            obj->set_name(tmp,true,aalang::OBSERVE);
         } |
         ostr ',' string {
-            std::string* tmp=new std::string("o" + *$2.str);
+            std::string* tmp=new std::string("o:" + *$2.str);
             delete $2.str;
-            obj->set_name($2.str);
+            obj->set_name($2.str,false,aalang::OBSERVE);
         } ;
 
 

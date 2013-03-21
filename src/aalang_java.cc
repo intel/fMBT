@@ -48,7 +48,7 @@ void aalang_java::set_starter(std::string* st,const char* file,int line,int col)
   delete st;
 }
 
-void aalang_java::set_name(std::string* name,bool first)
+void aalang_java::set_name(std::string* name,bool first,ANAMETYPE t)
 {
   s+="\n//action"+to_string(action_cnt)+": \""+*name+"\"\n";
   anames.push_back(*name);

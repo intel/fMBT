@@ -22,10 +22,17 @@
 #include "helper.hh"
 
 std::string to_call(std::list<std::string>& l) {
+  if (l.begin()==l.end()) {
+    return "";
+  }
+
   std::string ret="(" + l.front();
 
   std::list<std::string>::iterator i=l.begin();
-  i++;
+  if (i==l.end()) {
+    return ret;
+  } 
+ i++;
   for(;i!=l.end();i++) {
     ret=ret + " && " + *i;
   }
@@ -71,7 +78,7 @@ void aalang_cpp::set_starter(std::string* st,const char* file,int line,int col)
   delete st;
 }
 
-void aalang_cpp::set_name(std::string* name,bool first)
+void aalang_cpp::set_name(std::string* name,bool first,ANAMETYPE t)
 {
   if (first) {
     tstack.push_back(tag);

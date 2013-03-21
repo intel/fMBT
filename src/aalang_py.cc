@@ -128,7 +128,7 @@ void aalang_py::set_starter(std::string* st,const char* file,int line,int col)
 }
 
 
-void aalang_py::set_name(std::string* name,bool first)
+void aalang_py::set_name(std::string* name,bool first,ANAMETYPE t)
 {
   if (first) {
     ma_save.push(m_guard);
