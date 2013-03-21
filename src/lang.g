@@ -101,7 +101,7 @@ header: variables | ainit | istate | push | pop | comment;
 comment: '#' "[^\n]*" { } ;
 
 
-act: ( 'action' astr | 'input' istr | 'output' ostr ) {
+act: ( 'action' astr | ('input'|'act') istr | ('output'|'observe') ostr ) {
             abg_stack.push(guard);
             abg_stack.push(body);
             abg_stack.push(adapter);
