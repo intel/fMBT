@@ -48,16 +48,18 @@ Options:
 """
 
 import atexit
-import sys
-import subprocess
 import commands
-import re
-import os
 import getopt
+import os
+import re
+import shlex
 import shutil
+import subprocess
+import sys
 import tempfile
 import time
 import urllib
+
 import fmbt_config
 
 def error(msg, exit_status = 1, gui = False):
@@ -75,7 +77,7 @@ TR_RE = re.compile("([!]?)T\(\s*([^),]+)\s*,\s*([^\"),]+|\"[^\"]*\")\s*,\s*([^),
 SP_RE = re.compile("([!]?)P\(\s*([^),]+)\s*,\s*([^)]+)\s*\)")
 NEWRULE_RE = re.compile("[ ]*'[ ]*")
 AALP_RE = re.compile('^[ ]*(\^((ifdef|include)[ ]+"[^"]+")|\^endif)\s*$')
-CF_RE = re.compile("^(model|adapter|heuristic|coverage|history|((on_)?(pass|fail|inconc)))\s*=\s*\"[^\"]+\"\s*$")
+CF_RE = re.compile("^(model|adapter|heuristic|coverage|history|((on_)?(pass|fail|inconc)))\s*=.*$")
 
 AAL_AALRE     = re.compile('aal\s"[^"]*"\s*{')
 AAL_AALREI    = re.compile('{\s*"[^"]*"\s*laa')
@@ -679,8 +681,15 @@ Keyboard shortcuts:<br>
             aal_ppflags = ""
             conf_lines = str(self.conf_editor.toPlainText()).split('\n')
             for l in conf_lines:
-                if "model" in l: aal_ppflags=' '.join(
-                    ["'-D%s'" % f for f in re.findall('-D ?([^ ]*)', l)])
+                if "model" in l:
+                    aal_ppflags = ' '.join(
+                        ["'-D%s'" % f for f in re.findall('-D ?([^ ]*)', l)])
+                    try: _cmd_line = l.split('(',1)[1].rsplit(')')[0]
+                    except:
+                        showError('Cannot parse "model = ..."  in test configuration')
+                        self._model_ok = False
+                        return self._model_ok
+                    remote_pyaal_args = shlex.split(_cmd_line)
             aal2py_cmd = "fmbt-aalc %s -o '%s' %s" % (aal_ppflags, self._aalcFileName, self._modelFileName)
             executed_program = "fmbt-aalc"
             validation_exitstatus, output = self.runcmd(aal2py_cmd)
@@ -689,6 +698,14 @@ Keyboard shortcuts:<br>
                 [show_vars, hide_vars], preview_depth, _, _, _, _, _, _ = self.aalPreviewArguments()
                 for v in show_vars: show_hide_args += " -S '%s'" % (v,)
                 for v in hide_vars: show_hide_args += " -H '%s'" % (v,)
+
+                for arg_index, arg_value in enumerate(remote_pyaal_args):
+                    if arg_value.startswith("-c")
+
+                # TODO??? ASK "-c" PARAMETERS FROM REMOTE_PYAAL WHEN
+                # RUNNING THE MODEL CONFIG LINE, THEN PASS THEM TO IT
+                # (SHELL ESCAPED) IN LSTS-DEPTH COMMAND, TOO.
+
                 py2lsts_cmd = "remote_pyaal %s -o '%s'%s --lsts-depth %s '%s'" % (aal_ppflags, self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
                 validation_exitstatus, output = self.runcmd(py2lsts_cmd)
                 if validation_exitstatus != 0:
@@ -1788,17 +1805,20 @@ class ConfHighlighter(QtGui.QSyntaxHighlighter):
                 for pattern in keywordPatterns]
 
         quotationFormat = QtGui.QTextCharFormat()
+        self._quotationFormat = quotationFormat
         quotationFormat.setForeground(QtCore.Qt.darkGreen)
         self.highlightingRules.append((QtCore.QRegExp("\"[^\"]*\""),
-                quotationFormat))
-
+                                       quotationFormat))
+        self.highlightingRules.append((QtCore.QRegExp("=[^\n]*"),
+                                       quotationFormat))
         singleLineCommentFormat = QtGui.QTextCharFormat()
         singleLineCommentFormat.setForeground(QtCore.Qt.darkMagenta)
         self.highlightingRules.append((QtCore.QRegExp("^#[^\n]*"),
-                singleLineCommentFormat))
+                                       singleLineCommentFormat))
 
         self._usualErrorsFormat = QtGui.QTextCharFormat()
         self._usualErrorsFormat.setForeground(QtCore.Qt.red)
+        self._black = QtGui.QColor().black()
 
     def highlightBlock(self, text):
         text = str(text)
@@ -1808,13 +1828,24 @@ class ConfHighlighter(QtGui.QSyntaxHighlighter):
                 self.setFormat(0, len(text), self._usualErrorsFormat)
                 self.setCurrentBlockState(0)
                 return
+        # Check parenthesis
+        c = [") (".index(c)-1 for c in text if c in "()"]
+        if len(c) > 0:
+            for i in xrange(len(c)-1): c[i+1] = c[i] + c[i+1]
+            if min(c) < 0 or c[-1] != 0 or 0 in c[1:-1]:
+                self.setFormat(0, len(text), self._usualErrorsFormat)
+                self.setCurrentBlockState(0)
+                return
         for pattern, format in self.highlightingRules:
             expression = QtCore.QRegExp(pattern)
             index = expression.indexIn(text)
 
             while index >= 0:
                 length = expression.matchedLength()
-                self.setFormat(index, length, format)
+                if id(format) == id(self._quotationFormat) and text[index:].startswith('='):
+                    self.setFormat(index+1, length-1, format)
+                else:
+                    self.setFormat(index, length, format)
                 highlightedSomething = True
                 index = expression.indexIn(text, index + length)
 
