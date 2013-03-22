@@ -162,17 +162,17 @@ void clear_coding(std::string& s){
   }
 }
 
-void remove_force(std::string& s)
+void remove_force(std::string& s,char only)
 {
   std::string ss("");
   for(unsigned i=0;i<s.size();i++) {
     switch (s[i]) {
     case '\\': {
-      i++;
-      if (i<s.size()) {
-	ss=ss+s[i];
+      if (i+1<s.size()) {
+	if (only==0 || s[i+1]!=only) {
+	  i++;
+	}
       }
-      break;
     }
     default: {
       ss=ss+s[i];

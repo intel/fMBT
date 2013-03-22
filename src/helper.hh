@@ -106,7 +106,7 @@ void param_cut(std::string val,std::string& name,
 void strlist(std::vector<std::string>& s);
 
 void commalist(const std::string& s,std::vector<std::string>& vec, bool remove_whitespace=true);
-void remove_force(std::string& s);
+void remove_force(std::string& s,char only=0);
 class EndHook;
 void hook_runner(EndHook* e);
 void sdel(std::vector<std::string*>* strvec);
