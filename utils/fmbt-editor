@@ -706,7 +706,7 @@ Keyboard shortcuts:<br>
 
                 for index, value in enumerate(remote_pyaal_args):
                     if value.startswith("-c"):
-                        show_hide_args += shellArgEscape(value)
+                        show_hide_args += " " + shellArgEscape(value)
                         if (index + 1 < len(remote_pyaal_args) and
                             value == "-c"):
                             show_hide_args += " " + shellArgEscape(remote_pyaal_args[index+1])
