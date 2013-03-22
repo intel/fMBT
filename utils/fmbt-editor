@@ -51,6 +51,7 @@ import atexit
 import commands
 import getopt
 import os
+import pipes
 import re
 import shlex
 import shutil
@@ -67,6 +68,8 @@ def error(msg, exit_status = 1, gui = False):
     if gui:
         QtGui.QMessageBox.critical(None, "fmbt-editor error", msg)
     sys.exit(exit_status)
+
+shellArgEscape = pipes.quote
 
 PREVIEWTAB_MODEL, PREVIEWTAB_TEST, PREVIEWTAB_DIST, PREVIEWTAB_COV, PREVIEWTAB_ERR = range(5)
 EDITTAB_GT, EDITTAB_CONF = range(2)
@@ -679,17 +682,19 @@ Keyboard shortcuts:<br>
             self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
             # Pick up preprocessor arguments from remote_pyaal command line
             aal_ppflags = ""
+            remote_pyaal_args = ""
             conf_lines = str(self.conf_editor.toPlainText()).split('\n')
             for l in conf_lines:
                 if "model" in l:
                     aal_ppflags = ' '.join(
                         ["'-D%s'" % f for f in re.findall('-D ?([^ ]*)', l)])
-                    try: _cmd_line = l.split('(',1)[1].rsplit(')')[0]
+                    try:
+                        _cmd_line = l.split('(',1)[1].rsplit(')')[0]
+                        remote_pyaal_args = shlex.split(_cmd_line)
                     except:
                         showError('Cannot parse "model = ..."  in test configuration')
                         self._model_ok = False
                         return self._model_ok
-                    remote_pyaal_args = shlex.split(_cmd_line)
             aal2py_cmd = "fmbt-aalc %s -o '%s' %s" % (aal_ppflags, self._aalcFileName, self._modelFileName)
             executed_program = "fmbt-aalc"
             validation_exitstatus, output = self.runcmd(aal2py_cmd)
@@ -699,14 +704,14 @@ Keyboard shortcuts:<br>
                 for v in show_vars: show_hide_args += " -S '%s'" % (v,)
                 for v in hide_vars: show_hide_args += " -H '%s'" % (v,)
 
-                for arg_index, arg_value in enumerate(remote_pyaal_args):
-                    if arg_value.startswith("-c")
+                for index, value in enumerate(remote_pyaal_args):
+                    if value.startswith("-c"):
+                        show_hide_args += shellArgEscape(value)
+                        if (index + 1 < len(remote_pyaal_args) and
+                            value == "-c"):
+                            show_hide_args += " " + shellArgEscape(remote_pyaal_args[index+1])
 
-                # TODO??? ASK "-c" PARAMETERS FROM REMOTE_PYAAL WHEN
-                # RUNNING THE MODEL CONFIG LINE, THEN PASS THEM TO IT
-                # (SHELL ESCAPED) IN LSTS-DEPTH COMMAND, TOO.
-
-                py2lsts_cmd = "remote_pyaal %s -o '%s'%s --lsts-depth %s '%s'" % (aal_ppflags, self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
+                py2lsts_cmd = "remote_pyaal %s -o '%s' %s --lsts-depth %s '%s'" % (aal_ppflags, self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
                 validation_exitstatus, output = self.runcmd(py2lsts_cmd)
                 if validation_exitstatus != 0:
                     self.showError(output[1])
