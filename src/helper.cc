@@ -804,7 +804,7 @@ void param_cut(std::string val,std::string& name,
         name = val.substr(0,pos);
         remove_force(name);
         option = val.substr(pos+1,lstpos-pos-1);
-        remove_force(option);
+        //remove_force(option);
       } else {
         // ERROR
       }

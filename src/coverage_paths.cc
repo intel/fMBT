@@ -37,6 +37,7 @@ public:
     paths_dd=&_d;
 
     D_Parser *p = new_D_Parser(&parser_tables_paths, 512);
+    remove_force(params);
     bool ret=dparse(p,(char*)params.c_str(),strlen(params.c_str()));
     ret=p->syntax_errors==0 && ret;
     status=ret;

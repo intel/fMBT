@@ -87,6 +87,11 @@ void Coverage_trace::set_model(Model* _model) {
 
     for(unsigned i=0;i<acts.size();i++) {
       int pos=find(an,acts[i]);
+      if (!pos) {
+	std::string s=acts[i];
+	remove_force(s);
+	pos=find(an,acts[i]);
+      }
       if (pos) {
 	act.push_back(pos);
       } else {
