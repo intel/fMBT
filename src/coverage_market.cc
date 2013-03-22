@@ -26,6 +26,7 @@ Coverage_Market::Coverage_Market(Log& l, std::string& _params) :
     Coverage(l)
 {
   params = _params;
+  remove_force(params);
 }
 
 void Coverage_Market::history(int action,
