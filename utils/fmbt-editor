@@ -1473,9 +1473,9 @@ on_inconc = "exit(2)"
 
         self._menuOptionCoverageE = QtGui.QAction("&Coverage E", self)
         self._menuOptionCoverageE.setCheckable(True)
-        self._menuOptionCoverageE.setChecked(False)
-        optionsMenu.addAction(self._menuOptionCoverageE)
-        self._menuOptionCoverageE.changed.connect(self.changed_event)
+        self._menuOptionCoverageE.setChecked(True)
+        #optionsMenu.addAction(self._menuOptionCoverageE)
+        #self._menuOptionCoverageE.changed.connect(self.changed_event)
 
         self._menuOptionCoverageX = QtGui.QAction("Coverage X time", self)
         self._menuOptionCoverageX.setCheckable(True)
