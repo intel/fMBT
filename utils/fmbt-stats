@@ -159,7 +159,7 @@ def read_from_log_possible_executed_tags(testlog_fileobj):
     return possible_actions, executed_actions, tags
 
 def read_from_log_coverage_timestamp(testlog_fileobj):
-    cmd = "fmbt-log -f '$sc $st'"
+    cmd = "fmbt-log -f '$sb $st'"
     p = subprocess.Popen(cmd, shell=True, stdin=testlog_fileobj.fileno(), stdout=subprocess.PIPE)
 
     coverage_timestamp = []
@@ -267,7 +267,7 @@ def stats_cov(arg, testlog_fileobj, output_fileobj, plot_filename):
         i = 0
         for i, ct in enumerate(coverage_timestamp):
             if print_every_step or ct[0] != last_coverage:
-                data_cov_xaxis.append((ct[0], i+1))
+                data_cov_xaxis.append((ct[0], i))
                 last_coverage = ct[0]
     else:
         last_coverage = -1
@@ -711,7 +711,7 @@ if __name__ == '__main__':
             print __doc__
             sys.exit(0)
         elif opt in ['-E']:
-            print_every_step = True            
+            print_every_step = True
         elif opt in ['-V', '--version']:
             print "Version " + fmbt_config.fmbt_version
             sys.exit(0)
