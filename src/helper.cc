@@ -169,7 +169,7 @@ void remove_force(std::string& s,char only)
     switch (s[i]) {
     case '\\': {
       if (i+1<s.size()) {
-	if (only==0 || s[i+1]!=only) {
+	if (only==0 || s[i+1]==only) {
 	  i++;
 	}
       }
