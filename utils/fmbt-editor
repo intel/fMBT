@@ -1033,11 +1033,8 @@ on_inconc = exit(2)
 
     def editConf(self):
         if str(self.conf_editor.toPlainText()).strip() == "":
-            print "gererating conf"
             self._doGenerateConf()
             self.conf_editor.setPlainText(file(self._confFileName).read())
-        else:
-            print "not generating conf '%s'" % str(self.conf_editor.toPlainText()).strip()
         self.edit.setCurrentIndex(EDITTAB_CONF)
         self.conf_editor.setFocus()
 
@@ -1120,6 +1117,8 @@ on_inconc = exit(2)
 
         # Setup editor tabs
         self.edit = QtGui.QTabWidget()
+        self.edit.connect(self.edit, QtCore.SIGNAL("currentChanged(int)"),
+                          self.editTabChanged)
         self.edit.installEventFilter(TabBarEventFilter(self, self.edit))
 
         def makeScalableEditor(parent, font, EditorClass = QtGui.QTextEdit):
@@ -1374,6 +1373,10 @@ on_inconc = exit(2)
                     self.findFromPlainText.count(text)))
         self.findCanReplace = None
 
+    def editTabChanged(self, tabIndex):
+        if tabIndex == EDITTAB_GT: self.editGT()
+        elif tabIndex == EDITTAB_CONF: self.editConf()
+
     def previewTabChanged(self, tabIndex):
         if tabIndex == PREVIEWTAB_MODEL:
             self.visualiseModel(change_tab = self._previewTakeFocusOnTabChange)
@@ -1405,7 +1408,6 @@ on_inconc = exit(2)
         editMenu.addAction("Find (previous)", self.findPrev, "Ctrl+R")
 
     def changed_event(self):
-        print "CHANGED!"
         self.refreshImages()
 
     def chooseTagFilter(self):
