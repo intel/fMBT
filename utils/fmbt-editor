@@ -1378,6 +1378,8 @@ on_inconc = exit(2)
         elif tabIndex == EDITTAB_CONF: self.editConf()
 
     def previewTabChanged(self, tabIndex):
+        if tabIndex != PREVIEWTAB_ERR:
+            self.preview_error.clear()
         if tabIndex == PREVIEWTAB_MODEL:
             self.visualiseModel(change_tab = self._previewTakeFocusOnTabChange)
         elif tabIndex == PREVIEWTAB_TEST:
@@ -1407,9 +1409,6 @@ on_inconc = exit(2)
         editMenu.addAction("Find (next)", self.findNext, "Ctrl+F")
         editMenu.addAction("Find (previous)", self.findPrev, "Ctrl+R")
 
-    def changed_event(self):
-        self.refreshImages()
-
     def chooseTagFilter(self):
         # interactive choose between base model and included model files
         global model_tags
@@ -1423,7 +1422,7 @@ on_inconc = exit(2)
                 option = QtGui.QAction(tag,self)
                 option.setCheckable(True)
                 option.setChecked(False)
-                option.changed.connect(self.changed_event)
+                option.changed.connect(self.refreshImages)
                 self._tagfilter[tag]=option
             menu.addAction(option)
         menu.exec_(self.preview_modelcont.mapToGlobal(QtCore.QPoint(0,0)))
@@ -1436,19 +1435,19 @@ on_inconc = exit(2)
         self.preview_test_stepnumber.setCheckable(True)
         self.preview_test_stepnumber.setChecked(True)
         self.preview_test_menu.addAction(self.preview_test_stepnumber)
-        self.preview_test_stepnumber.changed.connect(self.changed_event)
+        self.preview_test_stepnumber.changed.connect(self.refreshImages)
 
         self.preview_test_timestamp=QtGui.QAction("Timestamp", self)
         self.preview_test_timestamp.setCheckable(True)
         self.preview_test_timestamp.setChecked(False)
         self.preview_test_menu.addAction(self.preview_test_timestamp)
-        self.preview_test_timestamp.changed.connect(self.changed_event)
+        self.preview_test_timestamp.changed.connect(self.refreshImages)
 
         self.preview_test_coverage=QtGui.QAction("Coverage", self)
         self.preview_test_coverage.setCheckable(True)
         self.preview_test_coverage.setChecked(False)
         self.preview_test_menu.addAction(self.preview_test_coverage)
-        self.preview_test_coverage.changed.connect(self.changed_event)
+        self.preview_test_coverage.changed.connect(self.refreshImages)
 
         self.preview_test_action=QtGui.QAction("Action", self)
         self.preview_test_action.setCheckable(True)
@@ -1477,19 +1476,19 @@ on_inconc = exit(2)
         self._menuOptionCFFD.setChecked(False)
         if HASTVT:
             optionsMenu.addAction(self._menuOptionCFFD)
-            self._menuOptionCFFD.changed.connect(self.changed_event)
+            self._menuOptionCFFD.changed.connect(self.refreshImages)
 
         self._menuOptionCoverageE = QtGui.QAction("&Coverage E", self)
         self._menuOptionCoverageE.setCheckable(True)
         self._menuOptionCoverageE.setChecked(True)
         #optionsMenu.addAction(self._menuOptionCoverageE)
-        #self._menuOptionCoverageE.changed.connect(self.changed_event)
+        #self._menuOptionCoverageE.changed.connect(self.refreshImages)
 
         self._menuOptionCoverageX = QtGui.QAction("Coverage X time", self)
         self._menuOptionCoverageX.setCheckable(True)
         self._menuOptionCoverageX.setChecked(False)
         optionsMenu.addAction(self._menuOptionCoverageX)
-        self._menuOptionCoverageX.changed.connect(self.changed_event)
+        self._menuOptionCoverageX.changed.connect(self.refreshImages)
 
 #        self._menuOptionRunTestOnSUT = QtGui.QAction("&Run test on device", self)
 #        self._menuOptionRunTestOnSUT.setCheckable(False)
@@ -1844,7 +1843,6 @@ on_inconc = exit(2)
         self.preview.setTabIcon(PREVIEWTAB_DIST, QtGui.QIcon())
         self.preview.setTabIcon(PREVIEWTAB_COV, QtGui.QIcon())
         self.preview.setTabIcon(PREVIEWTAB_ERR, QtGui.QIcon())
-        self.preview_error.clear()
 
         self._previewTakeFocusOnTabChange = False
         if self._previewTabBeforeError != None:
