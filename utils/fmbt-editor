@@ -2,7 +2,7 @@
 
 #
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2012, Intel Corporation.
+# Copyright (c) 2012-2013, Intel Corporation.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU Lesser General Public License,
@@ -338,6 +338,8 @@ class MainWindow(QtGui.QMainWindow):
         self.setupCommandsMenu()
         self.setupHelpMenu()
 
+        self.setupTestLogMenu()
+        self.setupCoverageMenu()
         self.setupEditor()
         self._set_modelFileName(self._modelFileName)
 
@@ -349,7 +351,6 @@ class MainWindow(QtGui.QMainWindow):
         self._previewTabBeforeError = None
         self._previewTakeFocusOnTabChange = True
 
-        self.setupTestLogMenu()
 
     def about(self):
         QtGui.QMessageBox.about(self, "fMBT editor",'''
@@ -904,15 +905,12 @@ Keyboard shortcuts:<br>
         self._doGenerateTest()
         if self._model_ok and self._test_ok:
             self._covFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".cov.png"
-            extra = ""
-            if self._menuOptionCoverageE.isChecked():
-                extra = "-E "
             covtype = "steps"
-            if self._menuOptionCoverageX.isChecked():
+            if not self._previewCovMenuXaxisStepsValue:
                 covtype = "time"
 
-            cmd = "fmbt-stats %s -f cov:%s -p '%s' -o /dev/null '%s'" % (
-                extra, covtype, self._covFileName, self._logFileName)
+            cmd = "fmbt-stats -E -f cov:%s -p '%s' -o /dev/null '%s'" % (
+                covtype, self._covFileName, self._logFileName)
             asyncRuncmd(cmd,
                         onThreadSuccess = self.pixmapLoader("cov", self._covFileName),
                         onSuccess = self.pixmapViewer("cov"),
@@ -1064,50 +1062,20 @@ on_inconc = exit(2)
         self._keypress_eventFilter = TabCompletionEventFilter(self)
 
         class TabBarEventFilter(QtCore.QObject):
-            def __init__(self, parent, tabWidget):
+            def __init__(self, parent, tabWidget, actOnTabNumber, actionCallback):
                 QtCore.QObject.__init__(self, parent)
                 self.parent = parent
                 self.tabWidget = tabWidget
+                self.actOnTabNumber = actOnTabNumber
+                self.actionCallback = actionCallback
             def eventFilter(self, obj, event):
                 if event.type() != QtCore.QEvent.MouseButtonPress:
                     return False
                 tabBar = self.tabWidget.tabBar()
                 for tabIndex in xrange(tabBar.count()):
                     if (tabBar.tabRect(tabIndex).contains(event.pos()) and
-                        self.tabWidget.currentIndex() == tabIndex == EDITTAB_GT):
-                        self.parent.chooseModelEditorFile()
-                        return True
-                return False
-
-        class PreviewBarEventFilter(QtCore.QObject):
-            def __init__(self, parent, tabWidget):
-                QtCore.QObject.__init__(self, parent)
-                self.parent = parent
-                self.tabWidget = tabWidget
-            def eventFilter(self, obj, event):
-                if event.type() != QtCore.QEvent.MouseButtonPress:
-                    return False
-                tabBar = self.tabWidget.tabBar()
-                for tabIndex in xrange(tabBar.count()):
-                    if (tabBar.tabRect(tabIndex).contains(event.pos()) and
-                        self.tabWidget.currentIndex() == tabIndex == PREVIEWTAB_MODEL):
-                        self.parent.chooseTagFilter()
-                        return True
-                return False
-
-        class PreviewBarCoverageEventFilter(QtCore.QObject):
-            def __init__(self, parent, tabWidget):
-                QtCore.QObject.__init__(self, parent)
-                self.parent = parent
-                self.tabWidget = tabWidget
-            def eventFilter(self, obj, event):
-                if event.type() != QtCore.QEvent.MouseButtonPress:
-                    return False
-                tabBar = self.tabWidget.tabBar()
-                for tabIndex in xrange(tabBar.count()):
-                    if (tabBar.tabRect(tabIndex).contains(event.pos()) and
-                        self.tabWidget.currentIndex() == tabIndex == PREVIEWTAB_TEST):
-                        self.parent.preview_test_menu_exec()
+                        self.tabWidget.currentIndex() == tabIndex == self.actOnTabNumber):
+                        self.actionCallback()
                         return True
                 return False
 
@@ -1119,7 +1087,6 @@ on_inconc = exit(2)
         self.edit = QtGui.QTabWidget()
         self.edit.connect(self.edit, QtCore.SIGNAL("currentChanged(int)"),
                           self.editTabChanged)
-        self.edit.installEventFilter(TabBarEventFilter(self, self.edit))
 
         def makeScalableEditor(parent, font, EditorClass = QtGui.QTextEdit):
             editor = EditorClass()
@@ -1158,10 +1125,6 @@ on_inconc = exit(2)
 
         # Setup preview tabs
         self.preview = QtGui.QTabWidget()
-        if HASTVT:
-            self.preview.installEventFilter(PreviewBarEventFilter(self, self.preview))
-
-        self.preview.installEventFilter(PreviewBarCoverageEventFilter(self, self.preview))
 
         self.splitter.addWidget(self.preview)
         self._editorsOnLeft = True
@@ -1210,6 +1173,21 @@ on_inconc = exit(2)
 
         self.preview.connect(self.preview, QtCore.SIGNAL("currentChanged(int)"),
                              self.previewTabChanged)
+
+
+        self.edit.installEventFilter(
+            TabBarEventFilter(self, self.edit, EDITTAB_GT,
+                              self.chooseModelEditorFile))
+        self.preview.installEventFilter(
+            TabBarEventFilter(self, self.preview, PREVIEWTAB_TEST,
+                              self.tabMenuLauncher(self.preview_test, self.preview_test_menu)))
+        self.preview.installEventFilter(
+            TabBarEventFilter(self, self.preview, PREVIEWTAB_COV,
+                              self.tabMenuLauncher(self.preview_covcont, self._previewCovMenu)))
+        if HASTVT:
+            self.preview.installEventFilter(
+                TabBarEventFilter(self, self.preview, PREVIEWTAB_MODEL,
+                                  self.chooseTagFilter))
 
     def activeEditor(self):
         if self.editor.hasFocus():
@@ -1453,8 +1431,36 @@ on_inconc = exit(2)
         self.preview_test_action.setCheckable(True)
         self.preview_test_action.setChecked(True)
 
-    def preview_test_menu_exec(self):
-        self.preview_test_menu.exec_(self.preview_test.mapToGlobal(QtCore.QPoint(30,0)))
+    def setupCoverageMenu(self):
+        self._previewCovMenu = QtGui.QMenu()
+
+        self._previewCovMenuXaxisSteps = QtGui.QAction("Steps on X axis", self)
+        self._previewCovMenuXaxisSteps.setCheckable(True)
+        self._previewCovMenuXaxisSteps.setChecked(True)
+        self._previewCovMenu.addAction(self._previewCovMenuXaxisSteps)
+        self._previewCovMenuXaxisSteps.triggered.connect(self.covMenuToggleXAxis)
+
+        self._previewCovMenuXaxisTime = QtGui.QAction("Time on X axis", self)
+        self._previewCovMenuXaxisTime.setCheckable(True)
+        self._previewCovMenuXaxisTime.setChecked(False)
+        self._previewCovMenu.addAction(self._previewCovMenuXaxisTime)
+        self._previewCovMenuXaxisTime.triggered.connect(self.covMenuToggleXAxis)
+
+        self._previewCovMenuXaxisStepsValue = True
+
+    def covMenuToggleXAxis(self):
+        self._previewCovMenuXaxisStepsValue = not self._previewCovMenuXaxisStepsValue
+        self._previewCovMenuXaxisSteps.setChecked(
+            self._previewCovMenuXaxisStepsValue)
+        self._previewCovMenuXaxisTime.setChecked(
+            not self._previewCovMenuXaxisStepsValue)
+        self.refreshImages()
+
+    def tabMenuLauncher(self, tab, menu):
+        def launch():
+            menu.exec_(QtCore.QPoint(QtGui.QCursor.pos().x()-30,
+                       tab.mapToGlobal(QtCore.QPoint(0,0)).y()))
+        return launch
 
     def setupOptionsMenu(self):
         global HASTVT
@@ -1478,22 +1484,10 @@ on_inconc = exit(2)
             optionsMenu.addAction(self._menuOptionCFFD)
             self._menuOptionCFFD.changed.connect(self.refreshImages)
 
-        self._menuOptionCoverageE = QtGui.QAction("&Coverage E", self)
-        self._menuOptionCoverageE.setCheckable(True)
-        self._menuOptionCoverageE.setChecked(True)
-        #optionsMenu.addAction(self._menuOptionCoverageE)
-        #self._menuOptionCoverageE.changed.connect(self.refreshImages)
-
-        self._menuOptionCoverageX = QtGui.QAction("Coverage X time", self)
-        self._menuOptionCoverageX.setCheckable(True)
-        self._menuOptionCoverageX.setChecked(False)
-        optionsMenu.addAction(self._menuOptionCoverageX)
-        self._menuOptionCoverageX.changed.connect(self.refreshImages)
-
-#        self._menuOptionRunTestOnSUT = QtGui.QAction("&Run test on device", self)
-#        self._menuOptionRunTestOnSUT.setCheckable(False)
-#        self._menuOptionRunTestOnSUT.setChecked(False)
-#        optionsMenu.addAction(self._menuOptionRunTestOnSUT)
+        # self._menuOptionRunTestOnSUT = QtGui.QAction("&Run test", self)
+        # self._menuOptionRunTestOnSUT.setCheckable(False)
+        # self._menuOptionRunTestOnSUT.setChecked(False)
+        # optionsMenu.addAction(self._menuOptionRunTestOnSUT)
 
     def setupViewMenu(self):
         viewMenu = QtGui.QMenu("&View", self)
