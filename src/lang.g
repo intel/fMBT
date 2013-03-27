@@ -138,7 +138,7 @@ istr:   string          {
         istr ',' string {
             std::string* tmp=new std::string("i:" + *$2.str);
             delete $2.str;
-            obj->set_name($2.str,false,aalang::IACT);
+            obj->set_name(tmp,false,aalang::IACT);
         } ;
 
 ostr:   string          {
@@ -149,7 +149,7 @@ ostr:   string          {
         ostr ',' string {
             std::string* tmp=new std::string("o:" + *$2.str);
             delete $2.str;
-            obj->set_name($2.str,false,aalang::OBSERVE);
+            obj->set_name(tmp,false,aalang::OBSERVE);
         } ;
 
 
