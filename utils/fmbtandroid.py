@@ -1769,7 +1769,15 @@ class _AndroidDeviceConnection:
         return self._monkeyCommand("press " + key)[0]
 
     def sendType(self, text):
-        return self._monkeyCommand("type " + text)[0]
+        for lineIndex, line in enumerate(text.split('\n')):
+            if lineIndex > 0: self.sendPress("KEYCODE_ENTER")
+            for wordIndex, word in enumerate(line.split(' ')):
+                if wordIndex > 0: self.sendPress("KEYCODE_SPACE")
+                if len(word) > 0 and not self._monkeyCommand("type " + word)[0]:
+                    _adapterLog('sendType("%s") failed when sending word "%s"' %
+                                (text, word))
+                    return False
+        return True
 
     def screenshot(self, screenshotDir=None, imageFilename=None):
         """

@@ -1233,7 +1233,11 @@ def _listInputDevices():
         if l.startswith("N: Name="):
             nameAndFile.append([l.split('"')[1]])
         elif l.startswith("H: Handlers=") and "event" in l:
-            nameAndFile[-1].append("/dev/input/event%s" % (l.rsplit("event",1)[1].rstrip(),))
+            try:
+                eventFilename = re.findall("(event[0-9]+)", l)[0]
+                nameAndFile[-1].append("/dev/input/%s" % (eventFilename,))
+            except:
+                _log('WARNING: Could not recognise event[0-9] filename from row "%s".' % (l.strip(),))
     return nameAndFile
 
 def _writeInputKeySeq(filename, keyCodeSeq, hold=0.1, delay=0.1):

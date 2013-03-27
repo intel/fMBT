@@ -167,7 +167,7 @@ int main(int argc,char** argv)
     {"version", no_argument, 0, 'V'},
     {0, 0, 0, 0}
   };
-  char c;
+  int c;
   while ((c = getopt_long (argc, argv, "hD:V", long_opts, NULL)) != -1) {
     switch (c)
     {
