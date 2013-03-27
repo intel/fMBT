@@ -331,6 +331,8 @@ class MainWindow(QtGui.QMainWindow):
         self._model_ok = False
         self._test_ok = False
 
+        self._fMBTRunning = False
+
         self.setupFileMenu()
         self.setupEditMenu()
         self.setupOptionsMenu()
@@ -909,7 +911,7 @@ Keyboard shortcuts:<br>
             if not self._previewCovMenuXaxisStepsValue:
                 covtype = "time"
 
-            cmd = "fmbt-stats -E -f cov:%s -p '%s' -o /dev/null '%s'" % (
+            cmd = "fmbt-stats -f cov:%s,all -p '%s' -o /dev/null '%s'" % (
                 covtype, self._covFileName, self._logFileName)
             asyncRuncmd(cmd,
                         onThreadSuccess = self.pixmapLoader("cov", self._covFileName),
@@ -972,7 +974,9 @@ on_inconc = exit(2)
             return
         self._logFileName = _g_tempdir + os.sep + os.path.basename(self._confFileName) + ".log"
         cmd = "fmbt -l '%s' -o 'adapter=\"dummy\"' '%s'" % (self._logFileName, self._confFileName)
+        self._fMBTRunning = True
         fmbt_exitstatus, output = self.runcmd(cmd)
+        self._fMBTRunning = False
         if fmbt_exitstatus == 0 or "pass:" in output[1] or "inconc:" in output[1] or "fail:" in output[1]:
             self._test_ok = True
             self._test_errormsg = ""
@@ -993,30 +997,13 @@ on_inconc = exit(2)
         asyncRuncmd(self._doGenerateTest,
                     onSuccess=lambda: self.generateTest_havingTestGenerated(change_tab),
                     onError=lambda: self.showError(self._test_errormsg))
+        QtCore.QTimer.singleShot(1000, window.liveUpdatePreviewTest)
 
     def generateTest_havingTestGenerated(self, change_tab):
         if self._model_ok and self._test_ok:
-            self.preview.setTabIcon(PREVIEWTAB_TEST, QtGui.QIcon())
-            fmbt_log_format = ""
-            if self.preview_test_stepnumber.isChecked():
-                fmbt_log_format += "$sn\t"
-            else:
-                fmbt_log_format += "\t"
-            if self.preview_test_timestamp.isChecked():
-                fmbt_log_format += "$st\t"
-            if self.preview_test_coverage.isChecked():
-                fmbt_log_format += "$sb\t"
-            if self.preview_test_action.isChecked():
-                fmbt_log_format += "$ax\t"
-            fmbt_log_format = fmbt_log_format[:-1]
-
-            fmbt_log_cmd = """fmbt-log -t "%%T.%%f" -f '$tv%s$tr' '%s'""" % (fmbt_log_format,self._logFileName,)
-            print fmbt_log_cmd
-            p = subprocess.Popen(fmbt_log_cmd, shell=True, stdout=subprocess.PIPE)
-            o = p.stdout.readlines()
-            self.preview_test.setPlainText(''.join([l for l in o]))
+            lines = self.readTestLogFromFile(self._logFileName)
+            self.preview_test.setPlainText(''.join(lines))
         else:
-            self.preview.setTabIcon(PREVIEWTAB_TEST, QtGui.qApp.style().standardIcon(QtGui.QStyle.SP_MessageBoxWarning))
             if hasattr(self, "_test_errormsg"):
                 self.showError(self._test_errormsg)
                 del self._test_errormsg
@@ -1024,6 +1011,37 @@ on_inconc = exit(2)
         if change_tab:
             self.preview.setCurrentIndex(PREVIEWTAB_TEST)
             self.preview_test.setFocus()
+
+    def readTestLogFromFile(self, filename):
+        fmbt_log_format = ""
+        if self.preview_test_stepnumber.isChecked():
+            fmbt_log_format += "$sn\t"
+        else:
+            fmbt_log_format += "\t"
+        if self.preview_test_timestamp.isChecked():
+            fmbt_log_format += "$st\t"
+        if self.preview_test_coverage.isChecked():
+            fmbt_log_format += "$sb\t"
+        if self.preview_test_action.isChecked():
+            fmbt_log_format += "$ax\t"
+        fmbt_log_format = fmbt_log_format[:-1]
+
+        fmbt_log_cmd = """fmbt-log -t "%%T.%%f" -f '$tv%s$tr' '%s'""" % (fmbt_log_format, filename)
+        print fmbt_log_cmd
+        p = subprocess.Popen(fmbt_log_cmd, shell=True, stdout=subprocess.PIPE)
+        return p.stdout.readlines()
+
+    def liveUpdatePreviewTest(self):
+        if self._fMBTRunning:
+            lines = self.readTestLogFromFile(self._logFileName)
+            if self._fMBTRunning:
+                self.preview_test.setPlainText(''.join(lines))
+                self.preview_test.moveCursor(QtGui.QTextCursor.End)
+                # continue updating
+                QtCore.QTimer.singleShot(1000, window.liveUpdatePreviewTest)
+                return
+        # do not update anymore
+        self.preview.setTabIcon(PREVIEWTAB_TEST, QtGui.QIcon())
 
     def editGT(self):
         self.edit.setCurrentIndex(EDITTAB_GT)
