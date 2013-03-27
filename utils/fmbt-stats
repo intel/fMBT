@@ -43,22 +43,25 @@ Options:
               If "sort" is given, data is sorted by counted steps.
               The default is sort by names.
 
-          tagdist[:from|to[,"tags="<regexp>] - number of steps on tags
+          tagdist[:"from"|"to"[,"tags="<regexp>] - number of steps on tags
               The default is "from", that is, present numbers of test
               steps starting *from* states with different tags.
               "tags:regexp" includes only tags matching the regular
               expression.
 
-          cov[:xaxis]          - test coverage
-              show coverage in function of "time" or "steps".
+          cov[:xaxis[,"all"]]  - test coverage
+              Present coverage as a function of "time" or "steps"
+              (xaxis). Coverage on every step is printed if "all" is
+              given, otherwise only on steps where coverage changes
+              (the default).
+
+  -h, --help
+          print this help.
 
   -o, --output=<file>
           output will be written to given file. Defaults to the
           standard output. File extension defines output
           format. Supported formats: html, csv, txt (default).
-
-  -h, --help
-          print this help.
 
   -p, --plot=<file>[,options]
           plot statistics into a diagram. Image will be written to the
@@ -88,8 +91,6 @@ import re
 import fmbt_config
 
 MAXSPEED=100000
-
-print_every_step = False
 
 def error(msg):
     sys.stderr.write('fmbt-stats: ' + msg + '\n')
@@ -229,10 +230,12 @@ def finish_plotting(plot_datafilename, gnuplot_commands):
     os.remove(plot_datafilename)
 
 def stats_cov(arg, testlog_fileobj, output_fileobj, plot_filename):
-    global print_every_step
-    if arg not in ["time", "steps"]:
+    arg_list = arg.split(",")
+    xaxis = arg_list[0]
+    if "all" in arg_list[1:]: print_every_step = True
+    else: print_every_step = False
+    if xaxis not in ["time", "steps"]:
         error('syntax error in coverage arguments "%s", expected "time" or "steps"' % (arg,))
-    xaxis = arg
 
     def format_data(out_format, data_cov_xaxis):
         title = 'Coverage in function of %s' % (xaxis,)
@@ -710,8 +713,6 @@ if __name__ == '__main__':
         if opt in ['-h', '--help']:
             print __doc__
             sys.exit(0)
-        elif opt in ['-E']:
-            print_every_step = True
         elif opt in ['-V', '--version']:
             print "Version " + fmbt_config.fmbt_version
             sys.exit(0)

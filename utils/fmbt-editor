@@ -909,7 +909,7 @@ Keyboard shortcuts:<br>
             if not self._previewCovMenuXaxisStepsValue:
                 covtype = "time"
 
-            cmd = "fmbt-stats -E -f cov:%s -p '%s' -o /dev/null '%s'" % (
+            cmd = "fmbt-stats -f cov:%s,all -p '%s' -o /dev/null '%s'" % (
                 covtype, self._covFileName, self._logFileName)
             asyncRuncmd(cmd,
                         onThreadSuccess = self.pixmapLoader("cov", self._covFileName),
