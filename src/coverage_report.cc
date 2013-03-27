@@ -31,22 +31,43 @@ void Coverage_report::on_find(int action,std::vector<int>&p) {
   was_online=true;
   count++;
   traces.push_back(executed);
+  if (push_depth!=0 && 
+      tcount_save[push_depth-1][executed]==0) {
+    tcount_save[push_depth-1][executed]=tcount[executed];
+  }
   tcount[executed]++;
   Coverage_exec_filter::on_find(action,p);
 }
 
 void Coverage_report::push() {
+  push_depth++;
   Coverage_exec_filter::push();
   save.push(count);
-  traces_save.push(traces);
-  tcount_save.push(tcount);
+  traces_save_.push(traces.size());
+  tcount_save.resize(push_depth);
+  //tcount_save.push(tcount);
 }
 
 void Coverage_report::pop() {
   Coverage_exec_filter::pop();
   count=save.top(); save.pop();
-  traces=traces_save.top(); traces_save.pop();
-  tcount=tcount_save.top(); tcount_save.pop();
+  // traces=traces_save.top(); traces_save.pop();
+  traces.resize(traces_save_.top()); traces_save_.pop();
+  //tcount=tcount_save.top(); tcount_save.pop();
+
+  push_depth--;
+  std::map<std::vector<std::pair<int,std::vector<int> > >, int>::iterator i;
+  std::map<std::vector<std::pair<int,std::vector<int> > >, int>::iterator e;
+  i=tcount_save[push_depth].begin();
+  e=tcount_save[push_depth].end();
+  for(;i!=e;i++) {
+    if (i->second) {
+      tcount[i->first] = i->second;
+    } else {
+      tcount.erase(i->first);
+    }
+  }
+  tcount_save.resize(push_depth);
 }
 
 void Coverage_report::on_online(int action,std::vector<int>&p){
