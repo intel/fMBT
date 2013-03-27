@@ -217,18 +217,18 @@ void Test_engine::verify_tags(const std::vector<std::string>& tnames)
 
   std::vector<int> t;
   for(int i=0;i<cnt;i++) {
-    if (disabled_tags[tags[i]]) {
+    if (!disabled_tags[tags[i]]) {
       t.push_back(tags[i]);
     }
   }
 
-  cnt=t.size();  
+  cnt=t.size();
   tags=&t[0];
 
-  if (cnt) {    
+  if (cnt) {
     adapter.check_tags(tags,cnt,mismatch_tags);
     /*
-    if (mismatch_tags.size()) { 
+    if (mismatch_tags.size()) {
       m_verdict_msg = "verifying tags ";
     }
     for(int i=0;i<mismatch_tags.size();i++) {
@@ -753,7 +753,7 @@ void Test_engine::interactive()
 	    fprintf(stderr,"Tag %s (%i) fails\n",
 		    heuristic.get_model()
 		    ->getSPNames()[mismatch_tags[i]].c_str(),
-		    mismatch_tags[i]);	    
+		    mismatch_tags[i]);
 	  }
 	} else {
 	  if (strncmp(s,"aup",3)==0) {
@@ -959,7 +959,7 @@ int Test_engine::matching_end_condition(int step_count,int state, int action)
 	  std::string me_reason_msg=e->end_reason().c_str();
 	  escape_string(me_reason_msg);
 	  log.print("<notice reason=\"%s\"/>\n",
-		    me_reason_msg.c_str());	  
+		    me_reason_msg.c_str());
 	}
       } else {
 	return cond_i;
