@@ -35,12 +35,14 @@ echo 'model = "lsts:t1.lsts"' > test.conf
 echo 'coverage = "perm:1"' >> test.conf
 
 fmbt test.conf -l perm.log >>$LOGFILE 2>&1 || {
+    echo "failed because exit status 0 expected" >>$LOGFILE
     testfailed
 }
 
-fmbt-log -f \$sc perm.log|head -1|while read f
+fmbt-log -f \$sb perm.log|head -1|while read f
 do
 if [ 0.000000 != $f ]; then
+    echo "failed because initial coverage 0.000000 expected" >>$LOGFILE
     testfailed
 fi
 done
@@ -48,6 +50,7 @@ done
 fmbt-log -f \$sc perm.log|tail -1|while read l
 do
 if [ 1.000000 != $l ]; then
+    echo "failed because final coverage 1.000000 expected" >>$LOGFILE
     testfailed
 fi
 done
@@ -536,8 +539,8 @@ if (( $(fmbt-log -f '$ax' steps.log | wc -l) <= 11 )); then
     echo "too few steps, optimal number of steps to cover perm(1) is 12." >>$LOGFILE
     testfailed
 fi
-if (( $(fmbt-log -f '$sc' steps.log | grep 0.000000 | wc -l) < 5 )); then
-    echo "too few 0.000000 coverages observed, at least initial coverage 0"
+if (( $(fmbt-log -f '$sb' steps.log | grep 0.000000 | wc -l) < 5 )); then
+    echo "too few 0.000000 coverages observed, at least initial coverage 0" >>$LOGFILE
     echo "and twice a two-step if(0) branch expected." >>$LOGFILE
     testfailed
 fi
