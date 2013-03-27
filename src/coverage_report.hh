@@ -31,7 +31,7 @@ public:
 		  std::vector<std::string*>& _to,
 		  std::vector<std::string*>& _drop):
     Coverage_exec_filter(l,_from,_to,_drop),count(0),was_online(false)
-  {}
+  {push_depth=0;}
 
   virtual ~Coverage_report() {
 
@@ -65,11 +65,14 @@ protected:
 public:
   std::vector<std::pair<struct timeval,struct timeval> > times;
 protected:
+  int push_depth;
   int count;
 private:
   std::stack<int> save;
-  std::stack<std::vector<std::vector<std::pair<int,std::vector<int> > > > > traces_save;
-  std::stack<std::map<std::vector<std::pair<int,std::vector<int> > >, int> > tcount_save;
+  //std::stack<std::vector<std::vector<std::pair<int,std::vector<int> > > > > traces_save;
+  std::stack<int> traces_save_;
+  //std::stack<std::map<std::vector<std::pair<int,std::vector<int> > >, int> > tcount_save;
+  std::vector<std::map<std::vector<std::pair<int,std::vector<int> > >, int> > tcount_save;
   bool was_online;
 };
 
