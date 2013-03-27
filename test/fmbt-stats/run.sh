@@ -111,8 +111,8 @@ fmbt deep.conf -l deep.log >>$LOGFILE 2>&1 || {
 testpassed
 
 teststep "fmbt-stats/history: initial coverage on deep.log"
-DEEP_INITIAL_COV=$(fmbt-log -f '$sc' deep.log | head -n 1)
-QUICK_INITIAL_COV=$(fmbt-log -f '$sc' quick.log | head -n 1)
+DEEP_INITIAL_COV=$(fmbt-log -f '$sb' deep.log | head -n 1)
+QUICK_INITIAL_COV=$(fmbt-log -f '$sb' quick.log | head -n 1)
 if [[ $DEEP_INITIAL_COV > $QUICK_INITIAL_COV ]]; then
     testpassed
 else
