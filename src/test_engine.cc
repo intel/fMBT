@@ -114,8 +114,8 @@ namespace {
     log_tag_type_name(log, "action", "output", adapter.getUActionName(action));
   }
   void log_status(Log& log, int step_count, float coverage) {
-    log.print("<status steps=\"%d\" coverage=\"%f\"/>\n",
-              step_count, coverage);
+    log.print("<status steps=\"%d\" coverage=\"%f\" scov=\"%e\"/>\n",
+              step_count, coverage,coverage);
   }
   void update_coverage(float curr_cov, int curr_step,
                        float *last_cov, int *last_step_cov_growth) {
