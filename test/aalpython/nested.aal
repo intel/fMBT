@@ -1,0 +1,40 @@
+aal "nested_blocks" {
+    language: python { import time
+    }
+    variables { x }
+
+    initial_state { x = [] }
+
+    tag "x is not empty" {
+        guard() { return len(x) > 0 }
+
+        tag "the first element of x is non-zero" {
+            guard() { return x[0] != 0 }
+
+            action "iMakeFirstElementZero" {
+                body() { x[0] = 0 }
+            }
+
+        }
+
+        tag "the first element of x is zero" {
+            guard() { return x[0] == 0 }
+
+            action "iClearX" {
+                body() { x = [] }
+            }
+        }
+
+    }
+
+    action "iAddNonzeroElement" {
+        guard() { return len(x) < 1 }
+        body() { x.append(42) }
+
+        action "iAddZeroElement" {
+            body() { x.append(0) }
+        }
+
+        tag "can add elements" {}
+    }
+}

@@ -61,8 +61,11 @@ aal "<modelname>" {
 }
 
 guard(), body() and adapter() blocks in actions and tags are
-optional. Default guard() is always true, default body and adapter
+optional. The default guard() is always true, default body and adapter
 blocks are empty.
+
+If tag and action blocks are nested, the guard() of an inner block is
+evaluated only if the guard() of the outer block returns true.
 
 Names of actions must start with either
 
