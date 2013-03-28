@@ -1808,6 +1808,7 @@ on_inconc = exit(2)
                         ('adapter() {\n    \n}', 1, 0)],
                 'guard': [('return ', 0, 0)]
                 }
+            suggestions['tag'].extend(suggestions['aal'])
 
             currentBlock, blockStartIndex = parserishAAL(pt, pos)
             if currentBlock == None and self._modelEditorActiveFile != self._modelFileName:
