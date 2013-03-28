@@ -423,7 +423,7 @@ Keyboard shortcuts:<br>
                                  '        varname1 = 42      # comment1\n'
                                  '        varname2 = \'hello\' # comment2\n'
                                  '    }\n'
-                                 '    input "TestStep1()" {\n'
+                                 '    action "iTestStep1()" {\n'
                                  '        guard() { return varname1 == 42 }\n'
                                  '        body()  { varname2 = \'bye\' }\n'
                                  '    }\n'
