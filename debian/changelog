@@ -1,8 +1,22 @@
-fmbt (0.7.1-0.rc0) unstable; urgency=low
+fmbt (0.8-1) unstable; urgency=low
 
-  * Development version
+  * AAL: nested tags and actions
+    - If the same condition is required in many guards, you can now
+      write the condition in the guard of an outer tag. Inner guards
+      are evaluated only if outer guards hold.
+  * configuration: simplified configuration file format.
+    - Double quotes after "=" are no more required for one-line entries.
+  * fmbt-editor:
+    - Test preview tab options: show/hide coverage, timestamp, tags.
+    - Live updating test tab.
+    - Coverage preview tab options: show steps or time on X axis.
+    - Support for AAL and configuration file syntax improvements.
+    - Tab collapse/expand on model preview tab (EXPERIMENTAL,
+      requires installing the TVT tool).
+  * coverages: uwalks and uinputs test generation performance improved.
+  * fixes in eyenfinger, fmbt, fmbtandroid, fmbt-stats.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Thu, 08 Mar 2013 08:42:00 +0200
+ -- Antti Kervinen <antti.kervinen@intel.com>  Thu, 28 Mar 2013 09:42:00 +0200
 
 fmbt (0.7-1) unstable; urgency=low
 

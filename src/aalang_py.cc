@@ -174,7 +174,8 @@ void aalang_py::set_istate(std::string* ist,const char* file,int line,int col)
 {
   const std::string funcname("initial_state");
   s += "\n    def " + funcname + "():\n" + variables +
-    indent(8, *ist) + "\n";
+    indent(8, *ist) + "\n" +
+    indent(8, "pass") + "\n";
   s += python_lineno_wrapper(file,line,funcname,1+m_lines_in_vars,4);
 }
 
@@ -217,7 +218,7 @@ void aalang_py::next_tag()
   guard_requires.pop_back();
 
   requires = to_list(guard_requires);
-  
+
   for (unsigned int i = 0; i < multiname.size(); i++) {
     tcnt=to_string(multiname[i].second);
 

@@ -234,3 +234,26 @@ if grep inconclusive tags-allfail-ex.stderr | egrep -q -e 'tNoDir|tNoSubdir' ; t
     testfailed
 fi
 testpassed
+
+teststep "remote_pyaal nested tags and actions"
+if ! fmbt nested.conf > nested.stdout 2>nested.stderr; then
+    echo "failed because expected exit status 0 from fmbt nested.conf" >>$LOGFILE
+    testfailed
+fi
+
+cat > nested.expected <<EOF
+iAddNonzeroElement: x is not empty; the first element of x is non-zero
+iMakeFirstElementZero: x is not empty; the first element of x is zero
+iClearX: can add elements
+iAddZeroElement: x is not empty; the first element of x is zero
+iClearX: can add elements
+iAddNonzeroElement: x is not empty; the first element of x is non-zero
+EOF
+fmbt-log -f '$ax: $tg' nested.stdout > nested.observed 2>>$LOGFILE
+
+if ! diff -u nested.expected nested.observed >>$LOGFILE 2>&1; then
+    echo "failed because nested.observed differed from nested.expected" >>$LOGFILE
+    testfailed
+fi
+
+testpassed
