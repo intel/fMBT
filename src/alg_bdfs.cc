@@ -25,7 +25,7 @@
 #include "coverage.hh"
 #include <algorithm>
 #include <cstdlib>
-
+#include "helper.hh"
 extern int _g_simulation_depth_hint;
 
 double AlgPathToBestCoverage::search(Model& model, Coverage& coverage, std::vector<int>& path)
@@ -49,7 +49,7 @@ void AlgPathToBestCoverage::doExecute(int action)
     m_model->push();
     m_coverage->push();
 
-    if (!m_model->execute(action)) { status=false; return;}
+    if (!m_model->execute(action)) { errormsg="Model execute error"; status=false; return;}
     m_coverage->execute(action);
 }
 
@@ -106,6 +106,8 @@ double AlgBDFS::path_to_best_evaluation(Model& model, std::vector<int>& path, in
     std::vector<int> hinted_path;
 
     if (!model.status || !status) {
+        if (!model.status)
+	  errormsg = "Model error:"+model.errormsg;
         status=false;
         return 0.0;
     }
@@ -131,10 +133,10 @@ double AlgBDFS::path_to_best_evaluation(Model& model, std::vector<int>& path, in
         //   lookups. (Not implemented)
 
         int invalid_step = -1;
-        for (unsigned int i = 0; i < path.size(); i++) {
-            doExecute(path[i]);
+        for (unsigned int pos = 0; pos < path.size() && invalid_step == -1; pos++) {
+            doExecute(path[pos]);
             if (status == false) {
-                invalid_step = i;
+                invalid_step = pos;
                 status = true;
             }
             if (!model.status) {
@@ -146,7 +148,7 @@ double AlgBDFS::path_to_best_evaluation(Model& model, std::vector<int>& path, in
         if (invalid_step > -1) {
             // Hinted path is no more valid, throw it away.
             path.resize(0);
-            for (int i = invalid_step; i > -1; i--)
+            for (int current_step = invalid_step; current_step > -1; current_step--)
                 undoExecute();
         } else {
             std::vector<int> additional_path;
@@ -154,15 +156,19 @@ double AlgBDFS::path_to_best_evaluation(Model& model, std::vector<int>& path, in
             best_score = _path_to_best_evaluation(model, additional_path, depth - path.size(), current_score);
 
             if (!model.status || !status) {
-                status=false;
-                return 0.0;
+	      if (!model.status)
+		errormsg = "Model error:"+model.errormsg;
+	      status=false;
+	      return 0.0;
             }
 
             for (unsigned int i = 0; i < path.size(); i++) undoExecute();
 
             if (!model.status || !status) {
-                status=false;
-                return 0.0;
+	      if (!model.status)
+		errormsg = "Model error:"+model.errormsg;
+	      status=false;
+	      return 0.0;
             }
 
             if (best_score > current_score) {
@@ -178,6 +184,8 @@ double AlgBDFS::path_to_best_evaluation(Model& model, std::vector<int>& path, in
     model.pop();
 
     if (!model.status || !status) {
+      if (!model.status)
+	errormsg = "Model error:"+model.errormsg;
       status=false;
       return 0.0;
     }
@@ -197,7 +205,11 @@ double AlgBDFS::path_to_best_evaluation(Model& model, std::vector<int>& path, in
 bool AlgBDFS::grows_first(std::vector<int>& first_path, int first_path_start,
                           std::vector<int>& second_path, int second_path_start)
 {
-    if (first_path.size() != second_path.size()) { status=false; return false; }
+    if (first_path.size() != second_path.size()) { 
+      errormsg="first_path.size() != second_path.size()";
+      status=false;
+      return false;
+    }
 
     volatile double current_score = evaluate();
 
@@ -218,7 +230,10 @@ bool AlgBDFS::grows_first(std::vector<int>& first_path, int first_path_start,
             break;
         }
     }
-    if (first_difference == (int)first_path.size()) { status=false; return false; }
+    if (first_difference == (int)first_path.size()) { 
+      errormsg = "first_difference == (int)first_path.size() "+to_string(first_difference);
+      status=false; return false; 
+    }
 
     for (int j = first_path.size() - 1; j >= first_difference; j--) undoExecute();
 
@@ -231,7 +246,10 @@ bool AlgBDFS::grows_first(std::vector<int>& first_path, int first_path_start,
             break;
         }
     }
-    if (second_difference == (int)second_path.size()) { status=false; return false; }
+    if (second_difference == (int)second_path.size()) {
+      errormsg = "second_difference == (int)second_path.size()";
+      status=false; return false;
+    }
 
     for (int j = second_path.size() - 1; j >= second_difference; j--) undoExecute();
 
@@ -265,6 +283,7 @@ double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, i
     input_action_count = model.getIActions(&input_actions);
 
     if (!model.status) {
+      errormsg = "Model error:"+model.errormsg;
         status=false;
         return 0.0;
     }
@@ -289,6 +308,8 @@ double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, i
         undoExecute();
 
         if (!model.status || !status) {
+	  if (!model.status)
+	    errormsg = "Model error:"+model.errormsg;
           status=false;
           return 0.0;
         }
