@@ -117,8 +117,10 @@ class AALModel:
             self.call(self._all_bodies[i-1])
             if len(self._stack) == 0:
                 fmbt._g_testStep += 1
+            self._enabled_actions_stack[-1] = set()
             return i
         else:
+            self._enabled_actions_stack[-1] = set()
             return 0
 
     def getActions(self):
@@ -195,7 +197,9 @@ class AALModel:
         enabled_oactions = []
         for index, guard in enumerate(self._all_guards):
             fmbt._g_actionName = self._all_names[index]
-            if self._all_types[index] == "output" and self.call(guard):
+            if (self._all_types[index] == "output" and
+                not (index + 1) in self._enabled_actions_stack[-1] and
+                self.call(guard)):
                 enabled_oactions.append(index + 1)
         self._enabled_actions_stack[-1].update(enabled_oactions)
 
