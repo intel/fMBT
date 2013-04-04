@@ -97,6 +97,10 @@ int Heuristic_greedy::getIAction()
     return Alphabet::OUTPUT_ONLY;
   }
 
+  int actions_save[i];
+
+  actions_save[0]=0;
+
   if (m_search_depth < 1) {
     /* Do a very fast lookup */
     float* f=new float[i];
@@ -110,6 +114,7 @@ int Heuristic_greedy::getIAction()
       return actions[pos];
     }
   } else {
+    memcpy(actions_save,actions,i*sizeof(int));
     /* In burst mode new path is not searched before previosly found
      * path is fully consumed */
     if (!m_burst || m_path.empty() ) {
@@ -120,6 +125,7 @@ int Heuristic_greedy::getIAction()
       double score = alg.search(*model, *my_coverage, m_path);
 
       if (!alg.status) {
+	errormsg = "Algorithm error:"+alg.errormsg;
         status=false;
       }
 
@@ -130,14 +136,14 @@ int Heuristic_greedy::getIAction()
     }
     if (m_path.size() > 0) {
       log.debug("path %i",m_path.back());
-      i = model->getIActions(&actions);
+      //i = model->getIActions(&actions);
       if (i==0) {
         return Alphabet::ERROR;
       }
       bool broken=true;
       int ret=m_path.back();
       for(int j=0;j<i;j++) {
-        if (actions[j]==ret) {
+        if (actions_save[j]==ret) {
           broken=false;
         }
       }
@@ -154,6 +160,10 @@ int Heuristic_greedy::getIAction()
    * valid anymore (execute might have happened), ask it again. */
   i = model->getIActions(&actions);
   pos=(((float)random())/RAND_MAX)*i;
+
+  if (actions_save[0]) {
+    return actions_save[pos];    
+  }
 
   return actions[pos];
 }
