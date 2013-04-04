@@ -1,0 +1,28 @@
+This example tests filesystems by making and removing directories. It covers:
+
+- successful mkdir
+- successful rmdir
+- successful mkdir of a subdirectory
+- successful rmdir of a subdirectory
+- mkdir failing because of non-existing parent directory
+- mkdir failing because of already existing directory
+- rmdir failing because of non-existing directory
+- rmdir failing because of non-empty directory
+
+After each operation, it is checked that directories that are expected
+to exist are readable, and others are not.
+
+filesystemtest.conf tests that all possible combinations of any two
+operations are tested.
+
+Edit the model and configuration:
+
+$ fmbt-editor filesystemtest.aal filesystemtest.conf
+
+Run the test:
+
+$ fmbt -l test.log filesystemtest.conf
+
+Run the test and see how it exercises the filesystem:
+
+$ strace -e trace=mkdir,rmdir,access -f fmbt filesystemtest.conf >/dev/null

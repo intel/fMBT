@@ -2,6 +2,8 @@ examplesaalcomponentsdir = @docdir@/examples/aal-components
 
 examplescppdir = @docdir@/examples/c++-unittest
 
+examplesfilesystemtestdir = @docdir@/examples/filesystemtest
+
 examplesgtcomponentsdir = @docdir@/examples/gt-components
 
 examplesjsdir = @docdir@/examples/javascript-unittest
@@ -30,6 +32,11 @@ dist_examplescpp_DATA = \
 	c++-unittest/mycountertest.cc.aal	\
 	c++-unittest/README			\
 	c++-unittest/test.conf
+
+dist_examplesfilesystemtest_DATA = \
+	filesystemtest/filesystemtest.aal	\
+	filesystemtest/filesystemtest.conf	\
+	filesystemtest/README
 
 dist_examplesgtcomponents_DATA =	\
 	gt-components/endmeeting.gt.inc \
