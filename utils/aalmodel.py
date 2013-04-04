@@ -186,6 +186,19 @@ class AALModel:
     def observe(self, block):
         poll_more = True
         start_time = 0
+
+        # Executing adapter blocks of output actions is allowed to
+        # change the state of the model. Allow execution of outputs
+        # whose guards are true both before executing adapter blocks*
+        # or after it. For that purpose, add currently enabled output
+        # actions to enabled_actions_stack.
+        enabled_oactions = []
+        for index, guard in enumerate(self._all_guards):
+            fmbt._g_actionName = self._all_names[index]
+            if self._all_types[index] == "output" and self.call(guard):
+                enabled_oactions.append(index + 1)
+        self._enabled_actions_stack[-1].update(enabled_oactions)
+
         while poll_more:
             for index, adapter in enumerate(self._all_adapters):
                 if self._all_types[index] != "output": continue
