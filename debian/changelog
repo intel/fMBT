@@ -1,3 +1,9 @@
+fmbt (0.8.2-0.rc0) unstable; urgency=low
+
+  * Development version.
+
+ -- Antti Kervinen <ask@dingu.tm.intel.com>  Thu, 04 Apr 2013 16:43:59 +0300
+
 fmbt (0.8.1-1) unstable; urgency=low
 
   * Fix three rarely occuring bugs in AAL/Python output actions.
