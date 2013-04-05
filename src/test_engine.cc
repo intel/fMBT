@@ -728,12 +728,24 @@ void Test_engine::interactive()
         break;
 
       case 'a': // commands "a", "a<num>" and "aup"
+	if (strncmp(s,"ae",2)==0) {
+	  std::string name,option;
+	  std::vector<std::string> p;
+	  param_cut(s,name,option);
+	  commalist(option,p);
+	  if (p.size()<1||p.size()>2) {
+	    goto unknown_command;	    
+	  }
+	  adapter.adapter_exit(from_string(p[0]),
+			       p.size()==2?p[1]:"");
+	  break;
+	}
 	if (strncmp(s,"at",2)==0) {
 	  num=std::atoi(s+2);
 	  int cnt=1;
 	  mismatch_tags.clear();
 	  int failing_tags = adapter.check_tags((int*)&num,cnt,mismatch_tags);
-
+	  
 	  for(unsigned i=0;i<mismatch_tags.size();i++) {
 	    fprintf(stderr,"Tag %s (%i) fails\n",
 		    heuristic.get_model()
@@ -764,8 +776,7 @@ void Test_engine::interactive()
 	    }
 	  }
 	}
-        break;
-
+	break;
       case 'q': // command "q": quit
         std::free(s);
         return;

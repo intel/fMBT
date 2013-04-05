@@ -626,6 +626,23 @@ ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
   return ret;
 }
 
+Verdict::Verdict from_string(const std::string& s)
+{
+  if (s=="pass") {
+    return Verdict::PASS;
+  }
+  if (s=="fail") {
+    return Verdict::FAIL;
+  }
+  if (s=="inconclusive") {
+    return Verdict::INCONCLUSIVE;
+  }
+  if (s=="error") {
+    return Verdict::ERROR;
+  }
+  return Verdict::UNDEFINED;
+}
+
 std::string to_string(Verdict::Verdict verdict)
 {
   switch (verdict) {
