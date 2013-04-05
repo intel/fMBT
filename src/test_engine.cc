@@ -151,22 +151,7 @@ Verdict::Verdict Test_engine::stop_test(Verdict::Verdict v, const char* _reason)
 {
   m_verdict = v;
   m_reason_msg = _reason;
-  switch (m_verdict) {
-  case Verdict::PASS:
-    m_verdict_msg = "pass";
-    break;
-  case Verdict::FAIL:
-    m_verdict_msg = "fail";
-    break;
-  case Verdict::INCONCLUSIVE:
-    m_verdict_msg = "inconclusive";
-    break;
-  case Verdict::ERROR:
-    m_verdict_msg = "error";
-    break;
-  default:
-    m_verdict_msg = "unknown";
-  }
+  m_verdict_msg = to_string(m_verdict);
 
   /*
     Just remember to encode the strings...
