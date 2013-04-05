@@ -153,6 +153,25 @@ int aal_remote::model_execute(int action) {
                 action_names.size(),this);
 }
 
+void aal_remote::adapter_exit(Verdict::Verdict verdict,
+			      const std::string& reason)
+{
+  if (!status) {
+    return;
+  }
+  
+  while(g_main_context_iteration(NULL,FALSE));
+  handle_stderr();
+
+  std::string me_reason(reason);
+  escape_string(me_reason);
+
+  //std::fprintf(d_stdin,"ae %s %s\n",to_string(verdict).c_str(),me_reason.c_str());
+  
+  while(g_main_context_iteration(NULL,FALSE));
+  handle_stderr();
+}
+
 void aal_remote::push() {
   if (status) {
     if (accel>0) {

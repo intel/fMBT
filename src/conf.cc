@@ -291,6 +291,11 @@ Verdict::Verdict Conf::execute(bool interactive) {
   log.pop();
   status = true;
   errormsg = engine.verdict_msg() + ": " + engine.reason_msg();
+
+  if (adapter->status) {
+    adapter->adapter_exit(engine.verdict(),engine.reason_msg());
+  }
+
   return engine.verdict();
 }
 

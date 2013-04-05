@@ -27,6 +27,7 @@
 #include "factory.hh"
 #include "log.hh"
 #include "helper.hh"
+#include "verdict.hh"
 #include <sys/time.h>
 
 /* Creating and initialising an adapter is a call sequence
@@ -109,6 +110,9 @@ public:
 
   /// Returns escaped action name (can be logged to XML)
   const char* getUActionName(int action);
+
+  virtual void adapter_exit(Verdict::Verdict verdict,
+			    const std::string& reason) { }
 
 protected:
   Log& log;

@@ -96,7 +96,7 @@ aal_start: 'aal' string '{' language {
             obj->set_namestr($1.str);
         } ;
 
-header: variables | ainit | istate | push | pop | comment;
+header: variables | ainit | aexit | istate | push | pop | comment;
 
 comment: '#' "[^\n]*" { } ;
 
@@ -208,6 +208,9 @@ istate: 'initial_state' '{' bstr '}' {
 
 ainit: 'adapter_init' '{' bstr '}' {
             obj->set_ainit($2.str,$n2.start_loc.pathname,$n2.start_loc.line,$n2.start_loc.col); } ;
+
+aexit: 'adapter_exit' '{' bstr '}' {
+            obj->set_aexit($2.str,$n2.start_loc.pathname,$n2.start_loc.line,$n2.start_loc.col); } ;
 
 guard: 'guard' '()' '{' bstr '}' {
             if (guard) {

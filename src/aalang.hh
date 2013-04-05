@@ -39,6 +39,7 @@ public:
   virtual void set_variables(std::string* var,const char*,int,int) = 0;
   virtual void set_istate(std::string* ist,const char*,int,int)    = 0;
   virtual void set_ainit(std::string* iai,const char*,int,int)     = 0;
+  virtual void set_aexit(std::string* iai,const char*,int,int)     = 0;
   virtual void set_guard(std::string* gua,const char*,int,int)     = 0;
 
   virtual void set_push(std::string* p,const char*,int,int)        = 0;

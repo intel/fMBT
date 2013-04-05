@@ -37,6 +37,7 @@ public:
   virtual void set_variables(std::string* var,const char*,int,int);
   virtual void set_istate(std::string* ist,const char*,int,int);
   virtual void set_ainit(std::string* iai,const char*,int,int);
+  virtual void set_aexit(std::string* iai,const char*,int,int);
   virtual void set_guard(std::string* gua,const char*,int,int);
 
   virtual void set_push(std::string* p,const char*,int,int);
@@ -63,6 +64,7 @@ protected:
   int name_cnt;
   std::string* istate;
   std::string* ainit;
+  std::string* aexit;
   std::string* name;
   std::string push;
   std::string pop;

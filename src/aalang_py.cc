@@ -188,6 +188,14 @@ void aalang_py::set_ainit(std::string* iai,const char* file,int line,int col)
   s += python_lineno_wrapper(file,line,funcname,1+m_lines_in_vars,4);
 }
 
+void aalang_py::set_aexit(std::string* iai,const char* file,int line,int col)
+{
+  const std::string funcname("adapter_exit");
+  s += "\n    def " + funcname + "(verdict,reason):\n" + variables +
+    indent(8, *iai) + "\n" "\n";
+  s += python_lineno_wrapper(file,line,funcname,1+m_lines_in_vars,4);
+}
+
 void aalang_py::set_tagname(std::string* name,bool first)
 {
   if (first) {

@@ -34,6 +34,8 @@ public:
   virtual void set_actions(std::vector<std::string>* _actions);
   virtual void set_tags(std::vector<std::string>* _tags);
   virtual bool init();
+  virtual void adapter_exit(Verdict::Verdict verdict,
+			    const std::string& reason);
 
   virtual void execute(std::vector<int>& action);
   virtual int  observe(std::vector<int> &action,bool block=false);

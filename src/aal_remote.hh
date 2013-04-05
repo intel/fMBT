@@ -50,7 +50,8 @@ public:
   virtual int getActions(int** act);
   virtual bool reset();
   virtual bool init();
-
+  virtual void adapter_exit(Verdict::Verdict verdict,
+			    const std::string& reason);
   virtual void push();
   virtual void pop();
   virtual int getprops(int** props);

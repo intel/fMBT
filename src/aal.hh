@@ -39,7 +39,7 @@ template<class InputIterator, class T>
 class aal;
 
 #include "writable.hh"
- 
+#include "verdict.hh" 
 class aal: public Writable {
 public:
   aal(Log&l, std::string& _params): refcount(0),_log(l), params(_params) {_log.ref();};
@@ -52,6 +52,9 @@ public:
   }
   virtual bool init() { // Adapter
     return true;
+  }
+  virtual void adapter_exit(Verdict::Verdict verdict,
+			    const std::string& reason) { // Adapter
   }
   virtual std::vector<std::string>& getActionNames() {
     return action_names;

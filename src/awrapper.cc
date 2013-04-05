@@ -45,6 +45,14 @@ bool Awrapper::init()
   return ada->init();
 }
 
+void Awrapper::adapter_exit(Verdict::Verdict verdict,
+				    const std::string& reason)
+{
+  if (ada)
+    ada->adapter_exit(verdict,reason);
+}
+
+
 void Awrapper::set_tags(std::vector<std::string>* _tags)
 {
   Adapter::set_tags(_tags);
@@ -165,7 +173,7 @@ int Awrapper::check_tags(int* tag,int len,std::vector<int>& t)
   }
   if (_tags.size()>0) {
     int ret=ada->check_tags(_tags,t);
-    for(int i=0;i<t.size();i++) {
+    for(unsigned i=0;i<t.size();i++) {
       t[i]=tagada2aal[t[i]];
     }
     return ret;

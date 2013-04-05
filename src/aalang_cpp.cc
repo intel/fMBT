@@ -41,7 +41,8 @@ std::string to_call(std::list<std::string>& l) {
 }
 
 aalang_cpp::aalang_cpp(): aalang(),action_cnt(1), tag_cnt(1), name_cnt(0),
-			  istate(NULL),ainit(NULL), name(NULL), tag(false)
+			  istate(NULL),ainit(NULL), aexit(NULL), name(NULL),
+			  tag(false)
 {
   default_guard="return true;"; 
   default_body="";
@@ -60,6 +61,8 @@ aalang_cpp::~aalang_cpp()
     delete istate;
   if (ainit)
     delete ainit;
+  if (aexit)
+    delete aexit;
   if (name)
     delete name;
 }
@@ -126,6 +129,14 @@ void aalang_cpp::set_ainit(std::string* iai,const char* file,int line,int col)
 {
   if (iai) {
     ainit=new std::string(to_line(file,line)+*iai);
+    delete iai;
+  }
+}
+
+void aalang_cpp::set_aexit(std::string* iai,const char* file,int line,int col)
+{
+  if (iai) {
+    aexit=new std::string(to_line(file,line)+*iai);
     delete iai;
   }
 }
@@ -257,6 +268,12 @@ std::string aalang_cpp::stringify()
   if (ainit) {
     s+="virtual bool init() {\n"+
       *ainit+
+      "\nreturn true;\n}\n\n";
+  }
+
+  if (aexit) {
+    s+="virtual void adapter_exit(Verdict::Verdict verdict, const std::string& reason) {\n"+
+      *aexit+
       "\nreturn true;\n}\n\n";
   }
 
