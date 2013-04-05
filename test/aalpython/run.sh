@@ -257,3 +257,27 @@ if ! diff -u nested.expected nested.observed >>$LOGFILE 2>&1; then
 fi
 
 testpassed
+
+teststep "remote_pyaal control flow with nondet sut"
+if ! fmbt controlflow.conf > controlflow.stdout 2>controlflow.stderr; then
+    echo "failed because expected exit status 0 from fmbt controlflow.conf" >>$LOGFILE
+    testfailed
+fi
+if [ "$(grep -B100 -A1 "adapter of 0 to 1" controlflow.aal.log | grep "body of 0 to 1" | wc -l)" != "2" ]; then
+    echo "failed because body of 0 to 1 was not executed exactly twice before 'adapter of 0 to 1' according to controlflow.aal.log:" >>$LOGFILE
+    cat controlflow.aal.log >>$LOGFILE
+    testfailed
+fi
+if [ "$(grep -A4 'observe: action "o:x == 1"' controlflow.aal.log | grep "guard of output x == 1" | wc -l)" != "2" ]; then
+    echo "failed because of missing 'guard of output x == 1' after the output that is disabled before executing its adapter" >>$LOGFILE
+    testfailed
+fi
+if [ "$(grep -A4 'observe: action "o:x == 2"' controlflow.aal.log | grep "guard of output x == 2" | wc -l)" != "1" ]; then
+    echo "failed because of extra 'guard of output x == 2' after the output that was already enabled before executing its adapter" >>$LOGFILE
+    testfailed
+fi
+if [ "$(grep -A4 'observe: action "o:x == 3"' controlflow.aal.log | grep "guard of output x == 3" | wc -l)" != "2" ]; then
+    echo "failed because of missing 'guard of output x == 3' after the output that is disabled before executing its adapter" >>$LOGFILE
+    testfailed
+fi
+testpassed

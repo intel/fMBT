@@ -78,43 +78,46 @@ int Heuristic_greedy::getIAction()
     return 0;
   }
 
-  int* actions;
-  int i = model->getIActions(&actions);
-  int pos = -1;
+  int* actions = NULL;
+  int input_action_count = model->getIActions(&actions);
 
-  log.debug("greedy getIACtion %i",i);
+  /* Copy actions to input_actions because next model->getIActions
+   * call changes the data */
+  int* input_actions = new int[input_action_count];
+  memcpy(input_actions, actions, input_action_count * sizeof(int));
+  int retval = -42;
 
-  for(int u=0;u<i;u++) {
-    log.debug("iaction %i %i",u,actions[u]);
+  log.debug("greedy getIAction %i", input_action_count);
+
+  for(int u = 0; u < input_action_count; u++) {
+    log.debug("iaction %i %i", u, input_actions[u]);
   }
 
-  if (i==0) {
+  if (input_action_count == 0) {
     // No input actions. See if there are output actions available.
-    i=model->getActions(&actions);
-    if (i==0) {
-      return Alphabet::DEADLOCK;
+    int output_action_count = model->getActions(&actions);
+    if (output_action_count == 0) {
+      retval = Alphabet::DEADLOCK;
+      goto done;
     }
-    return Alphabet::OUTPUT_ONLY;
+    retval = Alphabet::OUTPUT_ONLY;
+    goto done;
   }
-
-  int actions_save[i];
-
-  actions_save[0]=0;
 
   if (m_search_depth < 1) {
     /* Do a very fast lookup */
-    float* f=new float[i];
-    pos=my_coverage->fitness(actions,i,f);
+    float* f = new float[input_action_count];
+    int pos = my_coverage->fitness(input_actions, input_action_count, f);
     float score = f[pos];
     delete [] f;
 
     if (score > 0.0) {
       log.debug("Greedy selected %i (out of %i)\n",
-                pos,i);
-      return actions[pos];
+                pos,input_action_count);
+      retval = input_actions[pos];
+      goto done;
     }
   } else {
-    memcpy(actions_save,actions,i*sizeof(int));
     /* In burst mode new path is not searched before previosly found
      * path is fully consumed */
     if (!m_burst || m_path.empty() ) {
@@ -125,7 +128,6 @@ int Heuristic_greedy::getIAction()
       double score = alg.search(*model, *my_coverage, m_path);
 
       if (!alg.status) {
-	errormsg = "Algorithm error:"+alg.errormsg;
         status=false;
       }
 
@@ -136,36 +138,29 @@ int Heuristic_greedy::getIAction()
     }
     if (m_path.size() > 0) {
       log.debug("path %i",m_path.back());
-      //i = model->getIActions(&actions);
-      if (i==0) {
-        return Alphabet::ERROR;
-      }
-      bool broken=true;
-      int ret=m_path.back();
-      for(int j=0;j<i;j++) {
-        if (actions_save[j]==ret) {
+      bool broken = true;
+      retval = m_path.back();
+      for(int j = 0; j < input_action_count; j++) {
+        if (input_actions[j] == retval) {
           broken=false;
+          break;
         }
       }
       if (broken) {
         log.print("<ERROR msg=\"%s (%s)\"/>","suggesting disabled action",
-                  model->getActionName(ret).c_str());
+                  model->getActionName(retval).c_str());
         abort();
       }
-      return m_path.back();
+      goto done;
     }
   }
 
-  /* Fall back to random selection. Input actions table might not be
-   * valid anymore (execute might have happened), ask it again. */
-  i = model->getIActions(&actions);
-  pos=(((float)random())/RAND_MAX)*i;
+  /* Fall back to random selection. */
+  retval = input_actions[(int)((((float)random())/RAND_MAX)*input_action_count)];
 
-  if (actions_save[0]) {
-    return actions_save[pos];    
-  }
-
-  return actions[pos];
+done:
+  delete[] input_actions;
+  return retval;
 }
 
 FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "greedy")

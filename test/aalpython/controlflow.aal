@@ -1,0 +1,63 @@
+aal "controlflow" {
+    language: python {}
+    variables {
+        x
+    }
+    initial_state {
+        x = 0
+    }
+    input "0 to 1" {
+        guard() { return x == 0 }
+        body() { log("body of 0 to 1") }
+        adapter() { log("adapter of 0 to 1"); x = 1 }
+    }
+    input "0 to 2" {
+        guard() { return x == 0 }
+        body() { log("body of 0 to 2") }
+        adapter() { log("adapter of 0 to 2"); x = 2 }
+    }
+    input "0 to 3" {
+        guard() { return x == 0 }
+        body() { log("body of 0 to 3") }
+        adapter() { log("adapter of 0 to 3"); x = 3 }
+    }
+    input "0 to 4" {
+        guard() { return x == 0 }
+        body() { log("body of 0 to 4") }
+        adapter() { log("adapter of 0 to 4"); x = 4 }
+    }
+    input "reset" {
+        guard() { log("guard of reset"); return True }
+        body() { log("body of reset") }
+        adapter() { log("adapter of reset"); x = 0 }
+    }
+^ifdef "OUTPUTS"
+    output "x == 1" {
+        adapter() {
+            log("adapter of output x == 1")
+            if x == 1:
+                x = -1
+                return True
+        }
+        guard() { log("guard of output x == 1"); return x == -1 }
+    }
+    output "x == 2" {
+        adapter() {
+            log("adapter of output x == 2")
+            if x == 2:
+                x = 0
+                return True
+        }
+        guard() { log("guard of output x == 2"); return x == 2 }
+    }
+    output "x == 3" {
+        adapter() {
+            log("adapter of output x == 3")
+            if x == 3:
+                x = 0
+                return True
+        }
+        guard() { log("guard of output x == 3"); return x == 0 }
+    }
+^endif
+}
