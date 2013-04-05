@@ -626,6 +626,28 @@ ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
   return ret;
 }
 
+std::string to_string(Verdict::Verdict verdict)
+{
+  switch (verdict) {
+  case Verdict::PASS:
+    return "pass";
+    break;
+  case Verdict::FAIL:
+    return "fail";
+    break;
+  case Verdict::INCONCLUSIVE:
+    return "inconclusive";
+    break;
+  case Verdict::ERROR:
+    return "error";
+    break;
+  default:
+    return "unknown";
+  }
+  // Not reached
+  return "unknown";  
+}
+
 /* blocking getline, filter out log entries */
 ssize_t bgetline(char **lineptr, size_t *n, FILE *stream, Log& log)
 {

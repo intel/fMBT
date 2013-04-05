@@ -27,6 +27,8 @@
 #include <boost/regex.hpp>
 #endif
 
+#include "verdict.hh"
+
 class Log;
 
 extern bool human_readable;
@@ -70,6 +72,7 @@ std::string to_string(const float f);
 std::string to_string(const int cnt,const int* t,
 		      const std::vector<std::string>& st);
 std::string to_string(const struct timeval&t,bool minutes=false);
+std::string to_string(Verdict::Verdict verdict);
 void  strvec(std::vector<std::string> & v,std::string& s,
 	     const std::string& separator);
 
