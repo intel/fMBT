@@ -52,6 +52,8 @@ public:
     return adapters[a];
   } 
   virtual std::string stringify();
+  virtual void adapter_exit(Verdict::Verdict verdict,
+			    const std::string& reason);
 protected:
   typedef std::pair<int,int> adapter_action;
 
