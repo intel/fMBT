@@ -15,7 +15,11 @@ aal "filesystemtest" {
         try: shutil.rmtree(DIRNAME)
         except OSError: pass
     }
-
+    adapter_exit {
+        if verdict == "pass" and dir_exists:
+            log("cleaning up " + DIRNAME)
+            shutil.rmtree(DIRNAME)
+    }
     input "mkdir: ok" {
         guard()   { return not dir_exists }
         adapter() { os.mkdir(DIRNAME) }
