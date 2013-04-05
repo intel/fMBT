@@ -914,6 +914,7 @@ void Test_engine::interactive()
                "    c<num>  - run (max num iterations) until break or test exit\n"
                "Change adapters/models:\n"
                "    a      - list low-level adapters of current adapter\n"
+	       "    ae(verdict<,reason>) - call adapter_exit\n"
                "    a<num> - move down to adapter <num>\n"
                "    aup    - move up to parent adapter\n"
                "    m      - list model subcomponents\n"
