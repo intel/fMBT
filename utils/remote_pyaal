@@ -115,8 +115,8 @@ def error(msg):
     sys.exit(1)
 
 def bye():
+    _g_bridge._aal.aexit(None, None)
     _log("quitting", flush=True)
-atexit.register(bye)
 
 def put(msg):
     if opt_debug: _log("sending: '%s'" % (msg,))
@@ -181,6 +181,17 @@ class RemoteAALBridge:
                 self._aal.push()
             elif cmd == "mo":
                 self._aal.pop()
+            elif cmd.startswith("ae"):
+                try:
+                    args = cmd[3:]
+                    if " " in args: verdict, reason = args.split(" ", 1)
+                    else: verdict, reason = args, ""
+                    self._aal.aexit(verdict, urllib.unquote(reason))
+                except Exception, e:
+                    fmbtstderr('Error at adapter_exit(): %s: %s\n%s' % (type(e).__name__, e, format_pythonaalexception()))
+                    put(0)
+                else:
+                    put(1)
             elif cmd == "ai":
                 try: rv = self._aal.init()
                 except Exception, e:
@@ -505,9 +516,10 @@ if __name__ == "__main__":
     aal._variables['fmbtlog'] = fmbtlog
 
     if not opt_output_fileobj:
-        bridge = RemoteAALBridge(aal)
+        _g_bridge = RemoteAALBridge(aal)
         _log("starting")
-        bridge.communicate()
+        atexit.register(bye)
+        _g_bridge.communicate()
     else:
         aal.reset()
         try:

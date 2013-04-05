@@ -37,6 +37,10 @@ aal "<modelname>" {
          if this AAL is used as an adapter in the test run>
     }
 
+    adapter_exit {
+        <executed when test run ends>
+    }
+
     action "<name>" [, "<name>"...] {
         guard() {
             <precondition: return true when test step can be executed>
@@ -211,6 +215,14 @@ is called. If it returns an action, that body() of that action is
 executed. If it returns None, body() of suggested action is
 executed. If it raises an exception, test fails with an execution of
 an unidentified action.
+
+
+End of test
+
+adapter_exit is executed at the end of test. If the test ends because
+of reaching an end condition, "verdict" and "reason" variables contain
+more detailed information, for instance "pass" and "coverage
+reached". Otherwise, "verdict" and "reason" are None.
 
 
 AAL/Python syntax

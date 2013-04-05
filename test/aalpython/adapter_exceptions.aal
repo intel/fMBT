@@ -20,7 +20,7 @@ aal "adapter_exceptions" {
         adapter_exception_handler = take_same_action
     }
 
-    # preview-hide-vars: 
+    # preview-hide-vars:
     # preview-depth: 5
     variables {
         x, adapter_exception_handler
@@ -29,10 +29,12 @@ aal "adapter_exceptions" {
         x = 0
         adapter_exception_handler = take_same_action
     }
+    adapter_exit {
+        log("ADAPTER_EXIT: verdict=%s reason=%s" % (verdict, reason))
+    }
     action "oOutputAction" {
         guard() { return x < 999 }
         body() {
-            global adapter_exception_handler
             adapter_exception_handler = raise_an_exception
             log("body of oOutputAction")
             x = 999
@@ -53,11 +55,10 @@ aal "adapter_exceptions" {
         adapter() {
             log("adapter_exception_handler == %s" %
                 (adapter_exception_handler.func_name,))
-            global adapter_exception_handler
             adapter_exception_handler = take_output_action
             log("switching handler to %s" % (adapter_exception_handler,))
         }
-        
+
     }
     action "iStep3" {
         guard() { return x == 2 }

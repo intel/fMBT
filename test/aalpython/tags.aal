@@ -19,6 +19,11 @@ aal "filesystemtest" {
         try: shutil.rmtree(DIRNAME)
         except OSError: pass
     }
+    adapter_exit {
+        msg = "ADAPTER_EXIT verdict=%s reason=%s" % (verdict, reason)
+        fmbtlog("FMBT LOG <- " + msg)
+        log("ADAPTER LOG <- " + msg)
+    }
     action "iMkDir:Ok" {
         guard() { return not dir_exists }
         adapter() {

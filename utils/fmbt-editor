@@ -1971,7 +1971,7 @@ class AALHighlighter(QtGui.QSyntaxHighlighter):
 
         keywordPatterns = [
             "\\baal\\b", "\\blanguage\\b", "\\bvariables\\b",
-            "\\binitial_state\\b", "\\badapter_init\\b",
+            "\\binitial_state\\b", "\\badapter_init\\b", "\\badapter_exit\\b",
             "\\binput\\b","\\boutput\\b","\\baction\\b", "\\btag\\b",
             "\\bguard\\b", "\\bbody\\b", "\\badapter\\b"]
         self.highlightingRules = [(QtCore.QRegExp(pattern), keywordFormat)

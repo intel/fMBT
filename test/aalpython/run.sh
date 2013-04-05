@@ -143,6 +143,11 @@ if ! grep -q 'raise Exception("unrecoverable error!")' adapter_exception_handler
     echo "fails because: AAL line that raised exception not shown in stderr" >>$LOGFILE
     testfailed
 fi
+if ! grep -q 'ADAPTER_EXIT: verdict=None reason=None' adapter_exceptions.aal.log; then
+    cat adapter_exceptions.aal.log >>$LOGFILE
+    echo "fails because: adapter_exit handler was not called properly in unrecoverable error" >>$LOGFILE
+    testfailed
+fi
 testpassed
 
 teststep "remote_pyaal adapter() blocks of tags..."
@@ -150,6 +155,16 @@ fmbt tags-fail.conf 2>tags-fail.stderr >tags-fail.stdout && {
     echo "fails because: non-zero exit status from 'fmbt tags-fail.conf' expected" >>$LOGFILE
     testfailed
 }
+if ! grep -q 'ADAPTER LOG <- ADAPTER_EXIT verdict=fail reason=verifying tags "tSubdirExists" failed.' tags.aal.log; then
+    cat tags.aal.log >>$LOGFILE
+    echo "fails because: tags.aal.log ADAPTER_EXIT missing or unexpected content" >>$LOGFILE
+    testfailed
+fi
+if ! fmbt-log -f '$al' tags-fail.stdout | grep -q 'FMBT LOG <- ADAPTER_EXIT verdict=fail reason=verifying tags "tSubdirExists" failed.'; then
+    fmbt-log -f '$al' tags-fail.stdout >>$LOGFILE
+    echo "fails because: fmbt-log -f '\$al' shows no ADAPTER_EXIT message" >>$LOGFILE
+    testfailed
+fi
 if egrep -q 'tNoSubdir|tNoDir|tDirExists' tags-fail.stderr; then
     cat tags-fail.stderr >>$LOGFILE
     echo "fails because: wrong tag(s) mentioned in stderr" >>$LOGFILE

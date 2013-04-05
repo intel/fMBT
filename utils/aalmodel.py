@@ -30,6 +30,7 @@ class AALModel:
         self._variables['variable'] = lambda varname: self._variables[varname]
         self._variables['assign'] = lambda varname, v: self._variables.__setitem__(varname, v)
         self._stack = []
+        self._adapter_exit_executed = False
         self._enabled_actions_stack = [set()]
         fmbt._g_testStep = 1
 
@@ -89,6 +90,15 @@ class AALModel:
         fmbt._g_actionName = "undefined"
         rv = self.call(self.adapter_init)
         return rv
+
+    def adapter_exit(verdict, reason):
+        return
+
+    def aexit(self, verdict, reason):
+        if not self._adapter_exit_executed:
+            self._adapter_exit_executed = True
+            fmbt._g_actionName = "undefined"
+            self.adapter_exit.im_func(verdict, reason)
 
     def adapter_execute(self, i, adapter_call_arguments = ()):
         if self._all_types[i-1] == "input":

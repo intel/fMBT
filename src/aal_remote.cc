@@ -159,17 +159,18 @@ void aal_remote::adapter_exit(Verdict::Verdict verdict,
   if (!status) {
     return;
   }
-  
+
   while(g_main_context_iteration(NULL,FALSE));
   handle_stderr();
 
   std::string me_reason(reason);
   escape_string(me_reason);
 
-  //std::fprintf(d_stdin,"ae %s %s\n",to_string(verdict).c_str(),me_reason.c_str());
-  
+  std::fprintf(d_stdin,"ae %s %s\n",to_string(verdict).c_str(),me_reason.c_str());
+
   while(g_main_context_iteration(NULL,FALSE));
   handle_stderr();
+  getint(d_stdin, d_stdout,_log,0,1,this);
 }
 
 void aal_remote::push() {
