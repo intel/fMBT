@@ -1,0 +1,56 @@
+aal "mycountertest" {
+    language: python {
+        import fmbtweb
+        import json
+    }
+    variables     { value }
+    initial_state { value = None }
+    adapter_init {
+        # remote_pyaal -c BROWSER=... in the test configuration
+        # defines the browser to be launched for this test.
+        global js
+        js = fmbtweb.JS(browser=BROWSER, htmlFile="test.html", pollDelay=0)
+    }
+
+    tag "counter does not exist" {
+        guard() { return value == None }
+
+        input "create, init 0" {
+            adapter() { js.eval("mc = new mycounter(0)") }
+            body()    { value = 0 }
+        }
+
+        input "create, init 42" {
+            adapter() { js.eval("mc = new mycounter(42)") }
+            body()    { value = 42 }
+        }
+    }
+
+    tag "counter exists" {
+        guard()   { return value != None }
+        adapter() {
+            # The adapter block of a tag is executed at every state
+            # where guard() of the tag returns true. This is a
+            # good place to check that mycounter value matches
+            # the expected value.
+            mc_value = js.eval("mc.count()")
+            if json.loads(mc_value) != value:
+                assert False, "Unexpected counter value: %s, expected %s" % (mc_value, value)
+        }
+
+        input "destroy" {
+            adapter() { js.eval("mc = null", waitForResult=False) }
+            body()    { value = None }
+        }
+
+        input "reset" {
+            adapter() { js.eval("mc.reset()", waitForResult=False) }
+            body()    { value = 0 }
+        }
+
+        input "inc" {
+            adapter() { js.eval("mc.inc()", waitForResult=False) }
+            body()    { value += 1 }
+        }
+    }
+}

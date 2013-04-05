@@ -7,16 +7,10 @@ We used the following recipe to create tests for it:
 1. Create an html page that includes the API and fmbtweb.js. See
    "test.html".
 
-2. Define test steps in a Python library. We did this in
-   "teststeps.py". This library contains one function per step. When
-   imported the library connects to the browser that will run the
-   JavaScript. We used Firefox in this example. "test.html" is sent to
-   the browser as a starting page.
+2. Define test steps in AAL/Python. We did this in
+   "mycountertest.aal".
 
-3. Define orders in which the test steps can be executed. We used a
-   state machine to do this, see "testmodel.gt".
-
-4. Create a configuration file for the test. We did three of them:
+3. Create a configuration file for the test. We did three of them:
    "smoketest.conf", "regressiontest.conf", "reliabilitytest.conf"
 
 Then run the smoke test as follows:
@@ -54,6 +48,3 @@ cover all permutations of any three actions. This means that sequence
 <reset(), reset(), count()> will be tested, for instance. That
 sequence will never pass the test, because the second reset() will
 always break the value attribute, if it was not already broken.
-
-You can find reasons for failed tests from test and adapter log
-files. For instance, see reliabilitytest_adapter.log.
