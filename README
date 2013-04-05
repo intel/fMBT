@@ -10,72 +10,66 @@ Building & installing
 
 Quick start for Debian/Ubuntu users:
 
-    sudo apt-get install build-essential libglib2.0-dev libboost-regex-dev libedit-dev libmagick++-dev python-pexpect python-dbus python-gobject gawk libtool autoconf automake debhelper libboost-dev flex libxml2-dev graphviz imagemagick gnuplot python-pyside
+    sudo apt-get install build-essential libglib2.0-dev libboost-regex-dev libedit-dev libmagick++-dev python-pexpect python-dbus python-gobject gawk libtool autoconf automake debhelper libboost-dev flex libxml2-dev graphviz imagemagick gnuplot python-pyside tesseract-ocr
 
 Quick start for Fedora users:
 
-    yum install  glibc-devel glib2-devel boost-devel libedit-devel gcc-c++ pexpect dbus-python libtool autoconf automake flex libxml2-devel graphviz ImageMagick ImageMagick-c++-devel gnuplot python-pyside
+    yum install  glibc-devel glib2-devel boost-devel libedit-devel gcc-c++ pexpect dbus-python libtool autoconf automake flex libxml2-devel graphviz ImageMagick ImageMagick-c++-devel gnuplot python-pyside tesseract
 
-./autogen.sh
+./autogen.sh # run only if you cloned sources from git
 ./configure
 make
-make install
+sudo make install
 
-From fMBT sources you can build a normal version as above, and a
-low-dependency "Android" version (./configure --enable-android): it
-needs only C and C++ runtimes.
+
+Getting started
+---------------
+
+1. Create a model and a test configuration:
+
+   fmbt-editor helloworld.aal helloworld.conf
+
+2. Run the first test:
+
+   fmbt -l first.log helloworld.conf
+
+3. See what it executed:
+
+   fmbt-log first.log
 
 
 Documentation
 -------------
 
-doc/tutorial.txt
-        hands on with fMBT using a tiny example
+doc/aal_python.txt
+        AAL/Python language reference documentation.
 
-doc/overview.txt
-        technical introduction on how fMBT works in a
-        real-life example
-
-doc/models.txt
-        how to create test models
-
-doc/adapters.txt
-        how to use generic adapters and implement new ones
+doc/configuration.txt
+        Test configuration reference documentation.
 
 
 Examples
 --------
 
+examples/filesystemtest
+        Test a filesystem: mkdir, rmdir, access.
+
 examples/c++-unittest
-        testing single C++ class
+        Test a C++ class.
 
 examples/javascript-unittest
-        testing a JavaScript API in a browser
+        Test a JavaScript API in a browser.
 
-examples/shell-configurationtest
-        testing build configurations using shell functions
+examples/python-unittest
+        Test a Python class.
 
-
-Building and using an Android version
--------------------------------------
-
-1. Download and install Android NDK.
-
-2. Run "./configure --enable-android --with-ndk-build=/your/ndk-build"
-
-3. Run "make". This will build src/fmbt_droid targeted to your host.
-
-4. Run "make src/android/fmbt_droid". This will build
-   src/android/fmbt_droid targeted to Android.
-
-Note: At the moment fmbt_droid contains a subset features of
-fmbt. Most notably, it does not preprocess input files, handle regular
-expressions in configuration files or fork and execute child
-processes.
+https://github.com/askervin/fmbt-mplayertest
+        Test MPlayer's pause, continue, next song, prev song, add
+        song, and reset playlist.
 
 
-Testing
--------
+fMBT self-tests
+---------------
 
 make check
         Run tests against the source tree as it is.
