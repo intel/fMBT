@@ -290,16 +290,16 @@ class Device(object):
         self._longPressHoldTime = 2.0
         self._longTapHoldTime = 2.0
 
-        self._conf = _DeviceConf()
+        self._conf = Ini()
 
         self._loadDeviceAndTestINIs(self._fmbtAndroidHomeDir, deviceName, iniFile)
         if deviceName == None:
-            deviceName = self._conf.value("general", "serial", None)
+            deviceName = self._conf.value("general", "serial", "")
 
-        if connect == False and deviceName == None:
+        if connect == False and deviceName == "":
             deviceName = "nodevice"
             self._conn = None
-        elif deviceName == None:
+        elif deviceName == "":
             # Connect to an unspecified device.
             # Go through devices in "adb devices".
             listDevicesCommand = "adb devices"
@@ -463,6 +463,13 @@ class Device(object):
         time.sleep(delayAfterMoves)
         if self._conn.sendTouchUp(x2, y2): return True
         return False
+
+    def ini(self):
+        """
+        Returns an Ini object containing effective device
+        configuration.
+        """
+        return self._conf
 
     def intCoords(self, (x, y)):
         """
@@ -1188,36 +1195,79 @@ class Device(object):
         if iniFile:
             self.loadConfig(iniFile, override=True, level="test")
 
-class _DeviceConf:
+class Ini:
     """
-    Miniparser for INI files like:
+    Container for device configuration loaded from INI files.
+
+    INI file syntax:
     [section1]
     key1 = value1
     ; commented = out
     # commented = out
     """
-    def __init__(self, fileObj=None):
+    def __init__(self, iniFile=None):
+        """
+        Initialise the container, optionally with an initial configuration.
+
+        Parameters:
+
+          iniFile (file object, optional):
+                  load the initial configuration from iniFile.
+                  The default is None: start with empty configuration.
+        """
         # _conf is a dictionary:
         # (section, key) -> value
         self._conf = {}
-        if fileObj:
-            self.addFile(fileObj)
-    def addFile(self, fileObj, override=True):
-        for line in fileObj:
+        if iniFile:
+            self.addFile(iniFile)
+
+    def addFile(self, iniFile, override=True):
+        """
+        Add values from a file to the current configuration.
+
+        Parameters:
+
+          iniFile (file object):
+                  load values from this file object.
+
+          override (boolean, optional):
+                  If True, loaded values override existing values.
+                  Otherwise, only currently undefined values are
+                  loaded. The default is True.
+        """
+        for line in iniFile:
             line = line.strip()
             if line.startswith('[') and line.endswith(']'):
                 section = line[1:-1].strip()
             elif line.startswith(";") or line.startswith("#"):
                 continue
             elif '=' in line:
-                key, value = line.split('=')
+                key, value = line.split('=',1)
                 if override or (section, key.strip()) not in self._conf:
                     self._conf[(section, key.strip())] = value.strip()
+
     def sections(self):
+        """
+        Returns list of sections in the current configuration.
+        """
         return list(set([k[0] for k in self._conf.keys()]))
+
     def keys(self, section):
+        """
+        Returns list of keys in a section in the current configuration.
+
+        Parameters:
+
+          section (string):
+                  the name of the section.
+        """
         return [k[1] for k in self._conf.keys() if k[0] == section]
+
     def dump(self):
+        """
+        Returns the current configuration as a single string in the
+        INI format.
+        """
         lines = []
         for section in sorted(self.sections()):
             lines.append("[%s]" % (section,))
@@ -1225,18 +1275,48 @@ class _DeviceConf:
                 lines.append("%-16s = %s" % (key, self._conf[(section, key)]))
             lines.append("")
         return "\n".join(lines)
+
     def set(self, section, key, value):
-        self._conf[(section, key)] = value
+        """
+        Set new value for a key in a section.
+
+        Parameters:
+
+          section, key (strings):
+                  the section, the key.
+
+          value (string):
+                  the new value. If not string already, it will be
+                  converted to string, and it will be loaded as a
+                  string when loaded from file object.
+        """
+        self._conf[(section, key)] = str(value)
+
     def value(self, section, key, default=""):
         """
-        Returns the value associated with the key in the section.
-        The default is returned if the key is not found.
-        dump() will dump also sections and keys with
-        default values that have been returned.
+        Returns the value (string) associated with a key in a section.
+
+        Parameters:
+
+          section, key (strings):
+                  the section and the key.
+
+          default (string, optional):
+                  the default value to be used and stored if there is
+                  no value associated to the key in the section. The
+                  default is the empty string.
+
+        Reading a value of an undefined key in an undefined section
+        adds the key and the section to the configuration with the
+        returned (the default) value. This makes all returned values
+        visible in dump().
         """
         if not (section, key) in self._conf:
             self._conf[(section, key)] = default
         return self._conf[(section, key)]
+
+# For backward compatibility, someone might be using old _DeviceConf
+_DeviceConf = Ini
 
 class Screenshot(object):
     """
