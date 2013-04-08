@@ -666,7 +666,7 @@ std::string to_string(Verdict::Verdict verdict)
 }
 
 /* blocking getline, filter out log entries */
-ssize_t bgetline(char **lineptr, size_t *n, FILE *stream, Log& log)
+ssize_t bgetline(char **lineptr, size_t *n, FILE *stream, Log& log,bool magic)
 {
   ssize_t ret;
   bool log_redirect;
@@ -684,13 +684,26 @@ ssize_t bgetline(char **lineptr, size_t *n, FILE *stream, Log& log)
         std::free(*lineptr);
         *lineptr = NULL;
         log_redirect = true;
+      } else {
+	if (magic && strncmp(*lineptr,"fmbtmagic",9)!=0) {
+	  // We have something to stdout
+	  fprintf(stdout,"%s",*lineptr);
+	  std::free(*lineptr);
+	  *lineptr = NULL;
+	  log_redirect = true;
+	} else {
+	  if (magic) {
+	    ret-=9;
+	    memmove(*lineptr,*lineptr+9,ret);
+	  }
+	}
       }
     }
   } while (log_redirect);
   return ret;
 }
 
-int getint(FILE* out,FILE* in,Log& log,int min,int max,Writable* w)
+int getint(FILE* out,FILE* in,Log& log,int min,int max,Writable* w,bool magic)
 {
   if (out) {
     fflush(out);
@@ -698,7 +711,7 @@ int getint(FILE* out,FILE* in,Log& log,int min,int max,Writable* w)
   char* line=NULL;
   size_t n;
   int ret=-42;
-  ssize_t s=bgetline(&line,&n,in,log);
+  ssize_t s=bgetline(&line,&n,in,log,magic);
   if (s && s != -1) {
     ret=atoi(line);
     if ((int)strspn(line,"-0123456789") != s-1 || (ret == 0 && line[0] != '0')) {
@@ -737,14 +750,14 @@ int getint(FILE* out,FILE* in,Log& log,int min,int max,Writable* w)
 }
 
 int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in,Log& log,
-	   int min,int max,Writable* w)
+	   int min,int max,Writable* w,bool magic)
 {
   fflush(out);
   vec.resize(0);
   char* line=NULL;
   size_t n;
   int ret=-1;
-  size_t s=bgetline(&line,&n,in,log);
+  size_t s=bgetline(&line,&n,in,log,magic);
   if (s != (size_t)-1 && s > 0 && line) {
     if (strspn(line, " -0123456789") != s-1) {
       char *escaped_line = escape_string(line);
