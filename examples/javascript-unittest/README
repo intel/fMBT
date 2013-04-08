@@ -29,22 +29,16 @@ The JavaScript module contains an bug: reset() does not work if the
 counter value is zero when reset() is called.
 
 The smoke test may still pass, because detecting the bug requires
-first calling reset() when the internal value is zero, and calling
-count() after that. On the other hand, if mycounter instance becomes
-destroyed and reinstantiated between the broken reset() and count(),
-the error will not be found. Thus it is easy to run through every test
-step without finding the bug. Smoke test stops when every test step
-has been executed at least once.
+calling reset() when the internal value is zero. Thus it is easy to
+run through every test step without finding the bug. The smoke test
+stops when every test step has been executed at least once.
 
-The regression test is likely to fail, because it aims to cover all
-permutations of any two actions. It will test <reset(), reset()> and
-<new mycounter(0), reset()>, for instance. Both of these will set
-not-a-number to counter's value attribute. If the test generator
-happens to test <reset(), count()> after this kind of reset, the bug
-will be detected.
+The regression test will fail, because it aims to cover all
+permutations of any two actions. Therefore it will not stop until
+<reset(), reset()> and <new mycounter(0), reset()> have been
+tested. Both of these will set not-a-number to counter's value
+attribute, which will cause verification of the "counter exists" tag
+to fail.
 
-The reliability test will always fail. The test generator tries to
-cover all permutations of any three actions. This means that sequence
-<reset(), reset(), count()> will be tested, for instance. That
-sequence will never pass the test, because the second reset() will
-always break the value attribute, if it was not already broken.
+The reliability test will fail, too. The test generator tries to cover
+all permutations of any three actions.
