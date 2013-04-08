@@ -29,7 +29,8 @@ Options:
   -f, --format=<fmt>
           fmt defines output format. Default format is '$ax'.
           Available fields:
-          $al - adapter log messages
+          $al - adapter log message (timestamp included)
+          $aL - adapter log message payload (timestamp removed)
           $am - actions recognised by the model
           $as - action suggested to top-level adapter
           $ax - action actually executed in top-level adapter
@@ -61,6 +62,7 @@ If logfile is not given, log is read from standard input.
 
 import sys
 import getopt
+import re
 import urllib2
 import fmbt_config
 import datetime
@@ -81,16 +83,23 @@ def already_done_formatter_e(s):
     return None
 already_done_formatter_e.saved = "undefined"
 
-
 def TAU_formatter(s):
    if s == "TAU": return "[unidentified action]"
    return s
+
+def remove_preceding_timestamp_formatter(s):
+    m = remove_preceding_timestamp_formatter_re.match(s)
+    if not m:
+        return s
+    return s[m.end():]
+remove_preceding_timestamp_formatter_re=re.compile('[0-9]+\.[0-9]{4} ')
 
 fields = {
     '$ax' : ['<action type=', '"', 3, TAU_formatter],
     '$as' : ['<suggested_action type=', '"', 3, identity_formatter],
     '$am' : ['<action_name name=', '"', 1, identity_formatter],
     '$al' : ['<remote msg=', '"', 1, identity_formatter],
+    '$aL' : ['<remote msg=', '"', 1, remove_preceding_timestamp_formatter],
     '$ms' : ['<redirect id=', '"', 5, identity_formatter],
     '$mc' : ['<redirect id=', '"', 3, identity_formatter],
     '$mn' : ['<redirect id=', '"', 1, identity_formatter],
@@ -124,7 +133,7 @@ def extract(input_file_obj, output_file_obj, output_format, raw):
                     contents = VALUE_SEPARATOR.join(values)
                 else:
                     contents = formatter(urllib2.unquote(line.split(delimiter)[fieldindex]))
-            except: 
+            except:
                 contents = None
         return contents
 
@@ -157,15 +166,18 @@ def extract(input_file_obj, output_file_obj, output_format, raw):
                 ppoutput = output_format % printable_data
             parsed_data = clean_data()
         elif ((parsed_data['$al'] != [] and '%($al)' in output_format) or
+              (parsed_data['$aL'] != [] and '%($aL)' in output_format) or
               (parsed_data['$am'] != [] and '%($am)' in output_format)):
             # print immediately and only this
             printable_data = {}
             for field in parsed_data:
                 if field == '$al' and parsed_data['$al']: printable_data[field] = parsed_data['$al'][0]
+                elif field == '$aL' and parsed_data['$aL']: printable_data[field] = parsed_data['$aL'][0]
                 elif field == '$am' and parsed_data['$am']: printable_data[field] = parsed_data['$am'][0]
                 else: printable_data[field] = ''
             ppoutput = output_format % printable_data
             parsed_data['$al'] = []
+            parsed_data['$aL'] = []
             parsed_data['$am'] = []
         if ppoutput != empty_row: output_file_obj.write(ppoutput)
 
