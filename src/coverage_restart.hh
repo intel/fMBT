@@ -56,4 +56,18 @@ protected:
   int push_depth;
 };
 
+class Coverage_Noprogress: public Coverage_Restart {
+public:
+  Coverage_Noprogress(Log&l, std::string& params);
+
+  virtual ~Coverage_Noprogress(){}
+  virtual void push();
+  virtual void pop();
+  virtual bool execute(int action);
+protected:
+  int     noprog;
+  float   lp;
+  int     noplimit;
+};
+
 #endif

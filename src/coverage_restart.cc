@@ -146,8 +146,10 @@ bool Coverage_Restart::execute(int action)
   }
 
   if (status) {
-    if (left->getCoverage()>=right->getCoverage()) {
-      previous+=right->getCoverage();
+    float lc=left->getCoverage();
+    float rc=right->getCoverage();
+    if (lc>=rc) {
+      previous+=lc;
       if (push_depth) {
 	left->pop();
 	right->pop();
@@ -167,4 +169,82 @@ bool Coverage_Restart::execute(int action)
   return status;
 }
 
+Coverage_Noprogress::Coverage_Noprogress(Log&lo, std::string& params): Coverage_Restart(lo,params),noprog(0),lp(-42)
+{ 
+  {
+    std::string tmp=l;
+    l=r;
+    r=tmp;
+    noplimit=atoi(r.c_str());
+  }
+  {
+    Coverage* tmp=left;
+    left=right;
+    right=tmp;
+  }
+}
+
+void Coverage_Noprogress::push()
+{
+  Coverage_Restart::push();
+  pdsave.push_back(noprog);
+  psave.push_back(lp);
+}
+
+void Coverage_Noprogress::pop()
+{
+  lp=psave.back();
+  psave.pop_back();
+  noprog=pdsave.back();
+  pdsave.pop_back();
+  Coverage_Restart::pop();
+}
+
+bool Coverage_Noprogress::execute(int action)
+{
+  if (!status) return false;
+
+  left->execute(action);
+  right->execute(action);
+
+  if (!left->status || !right->status) {
+    status=false;
+  }
+
+  if (status) {
+    float lc=left->getCoverage();
+    float rc=right->getCoverage();
+
+    if(lp!=lc) {
+      noprog=0;
+      lp=lc;
+    } else {
+      noprog++;
+    }
+    
+    if (noprog==noplimit) {
+      previous+=lc;
+      noprog=0;
+
+      if (push_depth>0) {
+	left->pop();
+	right->pop();
+      }
+
+      if (csave.empty() || right!=csave.back()) {
+	delete right;
+	delete left;
+      }
+
+      new_left_right();
+      set_model(model);
+    }
+
+  }
+
+  return status;
+}
+
+
 FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Restart, "restart")
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Noprogress, "noprogress")
