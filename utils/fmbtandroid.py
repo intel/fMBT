@@ -477,8 +477,8 @@ class Device(object):
 
         Parameters:
 
-          outFileObj (file object)
-                  File to which the log is written in HTML format.
+          filenameOrObj (string or a file object)
+                  The file to which the log is written.
 
           screenshotWidth (string, optional)
                   Width of screenshot images in HTML.
