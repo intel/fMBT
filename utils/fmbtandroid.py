@@ -133,8 +133,10 @@ appsButtonClass = BubbleTextView
 window = Launcher
 '''
 
+import cgi
 import commands
 import datetime
+import inspect
 import os
 import random
 import re
@@ -142,8 +144,11 @@ import shutil
 import socket
 import StringIO
 import subprocess
+import sys
 import tempfile
 import time
+import traceback
+import types
 import uu
 
 import eyenfinger
@@ -463,6 +468,46 @@ class Device(object):
         time.sleep(delayAfterMoves)
         if self._conn.sendTouchUp(x2, y2): return True
         return False
+
+    def enableVisualLog(self, filenameOrObj,
+                        screenshotWidth="240", thumbnailWidth="",
+                        timeFormat="%s.%f", delayedDrawing=False):
+        """
+        Start writing visual HTML log on this device object.
+
+        Parameters:
+
+          outFileObj (file object)
+                  File to which the log is written in HTML format.
+
+          screenshotWidth (string, optional)
+                  Width of screenshot images in HTML.
+                  The default is "240".
+
+          thumbnailWidth (string, optional)
+                  Width of thumbnail images in HTML.
+                  The default is "", that is, original size.
+
+          timeFormat (string, optional)
+                  Timestamp format. The default is "%s.%f".
+                  Refer to strftime documentation.
+
+          delayedDrawing (boolean, optional)
+                  If True, screenshots with highlighted icons, words
+                  and gestures are not created during the
+                  test. Instead, only shell commands are stored for
+                  later execution. The value True can significantly
+                  save test execution time and disk space. The default
+                  is False.
+        """
+        if type(filenameOrObj) == str:
+            try: outFileObj = file(filenameOrObj, "w")
+            except Exception, e:
+                _fmbtLog('Failed to open file "%s" for logging.' % (filenameOrObj,))
+                raise
+        else:
+            outFileObj = filenameOrObj
+        _VisualLog(self, outFileObj, screenshotWidth, thumbnailWidth, timeFormat, delayedDrawing)
 
     def ini(self):
         """
@@ -1349,12 +1394,12 @@ class Screenshot(object):
 
     def findItemsByBitmap(self, bitmap, colorMatch=1.0, opacityLimit=.95, area=(0.0, 0.0, 1.0, 1.0)):
         bitmap = self._pathSolver(bitmap)
-        if (bitmap, colorMatch) in self._cache:
+        if (bitmap, colorMatch, opacityLimit, area) in self._cache:
             return self._cache[(bitmap, colorMatch, opacityLimit, area)]
         eyenfinger.iRead(source=self._filename, ocr=False)
         try:
             score, bbox = eyenfinger.iVerifyIcon(bitmap, colorMatch=colorMatch, opacityLimit=opacityLimit, area=area)
-            foundItem = self._item("bitmap", bbox, bitmap=bitmap)
+            foundItem = self._item("bitmap", bbox, bitmap=bitmap, screenshot=self._filename)
             self._cache[(bitmap, colorMatch, opacityLimit, area)] = [foundItem]
         except eyenfinger.BadMatch:
             _adapterLog('findItemsByBitmap no match for "%s" in "%s"' % (bitmap, self._filename))
@@ -1372,7 +1417,7 @@ class Screenshot(object):
                 continue
         else:
             return []
-        return [self._item("OCR word", bbox, ocrFind=text, ocrFound=word)]
+        return [self._item("OCR word", bbox, screenshot=self._filename, ocrFind=text, ocrFound=word)]
 
     def save(self, fileOrDirName):
         shutil.copy(self._filename, fileOrDirName)
@@ -1389,7 +1434,7 @@ class Screenshot(object):
                 eyenfinger.iRead(source=self._filename, ocr=True, preprocess=pp)
                 self._ocrWords[ppfilter] = eyenfinger._g_words
 
-    def _item(self, className, (x1, y1, x2, y2), bitmap=None, ocrFind=None, ocrFound=None):
+    def _item(self, className, (x1, y1, x2, y2), bitmap=None, screenshot=None, ocrFind=None, ocrFound=None):
         return ViewItem(
             className, None, 0,
             {"layout:mLeft": x1,
@@ -1398,6 +1443,7 @@ class Screenshot(object):
              "layout:getWidth()": x2-x1,
              "screenshot": self._filename,
              "bitmap": bitmap,
+             "screenshot": screenshot,
              "ocrFind": ocrFind,
              "ocrFound": ocrFound,
              },
@@ -1459,8 +1505,11 @@ class ViewItem(object):
             len(self._children), self._className, self._code, self._indent,
             '\n\t\t'.join(['"%s": %s' % (key, p[key]) for key in sorted(p.keys())]))
     def __str__(self):
-        return ("ViewItem(className='%s', id=%s, bbox=%s)"  % (
-                self._className, self.id(), self.bbox()))
+        extras = ""
+        if "bitmap" in self._rawProps:
+            extras += ", bitmap='%s'" % (self._rawProps["bitmap"],)
+        return ("ViewItem(className='%s', id=%s, bbox=%s%s)"  % (
+                self._className, self.id(), self.bbox(), extras))
 
 class View(object):
     """
@@ -1963,3 +2012,221 @@ class _AndroidDeviceConnection:
 class AndroidConnectionError(Exception): pass
 class AndroidConnectionLost(AndroidConnectionError): pass
 class AndroidDeviceNotFound(AndroidConnectionError): pass
+
+class _VisualLog:
+    def __init__(self, device, outFileObj,
+                 screenshotWidth, thumbnailWidth,
+                 timeFormat, delayedDrawing):
+        self._device = device
+        self._outFileObj = outFileObj
+        self._testStep = -1
+        self._actionName = None
+        self._callDepth = 0
+        self._highlightCounter = 0
+        self._screenshotWidth = screenshotWidth
+        self._thumbnailWidth = thumbnailWidth
+        self._timeFormat = timeFormat
+        eyenfinger.iSetDefaultDelayedDrawing(delayedDrawing)
+        device.refreshScreenshot = self.refreshScreenshotLogger(device.refreshScreenshot)
+        device.tap = self.tapLogger(device.tap)
+        device.drag = self.dragLogger(device.drag)
+        for m in [device.callContact, device.callNumber, device.close,
+                  device.loadConfig, device.platformVersion,
+                  device.pressAppSwitch, device.pressBack, device.pressHome,
+                  device.pressKey, device.pressMenu, device.pressPower,
+                  device.pressVolumeUp, device.pressVolumeDown,
+                  device.reboot, device.reconnect, device.refreshView,
+                  device.shell, device.shellSOE, device.smsNumber,
+                  device.supportsView, device.swipe,
+                  device.swipeBitmap, device.swipeItem, device.systemProperty,
+                  device.tapBitmap, device.tapId, device.tapItem, device.tapOcrText,
+                  device.tapText, device.topApp, device.topWindow, device.type,
+                  device.verifyOcrText, device.verifyText, device.verifyBitmap,
+                  device.waitBitmap, device.waitText]:
+            setattr(device, m.func_name, self.genericLogger(m))
+        self.logHeader()
+        self._stepId = 0
+
+    def timestamp(self):
+        return datetime.datetime.now().strftime(self._timeFormat)
+
+    def logAction(self):
+        ts = fmbt.getTestStep()
+        an = fmbt.getActionName()
+        if self._testStep != ts or self._actionName != an:
+            if self._testStep >= 0: self._outFileObj.write('</table></div></ul>')
+            if fmbt.getTestStep() > 0:
+                actionHtml = '''\n\n<ul><li><div class="step"><a href="javascript:showHide('S%s')">%s. %s</a></div><div class="funccalls" id="S%s"><table>\n''' % (
+                    self._stepId, ts, fmbt.getActionName(), self._stepId)
+            elif self._testStep == -1:
+                actionHtml = '\n\n<ul><li><table>\n'
+            else:
+                actionHtml = ""
+            if actionHtml: self._outFileObj.write(actionHtml)
+            self._testStep = ts
+            self._actionName = an
+            self._stepId += 1
+
+    def logCall(self, img=None, width=""):
+        self.logAction()
+        callee = inspect.currentframe().f_back.f_code.co_name[:-4] # cut "WRAP"
+        argv = inspect.getargvalues(inspect.currentframe().f_back)
+        calleeArgs = str(argv.locals['args']) + " " + str(argv.locals['kwargs'])
+        callerFilename = inspect.currentframe().f_back.f_back.f_code.co_filename
+        callerLineno = inspect.currentframe().f_back.f_back.f_lineno
+        if width: width = 'width="%s"' % (width,)
+        if img: imgHtml = '<tr><td></td><td><img src="%s" %s alt="%s" /></td></tr>' % (img, width, img)
+        else: imgHtml = ''
+        callHtml = '''
+            <tr><td></td><td><table><tr>
+                <td><div class="time">%s</div></td>
+                <td><a title="%s:%s"><div class="call">%s%s</div></a></td>
+                </tr>
+                %s''' % (self.timestamp(), cgi.escape(callerFilename), callerLineno, cgi.escape(callee), cgi.escape(str(calleeArgs)), imgHtml)
+        self._outFileObj.write(callHtml)
+        self._callDepth += 1
+
+    def logReturn(self, retval, img=None, width="", tip=""):
+        if width: width = 'width="%s"' % (width,)
+        if img: imgHtml = '<tr><td></td><td><img src="%s" %s alt="%s" /></td></tr>' % (img, width, img)
+        else: imgHtml = ''
+        self._callDepth -= 1
+        returnHtml = '''
+             <tr>
+             <td><div class="time">%s</div></td>
+             <td><div class="returnvalue"><a title="%s">== %s</a></div></td>
+             </tr>%s
+             </table></tr>\n''' % (self.timestamp(), tip, cgi.escape(str(retval)), imgHtml)
+        self._outFileObj.write(returnHtml)
+
+    def logException(self):
+        einfo = sys.exc_info()
+        self._callDepth -= 1
+        excHtml = '''
+             </td><tr>
+             <td><div class="time">%s</div></td>
+             <td><div class="exception"><a title="%s">!! %s</a></div></td>
+             </tr>
+             </table></tr>\n''' % (self.timestamp(), cgi.escape(traceback.format_exception(*einfo)[-2].replace('"','').strip()), cgi.escape(str(traceback.format_exception_only(einfo[0], einfo[1])[0])))
+        self._outFileObj.write(excHtml)
+
+    def logHeader(self):
+        self._outFileObj.write('''
+            <!DOCTYPE html><html>
+            <head><meta charset="utf-8"><title>fmbtandroid visual log</title>
+            <SCRIPT><!--
+            function showHide(eid){
+                if (document.getElementById(eid).style.display != 'inline'){
+                    document.getElementById(eid).style.display = 'inline';
+                } else {
+                    document.getElementById(eid).style.display = 'none';
+                }
+            }
+            // --></SCRIPT>
+            <style>
+                td { vertical-align: top }
+                .funccalls { display: none }
+            </style>
+            </head><body>
+            ''')
+
+    def genericLogger(loggerSelf, origMethod):
+        def origMethodWRAP(*args, **kwargs):
+            loggerSelf.logCall()
+            try:
+                retval = origMethod(*args, **kwargs)
+                loggerSelf.logReturn(retval, tip=origMethod.func_name)
+                return retval
+            except Exception:
+                loggerSelf.logException()
+                raise
+        loggerSelf.changeCodeName(origMethodWRAP, origMethod.func_code.co_name + "WRAP")
+        return origMethodWRAP
+
+    def dragLogger(loggerSelf, origMethod):
+        def dragWRAP(*args, **kwargs):
+            loggerSelf.logCall()
+            x1, y1 = args[0]
+            x2, y2 = args[1]
+            retval = origMethod(*args, **kwargs)
+            try:
+                screenshotFilename = loggerSelf._device.screenshot().filename()
+                highlightFilename = loggerSelf.highlightFilename(screenshotFilename)
+                iC = loggerSelf._device.intCoords
+                eyenfinger.drawLines(screenshotFilename, highlightFilename, [], [iC((x1, y1)), iC((x2, y2))])
+                loggerSelf.logReturn(retval, img=highlightFilename, width=loggerSelf._screenshotWidth, tip=origMethod.func_name)
+            except:
+                loggerSelf.logReturn(str(retval) + " (no screenshot available)", tip=origMethod.func_name)
+            return retval
+        return dragWRAP
+
+    def refreshScreenshotLogger(loggerSelf, origMethod):
+        def refreshScreenshotWRAP(*args, **kwargs):
+            loggerSelf.logCall()
+            retval = origMethod(*args, **kwargs)
+            loggerSelf.logReturn(retval, img=retval.filename(), width=loggerSelf._screenshotWidth, tip=origMethod.func_name)
+            retval.findItemsByBitmap = loggerSelf.findItemsByBitmapLogger(retval.findItemsByBitmap, retval)
+            retval.findItemsByOcr = loggerSelf.findItemsByOcrLogger(retval.findItemsByOcr, retval)
+            return retval
+        return refreshScreenshotWRAP
+
+    def tapLogger(loggerSelf, origMethod):
+        def tapWRAP(*args, **kwargs):
+            loggerSelf.logCall()
+            retval = origMethod(*args, **kwargs)
+            try:
+                screenshotFilename = loggerSelf._device.screenshot().filename()
+                highlightFilename = loggerSelf.highlightFilename(screenshotFilename)
+                eyenfinger.drawClickedPoint(screenshotFilename, highlightFilename, loggerSelf._device.intCoords(args[0]))
+                loggerSelf.logReturn(retval, img=highlightFilename, width=loggerSelf._screenshotWidth, tip=origMethod.func_name)
+            except:
+                loggerSelf.logReturn(str(retval) + " (no screenshot available)", tip=origMethod.func_name)
+            return retval
+        return tapWRAP
+
+    def findItemsByBitmapLogger(loggerSelf, origMethod, screenshotObj):
+        def findItemsByBitmapWRAP(*args, **kwargs):
+            bitmap = args[0]
+            loggerSelf.logCall(img=bitmap)
+            retval = origMethod(*args, **kwargs)
+            if len(retval) == 0:
+                loggerSelf.logReturn("not found in", img=screenshotObj.filename(), width=loggerSelf._screenshotWidth, tip=origMethod.func_name)
+            else:
+                foundItem = retval[0]
+                screenshotFilename = screenshotObj.filename()
+                highlightFilename = loggerSelf.highlightFilename(screenshotFilename)
+                eyenfinger.drawIcon(screenshotFilename, highlightFilename, bitmap, foundItem.bbox())
+                loggerSelf.logReturn([str(retval[0])], img=highlightFilename, width=loggerSelf._screenshotWidth, tip=origMethod.func_name)
+            return retval
+        return findItemsByBitmapWRAP
+
+    def findItemsByOcrLogger(loggerSelf, origMethod, screenshotObj):
+        def findItemsByOcrWRAP(*args, **kwargs):
+            loggerSelf.logCall()
+            retval = origMethod(*args, **kwargs)
+            if len(retval) == 0:
+                loggerSelf.logReturn("not found in words " + str(screenshotObj.dumpOcrWords()),
+                                     img=screenshotObj.filename(), width=loggerSelf._screenshotWidth, tip=origMethod.func_name)
+            else:
+                foundItem = retval[0]
+                screenshotFilename = screenshotObj.filename()
+                highlightFilename = loggerSelf.highlightFilename(screenshotFilename)
+                eyenfinger.drawIcon(screenshotFilename, highlightFilename, args[0], foundItem.bbox())
+                loggerSelf.logReturn([str(retval[0])], img=highlightFilename, width=loggerSelf._screenshotWidth, tip=origMethod.func_name)
+            return retval
+        return findItemsByOcrWRAP
+
+    def highlightFilename(self, screenshotFilename):
+        self._highlightCounter += 1
+        if screenshotFilename.endswith(".png"): s = screenshotFilename[:-4]
+        else: s = screenshotFilename
+        retval = s + "-" + str(self._highlightCounter).zfill(5) + ".png"
+        return retval
+
+    def changeCodeName(self, func, newName):
+        c = func.func_code
+        func.func_name = newName
+        func.func_code = types.CodeType(
+            c.co_argcount, c.co_nlocals, c.co_stacksize, c.co_flags,
+            c.co_code, c.co_consts, c.co_names, c.co_varnames,
+            c.co_filename, newName, c.co_firstlineno, c.co_lnotab, c.co_freevars)
