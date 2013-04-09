@@ -8,8 +8,6 @@ examplesgtcomponentsdir = @docdir@/examples/gt-components
 
 examplesjsdir = @docdir@/examples/javascript-unittest
 
-examplesjsaaldir = @docdir@/examples/javascript-unittest-aal
-
 examplesshelldir = @docdir@/examples/shell-configurationtest
 
 examplesjavadir = @docdir@/examples/java-configurationtest
@@ -48,21 +46,12 @@ dist_examplesgtcomponents_DATA =	\
 
 dist_examplesjs_DATA = \
 	javascript-unittest/mycounter.js		\
+	javascript-unittest/mycountertest.aal		\
 	javascript-unittest/README			\
 	javascript-unittest/regressiontest.conf		\
 	javascript-unittest/reliabilitytest.conf	\
 	javascript-unittest/smoketest.conf		\
-	javascript-unittest/test.html			\
-	javascript-unittest/testmodel.gt		\
-	javascript-unittest/teststeps.py
-
-dist_examplesjsaal_DATA = \
-	javascript-unittest-aal/mycounter.js	\
-	javascript-unittest-aal/README		\
-	javascript-unittest-aal/checkcount.conf	\
-	javascript-unittest-aal/smoketest.conf	\
-	javascript-unittest-aal/test.html	\
-	javascript-unittest-aal/countermodel.aal
+	javascript-unittest/test.html
 
 dist_examplesshell_DATA = \
 	shell-configurationtest/README          \
