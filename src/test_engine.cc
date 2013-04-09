@@ -530,7 +530,7 @@ void Test_engine::interactive()
   bool run=true;
 
   bool skip_adapter_execute   = false;
-  bool skip_model_execute     = true;
+  bool skip_model_execute     = false;
 
   Adapter* current_adapter=&adapter;
   Model* current_model=heuristic.get_model();
