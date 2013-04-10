@@ -32,7 +32,7 @@ class AALModel:
         self._stack = []
         self._adapter_exit_executed = False
         self._enabled_actions_stack = [set()]
-        fmbt._g_testStep = 1
+        fmbt._g_testStep = 0
 
     def _get_all(self, property_name, itemtype):
         plist = []
@@ -73,7 +73,7 @@ class AALModel:
 
     def reset(self):
         # initialize model
-        fmbt._g_actionName = "undefined"
+        fmbt._g_actionName = "AAL: initial_state"
         rv = self.call(self.initial_state)
         self._push_variables = [
             v for v in self.initial_state.func_code.co_names
@@ -87,7 +87,7 @@ class AALModel:
 
     def init(self):
         # initialize adapter
-        fmbt._g_actionName = "undefined"
+        fmbt._g_actionName = "AAL: adapter_init"
         rv = self.call(self.adapter_init)
         return rv
 
@@ -97,14 +97,16 @@ class AALModel:
     def aexit(self, verdict, reason):
         if not self._adapter_exit_executed:
             self._adapter_exit_executed = True
-            fmbt._g_actionName = "undefined"
+            fmbt._g_actionName = "AAL: adapter_exit"
             self.adapter_exit.im_func(verdict, reason)
 
     def adapter_execute(self, i, adapter_call_arguments = ()):
         if self._all_types[i-1] == "input":
             try:
                 fmbt._g_actionName = self._all_names[i-1]
+                fmbt._g_testStep += 1
                 rv = self.call(self._all_adapters[i-1], adapter_call_arguments)
+                fmbt._g_testStep -= 1
                 if rv == None: return i
                 else: return rv
             except Exception, exc:
@@ -118,6 +120,7 @@ class AALModel:
             return 0
 
     def tag_execute(self, i):
+        fmbt._g_actionName = "tag: " + self._all_tagnames[i-1]
         rv = self.call(self._all_tagadapters[i-1])
         return rv
 
@@ -157,7 +160,7 @@ class AALModel:
     def getprops(self):
         enabled_tags = []
         for index, guard in enumerate(self._all_tagguards):
-            fmbt._g_actionName = "undefined"
+            fmbt._g_actionName = "tag: " + self._all_tagnames[index]
             if self.call(guard): enabled_tags.append(index + 1)
         return enabled_tags
 
