@@ -368,7 +368,7 @@ class Device(object):
         self.androidUser     = self._conf.value("environment", "AndroidUser")
         self.voiceMailNumber = self._conf.value("environment", "VoiceMailNumber")
 
-        if self._conn: hw = self._conn._monkeyCommand("getvar build.device")[1]
+        if self._conn: hw = self._conn.recvVariable("build.device")
         else: hw = "nohardware"
         self.hardware        = self._conf.value("general", "hardware", hw)
         self.bitmapPath       = self._conf.value("paths", "bitmapPath", self._fmbtAndroidHomeDir + os.sep + "bitmaps" + os.sep + self.hardware + "-" + self.platformVersion() + ":.")
@@ -695,11 +695,15 @@ class Device(object):
             else:
                 self._lastScreenshot = forcedScreenshot
         else:
-            screenshotFile = self._conn.screenshot(screenshotDir=self.screenshotDir)
-            self._lastScreenshot = Screenshot(
-                screenshotFile=screenshotFile,
-                pathSolver=_bitmapPathSolver(self._fmbtAndroidHomeDir, self.bitmapPath),
-                screenSize=self.screenSize())
+            screenshotFile = self.screenshotDir + os.sep + _filenameTimestamp() + "-" + self.serialNumber + '.png'
+            if self._conn.recvScreenshot(screenshotFile):
+                self._lastScreenshot = Screenshot(
+                    screenshotFile=screenshotFile,
+                    pathSolver=_bitmapPathSolver(self._fmbtAndroidHomeDir, self.bitmapPath),
+                    screenSize=self.screenSize())
+            else:
+                _adapterlog('refreshScreenshot(): receiving screenshot to "%s" failed.' % (screenshotFile,))
+                self._lastScreenshot = None
         return self._lastScreenshot
 
     def refreshView(self, forcedView=None):
@@ -1908,36 +1912,28 @@ class _AndroidDeviceConnection:
                     return False
         return True
 
-    def screenshot(self, screenshotDir=None, imageFilename=None):
+    def recvScreenshot(self, filename):
         """
         Capture a screenshot and copy the image file to given path or
         system temp folder.
 
-        Returns screenshot filename.
+        Returns True on success, otherwise False.
         """
-        if imageFilename == None:
-            filename = _filenameTimestamp() + "-" + self._serialNumber + '.png'
-        else:
-            filename = imageFilename
-        remotefile = '/sdcard/' + filename
+        remotefile = '/sdcard/' + os.path.basename(filename)
 
         status, _, _ = self._runAdb(['shell', 'screencap', '-p', remotefile], 0)
 
-        if status != 0: return None
+        if status != 0:
+            return False
 
-        if screenshotDir == None:
-            status, _, _ = self._runAdb(['pull', remotefile, tempfile.gettempdir()], 0)
-        else:
-            status, _, _ = self._runAdb(['pull', remotefile, os.path.join(screenshotDir, filename)], 0)
+        status, _, _ = self._runAdb(['pull', remotefile, filename], 0)
 
-        if status != 0: return None
+        if status != 0:
+            return False
 
         status, _, _ = self._runAdb(['shell','rm', remotefile], 0)
 
-        if screenshotDir == None:
-            return os.path.join(tempfile.gettempdir(), filename)
-        else:
-            return os.path.join(screenshotDir, filename)
+        return True
 
     def shellSOE(self, shellCommand):
         fd, filename = tempfile.mkstemp(prefix="fmbtandroid-shellcmd-")
