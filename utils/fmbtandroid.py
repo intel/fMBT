@@ -381,6 +381,7 @@ class Device(object):
                 _adapterLog('creating directory "%s" for screenshots failed: %s' (self.screenshotDir, e))
                 raise
 
+        self._visualLog = None
         # Caches
         self._itemCache = {}
 
@@ -419,6 +420,8 @@ class Device(object):
             del self._lastView
         if hasattr(self, "_lastScreenshot"):
             del self._lastScreenshot
+        if self._visualLog:
+            self._visualLog.close()
         import gc
         gc.collect()
 
@@ -507,7 +510,7 @@ class Device(object):
                 raise
         else:
             outFileObj = filenameOrObj
-        _VisualLog(self, outFileObj, screenshotWidth, thumbnailWidth, timeFormat, delayedDrawing)
+        self._visualLog = _VisualLog(self, outFileObj, screenshotWidth, thumbnailWidth, timeFormat, delayedDrawing)
 
     def ini(self):
         """
@@ -2043,19 +2046,36 @@ class _VisualLog:
         self.logHeader()
         self._blockId = 0
 
-    def timestamp(self):
-        return datetime.datetime.now().strftime(self._timeFormat)
+    def close(self):
+        html = []
+        for c in xrange(self._callDepth):
+            html.append('</table></tr>') # end call
+        html.append('</table></div></td></tr></table></ul>') # end step
+        html.append('</body></html>')
+        self._outFileObj.write('\n'.join(html))
+        self._outFileObj.close()
 
-    def epochTimestamp(self):
-        return datetime.datetime.now().strftime("%s.%f")
+    def timestamp(self, t=None):
+        if t == None: t = datetime.datetime.now()
+        return t.strftime(self._timeFormat)
+
+    def epochTimestamp(self, t=None):
+        if t == None: t = datetime.datetime.now()
+        return t.strftime("%s.%f")
+
+    def htmlTimestamp(self, t=None):
+        if t == None: t = datetime.datetime.now()
+        retval = '<div class="time" id="%s"><a id="time%s">%s</a></div>' % (
+            self.epochTimestamp(t), self.epochTimestamp(t), self.timestamp(t))
+        return retval
 
     def logBlock(self):
         ts = fmbt.getTestStep()
         an = fmbt.getActionName()
         if self._testStep != ts or self._actionName != an:
-            if self._blockId != 0: self._outFileObj.write('</table></div></ul>')
-            actionHtml = '''\n\n<ul><li><div class="step" id="%s"><a id="blockId%s">%s</a> <a href="javascript:showHide('S%s')">%s. %s</a></div><div class="funccalls" id="S%s"><table>\n''' % (
-                self.epochTimestamp(), self._blockId, self.timestamp(), self._blockId, ts, fmbt.getActionName(), self._blockId)
+            if self._blockId != 0: self._outFileObj.write('</table></div></td></tr></table></ul>')
+            actionHtml = '''\n\n<ul><li><table><tr><td>%s</td><td><div class="step"><a id="blockId%s" href="javascript:showHide('S%s')">%s. %s</a></div><div class="funccalls" id="S%s"><table>\n''' % (
+                self.htmlTimestamp(), self._blockId, self._blockId, ts, an, self._blockId)
             self._outFileObj.write(actionHtml)
             self._testStep = ts
             self._actionName = an
@@ -2069,37 +2089,34 @@ class _VisualLog:
         callerFilename = inspect.currentframe().f_back.f_back.f_code.co_filename
         callerLineno = inspect.currentframe().f_back.f_back.f_lineno
         imgHtml = self.imgToHtml(img, width, imgTip)
-        timestamp = self.timestamp()
+        t = datetime.datetime.now()
         callHtml = '''
              <tr><td></td><td><table><tr>
-             <td><div class="time" id="%s">%s</div></td>
-             <td><a title="%s:%s"><div class="call">%s%s</div></a></td>
+                 <td>%s</td><td><a title="%s:%s"><div class="call">%s%s</div></a></td>
              </tr>
-             %s''' % (self.epochTimestamp(), timestamp, cgi.escape(callerFilename), callerLineno, cgi.escape(callee), cgi.escape(str(calleeArgs)), imgHtml)
+             %s''' % (self.htmlTimestamp(t), cgi.escape(callerFilename), callerLineno, cgi.escape(callee), cgi.escape(str(calleeArgs)), imgHtml)
         self._outFileObj.write(callHtml)
         self._callDepth += 1
-        return (timestamp, callerFilename, callerLineno)
+        return (self.timestamp(t), callerFilename, callerLineno)
 
     def logReturn(self, retval, img=None, width="", imgTip="", tip=""):
         imgHtml = self.imgToHtml(img, width, imgTip)
         self._callDepth -= 1
         returnHtml = '''
              <tr>
-             <td><div class="time" id="%s">%s</div></td>
-             <td><div class="returnvalue"><a title="%s">== %s</a></div></td>
+                 <td>%s</td><td><div class="returnvalue"><a title="%s">== %s</a></div></td>
              </tr>%s
-             </table></tr>\n''' % (self.epochTimestamp(), self.timestamp(), tip, cgi.escape(str(retval)), imgHtml)
+             </table></tr>\n''' % (self.htmlTimestamp(), tip, cgi.escape(str(retval)), imgHtml)
         self._outFileObj.write(returnHtml)
 
     def logException(self):
         einfo = sys.exc_info()
         self._callDepth -= 1
         excHtml = '''
-             </td><tr>
-             <td><div class="time" id="%s">%s</div></td>
-             <td><div class="exception"><a title="%s">!! %s</a></div></td>
+             <tr>
+                 <td>%s</td><td><div class="exception"><a title="%s">!! %s</a></div></td>
              </tr>
-             </table></tr>\n''' % (self.epochTimestamp(), self.timestamp(), cgi.escape(traceback.format_exception(*einfo)[-2].replace('"','').strip()), cgi.escape(str(traceback.format_exception_only(einfo[0], einfo[1])[0])))
+             </table></tr>\n''' % (self.htmlTimestamp(), cgi.escape(traceback.format_exception(*einfo)[-2].replace('"','').strip()), cgi.escape(str(traceback.format_exception_only(einfo[0], einfo[1])[0])))
         self._outFileObj.write(excHtml)
 
     def logHeader(self):
