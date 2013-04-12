@@ -1220,9 +1220,35 @@ class Device(object):
 
         Updates the last screenshot.
         """
-
         return self.wait(self.refreshScreenshot,
                          self.verifyBitmap, (bitmap,), _bitmapKwArgs(colorMatch, opacityLimit, area),
+                         **waitKwArgs)
+
+    def waitOcrText(self, text, match=None, preprocess=None, **waitKwArgs):
+        """
+        Wait until OCR detects text on the screen.
+
+        Parameters:
+
+          text (string):
+                  text to be waited for.
+
+          match, preprocess (float and string, optional)
+                  refer to verifyOcrText documentation.
+
+          waitTime, pollDelay (float, optional):
+                  refer to wait documentation.
+
+        Returns True if the text appeared within given time limit,
+        otherwise False.
+
+        Updates the last screenshot.
+        """
+        ocrKwArgs = {}
+        if match != None: ocrKwArgs["match"] = match
+        if preprocess != None: ocrKwArgs["preprocess"] = preprocess
+        return self.wait(self.refreshScreenshot,
+                         self.verifyOcrText, (text,), ocrKwArgs,
                          **waitKwArgs)
 
     def waitText(self, text, partial=False, **waitKwArgs):
@@ -1415,6 +1441,7 @@ class Screenshot(object):
         # => cache all search hits
         self._cache = {}
         self._ocrWords = None
+        self._ocrWordsPreprocess = None
         self._ocrPreprocess = _OCRPREPROCESS
 
     def dumpOcrWords(self, preprocess=None):
@@ -1461,12 +1488,13 @@ class Screenshot(object):
         shutil.copy(self._filename, fileOrDirName)
 
     def _assumeOcrWords(self, preprocess=None):
-        if self._ocrWords == None:
+        if self._ocrWords == None or self._ocrWordsPreprocess != preprocess:
             if preprocess == None:
                 preprocess = self._ocrPreprocess
             if not type(preprocess) in (list, tuple):
                 preprocess = [preprocess]
             self._ocrWords = {}
+            self._ocrWordsPreprocess = preprocess
             for ppfilter in preprocess:
                 pp = ppfilter % { "zoom": "-resize %sx" % (self._screenSize[0] * 2) }
                 eyenfinger.iRead(source=self._filename, ocr=True, preprocess=pp)
