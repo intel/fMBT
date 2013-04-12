@@ -2046,13 +2046,16 @@ class _VisualLog:
     def timestamp(self):
         return datetime.datetime.now().strftime(self._timeFormat)
 
+    def epochTimestamp(self):
+        return datetime.datetime.now().strftime("%s.%f")
+
     def logBlock(self):
         ts = fmbt.getTestStep()
         an = fmbt.getActionName()
         if self._testStep != ts or self._actionName != an:
             if self._blockId != 0: self._outFileObj.write('</table></div></ul>')
-            actionHtml = '''\n\n<ul><li><div class="step"><a id="blockId%s">%s</a> <a href="javascript:showHide('S%s')">%s. %s</a></div><div class="funccalls" id="S%s"><table>\n''' % (
-                self._blockId, self.timestamp(), self._blockId, ts, fmbt.getActionName(), self._blockId)
+            actionHtml = '''\n\n<ul><li><div class="step" id="%s"><a id="blockId%s">%s</a> <a href="javascript:showHide('S%s')">%s. %s</a></div><div class="funccalls" id="S%s"><table>\n''' % (
+                self.epochTimestamp(), self._blockId, self.timestamp(), self._blockId, ts, fmbt.getActionName(), self._blockId)
             self._outFileObj.write(actionHtml)
             self._testStep = ts
             self._actionName = an
@@ -2069,10 +2072,10 @@ class _VisualLog:
         timestamp = self.timestamp()
         callHtml = '''
              <tr><td></td><td><table><tr>
-             <td><div class="time">%s</div></td>
+             <td><div class="time" id="%s">%s</div></td>
              <td><a title="%s:%s"><div class="call">%s%s</div></a></td>
              </tr>
-             %s''' % (timestamp, cgi.escape(callerFilename), callerLineno, cgi.escape(callee), cgi.escape(str(calleeArgs)), imgHtml)
+             %s''' % (self.epochTimestamp(), timestamp, cgi.escape(callerFilename), callerLineno, cgi.escape(callee), cgi.escape(str(calleeArgs)), imgHtml)
         self._outFileObj.write(callHtml)
         self._callDepth += 1
         return (timestamp, callerFilename, callerLineno)
@@ -2082,10 +2085,10 @@ class _VisualLog:
         self._callDepth -= 1
         returnHtml = '''
              <tr>
-             <td><div class="time">%s</div></td>
+             <td><div class="time" id="%s">%s</div></td>
              <td><div class="returnvalue"><a title="%s">== %s</a></div></td>
              </tr>%s
-             </table></tr>\n''' % (self.timestamp(), tip, cgi.escape(str(retval)), imgHtml)
+             </table></tr>\n''' % (self.epochTimestamp(), self.timestamp(), tip, cgi.escape(str(retval)), imgHtml)
         self._outFileObj.write(returnHtml)
 
     def logException(self):
@@ -2093,10 +2096,10 @@ class _VisualLog:
         self._callDepth -= 1
         excHtml = '''
              </td><tr>
-             <td><div class="time">%s</div></td>
+             <td><div class="time" id="%s">%s</div></td>
              <td><div class="exception"><a title="%s">!! %s</a></div></td>
              </tr>
-             </table></tr>\n''' % (self.timestamp(), cgi.escape(traceback.format_exception(*einfo)[-2].replace('"','').strip()), cgi.escape(str(traceback.format_exception_only(einfo[0], einfo[1])[0])))
+             </table></tr>\n''' % (self.epochTimestamp(), self.timestamp(), cgi.escape(traceback.format_exception(*einfo)[-2].replace('"','').strip()), cgi.escape(str(traceback.format_exception_only(einfo[0], einfo[1])[0])))
         self._outFileObj.write(excHtml)
 
     def logHeader(self):
