@@ -31,7 +31,7 @@ import datetime
 
 _g_fmbt_adapterlogtimeformat="%s.%f"
 _g_actionName = "undefined"
-_g_testStep = 0
+_g_testStep = -1
 
 def fmbtlog(msg, flush=True):
     try: file("/tmp/fmbt.fmbtlog", "a").write("%s\n" % (msg,))
