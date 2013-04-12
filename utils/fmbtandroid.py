@@ -2200,7 +2200,7 @@ class _VisualLog:
     def findItemsByBitmapLogger(loggerSelf, origMethod, screenshotObj):
         def findItemsByBitmapWRAP(*args, **kwargs):
             bitmap = args[0]
-            loggerSelf.logCall(img=bitmap)
+            loggerSelf.logCall(img=screenshotObj._pathSolver(bitmap))
             retval = loggerSelf.doCallLogException(origMethod, args, kwargs)
             if len(retval) == 0:
                 loggerSelf.logReturn("not found in", img=screenshotObj, tip=origMethod.func_name)
