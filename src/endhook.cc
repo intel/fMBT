@@ -46,7 +46,11 @@ void EndHookExit::run(){
 }
 
 void EndHookInteractive::run() {
+  Policy policy;
   c->exit_interactive=true;
+  Test_engine engine(*c->heuristic,*c->adapter,c->log,policy,
+		     c->end_conditions,c->disabled_tags);
+  engine.interactive();
 }
 
 void hook_delete(EndHook* e)
@@ -78,6 +82,11 @@ void hook_runner(EndHook* e) {
 std::string EndHookExit::stringify() { 
     if (!status) return Writable::stringify();
     return "exit("+to_string(exit_status)+")";
+}
+
+std::string EndHookInteractive::stringify() { 
+    if (!status) return Writable::stringify();
+    return "interactive";
 }
 
 

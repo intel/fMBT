@@ -64,6 +64,7 @@ public:
   EndHookInteractive(Conf* _c,std::string& s): EndHook(_c,s) {
   }
   virtual ~EndHookInteractive() {}
+  virtual std::string stringify();
   virtual void run();
 };
 
