@@ -29,7 +29,7 @@
 #endif
 
 class EndHook;
-
+#include "endhook.hh"
 extern "C" {
   extern D_ParserTables parser_tables_conf;
 }
@@ -203,7 +203,10 @@ std::string Conf::stringify() {
   t << "adapter = \"" << adapter_name
     << capsulate(adapter->stringify()) << std::endl;
 
-  /* TODO: stringify end conditions */
+  // end conditions
+  for(size_t i=0;i<end_conditions.size();i++) {
+    t << end_conditions[i]->stringify() << std::endl;
+  }
 
   return t.str();
 }
