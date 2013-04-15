@@ -346,7 +346,7 @@ class writer(lsts):
 
         file.write("Begin Action_names\n")
         for ai,a in enumerate(self._actionnames[1:]):
-            file.write(" "+str(ai+1)+' = "'+a+'"\n')
+            file.write(" "+str(ai+1)+' = "'+a.replace('"','\\"')+'"\n')
         file.write("End Action_names\n\n")
 
         if self._stateprops:
@@ -357,7 +357,7 @@ class writer(lsts):
             else:
                 propnames = stateprop_order
             for key in propnames:
-                file.write('  "%s" :' % key)
+                file.write('  "%s" :' % key.replace('"','\\"'))
                 for v in self._stateprops[key]:
                     file.write(' %s' % (v+1))
                 file.write(';\n')
@@ -405,7 +405,7 @@ class reader(lsts):
                          "end lsts"]
         import re
         self.__headerrow=re.compile('\s*(\S+)\s*=\s*([0-9]+)[^0-9]')
-        self.__actionnamerow=re.compile('\s*([0-9]+)\s*=\s*"([^"]*)"')
+        self.__actionnamerow=re.compile('\s*([0-9]+)\s*=\s*"(([^"]|\\")*)"')
         self.__actionnamemultirow_start1=re.compile('\s*([0-9]+)\s*=\s*"([^\\\\]*)\\\\\^\s*$')
         self.__actionnamemultirow_start2=re.compile('\s*([0-9]+)\s*=\s*$')
         self.__actionnamemultirow_cont=re.compile('\s*\^([^\\\\]*)\\\\\^')
@@ -414,7 +414,7 @@ class reader(lsts):
         trowc1=re.compile('{[^}]*}|"[^"]*"') # transition row cleaner 1
         trowc2=re.compile(',')
         self.__cleanrow=lambda s:trowc2.sub(' ',trowc1.sub(' ',s))
-        self.__stateproprow=re.compile('\s*"([^"]+)"\s*:\s*([.0-9\s]*);')
+        self.__stateproprow=re.compile('\s*"(([^"]|\\")*)"\s*:\s*([.0-9\s]*);')
 
         if file:
             self.read()
@@ -460,7 +460,7 @@ class reader(lsts):
             elif secs[sidx]=="begin action_names": # parse an action name row
                 res=self.__actionnamerow.search(l)
                 if res and int(res.group(1))>0:
-                    self._actionnames[int(res.group(1))]=res.group(2)
+                    self._actionnames[int(res.group(1))]=res.group(2).replace('\\"', '"')
                     actionname_in_multirow=-1
                 else:
                     if actionname_in_multirow==-1:
@@ -500,9 +500,9 @@ class reader(lsts):
             elif secs[sidx]=="begin state_props": # parse state proposition row
                 res=self.__stateproprow.search(l)
                 if res:
-                    propname=res.group(1)
+                    propname=res.group(1).replace('\\"', '"')
                     proplist=[]
-                    for propitem in res.group(2).split():
+                    for propitem in res.group(3).split():
                         try:
                             # single number
                             propnum=int(propitem)-1 # off-by-one

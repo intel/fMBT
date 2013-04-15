@@ -162,7 +162,7 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
         tr_colors, state_colors = {}, {}
 
     state2props = {int(l.get_header().initial_states): ["[initial state]"]}
-    actionnames = l.get_actionnames()
+    actionnames = [a.replace('"','\\"') for a in l.get_actionnames()]
 
     erase_all_actions = set([])
     erase_untraversed_actions = set([])
@@ -195,7 +195,7 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
                     erase_all_actions.add(actionindex)
 
     for propname in l.get_stateprops():
-        prettyname = "[" + propname + "]"
+        prettyname = "[" + propname.replace('"','\\"') + "]"
         for state in l.get_stateprops()[propname]:
             if state in state2props:
                 state2props[state].append(prettyname)

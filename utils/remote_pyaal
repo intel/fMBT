@@ -345,6 +345,15 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]),
     except:
         import fmbt.lsts as lsts
 
+    def update_generated_tags(aal, include_variables,
+                              generated_tagnames, tags, new_lsts_state_num):
+        for v in include_variables:
+            t = "var:%s = %s" % (v, str(aal._variables[v])[:42])
+            if not t in generated_tagnames:
+                generated_tagnames.add(t)
+                tags[t] = []
+            tags[t].append(new_lsts_state_num)
+
     generation_discontinued_tag = "AAL-depth:%s" % (depth,)
 
     new_lsts = lsts.writer()
@@ -353,6 +362,7 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]),
     transitions = [[]]
     tags = {generation_discontinued_tag: []}
     tagnames = aal.getSPNames()
+    generated_tagnames = set([])
     tags.update([(name, []) for name in tagnames])
     tagnum_to_name = dict([(num+1, name) for num, name in enumerate(tagnames)])
 
@@ -371,6 +381,8 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]),
     # initial state tags
     for tag in current_tags:
         tags[tagnum_to_name[tag]].append(lsts_states[initial_state_hidden])
+    if include_variables:
+        update_generated_tags(aal, include_variables, generated_tagnames, tags, 0)
 
     while unhandled_states:
         source_state, path = unhandled_states.popitem()
@@ -394,7 +406,10 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]),
             # new state?
             if not next_state_hidden in lsts_states:
                 transitions.append([])
-                lsts_states[next_state_hidden] = len(transitions) - 1
+                new_lsts_state_num = len(transitions) - 1
+                lsts_states[next_state_hidden] = new_lsts_state_num
+                if include_variables:
+                    update_generated_tags(aal, include_variables, generated_tagnames, tags, new_lsts_state_num)
             if not next_state_real in found_states_real:
                 unhandled_states[next_state_real] = path + [action]
                 found_states_real[next_state_real] = next_state_hidden
@@ -411,7 +426,7 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]),
     new_lsts.set_actionnames(actionnames)
     new_lsts.set_transitions(transitions)
     new_lsts.set_stateprops(tags)
-    stateprop_order = aal.getSPNames()
+    stateprop_order = aal.getSPNames() + sorted(generated_tagnames)
     if include_generation_discontinued_tag:
         stateprop_order.append(generation_discontinued_tag)
     new_lsts.write(output_fileobj, stateprop_order=stateprop_order)
