@@ -422,6 +422,7 @@ class Device(object):
             del self._lastScreenshot
         if self._visualLog:
             self._visualLog.close()
+            self._visualLog = None
         import gc
         gc.collect()
 
@@ -948,6 +949,9 @@ class Device(object):
           colorMatch, opacityLimit, area (optional):
                   refer to verifyBitmap documentation.
 
+          tapPos (pair of floats (x,y)):
+                  refer to tapItem documentation.
+
           long, hold (optional):
                   refer to tap documentation.
 
@@ -975,8 +979,32 @@ class Device(object):
     def tapItem(self, viewItem, **tapKwArgs):
         """
         Tap the center point of viewItem.
+
+        Parameters:
+
+          viewItem (ViewItem object):
+                  item to be tapped, possibly returned by
+                  findItemsBy... methods in Screenshot or View.
+
+          tapPos (pair of floats (x,y)):
+                  position to tap, relational to the bitmap.
+                  (0.0, 0.0) is the top-left corner,
+                  (1.0, 0.0) is the top-right corner,
+                  (1.0, 1.0) is the lower-right corner.
+                  Values < 0 and > 1 tap coordinates outside the item.
+
+          long, hold (optional):
+                  refer to tap documentation.
         """
-        return self.tap(viewItem.coords(), **tapKwArgs)
+        if "tapPos" in tapKwArgs:
+            posX, posY = tapKwArgs["tapPos"]
+            del tapKwArgs["tapPos"]
+            x1, y1, x2, y2 = viewItem.bbox()
+            tapCoords = (x1 + (x2-x1) * posX,
+                         y1 + (y2-y1) * posY)
+        else:
+            tapCoords = viewItem.coords()
+        return self.tap(tapCoords, **tapKwArgs)
 
     def tapOcrText(self, word, match=1.0, preprocess=None, **tapKwArgs):
         """
@@ -1016,6 +1044,9 @@ class Device(object):
           partial (boolean, optional):
                   refer to verifyText documentation. The default is
                   False.
+
+          tapPos (pair of floats (x,y)):
+                  refer to tapItem documentation.
 
           long, hold (optional):
                   refer to tap documentation.
@@ -1189,9 +1220,35 @@ class Device(object):
 
         Updates the last screenshot.
         """
-
         return self.wait(self.refreshScreenshot,
                          self.verifyBitmap, (bitmap,), _bitmapKwArgs(colorMatch, opacityLimit, area),
+                         **waitKwArgs)
+
+    def waitOcrText(self, text, match=None, preprocess=None, **waitKwArgs):
+        """
+        Wait until OCR detects text on the screen.
+
+        Parameters:
+
+          text (string):
+                  text to be waited for.
+
+          match, preprocess (float and string, optional)
+                  refer to verifyOcrText documentation.
+
+          waitTime, pollDelay (float, optional):
+                  refer to wait documentation.
+
+        Returns True if the text appeared within given time limit,
+        otherwise False.
+
+        Updates the last screenshot.
+        """
+        ocrKwArgs = {}
+        if match != None: ocrKwArgs["match"] = match
+        if preprocess != None: ocrKwArgs["preprocess"] = preprocess
+        return self.wait(self.refreshScreenshot,
+                         self.verifyOcrText, (text,), ocrKwArgs,
                          **waitKwArgs)
 
     def waitText(self, text, partial=False, **waitKwArgs):
@@ -1384,6 +1441,7 @@ class Screenshot(object):
         # => cache all search hits
         self._cache = {}
         self._ocrWords = None
+        self._ocrWordsPreprocess = None
         self._ocrPreprocess = _OCRPREPROCESS
 
     def dumpOcrWords(self, preprocess=None):
@@ -1430,12 +1488,13 @@ class Screenshot(object):
         shutil.copy(self._filename, fileOrDirName)
 
     def _assumeOcrWords(self, preprocess=None):
-        if self._ocrWords == None:
+        if self._ocrWords == None or self._ocrWordsPreprocess != preprocess:
             if preprocess == None:
                 preprocess = self._ocrPreprocess
             if not type(preprocess) in (list, tuple):
                 preprocess = [preprocess]
             self._ocrWords = {}
+            self._ocrWordsPreprocess = preprocess
             for ppfilter in preprocess:
                 pp = ppfilter % { "zoom": "-resize %sx" % (self._screenSize[0] * 2) }
                 eyenfinger.iRead(source=self._filename, ocr=True, preprocess=pp)
@@ -2047,13 +2106,19 @@ class _VisualLog:
         self._blockId = 0
 
     def close(self):
-        html = []
-        for c in xrange(self._callDepth):
-            html.append('</table></tr>') # end call
-        html.append('</table></div></td></tr></table></ul>') # end step
-        html.append('</body></html>')
-        self._outFileObj.write('\n'.join(html))
-        self._outFileObj.close()
+        if self._outFileObj != None:
+            html = []
+            for c in xrange(self._callDepth):
+                html.append('</table></tr>') # end call
+            html.append('</table></div></td></tr></table></ul>') # end step
+            html.append('</body></html>') # end html
+            self.write('\n'.join(html))
+            self._outFileObj.close()
+            self._outFileObj = None
+
+    def write(self, s):
+        if self._outFileObj != None:
+            self._outFileObj.write(s)
 
     def timestamp(self, t=None):
         if t == None: t = datetime.datetime.now()
@@ -2073,10 +2138,10 @@ class _VisualLog:
         ts = fmbt.getTestStep()
         an = fmbt.getActionName()
         if self._testStep != ts or self._actionName != an:
-            if self._blockId != 0: self._outFileObj.write('</table></div></td></tr></table></ul>')
+            if self._blockId != 0: self.write('</table></div></td></tr></table></ul>')
             actionHtml = '''\n\n<ul><li><table><tr><td>%s</td><td><div class="step"><a id="blockId%s" href="javascript:showHide('S%s')">%s. %s</a></div><div class="funccalls" id="S%s"><table>\n''' % (
                 self.htmlTimestamp(), self._blockId, self._blockId, ts, an, self._blockId)
-            self._outFileObj.write(actionHtml)
+            self.write(actionHtml)
             self._testStep = ts
             self._actionName = an
             self._blockId += 1
@@ -2095,7 +2160,7 @@ class _VisualLog:
                  <td>%s</td><td><a title="%s:%s"><div class="call">%s%s</div></a></td>
              </tr>
              %s''' % (self.htmlTimestamp(t), cgi.escape(callerFilename), callerLineno, cgi.escape(callee), cgi.escape(str(calleeArgs)), imgHtml)
-        self._outFileObj.write(callHtml)
+        self.write(callHtml)
         self._callDepth += 1
         return (self.timestamp(t), callerFilename, callerLineno)
 
@@ -2107,7 +2172,7 @@ class _VisualLog:
                  <td>%s</td><td><div class="returnvalue"><a title="%s">== %s</a></div></td>
              </tr>%s
              </table></tr>\n''' % (self.htmlTimestamp(), tip, cgi.escape(str(retval)), imgHtml)
-        self._outFileObj.write(returnHtml)
+        self.write(returnHtml)
 
     def logException(self):
         einfo = sys.exc_info()
@@ -2117,10 +2182,10 @@ class _VisualLog:
                  <td>%s</td><td><div class="exception"><a title="%s">!! %s</a></div></td>
              </tr>
              </table></tr>\n''' % (self.htmlTimestamp(), cgi.escape(traceback.format_exception(*einfo)[-2].replace('"','').strip()), cgi.escape(str(traceback.format_exception_only(einfo[0], einfo[1])[0])))
-        self._outFileObj.write(excHtml)
+        self.write(excHtml)
 
     def logHeader(self):
-        self._outFileObj.write('''
+        self.write('''
             <!DOCTYPE html><html>
             <head><meta charset="utf-8"><title>fmbtandroid visual log</title>
             <SCRIPT><!--
@@ -2200,7 +2265,7 @@ class _VisualLog:
     def findItemsByBitmapLogger(loggerSelf, origMethod, screenshotObj):
         def findItemsByBitmapWRAP(*args, **kwargs):
             bitmap = args[0]
-            loggerSelf.logCall(img=bitmap)
+            loggerSelf.logCall(img=screenshotObj._pathSolver(bitmap))
             retval = loggerSelf.doCallLogException(origMethod, args, kwargs)
             if len(retval) == 0:
                 loggerSelf.logReturn("not found in", img=screenshotObj, tip=origMethod.func_name)
