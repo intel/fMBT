@@ -54,6 +54,8 @@ public:
   }
   virtual ~EndHookExit() {}
   virtual void run();
+  virtual std::string stringify();
+
   int exit_status;
 };
 
@@ -64,6 +66,11 @@ public:
   virtual ~EndHookInteractive() {}
   virtual void run();
 };
+
+void stringify_hooks(std::ostringstream& t,
+		     const std::list<EndHook*> hl,
+		     const std::string name);
+
 
 #undef FACTORY_CREATOR_PARAMS
 #undef FACTORY_CREATOR_PARAMS2 

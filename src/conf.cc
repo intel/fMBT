@@ -208,6 +208,12 @@ std::string Conf::stringify() {
     t << end_conditions[i]->stringify() << std::endl;
   }
 
+  // exit-hooks
+  stringify_hooks(t,pass_hooks ,"on_pass"  );
+  stringify_hooks(t,fail_hooks ,"on_fail"  );
+  stringify_hooks(t,inc_hooks  ,"on_inconc");
+  stringify_hooks(t,error_hooks,"on_error" );
+
   return t.str();
 }
 

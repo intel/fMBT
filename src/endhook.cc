@@ -19,6 +19,8 @@
 
 #include "conf.hh"
 #include "endhook.hh"
+#include <sstream>
+#include <list>
 
 #undef FACTORY_CREATOR_PARAMS
 #undef FACTORY_CREATOR_PARAMS2 
@@ -54,10 +56,29 @@ void hook_delete(EndHook* e)
   }
 }
 
+void stringify_hooks(std::ostringstream& t,
+		     const std::list<EndHook*> hl,
+		     const std::string name)
+{
+  for(std::list<EndHook*>::const_iterator i=hl.begin();i!=hl.end();i++) {
+    std::string val=(*i)->stringify();
+    if (val!="") {
+      t << name << " = " << val << std::endl;
+    }
+  }
+}
+		     
+
 void hook_runner(EndHook* e) {
   if (e) 
     e->run();
 }
+
+std::string EndHookExit::stringify() { 
+    if (!status) return Writable::stringify();
+    return "exit("+to_string(exit_status)+")";
+}
+
 
 EndHook* new_endhook(Conf* c,const std::string& s)
 {
