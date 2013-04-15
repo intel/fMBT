@@ -60,7 +60,8 @@ void stringify_hooks(std::ostringstream& t,
 		     const std::list<EndHook*> hl,
 		     const std::string name)
 {
-  for(std::list<EndHook*>::const_iterator i=hl.begin();i!=hl.end();i++) {
+  std::list<EndHook*>::const_iterator i=hl.begin();
+  for(i++;i!=hl.end();i++) {
     std::string val=(*i)->stringify();
     if (val!="") {
       t << name << " = " << val << std::endl;
