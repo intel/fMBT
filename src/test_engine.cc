@@ -547,6 +547,10 @@ void Test_engine::interactive()
     while (adapter.observe(actions_v)>0) {
       action=actions_v[0];
       fprintf(stderr,"Action %i:%s\n",action,heuristic.getActionName(action).c_str());
+      interactive::execute(log, adapter, heuristic, *heuristic.get_model(),
+			   action, policy,
+			   true, skip_model_execute);
+
       actions_v.resize(0);
     }
 
@@ -714,7 +718,7 @@ void Test_engine::interactive()
         unsigned int action_num;
         for (action_num=1;action_num<ca_anames.size();action_num++) {
           if (ca_anames[action_num]==std::string(s)) {
-
+o
             interactive::execute(log, *current_adapter, heuristic, *current_model,
                                  action_num, policy,
                                  skip_adapter_execute, skip_model_execute);
