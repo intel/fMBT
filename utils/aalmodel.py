@@ -30,6 +30,7 @@ class AALModel:
         self._variables['variable'] = lambda varname: self._variables[varname]
         self._variables['assign'] = lambda varname, v: self._variables.__setitem__(varname, v)
         self._stack = []
+        self._stack_executed_actions = []
         self._adapter_exit_executed = False
         self._enabled_actions_stack = [set()]
         fmbt._g_testStep = 0
@@ -130,6 +131,8 @@ class AALModel:
             self.call(self._all_bodies[i-1])
             if len(self._stack) == 0:
                 fmbt._g_testStep += 1
+            if len(self._stack_executed_actions) > 0:
+                self._stack_executed_actions[-1].append(fmbt._g_actionName)
             self._enabled_actions_stack[-1] = set()
             return i
         else:
@@ -177,10 +180,12 @@ class AALModel:
         for varname in self._push_variables:
             stack_element[varname] = copy.deepcopy(self._variables[varname])
         self._stack.append(stack_element)
+        self._stack_executed_actions.append([])
         self._enabled_actions_stack.append(set())
 
     def pop(self):
         stack_element = self._stack.pop()
+        self._stack_executed_actions.pop()
         for varname in stack_element:
             self._variables[varname] = stack_element[varname]
         self._enabled_actions_stack.pop()
