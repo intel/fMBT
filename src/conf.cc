@@ -337,8 +337,16 @@ void Conf::handle_hooks(Verdict::Verdict v)
     // unknown verdict?
   }
   }
-  if (hooklist)
-    for_each(hooklist->begin(),hooklist->end(),hook_runner);
+  if (hooklist) {
+    std::list<EndHook*>::iterator b,e;
+    b=hooklist->begin();
+    e=hooklist->end();
+    if (v==Verdict::FAIL && b++ != e) {
+      for_each(b++,e,hook_runner);
+    } else {
+      for_each(b,e,hook_runner);
+    }
+  }
 }
 
 void Conf::set_observe_sleep(std::string &s)
