@@ -32,11 +32,13 @@
 #include "helper.hh"
 
 class EndHook;
+class EndHookInteractive;
 class Conf;
 EndHook* new_endhook(Conf* c,const std::string& s);
 
 class Conf:public Writable {
  public:
+  friend class EndHookInteractive;
   Conf(Log& l, bool debug_enabled=false)
     :log(l), exit_status(0), exit_interactive(false),
      heuristic_name("random"), coverage_name("perm"),

@@ -21,6 +21,7 @@
 
 #include <string>
 #include <vector>
+#include <set>
 
 class aalang {
 public:
@@ -32,6 +33,14 @@ public:
 
   aalang() {}
   virtual ~aalang() {};
+  virtual bool check_name(std::string* name) {
+    if (names.find(*name)!=names.end()) {
+      return true;
+    } else {
+      names.insert(*name);
+    }
+    return false;
+  }
   virtual void set_name(std::string* name,bool first=false,ANAMETYPE t=DEFACTION) = 0;
   virtual void set_namestr(std::string* name)                      = 0;
   virtual void set_tagname(std::string* name,bool first=false)     = 0;
@@ -65,6 +74,7 @@ protected:
   std::string default_adapter;
   std::vector<int> amap;
   std::vector<int> tmap;
+  std::set<std::string> names;
 };
 
 #endif

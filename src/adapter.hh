@@ -111,6 +111,7 @@ public:
   /// Returns escaped action name (can be logged to XML)
   const char* getUActionName(int action);
 
+  /// called at the end of test
   virtual void adapter_exit(Verdict::Verdict verdict,
 			    const std::string& reason) { }
 

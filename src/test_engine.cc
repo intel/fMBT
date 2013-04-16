@@ -547,6 +547,10 @@ void Test_engine::interactive()
     while (adapter.observe(actions_v)>0) {
       action=actions_v[0];
       fprintf(stderr,"Action %i:%s\n",action,heuristic.getActionName(action).c_str());
+      interactive::execute(log, adapter, heuristic, *heuristic.get_model(),
+			   action, policy,
+			   true, skip_model_execute);
+
       actions_v.resize(0);
     }
 
@@ -558,7 +562,35 @@ void Test_engine::interactive()
       unsigned int num = 0;
 
       switch (*s) {
+      case 'h': {
+	// heuristic
+	Heuristic* h;
+	std::string tmp(s+1);
+	clear_whitespace(tmp);
+	if (tmp!="") {
+	  h=new_heuristic(log,tmp);
+	  if (h!=NULL) {
+	    if (h->status) {
+	      h->set_coverage(heuristic.get_coverage());
+	      h->set_model(heuristic.get_model());
+	    } else {
+	      printf("Heuristic error %s\n",h->errormsg.c_str());
+	    }
+	  } else {
+	    printf("Can't create heuristic %s\n",s+1);
+	    break;
+	  }
+	} else {
+	  h=&heuristic;
+	}
 
+	printf("%s\n",h->getActionName(h->getIAction()).c_str());
+
+	if (h!=&heuristic) {
+	  delete h;
+	}
+	break;
+      }
       case 'c': {
         // Feel free to improve.
         End_condition* e=NULL;
@@ -728,12 +760,24 @@ void Test_engine::interactive()
         break;
 
       case 'a': // commands "a", "a<num>" and "aup"
+	if (strncmp(s,"ae",2)==0) {
+	  std::string name,option;
+	  std::vector<std::string> p;
+	  param_cut(s,name,option);
+	  commalist(option,p);
+	  if (p.size()<1||p.size()>2) {
+	    goto unknown_command;	    
+	  }
+	  adapter.adapter_exit(from_string(p[0]),
+			       p.size()==2?p[1]:"");
+	  break;
+	}
 	if (strncmp(s,"at",2)==0) {
 	  num=std::atoi(s+2);
 	  int cnt=1;
 	  mismatch_tags.clear();
 	  int failing_tags = adapter.check_tags((int*)&num,cnt,mismatch_tags);
-
+	  
 	  for(unsigned i=0;i<mismatch_tags.size();i++) {
 	    fprintf(stderr,"Tag %s (%i) fails\n",
 		    heuristic.get_model()
@@ -764,8 +808,7 @@ void Test_engine::interactive()
 	    }
 	  }
 	}
-        break;
-
+	break;
       case 'q': // command "q": quit
         std::free(s);
         return;
@@ -903,6 +946,7 @@ void Test_engine::interactive()
                "    c<num>  - run (max num iterations) until break or test exit\n"
                "Change adapters/models:\n"
                "    a      - list low-level adapters of current adapter\n"
+	       "    ae(verdict<,reason>) - call adapter_exit\n"
                "    a<num> - move down to adapter <num>\n"
                "    aup    - move up to parent adapter\n"
                "    m      - list model subcomponents\n"
@@ -919,6 +963,7 @@ void Test_engine::interactive()
                "    oem[0|1]- get/set executing action in model\n"
                "Other:\n"
                "    C      - print coverage\n"
+	       "    h[heuristic] - print action what heuristic would suggest. If heuristic not specified, use heuristic specified in configuration file\n"
                "Search:\n"
                "    ?a<num>- search shortest path to execute action <num>\n"
                "    ?c<num>- search path of length <num> for maximal coverage\n"

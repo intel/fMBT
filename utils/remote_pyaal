@@ -79,6 +79,7 @@ opt_debug = False
 filter_tags = []
 log_filename = None
 log_flush_interval = 1.0 # in seconds
+
 def _log(msg, flush=False):
     global log_filename
     if opt_debug:
@@ -96,11 +97,11 @@ _log.last_flush = time.time()
 
 def fmbtlog(msg, flush=True):
     current_time = time.time()
-    timestamped = "l%.4f %s" % (current_time, msg)
+    timestamped = "fmbtmagicl%.4f %s" % (current_time, msg)
     sys.stdout.write(urllib.quote(timestamped)+"\n")
 
 def fmbtstderr(msg):
-    to_fmbt = urllib.quote("e%s" % (msg,)) + '\n'
+    to_fmbt = urllib.quote("fmbtmagice%s" % (msg,)) + '\n'
     sys.stdout.write(to_fmbt)
     _log(msg)
 
@@ -120,18 +121,18 @@ def bye():
 
 def put(msg):
     if opt_debug: _log("sending: '%s'" % (msg,))
-    sys.stdout.write(str(msg) + "\n")
+    sys.stdout.write("fmbtmagic " + str(msg) + "\n")
     sys.stdout.flush()
 
 def put_list(list_of_integers):
     msg = " ".join([str(i) for i in list_of_integers])
     if opt_debug: _log("sending: '%s'" % (msg,))
-    sys.stdout.write(msg + "\n")
+    sys.stdout.write("fmbtmagic " + msg + "\n")
     sys.stdout.flush()
 
 def put_lts(lts_string):
     if opt_debug: _log("sending lts")
-    sys.stdout.write("%s\n%s" % (len(lts_string), lts_string))
+    sys.stdout.write("fmbtmagic %s\n%s" % (len(lts_string), lts_string))
     sys.stdout.flush()
 
 def get():

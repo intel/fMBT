@@ -73,6 +73,9 @@ std::string to_string(const int cnt,const int* t,
 		      const std::vector<std::string>& st);
 std::string to_string(const struct timeval&t,bool minutes=false);
 std::string to_string(Verdict::Verdict verdict);
+
+Verdict::Verdict from_string(const std::string& s);
+
 void  strvec(std::vector<std::string> & v,std::string& s,
 	     const std::string& separator);
 
@@ -86,16 +89,16 @@ ssize_t nonblock_getline(char **lineptr, size_t *n,
 
 ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
 		 char* &read_buf,size_t &read_buf_pos,Log& log);
-ssize_t bgetline(char **lineptr, size_t *n, FILE *stream, Log& log);
+ssize_t bgetline(char **lineptr, size_t *n, FILE *stream, Log& log,bool magic=false);
 
 void block(int fd);
 void nonblock(int fd);
 
 int getint(FILE* out,FILE* in,Log& log,
-	   int min=-42,int max=INT_MAX,Writable* w=NULL);
+	   int min=-42,int max=INT_MAX,Writable* w=NULL,bool magic=false);
 
 int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in,Log& log,
-	   int min=-42,int max=INT_MAX,Writable* w=NULL);
+	   int min=-42,int max=INT_MAX,Writable* w=NULL,bool magic=false);
 
 void split(std::string val, std::string& name,
 	   std::string& param, const char* s=":");

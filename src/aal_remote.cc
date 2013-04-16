@@ -77,24 +77,24 @@ aal_remote::aal_remote(Log&l,std::string& s)
   d_stdout=fdopen(_stdout,"r");
   d_stderr=fdopen(_stderr,"r");
 
-  ssize_t red=bgetline(&read_buf,&read_buf_pos,d_stdout,l);
+  ssize_t red=bgetline(&read_buf,&read_buf_pos,d_stdout,l,true);
 
   action_names.push_back("TAU");
 
   while (red>1) {
     read_buf[red-1]='\0'; // no not include linefeed
     action_names.push_back(read_buf);
-    red=getline(&read_buf,&read_buf_pos,d_stdout);
+    red=bgetline(&read_buf,&read_buf_pos,d_stdout,l,true);
   }
 
-  red=getline(&read_buf,&read_buf_pos,d_stdout);
+  red=bgetline(&read_buf,&read_buf_pos,d_stdout,l,true);
 
   tag_names.push_back("TAU");
 
   while (red>1) {
     read_buf[red-1]='\0'; // no not include linefeed
     tag_names.push_back(read_buf);
-    red=getline(&read_buf,&read_buf_pos,d_stdout);
+    red=bgetline(&read_buf,&read_buf_pos,d_stdout,l,true);
   }
 
   free(read_buf);
@@ -133,7 +133,7 @@ int aal_remote::adapter_execute(int action,const char* params) {
 
   std::fprintf(d_stdin, "a%i\n", action);
   return getint(d_stdin,d_stdout,_log,Alphabet::ALPHABET_MIN,
-                action_names.size(),this);
+                action_names.size(),this,true);
 }
 
 int aal_remote::model_execute(int action) {
@@ -150,7 +150,7 @@ int aal_remote::model_execute(int action) {
 
   std::fprintf(d_stdin, "m%i\n", action);
   return getint(d_stdin,d_stdout,_log,Alphabet::ALPHABET_MIN,
-                action_names.size(),this);
+                action_names.size(),this,true);
 }
 
 void aal_remote::adapter_exit(Verdict::Verdict verdict,
@@ -170,7 +170,7 @@ void aal_remote::adapter_exit(Verdict::Verdict verdict,
 
   while(g_main_context_iteration(NULL,FALSE));
   handle_stderr();
-  getint(d_stdin, d_stdout,_log,0,1,this);
+  getint(d_stdin, d_stdout,_log,0,1,this,true);
 }
 
 void aal_remote::push() {
@@ -191,7 +191,7 @@ void aal_remote::push() {
       if (fflush(d_stdin)==EBADF) {
         status=false;
       }
-      int r=getint(d_stdin,d_stdout,_log,0,INT_MAX,this);
+      int r=getint(d_stdin,d_stdout,_log,0,INT_MAX,this,true);
       if (status && r>0) {
         char* lts_content = new char[r+1];
         lts_content[r]=0;
@@ -249,7 +249,7 @@ void aal_remote::pop() {
 bool aal_remote::reset() {
   handle_stderr();
   std::fprintf(d_stdin, "mr\n");
-  bool rv = (getint(d_stdin,d_stdout,_log,0,1,this) == 1);
+  bool rv = (getint(d_stdin,d_stdout,_log,0,1,this,true) == 1);
   if (!rv) {
     errormsg = "aal_remote model failed to reset \"" + params + "\".\n"
       "      (try executing: echo mr | " + params + ")";
@@ -260,7 +260,7 @@ bool aal_remote::reset() {
 
 bool aal_remote::init() {
   std::fprintf(d_stdin, "ai\n");
-  bool rv = (getint(d_stdin,d_stdout,_log,0,1,this) == 1);
+  bool rv = (getint(d_stdin,d_stdout,_log,0,1,this,true) == 1);
   if (!rv) {
     errormsg = "aal_remote adapter failed to init \"" + params + "\".\n"
       "      (try executing: echo ai | " + params + ")";
@@ -285,7 +285,7 @@ int aal_remote::getActions(int** act) {
 
   std::fprintf(d_stdin, "ma\n");
   if ((rv = getact(act,actions,d_stdin,d_stdout,_log,
-                   1,action_names.size(),this)) >= 0) {
+                   1,action_names.size(),this,true)) >= 0) {
     return rv;
   }
   status = false;
@@ -309,7 +309,7 @@ int aal_remote::getprops(int** pro) {
 
   std::fprintf(d_stdin, "mp\n");
   if ((rv = getact(pro,tags,d_stdin,d_stdout,_log,
-                   0,tag_names.size(),this)) >= 0) {
+                   0,tag_names.size(),this,true)) >= 0) {
     return rv;
   } else {
     status = false;
@@ -338,7 +338,7 @@ int aal_remote::check_tags(std::vector<int>& tag,std::vector<int>& t)
   std::fprintf(d_stdin, "act%s\n",s.c_str());
 
   if ((rv = getact(NULL,t,d_stdin,d_stdout,_log,
-                   0,tag_names.size(),this)) >= 0) {
+                   0,tag_names.size(),this,true)) >= 0) {
     return rv;
   }
   status = false;
@@ -365,7 +365,7 @@ int aal_remote::observe(std::vector<int> &action, bool block)
   }
   int action_alternatives = getact(NULL, action, d_stdin, d_stdout,_log,
                                    Alphabet::ALPHABET_MIN,
-                                   action_names.size(),this);
+                                   action_names.size(),this,true);
   if (action_alternatives < 0) {
       status = false;
       errormsg = "corrupted list of output actions";

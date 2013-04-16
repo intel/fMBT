@@ -47,6 +47,61 @@ public:
   End_condition(Verdict::Verdict v, const std::string& p);
   virtual ~End_condition();
 
+  virtual std::string stringify() {
+    if (!status) return Writable::stringify();
+    std::string ret;
+    switch (verdict) {
+    case Verdict::PASS:
+      ret="pass";
+      break;
+    case Verdict::FAIL:
+      ret="fail";
+      break;
+    case Verdict::INCONCLUSIVE:
+      ret="inconc";
+      break;
+    case Verdict::ERROR:
+      ret="error";
+      break;
+    default:
+      break;
+    }
+    std::string name;
+    switch(counter) {
+    case STEPS:
+      name="steps";
+      break;
+    case COVERAGE:
+      name="coverage";
+      break;
+    case STATETAG:
+      name="tag";
+      break;
+    case DURATION:
+      name="duration";
+      break;
+    case NOPROGRESS:
+      name="noprogress";
+      break;
+    case DEADLOCK:
+      name="deadlock";
+      break;
+    case TAGVERIFY:
+      name="failing_tag";
+      break;
+    case ACTION:
+    case STATUS:
+    default:
+      return "";
+    }
+    if (param!="") {
+      ret=ret+"\t=\t"+name+"("+param+")";
+    } else {
+      ret=ret+"\t=\t"+name;
+    }
+    return ret;
+  }
+
   virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags)=0;
   virtual const std::string& end_reason() {
     return er;
@@ -222,6 +277,7 @@ public:
     counter = STATUS;
     status = true;
   }
+
   virtual ~End_status_error() {}
   virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags);
 };

@@ -29,7 +29,7 @@
 #endif
 
 class EndHook;
-
+#include "endhook.hh"
 extern "C" {
   extern D_ParserTables parser_tables_conf;
 }
@@ -203,7 +203,16 @@ std::string Conf::stringify() {
   t << "adapter = \"" << adapter_name
     << capsulate(adapter->stringify()) << std::endl;
 
-  /* TODO: stringify end conditions */
+  // end conditions
+  for(size_t i=0;i<end_conditions.size();i++) {
+    t << end_conditions[i]->stringify() << std::endl;
+  }
+
+  // exit-hooks
+  stringify_hooks(t,pass_hooks ,"on_pass"  );
+  stringify_hooks(t,fail_hooks ,"on_fail"  );
+  stringify_hooks(t,inc_hooks  ,"on_inconc");
+  stringify_hooks(t,error_hooks,"on_error" );
 
   return t.str();
 }
@@ -328,8 +337,16 @@ void Conf::handle_hooks(Verdict::Verdict v)
     // unknown verdict?
   }
   }
-  if (hooklist)
-    for_each(hooklist->begin(),hooklist->end(),hook_runner);
+  if (hooklist) {
+    std::list<EndHook*>::iterator b,e;
+    b=hooklist->begin();
+    e=hooklist->end();
+    if (v==Verdict::FAIL && b++ != e) {
+      for_each(b++,e,hook_runner);
+    } else {
+      for_each(b,e,hook_runner);
+    }
+  }
 }
 
 void Conf::set_observe_sleep(std::string &s)

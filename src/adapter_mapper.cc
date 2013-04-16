@@ -513,4 +513,16 @@ int Adapter_mapper::observe(std::vector<int> &action,bool block)
   return Alphabet::SILENCE;
 }
 
+void Adapter_mapper::adapter_exit(Verdict::Verdict verdict,
+				  const std::string& reason)
+{
+  for(unsigned i=0;i<adapters.size();i++) {
+    if (adapters[i]) {
+      adapters[i]->adapter_exit(verdict,reason);
+    }
+  }
+}
+
+
+
 FACTORY_DEFAULT_CREATOR(Adapter, Adapter_mapper, "mapper")

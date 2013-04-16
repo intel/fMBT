@@ -19,6 +19,8 @@
 
 #include "conf.hh"
 #include "endhook.hh"
+#include <sstream>
+#include <list>
 
 #undef FACTORY_CREATOR_PARAMS
 #undef FACTORY_CREATOR_PARAMS2 
@@ -44,7 +46,11 @@ void EndHookExit::run(){
 }
 
 void EndHookInteractive::run() {
+  Policy policy;
   c->exit_interactive=true;
+  Test_engine engine(*c->heuristic,*c->adapter,c->log,policy,
+		     c->end_conditions,c->disabled_tags);
+  engine.interactive();
 }
 
 void hook_delete(EndHook* e)
@@ -54,10 +60,35 @@ void hook_delete(EndHook* e)
   }
 }
 
+void stringify_hooks(std::ostringstream& t,
+		     const std::list<EndHook*> hl,
+		     const std::string name)
+{
+  std::list<EndHook*>::const_iterator i=hl.begin();
+  for(i++;i!=hl.end();i++) {
+    std::string val=(*i)->stringify();
+    if (val!="") {
+      t << name << " = " << val << std::endl;
+    }
+  }
+}
+		     
+
 void hook_runner(EndHook* e) {
   if (e) 
     e->run();
 }
+
+std::string EndHookExit::stringify() { 
+    if (!status) return Writable::stringify();
+    return "exit("+to_string(exit_status)+")";
+}
+
+std::string EndHookInteractive::stringify() { 
+    if (!status) return Writable::stringify();
+    return "interactive";
+}
+
 
 EndHook* new_endhook(Conf* c,const std::string& s)
 {
