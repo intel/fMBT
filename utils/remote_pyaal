@@ -79,7 +79,6 @@ opt_debug = False
 filter_tags = []
 log_filename = None
 log_flush_interval = 1.0 # in seconds
-put_prefix = False
 
 def _log(msg, flush=False):
     global log_filename
@@ -121,22 +120,14 @@ def bye():
     _log("quitting", flush=True)
 
 def put(msg):
-    global put_prefix
-    if opt_debug: _log("sending: '%s'" % (msg,))    
-    if put_prefix:
-        sys.stdout.write("fmbtmagic" + str(msg) + "\n")
-    else:
-        sys.stdout.write(str(msg) + "\n")
+    if opt_debug: _log("sending: '%s'" % (msg,))
+    sys.stdout.write("fmbtmagic" + str(msg) + "\n")
     sys.stdout.flush()
 
 def put_list(list_of_integers):
-    global put_prefix
     msg = " ".join([str(i) for i in list_of_integers])
     if opt_debug: _log("sending: '%s'" % (msg,))
-    if put_prefix:
-        sys.stdout.write("fmbtmagic" + msg + "\n")
-    else:
-        sys.stdout.write(msg + "\n")
+    sys.stdout.write("fmbtmagic" + msg + "\n")
     sys.stdout.flush()
 
 def put_lts(lts_string):
@@ -155,8 +146,6 @@ class RemoteAALBridge:
 
     def communicate(self):
         # send all action names
-        global put_prefix
-        put_prefix = False
         action_names = self._aal.getActionNames()
         for name in action_names:
             put(name)
@@ -168,7 +157,6 @@ class RemoteAALBridge:
             put(name)
         put("")
 
-        put_prefix = True
         # protocol loop
         adapter_call_arguments = []
         cmd = get()

@@ -77,24 +77,24 @@ aal_remote::aal_remote(Log&l,std::string& s)
   d_stdout=fdopen(_stdout,"r");
   d_stderr=fdopen(_stderr,"r");
 
-  ssize_t red=bgetline(&read_buf,&read_buf_pos,d_stdout,l);
+  ssize_t red=bgetline(&read_buf,&read_buf_pos,d_stdout,l,true);
 
   action_names.push_back("TAU");
 
   while (red>1) {
     read_buf[red-1]='\0'; // no not include linefeed
     action_names.push_back(read_buf);
-    red=getline(&read_buf,&read_buf_pos,d_stdout);
+    red=bgetline(&read_buf,&read_buf_pos,d_stdout,l,true);
   }
 
-  red=getline(&read_buf,&read_buf_pos,d_stdout);
+  red=bgetline(&read_buf,&read_buf_pos,d_stdout,l,true);
 
   tag_names.push_back("TAU");
 
   while (red>1) {
     read_buf[red-1]='\0'; // no not include linefeed
     tag_names.push_back(read_buf);
-    red=getline(&read_buf,&read_buf_pos,d_stdout);
+    red=bgetline(&read_buf,&read_buf_pos,d_stdout,l,true);
   }
 
   free(read_buf);
