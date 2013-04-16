@@ -442,7 +442,7 @@ def windowXY():
         raise BadWindowName("undefined window")
     return _g_windowOffsets[_g_lastWindow]
 
-def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=None):
+def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=None, ocrArea=(0, 0, 1.0, 1.0)):
     """
     Read the contents of the given window or other source. If neither
     of windowId or source is given, reads the contents of active
@@ -488,7 +488,7 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
         iUseWindow(windowId)
 
         # take a screenshot
-        _runcmd("xwd -root -screen -out %s.xwd && convert %s.xwd -crop %sx%s+%s+%s '%s'" %
+        _runcmd("xwd -root -screen -out %s.xwd && convert %s.xwd -crop %sx%s+%s+%s +repage '%s'" %
                (SCREENSHOT_FILENAME, SCREENSHOT_FILENAME,
                 _g_windowSizes[_g_lastWindow][0], _g_windowSizes[_g_lastWindow][1],
                 _g_windowOffsets[_g_lastWindow][0], _g_windowOffsets[_g_lastWindow][1],
@@ -497,6 +497,15 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
     else:
         iUseImageAsWindow(source)
     _g_origImage = source
+    orig_width, orig_height = _g_windowSizes[_g_lastWindow][0], _g_windowSizes[_g_lastWindow][1]
+    x1, y1 = _coordsToInt(ocrArea[:2], (orig_width, orig_height))
+    x2, y2 = _coordsToInt(ocrArea[2:], (orig_width, orig_height))
+
+    if x2 <= x1 or y2 <= y1:
+        raise EyenfingerError("Invalid area size: %s => %s" % (ocrArea, (x1, y1, x2, y2)))
+
+    if orig_width <= 0 or orig_height <= 0:
+        raise EyenfingerError("Invalid image size: %sx%s" % (orig_width, orig_height))
 
     if not ocr:
         if capture:
@@ -508,9 +517,26 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
 
     # convert to text
     _g_readImage = _g_origImage + "-pp.png"
-    _, _g_hocr = _runcmd("convert %s %s %s && tesseract %s %s -l eng hocr" % (
-            _g_origImage, preprocess, _g_readImage,
-            _g_readImage, SCREENSHOT_FILENAME))
+    if ocrArea == (0, 0, 1.0, 1.0):
+        croparea = ""
+        wordXOffset = 0
+        wordYOffset = 0
+    else:
+        croparea = "-crop %sx%s+%s+%s +repage" % (x2-x1, y2-y1, x1, y1)
+        wordXOffset = x1
+        wordYOffset = y1
+        # rescale possible resize preprocessing parameter
+        resize_m = re.search('-resize ([0-9]+)x([0-9]*)', preprocess)
+        if resize_m:
+            origXResize = int(resize_m.group(1))
+            newXResize = int(origXResize/float(orig_width) * (x2-x1))
+            preprocess = (preprocess[:resize_m.start()] +
+                          ("-resize %sx" % (newXResize,)) +
+                          preprocess[resize_m.end():])
+    cmd = "convert %s %s %s %s && tesseract %s %s -l eng hocr" % (
+            _g_origImage, croparea, preprocess, _g_readImage,
+            _g_readImage, SCREENSHOT_FILENAME)
+    _, _g_hocr = _runcmd(cmd)
 
     if not os.access(SCREENSHOT_FILENAME + ".html", os.R_OK):
         raise NoOCRResults("HOCR output missing. Tesseract OCR 3.02 or greater required.")
@@ -519,21 +545,20 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
     _g_words = _hocr2words(file(SCREENSHOT_FILENAME + ".html").read())
 
     # convert word coordinates to the unscaled pixmap
-    orig_width, orig_height = _g_windowSizes[_g_lastWindow][0], _g_windowSizes[_g_lastWindow][1]
 
     scaled_width, scaled_height = re.findall('bbox 0 0 ([0-9]+)\s*([0-9]+)', _runcmd("grep ocr_page %s.html | head -n 1" % (SCREENSHOT_FILENAME,))[1])[0]
-    scaled_width, scaled_height = float(scaled_width), float(scaled_height)
+    scaled_width, scaled_height = float(scaled_width) / (float(x2-x1)/orig_width), float(scaled_height) / (float(y2-y1)/orig_height)
 
     for word in sorted(_g_words.keys()):
         for appearance, (wordid, middle, bbox) in enumerate(_g_words[word]):
             _g_words[word][appearance] = \
                 (wordid,
-                 (int(middle[0]/scaled_width * orig_width),
-                  int(middle[1]/scaled_height * orig_height)),
-                 (int(bbox[0]/scaled_width * orig_width),
-                  int(bbox[1]/scaled_height * orig_height),
-                  int(bbox[2]/scaled_width * orig_width),
-                  int(bbox[3]/scaled_height * orig_height)))
+                 (int(middle[0]/scaled_width * orig_width) + wordXOffset,
+                  int(middle[1]/scaled_height * orig_height) + wordYOffset),
+                 (int(bbox[0]/scaled_width * orig_width) + wordXOffset,
+                  int(bbox[1]/scaled_height * orig_height) + wordYOffset,
+                  int(bbox[2]/scaled_width * orig_width) + wordXOffset,
+                  int(bbox[3]/scaled_height * orig_height) + wordYOffset))
             _log('found "' + word + '": (' + str(bbox[0]) + ', ' + str(bbox[1]) + ')')
     if capture:
         drawWords(_g_origImage, capture, _g_words, _g_words)
