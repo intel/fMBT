@@ -177,11 +177,13 @@ class RemoteAALBridge:
                 try:
                     put_list(self._aal.getActions())
                 except Exception, e:
+                    report_simulation_error(self._aal)
                     fmbtstderr('Error when evaluating guards of actions: %s: %s\n%s' % (type(e).__name__, e, format_pythonaalexception()))
                     error(str(e))
             elif cmd == "mp":
                 try:    put_list(self._aal.getprops())
                 except Exception, e:
+                    report_simulation_error(self._aal)
                     fmbtstderr('Error at a tag: %s: %s\n%s' % (type(e).__name__, e, format_pythonaalexception()))
                     error(str(e))
             elif cmd == "mr":
@@ -249,6 +251,7 @@ class RemoteAALBridge:
                 try:
                     rv = self._aal.model_execute(action_number)
                 except Exception, e:
+                    report_simulation_error(self._aal)
                     fmbtstderr('Error at body() of "%s": %s: %s\n%s' % (action_names[action_number-1], type(e).__name__, e, format_pythonaalexception()))
                     error(str(e))
                 else:
@@ -282,6 +285,7 @@ class RemoteAALBridge:
                              include_generation_discontinued_tag = False)
                     self._aal.pop()
                 except Exception, e:
+                    report_simulation_error(self._aal)
                     fmbtstderr('Error on simulation %s: %s\n%s' % (type(e).__name__, e, format_pythonaalexception()))
                     error(str(e))
                 outfilestring.seek(0)
@@ -329,6 +333,13 @@ def format_syntaxerror():
         sys.last_value = exc_value
     except:
         pass
+
+def report_simulation_error(aal):
+    if len(aal._stack_executed_actions) > 0:
+        executed_actions = []
+        for l in aal._stack_executed_actions:
+            executed_actions.extend(l)
+        fmbtstderr("Error after simulated execution:\n    %s" % ('\n    '.join(executed_actions)))
 
 def tagfilter(state,tags):
     global filter_tags
@@ -553,5 +564,6 @@ if __name__ == "__main__":
         try:
             aal2lsts(aal, opt_output_fileobj, depth=opt_lsts_depth, discard_variables=set(opt_lsts_hide_vars), include_variables=set(opt_lsts_show_vars),_filter_tags=opt_lsts_hide_tags)
         except Exception, e:
+            report_simulation_error(aal)
             fmbtstderr('Error on simulation %s: %s\n%s' % (type(e).__name__, e, format_pythonaalexception()))
         opt_output_fileobj.close()
