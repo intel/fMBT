@@ -2122,7 +2122,7 @@ class _VisualLog:
                   device.tapBitmap, device.tapId, device.tapItem, device.tapOcrText,
                   device.tapText, device.topApp, device.topWindow, device.type,
                   device.verifyOcrText, device.verifyText, device.verifyBitmap,
-                  device.waitBitmap, device.waitText]:
+                  device.waitBitmap, device.waitOcrText, device.waitText]:
             setattr(device, m.func_name, self.genericLogger(m))
         self.logHeader()
         self._blockId = 0
@@ -2337,9 +2337,7 @@ class _VisualLog:
 
     def highlightFilename(self, screenshotFilename):
         self._highlightCounter += 1
-        if screenshotFilename.endswith(".png"): s = screenshotFilename[:-4]
-        else: s = screenshotFilename
-        retval = s + "-" + str(self._highlightCounter).zfill(5) + ".png"
+        retval = screenshotFilename + "." + str(self._highlightCounter).zfill(5) + ".png"
         return retval
 
     def changeCodeName(self, func, newName):
