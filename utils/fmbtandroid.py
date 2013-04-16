@@ -1006,7 +1006,7 @@ class Device(object):
             tapCoords = viewItem.coords()
         return self.tap(tapCoords, **tapKwArgs)
 
-    def tapOcrText(self, word, match=1.0, preprocess=None, **tapKwArgs):
+    def tapOcrText(self, word, match=1.0, preprocess=None, area=(0, 0, 1.0, 1.0), **tapKwArgs):
         """
         Find the given word from the latest screenshot using OCR, and
         tap it.
@@ -1025,13 +1025,21 @@ class Device(object):
                   result. Refer to eyenfinger.autoconfigure to search
                   for a good one.
 
+          area ((left, top, right, bottom), optional):
+                  search from the given area only. Left, top
+                  right and bottom are either absolute coordinates
+                  (integers) or floats in range [0.0, 1.0]. In the
+                  latter case they are scaled to screenshot
+                  dimensions. The default is (0.0, 0.0, 1.0, 1.0),
+                  that is, search everywhere in the screenshot.
+
           long, hold (optional):
                   refer to tap documentation.
 
           Returns True if successful, otherwise False.
         """
         assert self._lastScreenshot != None, "Screenshot required."
-        items = self._lastScreenshot.findItemsByOcr(word, match=match, preprocess=preprocess)
+        items = self._lastScreenshot.findItemsByOcr(word, match=match, preprocess=preprocess, area=area)
         if len(items) == 0: return False
         return self.tapItem(items[0], **tapKwArgs)
 
@@ -1073,7 +1081,7 @@ class Device(object):
     def type(self, text):
         return self._conn.sendType(text)
 
-    def verifyOcrText(self, word, match=1.0, preprocess=None):
+    def verifyOcrText(self, word, match=1.0, preprocess=None, area=(0, 0, 1.0, 1.0)):
         """
         Verify using OCR that the last screenshot contains the given word.
 
@@ -1091,13 +1099,21 @@ class Device(object):
                   result. Refer to eyenfinger.autoconfigure to search
                   for a good one.
 
+          area ((left, top, right, bottom), optional):
+                  search from the given area only. Left, top
+                  right and bottom are either absolute coordinates
+                  (integers) or floats in range [0.0, 1.0]. In the
+                  latter case they are scaled to screenshot
+                  dimensions. The default is (0.0, 0.0, 1.0, 1.0),
+                  that is, search everywhere in the screenshot.
+
           long, hold (optional):
                   refer to tap documentation.
 
           Returns True if successful, otherwise False.
         """
         assert self._lastScreenshot != None, "Screenshot required."
-        return self._lastScreenshot.findItemsByOcr(word, match=match, preprocess=preprocess) != []
+        return self._lastScreenshot.findItemsByOcr(word, match=match, preprocess=preprocess, area=area) != []
 
     def verifyText(self, text, partial=False):
         """
@@ -1441,11 +1457,14 @@ class Screenshot(object):
         # => cache all search hits
         self._cache = {}
         self._ocrWords = None
+        self._ocrWordsArea = None
         self._ocrWordsPreprocess = None
         self._ocrPreprocess = _OCRPREPROCESS
 
-    def dumpOcrWords(self, preprocess=None):
-        self._assumeOcrWords(preprocess=preprocess)
+    def dumpOcrWords(self, preprocess=None, area=None):
+        if preprocess == None: preprocess = self._ocrWordsPreprocess
+        if area == None: area = self._ocrWordsArea
+        self._assumeOcrWords(preprocess=preprocess, area=area)
         w = []
         for ppfilter in self._ocrWords:
             for word in self._ocrWords[ppfilter]:
@@ -1471,8 +1490,8 @@ class Screenshot(object):
             self._cache[(bitmap, colorMatch, opacityLimit, area)] = []
         return self._cache[(bitmap, colorMatch, opacityLimit, area)]
 
-    def findItemsByOcr(self, text, preprocess=None, match=1.0):
-        self._assumeOcrWords(preprocess=preprocess)
+    def findItemsByOcr(self, text, preprocess=None, match=1.0, area=(0, 0, 1.0, 1.0)):
+        self._assumeOcrWords(preprocess=preprocess, area=area)
         for ppfilter in self._ocrWords.keys():
             try:
                 eyenfinger._g_words = self._ocrWords[ppfilter]
@@ -1487,17 +1506,20 @@ class Screenshot(object):
     def save(self, fileOrDirName):
         shutil.copy(self._filename, fileOrDirName)
 
-    def _assumeOcrWords(self, preprocess=None):
-        if self._ocrWords == None or self._ocrWordsPreprocess != preprocess:
+    def _assumeOcrWords(self, preprocess=None, area=None):
+        if self._ocrWords == None or self._ocrWordsPreprocess != preprocess or self._ocrWordsArea != area:
             if preprocess == None:
                 preprocess = self._ocrPreprocess
+            if area == None:
+                area = (0, 0, 1.0, 1.0)
             if not type(preprocess) in (list, tuple):
                 preprocess = [preprocess]
             self._ocrWords = {}
             self._ocrWordsPreprocess = preprocess
+            self._ocrWordsArea = area
             for ppfilter in preprocess:
                 pp = ppfilter % { "zoom": "-resize %sx" % (self._screenSize[0] * 2) }
-                eyenfinger.iRead(source=self._filename, ocr=True, preprocess=pp)
+                eyenfinger.iRead(source=self._filename, ocr=True, preprocess=pp, ocrArea=area)
                 self._ocrWords[ppfilter] = eyenfinger._g_words
 
     def _item(self, className, (x1, y1, x2, y2), bitmap=None, screenshot=None, ocrFind=None, ocrFound=None):
@@ -2100,7 +2122,7 @@ class _VisualLog:
                   device.tapBitmap, device.tapId, device.tapItem, device.tapOcrText,
                   device.tapText, device.topApp, device.topWindow, device.type,
                   device.verifyOcrText, device.verifyText, device.verifyBitmap,
-                  device.waitBitmap, device.waitText]:
+                  device.waitBitmap, device.waitOcrText, device.waitText]:
             setattr(device, m.func_name, self.genericLogger(m))
         self.logHeader()
         self._blockId = 0
@@ -2315,9 +2337,7 @@ class _VisualLog:
 
     def highlightFilename(self, screenshotFilename):
         self._highlightCounter += 1
-        if screenshotFilename.endswith(".png"): s = screenshotFilename[:-4]
-        else: s = screenshotFilename
-        retval = s + "-" + str(self._highlightCounter).zfill(5) + ".png"
+        retval = screenshotFilename + "." + str(self._highlightCounter).zfill(5) + ".png"
         return retval
 
     def changeCodeName(self, func, newName):
