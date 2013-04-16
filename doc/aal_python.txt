@@ -20,7 +20,7 @@ Syntax of AAL is the following:
 
 aal "<modelname>" {
 
-    language: <language> {
+    language "<language>" {
         [prelude]
     }
 
@@ -79,6 +79,10 @@ Names of actions must start with either
 - "o" for output actions. Execution of these actions is triggered by
   the system under test. Test engine cannot suggest executing these
   actions.
+
+Shorthands "input" and "output" can be used instead of "action". In
+this case names are automatically prefixed by "i:" and "o:",
+respectively.
 
 Comments in AAL are written after "#" on their own lines. Commenting
 syntax inside code blocks is the same as in the programming language
@@ -306,14 +310,14 @@ follows:
 $ cat > example.aal << EOF
 aal "example" {
 
-    language: python { import os }
+    language "python" { import os }
 
-    variables        { pid_printed }
+    variables         { pid_printed }
 
-    initial_state    { pid_printed = False }
+    initial_state     { pid_printed = False }
 
     action "iPrintMyPID" {
-        guard()      { return pid_printed == False }
+        guard()       { return pid_printed == False }
         body() {
             log("my pid is: %s" % (os.getpid()))
             pid_printed = True
