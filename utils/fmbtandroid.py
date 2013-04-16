@@ -382,6 +382,7 @@ class Device(object):
                 raise
 
         self._visualLog = None
+        self._visualLogFileObj = None
         # Caches
         self._itemCache = {}
 
@@ -422,6 +423,8 @@ class Device(object):
             del self._lastScreenshot
         if self._visualLog:
             self._visualLog.close()
+            if self._visualLogFileObj:
+                self._visualLogFileObj.close()
             self._visualLog = None
         import gc
         gc.collect()
@@ -505,12 +508,16 @@ class Device(object):
                   is False.
         """
         if type(filenameOrObj) == str:
-            try: outFileObj = file(filenameOrObj, "w")
+            try:
+                outFileObj = file(filenameOrObj, "w")
+                self._visualLogFileObj = outFileObj
             except Exception, e:
                 _fmbtLog('Failed to open file "%s" for logging.' % (filenameOrObj,))
                 raise
         else:
             outFileObj = filenameOrObj
+            # someone else opened the file => someone else will close it
+            self._visualLogFileObj = None
         self._visualLog = _VisualLog(self, outFileObj, screenshotWidth, thumbnailWidth, timeFormat, delayedDrawing)
 
     def ini(self):
@@ -2135,7 +2142,7 @@ class _VisualLog:
             html.append('</table></div></td></tr></table></ul>') # end step
             html.append('</body></html>') # end html
             self.write('\n'.join(html))
-            self._outFileObj.close()
+            # File instance should be closed by the opener
             self._outFileObj = None
 
     def write(self, s):
