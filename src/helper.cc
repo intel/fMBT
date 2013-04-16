@@ -662,7 +662,7 @@ std::string to_string(Verdict::Verdict verdict)
     return "unknown";
   }
   // Not reached
-  return "unknown";  
+  return "unknown";
 }
 
 /* blocking getline, filter out log entries */
@@ -682,21 +682,23 @@ ssize_t bgetline(char **lineptr, size_t *n, FILE *stream, Log& log,bool magic)
 	log_redirect = true;
       } else {
 	if (magic && strncmp(*lineptr,"fmbtmagic",9)==0) {
-	  // Remove magic
-	  ret-=9;
-	  memmove(*lineptr,*lineptr+9,ret);
-	}
-	if (**lineptr == 'l' || **lineptr=='e') {
-	  // remote log messages must be url encoded when sent through
-	  // the remote adapter protocol
-	  *(*lineptr + ret - 1) = '\0';
-	  log.print("<remote msg=\"%s\"/>\n",*lineptr+1);
-	  if (**lineptr == 'e')
-	    fprintf(stderr, "%s\n", unescape_string(*lineptr+1));
-	  std::free(*lineptr);
-	  *lineptr = NULL;
-	  log_redirect = true;
-	}
+          const int magic_length = 10;
+          if (*(*lineptr + magic_length-1) == 'l' || *(*lineptr + magic_length-1) == 'e') {
+            // remote log messages must be url encoded when sent through
+            // the remote adapter protocol
+            *(*lineptr + ret - 1) = '\0';
+            log.print("<remote msg=\"%s\"/>\n",*lineptr+magic_length);
+            if (*(*lineptr + magic_length-1) == 'e')
+              fprintf(stderr, "%s\n", unescape_string(*lineptr+magic_length));
+            std::free(*lineptr);
+            *lineptr = NULL;
+            log_redirect = true;
+          } else {
+            // Remove magic
+            ret -= magic_length;
+            memmove(*lineptr,*lineptr + magic_length,ret);
+          }
+        }
       }
     }
   } while (log_redirect);
@@ -872,9 +874,9 @@ void strlist(std::vector<std::string>& s)
   for(unsigned i=0;i<s.size();i++) {
     size_t len=s[i].length();
     if (len>2) {
-      if ((s[i][0]=='"' && 
+      if ((s[i][0]=='"' &&
 	   s[i][len-1]=='"') ||
-	  (s[i][0]=='\'' && 
+	  (s[i][0]=='\'' &&
 	   s[i][len-1]=='\'')) {
 	s[i]=s[i].substr(1,len-2);
       }
