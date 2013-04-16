@@ -562,7 +562,35 @@ void Test_engine::interactive()
       unsigned int num = 0;
 
       switch (*s) {
+      case 'h': {
+	// heuristic
+	Heuristic* h;
+	std::string tmp(s+1);
+	clear_whitespace(tmp);
+	if (tmp!="") {
+	  h=new_heuristic(log,tmp);
+	  if (h!=NULL) {
+	    if (h->status) {
+	      h->set_coverage(heuristic.get_coverage());
+	      h->set_model(heuristic.get_model());
+	    } else {
+	      printf("Heuristic error %s\n",h->errormsg.c_str());
+	    }
+	  } else {
+	    printf("Can't create heuristic %s\n",s+1);
+	    break;
+	  }
+	} else {
+	  h=&heuristic;
+	}
 
+	printf("%s\n",h->getActionName(h->getIAction()).c_str());
+
+	if (h!=&heuristic) {
+	  delete h;
+	}
+	break;
+      }
       case 'c': {
         // Feel free to improve.
         End_condition* e=NULL;
@@ -718,7 +746,7 @@ void Test_engine::interactive()
         unsigned int action_num;
         for (action_num=1;action_num<ca_anames.size();action_num++) {
           if (ca_anames[action_num]==std::string(s)) {
-o
+
             interactive::execute(log, *current_adapter, heuristic, *current_model,
                                  action_num, policy,
                                  skip_adapter_execute, skip_model_execute);
@@ -935,6 +963,7 @@ o
                "    oem[0|1]- get/set executing action in model\n"
                "Other:\n"
                "    C      - print coverage\n"
+	       "    h[heuristic] - print action what heuristic would suggest. If heuristic not specified, use heuristic specified in configuration file\n"
                "Search:\n"
                "    ?a<num>- search shortest path to execute action <num>\n"
                "    ?c<num>- search path of length <num> for maximal coverage\n"
