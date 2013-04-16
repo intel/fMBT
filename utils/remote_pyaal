@@ -236,6 +236,8 @@ class RemoteAALBridge:
                 try:
                     rv = self._aal.model_execute(action_number)
                 except Exception, e:
+                    if len(self._aal._stack_executed_actions) > 0:
+                        fmbtstderr("Error when simulating execution:\n%s" % ('    \n'.join([str(s) for s in self._aal._stack_executed_actions]),))
                     fmbtstderr('Error at body() of "%s": %s: %s\n%s' % (action_names[action_number-1], type(e).__name__, e, format_pythonaalexception()))
                     error(str(e))
                 else:
@@ -269,6 +271,8 @@ class RemoteAALBridge:
                              include_generation_discontinued_tag = False)
                     self._aal.pop()
                 except Exception, e:
+                    if len(self._aal._stack_executed_actions) > 0:
+                        fmbtstderr("Error when simulating execution:\n%s" % ('    \n'.join([str(s) for s in self._aal._stack_executed_actions]),))
                     fmbtstderr('Error on simulation %s: %s\n%s' % (type(e).__name__, e, format_pythonaalexception()))
                     error(str(e))
                 outfilestring.seek(0)
@@ -525,5 +529,7 @@ if __name__ == "__main__":
         try:
             aal2lsts(aal, opt_output_fileobj, depth=opt_lsts_depth, discard_variables=set(opt_lsts_hide_vars), include_variables=set(opt_lsts_show_vars),_filter_tags=opt_lsts_hide_tags)
         except Exception, e:
+            if len(self._aal._stack_executed_actions) > 0:
+                fmbtstderr("Error when simulating execution:\n%s" % ('    \n'.join([str(s) for s in self._aal._stack_executed_actions]),))
             fmbtstderr('Error on simulation %s: %s\n%s' % (type(e).__name__, e, format_pythonaalexception()))
         opt_output_fileobj.close()
