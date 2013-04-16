@@ -674,28 +674,28 @@ ssize_t bgetline(char **lineptr, size_t *n, FILE *stream, Log& log,bool magic)
     log_redirect = false;
     ret = getdelim(lineptr, n, '\n', stream);
     if (ret && ret != -1) {
-      if (**lineptr == 'l' || **lineptr=='e') {
-        // remote log messages must be url encoded when sent through
-        // the remote adapter protocol
-        *(*lineptr + ret - 1) = '\0';
-        log.print("<remote msg=\"%s\"/>\n",*lineptr+1);
-        if (**lineptr == 'e')
-          fprintf(stderr, "%s\n", unescape_string(*lineptr+1));
-        std::free(*lineptr);
-        *lineptr = NULL;
-        log_redirect = true;
+      if (magic && strncmp(*lineptr,"fmbtmagic",9)!=0) {
+	// We have something to stdout
+	fprintf(stdout,"%s",*lineptr);
+	std::free(*lineptr);
+	*lineptr = NULL;
+	log_redirect = true;
       } else {
-	if (magic && strncmp(*lineptr,"fmbtmagic",9)!=0) {
-	  // We have something to stdout
-	  fprintf(stdout,"%s",*lineptr);
+	if (magic && strncmp(*lineptr,"fmbtmagic",9)==0) {
+	  // Remove magic
+	  ret-=9;
+	  memmove(*lineptr,*lineptr+9,ret);
+	}
+	if (**lineptr == 'l' || **lineptr=='e') {
+	  // remote log messages must be url encoded when sent through
+	  // the remote adapter protocol
+	  *(*lineptr + ret - 1) = '\0';
+	  log.print("<remote msg=\"%s\"/>\n",*lineptr+1);
+	  if (**lineptr == 'e')
+	    fprintf(stderr, "%s\n", unescape_string(*lineptr+1));
 	  std::free(*lineptr);
 	  *lineptr = NULL;
 	  log_redirect = true;
-	} else {
-	  if (magic) {
-	    ret-=9;
-	    memmove(*lineptr,*lineptr+9,ret);
-	  }
 	}
       }
     }

@@ -98,11 +98,11 @@ _log.last_flush = time.time()
 
 def fmbtlog(msg, flush=True):
     current_time = time.time()
-    timestamped = "l%.4f %s" % (current_time, msg)
+    timestamped = "fmbtmagicl%.4f %s" % (current_time, msg)
     sys.stdout.write(urllib.quote(timestamped)+"\n")
 
 def fmbtstderr(msg):
-    to_fmbt = urllib.quote("e%s" % (msg,)) + '\n'
+    to_fmbt = urllib.quote("fmbtmagice%s" % (msg,)) + '\n'
     sys.stdout.write(to_fmbt)
     _log(msg)
 
