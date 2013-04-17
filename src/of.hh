@@ -62,9 +62,9 @@ public:
 		  std::string& cov);
   virtual void add_report(std::string filter,
 			  std::string& name,
-			  std::vector<std::string*>& from,
-			  std::vector<std::string*>& to,
-			  std::vector<std::string*>& drop);
+			  std::vector<std::string*>* from,
+			  std::vector<std::string*>* to,
+			  std::vector<std::string*>* drop);
 
   virtual std::string report()=0;
 

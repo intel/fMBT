@@ -31,7 +31,7 @@ public:
 		  std::vector<std::string*>& _to,
 		  std::vector<std::string*>& _drop):
     Coverage_exec_filter(l,_from,_to,_drop),count(0),was_online(false)
-  {push_depth=0;}
+  {push_depth=0;_f=NULL;_t=NULL;_d=NULL;}
 
   virtual ~Coverage_report() {
 
@@ -64,6 +64,7 @@ protected:
   //  bool prop_set(std::vector<int> p,int npro,int* props);
 public:
   std::vector<std::pair<struct timeval,struct timeval> > times;
+  std::vector<std::string*> *_f,*_t,*_d;
 protected:
   int push_depth;
   int count;

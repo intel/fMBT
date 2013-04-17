@@ -923,10 +923,13 @@ void commalist(const std::string& s,std::vector<std::string>& vec, bool remove_w
 
 void sdel(std::vector<std::string*>* strvec)
 {
-    for(unsigned i=0;i<strvec->size();i++) {
-        delete (*strvec)[i];
-    }
-    delete strvec;
+  if (strvec==NULL) {
+    return;
+  }
+  for(unsigned i=0;i<strvec->size();i++) {
+    delete (*strvec)[i];
+  }
+  delete strvec;
 }
 
 void gettime(struct timeval *tv)

@@ -33,7 +33,16 @@ Coverage_notice::Coverage_notice(Log&l,std::string _cc1,std::string _cc2):
 
 Coverage_notice::~Coverage_notice() 
 {
-  
+  std::list<std::pair<std::pair<Coverage*,Coverage*>,
+		      std::pair<
+			std::pair<struct timeval,struct timeval>,
+			std::vector<std::pair<int,std::vector<int> > > > > >::iterator i;
+  for(i=subcovs.begin();i!=subcovs.end();i++) {
+    delete i->first.first;
+    if (i->first.second != &const1) {
+      delete i->first.second;
+    }
+  }
 }
 
 
