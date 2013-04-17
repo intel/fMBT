@@ -80,8 +80,6 @@ int main(int argc,char * const argv[])
   g_type_init ();  
 #endif
 
-  l=new Log_null();
-
   static struct option long_opts[] = {
     {"help", no_argument, 0, 'h'},
     {"version", no_argument, 0, 'V'},
@@ -142,10 +140,12 @@ int main(int argc,char * const argv[])
   }
 
   if (!of->status) {
+    delete of;
     return -1;
   }
 
   if (usecasefile==NULL) {
+    delete of;
     print_usage();
     return 5;    
   }
@@ -183,6 +183,8 @@ int main(int argc,char * const argv[])
 
   std::string o=of->header();
   fwrite(o.c_str(),1,o.size(),outfile);  
+
+  l=new Log_null();
 
   for (int i=optind;i<argc;i++) {
     fprintf(stderr,"Handling log %s\n",argv[i]);
