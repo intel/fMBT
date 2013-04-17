@@ -2016,15 +2016,12 @@ class _AndroidDeviceConnection:
         """
         remotefile = '/sdcard/' + os.path.basename(filename)
 
-        status, _, _ = self._runAdb(['shell', 'screencap', '-p', remotefile], 0)
+        self._runAdb(['shell', 'screencap', '-p', remotefile], 0)
+
+        status, out, err = self._runAdb(['pull', remotefile, filename], [0, 1])
 
         if status != 0:
-            return False
-
-        status, _, _ = self._runAdb(['pull', remotefile, filename], 0)
-
-        if status != 0:
-            return False
+            raise FMBTAndroidError("Failed to fetch screenshot from the device: %s. SD card required." % ((out + err).strip(),))
 
         status, _, _ = self._runAdb(['shell','rm', remotefile], 0)
 
@@ -2100,7 +2097,8 @@ class _AndroidDeviceConnection:
             try: self._windowSocket.close()
             except: pass
 
-class AndroidConnectionError(Exception): pass
+class FMBTAndroidError(Exception): pass
+class AndroidConnectionError(FMBTAndroidError): pass
 class AndroidConnectionLost(AndroidConnectionError): pass
 class AndroidDeviceNotFound(AndroidConnectionError): pass
 
