@@ -38,6 +38,9 @@ Coverage_Tema_seq::Coverage_Tema_seq(Log &l, std::string params)
   : Coverage(l), a_trace_file_name(params), a_trace_ptr(0) {
 }
 
+Coverage_Tema_seq::~Coverage_Tema_seq()
+{
+}
 
 namespace {
   int
