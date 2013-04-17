@@ -72,6 +72,7 @@ void Conf::load(std::string& name,std::string& content)
   }
 
   std::string ss(s);
+  free(s);
   ss=ss+"\n"+content;
   if ((name!="" && s==NULL))
     RETURN_ERROR_VOID("Loading \"" + name + "\" failed.");
@@ -83,12 +84,11 @@ void Conf::load(std::string& name,std::string& content)
 
   ret=p->syntax_errors==0 && ret;
 
-  if (!ret)
-    RETURN_ERROR_VOID("Parsing \"" + name + "\" failed.");
-
-  free(s);
-
   free_D_Parser(p);
+
+  if (!ret) {
+    RETURN_ERROR_VOID("Parsing \"" + name + "\" failed.");
+  }
 
   conf_obj=tmp;
 
