@@ -35,6 +35,10 @@ Heuristic_weight::Heuristic_weight(Log& l, std::string params) :
 {
 }
 
+Heuristic_weight::~Heuristic_weight()
+{
+}
+
 float Heuristic_weight::getCoverage() {
   if (my_coverage==NULL) {
     return 0.0;
@@ -53,10 +57,12 @@ void Heuristic_weight::add(std::vector<std::string*> p,
 
   for(unsigned i=0;i<p.size();i++) {
     regexpmatch(*(p[i]),model->getSPNames(),props,false);
+    delete p[i];
   }
 
   for(unsigned i=0;i<a.size();i++) {
     regexpmatch(*(a[i]),model->getActionNames(),actions,false);
+    delete a[i];
   }
 
   // Remove duplicate matches

@@ -42,9 +42,14 @@ specs: spec |
 
 spec: osvec ',' strvec ':' int {
             Hw->add(*$0.strvec,*$2.strvec,$4.val);
+            delete $0.strvec;
+            delete $2.strvec;
         }
     | strvec ':' int {
-            Hw->add(*(new std::vector<std::string*>),*$0.strvec,$2.val);
+            std::vector<std::string*>* tmp=new std::vector<std::string*>;
+            Hw->add(*tmp,*$0.strvec,$2.val);
+            delete tmp;
+            delete $0.strvec;
         };
 
 osvec: { $$.strvec = new std::vector<std::string*>; }
