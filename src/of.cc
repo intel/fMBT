@@ -48,6 +48,10 @@ OutputFormat::~OutputFormat() {
   }
 
   for(unsigned i=0;i<rcovs.size();i++) {
+    // We need to delete coverage_report from,to,drop...
+    sdel(rcovs[i]->_f);
+    sdel(rcovs[i]->_t);
+    sdel(rcovs[i]->_d);
     delete rcovs[i];
   }
 
@@ -153,9 +157,10 @@ std::string OutputFormat::handle_history(Log&l,std::string& h)
 
     test_verdict=history->test_verdict;
 
-    delete cov;
+    std::string ret=format_covs();
     delete history;
-    return format_covs();
+    delete cov;
+    return ret;
   } else {
     return "";
   }
@@ -207,14 +212,16 @@ void OutputFormat::add_notice(std::string filter,
 
 void OutputFormat::add_report(std::string filter,
 			      std::string& name,
-			      std::vector<std::string*>& from,
-			      std::vector<std::string*>& to,
-			      std::vector<std::string*>& drop)
+			      std::vector<std::string*>* from,
+			      std::vector<std::string*>* to,
+			      std::vector<std::string*>* drop)
 {
   if (status) {
     reportnames.push_back(name);
-    Coverage_report* c=new Coverage_report(l,from,to,drop);
-
+    Coverage_report* c=new Coverage_report(l,*from,*to,*drop);
+    c->_f=from;
+    c->_t=to;
+    c->_d=drop;
     if (!c->status) {
       status=false;
       errormsg=errormsg+" Report failure:"+c->errormsg;

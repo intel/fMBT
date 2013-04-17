@@ -47,9 +47,9 @@ notice: 'notice' filter string string { uconf_obj->add_notice(*$1.str,*$2.str,*$
 testcase: 'report' filter string 'from' strvec 'to' strvec opt_drop { uconf_obj->add_report(
                 *$1.str,
                 *$2.str,
-                *$4.strvec,
-                *$6.strvec,
-                *$7.strvec);
+                $4.strvec,
+                $6.strvec,
+                $7.strvec);
             delete $1.str;
             delete $2.str;
             /*
