@@ -7,6 +7,10 @@ MyLocalAdapter::MyLocalAdapter(Log& l, std::string params):
     log.print("<adapter name=\"mylocal\" params=\"%s\" />\n", params.c_str());
 }
 
+MyLocalAdapter::~MyLocalAdapter() 
+{
+}
+
 void MyLocalAdapter::execute(std::vector<int>& action)
 {
     log.push("mylocal_execute");
