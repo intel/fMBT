@@ -23,7 +23,15 @@
 class Adapter_remote: public Adapter, public remote {
 public:
   Adapter_remote(Log& l, std::string& params, bool encode=true);
-  ~Adapter_remote() {
+  virtual ~Adapter_remote() {
+    if (d_stdin) 
+      fclose(d_stdin);
+    if (d_stdout)
+      fclose(d_stdout);
+    if (d_stderr)
+      fclose(d_stderr);
+    if (read_buf)
+      free(read_buf);
   }
   virtual bool init();
 

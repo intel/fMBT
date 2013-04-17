@@ -72,6 +72,7 @@ void Conf::load(std::string& name,std::string& content)
   }
 
   std::string ss(s);
+  free(s);
   ss=ss+"\n"+content;
   if ((name!="" && s==NULL))
     RETURN_ERROR_VOID("Loading \"" + name + "\" failed.");
@@ -83,12 +84,11 @@ void Conf::load(std::string& name,std::string& content)
 
   ret=p->syntax_errors==0 && ret;
 
-  if (!ret)
-    RETURN_ERROR_VOID("Parsing \"" + name + "\" failed.");
-
-  free(s);
-
   free_D_Parser(p);
+
+  if (!ret) {
+    RETURN_ERROR_VOID("Parsing \"" + name + "\" failed.");
+  }
 
   conf_obj=tmp;
 
@@ -166,8 +166,11 @@ void Conf::load(std::string& name,std::string& content)
     if (h) {
       h->set_coverage(coverage,model);
       if (!h->status) {
-        RETURN_ERROR_VOID(h->errormsg);
+	errormsg=h->errormsg;
+	delete h;
+	RETURN_ERROR_VOID(errormsg);
       }
+      delete h;
     } else {
       RETURN_ERROR_VOID("Creating history \""+ *history[i] + "\" failed.");
     }
@@ -400,5 +403,5 @@ Conf::~Conf() {
   for_each(fail_hooks.begin(),fail_hooks.end(),hook_delete);
   for_each(inc_hooks.begin(),inc_hooks.end(),hook_delete);
   for_each(error_hooks.begin(),error_hooks.end(),hook_delete);
-
+  log.unref();
 }

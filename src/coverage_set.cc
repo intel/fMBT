@@ -61,7 +61,17 @@ public:
     to=_t;
     drop=_d;
   }
-  virtual ~Coverage_setw() {}
+  virtual ~Coverage_setw() {
+    for(size_t i=0;i<_f.size();i++) {
+      delete _f[i];
+    }
+    for(size_t i=0;i<_t.size();i++) {
+      delete _t[i];
+    }
+    for(size_t i=0;i<_d.size();i++) {
+      delete _d[i];
+    }
+  }
 private:
   std::vector<std::string*> _f,_t,_d;
 };
@@ -71,6 +81,9 @@ Coverage_set::~Coverage_set()
   for(unsigned i=0;i<covs.size();i++) {
     delete covs[i];
   }  
+  for(size_t i=0;i<_fv.size();i++) {
+    delete _fv[i].first;
+  }
 }
 
 void Coverage_set::add_filter()

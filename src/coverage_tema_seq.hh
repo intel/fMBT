@@ -50,6 +50,7 @@ class Coverage_Tema_seq: public Coverage {
 
 public:
   Coverage_Tema_seq(Log &l, std::string params);
+  virtual ~Coverage_Tema_seq();
 
   virtual void push();
   virtual void pop();

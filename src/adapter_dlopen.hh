@@ -21,13 +21,18 @@
 class Adapter_dlopen: public Adapter {
 public:
   Adapter_dlopen(Log& l, std::string params = "");
+  virtual ~Adapter_dlopen();
   virtual void set_actions(std::vector<std::string>* _actions);
   virtual bool init();
 
   virtual void execute(std::vector<int>& action);
   virtual int observe(std::vector<int>& action, bool block=false);
+  virtual int check_tags(int* tag,int len,std::vector<int>& t);
+  virtual void adapter_exit(Verdict::Verdict verdict,
+			    const std::string& reason);
 
   virtual std::string stringify();
 private:
   Adapter* loaded_adapter;
+  void *library_handle;
 };

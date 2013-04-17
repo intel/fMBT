@@ -41,6 +41,8 @@ History_log::~History_log()
     free(act);
   if (tag)
     free(tag);
+  if (a)
+    delete a;
   // This should be deleted by someone else...
   /*
   if (myes)

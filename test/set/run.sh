@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # fMBT, free Model Based Testing tool
 # Copyright (c) 2012, Intel Corporation.
 #
@@ -32,7 +31,7 @@ testpassed
 
 teststep "coverage set: cover tags"
 echo 'model = "lsts(t2.lsts)"' > test.conf
-echo 'coverage = "set(1:2:3 from \"Foo\" to \"iFoo\" -> \"tag\":0:4)"' >> test.conf
+echo 'coverage = set(1:2:3 from "iFoo" to "iFoo" -> "tag":0:4)' >> test.conf
 echo 'pass = "steps:5"' >> test.conf
 
 fmbt -D test.conf -l set.log >>$LOGFILE 2>&1 \
