@@ -400,5 +400,5 @@ Conf::~Conf() {
   for_each(fail_hooks.begin(),fail_hooks.end(),hook_delete);
   for_each(inc_hooks.begin(),inc_hooks.end(),hook_delete);
   for_each(error_hooks.begin(),error_hooks.end(),hook_delete);
-
+  log.unref();
 }

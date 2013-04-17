@@ -49,6 +49,7 @@ class Conf:public Writable {
      adapter(NULL),coverage(NULL),
      disable_tagverify(false)
   {
+    log.ref();
     log.push("fmbt_log");
     log.set_debug(debug_enabled);
 
