@@ -1247,7 +1247,7 @@ class Device(object):
                          self.verifyBitmap, (bitmap,), _bitmapKwArgs(colorMatch, opacityLimit, area),
                          **waitKwArgs)
 
-    def waitOcrText(self, text, match=None, preprocess=None, **waitKwArgs):
+    def waitOcrText(self, text, match=None, preprocess=None, area=None, **waitKwArgs):
         """
         Wait until OCR detects text on the screen.
 
@@ -1257,6 +1257,9 @@ class Device(object):
                   text to be waited for.
 
           match, preprocess (float and string, optional)
+                  refer to verifyOcrText documentation.
+
+          area ((left, top, right, bottom), optional):
                   refer to verifyOcrText documentation.
 
           waitTime, pollDelay (float, optional):
@@ -1270,6 +1273,7 @@ class Device(object):
         ocrKwArgs = {}
         if match != None: ocrKwArgs["match"] = match
         if preprocess != None: ocrKwArgs["preprocess"] = preprocess
+        if area != None: ocrKwArgs["area"] = area
         return self.wait(self.refreshScreenshot,
                          self.verifyOcrText, (text,), ocrKwArgs,
                          **waitKwArgs)
@@ -2268,6 +2272,7 @@ class _VisualLog:
 
     def refreshScreenshotLogger(loggerSelf, origMethod):
         def refreshScreenshotWRAP(*args, **kwargs):
+            loggerSelf._highlightCounter = 0
             logCallReturnValue = loggerSelf.logCall()
             retval = loggerSelf.doCallLogException(origMethod, args, kwargs)
             retval._logCallReturnValue = logCallReturnValue
