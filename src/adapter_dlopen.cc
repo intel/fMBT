@@ -41,9 +41,9 @@
 
 Adapter_dlopen::Adapter_dlopen(Log& log, std::string params) :
   Adapter::Adapter(log),
-  loaded_adapter(NULL)
+  loaded_adapter(NULL),
+  library_handle(NULL)
 {
-  void *library_handle;
 
   std::vector<std::string> s;
   commalist(params,s);
@@ -71,6 +71,28 @@ Adapter_dlopen::Adapter_dlopen(Log& log, std::string params) :
   loaded_adapter = new_adapter(log,s[1]);
   if (!loaded_adapter)
     RETURN_ERROR("creating adapter from successfully opened library failed");
+}
+
+Adapter_dlopen::~Adapter_dlopen()
+{
+  if (loaded_adapter) 
+    delete loaded_adapter;
+  if (library_handle)
+    dlclose(library_handle);
+}
+
+int Adapter_dlopen::check_tags(int* tag,int len,std::vector<int>& t)
+{
+  if (loaded_adapter) 
+    return loaded_adapter->check_tags(tag,len,t);
+  return 0;
+}
+
+void Adapter_dlopen::adapter_exit(Verdict::Verdict verdict,
+				  const std::string& reason)
+{
+  if (loaded_adapter)   
+    loaded_adapter->adapter_exit(verdict,reason);
 }
 
 void Adapter_dlopen::set_actions(std::vector<std::string>* _actions)
