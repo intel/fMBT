@@ -66,8 +66,8 @@ expr: node             { $$.u = $0.u; }
     | node "then" expr { $$.u = new Coverage_Market::unit_then($0.u,$2.u); } ;
 
 node: actionname       { $$.type='e'; $$.u = cobj->req_rx_action($$.type,*$0.str); delete $0.str; $0.str=NULL; }
-    | ('a' | 'A' | 'all' ) actionname   { $$.type='a'; $$.u = cobj->req_rx_action($$.type,*$1.str); delete $0.str; $0.str=NULL; }
-    | ('e' | 'E' | 'any' ) actionname   { $$.type='e'; $$.u = cobj->req_rx_action($$.type,*$1.str); delete $0.str; $0.str=NULL; }
+    | ('a' | 'A' | 'all' ) actionname   { $$.type='a'; $$.u = cobj->req_rx_action($$.type,*$1.str); delete $1.str; $1.str=NULL; }
+    | ('e' | 'E' | 'any' ) actionname   { $$.type='e'; $$.u = cobj->req_rx_action($$.type,*$1.str); delete $1.str; $1.str=NULL; }
     | '(' expr ')'     { $$.u = $1.u; }
     | "not" node       { $$.u = new Coverage_Market::unit_not($1.u); } 
     | uint '*' node    { $$.u = inthelper($2.u,$0.i); }
