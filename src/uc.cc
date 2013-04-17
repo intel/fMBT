@@ -152,24 +152,26 @@ int main(int argc,char * const argv[])
   
   uconf_obj=of;
 
-  D_Parser *p = new_D_Parser(&parser_tables_uconf,5120);
-  p->loc.pathname = usecasefile;
-
   char* s=readfile(usecasefile);
   if (!s) {
     std::printf("Can't read input file \"%s\"\n",usecasefile);
     return 3;    
   }
+  D_Parser *p = new_D_Parser(&parser_tables_uconf,5120);
+  p->loc.pathname = usecasefile;
   dparse(p,s,std::strlen(s));
 
-  if (p->syntax_errors) {
-    return -1;
-  }
-
-  free_D_Parser(p);
-  p=NULL;
   free(s);
   s=NULL;
+
+  if (p->syntax_errors) {
+    free_D_Parser(p);
+    p=NULL;
+    delete of;
+    return -1;
+  }
+  free_D_Parser(p);
+  p=NULL;
 
   if (optind == argc) {
     print_usage();
