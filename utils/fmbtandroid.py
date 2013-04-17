@@ -382,6 +382,7 @@ class Device(object):
                 raise
 
         self._visualLog = None
+        self._visualLogFileObj = None
         # Caches
         self._itemCache = {}
 
@@ -422,6 +423,8 @@ class Device(object):
             del self._lastScreenshot
         if self._visualLog:
             self._visualLog.close()
+            if self._visualLogFileObj:
+                self._visualLogFileObj.close()
             self._visualLog = None
         import gc
         gc.collect()
@@ -505,12 +508,16 @@ class Device(object):
                   is False.
         """
         if type(filenameOrObj) == str:
-            try: outFileObj = file(filenameOrObj, "w")
+            try:
+                outFileObj = file(filenameOrObj, "w")
+                self._visualLogFileObj = outFileObj
             except Exception, e:
                 _fmbtLog('Failed to open file "%s" for logging.' % (filenameOrObj,))
                 raise
         else:
             outFileObj = filenameOrObj
+            # someone else opened the file => someone else will close it
+            self._visualLogFileObj = None
         self._visualLog = _VisualLog(self, outFileObj, screenshotWidth, thumbnailWidth, timeFormat, delayedDrawing)
 
     def ini(self):
@@ -1240,7 +1247,7 @@ class Device(object):
                          self.verifyBitmap, (bitmap,), _bitmapKwArgs(colorMatch, opacityLimit, area),
                          **waitKwArgs)
 
-    def waitOcrText(self, text, match=None, preprocess=None, **waitKwArgs):
+    def waitOcrText(self, text, match=None, preprocess=None, area=None, **waitKwArgs):
         """
         Wait until OCR detects text on the screen.
 
@@ -1250,6 +1257,9 @@ class Device(object):
                   text to be waited for.
 
           match, preprocess (float and string, optional)
+                  refer to verifyOcrText documentation.
+
+          area ((left, top, right, bottom), optional):
                   refer to verifyOcrText documentation.
 
           waitTime, pollDelay (float, optional):
@@ -1263,6 +1273,7 @@ class Device(object):
         ocrKwArgs = {}
         if match != None: ocrKwArgs["match"] = match
         if preprocess != None: ocrKwArgs["preprocess"] = preprocess
+        if area != None: ocrKwArgs["area"] = area
         return self.wait(self.refreshScreenshot,
                          self.verifyOcrText, (text,), ocrKwArgs,
                          **waitKwArgs)
@@ -2135,7 +2146,7 @@ class _VisualLog:
             html.append('</table></div></td></tr></table></ul>') # end step
             html.append('</body></html>') # end html
             self.write('\n'.join(html))
-            self._outFileObj.close()
+            # File instance should be closed by the opener
             self._outFileObj = None
 
     def write(self, s):
@@ -2261,6 +2272,7 @@ class _VisualLog:
 
     def refreshScreenshotLogger(loggerSelf, origMethod):
         def refreshScreenshotWRAP(*args, **kwargs):
+            loggerSelf._highlightCounter = 0
             logCallReturnValue = loggerSelf.logCall()
             retval = loggerSelf.doCallLogException(origMethod, args, kwargs)
             retval._logCallReturnValue = logCallReturnValue

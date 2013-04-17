@@ -32,6 +32,7 @@ import datetime
 _g_fmbt_adapterlogtimeformat="%s.%f"
 _g_actionName = "undefined"
 _g_testStep = -1
+_g_simulated_actions = []
 
 def fmbtlog(msg, flush=True):
     try: file("/tmp/fmbt.fmbtlog", "a").write("%s\n" % (msg,))
@@ -65,3 +66,10 @@ def getActionName():
 
 def getTestStep():
     return _g_testStep
+
+def simulated():
+    """
+    Returns True if fMBT is simulating execution of an action (guard
+    or body block) instead of really executing it.
+    """
+    return len(_g_simulated_actions) > 0

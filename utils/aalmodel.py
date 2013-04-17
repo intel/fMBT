@@ -45,6 +45,7 @@ class AALModel:
 
     def call(self, func, call_arguments = ()):
         try:
+            fmbt._g_simulated_actions = self._stack_executed_actions
             if hasattr(func,"requires"):
                 for prerequire in func.requires:
                     if not self.call(getattr(self,prerequire)):
