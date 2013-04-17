@@ -106,16 +106,19 @@ print 'status: %s, stdout: "%s", stderr: "%s"' % (status, out, err)
 
 * * *
 
-Enable extensive logging with fmbtlogger. You can use functions or
-file objects as backends. Example: log to standard output
+Enable extensive logging with screenshots and highlighted content:
 
-import fmbtandroid
-import fmbtlogger
-import sys
+import fmbtandroid, time
 
 d = fmbtandroid.Device()
-d = fmbtlogger.text(d, sys.stdout, logDepth=-1)
-d.pressPower()
+d.enableVisualLog("example.html")
+d.pressHome(); time.sleep(1)
+d.refreshScreenshot()
+d.tapOcrText("Google"); time.sleep(1)
+d.refreshScreenshot()
+
+then view the log:
+$ chromium example.html
 
 """
 

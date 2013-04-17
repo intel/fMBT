@@ -2,6 +2,12 @@
 fMBT tutorial
 =============
 
+WARNING: This tutorial introduces modelling with the GT language and
+using the remote_python adapter. Yet still supported, this is an old
+and pretty hard way to start using fMBT. For new comers, it's
+recommended to start with AAL/Python examples and AAL/Python reference
+documentation. See fMBT README file.
+
 In this tutorial we will create a model-based test for mkdir and rmdir
 in the Python "os" module. We will cover everything from scratch to
 running the test and inspecting the results using fMBT.
@@ -201,7 +207,7 @@ $ fmbt -L mkrmdir.log mkrmdir.conf
 By default, fMBT drops to an interactive mode when an error is
 found. That is, this test run results in a prompt:
 
-fMBT> 
+fMBT>
 
 In the interactive mode we can inspect and walk through states of the
 model and try executing all actions available at adapters.
@@ -221,7 +227,7 @@ s: iCatch('mkdir(dname+\'/d\')') == None
 x: iCatch('mkdir(dname+\'/d\')') == Error('.*File exists.*')
 
 s: iCatch('rmdir(dname)') == None
-x: 
+x:
 
 The last suggested action tried to execute "rmdir(dname)", but the
 adapter did not report any known action to be executed. The previous
@@ -313,9 +319,9 @@ adapter:   iCatch('mkdir(dname+\'/d\')') == None
 model:     [skipped]
 fMBT> iCatch('rmdir(dname)') == None
 executing: iCatch('rmdir(dname)') == None
-adapter:   
+adapter:
 model:     [skipped]
-fMBT> 
+fMBT>
 
 Which confirms that the adapter cannot execute the last action after
 the previous actions. We found an error trace of 5 steps instead of
