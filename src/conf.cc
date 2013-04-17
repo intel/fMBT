@@ -166,8 +166,11 @@ void Conf::load(std::string& name,std::string& content)
     if (h) {
       h->set_coverage(coverage,model);
       if (!h->status) {
-        RETURN_ERROR_VOID(h->errormsg);
+	errormsg=h->errormsg;
+	delete h;
+	RETURN_ERROR_VOID(errormsg);
       }
+      delete h;
     } else {
       RETURN_ERROR_VOID("Creating history \""+ *history[i] + "\" failed.");
     }
