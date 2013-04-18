@@ -616,11 +616,15 @@ Available types & parameters:
 
                 exit with the given exit status.
 
+        interactive
+
+                enter interactive mode.
+
 Examples:
 
         on_fail   = "exit(1)"
 
-        on_inconc = "exit(2)"
+        on_inconc = "interactive"
 
         on_error  = "exit(42)"
 
