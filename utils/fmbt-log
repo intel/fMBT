@@ -161,7 +161,8 @@ def extract(input_file_obj, output_file_obj, output_format, raw):
             ('</test_engine>' in line)):
             printable_data = {}
             for field in parsed_data:
-                printable_data[field] = VALUE_SEPARATOR.join(parsed_data[field])
+                if field != '$st': printable_data[field] = VALUE_SEPARATOR.join(parsed_data[field])
+                elif parsed_data[field]: printable_data[field] = parsed_data[field][0]
             if not '<status steps="0"' in line:
                 ppoutput = output_format % printable_data
             parsed_data = clean_data()
