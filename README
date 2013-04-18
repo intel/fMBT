@@ -67,6 +67,11 @@ https://github.com/askervin/fmbt-mplayertest
         Test MPlayer's pause, continue, next song, prev song, add
         song, and reset playlist.
 
+https://github.com/askervin/fmbt-androidtest
+        Test the phone application on Android: make calls, put calls
+        on hold, swap calls, hang up calls from the phone application
+        and homescreen menu.
+
 
 fMBT self-tests
 ---------------

@@ -8,8 +8,6 @@ dist_doc_DATA = \
 	doc/adapters.txt	\
 	doc/architecture.txt	\
 	doc/configuration.txt   \
-	doc/models.txt		\
-	doc/overview.txt	\
 	doc/tutorial.txt
 
 src/android/fmbt_droid:
