@@ -74,24 +74,40 @@ if [ $FAILED == 1 ]; then testfailed
 else testpassed; fi
 
 
-teststep "testing examples/offline-test-suite"
+teststep "testing examples/offline-test-suite..."
 cd "$TESTDIR"
 echo "# copy example to $TESTDIR" >>$LOGFILE 2>&1
 cp -v ../../examples/offline-test-suite/{weakly-connected.gt,weakly-connected.conf,generate-all-tests} . >>$LOGFILE 2>&1 || {
     testfailed
-    exit 1
 }
 rm -f test*.log
 echo "# generate tests" >>$LOGFILE 2>&1
 ./generate-all-tests weakly-connected.conf >>$LOGFILE 2>&1 || {
     testfailed
-    exit 1
 }
 echo "# check generated files" >>$LOGFILE 2>&1
 if [ -f test6.log ] && [ ! -f test7.log ] && [ ! -f next-test.conf ]; then
     testpassed
 else
     testfailed
-    exit 1
 fi
 rm -f weakly-connected.conf weakly-connected.gt generate-all-tests test*log
+
+teststep "testing examples/filesystemtest..."
+cd "$TESTDIR"
+cp -v ../../examples/filesystemtest/{README,filesystemtest.aal,filesystemtest.conf} . >>$LOGFILE 2>&1 || {
+    echo "failed because: copying filesystemtest files failed" >>$LOGFILE
+    testfailed
+}
+rm -f test.log
+eval $(grep '$ fmbt ' README | tr -d '$') >>$LOGFILE 2>&1 || {
+    echo "failed because: exit status 0 expected from README fmbt command" >>$LOGFILE
+    testfailed
+}
+step_count=$(fmbt-log -f '$ax' test.log | wc -l)
+if [[ $step_count -lt 40 ]] || [[ $step_count -gt 60 ]]; then
+    echo "failed because: unexpected number of test steps in test.log: $step_count" >>$LOGFILE
+    cat test.log >>$LOGFILE
+    testfailed
+fi
+testpassed
