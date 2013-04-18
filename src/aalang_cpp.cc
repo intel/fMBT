@@ -242,6 +242,7 @@ std::string aalang_cpp::stringify()
 
   s=s+
     "\npublic:\n"
+    "\t~_gen_"+*name+"() {}\n"
     "\t_gen_"+*name+"(Log& l, std::string& _params): aal(l, _params) {\n\taction_names.push_back(\"\");\n";
 
   for(std::list<std::vector<std::string> >::iterator i=aname.begin();i!=aname.end();i++) {
