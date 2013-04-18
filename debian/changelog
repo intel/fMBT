@@ -1,8 +1,46 @@
-fmbt (0.8.2-0.rc0) unstable; urgency=low
+fmbt (0.9-1) unstable; urgency=low
 
-  * Development version.
+  * fmbtandroid:
+    - Visual logging added to help debugging.
+    - tapPos parameter added to tapBitmap, tapText and tapOcrText.
+      Enables tapping a position relative to found bitmap and text.
+    - waitOcrText method added.
+    - area parameter added to *OcrText methods. Enables limiting the
+      area within which text is recognised. Improves performance, too.
+  * AAL C++ and Python:
+    - "input" and "output" syntax added. input "X" is a shorthand
+      action "i:X".
+    - adapter_exit block added. The block is executed in the end
+      of test runs.
+    - language block syntax aligned with others: language "python" {...}
+  * AAL/Python:
+    - print "Hello world" in AAL is forwarded to the output
+      of the fmbt process. Does not cause errors anymore.
+    - Errors detected during model simulation are shown with the
+      simulated trace.
+  * fmbt-editor:
+    - "# preview-show-vars: v" shows the value of variable v at each
+      visualised state.
+    - Support & tab completion for AAL syntax changes.
+  * fmbt interactive mode:
+    - "h" added to test what different test generation heuristics
+      would suggest.
+    - "ae" added to execute the adapter_exit block.
+    - executing given actions in both adapter and model is new default.
+    - "interactive" target added to test configuration exit hooks:
+      fmbt can enter the interactice mode on_pass, on_fail, etc.
+  * examples:
+    - examples/filesystemtest: new AAL/Python example demonstrates
+      state verification done in tag adapter blocks. Inputs and
+      adapter_exit blocks are used, too.
+    - examples/javascript-unittest: example rewritten in AAL/Python.
+    - https://github.com/askervin/fmbt-androidtest: new example
+      demonstrates Android UI testing with the fmbtandroid library
+      in fMBT v0.9.
+  * fixes and small improvements: fmbt-log, fmbt-stats, interactive
+    mode, fmbt.py library, AAL errors, documentation.
 
- -- Antti Kervinen <ask@dingu.tm.intel.com>  Thu, 04 Apr 2013 16:43:59 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Thu, 18 Apr 2013 07:46:01 +0300
 
 fmbt (0.8.1-1) unstable; urgency=low
 
