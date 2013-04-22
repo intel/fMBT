@@ -1521,11 +1521,11 @@ class Screenshot(object):
         shutil.copy(self._filename, fileOrDirName)
 
     def _assumeOcrWords(self, preprocess=None, area=None):
+        if preprocess == None:
+            preprocess = self._ocrPreprocess
+        if area == None:
+            area = (0, 0, 1.0, 1.0)
         if self._ocrWords == None or self._ocrWordsPreprocess != preprocess or self._ocrWordsArea != area:
-            if preprocess == None:
-                preprocess = self._ocrPreprocess
-            if area == None:
-                area = (0, 0, 1.0, 1.0)
             if not type(preprocess) in (list, tuple):
                 preprocess = [preprocess]
             self._ocrWords = {}
