@@ -289,7 +289,7 @@ std::string aalang_cpp::stringify()
   if (aexit) {
     s+="virtual void adapter_exit(Verdict::Verdict verdict, const std::string& reason) {\n"+
       *aexit+
-      "\nreturn true;\n}\n\n";
+      "}\n\n";
   }
 
   if (pop!="") {
@@ -395,29 +395,26 @@ void aalang_cpp::factory_register()
 {
   s=s+"  /* factory register */\n\n"
     "namespace {\n"
-    "static std::map<std::string,aal*> a;\n\n"
-    "void _atexitfunc()\n"
-    "  {\n"
-    "    std::map<std::string,aal*>::iterator i;\n"
-    "    for(i=a.begin();i!=a.end();i++) {\n"
-    "      delete i->second;\n"
-    "    }\n"
+    "aal* al_helper(Log&l, std::string& params) {\n"
+    "  if (aal::storage==NULL) {\n"
+    "	aal::storage=new std::map<std::string,aal*>;\n"
     "  }\n"
+    "  aal* al=(*aal::storage)[\""+*name+"\"];\n"
+    "  if (!al){\n"
+    "   al=new _gen_"+*name+"(l,params);\n"
+    "	(*aal::storage)[\""+*name+"\"]=al;\n"
+    "  }\n"
+    "  return al;\n"
+    "}\n"
     "Model* model_creator(Log&l, std::string params) {\n"
-    "\tif (!a[params]) {\n"
-    "\t  a[params]=new _gen_"+*name+"(l, params);\n"
-    "\t  atexit(_atexitfunc);\n"
-    "\t}\n"
-    "\treturn new Mwrapper(l,params,a[params]);\n"
+    "\taal* al=al_helper(l,params);\n"
+    "\treturn new Mwrapper(l,params,al);\n"
     "}\n\n"
     "static ModelFactory::Register me1(\""+*name+"\", model_creator);\n\n"
     "Adapter* adapter_creator(Log&l, std::string params = \"\")\n"
     "{\n"
-    "\tif (!a[params]) {\n"
-    "\t  a[params]=new _gen_"+*name+"(l, params);\n"
-    "\t  atexit(_atexitfunc);\n"
-    "\t}\n"
-    "\treturn new Awrapper(l,params,a[params]);\n"
+    "\taal* al=al_helper(l,params);\n"
+    "\treturn new Awrapper(l,params,al);\n"
     "}\n"
     "static AdapterFactory::Register me2(\""+*name+"\", adapter_creator);\n"+
     "}\n";
