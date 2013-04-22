@@ -26,7 +26,28 @@
 class Lts_xrules : public Model {
 public:
   Lts_xrules(Log&l, std::string params): Model(l, params) {}
-  virtual ~Lts_xrules() {} // leaks memory.
+  virtual ~Lts_xrules() {
+    if (_res_iactions) {
+      delete [] _res_iactions;
+    }
+    for(size_t i=0;i<lts.size();i++) {
+      delete lts[i];
+    }
+    /*
+    for(size_t i=0;i<res_nodes.size();i++) {
+      delete res_nodes[i];
+    }
+    std::multimap<comp,struct par*>::iterator i;
+    comp c(-1,-1);
+    for(i=bob.begin();i!=bob.end();i++) {
+      if (c!=i->first) {
+	c=i->first;
+	delete i->second;
+      }
+    }
+    bob.clear();
+    */
+  } // leaks memory.
   virtual bool reset();
   virtual int  execute(int action);
 
@@ -83,6 +104,12 @@ protected:
 
   struct par {
     par() { count=0;added_count=0;root_count=NULL; };
+    ~par() {
+      std::map<comp, struct par*>::iterator i=vmap.begin();
+      for(;i!=vmap.end();i++) {
+	delete i->second;
+      }
+    }
     par(struct par* p) { 
       parent = p;
       root_count = p->root_count;

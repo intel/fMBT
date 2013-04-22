@@ -256,7 +256,7 @@ std::string aalang_cpp::stringify()
   tag_cnt=tname.size();
   s=s+
     "\npublic:\n"
-    "\t~_gen_"+*name+"() {}\n"
+    "\tvirtual ~_gen_"+*name+"() {}\n"
     "\t_gen_"+*name+"(Log& l, std::string& _params): aal(l, _params) {\n\taction_names.push_back(\"\");\n";
 
   for(std::list<std::vector<std::string> >::iterator i=aname.begin();i!=aname.end();i++) {
@@ -398,10 +398,10 @@ void aalang_cpp::factory_register()
     "static std::map<std::string,aal*> a;\n\n"
     "void _atexitfunc()\n"
     "  {\n"
-    "//    if (a) {\n"
-    "//      delete a;\n"
-    "//      a=NULL;\n"
-    "//    }\n"
+    "    std::map<std::string,aal*>::iterator i;\n"
+    "    for(i=a.begin();i!=a.end();i++) {\n"
+    "      delete i->second;\n"
+    "    }\n"
     "  }\n"
     "Model* model_creator(Log&l, std::string params) {\n"
     "\tif (!a[params]) {\n"
