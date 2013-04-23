@@ -4,7 +4,7 @@
 #include <list>
 #include <map>
 #include <cstring>
-
+#include <stack>
 #include "config.h"
 #include <getopt.h>
 
@@ -27,7 +27,7 @@ enum {
 };
 
 int state=NONE;
-
+std::stack<bool> echo_stack;
 %}
 
 %Start STR
@@ -86,7 +86,6 @@ int state=NONE;
       break;
     }
     }
-
     state=NONE;
   }
   BEGIN 0;
@@ -103,17 +102,22 @@ int state=NONE;
 }
 
 ^[\ \t]*"^ifdef"[\ \t]+ {
+  echo_stack.push(echo);
   state=IF;
   BEGIN STR;
 }
 
 ^[\ \t]*"^ifndef"[\ \t]+ {
+  echo_stack.push(echo);
   state=IFN;
   BEGIN STR;
 }
 
 ^[\ \t]*"^endif" {
-  echo=true;
+  if (!echo_stack.empty()) {
+    echo=echo_stack.top();
+    echo_stack.pop();
+  }
   state=NONE;
   BEGIN 0;
 }
@@ -198,6 +202,7 @@ int main(int argc,char** argv)
     fstack.push_back("/dev/stdin");
   }
   yylex();
+
   return 0;
 }
 
