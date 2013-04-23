@@ -96,8 +96,13 @@ void aalang_cpp::set_name(std::string* name,bool first,ANAMETYPE t)
     guard_call_construct.push_back("action"+to_string(action_cnt)+"_guard(action_names["+to_string(action_cnt) +"])");
     action_guard_call.push_back(to_call(guard_call_construct));
   } else {
-    action_guard_call.push_back("filler");
-  }
+    std::string tmp=guard_call_construct.back();
+    guard_call_construct.pop_back();
+    guard_call_construct.push_back("action"+to_string(action_cnt)+"_guard(action_names["+to_string(action_cnt+name_cnt) +"])");    
+    action_guard_call.push_back(to_call(guard_call_construct));
+    guard_call_construct.pop_back();
+    guard_call_construct.push_back(tmp);
+ }
 
   anames.push_back(*name);
   aname.back().push_back(*name);
@@ -348,7 +353,7 @@ std::string aalang_cpp::stringify()
     "actions.clear();\n";
   
   for(int i=1;i<action_cnt;i++) {
-    s+="\tif ( " + action_guard_call[amap[i]-1] + ") {\n"
+    s+="\tif ( " + action_guard_call[i-1] + ") {\n"
      "\t\tactions.push_back("+to_string(i)+");\n"
       "\t}\n";
   }
