@@ -1,8 +1,10 @@
-fmbt (0.9.1-0.rc0) unstable; urgency=low
+fmbt (0.9.1-1) unstable; urgency=low
 
-  * Development version.
+  * Bug fix release.
+  * AAL preprocessor supports nested ifdef's.
+  * fmbtandroid: OCR results cache fixed.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 22 Apr 2013 09:15:24 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 23 Apr 2013 16:42:00 +0300
 
 fmbt (0.9-1) unstable; urgency=low
 
