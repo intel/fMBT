@@ -238,35 +238,23 @@ void Lts::add_transitions(int st,
 int Lts::execute(int action)
 {
   struct _state* st=&state[current_state];
-
-  log.debug("Lts::execute: %s trying to execute action %i at state %i",lts_name.c_str(),action,current_state);
-
-  log.debug("%i %i",
-         st->first,
-         st->transitions);
-
+  
   for(int i=0;i<st->transitions;i++) {
-    log.debug("state[%i] action %i",
-           current_state,actions[st->first+i]);
     if (actions[st->first+i]==action) {
       current_state=dstate[st->first+i];
-      log.debug("Lts::execute: %s action found, continuing from state %i",lts_name.c_str(),current_state);
       return true;
     }
   }
-  log.debug("Lts::execute: %s can't execute",lts_name.c_str());
   return false;
 }
 
 void Lts::push()
 {
-  log.debug("Lts::push %s",lts_name.c_str());
   state_save.push(current_state);
 }
 
 void Lts::pop()
 {
-  log.debug("Lts::pop %s",lts_name.c_str());
   current_state=state_save.top();
   state_save.pop();
 }
