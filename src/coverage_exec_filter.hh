@@ -21,7 +21,7 @@
 
 #include "coverage.hh"
 #include "helper.hh"
-#include <list>
+#include <stack>
 #include "log_null.hh"
 
 class Coverage_exec_filter: public Coverage {
@@ -37,16 +37,16 @@ public:
   virtual std::string stringify();
 
   virtual void push(){
-    save_online.push_front(online);
-    save_executed.push_front(executed);
+    save_online.push(online);
+    save_executed.push(executed);
   };
 
   virtual void pop(){
-    online=save_online.front();
-    save_online.pop_front();
+    online=save_online.top();
+    save_online.pop();
 
-    executed=save_executed.front();
-    save_executed.pop_front();
+    executed=save_executed.top();
+    save_executed.pop();
   };
 
   virtual bool execute(int action);
@@ -88,8 +88,8 @@ protected:
 public:
   bool online;
 protected:
-  std::list<bool> save_online;
-  std::list<std::vector<std::pair<int,std::vector<int> > > > save_executed;
+  std::stack<bool> save_online;
+  std::stack<std::vector<std::pair<int,std::vector<int> > > > save_executed;
 };
 
 #endif
