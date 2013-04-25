@@ -30,7 +30,8 @@ std::string Coverage_report::stringify()
 void Coverage_report::on_find(int action,std::vector<int>&p) {
   was_online=true;
   count++;
-  traces.push_back(executed);
+  if (traces_needed)
+    traces.push_back(executed);
   if (push_depth!=0 && 
       tcount_save[push_depth-1][executed]==0) {
     tcount_save[push_depth-1][executed]=tcount[executed];
@@ -43,7 +44,8 @@ void Coverage_report::push() {
   push_depth++;
   Coverage_exec_filter::push();
   save.push(count);
-  traces_save_.push(traces.size());
+  if (traces_needed)
+    traces_save_.push(traces.size());
   tcount_save.resize(push_depth);
   //tcount_save.push(tcount);
 }
@@ -52,7 +54,9 @@ void Coverage_report::pop() {
   Coverage_exec_filter::pop();
   count=save.top(); save.pop();
   // traces=traces_save.top(); traces_save.pop();
-  traces.resize(traces_save_.top()); traces_save_.pop();
+  if (traces_needed) {
+    traces.resize(traces_save_.top()); traces_save_.pop();
+  }
   //tcount=tcount_save.top(); tcount_save.pop();
 
   push_depth--;
@@ -77,9 +81,11 @@ void Coverage_report::on_online(int action,std::vector<int>&p){
 
 void Coverage_report::on_offline(int action,std::vector<int>&p){
   if (was_online) {
-    struct timeval t1=* etime.begin();
-    times.push_back(std::pair<struct timeval,struct timeval>
-		    (t1,History::current_time));
+    if (traces_needed) {
+      struct timeval t1=* etime.begin();
+      times.push_back(std::pair<struct timeval,struct timeval>
+		      (t1,History::current_time));
+    }
     was_online=false;
   }
 }
