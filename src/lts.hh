@@ -103,7 +103,7 @@ protected:
   
   std::vector<struct _state> state;
   std::vector<int> actions;
-  std::list<int> state_save;
+  std::stack<int> state_save;
 
   int current_state;                /* current state... */
 

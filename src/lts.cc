@@ -261,13 +261,14 @@ int Lts::execute(int action)
 void Lts::push()
 {
   log.debug("Lts::push %s",lts_name.c_str());
-  state_save.push_front(current_state);
+  state_save.push(current_state);
 }
+
 void Lts::pop()
 {
   log.debug("Lts::pop %s",lts_name.c_str());
-  current_state=state_save.front();
-  state_save.pop_front();
+  current_state=state_save.top();
+  state_save.pop();
 }
 
 FACTORY_DEFAULT_CREATOR(Model, Lts, "lts")
