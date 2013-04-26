@@ -1,3 +1,9 @@
+fmbt (0.9.2-0.rc0) unstable; urgency=low
+
+  * Development version.
+
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 26 Apr 2013 09:42:00 +0300
+
 fmbt (0.9.1-1) unstable; urgency=low
 
   * Bug fix release.
