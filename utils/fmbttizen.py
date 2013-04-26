@@ -18,7 +18,7 @@
 This is library implements fmbtandroid.Device-like interface for
 Tizen devices.
 
-WARNING: THIS IS A PROOF-OF-CONCEPT.
+WARNING: THIS IS A VERY SLOW PROTOTYPE WITHOUT ANY ERROR HANDLING.
 """
 
 import fmbtgti
@@ -31,6 +31,32 @@ class Device(fmbtgti.GUITestInterface):
         self.setConnection(TizenDeviceConnection())
 
 class TizenDeviceConnection(fmbtgti.GUITestConnection):
+    def __init__(self):
+        self._serialNumber = None
+    def sendPress(self, keyName):
+        s, o = commands.getstatusoutput("sdb shell xte 'key %s'" % (keyName,))
+        return True
+    def sendKeyDown(self, keyName):
+        s, o = commands.getstatusoutput("sdb shell xte 'keydown %s'" % (keyName,))
+        return True
+    def sendKeyUp(self, keyName):
+        s, o = commands.getstatusoutput("sdb shell xte 'keyup %s'" % (keyName,))
+        return True
+    def sendTap(self, x, y):
+        s, o = commands.getstatusoutput("sdb shell xte 'mousemove %s %s' 'mouseclick 1'" % (x, y))
+        return True
+    def sendTouchDown(self, x, y):
+        s, o = commands.getstatusoutput("sdb shell xte 'mousemove %s %s' 'mousedown 1'" % (x, y))
+        return True
+    def sendTouchMove(self, x, y):
+        s, o = commands.getstatusoutput("sdb shell xte 'mousemove %s %s'" % (x, y))
+        return True
+    def sendTouchUp(self, x, y):
+        s, o = commands.getstatusoutput("sdb shell xte 'mousemove %s %s' 'mouseup 1'" % (x, y))
+        return True
+    def sendType(self, string):
+        s, o = commands.getstatusoutput("sdb shell xte 'str %s'" % (string,))
+        return True
     def recvScreenshot(self, filename):
         remoteFilename = "/tmp/fmbttizen.screenshot.xwd"
         s, o = commands.getstatusoutput("sdb shell 'xwd -root -out %s'" % (remoteFilename,))
@@ -39,8 +65,8 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
         s, o = commands.getstatusoutput("convert %s.xwd %s" % (filename, filename))
         os.remove("%s.xwd" % (filename,))
         return True
-
-    def sendTap(self, x, y):
-        cmd = '''sdb shell "xte 'mousemove %s %s' 'mouseclick 1'"''' % (x, y)
-        s, o = commands.getstatusoutput(cmd)
-        return True
+    def target(self):
+        if self._serialNumber == None:
+            s, o = commands.getstatusoutput("sdb get-serialno")
+            self._serialNumber = o.splitlines()[-1]
+        return self._serialNumber

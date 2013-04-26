@@ -99,10 +99,10 @@ class GUITestConnection(object):
         raise NotImplemented('sendTap(%d, %d) needed but not implemented.' % (x, y))
     def sendTouchDown(self, x, y):
         raise NotImplemented('sendTouchDown(%d, %d) needed but not implemented.' % (x, y))
-    def sendTouchUp(self, x, y):
-        raise NotImplemented('sendTouchUp(%d, %d) needed but not implemented.' % (x, y))
     def sendTouchMove(self, x, y):
         raise NotImplemented('sendTouchMove(%d, %d) needed but not implemented.' % (x, y))
+    def sendTouchUp(self, x, y):
+        raise NotImplemented('sendTouchUp(%d, %d) needed but not implemented.' % (x, y))
     def sendType(self, text):
         raise NotImplemented('sendType("%s") needed but not implemented.' % (text,))
     def recvScreenshot(self, filename):
