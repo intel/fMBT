@@ -245,7 +245,6 @@ class Device(fmbtgti.GUITestInterface):
 
         self._fmbtAndroidHomeDir = os.getenv("FMBTANDROIDHOME", os.getcwd())
 
-        self._screenSize = None
         self._platformVersion = None
         self._lastView = None
         self._lastScreenshot = None
@@ -1141,6 +1140,9 @@ class _AndroidDeviceConnection:
     def __del__(self):
         try: self._monkeySocket.close()
         except: pass
+
+    def target(self):
+        return self._serialNumber
 
     def _cat(self, remoteFilename):
         fd, filename = tempfile.mkstemp("fmbtandroid-cat-")

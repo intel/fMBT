@@ -80,13 +80,22 @@ def _bitmapPathSolver(rootDirForRelativePaths, bitmapPath):
     return _solver
 
 class GUITestConnection(object):
+    """
+    Implements GUI testing primitives needed by GUITestInterface.
+
+    All send* and recv* methods return
+    - True on success
+    - False on user error (unknown keyName, coordinates out of range)
+    - raise Exception on framework error (connection lost, missing
+      dependencies).
+    """
     def sendPress(self, keyName):
         raise NotImplemented('sendPress("%s") needed but not implemented.' % (keyName,))
     def sendKeyDown(self, keyName):
         raise NotImplemented('sendKeyDown("%s") needed but not implemented.' % (keyName,))
     def sendKeyUp(self, keyName):
         raise NotImplemented('sendKeyUp("%s") needed but not implemented.' % (keyName,))
-    def sendTap(self, (x, y)):
+    def sendTap(self, x, y):
         raise NotImplemented('sendTap(%d, %d) needed but not implemented.' % (x, y))
     def sendTouchDown(self, x, y):
         raise NotImplemented('sendTouchDown(%d, %d) needed but not implemented.' % (x, y))
@@ -96,8 +105,17 @@ class GUITestConnection(object):
         raise NotImplemented('sendTouchMove(%d, %d) needed but not implemented.' % (x, y))
     def sendType(self, text):
         raise NotImplemented('sendType("%s") needed but not implemented.' % (text,))
-    def recvScreenSize(self):
-        raise NotImplemented('recvScreenSize needed but not implemented.')
+    def recvScreenshot(self, filename):
+        """
+        Saves screenshot from the GUI under test to given filename.
+        """
+        raise NotImplemented('recvScreenshot("%s") needed but not implemented.' % (filename,))
+    def target(self):
+        """
+        Returns a string that is unique to each test target. For
+        instance, Android device serial number.
+        """
+        return "GUITestConnectionTarget"
 
 class GUITestInterface(object):
     def __init__(self):
@@ -107,6 +125,7 @@ class GUITestInterface(object):
         self._conn = None
         self._screenshotDir = None
         self._screenshotDirDefault = "screenshots"
+        self._screenSize = None
         self._bitmapPath = ""
         self._bitmapPathRootForRelativePaths = ""
 
@@ -283,14 +302,13 @@ class GUITestInterface(object):
         else:
             if self.screenshotDir() == None:
                 self.setScreenshotDir(self._screenshotDirDefault)
-            screenshotFile = self.screenshotDir() + os.sep + _filenameTimestamp() + "-" + self.serialNumber + '.png'
+            screenshotFile = self.screenshotDir() + os.sep + _filenameTimestamp() + "-" + self._conn.target() + '.png'
             if self._conn.recvScreenshot(screenshotFile):
                 self._lastScreenshot = Screenshot(
                     screenshotFile=screenshotFile,
-                    pathSolver=_bitmapPathSolver(self._bitmapPathRootForRelativePaths, self._bitmapPath),
-                    screenSize=self.screenSize())
+                    pathSolver=_bitmapPathSolver(self._bitmapPathRootForRelativePaths, self._bitmapPath))
+                self._screenSize = self._lastScreenshot.size()
             else:
-                _adapterlog('refreshScreenshot(): receiving screenshot to "%s" failed.' % (screenshotFile,))
                 self._lastScreenshot = None
         return self._lastScreenshot
 
@@ -309,8 +327,6 @@ class GUITestInterface(object):
         """
         Returns screen size in pixels in tuple (width, height).
         """
-        if self._screenSize == None:
-            self._screenSize = self._conn.recvScreenSize()
         return self._screenSize
 
     def setBitmapPath(self, bitmapPath, rootForRelativePaths=None):
@@ -724,10 +740,10 @@ class Screenshot(object):
     Screenshot class takes and holds a screenshot (bitmap) of device
     display, or a forced bitmap file if device connection is not given.
     """
-    def __init__(self, screenshotFile=None, pathSolver=None, screenSize=None):
+    def __init__(self, screenshotFile=None, pathSolver=None):
         self._filename = screenshotFile
         self._pathSolver = pathSolver
-        self._screenSize = screenSize
+        self._screenSize = eyenfinger.imageSize(self._filename)
         # The bitmap held inside screenshot object is never updated.
         # If new screenshot is taken, this screenshot object disappears.
         # => cache all search hits
@@ -736,6 +752,9 @@ class Screenshot(object):
         self._ocrWords = None
         self._ocrWordsArea = None
         self._ocrWordsPreprocess = None
+
+    def size(self):
+        return self._screenSize
 
     def dumpOcrWords(self, preprocess=None, area=None):
         if preprocess == None: preprocess = self._ocrWordsPreprocess
@@ -845,20 +864,23 @@ class _VisualLog:
         device.refreshScreenshot = self.refreshScreenshotLogger(device.refreshScreenshot)
         device.tap = self.tapLogger(device.tap)
         device.drag = self.dragLogger(device.drag)
-        for m in [device.callContact, device.callNumber, device.close,
-                  device.loadConfig, device.platformVersion,
-                  device.pressAppSwitch, device.pressBack, device.pressHome,
-                  device.pressKey, device.pressMenu, device.pressPower,
-                  device.pressVolumeUp, device.pressVolumeDown,
-                  device.reboot, device.reconnect, device.refreshView,
-                  device.shell, device.shellSOE, device.smsNumber,
-                  device.supportsView, device.swipe,
-                  device.swipeBitmap, device.swipeItem, device.systemProperty,
-                  device.tapBitmap, device.tapId, device.tapItem, device.tapOcrText,
-                  device.tapText, device.topApp, device.topWindow, device.type,
-                  device.verifyOcrText, device.verifyText, device.verifyBitmap,
-                  device.waitBitmap, device.waitOcrText, device.waitText]:
-            setattr(device, m.func_name, self.genericLogger(m))
+        attrs = ['callContact', 'callNumber', 'close',
+                 'loadConfig', 'platformVersion',
+                 'pressAppSwitch', 'pressBack', 'pressHome',
+                 'pressKey', 'pressMenu', 'pressPower',
+                 'pressVolumeUp', 'pressVolumeDown',
+                 'reboot', 'reconnect', 'refreshView',
+                 'shell', 'shellSOE', 'smsNumber',
+                 'supportsView', 'swipe',
+                 'swipeBitmap', 'swipeItem', 'systemProperty',
+                 'tapBitmap', 'tapId', 'tapItem', 'tapOcrText',
+                 'tapText', 'topApp', 'topWindow', 'type',
+                 'verifyOcrText', 'verifyText', 'verifyBitmap',
+                  'waitBitmap', 'waitOcrText', 'waitText']
+        for a in attrs:
+            if hasattr(device, a):
+                m = getattr(device, a)
+                setattr(device, m.func_name, self.genericLogger(m))
         self.logHeader()
         self._blockId = 0
 

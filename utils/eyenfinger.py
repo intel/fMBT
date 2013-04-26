@@ -442,6 +442,17 @@ def windowXY():
         raise BadWindowName("undefined window")
     return _g_windowOffsets[_g_lastWindow]
 
+def imageSize(imageFilename):
+    """
+    Returns image size as pair (width, height).
+    """
+    struct_bbox = Bbox(0,0,0,0,0)
+    err = eye4graphics.imageDimensions(ctypes.byref(struct_bbox),
+                                       imageFilename)
+    if err != 0:
+        return None, None
+    return struct_bbox.right, struct_bbox.bottom
+
 def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=None, ocrArea=(0, 0, 1.0, 1.0)):
     """
     Read the contents of the given window or other source. If neither
@@ -1399,15 +1410,14 @@ def iUseImageAsWindow(imageFilename):
 
     _g_lastWindow = imageFilename
 
-    struct_bbox = Bbox(0,0,0,0,0)
-    err = eye4graphics.imageDimensions(ctypes.byref(struct_bbox),
-                                       imageFilename)
-    if err != 0:
+    imageWidth, imageHeight = imageSize(imageFilename)
+
+    if imageWidth == None:
         _log('iUseImageAsWindow: Failed reading dimensions of image "%s".' % (imageFilename,))
         raise BadSourceImage('Failed to read dimensions of "%s".' % (imageFilename,))
 
     _g_windowOffsets[_g_lastWindow] = (0, 0)
-    _g_windowSizes[_g_lastWindow] = (int(struct_bbox.right), int(struct_bbox.bottom))
+    _g_windowSizes[_g_lastWindow] = (imageWidth, imageHeight)
     _g_screenSize = _g_windowSizes[_g_lastWindow]
     return _g_lastWindow
 
