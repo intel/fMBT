@@ -57,7 +57,7 @@ def _bitmapKwArgs(colorMatch=None, opacityLimit=None, area=None):
 
 def _bitmapPathSolver(rootDirForRelativePaths, bitmapPath):
     def _solver(bitmap, checkReadable=True):
-        if bitmap.startswith("/") or os.access(bitmap, os.R_OK):
+        if bitmap.startswith("/"):
             path = [os.path.dirname(bitmap)]
             bitmap = os.path.basename(bitmap)
         else:
@@ -107,6 +107,21 @@ class GUITestInterface(object):
         self._conn = None
         self._screenshotDir = None
         self._screenshotDirDefault = "screenshots"
+        self._bitmapPath = ""
+        self._bitmapPathRootForRelativePaths = ""
+
+    def bitmapPath(self):
+        """
+        Returns bitmapPath from which bitmaps are searched for.
+        """
+        return self._bitmapPath
+
+    def bitmapPathRoot(self):
+        """
+        Returns the path that prefixes all relative directories in
+        bitmapPath.
+        """
+        return self._bitmapPathRootForRelativePaths
 
     def close(self):
         self._lastScreenshot = None
@@ -261,7 +276,7 @@ class GUITestInterface(object):
             if type(forcedScreenshot) == str:
                 self._lastScreenshot = Screenshot(
                     screenshotFile=forcedScreenshot,
-                    pathSolver=_bitmapPathSolver(self._rootDirForRelativePaths, self.bitmapPath),
+                    pathSolver=_bitmapPathSolver(self._bitmapPathRootForRelativePaths, self._bitmapPath),
                     screenSize=self.screenSize())
             else:
                 self._lastScreenshot = forcedScreenshot
@@ -272,7 +287,7 @@ class GUITestInterface(object):
             if self._conn.recvScreenshot(screenshotFile):
                 self._lastScreenshot = Screenshot(
                     screenshotFile=screenshotFile,
-                    pathSolver=_bitmapPathSolver(self._rootDirForRelativePaths, self.bitmapPath),
+                    pathSolver=_bitmapPathSolver(self._bitmapPathRootForRelativePaths, self._bitmapPath),
                     screenSize=self.screenSize())
             else:
                 _adapterlog('refreshScreenshot(): receiving screenshot to "%s" failed.' % (screenshotFile,))
@@ -298,12 +313,31 @@ class GUITestInterface(object):
             self._screenSize = self._conn.recvScreenSize()
         return self._screenSize
 
-    def setBitmapPath(self, path, rootDirForRelativePaths=None):
-        self.bitmapPath = path
-        if rootDirForRelativePaths:
-            self._rootDirForRelativePaths = rootDirForRelativePaths
-        else:
-            self._rootDirForRelativePaths = os.getcwd()
+    def setBitmapPath(self, bitmapPath, rootForRelativePaths=None):
+        """
+        Set new bitmapPath.
+
+        Parameters:
+
+          bitmapPath (string)
+                  colon-separated list of directories from which
+                  bitmap methods look for bitmap files.
+
+          rootForRelativePaths (string, optional)
+                  path that will prefix all relative paths in
+                  bitmapPath.
+
+        Example:
+
+          gui.setBitmapPath("bitmaps:icons:/tmp", "/home/X")
+          gui.tapBitmap("start.png")
+
+          will look for /home/X/bitmaps/start.png,
+          /home/X/icons/start.png and /tmp/start.png, in this order.
+        """
+        self._bitmapPath = bitmapPath
+        if rootForRelativePaths != None:
+            self._bitmapPathRootForRelativePaths = rootForRelativePaths
 
     def setConnection(self, conn):
         """
