@@ -61,7 +61,7 @@ void Heuristic_weight::add(std::vector<std::string*> p,
   }
 
   for(unsigned i=0;i<a.size();i++) {
-    regexpmatch(*(a[i]),model->getActionNames(),actions,false);
+    regexpmatch(*(a[i]),model->getActionNames(),actions,false,1,1);
     delete a[i];
   }
 

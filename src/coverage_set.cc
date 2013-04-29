@@ -90,7 +90,7 @@ void Coverage_set::add_filter()
 {
   for(unsigned i=0;i<_fv.size();i++) {
     std::vector<int> r;
-    regexpmatch(*_fv[i].first,model->getActionNames(),r);
+    regexpmatch(*_fv[i].first,model->getActionNames(),r,true,1,1);
     regexpmatch(*_fv[i].first,model->getSPNames(),r,false,-1);
     // Free some memory...
     delete _fv[i].first;
