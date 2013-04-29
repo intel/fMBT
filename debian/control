@@ -62,6 +62,13 @@ Description: fMBT adapter for Android GUI testing through USB
  Provides fmbtandroid.py, a Python library for Android GUI testing.
  The library needs Android Debug Bridge (adb).
 
+Package: fmbt-adapter-tizen
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, fmbt-adapter-eyenfinger (= ${binary:Version})
+Description: fMBT adapter for Tizen GUI testing through USB
+ Provides fmbttizen.py, a Python library for Tizen GUI testing.
+ The library needs Smart Development Bridge (sdb) from Tizen SDK.
+
 Package: fmbt-adapter-eyenfinger
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, x11-apps, imagemagick, tesseract-ocr, xautomation
@@ -85,6 +92,6 @@ Description: fMBT examples
 
 Package: fmbt
 Architecture: all
-Depends: fmbt-editor (>= ${source:Version}), fmbt-examples (= ${binary:Version}), fmbt-doc (= ${binary:Version}), fmbt-adapter-android (>= ${source:Version}), ${misc:Depends}
+Depends: fmbt-editor (>= ${source:Version}), fmbt-examples (= ${binary:Version}), fmbt-doc (= ${binary:Version}), fmbt-adapter-android (>= ${source:Version}), fmbt-adapter-tizen (>= ${source:Version}), ${misc:Depends}
 Description: A metapackage for installing all fMBT packages
  This metapackage brings in all fMBT tools, adapters and examples.

@@ -1,4 +1,5 @@
 usr/lib/python*/*packages/fmbt.py*
+usr/lib/python*/*packages/fmbtgti.py*
 usr/lib/python*/*packages/fmbtlogger.py*
 usr/lib/python*/*packages/fmbt/lsts.py*
 usr/lib/python*/*packages/fmbt/aalmodel.py*

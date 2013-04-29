@@ -115,10 +115,20 @@ Proof-of-concept adapter for X11 GUI testing with OCR and icon matching.
 %package adapter-android
 Summary: fMBT adapter for Android GUI testing through USB
 Requires: %{name}-adapter-eyenfinger
+Requires: %{name}-python
 
 %description adapter-android
 Provides fmbtandroid.py, a Python library for Android GUI testing.
 The library needs Android Debug Bridge (adb).
+
+%package adapter-tizen
+Summary: fMBT adapter for Tizen GUI testing through USB
+Requires: %{name}-adapter-eyenfinger
+Requires: %{name}-python
+
+%description adapter-tizen
+Provides fmbttizen.py, a Python library for Tizen GUI testing.
+The library needs Smart Development Bridge (sdb) from Tizen SDK.
 
 %package doc
 Summary: fMBT documentation
@@ -135,6 +145,7 @@ various fMBT examples
 %package all
 Summary: Meta package for installing all fMBT packages
 Requires: %{name}-adapter-android
+Requires: %{name}-adapter-tizen
 Requires: %{name}-doc
 Requires: %{name}-editor
 Requires: %{name}-examples
@@ -198,8 +209,9 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %files python
 %defattr(-, root, root, -)
 %dir %{python_sitelib}/%{name}
-%{python_sitelib}/%{name}.py*
-%{python_sitelib}/%{name}logger.py*
+%{python_sitelib}/fmbt.py*
+%{python_sitelib}/fmbtgti.py*
+%{python_sitelib}/fmbtlogger.py*
 %{python_sitelib}/%{name}/lsts.py*
 %{python_sitelib}/%{name}/aalmodel.py*
 %{python_sitelib}/%{name}/%{name}parsers.py*
@@ -215,6 +227,7 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %{_bindir}/remote_python
 %{python_sitelib}/%{name}/remote_pyaal
 %{python_sitelib}/%{name}/remote_python
+
 %{python_sitelib}/%{name}web.py*
 
 %files adapter-eyenfinger
@@ -225,6 +238,10 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %files adapter-android
 %defattr(-, root, root, -)
 %{python_sitelib}/fmbtandroid.py*
+
+%files adapter-tizen
+%defattr(-, root, root, -)
+%{python_sitelib}/fmbttizen.py*
 
 %files doc
 %defattr(-, root, root, -)
