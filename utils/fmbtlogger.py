@@ -217,8 +217,10 @@ def _logCalls(orig_self, report, logDepth_):
             localVars.logDepth += 1
             return rv
         return callee
-    class _detectCalls(object):
-        def __getattr__(self, attr):
+    class _detectCalls(orig_self.__class__):
+        def __init__(self): pass
+        def __del__(self): pass
+        def __getattribute__(self, attr):
             attr = getattr(orig_self, attr)
             if type(attr) == types.MethodType:
                 if localVars.logDepth == 0:
