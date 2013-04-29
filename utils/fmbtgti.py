@@ -898,6 +898,7 @@ class _VisualLog:
     def write(self, s):
         if self._outFileObj != None:
             self._outFileObj.write(s)
+            self._outFileObj.flush()
 
     def timestamp(self, t=None):
         if t == None: t = datetime.datetime.now()
