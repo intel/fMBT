@@ -15,6 +15,6 @@ dist_bin_SCRIPTS = $(PYTHON_WRAPPERS) fmbt-view remote_exec.sh
 
 pkgpython_PYTHON = aalmodel.py lsts.py fmbtparsers.py fmbt-editor fmbt-gt fmbt-gteditor fmbt-log fmbt-stats lsts2dot fmbt-parallel remote_pyaal remote_python fmbt_config.py
 
-python_PYTHON = fmbtweb.py fmbt.py eyenfinger.py fmbtandroid.py fmbtlogger.py
+python_PYTHON = fmbtweb.py fmbt.py eyenfinger.py fmbtandroid.py fmbtgti.py fmbttizen.py fmbtlogger.py
 
 endif
