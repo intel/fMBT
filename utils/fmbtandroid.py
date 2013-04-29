@@ -929,7 +929,7 @@ class View(object):
         self._olderAndroidLineRegEx = re.compile("(?P<indent>\s*)(?P<class>[\w.$]+)@(?P<id>\w)(?P<properties>.*)")
         self._propRegEx = re.compile("(?P<prop>(?P<name>[^=]+)=(?P<len>\d+),)(?P<data>[^\s]* ?)")
         self._dump = dump
-        self._rawDumpFilename = self.screenshotDir + os.sep + _filenameTimestamp() + "-" + self.serialNumber + ".view"
+        self._rawDumpFilename = self.screenshotDir + os.sep + fmbtgti._filenameTimestamp() + "-" + self.serialNumber + ".view"
         file(self._rawDumpFilename, "w").write(self._dump)
         try: self._parseDump(dump, self._rawDumpFilename)
         except Exception, e:
