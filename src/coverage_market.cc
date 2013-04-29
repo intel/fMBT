@@ -146,7 +146,7 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const std::st
 
   if (m) {
     std::vector<int> actions;
-    regexpmatch(action, model->getActionNames(), actions, false);
+    regexpmatch(action, model->getActionNames(), actions, false,1,1);
 
     if (actions.empty()) {
       errormsg = "No actions matching \"" + action + "\"";
@@ -162,7 +162,7 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const std::st
           u=new Coverage_Market::unit_and(u,new Coverage_Market::unit_leaf(actions[i]));
         }
       } else {
-        u=new Coverage_Market::unit_leaf(actions[i]);
+	u=new Coverage_Market::unit_leaf(actions[i]);
       }
     }
   } else {

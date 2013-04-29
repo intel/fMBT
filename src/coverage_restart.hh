@@ -49,9 +49,9 @@ protected:
   std::string l,r;
   Coverage* left,*right;
 
-  std::list<Coverage* > csave;
-  std::list<int> pdsave;
-  std::list<float> psave;
+  std::stack<Coverage* > csave;
+  std::stack<int> pdsave;
+  std::stack<float> psave;
   float previous;
   int push_depth;
 };

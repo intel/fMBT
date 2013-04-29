@@ -66,10 +66,10 @@ void Coverage_Restart::push()
 {
   if (!status) return;
 
-  csave.push_back(left);
-  csave.push_back(right);
-  psave.push_back(previous);
-  pdsave.push_back(push_depth);
+  csave.push(left);
+  csave.push(right);
+  psave.push(previous);
+  pdsave.push(push_depth);
 
   left->push();
   right->push();
@@ -90,24 +90,24 @@ void Coverage_Restart::pop()
     right->pop();
   }
 
-  push_depth=pdsave.back();
-  pdsave.pop_back();
+  push_depth=pdsave.top();
+  pdsave.pop();
 
-  previous=psave.back();
-  psave.pop_back();
+  previous=psave.top();
+  psave.pop();
 
-  if (right!=csave.back()) {
+  if (right!=csave.top()) {
     delete right;
-    right=csave.back();    
+    right=csave.top();
   }
 
-  csave.pop_back();
+  csave.pop();
 
-  if (left!=csave.back()) {
+  if (left!=csave.top()) {
     delete left;
-    left=csave.back();
+    left=csave.top();
   }
-  csave.pop_back();
+  csave.pop();
 
   if (!left->status || !right->status) {
     status=false;
@@ -155,7 +155,7 @@ bool Coverage_Restart::execute(int action)
 	right->pop();
       }
 
-      if (csave.empty() || right!=csave.back()) {
+      if (csave.empty() || right!=csave.top()) {
 	delete right;
 	delete left;
       }
@@ -187,16 +187,16 @@ Coverage_Noprogress::Coverage_Noprogress(Log&lo, std::string& params): Coverage_
 void Coverage_Noprogress::push()
 {
   Coverage_Restart::push();
-  pdsave.push_back(noprog);
-  psave.push_back(lp);
+  pdsave.push(noprog);
+  psave.push(lp);
 }
 
 void Coverage_Noprogress::pop()
 {
-  lp=psave.back();
-  psave.pop_back();
-  noprog=pdsave.back();
-  pdsave.pop_back();
+  lp=psave.top();
+  psave.pop();
+  noprog=pdsave.top();
+  pdsave.pop();
   Coverage_Restart::pop();
 }
 
@@ -213,7 +213,7 @@ bool Coverage_Noprogress::execute(int action)
 
   if (status) {
     float lc=left->getCoverage();
-    float rc=right->getCoverage();
+    //float rc=right->getCoverage();
 
     if(lp!=lc) {
       noprog=0;
@@ -231,7 +231,7 @@ bool Coverage_Noprogress::execute(int action)
 	right->pop();
       }
 
-      if (csave.empty() || right!=csave.back()) {
+      if (csave.empty() || right!=csave.top()) {
 	delete right;
 	delete left;
       }

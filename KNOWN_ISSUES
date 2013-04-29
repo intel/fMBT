@@ -11,3 +11,9 @@ On Ubuntu 11.04 and Ubuntu 11.10 valgrind will complain about sse42 optimised ve
 ==30949==    by 0x448A23: main (fmbt.cc:191)
 
 - FIXED(?) Escaping on coverage definition is not clear. Some times escaping works, usually not. Needs to be fixed.
+
+adapter_remote doesn't support adapter_exit, check_tags
+
+It seems that sometimes when we get parse error, some memory is not free'ed.
+
+FMBT with lsts models seems to use 1.5x more cpu and noticeably amount more of memory with Ubuntu 13.04, when compared with earlier Ubuntu releases (11.04, 12.04, 12.10). For some reason std::list is slow. Now we use std::stack instead and we don't have a performance issue with ubuntu 13.04 any more.

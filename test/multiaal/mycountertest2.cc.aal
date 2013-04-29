@@ -13,6 +13,10 @@ aal "mycountertest2" {
         value = 0;
     }
 
+    adapter_exit {
+	if (mycounter)
+		delete mycounter;
+    }
     action "iCreate" {
         guard() { return mycounter == NULL; }
         adapter() {

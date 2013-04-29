@@ -32,16 +32,19 @@ void Coverage_Tree::push()
 {
   push_depth++;
   std::list<std::pair<struct node*, int> > a;
-  push_restore.push_front(a);
-  exec_restore.push_front(exec);
+  push_restore.push(a);
+  exec_restore.push(exec);
 }
 
 void Coverage_Tree::pop()
 {
   std::list<std::pair<struct node*, int> >::iterator i
-    = push_restore.front().begin();
+    = push_restore.top().begin();
 
-  while(i!=push_restore.front().end()) {
+  std::list<std::pair<struct node*, int> >::iterator e
+    = push_restore.top().end();
+
+  while(i!=e) {
     node_count--;
     int action=i->second;
     struct node* current_node=i->first;
@@ -50,10 +53,10 @@ void Coverage_Tree::pop()
     current_node->nodes.erase(action);
     i++;
   }
-  push_restore.pop_front();
+  push_restore.pop();
 
-  exec=exec_restore.front();
-  exec_restore.pop_front();
+  exec=exec_restore.top();
+  exec_restore.pop();
   push_depth--;
 }
 
@@ -109,8 +112,12 @@ bool Coverage_Tree::execute(int action)
       current_node->nodes[action]->action=action;
       node_count++;
       if (push_depth) {
+	/*
 	std::pair<struct node*, int> a(current_node,action);
 	push_restore.front().push_front(a);
+	*/
+	push_restore.top().push_front(std::pair<struct node*, int> 
+				      (current_node,action));
       }
     }
     depth++;

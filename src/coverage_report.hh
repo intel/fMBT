@@ -30,7 +30,7 @@ public:
   Coverage_report(Log&l,std::vector<std::string*>& _from,
 		  std::vector<std::string*>& _to,
 		  std::vector<std::string*>& _drop):
-    Coverage_exec_filter(l,_from,_to,_drop),count(0),was_online(false)
+    Coverage_exec_filter(l,_from,_to,_drop),count(0),traces_needed(true),was_online(false)
   {push_depth=0;_f=NULL;_t=NULL;_d=NULL;}
 
   virtual ~Coverage_report() {
@@ -68,6 +68,7 @@ public:
 protected:
   int push_depth;
   int count;
+  bool traces_needed;
 private:
   std::stack<int> save;
   //std::stack<std::vector<std::vector<std::pair<int,std::vector<int> > > > > traces_save;

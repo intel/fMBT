@@ -1,0 +1,140 @@
+aal "filesystemtest" {
+    language: c++ {
+#include <unistd.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <stack>
+
+#define MOUNTPOINT "/tmp"
+#define DIRNAME MOUNTPOINT "/fmbt.filesystemtest"
+#define SUBDIRNAME DIRNAME "/subdir"
+    }
+  variables { bool dir_exists, subdir_exists; std::stack<bool> st; }
+    push {
+      st.push(dir_exists);
+      st.push(subdir_exists);
+    }
+    pop {
+      subdir_exists=st.top();st.pop();
+      dir_exists   =st.top();st.pop();
+    }
+    initial_state {
+        dir_exists = false;
+        subdir_exists = false;
+    }
+    adapter_init {
+        rmdir(SUBDIRNAME);
+        rmdir(DIRNAME);
+    }
+    adapter_exit {
+      if (verdict == Verdict::PASS && subdir_exists) {
+	    log("cleaning up " SUBDIRNAME);
+            rmdir(SUBDIRNAME);
+      }
+      if (verdict == Verdict::PASS && dir_exists) {
+	    log("cleaning up " DIRNAME);
+            rmdir(DIRNAME);
+      }
+    }
+    input "mkdir: ok" {
+      guard()   { return !dir_exists; }
+      adapter() { if (mkdir(DIRNAME,0777)!=0) { 
+	    return 0;
+	  }
+	}
+        body()    { dir_exists = true; }
+    }
+    input "rmdir: ok" {
+      guard()   { return dir_exists && !subdir_exists; }
+        adapter() { if (rmdir(DIRNAME)!=0) { return 0; }  }
+        body()    { dir_exists = false; }
+    }
+    input "mksubdir: ok" {
+      guard()   { return dir_exists && !subdir_exists; }
+        adapter() { mkdir(SUBDIRNAME,0777); }
+        body()    { subdir_exists = true; }
+    }
+    input "rmsubdir: ok" {
+      guard()   { return subdir_exists; }
+        adapter() { rmdir(SUBDIRNAME); }
+        body()    { subdir_exists = false; }
+    }
+    input "mkdir: already exists" {
+      guard()   { return dir_exists; }
+        adapter() {
+	  if (mkdir(DIRNAME,0777) != 0 ) {
+	    if (errno!=EEXIST) {
+	      return 0;
+	    }
+	  } else {
+	    return 0;
+	  }
+        }
+    }
+    input "mksubdir: already exists" {
+      guard()   { return subdir_exists; }
+        adapter() {
+	  if (mkdir(SUBDIRNAME,0777) != 0 ) {
+	    if (errno!=EEXIST) {
+	      return 0;
+	    }
+	  } else {
+	    return 0;
+	  }
+        }
+    }
+    input "rmdir: no such file" {
+      guard()   { return !dir_exists; }
+        adapter() {
+	  if (rmdir(DIRNAME) != 0 ) {
+	    if (errno!=ENOENT) {
+	      return 0;
+	    }
+	  } else {
+	    return 0;
+	  }
+        }
+    }
+    input "rmdir: not empty" {
+      guard()   { return subdir_exists; }
+        adapter() {
+	  if (rmdir(DIRNAME) != 0 ) {
+	    if (errno!=ENOTEMPTY) {
+	      return 0;
+	    }
+	  } else {
+	    return 0;
+	  }
+        }
+    }
+    input "rmsubdir: no such file" {
+      guard()   { return !subdir_exists; }
+        adapter() {
+	  if (rmdir(SUBDIRNAME) != 0 ) {
+	    if (errno!=ENOENT) {
+	      return 0;
+	    }
+	  } else {
+	    return 0;
+	  }
+        }
+    }
+
+    tag "dir exists" {
+      guard()   { return dir_exists; }
+      adapter() { return (access(DIRNAME, R_OK)==0); }
+    }
+    tag "no dir" {
+      guard()   { return !dir_exists; }
+      adapter() { return access(DIRNAME, R_OK)!=0; }
+    }
+    tag "subdir exists" {
+      guard()   { return subdir_exists; }
+      adapter() { return access(SUBDIRNAME, R_OK)==0; }
+    }
+    tag "no subdir" {
+      guard()   { return !subdir_exists; }
+        adapter() { return access(SUBDIRNAME, R_OK)!=0;}
+    }
+}

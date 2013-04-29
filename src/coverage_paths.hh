@@ -28,7 +28,7 @@ public:
   Coverage_paths_base(Log&l,std::vector<std::string*>& _from,
 		 std::vector<std::string*>& _to,
 		 std::vector<std::string*>& _drop):
-    Coverage_report(l,_from,_to,_drop), filter_outputs(false),af(false),pf(true),unique(true) {}
+    Coverage_report(l,_from,_to,_drop), filter_outputs(false),af(false),pf(true),unique(true) { traces_needed=false; }
   
   virtual ~Coverage_paths_base() {}
 
