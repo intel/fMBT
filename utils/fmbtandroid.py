@@ -1096,7 +1096,7 @@ class View(object):
 
                 index += len(propMatch.group("prop")) + length + 1
 
-            self._viewItems.append(ViewItem(matcher.group("class"), matcher.group("id"), indent, properties, parent, matcher.group("properties")))
+            self._viewItems.append(ViewItem(matcher.group("class"), matcher.group("id"), indent, properties, parent, matcher.group("properties"), self._rawDumpFilename))
 
             if parent:
                 parent.addChild(self._viewItems[-1])
