@@ -67,10 +67,6 @@ public:
 
   virtual int fitness(int* actions,int n, float* fitness);
 
-  virtual void addmodel(Model* model) { // for coverage
-    models.push_back(model);
-  }
-
   virtual void set_model(Model* _model)
   {
     model=_model;
@@ -324,12 +320,7 @@ public:
   };
 
 protected:
-  std::vector<Model*> models;
-
   std::vector<unit*> Units;
-
-  std::multimap<int,char*> map;
-
   std::string params;
 };
 

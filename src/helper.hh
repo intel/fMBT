@@ -104,7 +104,7 @@ void split(std::string val, std::string& name,
 	   std::string& param, const char* s=":");
 
 void regexpmatch(const std::string& regexp,std::vector<std::string>& f,
-		 std::vector<int>& result,bool clear=true,int a=1);
+		 std::vector<int>& result,bool clear=true,int a=1,int min=0);
 
 void param_cut(std::string val,std::string& name,
 	       std::string& option);
