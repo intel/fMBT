@@ -65,21 +65,25 @@ class Device(fmbtgti.GUITestInterface):
 
 class TizenDeviceConnection(fmbtgti.GUITestConnection):
     def __init__(self):
-        self._serialNumber = None
+        self._serialNumber = self.recvSerialNumber()
+        self.connect()
+
+    def connect(self):
         agentFilename = "/tmp/fmbttizen-agent.py"
         agentRemoteFilename = "/tmp/fmbttizen-agent.py"
 
         file(agentFilename, "w").write(_X11agent)
 
         status, _, _ = _run(["sdb", "push", agentFilename, agentRemoteFilename])
-        os.remove(agentFilename)
 
-        self._sdbShell = subprocess.Popen(["sdb","shell"], shell=False,
+        self._sdbShell = subprocess.Popen(["sdb", "shell"], shell=False,
                                           stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                           close_fds=True)
         self._sdbShell.stdin.write("\r")
-        self._agentCmd("python %s" % (agentRemoteFilename,),
+        self._agentCmd("python %s; exit" % (agentRemoteFilename,),
                        afterPrompt = lambda s: s.strip().endswith("#"))
+        self._agentWaitLine(lambda s: s.strip() == "fmbttizen-agent")
+        os.remove(agentFilename)
 
     def close(self):
         self._sdbShell.stdin.close()
@@ -91,11 +95,22 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
         if lineValidator == None:
             lineValidator = lambda s: s == "OK"
         while not lineValidator(l):
-            l = self._sdbShell.stdout.readline().strip()
+            l = self._sdbShell.stdout.readline()
+            if l == "": raise IOError("Unexpected end of sdb shell output")
+            l = l.strip()
 
-    def _agentCmd(self, command, afterPrompt = None):
-        self._agentWaitLine(afterPrompt)
-        self._sdbShell.stdin.write("%s\r" % (command,))
+    def _agentCmd(self, command, afterPrompt = None, retry=3):
+        try:
+            self._agentWaitLine(afterPrompt)
+            self._sdbShell.stdin.write("%s\r" % (command,))
+            self._sdbShell.stdin.flush()
+        except IOError:
+            if retry > 0:
+                self.connect()
+                self._agentCmd(command, afterPrompt, retry=retry-1)
+            else:
+                raise
+        return True
 
     def sendPress(self, keyName):
         s, o = commands.getstatusoutput("sdb shell xte 'key %s'" % (keyName,))
@@ -110,21 +125,16 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
         return True
 
     def sendTap(self, x, y):
-        self._agentCmd("m%s %s" % (x, y))
-        self._agentCmd("c1")
-        return True
+        return self._agentCmd("t%s %s 1" % (x, y))
 
     def sendTouchDown(self, x, y):
-        s, o = commands.getstatusoutput("sdb shell xte 'mousemove %s %s' 'mousedown 1'" % (x, y))
-        return True
+        return self._agentCmd("d%s %s 1" % (x, y))
 
     def sendTouchMove(self, x, y):
-        s, o = commands.getstatusoutput("sdb shell xte 'mousemove %s %s'" % (x, y))
-        return True
+        return self._agentCmd("m%s %s" % (x, y))
 
     def sendTouchUp(self, x, y):
-        s, o = commands.getstatusoutput("sdb shell xte 'mousemove %s %s' 'mouseup 1'" % (x, y))
-        return True
+        return self._agentCmd("u%s %s 1" % (x, y))
 
     def sendType(self, string):
         s, o = commands.getstatusoutput("sdb shell xte 'str %s'" % (string,))
@@ -138,10 +148,12 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
         s, o = commands.getstatusoutput("convert %s.xwd %s" % (filename, filename))
         os.remove("%s.xwd" % (filename,))
         return True
+
+    def recvSerialNumber(self):
+        s, o = commands.getstatusoutput("sdb get-serialno")
+        return o.splitlines()[-1]
+
     def target(self):
-        if self._serialNumber == None:
-            s, o = commands.getstatusoutput("sdb get-serialno")
-            self._serialNumber = o.splitlines()[-1]
         return self._serialNumber
 
 # _X11agent code is executed on Tizen device in sdb shell.
@@ -165,15 +177,31 @@ def read_cmd():
     sys.stdout.flush()
     return sys.stdin.readline().strip()
 
+sys.stdout.write('fmbttizen-agent\\n')
+sys.stdout.flush()
 cmd = read_cmd()
 while cmd:
-    if cmd.startswith("m"):
+    if cmd.startswith("m"):   # move(x, y)
         xs, ys = cmd[1:].strip().split()
         libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
         libX11.XFlush(display)
-    elif cmd.startswith("c"):
-        button = int(cmd[1:].strip())
+    elif cmd.startswith("t"): # tap(x, y, button)
+        xs, ys, button = cmd[1:].strip().split()
+        button = int(button)
+        libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
         libXtst.XTestFakeButtonEvent(display, button, X_True, X_CurrentTime)
+        libXtst.XTestFakeButtonEvent(display, button, X_False, X_CurrentTime)
+        libX11.XFlush(display)
+    elif cmd.startswith("d"): # down(x, y, button)
+        xs, ys, button = cmd[1:].strip().split()
+        button = int(button)
+        libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
+        libXtst.XTestFakeButtonEvent(display, button, X_True, X_CurrentTime)
+        libX11.XFlush(display)
+    elif cmd.startswith("u"): # up(x, y, button)
+        xs, ys, button = cmd[1:].strip().split()
+        button = int(button)
+        libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
         libXtst.XTestFakeButtonEvent(display, button, X_False, X_CurrentTime)
         libX11.XFlush(display)
     cmd = read_cmd()
