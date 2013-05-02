@@ -247,9 +247,6 @@ class Device(fmbtgti.GUITestInterface):
 
         self._platformVersion = None
         self._lastView = None
-        self._lastScreenshot = None
-        self._longPressHoldTime = 2.0
-        self._longTapHoldTime = 2.0
 
         self._conf = Ini()
 
@@ -338,7 +335,7 @@ class Device(fmbtgti.GUITestInterface):
         """
         callCommand = 'service call phone 1 s16 "%s"' % (contact,)
         status, out, err = self.shellSOE(callCommand)
-        if status != 0: # TODO: check out/err, too?
+        if status != 0:
             _logFailedCommand("callContact", callCommand, status, out, err)
             return False
         else:
@@ -352,7 +349,7 @@ class Device(fmbtgti.GUITestInterface):
         """
         callCommand = "service call phone 2 s16 %s" % (number,)
         status, out, err = self.shellSOE(callCommand)
-        if status != 0: # TODO: check out/err, too?
+        if status != 0:
             _logFailedCommand("callNumber", callCommand, status, out, err)
             return False
         else:
@@ -961,11 +958,11 @@ class View(object):
             l.extend(self._dumpSubTree(i, indent + 4))
         return l
     def _dumpItem(self, viewItem):
-            i = viewItem
-            if i.text() != None: t = '"%s"' % (i.text(),)
-            else: t = None
-            return "id=%s cls=%s text=%s bbox=%s" % (
-                i.id(), i.className(), t, i.bbox())
+        i = viewItem
+        if i.text() != None: t = '"%s"' % (i.text(),)
+        else: t = None
+        return "id=%s cls=%s text=%s bbox=%s" % (
+            i.id(), i.className(), t, i.bbox())
 
     def findItems(self, comparator, count=-1, searchRootItem=None, searchItems=None):
         foundItems = []
@@ -973,7 +970,7 @@ class View(object):
         if searchRootItem != None:
             # find from searchRootItem and its children
             if comparator(searchRootItem):
-                foundItems.append(i)
+                foundItems.append(searchRootItem)
             for c in searchRootItem.children():
                 foundItems.extend(self.findItems(comparator, count=count-len(foundItems), searchRootItem=c))
         else:
@@ -1214,7 +1211,7 @@ class _AndroidDeviceConnection:
             _adapterLog("monkeyCommand failing... command: '%s' response: '%s'" % (command, data))
             return False, None
         except socket.error:
-            try: self.sock.close()
+            try: self._monkeySocket.close()
             except: pass
 
             if retry > 0:
@@ -1379,7 +1376,7 @@ class _AndroidDeviceConnection:
             # DUMP -1: get foreground window info
             if self._windowSocket.sendall("DUMP -1\n") == 0:
                 # LOG: readGUI cannot write to window socket
-                raise AdapterConnectionError("writing socket failed")
+                raise AndroidConnectionError("writing socket failed")
 
             # Read until a "DONE" line
             data = ""

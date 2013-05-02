@@ -90,26 +90,26 @@ class GUITestConnection(object):
       dependencies).
     """
     def sendPress(self, keyName):
-        raise NotImplemented('sendPress("%s") needed but not implemented.' % (keyName,))
+        raise NotImplementedError('sendPress("%s") needed but not implemented.' % (keyName,))
     def sendKeyDown(self, keyName):
-        raise NotImplemented('sendKeyDown("%s") needed but not implemented.' % (keyName,))
+        raise NotImplementedError('sendKeyDown("%s") needed but not implemented.' % (keyName,))
     def sendKeyUp(self, keyName):
-        raise NotImplemented('sendKeyUp("%s") needed but not implemented.' % (keyName,))
+        raise NotImplementedError('sendKeyUp("%s") needed but not implemented.' % (keyName,))
     def sendTap(self, x, y):
-        raise NotImplemented('sendTap(%d, %d) needed but not implemented.' % (x, y))
+        raise NotImplementedError('sendTap(%d, %d) needed but not implemented.' % (x, y))
     def sendTouchDown(self, x, y):
-        raise NotImplemented('sendTouchDown(%d, %d) needed but not implemented.' % (x, y))
+        raise NotImplementedError('sendTouchDown(%d, %d) needed but not implemented.' % (x, y))
     def sendTouchMove(self, x, y):
-        raise NotImplemented('sendTouchMove(%d, %d) needed but not implemented.' % (x, y))
+        raise NotImplementedError('sendTouchMove(%d, %d) needed but not implemented.' % (x, y))
     def sendTouchUp(self, x, y):
-        raise NotImplemented('sendTouchUp(%d, %d) needed but not implemented.' % (x, y))
+        raise NotImplementedError('sendTouchUp(%d, %d) needed but not implemented.' % (x, y))
     def sendType(self, text):
-        raise NotImplemented('sendType("%s") needed but not implemented.' % (text,))
+        raise NotImplementedError('sendType("%s") needed but not implemented.' % (text,))
     def recvScreenshot(self, filename):
         """
         Saves screenshot from the GUI under test to given filename.
         """
-        raise NotImplemented('recvScreenshot("%s") needed but not implemented.' % (filename,))
+        raise NotImplementedError('recvScreenshot("%s") needed but not implemented.' % (filename,))
     def target(self):
         """
         Returns a string that is unique to each test target. For
@@ -119,15 +119,17 @@ class GUITestConnection(object):
 
 class GUITestInterface(object):
     def __init__(self):
-        self._visualLog = None
-        self._visualLogFileObj = None
-        self._lastScreenshot = None
+        self._bitmapPath = ""
+        self._bitmapPathRootForRelativePaths = ""
         self._conn = None
+        self._lastScreenshot = None
+        self._longPressHoldTime = 2.0
+        self._longTapHoldTime = 2.0
         self._screenshotDir = None
         self._screenshotDirDefault = "screenshots"
         self._screenSize = None
-        self._bitmapPath = ""
-        self._bitmapPathRootForRelativePaths = ""
+        self._visualLog = None
+        self._visualLogFileObj = None
 
     def bitmapPath(self):
         """
@@ -274,7 +276,7 @@ class GUITestInterface(object):
                 assert self._conn.sendKeyDown(keyName)
                 time.sleep(hold)
                 assert self._conn.sendKeyUp(keyName)
-            except:
+            except AssertionError:
                 return False
             return True
         return self._conn.sendPress(keyName)
@@ -295,8 +297,7 @@ class GUITestInterface(object):
             if type(forcedScreenshot) == str:
                 self._lastScreenshot = Screenshot(
                     screenshotFile=forcedScreenshot,
-                    pathSolver=_bitmapPathSolver(self._bitmapPathRootForRelativePaths, self._bitmapPath),
-                    screenSize=self.screenSize())
+                    pathSolver=_bitmapPathSolver(self._bitmapPathRootForRelativePaths, self._bitmapPath))
             else:
                 self._lastScreenshot = forcedScreenshot
         else:
@@ -307,7 +308,6 @@ class GUITestInterface(object):
                 self._lastScreenshot = Screenshot(
                     screenshotFile=screenshotFile,
                     pathSolver=_bitmapPathSolver(self._bitmapPathRootForRelativePaths, self._bitmapPath))
-                self._screenSize = self._lastScreenshot.size()
             else:
                 self._lastScreenshot = None
         return self._lastScreenshot
@@ -379,7 +379,7 @@ class GUITestInterface(object):
             try:
                 os.makedirs(self.screenshotDir())
             except Exception, e:
-                _fmbtLog('creating directory "%s" for screenshots failed: %s' (self.screenshotDir(), e))
+                _fmbtLog('creating directory "%s" for screenshots failed: %s' % (self.screenshotDir(), e))
                 raise
 
     def swipe(self, (x, y), direction, **dragKwArgs):
@@ -468,7 +468,7 @@ class GUITestInterface(object):
                 assert self._conn.sendTouchDown(x, y)
                 time.sleep(hold)
                 assert self._conn.sendTouchUp(x, y)
-            except:
+            except AssertionError:
                 return False
             return True
         else:
