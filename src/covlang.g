@@ -63,7 +63,7 @@ begin: expr { cobj->add_unit($0.u); };
 expr: node             { $$.u = $0.u; }
     | node "and" expr  { $$.u = new Coverage_Market::unit_and ($0.u,$2.u); }
     | node "or" expr   { $$.u = new Coverage_Market::unit_or  ($0.u,$2.u); }
-    | node "then" expr { $$.u = new Coverage_Market::unit_then($0.u,$2.u); } ;
+    | node "then" expr { $$.u = new Coverage_Market::unit_then_($0.u,$2.u); } ;
 
 node: actionname       { $$.type='e'; $$.u = cobj->req_rx_action($$.type,*$0.str); delete $0.str; $0.str=NULL; }
     | ('a' | 'A' | 'all' ) actionname   { $$.type='a'; $$.u = cobj->req_rx_action($$.type,*$1.str); delete $1.str; $1.str=NULL; }
@@ -72,6 +72,7 @@ node: actionname       { $$.type='e'; $$.u = cobj->req_rx_action($$.type,*$0.str
     | "not" node       { $$.u = new Coverage_Market::unit_not($1.u); } 
     | uint '*' node    { $$.u = inthelper($2.u,$0.i); }
     | node '*' uint    { $$.u = inthelper($0.u,$2.i); }
+    | 'uwalk' '(' expr ')' { $$.u = new Coverage_Market::unit_walk($2.u); }
     | 'file' '(' name ')' [
             char* ss=strndup($n2.start_loc.s+1, $n2.end-$n2.start_loc.s-2);
             char* bb=readfile(ss);
