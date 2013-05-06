@@ -2,6 +2,53 @@
 fMBT test configuration file
 ============================
 
+Configuration file tells fMBT
+
+- how to load model and adapter,
+
+- which test generation heuristics will be used,
+
+- how to measure coverage,
+
+- when to end test generation and execution, and
+
+- what to do on different verdicts.
+
+
+Configuration syntax
+--------------------
+
+All configuration options are of the form
+
+key = single-line-definition
+
+or
+
+key = "multi-
+       line-
+       defintion"
+
+Lines starting with "#" are comments.
+
+For example, filesystemtest.conf defines:
+
+# Regression test for filesystems.
+model     = aal_remote(remote_pyaal -l aal.log filesystemtest.aal)
+adapter   = aal
+heuristic = lookahead(6)
+coverage  = perm(2)
+pass      = no_progress(6)
+on_pass   = exit(0)
+on_fail   = exit(1)
+
+That is, fMBT will use filesystemtest.aal, an AAL/Python file, as both
+model and adapter. 6-steps-long "lookahead" will be used as test
+generation heuristic. It will try to cover permutations of any two
+test steps (perm(2)), that is the measured coverage. Test ends with
+"pass" verdict when six test steps have been executed without making
+progress in the coverage. If the verdict is "pass", fMBT will exit
+with exit status 0. On "fail" exit status will be 1.
+
 
 Model
 -----
@@ -12,7 +59,7 @@ Model must be defined in the configuration.
 
 Syntax:
 
-        model = "type(params)"
+        model = type(params)
 
 Available types & parameters:
 
@@ -51,19 +98,19 @@ Available types & parameters:
 
 Examples:
 
-        model = "aal_remote(remote_pyaal -l aal.log mytest.aal)"
+        model = aal_remote(remote_pyaal -l aal.log mytest.aal)
 
-        model = "lib(myaaltest1(foo),myaaltests.so)"
+        model = lib(myaaltest1(foo),myaaltests.so)
 
-        model = "lsts(models/mymodel.lsts)"
+        model = lsts(models/mymodel.lsts)
 
-        model = "lsts_remote(fmbt-gt -f mymodel.gt)"
+        model = lsts_remote(fmbt-gt -f mymodel.gt)
 
-        model = "lsts_remote(wget -O- http://modelhost/mymodel.lsts)"
+        model = lsts_remote(wget -O- http://modelhost/mymodel.lsts)
 
-        model = "lsts_remote(./create_mymodel.sh --exclude negativecases)"
+        model = lsts_remote(./create_mymodel.sh --exclude negativecases)
 
-        model = "parallel_remote(fmbt-parallel a.lsts b.lsts)"
+        model = parallel_remote(fmbt-parallel a.lsts b.lsts)
 
 
 
@@ -76,7 +123,7 @@ If not given, adapter defaults to "dummy".
 
 Syntax:
 
-        adapter = "type(params)"
+        adapter = type(params)
 
 Available types & parameters:
 
@@ -122,17 +169,17 @@ Available types & parameters:
 
 Examples:
 
-        adapter = "aal"
+        adapter = aal
 
-        adapter = "aal_remote(remote_pyaal -l aal.log mytest.aal)"
+        adapter = aal_remote(remote_pyaal -l aal.log mytest.aal)
 
-        adapter = "remote(remote_exec.sh)"
+        adapter = remote(remote_exec.sh)
 
-        adapter = "remote(ssh user@host ./remote_python -l adapter.log)"
+        adapter = remote(ssh user@host ./remote_python -l adapter.log)
 
-        adapter = "mapper(adapters.mrules)"
+        adapter = mapper(adapters.mrules)
 
-        adapter = "lib(myaaltest1,myaaltests.so)"
+        adapter = lib(myaaltest1,myaaltests.so)
 
 
 Heuristic
@@ -145,7 +192,7 @@ If not given, defaults to "random".
 
 Syntax:
 
-        heuristic = "type(params)"
+        heuristic = type(params)
 
 Available types & parameters:
 
@@ -222,7 +269,7 @@ Available types & parameters:
 
 Examples:
 
-        heuristic = "exclude('.*Error.*', lookahead(3))"
+        heuristic = exclude('.*Error.*', lookahead(3))
 
                 chooses the first action of a three-step-path that
                 gives the best coverage and does not include actions
@@ -230,12 +277,12 @@ Examples:
                 containing "Error" only if nothing else can be
                 suggested.
 
-        heuristic = "lookahead(5)"
+        heuristic = lookahead(5)
 
                 chooses the first action of a five-step-path that gives
                 the best coverage.
 
-        heuristic = "random(42)"
+        heuristic = random(42)
 
                 chooses a random enabled action with a random number
                 generator initialised with seed 42.
@@ -250,7 +297,7 @@ Defaults to "perm".
 
 Syntax:
 
-        coverage = "type(params)"
+        coverage = type(params)
 
 Available types & parameters:
 
@@ -416,13 +463,13 @@ Available types & parameters:
 
 Examples:
 
-        coverage = "exclude('.*Choose(Cash|Credit|Bank).*', perm(1))"
+        coverage = exclude('.*Choose(Cash|Credit|Bank).*', perm(1))
 
                 measures coverage of all other actions but those which
                 include ChooseCash, ChooseCredit or ChooseBank in
                 their names.
 
-        coverage = "include('iChoose(Cash|Credit|Bank)', 'iPay', perm(2))"
+        coverage = include('iChoose(Cash|Credit|Bank)', 'iPay', perm(2))
 
                 measures coverage of action pairs from the set of four
                 actions: iChooseCash, iChooseCredit, iChooseBank and
@@ -433,21 +480,21 @@ Examples:
                 iChooseCredit, iPay
                 iChooseBank, iPay
 
-        coverage = "perm(1)"
+        coverage = perm(1)
 
                 good for a smoke test, coverage reaches 1.0 when
                 every action in the model has been executed at least
                 once.
 
-        coverage = "perm(2)"
+        coverage = perm(2)
 
                 if there are actions A, B and C in the model, coverage
-                of "perm(2)" reaches 1.0 when AA, AB, AC, BA, BB, BC,
+                of perm(2) reaches 1.0 when AA, AB, AC, BA, BB, BC,
                 CA, CB and CC have been executed. Suitable for
                 regression tests. Notice that not all permutations can
                 be covered because of test model. See End conditions.
 
-        coverage = "uwalks(from 'iOrderCoffee' to 'iCancelOrder')"
+        coverage = uwalks(from 'iOrderCoffee' to 'iCancelOrder')
 
                 measures how many different minimal sequences from
                 iOrderCoffee to iCancelOrder has been tested.
@@ -461,7 +508,7 @@ Examples:
                 versa. Percentage of covered permutations of action
                 pairs is added to the measure.
 
-        coverage = "covlang(a A then (a B or a C))"
+        coverage = covlang(a A then (a B or a C))
 
                 coverage reaches 1.0 when action A has been executed
                 and at least either of actions B and C has been
@@ -478,7 +525,7 @@ several history lines in the test configuration.
 
 Syntax:
 
-        history = "type(params)"
+        history = type(params)
 
 Available types & parameters:
 
@@ -489,8 +536,8 @@ Available types & parameters:
 
 Examples:
 
-        coverage = "perm(2)"
-        history  = "log(smoketest.log)"
+        coverage = perm(2)
+        history  = log(smoketest.log)
 
                 Assume that an already executed smoke test produced
                 smoketest.log. Measure now coverage perm(2) and,
@@ -507,13 +554,13 @@ verdict. There can be many end conditions that result in the same
 verdict.
 
 If any verdicts on coverage is not given, there is a default coverage
-end condition: pass = "coverage(1.0)".
+end condition: pass = coverage(1.0).
 
 Syntax:
 
-        <verdict> = "measure(value)"
+        <verdict> = measure(value)
 
-        <verdict> = "condition"
+        <verdict> = condition
 
 Available verdicts:
 
@@ -581,15 +628,15 @@ Examples:
         state with tag this_should_never_happen is reached or model is
         in deadlock.
 
-        pass   = "coverage(0.5)"
+        pass   = coverage(0.5)
 
-        pass   = "steps(1000)"
+        pass   = steps(1000)
 
-        inconc = "duration(7 seconds)"
+        inconc = duration(7 seconds)
 
-        fail   = "tag(this_should_never_happen)"
+        fail   = tag(this_should_never_happen)
 
-        fail   = "deadlock"
+        fail   = deadlock
 
 
 Exit hooks
@@ -600,11 +647,11 @@ finished with given verdict.
 
 Syntax:
 
-        on_<verdict> = "type(params)"
+        on_<verdict> = type(params)
 
 or
 
-        on_error = "type(params)"
+        on_error = type(params)
 
         on_error hook is entered if an unexpected error prevents
         continuing test run. For instance, if the connection to a
@@ -622,11 +669,11 @@ Available types & parameters:
 
 Examples:
 
-        on_fail   = "exit(1)"
+        on_fail   = exit(1)
 
-        on_inconc = "interactive"
+        on_inconc = interactive
 
-        on_error  = "exit(42)"
+        on_error  = exit(42)
 
 
 Other
