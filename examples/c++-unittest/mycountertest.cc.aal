@@ -1,7 +1,7 @@
 aal "mycountertest" {
-    language: C++ {
+    language "C++" {
         #include "mycounter.h"
-    };
+    }
 
     variables {
         MyCounter* mycounter;
