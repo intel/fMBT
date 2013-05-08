@@ -1,7 +1,7 @@
 aal "basesystem" {
-    language: python {}
+    language "python" {}
 
-    # preview-depth: 5
+    # preview-depth: 6
     variables {
         fg_app, clock_timer_running, \
         calc_sci
