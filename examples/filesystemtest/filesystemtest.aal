@@ -1,5 +1,6 @@
+# preview-show-vars: dir_exists
 aal "filesystemtest" {
-    language: python {
+    language "python" {
         import os
         import shutil
         MOUNTPOINT = "/tmp"

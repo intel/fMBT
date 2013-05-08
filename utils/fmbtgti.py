@@ -187,13 +187,18 @@ class GUITestInterface(object):
         x1, y1 = self.intCoords((x1, y1))
         x2, y2 = self.intCoords((x2, y2))
         if not self._conn.sendTouchDown(x1, y1): return False
-        time.sleep(delayBeforeMoves)
+        if delayBeforeMoves > 0:
+            time.sleep(delayBeforeMoves)
+        else:
+            time.sleep(delayBetweenMoves)
         for i in xrange(0, movePoints):
             nx = x1 + int(round(((x2 - x1) / float(movePoints+1)) * (i+1)))
             ny = y1 + int(round(((y2 - y1) / float(movePoints+1)) * (i+1)))
             if not self._conn.sendTouchMove(nx, ny): return False
-            if i < movePoints - 1: time.sleep(delayBetweenMoves)
-        time.sleep(delayAfterMoves)
+            time.sleep(delayBetweenMoves)
+        if delayAfterMoves > 0:
+            self._conn.sendTouchMove(x2, y2)
+            time.sleep(delayAfterMoves)
         if self._conn.sendTouchUp(x2, y2): return True
         return False
 
@@ -269,7 +274,7 @@ class GUITestInterface(object):
         if not keyName.upper().startswith("KEYCODE_"):
             keyName = "KEYCODE_" + keyName
         keyName = keyName.upper()
-        if long and hold == None:
+        if long and hold == 0.0:
             hold = self._longPressHoldTime
         if hold > 0.0:
             try:
@@ -461,7 +466,7 @@ class GUITestInterface(object):
         Returns True if successful, otherwise False.
         """
         x, y = self.intCoords((x, y))
-        if long and hold == None:
+        if long and hold == 0.0:
             hold = self._longTapHoldTime
         if hold > 0.0:
             try:
