@@ -118,6 +118,7 @@ public:
     // Broken
     virtual void execute(int action) {
       bool added=false;
+
       child->update();
       val tmp=child->get_value();
       if (tmp.first>0) {
@@ -126,8 +127,14 @@ public:
       }
       child->execute(action);
       child->update();
-      val t2=child->get_value();
-      if (t2.first==t2.second) {
+      tmp=child->get_value();
+
+      if (tmp.first>0 && !added) {
+	executed.push_back(action);
+	added=true;
+      }
+      
+      if (tmp.first==tmp.second) {
 	count++;
 	if (!added) {
 	  executed.push_back(action);
@@ -137,13 +144,14 @@ public:
 	    tcount_save[push_depth-1][executed]==0) {
 	  tcount_save[push_depth-1][executed]=tcount[executed];
 	}
+
 	tcount[executed]++;
 	executed.clear();
 	child->reset();
-	value=t2;
+	value=tmp;
 	value.first=0;
       } else {
-	value=t2;
+	value=tmp;
       }
       value.first+=tcount.size()*value.second;
     }
