@@ -187,12 +187,15 @@ class GUITestInterface(object):
         x1, y1 = self.intCoords((x1, y1))
         x2, y2 = self.intCoords((x2, y2))
         if not self._conn.sendTouchDown(x1, y1): return False
-        time.sleep(delayBeforeMoves)
+        if delayBeforeMoves > 0:
+            time.sleep(delayBeforeMoves)
+        else:
+            time.sleep(delayBetweenMoves)
         for i in xrange(0, movePoints):
             nx = x1 + int(round(((x2 - x1) / float(movePoints+1)) * (i+1)))
             ny = y1 + int(round(((y2 - y1) / float(movePoints+1)) * (i+1)))
             if not self._conn.sendTouchMove(nx, ny): return False
-            if i < movePoints - 1: time.sleep(delayBetweenMoves)
+            time.sleep(delayBetweenMoves)
         if delayAfterMoves > 0:
             self._conn.sendTouchMove(x2, y2)
             time.sleep(delayAfterMoves)
