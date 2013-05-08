@@ -269,7 +269,7 @@ class GUITestInterface(object):
         if not keyName.upper().startswith("KEYCODE_"):
             keyName = "KEYCODE_" + keyName
         keyName = keyName.upper()
-        if long and hold == None:
+        if long and hold == 0.0:
             hold = self._longPressHoldTime
         if hold > 0.0:
             try:
@@ -461,7 +461,7 @@ class GUITestInterface(object):
         Returns True if successful, otherwise False.
         """
         x, y = self.intCoords((x, y))
-        if long and hold == None:
+        if long and hold == 0.0:
             hold = self._longTapHoldTime
         if hold > 0.0:
             try:
