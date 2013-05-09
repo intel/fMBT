@@ -1023,7 +1023,7 @@ class _VisualLog:
                 highlightFilename = loggerSelf.highlightFilename(screenshotFilename)
                 iC = loggerSelf._device.intCoords
                 eyenfinger.drawLines(screenshotFilename, highlightFilename, [], [iC((x1, y1)), iC((x2, y2))])
-                loggerSelf.logReturn(retval, img=loggerSelf._device.screenshot(), tip=origMethod.func_name)
+                loggerSelf.logReturn(retval, img=highlightFilename, width=loggerSelf._screenshotWidth, tip=origMethod.func_name)
             except:
                 loggerSelf.logReturn(str(retval) + " (no screenshot available)", tip=origMethod.func_name)
             return retval
