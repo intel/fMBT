@@ -123,9 +123,10 @@ protected:
   std::stack<std::map<int,struct node*> > exec_restore;
 
   struct node root_node;
+public:
   long node_count;
   long max_count;
-
+protected:
   std::map<int,struct node*> exec;
 
   void print_tree(struct node* node,int depth);

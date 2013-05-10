@@ -37,6 +37,10 @@
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
+#include "coverage_tree.hh"
+#include "log_null.hh"
+#include "helper.hh"
+
 class Model;
 
 class Coverage_Market;
@@ -67,6 +71,11 @@ public:
 
   virtual int fitness(int* actions,int n, float* fitness);
 
+  Model* get_model()
+  {
+    return model;
+  }
+
   virtual void set_model(Model* _model)
   {
     model=_model;
@@ -91,7 +100,6 @@ public:
 
   typedef std::pair<int, int> val;
 
-
   class unit {
   public:
     val& get_value() {
@@ -106,6 +114,43 @@ public:
     val value;
   };
 
+  class unit_perm: public unit {
+  public:
+    unit_perm(int i,Coverage_Market* m) {
+      std::string p=to_string(i);
+      child=new Coverage_Tree(l,p);
+      child->set_model(m->get_model());
+      value.second=child->max_count;
+      l.ref();
+    }
+    virtual ~unit_perm() {
+      delete child;
+    }
+    virtual void push()
+    {
+      child->push();
+    }
+    virtual void pop()
+    {
+      child->pop();
+    }
+    virtual void reset()
+    {
+      // Not working.
+    }
+    virtual void update()
+    {
+      value.first=child->node_count-1;
+      value.second=child->max_count;
+    }
+    virtual void execute(int action)
+    {
+      child->execute(action);
+    }
+    Log_null l;
+    Coverage_Tree* child;
+  };
+
   class unit_walk: public unit {
   public:
     unit_walk(unit* c):child(c),count(0) {
@@ -116,15 +161,19 @@ public:
     }
 
     void minimise() {
+      bool child_update_needed=true;
       sexecuted.push(executed);
       while (executed.size()>1) {
 	// vector pop_front
 	executed.erase(executed.begin());
-	child->push();
-	child->reset();
+	if (child_update_needed) {
+	  child->push();
+	  child->reset();
+	}
 	child->execute(executed[0]);
 	child->update();
 	if (child->get_value().first>0) {
+	  child_update_needed=true;
 	  for(unsigned i=1;i<executed.size();i++) {
 	    child->execute(executed[i]);
 	  }
@@ -135,7 +184,12 @@ public:
 	    sexecuted.pop();
 	    sexecuted.push(executed);
 	  }
+	  child->pop();      
+	} else {
+	  child_update_needed=false;
 	}
+      }
+      if (!child_update_needed) {
 	child->pop();
       }
       executed=sexecuted.top();
