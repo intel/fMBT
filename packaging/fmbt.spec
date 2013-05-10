@@ -154,6 +154,7 @@ various fMBT examples
 Summary: Meta package for installing all fMBT packages
 Requires: %{name}-adapter-android
 Requires: %{name}-adapter-tizen
+Requires: %{name}-adapter-x11
 Requires: %{name}-doc
 Requires: %{name}-editor
 Requires: %{name}-examples
@@ -250,6 +251,10 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %files adapter-tizen
 %defattr(-, root, root, -)
 %{python_sitelib}/fmbttizen.py*
+
+%files adapter-x11
+%defattr(-, root, root, -)
+%{python_sitelib}/fmbtx11.py*
 
 %files doc
 %defattr(-, root, root, -)
