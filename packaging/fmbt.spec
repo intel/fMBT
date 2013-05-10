@@ -130,6 +130,14 @@ Requires: %{name}-python
 Provides fmbttizen.py, a Python library for Tizen GUI testing.
 The library needs Smart Development Bridge (sdb) from Tizen SDK.
 
+%package adapter-x11
+Summary: fMBT adapter for Tizen GUI testing through USB
+Requires: %{name}-adapter-eyenfinger
+Requires: %{name}-python
+
+%description adapter-x11
+Provides fmbtx11.py, a Python library for X11 GUI testing.
+
 %package doc
 Summary: fMBT documentation
 
