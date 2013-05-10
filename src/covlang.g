@@ -72,7 +72,7 @@ node: actionname       { $$.type='e'; $$.u = cobj->req_rx_action($$.type,*$0.str
     | "not" node       { $$.u = new Coverage_Market::unit_not($1.u); } 
     | uint '*' node    { $$.u = inthelper($2.u,$0.i); }
     | node '*' uint    { $$.u = inthelper($0.u,$2.i); }
-    | 'uwalk' '(' expr ')' { $$.u = new Coverage_Market::unit_walk($2.u); }
+    | 'uwalks' '(' expr ')' { $$.u = new Coverage_Market::unit_walk($2.u); }
     | 'file' '(' name ')' [
             char* ss=strndup($n2.start_loc.s+1, $n2.end-$n2.start_loc.s-2);
             char* bb=readfile(ss);

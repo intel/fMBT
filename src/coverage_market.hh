@@ -115,7 +115,33 @@ public:
       delete child;
     }
 
-    // Broken
+    void minimise() {
+      sexecuted.push(executed);
+      while (executed.size()>1) {
+	// vector pop_front
+	executed.erase(executed.begin());
+	child->push();
+	child->reset();
+	child->execute(executed[0]);
+	child->update();
+	if (child->get_value().first>0) {
+	  for(unsigned i=1;i<executed.size();i++) {
+	    child->execute(executed[i]);
+	  }
+	  child->update();
+	  val v=child->get_value();
+	  if (v.first==v.second) {
+	    // New minimal trace!
+	    sexecuted.pop();
+	    sexecuted.push(executed);
+	  }
+	}
+	child->pop();
+      }
+      executed=sexecuted.top();
+      sexecuted.pop();
+    }
+
     virtual void execute(int action) {
       bool added=false;
 
@@ -139,6 +165,10 @@ public:
 	if (!added) {
 	  executed.push_back(action);
 	}
+
+	// minimise...
+
+	minimise();
 
 	if (push_depth!=0 && 
 	    tcount_save[push_depth-1][executed]==0) {
