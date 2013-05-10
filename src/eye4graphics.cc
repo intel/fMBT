@@ -216,7 +216,9 @@ int iconsearch(std::vector<BoundingBox>& retval,
                Image& needle,
                const int threshold,
                const double colorMatch,
-               const double opacityLimit)
+               const double opacityLimit,
+               const int startX,
+               const int startY)
 {
     const int color_threshold = COLORS * threshold;
 
@@ -257,8 +259,9 @@ int iconsearch(std::vector<BoundingBox>& retval,
     if (threshold == 0) {
         /* Pixel-perfect match */
         int match_count = 0;
-        for (int y=0; y < hayy-neey; y++) {
-            for (int x=0; x < hayx-neex; x++) {
+        int startX_ = startX - searchArea.left;
+        for (int y=startY-searchArea.top; y < hayy-neey; y++) {
+            for (int x=startX_; x < hayx-neex; x++) {
                 if (pixelperfect_match(hayx, neex, neey, x, y,
                                        hay_pixel, nee_pixel,
                                        colorDiff,
@@ -273,6 +276,7 @@ int iconsearch(std::vector<BoundingBox>& retval,
                     match_count++;
                 }
             }
+            startX_ = 0;
         }
         return match_count > 0 ? 1 : 0;
     }
@@ -341,36 +345,66 @@ int findSingleIcon(BoundingBox* bbox,
                    const char* iconfile,
                    const int threshold,
                    const double colorMatch,
-                   const double opacityLimit)
+                   const double opacityLimit,
+                   const BoundingBox* searchArea)
+{
+    void* haystack = openImage(imagefile);
+    if (haystack == NULL)
+        return ERROR_CANNOT_OPEN_IMAGEFILE;
+
+    void* needle = openImage(iconfile);
+    if (needle == NULL) {
+        closeImage(haystack);
+        return ERROR_CANNOT_OPEN_ICONFILE;
+    }
+
+    int retval = findNextIcon(bbox,
+                              haystack,
+                              needle,
+                              threshold,
+                              colorMatch,
+                              opacityLimit,
+                              searchArea, 0);
+
+    closeImage(needle);
+    closeImage(haystack);
+    return retval;
+}
+
+int findNextIcon(BoundingBox* bbox,
+                 void* image,
+                 void* icon,
+                 const int threshold,
+                 const double colorMatch,
+                 const double opacityLimit,
+                 const BoundingBox* searchArea,
+                 const int continueOpts)
 {
     /* TODO: another version with multiple versions of the same
      * icon. Clear, blurred, etc.
      */
-    Image *haystack;
-    Image *needle;
-
     int retval = 0;
 
+    int startX = 0;
+    int startY = 0;
+
+    if (continueOpts != 0) {
+        startX = bbox->left + 1;
+        startY = bbox->top;
+    }
+
     bbox->error  = -1;
-    BoundingBox searchArea = *bbox;
-    bbox->left = -1;
-    bbox->top = -1;
-    bbox->right = -1;
+    bbox->left   = -1;
+    bbox->top    = -1;
+    bbox->right  = -1;
     bbox->bottom = -1;
 
-    try { haystack = new Image(imagefile); }
-    catch(ErrorFileOpen e) {
-        return -3;
-    }
-
-    try { needle = new Image(iconfile); }
-    catch(ErrorFileOpen e) {
-        delete haystack;
-        return -4;
-    }
-
     std::vector<BoundingBox> found;
-    if (iconsearch(found, searchArea, *haystack, *needle, threshold, colorMatch, opacityLimit) > 0
+    if (iconsearch(found, *searchArea,
+                   *static_cast<Image*>(image),
+                   *static_cast<Image*>(icon),
+                   threshold,
+                   colorMatch, opacityLimit, startX, startY) > 0
         && found.size() > 0) {
         *bbox = found[0];
         if (bbox->error > threshold)
@@ -380,35 +414,47 @@ int findSingleIcon(BoundingBox* bbox,
     } else {
         retval = -1;
     }
-    delete needle;
-    delete haystack;
     return retval;
 }
 
 int imageDimensions(BoundingBox* bbox,
                     const char* imagefile)
 {
-    Image *image;
+    void *image = openImage(imagefile);
+    if (image == NULL) return ERROR_CANNOT_OPEN_IMAGEFILE;
 
-    bbox->left   = 0;
-    bbox->top    = 0;
-    bbox->right  = -1;
-    bbox->bottom = -1;
-    bbox->error  = 0;
+    openedImageDimensions(bbox, image);
 
-    try { image = new Image(imagefile); }
-    catch(ErrorFileOpen e) {
-        return -3;
-    }
-
-    bbox->right = image->columns();
-    bbox->bottom = image->rows();
-
-    delete image;
+    closeImage(image);
 
     return 0;
 }
 
+int openedImageDimensions(BoundingBox* bbox, const void * image)
+{
+    bbox->left   = 0;
+    bbox->top    = 0;
+    bbox->right = static_cast<const Image*>(image)->columns();
+    bbox->bottom = static_cast<const Image*>(image)->rows();
+    bbox->error  = 0;
+    return 0;
+}
+
+void * openImage(const char* imagefile)
+{
+    Image* image;
+    try { image = new Image(imagefile); }
+    catch(ErrorFileOpen e) {
+        return NULL;
+    }
+    return static_cast<void*>(image);
+}
+
+void closeImage(void * image)
+{
+    if (image != NULL)
+        delete static_cast<Image*>(image);
+}
 
 // make library:
 // g++ -fPIC -shared -o eye4graphics.so -O3 -Wall `pkg-config --cflags --libs Magick++` eye4graphics.cc
