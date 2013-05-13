@@ -171,7 +171,7 @@ public:
 
   class unit_walk: public unit {
   public:
-    unit_walk(unit* c):child(c),count(0) {
+    unit_walk(unit* c,bool _min):child(c),count(0),minimi(_min) {
       push_depth=0;
     }
     virtual ~unit_walk() {
@@ -239,7 +239,9 @@ public:
 
 	// minimise...
 
-	minimise();
+	if (minimi) {
+	  minimise();
+	}
 
 	if (push_depth!=0 && 
 	    tcount_save[push_depth-1][executed]==0) {
@@ -308,6 +310,7 @@ public:
 
     std::map<std::vector<int >, int> tcount;
     std::vector<std::map<std::vector<int >, int> > tcount_save;
+    bool minimi;
   };
 
   class unit_many: public unit {
