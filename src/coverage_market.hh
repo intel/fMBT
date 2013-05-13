@@ -137,11 +137,11 @@ public:
     }
     virtual void pop()
     {
-      child->pop();
       if (child_save.top()!=child) {
 	delete child;
 	child=child_save.top();
       }
+      child->pop();
       child_save.pop();
     }
     virtual void reset()
