@@ -689,12 +689,14 @@ def iVerifyIcon(iconFilename, match=None, colorMatch=None, opacityLimit=None, ca
     leftTopRightBottomZero = (_coordsToInt((area[0], area[1]), windowSize()) +
                                _coordsToInt((area[2], area[3]), windowSize()) +
                                (0,))
-    struct_bbox = Bbox(*leftTopRightBottomZero)
+    struct_area_bbox = Bbox(*leftTopRightBottomZero)
+    struct_bbox = Bbox(0,0,0,0,0)
     threshold = int((1.0-match)*20)
     err = eye4graphics.findSingleIcon(ctypes.byref(struct_bbox),
                                       _g_origImage, iconFilename, threshold,
                                       ctypes.c_double(colorMatch),
-                                      ctypes.c_double(opacityLimit))
+                                      ctypes.c_double(opacityLimit),
+                                      ctypes.byref(struct_area_bbox))
     bbox = (int(struct_bbox.left), int(struct_bbox.top),
             int(struct_bbox.right), int(struct_bbox.bottom))
 
@@ -1455,16 +1457,26 @@ def drawWords(inputfilename, outputfilename, words, detected_words):
             color, left, bottom+10, score)
     _runDrawCmd(inputfilename, draw_commands, outputfilename)
 
-def drawIcon(inputfilename, outputfilename, iconFilename, bbox, color='green', area=None):
+def drawIcon(inputfilename, outputfilename, iconFilename, bboxes, color='green', area=None):
     if inputfilename == None:
         return
-
-    left, top, right, bottom = bbox[0], bbox[1], bbox[2], bbox[3]
-    draw_commands = """ -stroke %s -fill blue -draw "fill-opacity 0.2 rectangle %s,%s %s,%s" """ % (color, left, top, right, bottom)
+    if type(bboxes) == tuple:
+        bboxes = [bboxes]
+        show_number = False
+    else:
+        show_number = True
+    draw_commands = ""
+    for index, bbox in enumerate(bboxes):
+        left, top, right, bottom = bbox[0], bbox[1], bbox[2], bbox[3]
+        draw_commands += """ -stroke %s -fill blue -draw "fill-opacity 0.2 rectangle %s,%s %s,%s" """ % (color, left, top, right, bottom)
+        if show_number:
+            caption = "%s %s" % (index+1, iconFilename)
+        else:
+            caption = iconFilename
+        draw_commands += """ -stroke none -fill %s -draw "text %s,%s '%s'" """ % (
+            color, left, top, caption)
     if area != None:
         draw_commands += """ -stroke yellow -draw "fill-opacity 0.0 rectangle %s,%s %s,%s" """ % (area[0]-1, area[1]-1, area[2], area[3])
-    draw_commands += """ -stroke none -fill %s -draw "text %s,%s '%s'" """ % (
-        color, left, top, iconFilename)
     _runDrawCmd(inputfilename, draw_commands, outputfilename)
 
 def drawClickedPoint(inputfilename, outputfilename, clickedXY):

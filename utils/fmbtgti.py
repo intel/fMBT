@@ -25,6 +25,7 @@
 # classes and wiring up required methods to the technology.
 
 import cgi
+import ctypes
 import datetime
 import inspect
 import os
@@ -34,8 +35,8 @@ import time
 import traceback
 import types
 
-import eyenfinger
 import fmbt
+import eyenfinger
 
 _OCRPREPROCESS =  [
     '-sharpen 5 -filter Mitchell %(zoom)s -sharpen 5 -level 60%%,60%%,3.0 -sharpen 5',
@@ -48,11 +49,12 @@ def _fmbtLog(msg):
 def _filenameTimestamp():
     return datetime.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
 
-def _bitmapKwArgs(colorMatch=None, opacityLimit=None, area=None):
+def _bitmapKwArgs(colorMatch=None, opacityLimit=None, area=None, limit=None):
     bitmapKwArgs = {}
-    if colorMatch != None: bitmapKwArgs['colorMatch'] = colorMatch
+    if colorMatch != None  : bitmapKwArgs['colorMatch'] = colorMatch
     if opacityLimit != None: bitmapKwArgs['opacityLimit'] = opacityLimit
-    if area != None: bitmapKwArgs['area'] = area
+    if area != None        : bitmapKwArgs['area'] = area
+    if limit != None       : bitmapKwArgs['limit'] = limit
     return bitmapKwArgs
 
 def _bitmapPathSolver(rootDirForRelativePaths, bitmapPath):
@@ -78,6 +80,29 @@ def _bitmapPathSolver(rootDirForRelativePaths, bitmapPath):
             raise ValueError('Bitmap "%s" not readable in bitmapPath %s' % (bitmap, ':'.join(path)))
         return retval
     return _solver
+
+def _intCoords((x, y), (width, height)):
+    if 0 <= x <= 1 and type(x) == float: x = x * width
+    if 0 <= y <= 1 and type(y) == float: y = y * height
+    return (int(round(x)), int(round(y)))
+
+### Binding to eye4graphics.so
+_libpath = ["", "." + os.path.sep]
+for _dirname in _libpath:
+    try:
+        eye4graphics = ctypes.CDLL(_dirname + "eye4graphics.so")
+        break
+    except: pass
+else:
+    raise ImportError("%s cannot load eye4graphics.so" % (__file__,))
+
+class _Bbox(ctypes.Structure):
+    _fields_ = [("left", ctypes.c_int32),
+                ("top", ctypes.c_int32),
+                ("right", ctypes.c_int32),
+                ("bottom", ctypes.c_int32),
+                ("error", ctypes.c_int32)]
+### end of binding to eye4graphics.so
 
 class GUITestConnection(object):
     """
@@ -252,9 +277,7 @@ class GUITestInterface(object):
         screen coordinates.
         """
         width, height = self.screenSize()
-        if 0 <= x <= 1 and type(x) == float: x = x * width
-        if 0 <= y <= 1 and type(y) == float: y = y * height
-        return (int(round(x)), int(round(y)))
+        return _intCoords((x, y), (width, height))
 
     def pressKey(self, keyName, long=False, hold=0.0):
         """
@@ -430,7 +453,7 @@ class GUITestInterface(object):
         Returns True on success, False if sending input failed.
         """
         assert self._lastScreenshot != None, "Screenshot required."
-        items = self._lastScreenshot.findItemsByBitmap(bitmap, **_bitmapKwArgs(colorMatch, opacityLimit, area))
+        items = self._lastScreenshot.findItemsByBitmap(bitmap, **_bitmapKwArgs(colorMatch, opacityLimit, area, 1))
         if len(items) == 0:
             return False
         return self.swipeItem(items[0], direction, **dragKwArgs)
@@ -500,7 +523,7 @@ class GUITestInterface(object):
         Returns True if successful, otherwise False.
         """
         assert self._lastScreenshot != None, "Screenshot required."
-        items = self._lastScreenshot.findItemsByBitmap(bitmap, **_bitmapKwArgs(colorMatch, opacityLimit, area))
+        items = self._lastScreenshot.findItemsByBitmap(bitmap, **_bitmapKwArgs(colorMatch, opacityLimit, area, 1))
         if len(items) == 0:
             return False
         return self.tapItem(items[0], **tapKwArgs)
@@ -649,7 +672,7 @@ class GUITestInterface(object):
         assert self._lastScreenshot != None, "Screenshot required."
         if self._lastScreenshot == None:
             return False
-        return self._lastScreenshot.findItemsByBitmap(bitmap, **_bitmapKwArgs(colorMatch, opacityLimit, area)) != []
+        return self._lastScreenshot.findItemsByBitmap(bitmap, **_bitmapKwArgs(colorMatch, opacityLimit, area, 1)) != []
 
     def wait(self, refreshFunc, waitFunc, waitFuncArgs=(), waitFuncKwargs={}, waitTime = 5.0, pollDelay = 1.0):
         """
@@ -755,7 +778,10 @@ class Screenshot(object):
     def __init__(self, screenshotFile=None, pathSolver=None):
         self._filename = screenshotFile
         self._pathSolver = pathSolver
-        self._screenSize = eyenfinger.imageSize(self._filename)
+        self._e4gImage = eye4graphics.openImage(self._filename)
+        struct_bbox = _Bbox(0,0,0,0,0)
+        eye4graphics.openedImageDimensions(ctypes.byref(struct_bbox), self._e4gImage)
+        self._screenSize = (struct_bbox.right, struct_bbox.bottom)
         # The bitmap held inside screenshot object is never updated.
         # If new screenshot is taken, this screenshot object disappears.
         # => cache all search hits
@@ -764,6 +790,9 @@ class Screenshot(object):
         self._ocrWords = None
         self._ocrWordsArea = None
         self._ocrWordsPreprocess = None
+
+    def __del__(self):
+        eye4graphics.closeImage(self._e4gImage)
 
     def size(self):
         return self._screenSize
@@ -783,18 +812,60 @@ class Screenshot(object):
     def filename(self):
         return self._filename
 
-    def findItemsByBitmap(self, bitmap, colorMatch=1.0, opacityLimit=.95, area=(0.0, 0.0, 1.0, 1.0)):
+    def findItemsByBitmap(self, bitmap, colorMatch=1.0, opacityLimit=.95, area=(0.0, 0.0, 1.0, 1.0), limit=-1, allowOverlapping=True):
+        """
+        Find items on the screenshot that match to bitmap.
+
+        Parameters:
+
+          bitmap (string):
+                  filename of the bitmap
+
+          colorMatch, opacityLimit, area (optional):
+                  see verifyBitmap documentation.
+
+          limit (integer, optional):
+                  number of returned matches is limited to the
+                  limit. The default is -1: all matches are returned.
+
+          allowOverlapping (boolean, optional):
+                  allow returned icons to overlap. If False, returned
+                  list contains only non-overlapping bounding boxes.
+                  The default is True: every bounding box that contains
+                  matching bitmap is returned.
+        """
         bitmap = self._pathSolver(bitmap)
-        if (bitmap, colorMatch, opacityLimit, area) in self._cache:
-            return self._cache[(bitmap, colorMatch, opacityLimit, area)]
-        eyenfinger.iRead(source=self._filename, ocr=False)
-        try:
-            score, bbox = eyenfinger.iVerifyIcon(bitmap, colorMatch=colorMatch, opacityLimit=opacityLimit, area=area)
-            foundItem = GUIItem("bitmap", bbox, self._filename, bitmap=bitmap)
-            self._cache[(bitmap, colorMatch, opacityLimit, area)] = [foundItem]
-        except eyenfinger.BadMatch:
-            self._cache[(bitmap, colorMatch, opacityLimit, area)] = []
-        return self._cache[(bitmap, colorMatch, opacityLimit, area)]
+        cacheKey = (bitmap, colorMatch, opacityLimit, area, limit)
+        if cacheKey in self._cache:
+            return self._cache[(bitmap, colorMatch, opacityLimit, area, limit)]
+        self._cache[cacheKey] = []
+        e4gIcon = eye4graphics.openImage(bitmap)
+        matchCount = 0
+        leftTopRightBottomZero = (_intCoords((area[0], area[1]), self._screenSize) +
+                                  _intCoords((area[2], area[3]), self._screenSize) +
+                                  (0,))
+        struct_area_bbox = _Bbox(*leftTopRightBottomZero)
+        struct_bbox = _Bbox(0,0,0,0,0)
+        contOpts = 0 # search for the first hit
+        while True:
+            if matchCount == limit: break
+            result = eye4graphics.findNextIcon(ctypes.byref(struct_bbox),
+                                               ctypes.c_void_p(self._e4gImage),
+                                               ctypes.c_void_p(e4gIcon),
+                                               0, # no fuzzy matching
+                                               ctypes.c_double(colorMatch),
+                                               ctypes.c_double(opacityLimit),
+                                               ctypes.byref(struct_area_bbox),
+                                               ctypes.c_int(contOpts))
+            contOpts = 1 # search for the next hit
+            if result < 0: break
+            bbox = (int(struct_bbox.left), int(struct_bbox.top),
+                    int(struct_bbox.right), int(struct_bbox.bottom))
+
+            self._cache[cacheKey].append(GUIItem("bitmap", bbox, self._filename, bitmap=bitmap))
+            matchCount += 1
+        eye4graphics.closeImage(e4gIcon)
+        return self._cache[cacheKey]
 
     def findItemsByOcr(self, text, preprocess=None, match=1.0, area=(0, 0, 1.0, 1.0)):
         self._assumeOcrWords(preprocess=preprocess, area=area)
@@ -1023,7 +1094,7 @@ class _VisualLog:
                 highlightFilename = loggerSelf.highlightFilename(screenshotFilename)
                 iC = loggerSelf._device.intCoords
                 eyenfinger.drawLines(screenshotFilename, highlightFilename, [], [iC((x1, y1)), iC((x2, y2))])
-                loggerSelf.logReturn(retval, img=loggerSelf._device.screenshot(), tip=origMethod.func_name)
+                loggerSelf.logReturn(retval, img=highlightFilename, width=loggerSelf._screenshotWidth, tip=origMethod.func_name)
             except:
                 loggerSelf.logReturn(str(retval) + " (no screenshot available)", tip=origMethod.func_name)
             return retval
@@ -1063,10 +1134,10 @@ class _VisualLog:
             if len(retval) == 0:
                 loggerSelf.logReturn("not found in", img=screenshotObj, tip=origMethod.func_name)
             else:
-                foundItem = retval[0]
+                foundItems = retval
                 screenshotFilename = screenshotObj.filename()
                 highlightFilename = loggerSelf.highlightFilename(screenshotFilename)
-                eyenfinger.drawIcon(screenshotFilename, highlightFilename, bitmap, foundItem.bbox())
+                eyenfinger.drawIcon(screenshotFilename, highlightFilename, bitmap, [i.bbox() for i in foundItems])
                 loggerSelf.logReturn(retval, img=highlightFilename, width=loggerSelf._screenshotWidth, tip=origMethod.func_name, imgTip=screenshotObj._logCallReturnValue)
             return retval
         return findItemsByBitmapWRAP

@@ -19,6 +19,10 @@
 
 #include <sys/types.h>
 
+#define ERROR_CANNOT_OPEN_IMAGEFILE -3
+#define ERROR_CANNOT_OPEN_ICONFILE -4
+
+
 extern "C" {
 
     typedef struct _bbox {
@@ -30,8 +34,7 @@ extern "C" {
      * findSingleIcon
      *
      * Parameters:
-     *   - bbox (in/out)- in: search area in haystack and
-     *                    out: found icon's bounding box
+     *   - bbox (out)   - bounding box of matching area
      *   - imagefile    - name of image to be searched from (haystack)
      *   - iconfile     - name of icon to be search for (needle)
      *   - threshold    - max. acceptable error.
@@ -41,11 +44,12 @@ extern "C" {
      *   - opacityLimit - skip comparing pixels with opacity < opacityLimit
      *                    0.0 (default) compares all pixels without reading
      *                    opacity values
+     *   - searchArea   - bounding box of area in the imagefile to be searched
      *
      * Return value:
      *    0: success
-     *   -1: found an icon but it has too big error
-     *   -2: nothing like icon has been found
+     *   -1: nothing like icon has been found
+     *   -2: found an icon but it has too big error
      *   -3: cannot open imagefile
      *   -4: cannot open iconfile
      */
@@ -55,7 +59,33 @@ extern "C" {
                        const char* iconfile,
                        const int threshold,
                        const double colorMatch,
-                       const double opacityLimit);
+                       const double opacityLimit,
+                       const BoundingBox* searchArea);
+
+    /*
+     * findNextIcon
+     *
+     * Parameters:
+     * - bbox (in/out)  - in: bounding box of previously found icon
+     *                    out: bounding box of next icon
+     * - image          - opened image (returned by openImage)
+     * - icon           - opened icon (returned by openImage)
+     * - threshold, colorMatch, opacityLimit, searchArea - see findSingleIcon
+     * - continueOpts   - if 0, find the first match (ignore bbox value)
+     *                    if non-zero, find the next match
+     *
+     * Return value:
+     *     see findSingleIcon
+     */
+
+    int findNextIcon(BoundingBox* bbox,
+                     void* image,
+                     void* icon,
+                     const int threshold,
+                     const double colorMatch,
+                     const double opacityLimit,
+                     const BoundingBox* searchArea,
+                     const int continueOpts);
 
     /*
      * imageDimensions
@@ -73,4 +103,10 @@ extern "C" {
      */
     int imageDimensions(BoundingBox* bbox,
                         const char* imagefile);
+
+    int openedImageDimensions(BoundingBox* bbox, const void * image);
+
+    void* openImage(const char* imagefile);
+
+    void closeImage(void* image);
 }
