@@ -116,11 +116,15 @@ public:
 
   class unit_perm: public unit {
   public:
-    unit_perm(int i,Coverage_Market* m) {
-      std::string p=to_string(i);
+    unit_perm(int i,Coverage_Market* _m) {
+      p=to_string(i);
+      m=_m;
+      reset();
+      /*
       child=new Coverage_Tree(l,p);
       child->set_model(m->get_model());
       value.second=child->max_count;
+      */
       l.ref();
     }
     virtual ~unit_perm() {
@@ -129,14 +133,25 @@ public:
     virtual void push()
     {
       child->push();
+      child_save.push(child);
     }
     virtual void pop()
     {
       child->pop();
+      if (child_save.top()!=child) {
+	delete child;
+	child=child_save.top();
+      }
+      child_save.pop();
     }
     virtual void reset()
     {
-      // Not working.
+      if (!child_save.empty() && child_save.top()!=child) {
+	delete child;
+      }
+      child=new Coverage_Tree(l,p);
+      child->set_model(m->get_model());
+      value.second=child->max_count;
     }
     virtual void update()
     {
@@ -149,6 +164,9 @@ public:
     }
     Log_null l;
     Coverage_Tree* child;
+    std::stack<Coverage_Tree*> child_save;
+    Coverage_Market* m;
+    std::string p;
   };
 
   class unit_walk: public unit {
@@ -215,7 +233,6 @@ public:
       }
       
       if (tmp.first==tmp.second) {
-	count++;
 	if (!added) {
 	  executed.push_back(action);
 	}
@@ -240,33 +257,30 @@ public:
       value.first+=tcount.size()*value.second;
     }
 
-
-    // Broken 
     virtual void update() {
       child->update();
       value=child->get_value();
-      value.first+=tcount.size()*value.second;
+      value.first+=(tcount.size()-count)*value.second;
     }
 
     virtual void reset() {
       child->reset();
-      count=0;
-      executed.clear();
+      count=tcount.size();
     }
 
     virtual void push() {
       push_depth++;
       tcount_save.resize(push_depth);
       child->push();
-      //st.push(count);
+      st.push(count);
       sexecuted.push(executed);
       //tcount_save.push(tcount);
     }
 
     virtual void pop() {
       child->pop();
-      //count=st.top();
-      //st.pop();
+      count=st.top();
+      st.pop();
       executed=sexecuted.top();
       sexecuted.pop();
 
