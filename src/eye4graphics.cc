@@ -32,6 +32,41 @@ using namespace Magick;
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
+class Search_id {
+public:
+    Search_id(void* haystack_, void* needle_, int threshold_,
+              double colorMatch_, double opacityLimit_,
+              const BoundingBox &area_):
+        haystack(haystack_), needle(needle_), threshold(threshold_),
+        colorMatch(colorMatch_), opacityLimit(opacityLimit_),
+        area(area_), hay_pixel(0), nee_pixel(0) {}
+    void * haystack;
+    void * needle;
+    int threshold;
+    double colorMatch;
+    double opacityLimit;
+    BoundingBox area;
+    const PixelPacket* hay_pixel;
+    const PixelPacket* nee_pixel;
+};
+
+class Search_id_less_comparator {
+public:
+    bool operator()(const Search_id &lhs, const Search_id &rhs) const {
+        return (lhs.haystack < rhs.haystack ||
+                lhs.needle < rhs.needle ||
+                lhs.threshold < rhs.threshold ||
+                lhs.colorMatch < rhs.colorMatch ||
+                lhs.area.left < rhs.area.left ||
+                lhs.area.right < rhs.area.right ||
+                lhs.area.top < rhs.area.top ||
+                lhs.area.bottom < rhs.area.bottom);
+    }
+};
+
+static std::map<Search_id, bool, Search_id_less_comparator> imagePixels;
+typedef std::map<Search_id, bool, Search_id_less_comparator>::iterator ImagePixelsIterator;
+
 inline bool same_color(const PixelPacket *p1, const PixelPacket *p2,
                        const int colorDiff, const unsigned char skipTransparency)
 {
@@ -54,7 +89,7 @@ inline bool same_color(const PixelPacket *p1, const PixelPacket *p2,
     }
 }
 
-bool pixelperfect_match(const int hayxsize,
+static bool pixelperfect_match(const int hayxsize,
                         const int neex, const int neey,
                         const int x, const int y,
                         const PixelPacket *hay_pixel,
@@ -217,8 +252,8 @@ int iconsearch(std::vector<BoundingBox>& retval,
                const int threshold,
                const double colorMatch,
                const double opacityLimit,
-               const int startX,
-               const int startY)
+               int startX,
+               int startY)
 {
     const int color_threshold = COLORS * threshold;
 
@@ -229,39 +264,62 @@ int iconsearch(std::vector<BoundingBox>& retval,
     typedef std::pair<long, std::pair<int,int> > Candidate;
     std::vector< Candidate > candidates;
 
-    haystack.modifyImage();
-    needle.modifyImage();
+    if (startX == 0) startX = searchArea.left;
+    if (startY == 0) startY = searchArea.top;
+    if (startX < searchArea.left ||
+        startX > searchArea.right ||
+        startY < searchArea.top ||
+        startY > searchArea.bottom)
+        return -1;
 
-    if (threshold == 0) {
-        if (skipTransparency > 0) {
-            haystack.type(TrueColorMatteType);
-            needle.type(TrueColorMatteType);
-        } else {
-            haystack.type(TrueColorType);
-            needle.type(TrueColorType);
-        }
-    } else {
-        haystack.type(GrayscaleType);
-        needle.type(GrayscaleType);
-    }
     int hayx = haystack.columns();
     int hayy = haystack.rows();
     int neex = needle.columns();
     int neey = needle.rows();
-
     hayx = MIN(hayx, searchArea.right - searchArea.left);
     hayy = MIN(hayy, searchArea.bottom - searchArea.top);
 
-    const PixelPacket *hay_pixel=haystack.getConstPixels(
-        searchArea.left, searchArea.top, hayx, hayy);
-    const PixelPacket *nee_pixel=needle.getConstPixels(0,0,neex,neey);
+    const PixelPacket *hay_pixel;
+    const PixelPacket *nee_pixel;
+
+    Search_id search_id(static_cast<void*>(&haystack),
+                        static_cast<void*>(&needle),
+                        threshold, colorMatch, opacityLimit, searchArea);
+
+    ImagePixelsIterator it;
+    if ((it = imagePixels.find(search_id)) != imagePixels.end()) {
+        hay_pixel = it->first.hay_pixel;
+        nee_pixel = it->first.nee_pixel;
+    } else {
+        haystack.modifyImage();
+        needle.modifyImage();
+
+        if (threshold == 0) {
+            if (skipTransparency > 0) {
+                haystack.type(TrueColorMatteType);
+                needle.type(TrueColorMatteType);
+            } else {
+                haystack.type(TrueColorType);
+                needle.type(TrueColorType);
+            }
+        } else {
+            haystack.type(GrayscaleType);
+            needle.type(GrayscaleType);
+        }
+
+        hay_pixel=haystack.getConstPixels(searchArea.left, searchArea.top, hayx, hayy);
+        nee_pixel=needle.getConstPixels(0,0,neex,neey);
+        search_id.hay_pixel = hay_pixel;
+        search_id.nee_pixel = nee_pixel;
+        imagePixels[search_id] = true;
+    }
 
     if (threshold == 0) {
         /* Pixel-perfect match */
-        int match_count = 0;
-        int startX_ = startX - searchArea.left;
-        for (int y=startY-searchArea.top; y < hayy-neey; y++) {
-            for (int x=startX_; x < hayx-neex; x++) {
+        int startXinArea = startX - searchArea.left;
+        int startYinArea = startY - searchArea.top;
+        for (int y=startYinArea; y < hayy-neey; y++) {
+            for (int x=startXinArea; x < hayx-neex; x++) {
                 if (pixelperfect_match(hayx, neex, neey, x, y,
                                        hay_pixel, nee_pixel,
                                        colorDiff,
@@ -273,12 +331,12 @@ int iconsearch(std::vector<BoundingBox>& retval,
                     bbox.bottom = bbox.top + neey;
                     bbox.error = 0;
                     retval.push_back(bbox);
-                    match_count++;
+                    return 1;
                 }
             }
-            startX_ = 0;
+            startXinArea = searchArea.left;
         }
-        return match_count > 0 ? 1 : 0;
+        return 0;
     }
 
     /* Fuzzy match */
@@ -452,6 +510,16 @@ void * openImage(const char* imagefile)
 
 void closeImage(void * image)
 {
+    ImagePixelsIterator it = imagePixels.begin();
+    while (it != imagePixels.end()) {
+        if (it->first.haystack == image ||
+            it->first.needle == image)
+        {
+            imagePixels.erase(it++);
+        } else {
+            ++it;
+        }
+    }
     if (image != NULL)
         delete static_cast<Image*>(image);
 }

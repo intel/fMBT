@@ -812,7 +812,7 @@ class Screenshot(object):
     def filename(self):
         return self._filename
 
-    def findItemsByBitmap(self, bitmap, colorMatch=1.0, opacityLimit=.95, area=(0.0, 0.0, 1.0, 1.0), limit=-1, allowOverlapping=True):
+    def findItemsByBitmap(self, bitmap, colorMatch=1.0, opacityLimit=.95, area=(0.0, 0.0, 1.0, 1.0), limit=-1, allowOverlap=True):
         """
         Find items on the screenshot that match to bitmap.
 
@@ -828,7 +828,7 @@ class Screenshot(object):
                   number of returned matches is limited to the
                   limit. The default is -1: all matches are returned.
 
-          allowOverlapping (boolean, optional):
+          allowOverlap (boolean, optional):
                   allow returned icons to overlap. If False, returned
                   list contains only non-overlapping bounding boxes.
                   The default is True: every bounding box that contains
