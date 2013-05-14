@@ -861,9 +861,19 @@ class Screenshot(object):
             if result < 0: break
             bbox = (int(struct_bbox.left), int(struct_bbox.top),
                     int(struct_bbox.right), int(struct_bbox.bottom))
-
-            self._cache[cacheKey].append(GUIItem("bitmap", bbox, self._filename, bitmap=bitmap))
-            matchCount += 1
+            addToFoundItems = True
+            if allowOverlap == False:
+                for guiItem in self._cache[cacheKey]:
+                    itemLeft, itemTop, itemRight, itemBottom = guiItem.bbox()
+                    if ((itemLeft <= bbox[0] <= itemRight or itemLeft <= bbox[2] <= itemRight) and
+                        (itemTop <= bbox[1] <= itemBottom or itemTop <= bbox[3] <= itemBottom)):
+                        if ((itemLeft < bbox[0] < itemRight or itemLeft < bbox[2] < itemRight) or
+                            (itemTop < bbox[1] < itemBottom or itemTop < bbox[3] < itemBottom)):
+                            addToFoundItems = False
+                            break
+            if addToFoundItems:
+                self._cache[cacheKey].append(GUIItem("bitmap", bbox, self._filename, bitmap=bitmap))
+                matchCount += 1
         eye4graphics.closeImage(e4gIcon)
         return self._cache[cacheKey]
 

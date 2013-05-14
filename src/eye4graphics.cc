@@ -334,7 +334,7 @@ int iconsearch(std::vector<BoundingBox>& retval,
                     return 1;
                 }
             }
-            startXinArea = searchArea.left;
+            startXinArea = 0;
         }
         return 0;
     }
