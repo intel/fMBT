@@ -21,9 +21,12 @@ Tizen devices.
 WARNING: THIS IS A VERY SLOW PROTOTYPE WITHOUT ANY ERROR HANDLING.
 """
 
+import base64
+import cPickle
 import commands
 import subprocess
 import os
+import sys
 
 import fmbt
 import fmbtgti
@@ -72,7 +75,7 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
         agentFilename = "/tmp/fmbttizen-agent.py"
         agentRemoteFilename = "/tmp/fmbttizen-agent.py"
 
-        file(agentFilename, "w").write(_X11agent)
+        file(agentFilename, "w").write(_tizenAgent)
 
         status, _, _ = _run(["sdb", "push", agentFilename, agentRemoteFilename])
 
@@ -80,65 +83,65 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
                                           stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                           close_fds=True)
         self._sdbShell.stdin.write("\r")
-        self._agentCmd("python %s; exit" % (agentRemoteFilename,),
-                       afterPrompt = lambda s: s.strip().endswith("#"))
-        self._agentWaitLine(lambda s: s.strip() == "fmbttizen-agent")
+        ok, version = self._agentCmd("python %s; exit" % (agentRemoteFilename,))
         os.remove(agentFilename)
+        return ok
 
     def close(self):
         self._sdbShell.stdin.close()
         self._sdbShell.stdout.close()
         self._sdbShell.terminate()
 
-    def _agentWaitLine(self, lineValidator):
+    def _agentWaitAnswer(self):
+        errorLinePrefix = "FMBTAGENT ERROR "
+        okLinePrefix = "FMBTAGENT OK "
         l = self._sdbShell.stdout.readline().strip()
-        if lineValidator == None:
-            lineValidator = lambda s: s == "OK"
-        while not lineValidator(l):
+        while True:
+            if l.startswith(okLinePrefix):
+                return True, cPickle.loads(base64.b64decode(l[len(okLinePrefix):]))
+            elif l.startswith(errorLinePrefix):
+                return False, cPickle.loads(base64.b64decode(l[len(errorLinePrefix):]))
+            else:
+                pass
             l = self._sdbShell.stdout.readline()
             if l == "": raise IOError("Unexpected end of sdb shell output")
             l = l.strip()
 
-    def _agentCmd(self, command, afterPrompt = None, retry=3):
+    def _agentCmd(self, command, retry=3):
         try:
-            self._agentWaitLine(afterPrompt)
             self._sdbShell.stdin.write("%s\r" % (command,))
             self._sdbShell.stdin.flush()
         except IOError:
             if retry > 0:
                 self.connect()
-                self._agentCmd(command, afterPrompt, retry=retry-1)
+                self._agentCmd(command, retry=retry-1)
             else:
                 raise
-        return True
+        return self._agentWaitAnswer()
 
     def sendPress(self, keyName):
-        s, o = commands.getstatusoutput("sdb shell xte 'key %s'" % (keyName,))
-        return True
+        return self._agentCmd("kp%s" % (keyName,))[0]
 
     def sendKeyDown(self, keyName):
-        s, o = commands.getstatusoutput("sdb shell xte 'keydown %s'" % (keyName,))
-        return True
+        return self._agentCmd("kd%s" % (keyName,))[0]
 
     def sendKeyUp(self, keyName):
-        s, o = commands.getstatusoutput("sdb shell xte 'keyup %s'" % (keyName,))
-        return True
+        return self._agentCmd("ku%s" % (keyName,))[0]
 
     def sendTap(self, x, y):
-        return self._agentCmd("t%s %s 1" % (x, y))
+        return self._agentCmd("tt%s %s 1" % (x, y))[0]
 
     def sendTouchDown(self, x, y):
-        return self._agentCmd("d%s %s 1" % (x, y))
+        return self._agentCmd("td%s %s 1" % (x, y))[0]
 
     def sendTouchMove(self, x, y):
-        return self._agentCmd("m%s %s" % (x, y))
+        return self._agentCmd("tm%s %s" % (x, y))[0]
 
     def sendTouchUp(self, x, y):
-        return self._agentCmd("u%s %s 1" % (x, y))
+        return self._agentCmd("tu%s %s 1" % (x, y))[0]
 
     def sendType(self, string):
-        s, o = commands.getstatusoutput("sdb shell xte 'str %s'" % (string,))
-        return True
+        return self._agentCmd("kt%s" % (base64.b64encode(cPickle.dumps(string))))[0]
 
     def recvScreenshot(self, filename):
         remoteFilename = "/tmp/fmbttizen.screenshot.xwd"
@@ -156,54 +159,187 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
     def target(self):
         return self._serialNumber
 
-# _X11agent code is executed on Tizen device in sdb shell.
+# _tizenAgent code is executed on Tizen device in sdb shell.
 # The agent synthesizes X events.
-_X11agent = """
+_tizenAgent = """
+import base64
+import cPickle
 import ctypes
+import os
+import platform
+import re
+import struct
 import sys
+import time
 
 libX11         = ctypes.CDLL("libX11.so")
 libXtst        = ctypes.CDLL("libXtst.so.6")
 X_CurrentTime  = ctypes.c_ulong(0)
 X_True         = ctypes.c_int(1)
 X_False        = ctypes.c_int(0)
-NULL           = ctypes.c_char_p(0)
+X_NULL         = ctypes.c_char_p(0)
+NoSymbol       = 0
 
-display        = ctypes.c_void_p(libX11.XOpenDisplay(NULL))
+display        = ctypes.c_void_p(libX11.XOpenDisplay(X_NULL))
 current_screen = ctypes.c_int(-1)
 
+# See struct input_event in /usr/include/linux/input.h
+if platform.architecture()[0] == "32bit": _input_event = 'IIHHi'
+else: _input_event = 'QQHHi'
+# Event and keycodes are in input.h, too.
+_EV_KEY = 0x01
+
+# Set input device names (in /proc/bus/input/devices)
+# for pressing hardware keys.
+try: cpuinfo = file("/proc/cpuinfo").read()
+except: cpuinfo = ""
+
+if 'TRATS' in cpuinfo:
+    # Running on Lunchbox
+    hwKeyDevice = {
+        "POWER": "/dev/input/event1",
+        "VOLUMEUP": "gpio-keys",
+        "VOLUMEDOWN": "gpio-keys",
+        "HOME": "max8997-muic"
+        }
+    nonstandardKeycodes = {"HOME": 139}
+elif 'QEMU Virtual CPU' in cpuinfo:
+    # Running on Tizen emulator
+    hwKeyDevice = {
+        "POWER": "Power Button",
+        "VOLUMEUP": "AT Translated Set 2 hardkeys",
+        "VOLUMEDOWN": "AT Translated Set 2 hardkeys",
+        "HOME": "AT Translated Set 2 hardkeys"
+        }
+    nonstandardKeycodes = {}
+else:
+    # Running on some other device
+    hwKeyDevice = {
+        "POWER": "msic_power_btn",
+        "VOLUMEUP": "gpio-keys",
+        "VOLUMEDOWN": "gpio-keys",
+        "HOME": "mxt224_key_0"
+        }
+    nonstandardKeycodes = {}
+
+# Read input devices
+deviceToEventFile = {}
+for _l in file("/proc/bus/input/devices"):
+    if _l.startswith('N: Name="'): _device = _l.split('"')[1]
+    elif _l.startswith("H: Handlers=") and "event" in _l:
+        try: deviceToEventFile[_device] = "/dev/input/" + re.findall("(event[0-9]+)", _l)[0]
+        except Exception, e: pass
+
+# InputKeys contains key names known to input devices, see
+# linux/input.h or http://www.usb.org/developers/hidpage. The order is
+# significant, because keyCode = InputKeys.index(keyName).
+InputKeys = [
+    "RESERVED", "ESC","1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
+    "MINUS", "EQUAL", "BACKSPACE", "TAB",
+    "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P",
+    "LEFTBRACE", "RIGHTBRACE", "ENTER", "LEFTCTRL",
+    "A", "S", "D", "F", "G", "H", "J", "K", "L",
+    "SEMICOLON", "APOSTROPHE", "GRAVE", "LEFTSHIFT", "BACKSLASH",
+    "Z", "X", "C", "V", "B", "N", "M",
+    "COMMA", "DOT", "SLASH", "RIGHTSHIFT", "KPASTERISK", "LEFTALT",
+    "SPACE", "CAPSLOCK",
+    "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10",
+    "NUMLOCK", "SCROLLLOCK",
+    "KP7", "KP8", "KP9", "KPMINUS",
+    "KP4", "KP5", "KP6", "KPPLUS",
+    "KP1", "KP2", "KP3", "KP0", "KPDOT",
+    "undefined0",
+    "ZENKAKUHANKAKU", "102ND", "F11", "F12", "RO",
+    "KATAKANA", "HIRAGANA", "HENKAN", "KATAKANAHIRAGANA", "MUHENKAN",
+    "KPJPCOMMA", "KPENTER", "RIGHTCTRL", "KPSLASH", "SYSRQ", "RIGHTALT",
+    "LINEFEED", "HOME", "UP", "PAGEUP", "LEFT", "RIGHT", "END", "DOWN",
+    "PAGEDOWN", "INSERT", "DELETE", "MACRO",
+    "MUTE", "VOLUMEDOWN", "VOLUMEUP",
+    "POWER",
+    "KPEQUAL", "KPPLUSMINUS", "PAUSE", "SCALE", "KPCOMMA", "HANGEUL",
+    "HANGUEL", "HANJA", "YEN", "LEFTMETA", "RIGHTMETA", "COMPOSE"]
+
 def read_cmd():
-    sys.stdout.write('OK\\n')
-    sys.stdout.flush()
     return sys.stdin.readline().strip()
 
-sys.stdout.write('fmbttizen-agent\\n')
-sys.stdout.flush()
+def write_response(ok, value):
+    if ok: p = "FMBTAGENT OK "
+    else: p = "FMBTAGENT ERROR "
+    response = "%s%s\\n" % (p, base64.b64encode(cPickle.dumps(value)))
+    sys.stdout.write(response)
+    sys.stdout.flush()
+
+def sendHwKey(inputDevice, keyCode, delayBeforePress, delayBeforeRelease):
+    try: fd = os.open(inputDevice, os.O_WRONLY | os.O_NONBLOCK)
+    except: return False
+    if delayBeforePress > 0: time.sleep(delayBeforePress)
+    if delayBeforePress >= 0:
+        if os.write(fd, struct.pack(_input_event, int(time.time()), 0, _EV_KEY, keyCode, 1)) > 0:
+            os.write(fd, struct.pack(_input_event, 0, 0, 0, 0, 0))
+    if delayBeforeRelease > 0: time.sleep(delayBeforeRelease)
+    if delayBeforeRelease >= 0:
+        if os.write(fd, struct.pack(_input_event, int(time.time()), 0, _EV_KEY, keyCode, 0)) > 0:
+            os.write(fd, struct.pack(_input_event, 0, 0, 0, 0, 0))
+    os.close(fd)
+    return True
+
+def typeSequence(s):
+    skipped = []
+    for c in s:
+        keysym = libX11.XStringToKeysym(c)
+        if keysym == NoSymbol:
+            skipped.append(c)
+            continue
+        keycode = libX11.XKeysymToKeycode(display, keysym)
+        libXtst.XTestFakeKeyEvent(display, keycode, X_True, X_CurrentTime)
+        libXtst.XTestFakeKeyEvent(display, keycode, X_False, X_CurrentTime)
+    if skipped: return False, skipped
+    else: return True, skipped
+
+write_response(True, 0.0)
 cmd = read_cmd()
 while cmd:
-    if cmd.startswith("m"):   # move(x, y)
-        xs, ys = cmd[1:].strip().split()
+    if cmd.startswith("tm"):   # touch move(x, y)
+        xs, ys = cmd[2:].strip().split()
         libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
         libX11.XFlush(display)
-    elif cmd.startswith("t"): # tap(x, y, button)
-        xs, ys, button = cmd[1:].strip().split()
+        write_response(True, None)
+    elif cmd.startswith("tt"): # touch tap(x, y, button)
+        xs, ys, button = cmd[2:].strip().split()
         button = int(button)
         libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
         libXtst.XTestFakeButtonEvent(display, button, X_True, X_CurrentTime)
         libXtst.XTestFakeButtonEvent(display, button, X_False, X_CurrentTime)
         libX11.XFlush(display)
-    elif cmd.startswith("d"): # down(x, y, button)
-        xs, ys, button = cmd[1:].strip().split()
+        write_response(True, None)
+    elif cmd.startswith("td"): # touch down(x, y, button)
+        xs, ys, button = cmd[2:].strip().split()
         button = int(button)
         libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
         libXtst.XTestFakeButtonEvent(display, button, X_True, X_CurrentTime)
         libX11.XFlush(display)
-    elif cmd.startswith("u"): # up(x, y, button)
-        xs, ys, button = cmd[1:].strip().split()
+        write_response(True, None)
+    elif cmd.startswith("tu"): # touch up(x, y, button)
+        xs, ys, button = cmd[2:].strip().split()
         button = int(button)
         libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
         libXtst.XTestFakeButtonEvent(display, button, X_False, X_CurrentTime)
         libX11.XFlush(display)
+        write_response(True, None)
+    elif cmd.startswith("kd"): # hw key down
+        rv = sendHwKey(deviceToEventFile[hwKeyDevice[cmd[2:]]], InputKeys.index(cmd[2:]), 0, -1)
+        write_response(rv, None)
+    elif cmd.startswith("kp"): # hw key press
+        rv = sendHwKey(deviceToEventFile[hwKeyDevice[cmd[2:]]], InputKeys.index(cmd[2:]), 0, 0)
+        write_response(rv, None)
+    elif cmd.startswith("ku"): # hw key up
+        rv = sendHwKey(deviceToEventFile[hwKeyDevice[cmd[2:]]], InputKeys.index(cmd[2:]), -1, 0)
+        write_response(rv, None)
+    elif cmd.startswith("kt"): # send x events
+        rv, skippedSymbols = typeSequence(cPickle.loads(base64.b64decode(cmd[2:])))
+        libX11.XFlush(display)
+        write_response(rv, skippedSymbols)
+
     cmd = read_cmd()
 
 display = libX11.XCloseDisplay(display)

@@ -294,9 +294,6 @@ class GUITestInterface(object):
           hold (float, optional):
                   time in seconds to hold the key down.
         """
-        if not keyName.upper().startswith("KEYCODE_"):
-            keyName = "KEYCODE_" + keyName
-        keyName = keyName.upper()
         if long and hold == 0.0:
             hold = self._longPressHoldTime
         if hold > 0.0:
