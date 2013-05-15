@@ -417,7 +417,7 @@ Keyboard shortcuts:<br>
 
     def newFileAAL(self, path=None):
         self.editor.setPlainText('aal "noname" {\n'
-                                 '    language: python {}\n'
+                                 '    language "python" {}\n'
                                  '\n'
                                  '    # preview-hide-vars: \n'
                                  '    # preview-depth: 5\n'
@@ -425,10 +425,10 @@ Keyboard shortcuts:<br>
                                  '        varname1, varname2\n'
                                  '    }\n'
                                  '    initial_state {\n'
-                                 '        varname1 = 42      # comment1\n'
+                                 '        varname1 = 42        # comment1\n'
                                  '        varname2 = \'hello\' # comment2\n'
                                  '    }\n'
-                                 '    action "iTestStep1()" {\n'
+                                 '    input "test step 1" {\n'
                                  '        guard() { return varname1 == 42 }\n'
                                  '        body()  { varname2 = \'bye\' }\n'
                                  '    }\n'
@@ -617,6 +617,14 @@ Keyboard shortcuts:<br>
                                                   (filename, lineno))
                 self.preview_error.insertHtml('<tr><td style="padding-left: 40 px;">%s</td></tr></table>' % (whatswrong,))
         elif "Traceback (most recent call last):" in errorMsg:
+            for l in self._modelSource().splitlines():
+                if l.strip().startswith("language") and not (
+                    "py" in l.lower()):
+                    if "c++" in l.lower():
+                        self.preview_error.insertHtml("AAL/C++ cannot be previewed.<br><br>")
+                    self.preview_error.insertHtml("fmbt-editor preview supports only AAL/Python and GT languages.<br>")
+                    self.preview_error.insertHtml("In order to use fmbt-editor with other languages,<br>")
+                    self.preview_error.insertHtml("try fmbt-editor -p filename<br><br><br>")
             try:
                 el = errorMsg.split('\n')
                 exceptionString = " " + [l for l in el[el.index("Traceback (most recent call last):")+1:]
