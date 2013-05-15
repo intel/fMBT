@@ -34,9 +34,9 @@ public:
 
   aalang() {}
   virtual ~aalang() {};
+
   virtual bool check_name(std::string* name,const char* _file,int _line) {
     if (names.find(*name)!=names.end()) {
-      fprintf(stderr,"Name \"%s\" already defined at %s:%i\n",name->c_str(),names[*name].first.c_str(),names[*name].second);
       return true;
     } else {
       std::pair<std::string,int> pos;
@@ -45,6 +45,9 @@ public:
       names[*name]=pos;
     }
     return false;
+  }
+  virtual std::pair<std::string,int> get_namepos(std::string* name) {
+    return names[*name];
   }
   virtual void set_name(std::string* name,bool first=false,ANAMETYPE t=DEFACTION) = 0;
   virtual void set_namestr(std::string* name)                      = 0;

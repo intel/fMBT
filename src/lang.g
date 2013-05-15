@@ -47,12 +47,34 @@ void *ops_cache=&count;
 
 #include "d.h"
 
+static std::pair<std::string,std::pair<std::string,int> > pa;
+
+static void name_syntax_error_report(struct D_Parser *ap) {
+    Parser *p = (Parser *)ap;
+    
+    char *fn = d_dup_pathname_str(p->user.loc.pathname);
+    
+    fprintf(stderr,"%s:%d: name error '%s' already defined at %s:%d\n",
+                    fn,p->user.loc.line,pa.first.c_str(),
+                    pa.second.first.c_str(),
+                    pa.second.second);
+    
+    FREE(fn);
+}
+
 void raise_error(d_loc_t& sl,Parser *p) {
     p->last_syntax_error_line = sl.line;
     p->user.syntax_errors++;
     p->user.loc.line= sl.line;
     p->user.loc.ws = sl.s-1;
     p->user.syntax_error_fn((D_Parser*)p);
+}
+
+void raise_name_error(d_loc_t& sl,Parser *p,std::string* name) {
+    pa.first=*name;
+    pa.second=obj->get_namepos(name);
+    p->user.syntax_error_fn=name_syntax_error_report;
+    raise_error(sl,p);
 }
 
 int bstr_scan(char *ops, void *ops_cache, d_loc_t *loc,
@@ -125,13 +147,13 @@ ab: (comment|guard|body|adapter|tag|act)*;
 
 astr:   string          {
             if (obj->check_name($0.str,$n0.start_loc.pathname,$n0.start_loc.line)) {
-                raise_error($n0.start_loc,(Parser*)_parser);
+                raise_name_error($n0.start_loc,(Parser*)_parser,$0.str);
             }
             obj->set_name($0.str,true);
         } |
         astr ',' string {
             if (obj->check_name($2.str,$n2.start_loc.pathname,$n2.start_loc.line)) {
-                raise_error($n2.start_loc,(Parser*)_parser);
+                raise_name_error($n2.start_loc,(Parser*)_parser,$2.str);
             }
             obj->set_name($2.str);
         } ;
@@ -140,7 +162,7 @@ istr:   string          {
             std::string* tmp=new std::string("i:" + *$0.str);
             delete $0.str;
             if (obj->check_name(tmp,$n0.start_loc.pathname,$n0.start_loc.line)) { 
-                raise_error($n0.start_loc,(Parser*)_parser);
+                raise_name_error($n0.start_loc,(Parser*)_parser,tmp);
             }
             obj->set_name(tmp,true,aalang::IACT);
         } |
@@ -148,7 +170,7 @@ istr:   string          {
             std::string* tmp=new std::string("i:" + *$2.str);
             delete $2.str;
             if (obj->check_name(tmp,$n2.start_loc.pathname,$n2.start_loc.line)) {
-                raise_error($n2.start_loc,(Parser*)_parser);
+                raise_name_error($n2.start_loc,(Parser*)_parser,tmp);
             }
             obj->set_name(tmp,false,aalang::IACT);
         } ;
@@ -157,7 +179,7 @@ ostr:   string          {
             std::string* tmp=new std::string("o:" + *$0.str);
             delete $0.str;
             if (obj->check_name(tmp,$n0.start_loc.pathname,$n0.start_loc.line)) {
-                raise_error($n0.start_loc,(Parser*)_parser);
+                raise_name_error($n0.start_loc,(Parser*)_parser,tmp);
             }
             obj->set_name(tmp,true,aalang::OBSERVE);
         } |
@@ -165,7 +187,7 @@ ostr:   string          {
             std::string* tmp=new std::string("o:" + *$2.str);
             delete $2.str;
             if (obj->check_name(tmp,$n2.start_loc.pathname,$n2.start_loc.line)) {
-                raise_error($n2.start_loc,(Parser*)_parser);
+                raise_name_error($n2.start_loc,(Parser*)_parser,tmp);
             }
             obj->set_name(tmp,false,aalang::OBSERVE);
         } ;
@@ -192,13 +214,13 @@ tag: 'tag' tstr {
 
 tstr:   string          {
             if (obj->check_name($0.str,$n0.start_loc.pathname,$n0.start_loc.line)) {
-                raise_error($n0.start_loc,(Parser*)_parser);
+                raise_name_error($n0.start_loc,(Parser*)_parser,$0.str);
             }
             obj->set_tagname($0.str,true);
         } |
         tstr ',' string {
             if (obj->check_name($2.str,$n2.start_loc.pathname,$n2.start_loc.line)) {
-                raise_error($n2.start_loc,(Parser*)_parser);
+                raise_name_error($n2.start_loc,(Parser*)_parser,$2.str);
             }
             obj->set_tagname($2.str);
         } ;
