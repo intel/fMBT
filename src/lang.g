@@ -124,13 +124,13 @@ act: ( 'action' astr | 'input' istr | 'output' ostr ) {
 ab: (comment|guard|body|adapter|tag|act)*;
 
 astr:   string          {
-            if (obj->check_name($0.str)) {
+            if (obj->check_name($0.str,$n0.start_loc.pathname,$n0.start_loc.line)) {
                 raise_error($n0.start_loc,(Parser*)_parser);
             }
             obj->set_name($0.str,true);
         } |
         astr ',' string {
-            if (obj->check_name($2.str)) {
+            if (obj->check_name($2.str,$n2.start_loc.pathname,$n2.start_loc.line)) {
                 raise_error($n2.start_loc,(Parser*)_parser);
             }
             obj->set_name($2.str);
@@ -139,7 +139,7 @@ astr:   string          {
 istr:   string          {
             std::string* tmp=new std::string("i:" + *$0.str);
             delete $0.str;
-            if (obj->check_name(tmp)) { 
+            if (obj->check_name(tmp,$n0.start_loc.pathname,$n0.start_loc.line)) { 
                 raise_error($n0.start_loc,(Parser*)_parser);
             }
             obj->set_name(tmp,true,aalang::IACT);
@@ -147,7 +147,7 @@ istr:   string          {
         istr ',' string {
             std::string* tmp=new std::string("i:" + *$2.str);
             delete $2.str;
-            if (obj->check_name(tmp)) {
+            if (obj->check_name(tmp,$n2.start_loc.pathname,$n2.start_loc.line)) {
                 raise_error($n2.start_loc,(Parser*)_parser);
             }
             obj->set_name(tmp,false,aalang::IACT);
@@ -156,7 +156,7 @@ istr:   string          {
 ostr:   string          {
             std::string* tmp=new std::string("o:" + *$0.str);
             delete $0.str;
-            if (obj->check_name(tmp)) {
+            if (obj->check_name(tmp,$n0.start_loc.pathname,$n0.start_loc.line)) {
                 raise_error($n0.start_loc,(Parser*)_parser);
             }
             obj->set_name(tmp,true,aalang::OBSERVE);
@@ -164,7 +164,7 @@ ostr:   string          {
         ostr ',' string {
             std::string* tmp=new std::string("o:" + *$2.str);
             delete $2.str;
-            if (obj->check_name(tmp)) {
+            if (obj->check_name(tmp,$n2.start_loc.pathname,$n2.start_loc.line)) {
                 raise_error($n2.start_loc,(Parser*)_parser);
             }
             obj->set_name(tmp,false,aalang::OBSERVE);
@@ -191,13 +191,13 @@ tag: 'tag' tstr {
         };
 
 tstr:   string          {
-            if (obj->check_name($0.str)) {
+            if (obj->check_name($0.str,$n0.start_loc.pathname,$n0.start_loc.line)) {
                 raise_error($n0.start_loc,(Parser*)_parser);
             }
             obj->set_tagname($0.str,true);
         } |
         tstr ',' string {
-            if (obj->check_name($2.str)) {
+            if (obj->check_name($2.str,$n2.start_loc.pathname,$n2.start_loc.line)) {
                 raise_error($n2.start_loc,(Parser*)_parser);
             }
             obj->set_tagname($2.str);

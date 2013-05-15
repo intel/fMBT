@@ -141,6 +141,7 @@ double AlgBDFS::path_to_best_evaluation(Model& model, std::vector<int>& path, in
             }
             if (!model.status) {
                 status = false;
+		errormsg = "Model:" + model.errormsg;
                 return 0.0;
             }
         }

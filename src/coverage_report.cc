@@ -47,17 +47,14 @@ void Coverage_report::push() {
   if (traces_needed)
     traces_save_.push(traces.size());
   tcount_save.resize(push_depth);
-  //tcount_save.push(tcount);
 }
 
 void Coverage_report::pop() {
   Coverage_exec_filter::pop();
   count=save.top(); save.pop();
-  // traces=traces_save.top(); traces_save.pop();
   if (traces_needed) {
     traces.resize(traces_save_.top()); traces_save_.pop();
   }
-  //tcount=tcount_save.top(); tcount_save.pop();
 
   push_depth--;
   std::map<std::vector<std::pair<int,std::vector<int> > >, int>::iterator i;

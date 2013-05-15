@@ -21,7 +21,8 @@
 
 #include <string>
 #include <vector>
-#include <set>
+#include <map>
+#include <stdio.h>
 
 class aalang {
 public:
@@ -33,11 +34,15 @@ public:
 
   aalang() {}
   virtual ~aalang() {};
-  virtual bool check_name(std::string* name) {
+  virtual bool check_name(std::string* name,const char* _file,int _line) {
     if (names.find(*name)!=names.end()) {
+      fprintf(stderr,"Name \"%s\" already defined at %s:%i\n",name->c_str(),names[*name].first.c_str(),names[*name].second);
       return true;
     } else {
-      names.insert(*name);
+      std::pair<std::string,int> pos;
+      pos.first=_file;
+      pos.second=_line;
+      names[*name]=pos;
     }
     return false;
   }
@@ -74,7 +79,7 @@ protected:
   std::string default_adapter;
   std::vector<int> amap;
   std::vector<int> tmap;
-  std::set<std::string> names;
+  std::map<std::string,std::pair<std::string,int> > names;
 };
 
 #endif

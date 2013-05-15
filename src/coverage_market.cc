@@ -154,16 +154,32 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const std::st
       return NULL;
     }
 
-    for(unsigned int i=0; i < actions.size(); i++) {
-      if (u) {
-        if (m=='e') {
-          u=new Coverage_Market::unit_or(u,new Coverage_Market::unit_leaf(actions[i]));
-        } else {
-          u=new Coverage_Market::unit_and(u,new Coverage_Market::unit_leaf(actions[i]));
-        }
-      } else {
-	u=new Coverage_Market::unit_leaf(actions[i]);
-      }
+    if (actions.size()==1) {
+      u=new Coverage_Market::unit_leaf(actions[0]);
+    } /*else {
+      if (actions.size()==2) {
+	Coverage_Market::unit *l,*r;
+	l=new Coverage_Market::unit_leaf(actions[0]);
+	r=new Coverage_Market::unit_leaf(actions[1]);
+	if (m=='e') {
+	  u=new Coverage_Market::unit_or(l,r);
+	} else {
+	  u=new Coverage_Market::unit_and(l,r);	  
+	}
+	} */else {
+	for(unsigned int i=0; i < actions.size(); i++) {
+	  if (!u) {
+	    if (m=='e') {
+	      u=new Coverage_Market::unit_manyleafor();
+	    } else {
+	      u=new Coverage_Market::unit_manyleafand();
+	    }
+	  }
+	  ((unit_manyleaf*)u)->my_action.push_back(actions[i]);
+	  ((unit_manyleaf*)u)->value    .push_back(0);
+	  u->value.second++;
+	}
+	/*      }*/
     }
   } else {
     int an = model->action_number(action.c_str());

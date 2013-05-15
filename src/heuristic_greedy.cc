@@ -129,6 +129,8 @@ int Heuristic_greedy::getIAction()
 
       if (!alg.status) {
         status=false;
+	errormsg = "Alg:" + alg.errormsg;
+	return 0;
       }
 
       if (m_path.size() > 0) {
