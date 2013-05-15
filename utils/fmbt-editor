@@ -610,10 +610,10 @@ Keyboard shortcuts:<br>
         if "fmbt-aalc: parsing AAL failed" in errorMsg:
             for filename, lineno, whatswrong in re.findall("^(.+):([0-9]+):(.*error.*)", errorMsg):
                 if filename == self._modelFileName or filename in self._modelEditorFiles:
-                    self.preview_error.insertHtml('<table><tr><td style="color: darkred;">AAL syntax error in file <a href="%s:%s">%s</a>, line %s</td></tr>' %
+                    self.preview_error.insertHtml('<table><tr><td style="color: darkred;">AAL error in file <a href="%s:%s">%s</a>, line %s</td></tr>' %
                                                   (urllib.quote(filename), lineno, filename, lineno))
                 else:
-                    self.preview_error.insertHtml('<table><tr><td style="color: darkred;">AAL syntax error in file %s, line %s</td></tr>' %
+                    self.preview_error.insertHtml('<table><tr><td style="color: darkred;">AAL error in file %s, line %s</td></tr>' %
                                                   (filename, lineno))
                 self.preview_error.insertHtml('<tr><td style="padding-left: 40 px;">%s</td></tr></table>' % (whatswrong,))
         elif "Traceback (most recent call last):" in errorMsg:
