@@ -27,6 +27,8 @@ import commands
 import subprocess
 import os
 import sys
+import time
+import zlib
 
 import fmbt
 import fmbtgti
@@ -120,36 +122,44 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
         return self._agentWaitAnswer()
 
     def sendPress(self, keyName):
-        return self._agentCmd("kp%s" % (keyName,))[0]
+        return self._agentCmd("kp %s" % (keyName,))[0]
 
     def sendKeyDown(self, keyName):
-        return self._agentCmd("kd%s" % (keyName,))[0]
+        return self._agentCmd("kd %s" % (keyName,))[0]
 
     def sendKeyUp(self, keyName):
-        return self._agentCmd("ku%s" % (keyName,))[0]
+        return self._agentCmd("ku %s" % (keyName,))[0]
 
     def sendTap(self, x, y):
-        return self._agentCmd("tt%s %s 1" % (x, y))[0]
+        return self._agentCmd("tt %s %s 1" % (x, y))[0]
 
     def sendTouchDown(self, x, y):
-        return self._agentCmd("td%s %s 1" % (x, y))[0]
+        return self._agentCmd("td %s %s 1" % (x, y))[0]
 
     def sendTouchMove(self, x, y):
-        return self._agentCmd("tm%s %s" % (x, y))[0]
+        return self._agentCmd("tm %s %s" % (x, y))[0]
 
     def sendTouchUp(self, x, y):
-        return self._agentCmd("tu%s %s 1" % (x, y))[0]
+        return self._agentCmd("tu %s %s 1" % (x, y))[0]
 
     def sendType(self, string):
-        return self._agentCmd("kt%s" % (base64.b64encode(cPickle.dumps(string))))[0]
+        return self._agentCmd("kt %s" % (base64.b64encode(cPickle.dumps(string))))[0]
 
     def recvScreenshot(self, filename):
-        remoteFilename = "/tmp/fmbttizen.screenshot.xwd"
-        s, o = commands.getstatusoutput("sdb shell 'xwd -root -out %s'" % (remoteFilename,))
-        s, o = commands.getstatusoutput("sdb pull %s %s.xwd" % (remoteFilename, filename))
-        s, o = commands.getstatusoutput("sdb shell rm %s" % (remoteFilename,))
-        s, o = commands.getstatusoutput("convert %s.xwd %s" % (filename, filename))
-        os.remove("%s.xwd" % (filename,))
+        time_start = time.time()
+        rv, img = self._agentCmd("ss")
+        header, data = zlib.decompress(img).split('\n',1)
+        width, height, depth, bpp = [int(n) for n in header.split()[1:]]
+
+        fmbtgti.eye4graphics.bgrx2rgb(data, width, height);
+
+        # TODO: use libimagemagick directly to save data to png?
+        ppm_header = "P6\n%d %d\n%d\n" % (width, height, 255)
+        f = file(filename + ".ppm", "w").write(ppm_header + data[:width*height*3])
+        s, o = commands.getstatusoutput("convert %s.ppm %s" % (filename, filename))
+        os.remove("%s.ppm" % (filename,))
+
+        time_end = time.time()
         return True
 
     def recvSerialNumber(self):
@@ -171,17 +181,62 @@ import re
 import struct
 import sys
 import time
+import zlib
 
+libc           = ctypes.CDLL("libc.so.6")
 libX11         = ctypes.CDLL("libX11.so")
 libXtst        = ctypes.CDLL("libXtst.so.6")
+
+class XImage(ctypes.Structure):
+    _fields_ = [
+        ('width'            , ctypes.c_int),
+        ('height'           , ctypes.c_int),
+        ('xoffset'          , ctypes.c_int),
+        ('format'           , ctypes.c_int),
+        ('data'             , ctypes.c_void_p),
+        ('byte_order'       , ctypes.c_int),
+        ('bitmap_unit'      , ctypes.c_int),
+        ('bitmap_bit_order' , ctypes.c_int),
+        ('bitmap_pad'       , ctypes.c_int),
+        ('depth'            , ctypes.c_int),
+        ('bytes_per_line'   , ctypes.c_int),
+        ('bits_per_pixel'   , ctypes.c_int)]
+
+libc.write.argtypes           = [ctypes.c_int, ctypes.c_void_p, ctypes.c_size_t]
+libX11.XAllPlanes.restype     = ctypes.c_ulong
+libX11.XGetImage.restype      = ctypes.POINTER(XImage)
+libX11.XRootWindow.restype    = ctypes.c_uint32
+libX11.XOpenDisplay.restype   = ctypes.c_void_p
+libX11.XDefaultScreen.restype = ctypes.c_int
+
+# X11 constants, see Xlib.h
+
 X_CurrentTime  = ctypes.c_ulong(0)
-X_True         = ctypes.c_int(1)
 X_False        = ctypes.c_int(0)
-X_NULL         = ctypes.c_char_p(0)
+X_NULL         = ctypes.c_void_p(0)
+X_True         = ctypes.c_int(1)
+X_ZPixmap      = ctypes.c_int(2)
 NoSymbol       = 0
 
-display        = ctypes.c_void_p(libX11.XOpenDisplay(X_NULL))
-current_screen = ctypes.c_int(-1)
+# Connect to X server, get root window size for screenshots
+
+display        = libX11.XOpenDisplay(X_NULL)
+current_screen = libX11.XDefaultScreen(display)
+root_window    = libX11.XRootWindow(display, current_screen)
+X_AllPlanes    = libX11.XAllPlanes()
+
+ref            = ctypes.byref
+__rw           = ctypes.c_uint(0)
+__x            = ctypes.c_int(0)
+__y            = ctypes.c_int(0)
+root_width     = ctypes.c_uint(0)
+root_height    = ctypes.c_uint(0)
+__bwidth       = ctypes.c_uint(0)
+root_depth     = ctypes.c_uint(0)
+
+libX11.XGetGeometry(display, root_window, ref(__rw), ref(__x), ref(__y),
+                    ref(root_width), ref(root_height), ref(__bwidth),
+                    ref(root_depth))
 
 # See struct input_event in /usr/include/linux/input.h
 if platform.architecture()[0] == "32bit": _input_event = 'IIHHi'
@@ -296,49 +351,67 @@ def typeSequence(s):
     if skipped: return False, skipped
     else: return True, skipped
 
+def takeScreenshot():
+    image_p = libX11.XGetImage(display, root_window,
+                               0, 0, root_width, root_height,
+                               X_AllPlanes, X_ZPixmap)
+    image = image_p[0]
+    # FMBTRAWX11 image format header:
+    # FMBTRAWX11 [width] [height] [color depth] [bits per pixel]<linefeed>
+    # Binary data
+    rawfmbt_header = "FMBTRAWX11 %d %d %d %d\\n" % (
+                     image.width, image.height, root_depth.value, image.bits_per_pixel)
+    rawfmbt_data = ctypes.string_at(image.data, image.height * image.bytes_per_line)
+    compressed_image = zlib.compress(rawfmbt_header + rawfmbt_data, 3)
+    libX11.XDestroyImage(image_p)
+    return True, compressed_image
+
 write_response(True, 0.0)
 cmd = read_cmd()
 while cmd:
-    if cmd.startswith("tm"):   # touch move(x, y)
-        xs, ys = cmd[2:].strip().split()
+    if cmd.startswith("tm "):   # touch move(x, y)
+        xs, ys = cmd[3:].strip().split()
         libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
         libX11.XFlush(display)
         write_response(True, None)
-    elif cmd.startswith("tt"): # touch tap(x, y, button)
-        xs, ys, button = cmd[2:].strip().split()
+    elif cmd.startswith("tt "): # touch tap(x, y, button)
+        xs, ys, button = cmd[3:].strip().split()
         button = int(button)
         libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
         libXtst.XTestFakeButtonEvent(display, button, X_True, X_CurrentTime)
         libXtst.XTestFakeButtonEvent(display, button, X_False, X_CurrentTime)
         libX11.XFlush(display)
         write_response(True, None)
-    elif cmd.startswith("td"): # touch down(x, y, button)
-        xs, ys, button = cmd[2:].strip().split()
+    elif cmd.startswith("td "): # touch down(x, y, button)
+        xs, ys, button = cmd[3:].strip().split()
         button = int(button)
         libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
         libXtst.XTestFakeButtonEvent(display, button, X_True, X_CurrentTime)
         libX11.XFlush(display)
         write_response(True, None)
-    elif cmd.startswith("tu"): # touch up(x, y, button)
-        xs, ys, button = cmd[2:].strip().split()
+    elif cmd.startswith("tu "): # touch up(x, y, button)
+        xs, ys, button = cmd[3:].strip().split()
         button = int(button)
         libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
         libXtst.XTestFakeButtonEvent(display, button, X_False, X_CurrentTime)
         libX11.XFlush(display)
         write_response(True, None)
-    elif cmd.startswith("kd"): # hw key down
-        rv = sendHwKey(deviceToEventFile[hwKeyDevice[cmd[2:]]], InputKeys.index(cmd[2:]), 0, -1)
+    elif cmd.startswith("kd "): # hw key down
+        rv = sendHwKey(deviceToEventFile[hwKeyDevice[cmd[3:]]], InputKeys.index(cmd[3:]), 0, -1)
         write_response(rv, None)
-    elif cmd.startswith("kp"): # hw key press
-        rv = sendHwKey(deviceToEventFile[hwKeyDevice[cmd[2:]]], InputKeys.index(cmd[2:]), 0, 0)
+    elif cmd.startswith("kp "): # hw key press
+        rv = sendHwKey(deviceToEventFile[hwKeyDevice[cmd[3:]]], InputKeys.index(cmd[3:]), 0, 0)
         write_response(rv, None)
-    elif cmd.startswith("ku"): # hw key up
-        rv = sendHwKey(deviceToEventFile[hwKeyDevice[cmd[2:]]], InputKeys.index(cmd[2:]), -1, 0)
+    elif cmd.startswith("ku "): # hw key up
+        rv = sendHwKey(deviceToEventFile[hwKeyDevice[cmd[3:]]], InputKeys.index(cmd[3:]), -1, 0)
         write_response(rv, None)
-    elif cmd.startswith("kt"): # send x events
-        rv, skippedSymbols = typeSequence(cPickle.loads(base64.b64decode(cmd[2:])))
+    elif cmd.startswith("kt "): # send x events
+        rv, skippedSymbols = typeSequence(cPickle.loads(base64.b64decode(cmd[3:])))
         libX11.XFlush(display)
         write_response(rv, skippedSymbols)
+    elif cmd.startswith("ss"): # save screenshot
+        rv, compressedImage = takeScreenshot()
+        write_response(rv, compressedImage)
 
     cmd = read_cmd()
 

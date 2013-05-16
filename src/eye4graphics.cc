@@ -524,6 +524,16 @@ void closeImage(void * image)
         delete static_cast<Image*>(image);
 }
 
+void bgrx2rgb(char* data, int width, int height)
+{
+    for (int i = 0; i < height * width; ++i) {
+        char tmp = data[4*i];
+        data[3*i] = data[4*i + 2];
+        data[3*i + 1] = data[4*i + 1];
+        data[3*i + 2] = tmp;
+    }
+}
+
 // make library:
 // g++ -fPIC -shared -o eye4graphics.so -O3 -Wall `pkg-config --cflags --libs Magick++` eye4graphics.cc
 

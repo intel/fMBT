@@ -109,4 +109,7 @@ extern "C" {
     void* openImage(const char* imagefile);
 
     void closeImage(void* image);
+
+    void bgrx2rgb(char* data, int width, int height);
+
 }
