@@ -15,10 +15,40 @@
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
 """
-This is library implements fmbtandroid.Device-like interface for
-Tizen devices.
+This is library implements fMBT GUITestInterface for Tizen devices and
+emulators.
 
-WARNING: THIS IS A VERY SLOW PROTOTYPE WITHOUT ANY ERROR HANDLING.
+
+Example 1: Take a screenshot on the lock. Run in Python:
+
+import fmbttizen, time
+d = fmbttizen.Device()
+d.pressPower(), time.sleep(1), d.pressPower(), time.sleep(1)
+d.refreshScreenshot().save("/tmp/lockscreen.png")
+
+Then save the lock on the lockscreen and as "lock.png". Install
+shutter and run in shell:
+
+display /tmp/lockscreen.png &
+shutter -s --exit_after_capture -o lock.png
+
+
+Example 2: Open the lock screen, launch Settings
+
+import fmbttizen, time
+d = fmbttizen.Device()
+d.enableVisualLog("device.html")
+d.pressHome()
+time.sleep(1)
+d.refreshScreenshot()
+if d.verifyBitmap("lock.png"):
+    d.swipeBitmap("lock.png", "east") # open screenlock
+    time.sleep(1)
+    d.pressHome()
+
+if d.waitOcrText("Settings"):
+    d.tapOcrText("Settings", tapPos=(0.5, -1))
+
 """
 
 import base64
@@ -26,12 +56,17 @@ import cPickle
 import commands
 import subprocess
 import os
+import Queue
 import sys
+import thread
 import time
 import zlib
 
 import fmbt
 import fmbtgti
+
+def _adapterLog(msg):
+    fmbt.adapterlog("fmbttizen: %s" % (msg,))
 
 def _run(command, expectedExitStatus=None):
     if type(command) == str: shell=True
@@ -63,12 +98,96 @@ def _run(command, expectedExitStatus=None):
 
     return exitStatus, out, err
 
+def _fileToQueue(f, outQueue):
+    line = f.readline()
+    while line != "":
+        outQueue.put(line)
+        line = f.readline()
+    f.close()
+
 class Device(fmbtgti.GUITestInterface):
     def __init__(self):
         fmbtgti.GUITestInterface.__init__(self)
         self.setConnection(TizenDeviceConnection())
 
+    def pressPower(self, **pressKeyKwArgs):
+        """
+        Press the power button.
+
+        Parameters:
+
+          long, hold (optional):
+                  refer to pressKey documentation.
+        """
+        return self.pressKey("POWER", **pressKeyKwArgs)
+
+    def pressVolumeUp(self, **pressKeyKwArgs):
+        """
+        Press the volume up button.
+
+        Parameters:
+
+          long, hold (optional):
+                  refer to pressKey documentation.
+        """
+        return self.pressKey("VOLUME_UP", **pressKeyKwArgs)
+
+    def pressVolumeDown(self, **pressKeyKwArgs):
+        """
+        Press the volume down button.
+
+        Parameters:
+
+          long, hold (optional):
+                  refer to pressKey documentation.
+        """
+        return self.pressKey("VOLUME_DOWN", **pressKeyKwArgs)
+
+    def pressHome(self, **pressKeyKwArgs):
+        """
+        Press the home button.
+
+        Parameters:
+
+          long, hold (optional):
+                  refer to pressKey documentation.
+        """
+        return self.pressKey("HOME", **pressKeyKwArgs)
+
+    def shell(self, shellCommand):
+        """
+        Execute shell command through sdb shell.
+
+        Parameters:
+
+          shellCommand (string)
+                  command to be executed in sdb shell.
+
+        Returns output of "sdb shell" command.
+
+        If you wish to receive exitstatus or standard output and error
+        separated from shellCommand, refer to shellSOE().
+        """
+        return _run(["sdb", "shell", shellCommand], expectedExitStatus=range(256))[1]
+
+    def shellSOE(self, shellCommand):
+        """
+        Get status, output and error of executing shellCommand on Tizen device
+
+        Parameters:
+
+          shellCommand (string)
+                  command to be executed on device.
+
+        Returns tuple (exitStatus, standardOutput, standardError).
+        """
+        return self._conn.shellSOE(shellCommand)
+
 class TizenDeviceConnection(fmbtgti.GUITestConnection):
+    """
+    TizenDeviceConnection copies _tizenAgent to Tizen device,
+    and runs & communicates with it via sdb shell.
+    """
     def __init__(self):
         self._serialNumber = self.recvSerialNumber()
         self.connect()
@@ -79,47 +198,80 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
 
         file(agentFilename, "w").write(_tizenAgent)
 
-        status, _, _ = _run(["sdb", "push", agentFilename, agentRemoteFilename])
+        uploadCmd = ["sdb", "push", agentFilename, agentRemoteFilename]
+        try:
+            status, out, err = _run(uploadCmd, range(256))
+            if status == 127:
+                raise TizenConnectionError('Executing "sdb push" failed. Check your Tizen SDK installation.')
+            elif status != 0:
+                if "device not found" in err:
+                    raise TizenDeviceNotFoundError("Tizen device not found.")
+                else:
+                    raise TizenConnectionError('Executing "%s" failed: %s' % (' '.join(uploadCmd), err + " " + out))
 
-        self._sdbShell = subprocess.Popen(["sdb", "shell"], shell=False,
-                                          stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                          close_fds=True)
-        self._sdbShell.stdin.write("\r")
-        ok, version = self._agentCmd("python %s; exit" % (agentRemoteFilename,))
-        os.remove(agentFilename)
+            try:
+                self._sdbShell = subprocess.Popen(["sdb", "shell"], shell=False,
+                                                  stdin=subprocess.PIPE,
+                                                  stdout=subprocess.PIPE,
+                                                  stderr=subprocess.PIPE,
+                                                  close_fds=True)
+            except OSError, msg:
+                raise TizenConnectionError('Executing "sdb shell" failed. Check your Tizen SDK installation.')
+            self._sdbShellErrQueue = Queue.Queue()
+            thread.start_new_thread(_fileToQueue, (self._sdbShell.stderr, self._sdbShellErrQueue))
+
+            self._sdbShell.stdin.write("\r")
+            try:
+                ok, version = self._agentCmd("python %s; exit" % (agentRemoteFilename,))
+            except IOError:
+                raise TizenConnectionError('Connecting to Tizen device with "sdb shell" failed.')
+        finally:
+            os.remove(agentFilename)
         return ok
+
+    def reportErrorsInQueue(self):
+        while True:
+            try: l = self._sdbShellErrQueue.get_nowait()
+            except Queue.Empty: return
+            _adapterLog("fmbttizen agent error: %s" % (l,))
 
     def close(self):
         self._sdbShell.stdin.close()
         self._sdbShell.stdout.close()
         self._sdbShell.terminate()
 
-    def _agentWaitAnswer(self):
+    def _agentAnswer(self):
         errorLinePrefix = "FMBTAGENT ERROR "
         okLinePrefix = "FMBTAGENT OK "
         l = self._sdbShell.stdout.readline().strip()
+        output = []
         while True:
             if l.startswith(okLinePrefix):
                 return True, cPickle.loads(base64.b64decode(l[len(okLinePrefix):]))
             elif l.startswith(errorLinePrefix):
                 return False, cPickle.loads(base64.b64decode(l[len(errorLinePrefix):]))
             else:
+                output.append(l)
                 pass
             l = self._sdbShell.stdout.readline()
-            if l == "": raise IOError("Unexpected end of sdb shell output")
+            if l == "":
+                raise IOError("Unexpected termination of sdb shell: %s" % ("\n".join(output)))
             l = l.strip()
 
     def _agentCmd(self, command, retry=3):
         try:
             self._sdbShell.stdin.write("%s\r" % (command,))
             self._sdbShell.stdin.flush()
-        except IOError:
+        except IOError, msg:
             if retry > 0:
+                time.sleep(.2)
+                self.reportErrorsInQueue()
+                _adapterLog('Error when sending command "%s": %s.' % (command, msg))
                 self.connect()
                 self._agentCmd(command, retry=retry-1)
             else:
                 raise
-        return self._agentWaitAnswer()
+        return self._agentAnswer()
 
     def sendPress(self, keyName):
         return self._agentCmd("kp %s" % (keyName,))[0]
@@ -146,31 +298,36 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
         return self._agentCmd("kt %s" % (base64.b64encode(cPickle.dumps(string))))[0]
 
     def recvScreenshot(self, filename):
-        time_start = time.time()
         rv, img = self._agentCmd("ss")
-        header, data = zlib.decompress(img).split('\n',1)
-        width, height, depth, bpp = [int(n) for n in header.split()[1:]]
+        if rv == False:
+            return False
+        try:
+            header, data = zlib.decompress(img).split('\n',1)
+            width, height, depth, bpp = [int(n) for n in header.split()[1:]]
+        except Exception, e:
+            raise TizenConnectionError("Corrupted screenshot data: %s" % (e,))
 
         fmbtgti.eye4graphics.bgrx2rgb(data, width, height);
 
         # TODO: use libimagemagick directly to save data to png?
         ppm_header = "P6\n%d %d\n%d\n" % (width, height, 255)
         f = file(filename + ".ppm", "w").write(ppm_header + data[:width*height*3])
-        s, o = commands.getstatusoutput("convert %s.ppm %s" % (filename, filename))
+        _run(["convert", filename + ".ppm", filename], expectedExitStatus=0)
         os.remove("%s.ppm" % (filename,))
-
-        time_end = time.time()
         return True
 
     def recvSerialNumber(self):
         s, o = commands.getstatusoutput("sdb get-serialno")
         return o.splitlines()[-1]
 
+    def shellSOE(self, shellCommand):
+        _, (s, o, e) = self._agentCmd("es %s" % (base64.b64encode(cPickle.dumps(shellCommand)),))
+        return s, o, e
+
     def target(self):
         return self._serialNumber
 
-# _tizenAgent code is executed on Tizen device in sdb shell.
-# The agent synthesizes X events.
+# _tizenAgent code is executed on Tizen device through sdb shell.
 _tizenAgent = """
 import base64
 import cPickle
@@ -179,6 +336,7 @@ import os
 import platform
 import re
 import struct
+import subprocess
 import sys
 import time
 import zlib
@@ -366,6 +524,18 @@ def takeScreenshot():
     libX11.XDestroyImage(image_p)
     return True, compressed_image
 
+def shellSOE(command):
+    try:
+        p = subprocess.Popen(command, shell=True,
+                             stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE,
+                             close_fds=True)
+    except Exception, e:
+        return False, (None, None, e)
+    out, err = p.communicate()
+    return True, (p.returncode, out, err)
+
 write_response(True, 0.0)
 cmd = read_cmd()
 while cmd:
@@ -412,6 +582,9 @@ while cmd:
     elif cmd.startswith("ss"): # save screenshot
         rv, compressedImage = takeScreenshot()
         write_response(rv, compressedImage)
+    elif cmd.startswith("es "): # execute shell
+        rv, soe = shellSOE(cPickle.loads(base64.b64decode(cmd[3:])))
+        write_response(rv, soe)
 
     cmd = read_cmd()
 
@@ -419,3 +592,5 @@ display = libX11.XCloseDisplay(display)
 """
 
 class FMBTTizenError(Exception): pass
+class TizenConnectionError(FMBTTizenError): pass
+class TizenDeviceNotFoundError(TizenConnectionError): pass
