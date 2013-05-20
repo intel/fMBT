@@ -51,6 +51,7 @@ if d.waitOcrText("Settings"):
 
 """
 
+import atexit
 import base64
 import cPickle
 import commands
@@ -106,9 +107,22 @@ def _fileToQueue(f, outQueue):
     f.close()
 
 class Device(fmbtgti.GUITestInterface):
-    def __init__(self):
+    def __init__(self, debugAgentFile=None):
+        """
+        Parameters:
+
+          debugAgentFile (file-like object)
+                  record communication with the fMBT Tizen agent to
+                  given file. The default is None: communication is
+                  not recorded.
+        """
         fmbtgti.GUITestInterface.__init__(self)
-        self.setConnection(TizenDeviceConnection())
+        self.setConnection(TizenDeviceConnection(debugAgentFile=debugAgentFile))
+
+    def close(self):
+        fmbtgti.GUITestInterface.close(self)
+        if hasattr(self, "_conn"):
+            self._conn.close()
 
     def pressPower(self, **pressKeyKwArgs):
         """
@@ -183,16 +197,32 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self._conn.shellSOE(shellCommand)
 
+_g_sdbProcesses = set()
+def _forceCloseSdbProcesses():
+    for p in _g_sdbProcesses:
+        try: p.write("quit\n")
+        except: pass
+        try: p.terminate()
+        except: pass
+atexit.register(_forceCloseSdbProcesses)
+
 class TizenDeviceConnection(fmbtgti.GUITestConnection):
     """
     TizenDeviceConnection copies _tizenAgent to Tizen device,
     and runs & communicates with it via sdb shell.
     """
-    def __init__(self):
+    def __init__(self, debugAgentFile=None):
         self._serialNumber = self.recvSerialNumber()
-        self.connect()
+        self._sdbShell = None
+        self._debugAgentFile = debugAgentFile
+        self.open()
 
-    def connect(self):
+    def __del__(self):
+        self.close()
+
+    def open(self):
+        self.close()
+
         agentFilename = "/tmp/fmbttizen-agent.py"
         agentRemoteFilename = "/tmp/fmbttizen-agent.py"
 
@@ -217,6 +247,7 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
                                                   close_fds=True)
             except OSError, msg:
                 raise TizenConnectionError('Executing "sdb shell" failed. Check your Tizen SDK installation.')
+            _g_sdbProcesses.add(self._sdbShell)
             self._sdbShellErrQueue = Queue.Queue()
             thread.start_new_thread(_fileToQueue, (self._sdbShell.stderr, self._sdbShellErrQueue))
 
@@ -233,19 +264,34 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
         while True:
             try: l = self._sdbShellErrQueue.get_nowait()
             except Queue.Empty: return
+            if self._debugAgentFile: self._debugAgentFile.write("<2 %s" % (l,))
             _adapterLog("fmbttizen agent error: %s" % (l,))
 
     def close(self):
-        self._sdbShell.stdin.close()
-        self._sdbShell.stdout.close()
-        self._sdbShell.terminate()
+        if self._sdbShell != None:
+            try: self._agentCmd("quit", retry=0)
+            except: pass
+            try: self._sdbShell.terminate()
+            except: pass
+            try: self._sdbShell.stdin.close()
+            except: pass
+            try: self._sdbShell.stdout.close()
+            except: pass
+            try: self._sdbShell.stderr.close()
+            except: pass
+            self.reportErrorsInQueue()
+            _g_sdbProcesses.remove(self._sdbShell)
+        self._sdbShell = None
 
     def _agentAnswer(self):
         errorLinePrefix = "FMBTAGENT ERROR "
         okLinePrefix = "FMBTAGENT OK "
-        l = self._sdbShell.stdout.readline().strip()
+        l = self._sdbShell.stdout.readline()
         output = []
         while True:
+            if self._debugAgentFile:
+                if len(l) > 72: self._debugAgentFile.write("<1 %s...\n" % (l[:72],))
+                else: self._debugAgentFile.write("<1 %s\n" % (l,))
             if l.startswith(okLinePrefix):
                 return True, cPickle.loads(base64.b64decode(l[len(okLinePrefix):]))
             elif l.startswith(errorLinePrefix):
@@ -259,6 +305,7 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
             l = l.strip()
 
     def _agentCmd(self, command, retry=3):
+        if self._debugAgentFile: self._debugAgentFile.write(">0 %s\n" % (command,))
         try:
             self._sdbShell.stdin.write("%s\r" % (command,))
             self._sdbShell.stdin.flush()
@@ -267,7 +314,7 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
                 time.sleep(.2)
                 self.reportErrorsInQueue()
                 _adapterLog('Error when sending command "%s": %s.' % (command, msg))
-                self.connect()
+                self.open()
                 self._agentCmd(command, retry=retry-1)
             else:
                 raise
@@ -306,6 +353,8 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
             width, height, depth, bpp = [int(n) for n in header.split()[1:]]
         except Exception, e:
             raise TizenConnectionError("Corrupted screenshot data: %s" % (e,))
+        if len(data) != width * height * 4:
+            raise FMBTTizenError("Image data size mismatch.")
 
         fmbtgti.eye4graphics.bgrx2rgb(data, width, height);
 
@@ -340,6 +389,7 @@ import subprocess
 import sys
 import time
 import zlib
+import termios
 
 libc           = ctypes.CDLL("libc.so.6")
 libX11         = ctypes.CDLL("libX11.so")
@@ -376,73 +426,6 @@ X_True         = ctypes.c_int(1)
 X_ZPixmap      = ctypes.c_int(2)
 NoSymbol       = 0
 
-# Connect to X server, get root window size for screenshots
-
-display        = libX11.XOpenDisplay(X_NULL)
-current_screen = libX11.XDefaultScreen(display)
-root_window    = libX11.XRootWindow(display, current_screen)
-X_AllPlanes    = libX11.XAllPlanes()
-
-ref            = ctypes.byref
-__rw           = ctypes.c_uint(0)
-__x            = ctypes.c_int(0)
-__y            = ctypes.c_int(0)
-root_width     = ctypes.c_uint(0)
-root_height    = ctypes.c_uint(0)
-__bwidth       = ctypes.c_uint(0)
-root_depth     = ctypes.c_uint(0)
-
-libX11.XGetGeometry(display, root_window, ref(__rw), ref(__x), ref(__y),
-                    ref(root_width), ref(root_height), ref(__bwidth),
-                    ref(root_depth))
-
-# See struct input_event in /usr/include/linux/input.h
-if platform.architecture()[0] == "32bit": _input_event = 'IIHHi'
-else: _input_event = 'QQHHi'
-# Event and keycodes are in input.h, too.
-_EV_KEY = 0x01
-
-# Set input device names (in /proc/bus/input/devices)
-# for pressing hardware keys.
-try: cpuinfo = file("/proc/cpuinfo").read()
-except: cpuinfo = ""
-
-if 'TRATS' in cpuinfo:
-    # Running on Lunchbox
-    hwKeyDevice = {
-        "POWER": "/dev/input/event1",
-        "VOLUMEUP": "gpio-keys",
-        "VOLUMEDOWN": "gpio-keys",
-        "HOME": "max8997-muic"
-        }
-    nonstandardKeycodes = {"HOME": 139}
-elif 'QEMU Virtual CPU' in cpuinfo:
-    # Running on Tizen emulator
-    hwKeyDevice = {
-        "POWER": "Power Button",
-        "VOLUMEUP": "AT Translated Set 2 hardkeys",
-        "VOLUMEDOWN": "AT Translated Set 2 hardkeys",
-        "HOME": "AT Translated Set 2 hardkeys"
-        }
-    nonstandardKeycodes = {}
-else:
-    # Running on some other device
-    hwKeyDevice = {
-        "POWER": "msic_power_btn",
-        "VOLUMEUP": "gpio-keys",
-        "VOLUMEDOWN": "gpio-keys",
-        "HOME": "mxt224_key_0"
-        }
-    nonstandardKeycodes = {}
-
-# Read input devices
-deviceToEventFile = {}
-for _l in file("/proc/bus/input/devices"):
-    if _l.startswith('N: Name="'): _device = _l.split('"')[1]
-    elif _l.startswith("H: Handlers=") and "event" in _l:
-        try: deviceToEventFile[_device] = "/dev/input/" + re.findall("(event[0-9]+)", _l)[0]
-        except Exception, e: pass
-
 # InputKeys contains key names known to input devices, see
 # linux/input.h or http://www.usb.org/developers/hidpage. The order is
 # significant, because keyCode = InputKeys.index(keyName).
@@ -471,6 +454,73 @@ InputKeys = [
     "POWER",
     "KPEQUAL", "KPPLUSMINUS", "PAUSE", "SCALE", "KPCOMMA", "HANGEUL",
     "HANGUEL", "HANJA", "YEN", "LEFTMETA", "RIGHTMETA", "COMPOSE"]
+_inputKeyNameToCode={}
+for c, n in enumerate(InputKeys):
+    _inputKeyNameToCode[n] = c
+
+# See struct input_event in /usr/include/linux/input.h
+if platform.architecture()[0] == "32bit": _input_event = 'IIHHi'
+else: _input_event = 'QQHHi'
+# Event and keycodes are in input.h, too.
+_EV_KEY = 0x01
+
+# Set input device names (in /proc/bus/input/devices)
+# for pressing hardware keys.
+try: cpuinfo = file("/proc/cpuinfo").read()
+except: cpuinfo = ""
+
+if 'TRATS' in cpuinfo:
+    # Running on Lunchbox
+    hwKeyDevice = {
+        "POWER": "gpio-keys",
+        "VOLUMEUP": "gpio-keys",
+        "VOLUMEDOWN": "gpio-keys",
+        "HOME": "gpio-keys"
+        }
+    _inputKeyNameToCode["HOME"] = 139
+elif 'QEMU Virtual CPU' in cpuinfo:
+    # Running on Tizen emulator
+    hwKeyDevice = {
+        "POWER": "Power Button",
+        "VOLUMEUP": "AT Translated Set 2 hardkeys",
+        "VOLUMEDOWN": "AT Translated Set 2 hardkeys",
+        "HOME": "AT Translated Set 2 hardkeys"
+        }
+else:
+    # Running on some other device
+    hwKeyDevice = {
+        "POWER": "msic_power_btn",
+        "VOLUMEUP": "gpio-keys",
+        "VOLUMEDOWN": "gpio-keys",
+        "HOME": "mxt224_key_0"
+        }
+
+# Read input devices
+deviceToEventFile = {}
+for _l in file("/proc/bus/input/devices"):
+    if _l.startswith('N: Name="'): _device = _l.split('"')[1]
+    elif _l.startswith("H: Handlers=") and "event" in _l:
+        try: deviceToEventFile[_device] = "/dev/input/" + re.findall("(event[0-9]+)", _l)[0]
+        except Exception, e: pass
+
+# Connect to X server, get root window size for screenshots
+display        = libX11.XOpenDisplay(X_NULL)
+current_screen = libX11.XDefaultScreen(display)
+root_window    = libX11.XRootWindow(display, current_screen)
+X_AllPlanes    = libX11.XAllPlanes()
+
+ref            = ctypes.byref
+__rw           = ctypes.c_uint(0)
+__x            = ctypes.c_int(0)
+__y            = ctypes.c_int(0)
+root_width     = ctypes.c_uint(0)
+root_height    = ctypes.c_uint(0)
+__bwidth       = ctypes.c_uint(0)
+root_depth     = ctypes.c_uint(0)
+
+libX11.XGetGeometry(display, root_window, ref(__rw), ref(__x), ref(__y),
+                    ref(root_width), ref(root_height), ref(__bwidth),
+                    ref(root_depth))
 
 def read_cmd():
     return sys.stdin.readline().strip()
@@ -482,9 +532,13 @@ def write_response(ok, value):
     sys.stdout.write(response)
     sys.stdout.flush()
 
-def sendHwKey(inputDevice, keyCode, delayBeforePress, delayBeforeRelease):
+def sendHwKey(keyName, delayBeforePress, delayBeforeRelease):
+    try: inputDevice = deviceToEventFile[hwKeyDevice[keyName]]
+    except: return False, 'No input device for key "%s"' % (keyName,)
+    try: keyCode = _inputKeyNameToCode[keyName]
+    except: return False, 'No keycode for key "%s"' % (keyName,)
     try: fd = os.open(inputDevice, os.O_WRONLY | os.O_NONBLOCK)
-    except: return False
+    except: return False, 'Unable to open input device "%s" for writing' % (inputDevice,)
     if delayBeforePress > 0: time.sleep(delayBeforePress)
     if delayBeforePress >= 0:
         if os.write(fd, struct.pack(_input_event, int(time.time()), 0, _EV_KEY, keyCode, 1)) > 0:
@@ -494,7 +548,7 @@ def sendHwKey(inputDevice, keyCode, delayBeforePress, delayBeforeRelease):
         if os.write(fd, struct.pack(_input_event, int(time.time()), 0, _EV_KEY, keyCode, 0)) > 0:
             os.write(fd, struct.pack(_input_event, 0, 0, 0, 0, 0))
     os.close(fd)
-    return True
+    return True, None
 
 def typeSequence(s):
     skipped = []
@@ -536,7 +590,14 @@ def shellSOE(command):
     out, err = p.communicate()
     return True, (p.returncode, out, err)
 
-write_response(True, 0.0)
+# Disable terminal echo
+origTermAttrs = termios.tcgetattr(sys.stdin.fileno())
+newTermAttrs = origTermAttrs
+newTermAttrs[3] = origTermAttrs[3] &  ~termios.ECHO
+termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, newTermAttrs)
+
+# Send version number, enter main loop
+write_response(True, "0.0")
 cmd = read_cmd()
 while cmd:
     if cmd.startswith("tm "):   # touch move(x, y)
@@ -567,14 +628,14 @@ while cmd:
         libX11.XFlush(display)
         write_response(True, None)
     elif cmd.startswith("kd "): # hw key down
-        rv = sendHwKey(deviceToEventFile[hwKeyDevice[cmd[3:]]], InputKeys.index(cmd[3:]), 0, -1)
-        write_response(rv, None)
+        rv, msg = sendHwKey(cmd[3:], 0, -1)
+        write_response(rv, msg)
     elif cmd.startswith("kp "): # hw key press
-        rv = sendHwKey(deviceToEventFile[hwKeyDevice[cmd[3:]]], InputKeys.index(cmd[3:]), 0, 0)
-        write_response(rv, None)
+        rv, msg = sendHwKey(cmd[3:], 0, 0)
+        write_response(rv, msg)
     elif cmd.startswith("ku "): # hw key up
-        rv = sendHwKey(deviceToEventFile[hwKeyDevice[cmd[3:]]], InputKeys.index(cmd[3:]), -1, 0)
-        write_response(rv, None)
+        rv, msg = sendHwKey(cmd[3:], -1, 0)
+        write_response(rv, msg)
     elif cmd.startswith("kt "): # send x events
         rv, skippedSymbols = typeSequence(cPickle.loads(base64.b64decode(cmd[3:])))
         libX11.XFlush(display)
@@ -585,10 +646,16 @@ while cmd:
     elif cmd.startswith("es "): # execute shell
         rv, soe = shellSOE(cPickle.loads(base64.b64decode(cmd[3:])))
         write_response(rv, soe)
-
+    elif cmd.startswith("quit"): # quit
+        write_response(rv, True)
+        break
+    else:
+        write_response(False, 'Unknown command: "%s"' % (cmd,))
     cmd = read_cmd()
 
-display = libX11.XCloseDisplay(display)
+libX11.XCloseDisplay(display)
+
+termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, origTermAttrs)
 """
 
 class FMBTTizenError(Exception): pass
