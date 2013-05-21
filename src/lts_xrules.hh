@@ -33,20 +33,7 @@ public:
     for(size_t i=0;i<lts.size();i++) {
       delete lts[i];
     }
-    /*
-    for(size_t i=0;i<res_nodes.size();i++) {
-      delete res_nodes[i];
-    }
-    std::multimap<comp,struct par*>::iterator i;
-    comp c(-1,-1);
-    for(i=bob.begin();i!=bob.end();i++) {
-      if (c!=i->first) {
-	c=i->first;
-	delete i->second;
-      }
-    }
-    bob.clear();
-    */
+
   } // leaks memory.
   virtual bool reset();
   virtual int  execute(int action);
