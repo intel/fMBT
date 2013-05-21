@@ -23,6 +23,27 @@
 
 std::map<std::string,aal*>* aal::storage=NULL;
 
+int aal::input(const std::string& s) {
+  return action("i:"+s);
+}
+
+int aal::output(const std::string& s) {
+  return action("o:"+s);
+}
+
+
+int aal::action(const std::string& s)
+{
+  static std::map<std::string,int> amap;
+
+  if (amap.empty()) {
+    for(unsigned i=0;i<action_names.size();i++) {
+      amap[action_names[i]]=i;
+    }
+  }
+  return amap[s];
+}
+
 void aal::log(const char* format, ...)
 {
   va_list ap;

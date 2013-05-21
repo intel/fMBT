@@ -99,6 +99,11 @@ public:
       delete this;
     }
   }
+
+  int action(const std::string&);
+  int input(const std::string&);
+  int output(const std::string&);
+
   static std::map<std::string,aal*>* storage;
 
 protected:
