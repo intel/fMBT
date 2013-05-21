@@ -25,8 +25,8 @@ bool Xrules_remote::init()
 {
   std::string& name = params;
   std::string model("remote.xrules#");
-  gchar* stdout=NULL;
-  gchar* stderr=NULL;
+  gchar* __stdout=NULL;
+  gchar* __stderr=NULL;
   gint   exit_status=0;
   GError *ger=NULL;
   bool ret;
@@ -38,9 +38,9 @@ bool Xrules_remote::init()
       offset = model.length();
 
   g_spawn_command_line_sync(name.c_str()+offset,
-			    &stdout,&stderr,
+			    &__stdout,&__stderr,
 			    &exit_status,&ger);
-  if (!stdout) {
+  if (!__stdout) {
     errormsg = std::string("xrules_remote cannot execute \"")
       + (name.c_str()+offset) + "\"";
     status = false;
@@ -51,11 +51,11 @@ bool Xrules_remote::init()
         + (name.c_str()+offset) + "\"";
       ret=false;
     } else {
-      params = model + escape_string(stdout);
+      params = model + escape_string(__stdout);
       ret=Lts_xrules::init();
     }
-    g_free(stdout);
-    g_free(stderr);
+    g_free(__stdout);
+    g_free(__stderr);
     g_free(ger);
   }
   return ret;

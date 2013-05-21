@@ -34,18 +34,18 @@ Alphabet* History_remote::set_coverage(Coverage* cov,
   a=alpha;
   c=cov;
 
-  gchar* stdout=NULL;
-  gchar* stderr=NULL;
+  gchar* __stdout=NULL;
   gint   exit_status=0;
   GError *ger=NULL;
 
-  g_spawn_command_line_sync(cmd.c_str(),&stdout,&stderr,
+  g_spawn_command_line_sync(cmd.c_str(),&__stdout,NULL,
 			    &exit_status,&ger);
 
   /* Let's iterate over the actions and state props */
 
   std::vector<std::string> vec;
-  std::string s(stdout);
+  std::string s(__stdout);
+  g_free(__stdout);
   std::string separator("\n");
   strvec(vec,s,separator);
 
