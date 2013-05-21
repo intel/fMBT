@@ -27,29 +27,29 @@ bool Lts_trace::init()
 {
   std::string& name = params;
   std::string model("trace.lts#");
-  gchar* stdout=NULL;
-  gchar* stderr=NULL;
+  gchar* _stdout=NULL;
+  gchar* _stderr=NULL;
   gint   exit_status=0;
   GError *ger=NULL;
   bool ret;
   std::string cmd("fmbt-log -f $sn:\"$as\" ");
   cmd+=(name.c_str()+strlen("lts_trace#"));
-  g_spawn_command_line_sync(cmd.c_str(),&stdout,&stderr,
+  g_spawn_command_line_sync(cmd.c_str(),&_stdout,&_stderr,
 			    &exit_status,&ger);
-  if (!stdout) {
+  if (!_stdout) {
     errormsg = std::string("Lts_trace cannot execute \"") + cmd + "\"";
     status = false;
     ret = false;
   } else {
-    std::string m=trace2model(stdout);
+    std::string m=trace2model(_stdout);
     model+=m;
     if (exit_status || m=="") {
       ret=false;
     } else {
       ret=Lts::init();
     }
-    g_free(stdout);
-    g_free(stderr);
+    g_free(_stdout);
+    g_free(_stderr);
     g_free(ger);
   }
   return ret;
