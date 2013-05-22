@@ -1,8 +1,19 @@
-fmbt (0.9.2-0.rc0) unstable; urgency=low
+fmbt (0.9.2-1) unstable; urgency=low
 
-  * Development version.
+  * Bug fix release.
+  * Test generator
+    - performance improvements.
+    - fixed a bug that may cause testing disabled steps.
+  * AAL/C++ added missing functionality.
+  * fmbtandroid/fmbttizen/fmbtx11:
+    - platform-independent GUI test interface refactored to fmbtgti.
+    - fmbttizen: lots of bugs fixed, works pretty well now.
+    - fmbtx11 prototype added to enable X11 GUI testing.
+    - findItemsByBitmap finds multiple icons.
+    - bitmap matching performance improved.
+  * examples: AAL/C++ version of the filesystemtest example.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 26 Apr 2013 09:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 21 May 2013 16:42:00 +0300
 
 fmbt (0.9.1-1) unstable; urgency=low
 

@@ -697,6 +697,7 @@ ssize_t bgetline(char **lineptr, size_t *n, FILE *stream, Log& log,bool magic)
             // Remove magic
             ret -= magic_length;
             memmove(*lineptr,*lineptr + magic_length,ret);
+            (*lineptr)[ret] = '\0';
           }
         }
       }
