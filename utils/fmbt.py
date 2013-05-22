@@ -42,6 +42,18 @@ def adapterlog(msg, flush=True):
     try: file("/tmp/fmbt.adapterlog", "a").write("%s\n" % (msg,))
     except: pass
 
+def setAdapterLogWriter(func):
+    """
+    Override low-level adapter log writer with the given function. The
+    function should take two parameters: a file-like object and a log
+    message. The message is formatted and ready to be written to the
+    file. The default is
+
+    lambda fileObj, formattedMsg: fileObj.write(formattedMsg)
+    """
+    global _adapterlogWriter
+    _adapterlogWriter = func
+
 def reportOutput(msg):
     try: file("/tmp/fmbt.reportOutput", "a").write("%s\n" % (msg,))
     except: pass
@@ -73,3 +85,6 @@ def simulated():
     or body block) instead of really executing it.
     """
     return len(_g_simulated_actions) > 0
+
+def _adapterlogWriter(fileObj, formattedMsg):
+    fileObj.write(formattedMsg)

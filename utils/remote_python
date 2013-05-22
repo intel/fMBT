@@ -87,7 +87,7 @@ gLogFile = "/tmp/remote_python.log"
 def log(msg, writeToFile=1, writeToStdout=0, writeToStderr=0):
     timestamped = fmbt.formatAdapterLogMessage(msg.rstrip())
     if writeToFile:
-        file(gLogFile, "a").write(timestamped)
+        fmbt._adapterlogWriter(file(gLogFile, "a"), timestamped)
     if writeToStdout:
         sys.stdout.write('l' + urllib.quote(timestamped[:-1]) + '\n')
         sys.stdout.flush()
