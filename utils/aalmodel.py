@@ -182,7 +182,7 @@ class AALModel:
             stack_element[varname] = copy.deepcopy(self._variables[varname])
         self._stack.append(stack_element)
         self._stack_executed_actions.append([])
-        self._enabled_actions_stack.append(set())
+        self._enabled_actions_stack.append(set(self._enabled_actions_stack[-1]))
 
     def pop(self):
         stack_element = self._stack.pop()
