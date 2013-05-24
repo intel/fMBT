@@ -184,7 +184,7 @@ class Device(fmbtgti.GUITestInterface):
         """
         return _run(["sdb", "shell", shellCommand], expectedExitStatus=range(256))[1]
 
-    def shellSOE(self, shellCommand):
+    def shellSOE(self, shellCommand, username="", password=""):
         """
         Get status, output and error of executing shellCommand on Tizen device
 
@@ -193,9 +193,22 @@ class Device(fmbtgti.GUITestInterface):
           shellCommand (string)
                   command to be executed on device.
 
+          username (string, optional)
+                  username who should execute the command. The default
+                  is "", that is, run as the default user when logged
+                  in using "sdb shell".
+
+          password (string, optional)
+                  if username is given, use given string as
+                  password. The default is "tizen" for user "root",
+                  otherwise "".
+
         Returns tuple (exitStatus, standardOutput, standardError).
         """
-        return self._conn.shellSOE(shellCommand)
+        if username == "root" and password == "":
+            return self._conn.shellSOE(shellCommand, username, "tizen")
+        else:
+            return self._conn.shellSOE(shellCommand, username, password)
 
 _g_sdbProcesses = set()
 def _forceCloseSdbProcesses():
@@ -369,8 +382,9 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
         s, o = commands.getstatusoutput("sdb get-serialno")
         return o.splitlines()[-1]
 
-    def shellSOE(self, shellCommand):
-        _, (s, o, e) = self._agentCmd("es %s" % (base64.b64encode(cPickle.dumps(shellCommand)),))
+    def shellSOE(self, shellCommand, username, password):
+        _, (s, o, e) = self._agentCmd("es %s" % (base64.b64encode(cPickle.dumps(
+                        (shellCommand, username, password))),))
         return s, o, e
 
     def target(self):
@@ -381,6 +395,7 @@ _tizenAgent = """
 import base64
 import cPickle
 import ctypes
+import fcntl
 import os
 import platform
 import re
@@ -392,7 +407,7 @@ import zlib
 import termios
 
 libc           = ctypes.CDLL("libc.so.6")
-libX11         = ctypes.CDLL("libX11.so")
+libX11         = ctypes.CDLL("libX11.so.6")
 libXtst        = ctypes.CDLL("libXtst.so.6")
 
 class XImage(ctypes.Structure):
@@ -590,72 +605,144 @@ def shellSOE(command):
     out, err = p.communicate()
     return True, (p.returncode, out, err)
 
-# Disable terminal echo
-origTermAttrs = termios.tcgetattr(sys.stdin.fileno())
-newTermAttrs = origTermAttrs
-newTermAttrs[3] = origTermAttrs[3] &  ~termios.ECHO
-termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, newTermAttrs)
+def waitOutput(nonblockingFd, expectedOutput, timeout, pollInterval=0.1):
+    start = time.time()
+    endTime = start + timeout
+    s = ""
+    try: s += nonblockingFd.read()
+    except IOError: pass
+    while (not expectedOutput in s) and time.time() < endTime:
+        time.sleep(pollInterval)
+        try: s += nonblockingFd.read()
+        except IOError: pass
+    return expectedOutput in s, s
 
-# Send version number, enter main loop
-write_response(True, "0.0")
-cmd = read_cmd()
-while cmd:
-    if cmd.startswith("tm "):   # touch move(x, y)
-        xs, ys = cmd[3:].strip().split()
-        libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
-        libX11.XFlush(display)
-        write_response(True, None)
-    elif cmd.startswith("tt "): # touch tap(x, y, button)
-        xs, ys, button = cmd[3:].strip().split()
-        button = int(button)
-        libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
-        libXtst.XTestFakeButtonEvent(display, button, X_True, X_CurrentTime)
-        libXtst.XTestFakeButtonEvent(display, button, X_False, X_CurrentTime)
-        libX11.XFlush(display)
-        write_response(True, None)
-    elif cmd.startswith("td "): # touch down(x, y, button)
-        xs, ys, button = cmd[3:].strip().split()
-        button = int(button)
-        libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
-        libXtst.XTestFakeButtonEvent(display, button, X_True, X_CurrentTime)
-        libX11.XFlush(display)
-        write_response(True, None)
-    elif cmd.startswith("tu "): # touch up(x, y, button)
-        xs, ys, button = cmd[3:].strip().split()
-        button = int(button)
-        libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
-        libXtst.XTestFakeButtonEvent(display, button, X_False, X_CurrentTime)
-        libX11.XFlush(display)
-        write_response(True, None)
-    elif cmd.startswith("kd "): # hw key down
-        rv, msg = sendHwKey(cmd[3:], 0, -1)
-        write_response(rv, msg)
-    elif cmd.startswith("kp "): # hw key press
-        rv, msg = sendHwKey(cmd[3:], 0, 0)
-        write_response(rv, msg)
-    elif cmd.startswith("ku "): # hw key up
-        rv, msg = sendHwKey(cmd[3:], -1, 0)
-        write_response(rv, msg)
-    elif cmd.startswith("kt "): # send x events
-        rv, skippedSymbols = typeSequence(cPickle.loads(base64.b64decode(cmd[3:])))
-        libX11.XFlush(display)
-        write_response(rv, skippedSymbols)
-    elif cmd.startswith("ss"): # save screenshot
-        rv, compressedImage = takeScreenshot()
-        write_response(rv, compressedImage)
-    elif cmd.startswith("es "): # execute shell
-        rv, soe = shellSOE(cPickle.loads(base64.b64decode(cmd[3:])))
-        write_response(rv, soe)
-    elif cmd.startswith("quit"): # quit
-        write_response(rv, True)
-        break
+_subAgents = {}
+def openSubAgent(username, password):
+    p = subprocess.Popen('''python -c 'import pty; pty.spawn(["su", "-c", "python /tmp/fmbttizen-agent.py --sub-agent", "-", "%s"])' ''' % (username,),
+            shell=True,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+
+    # Read in non-blocking mode to ensure agent starts correctly
+    fl = fcntl.fcntl(p.stdout.fileno(), fcntl.F_GETFL)
+    fcntl.fcntl(p.stdout.fileno(), fcntl.F_SETFL, fl | os.O_NONBLOCK)
+
+    asksPassword, output1 = waitOutput(p.stdout, "Password:", 5.0)
+    if asksPassword:
+        p.stdin.write(password + "\\r")
+        output1 = ""
+
+    agentAlive, output2 = waitOutput(p.stdout, "FMBTAGENT", 5.0)
+    if not agentAlive:
+        p.terminate()
+        return (None, 'fMBT agent with username "%s" does not answer.' % (username,),
+                output1 + output2)
+
+    # Agent is alive, continue in blocking mode
+    fcntl.fcntl(p.stdout.fileno(), fcntl.F_SETFL, fl)
+
+    return p, "", ""
+
+def subAgentCommand(username, password, cmd):
+    if not username in _subAgents:
+        process, output, error = openSubAgent(username, password)
+        if process == None:
+            return None, (-1, output, error)
+        else:
+            _subAgents[username] = process
+    p = _subAgents[username]
+    p.stdin.write(cmd + "\\r")
+    answer = p.stdout.readline().rstrip()
+    if answer.startswith("FMBTAGENT OK "):
+        return True, cPickle.loads(base64.b64decode(answer[len("FMBTAGENT OK "):]))
     else:
-        write_response(False, 'Unknown command: "%s"' % (cmd,))
+        return False, cPickle.loads(base64.b64decode(answer[len("FMBTAGENT ERROR "):]))
+
+def closeSubAgents():
+    for username in _subAgents:
+        subAgentCommand(username, None, "quit")
+
+if __name__ == "__main__":
+    iAmRoot = (os.getuid() == 0)
+    if not "--keep-echo" in sys.argv:
+        # Disable terminal echo
+        origTermAttrs = termios.tcgetattr(sys.stdin.fileno())
+        newTermAttrs = origTermAttrs
+        newTermAttrs[3] = origTermAttrs[3] &  ~termios.ECHO
+        termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, newTermAttrs)
+
+    # Send version number, enter main loop
+    write_response(True, "0.0")
     cmd = read_cmd()
+    while cmd:
+        if cmd.startswith("tm "):   # touch move(x, y)
+            xs, ys = cmd[3:].strip().split()
+            libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
+            libX11.XFlush(display)
+            write_response(True, None)
+        elif cmd.startswith("tt "): # touch tap(x, y, button)
+            xs, ys, button = cmd[3:].strip().split()
+            button = int(button)
+            libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
+            libXtst.XTestFakeButtonEvent(display, button, X_True, X_CurrentTime)
+            libXtst.XTestFakeButtonEvent(display, button, X_False, X_CurrentTime)
+            libX11.XFlush(display)
+            write_response(True, None)
+        elif cmd.startswith("td "): # touch down(x, y, button)
+            xs, ys, button = cmd[3:].strip().split()
+            button = int(button)
+            libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
+            libXtst.XTestFakeButtonEvent(display, button, X_True, X_CurrentTime)
+            libX11.XFlush(display)
+            write_response(True, None)
+        elif cmd.startswith("tu "): # touch up(x, y, button)
+            xs, ys, button = cmd[3:].strip().split()
+            button = int(button)
+            libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
+            libXtst.XTestFakeButtonEvent(display, button, X_False, X_CurrentTime)
+            libX11.XFlush(display)
+            write_response(True, None)
+        elif cmd.startswith("kd "): # hw key down
+            if iAmRoot: rv, msg = sendHwKey(cmd[3:], 0, -1)
+            else: rv, msg = subAgentCommand("root", "tizen", cmd)
+            write_response(rv, msg)
+        elif cmd.startswith("kp "): # hw key press
+            if iAmRoot: rv, msg = sendHwKey(cmd[3:], 0, 0)
+            else: rv, msg = subAgentCommand("root", "tizen", cmd)
+            write_response(rv, msg)
+        elif cmd.startswith("ku "): # hw key up
+            if iAmRoot: rv, msg = sendHwKey(cmd[3:], -1, 0)
+            else: rv, msg = subAgentCommand("root", "tizen", cmd)
+            write_response(rv, msg)
+        elif cmd.startswith("kt "): # send x events
+            rv, skippedSymbols = typeSequence(cPickle.loads(base64.b64decode(cmd[3:])))
+            libX11.XFlush(display)
+            write_response(rv, skippedSymbols)
+        elif cmd.startswith("ss"): # save screenshot
+            rv, compressedImage = takeScreenshot()
+            write_response(rv, compressedImage)
+        elif cmd.startswith("es "): # execute shell
+            shellCmd, username, password = cPickle.loads(base64.b64decode(cmd[3:]))
+            if username == "":
+                rv, soe = shellSOE(shellCmd)
+            else:
+                rv, soe = subAgentCommand(username, password,
+                    "es " + base64.b64encode(cPickle.dumps((shellCmd, "", ""))))
+            write_response(rv, soe)
+        elif cmd.startswith("quit"): # quit
+            write_response(rv, True)
+            break
+        else:
+            write_response(False, 'Unknown command: "%s"' % (cmd,))
+        cmd = read_cmd()
 
-libX11.XCloseDisplay(display)
+    closeSubAgents()
 
-termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, origTermAttrs)
+    libX11.XCloseDisplay(display)
+
+    termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, origTermAttrs)
 """
 
 class FMBTTizenError(Exception): pass
