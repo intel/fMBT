@@ -547,7 +547,9 @@ Keyboard shortcuts:<br>
 
     def runcmd(self, cmd):
         print cmd
-        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if type(cmd) == "str": shell=True
+        else: shell=False
+        p = subprocess.Popen(cmd, shell=shell, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         try: msg_stdout = p.stdout.read()
         except: msg_stdout = ""
         try: msg_stderr = p.stderr.read()
@@ -701,12 +703,11 @@ Keyboard shortcuts:<br>
             self.conf_editor.setFocus()
 
     def _remote_pyaalCmdlineArgs(self,conf_lines):
-        aal_ppflags = ""
+        aal_ppflags = []
         aal_modelflags = ""
         for l in conf_lines:
-            if "model" in l:
-                aal_ppflags=' '.join(
-                    ["'-D%s'" % f for f in re.findall('-D ?([^ ]*)', l)])
+            if "model" in l and not l.strip().startswith("#"):
+                aal_ppflags.extend(["-D%s" % f for f in re.findall('-D ?([^ ]*)', l)])
                 try:
                     _cmd_line = l.split('(',1)[1].rsplit(')')[0]
                     aal_modelflags = shlex.split(_cmd_line)
@@ -717,7 +718,7 @@ Keyboard shortcuts:<br>
         return aal_ppflags, aal_modelflags
 
     def _aal2pyCmdline(self,aal_ppflags):
-        return "fmbt-aalc %s -o '%s' %s" % (aal_ppflags, self._aalcFileName, self._modelFileName)
+        return ["fmbt-aalc"] + aal_ppflags + ["-o", self._aalcFileName, self._modelFileName]
 
     def saveAndValidateModel(self):
         """
@@ -741,37 +742,39 @@ Keyboard shortcuts:<br>
             validation_exitstatus, output = self.runcmd(aal2py_cmd)
             if validation_exitstatus == 0:
                 global model_tags
-                aal2tag_cmd = "fmbt-aalc %s %s -l tag" % (aal_ppflags, self._modelFileName)
+                aal2tag_cmd = ["fmbt-aalc"] + aal_ppflags + [self._modelFileName, "-l", "tag"]
                 tags_exitstatus, tags_output = self.runcmd(aal2tag_cmd)
                 if tags_exitstatus == 0:
                     model_tags = []
                     for tag in tags_output[0].split('\n'):
                         if tag:
                             model_tags.append(tag)
-                show_hide_args = ""
+                show_hide_args = []
                 collapse = []
                 [show_vars, hide_vars], preview_depth, _, _, _, _, _, _, collapse = self.aalPreviewArguments()
 
-                for v in show_vars: show_hide_args += " -S '%s'" % (v,)
-                for v in hide_vars: show_hide_args += " -H '%s'" % (v,)
+                for v in show_vars: show_hide_args.extend(["-S", v])
+                for v in hide_vars: show_hide_args.extend(["-H", v])
                 for index, value in enumerate(aal_modelflags):
                     if value.startswith("-c"):
-                        show_hide_args += " " + shellArgEscape(value)
+                        show_hide_args.append(value)
                         if (index + 1 < len(aal_modelflags) and
                             value == "-c"):
-                            show_hide_args += " " + shellArgEscape(aal_modelflags[index+1])
+                            show_hide_args.append(aal_modelflags[index+1])
 
                 for tag in collapse:
-                    show_hide_args += " -T '%s'" % tag
+                    show_hide_args.extend(["-T", tag])
 
                 for tag in self._tagfilter.keys():
                     if self._tagfilter[tag].isChecked():
-                        show_hide_args += " -T '%s'" % tag
+                        show_hide_args.extend(["-T", tag])
                 py2lsts_cmd = ""
                 if self._menuOptionCFFD.isChecked():
+                    # This CFFD-minimizing pipe does not work in Windows
                     py2lsts_cmd = "remote_pyaal -o - %s %s --lsts-depth %s '%s'|tvt.CFFD_normalize - -|fmbt-gt -i - -o '%s'" % (aal_ppflags, show_hide_args, preview_depth, self._aalcFileName, self._lstsFileName)
                 else:
-                    py2lsts_cmd = "remote_pyaal %s -o '%s'%s --lsts-depth %s '%s'" % (aal_ppflags, self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
+                    # py2lsts_cmd = "remote_pyaal %s -o '%s'%s --lsts-depth %s '%s'" % (aal_ppflags, self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
+                    py2lsts_cmd = ["remote_pyaal"] + aal_ppflags + ["-o", self._lstsFileName] + show_hide_args + ["--lsts-depth", str(preview_depth), self._aalcFileName]
 
                 validation_exitstatus, output = self.runcmd(py2lsts_cmd)
                 if validation_exitstatus != 0:
@@ -785,8 +788,7 @@ Keyboard shortcuts:<br>
                 try: gt2lsts_cmd = re.findall("lsts_remote[ ]*\((.*)\)", self._modelSpec())[0]
                 except: gt2lsts_cmd = ""
             if gt2lsts_cmd == "":
-                gt2lsts_cmd = "fmbt-gt -f '%s'" % (self._modelFileName,)
-            gt2lsts_cmd += " > '%s'" % (self._lstsFileName,)
+                gt2lsts_cmd = ["fmbt-gt", "-f", self._modelFileName, "-o", self._lstsFileName]
             executed_program = gt2lsts_cmd
             validation_exitstatus, output = self.runcmd(gt2lsts_cmd)
             if validation_exitstatus != 0:
@@ -907,8 +909,7 @@ Keyboard shortcuts:<br>
             elif self._previewDistMenuActionsToTags.isChecked(): fmt = "tagdist:to"
             elif self._previewDistMenuActionsFromTags.isChecked(): fmt = "tagdist:from"
 
-            cmd = "fmbt-stats -f %s -p '%s' -o /dev/null '%s'" % (
-                fmt, self._distFileName, self._logFileName)
+            cmd = ["fmbt-stats", "-f", fmt, "-p", self._distFileName, "-o", "/dev/null", self._logFileName]
             asyncRuncmd(cmd,
                         onThreadSuccess = self.pixmapLoader("dist", self._distFileName),
                         onSuccess = self.pixmapViewer("dist"),
@@ -929,8 +930,9 @@ Keyboard shortcuts:<br>
             if not self._previewCovMenuXaxisStepsValue:
                 covtype = "time"
 
-            cmd = "fmbt-stats -f cov:%s,all -p '%s' -o /dev/null '%s'" % (
-                covtype, self._covFileName, self._logFileName)
+            # cmd = "fmbt-stats -f cov:%s,all -p '%s' -o /dev/null '%s'" % (
+            #     covtype, self._covFileName, self._logFileName)
+            cmd = ["fmbt-stats", "-f", "cov:"+covtype+",all", "-p", self._covFileName, "-o", "/dev/null", self._logFileName]
             asyncRuncmd(cmd,
                         onThreadSuccess = self.pixmapLoader("cov", self._covFileName),
                         onSuccess = self.pixmapViewer("cov"),
@@ -986,12 +988,13 @@ on_inconc = exit(2)
 
     def _doGenerateTest(self):
         """ runnable in non-UI thread """
+        self._test_errormsg = ""
         self._doGenerateConf()
         if not self._model_ok:
             self._test_ok = False
             return
         self._logFileName = _g_tempdir + os.sep + os.path.basename(self._confFileName) + ".log"
-        cmd = "fmbt -l '%s' -o 'adapter=\"dummy\"' '%s'" % (self._logFileName, self._confFileName)
+        cmd = ["fmbt", "-l", self._logFileName, "-o", "adapter=dummy", self._confFileName]
         self._fMBTRunning = True
         fmbt_exitstatus, output = self.runcmd(cmd)
         self._fMBTRunning = False
@@ -1047,9 +1050,9 @@ on_inconc = exit(2)
             if self.preview_test_tags.isChecked():
                 fmbt_log_format += '"$tg"'
 
-        fmbt_log_cmd = """fmbt-log -t "%%T.%%f" -s '", "' -f '%s' '%s'""" % (fmbt_log_format, filename)
+        fmbt_log_cmd = ["fmbt-log", "-t", "%T.%f", "-s", ", ", "-f", fmbt_log_format, filename]
         print fmbt_log_cmd
-        p = subprocess.Popen(fmbt_log_cmd, shell=True, stdout=subprocess.PIPE)
+        p = subprocess.Popen(fmbt_log_cmd, shell=False, stdout=subprocess.PIPE)
         lines = p.stdout.readlines()
         if "$tg" in fmbt_log_format and self._fMBTRunning == False:
             # clean up tags listed after the reason for test verdict
