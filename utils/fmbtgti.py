@@ -945,7 +945,7 @@ class _VisualLog:
         self._outFileObj = outFileObj
         self._testStep = -1
         self._actionName = None
-        self._callDepth = 0
+        self._callStack = []
         self._highlightCounter = 0
         self._screenshotWidth = screenshotWidth
         self._thumbnailWidth = thumbnailWidth
@@ -977,7 +977,7 @@ class _VisualLog:
     def close(self):
         if self._outFileObj != None:
             html = []
-            for c in xrange(self._callDepth):
+            for c in xrange(len(self._callStack)):
                 html.append('</table></tr>') # end call
             html.append('</table></div></td></tr></table></ul>') # end step
             html.append('</body></html>') # end html
@@ -1023,7 +1023,7 @@ class _VisualLog:
         calleeArgs = str(argv.locals['args']) + " " + str(argv.locals['kwargs'])
         callerFilename = inspect.currentframe().f_back.f_back.f_code.co_filename
         callerLineno = inspect.currentframe().f_back.f_back.f_lineno
-        imgHtml = self.imgToHtml(img, width, imgTip)
+        imgHtml = self.imgToHtml(img, width, imgTip, "call:%s" % (callee,))
         t = datetime.datetime.now()
         callHtml = '''
              <tr><td></td><td><table><tr>
@@ -1031,12 +1031,12 @@ class _VisualLog:
              </tr>
              %s''' % (self.htmlTimestamp(t), cgi.escape(callerFilename), callerLineno, cgi.escape(callee), cgi.escape(str(calleeArgs)), imgHtml)
         self.write(callHtml)
-        self._callDepth += 1
+        self._callStack.append(callee)
         return (self.timestamp(t), callerFilename, callerLineno)
 
     def logReturn(self, retval, img=None, width="", imgTip="", tip=""):
-        imgHtml = self.imgToHtml(img, width, imgTip)
-        self._callDepth -= 1
+        imgHtml = self.imgToHtml(img, width, imgTip, "return:%s" % (self._callStack[-1],))
+        self._callStack.pop()
         returnHtml = '''
              <tr>
                  <td>%s</td><td><div class="returnvalue"><a title="%s">== %s</a></div></td>
@@ -1046,7 +1046,7 @@ class _VisualLog:
 
     def logException(self):
         einfo = sys.exc_info()
-        self._callDepth -= 1
+        self._callStack.pop()
         excHtml = '''
              <tr>
                  <td>%s</td><td><div class="exception"><a title="%s">!! %s</a></div></td>
@@ -1165,9 +1165,12 @@ class _VisualLog:
             return retval
         return findItemsByOcrWRAP
 
-    def imgToHtml(self, img, width="", imgTip=""):
+    def imgToHtml(self, img, width="", imgTip="", imgClass=""):
+        if imgClass: imgClassAttr = 'class="%s" ' % (imgClass,)
+        else: imgClassAttr = ""
         if isinstance(img, Screenshot):
-            imgHtml = '<tr><td></td><td><img title="%s" src="%s" width="%s" alt="%s" /></td></tr>' % (
+            imgHtml = '<tr><td></td><td><img %stitle="%s" src="%s" width="%s" alt="%s" /></td></tr>' % (
+                imgClassAttr,
                 "%s refreshScreenshot() at %s:%s" % img._logCallReturnValue,
                 img.filename(),
                 self._screenshotWidth,
@@ -1178,8 +1181,8 @@ class _VisualLog:
                 imgTip = 'title="%s refreshScreenshot() at %s:%s"' % imgTip
             else:
                 imgTip = 'title="%s"' % (imgTip,)
-            imgHtml = '<tr><td></td><td><img %s src="%s" %s alt="%s" /></td></tr>' % (
-                imgTip, img, width, img)
+            imgHtml = '<tr><td></td><td><img %s%s src="%s" %s alt="%s" /></td></tr>' % (
+                imgClassAttr, imgTip, img, width, img)
         else:
             imgHtml = ""
         return imgHtml
