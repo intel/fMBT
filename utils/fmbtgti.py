@@ -27,6 +27,7 @@
 import cgi
 import ctypes
 import datetime
+import gc
 import inspect
 import os
 import shutil
@@ -335,6 +336,20 @@ class GUITestInterface(object):
                     pathSolver=_bitmapPathSolver(self._bitmapPathRootForRelativePaths, self._bitmapPath))
             else:
                 self._lastScreenshot = None
+        # Make sure unreachable Screenshot instances are released from
+        # memory.
+        gc.collect()
+        for obj in gc.garbage:
+            if isinstance(obj, Screenshot):
+                if hasattr(obj, "_logCallReturnValue"):
+                    # Some methods have been wrapped by visual
+                    # log. Break reference cycles to let gc collect
+                    # them.
+                    del obj.findItemsByBitmap
+                    del obj.findItemsByOcr
+        del gc.garbage[:]
+        gc.collect()
+
         return self._lastScreenshot
 
     def screenshot(self):
