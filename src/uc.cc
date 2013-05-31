@@ -77,7 +77,7 @@ int main(int argc,char * const argv[])
   OutputFormat* of=NULL;
 
 #ifndef DROI
-  g_type_init ();  
+  g_type_init ();
 #endif
 
   static struct option long_opts[] = {
@@ -90,7 +90,7 @@ int main(int argc,char * const argv[])
     switch (c)
     {
     case 'v':
-      printf("Version: "VERSION"\n");
+      printf("Version: "VERSION FMBTBUILDINFO"\n");
       return 0;
       break;
     case 'u':
@@ -147,15 +147,15 @@ int main(int argc,char * const argv[])
   if (usecasefile==NULL) {
     delete of;
     print_usage();
-    return 5;    
+    return 5;
   }
-  
+
   uconf_obj=of;
 
   char* s=readfile(usecasefile);
   if (!s) {
     std::printf("Can't read input file \"%s\"\n",usecasefile);
-    return 3;    
+    return 3;
   }
   D_Parser *p = new_D_Parser(&parser_tables_uconf,5120);
   p->loc.pathname = usecasefile;
@@ -184,7 +184,7 @@ int main(int argc,char * const argv[])
   }
 
   std::string o=of->header();
-  fwrite(o.c_str(),1,o.size(),outfile);  
+  fwrite(o.c_str(),1,o.size(),outfile);
 
   l=new Log_null();
 
@@ -204,20 +204,20 @@ int main(int argc,char * const argv[])
   }
 
   o=of->footer();
-  fwrite(o.c_str(),1,o.size(),outfile);  
+  fwrite(o.c_str(),1,o.size(),outfile);
 
   o=of->report();
-  fwrite(o.c_str(),1,o.size(),outfile);  
+  fwrite(o.c_str(),1,o.size(),outfile);
 
   fflush(outfile);
 
-  if (outfile!=stdout) 
+  if (outfile!=stdout)
     fclose(outfile);
 
   delete of;
   l->unref();
 
-  
+
 
   return 0;
 }

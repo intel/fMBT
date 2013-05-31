@@ -835,7 +835,7 @@ if __name__ == "__main__":
             print __doc__
             sys.exit(0)
         elif opt in ['-V', '--version']:
-            print "Version " + fmbt_config.fmbt_version
+            print "Version " + fmbt_config.fmbt_version + fmbt_config.fmbt_build_info
             sys.exit(0)
         elif opt in ["-s", "--sync"]:
             try: sync_regexps.append(re.compile(arg))

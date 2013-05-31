@@ -34,6 +34,12 @@ AC_SUBST([NDK_BUILD])
 
 AC_SUBST([FMBT_VERSION], ['AC_PACKAGE_VERSION'])
 
+AC_ARG_WITH([build-info],
+            [AS_HELP_STRING([--with-build-info=string], [add extra build/version info])],
+            [FMBTBUILDINFO=$withval],
+            [FMBTBUILDINFO=m4_esyscmd_s([head -n 1 configure.ac | grep -q rc0 && echo -n \-&& git describe --always])])
+AC_SUBST([FMBTBUILDINFO])
+
 
 AS_IF([test "x$enable_android" != "xyes"],
     [PKG_CHECK_MODULES([GLIB], [glib-2.0], [],

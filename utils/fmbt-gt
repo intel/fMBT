@@ -1119,7 +1119,7 @@ def parse_args(argv):
             print __doc__
             sys.exit(0)
         elif opt in ['-V', '--version']:
-            print "Version " + fmbt_config.fmbt_version
+            print "Version " + fmbt_config.fmbt_version + fmbt_config.fmbt_build_info
             sys.exit(0)
         elif opt in ["-k", "--keep-labels"]:
             arg_keep_labels = True

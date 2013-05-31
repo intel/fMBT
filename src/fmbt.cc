@@ -65,7 +65,7 @@ void print_usage()
     "    -L<f>  append log to file f (default: standard output)\n"
     "    -l<f>  overwrite log to file f (default: standard output)\n"
     "    -q     quiet, do not print test verdict\n"
-    "    -V     print version("VERSION")\n"
+    "    -V     print version ("VERSION FMBTBUILDINFO")\n"
     "    -o     configfile line\n"
     "    -C     print coverage modules.\n"
     );
@@ -95,7 +95,7 @@ int main(int argc,char * const argv[])
     switch (c)
     {
     case 'V':
-      printf("Version: "VERSION"\n");
+      printf("Version: "VERSION FMBTBUILDINFO"\n");
       return 0;
       break;
     case 'o': {
@@ -109,7 +109,7 @@ int main(int argc,char * const argv[])
       if (CoverageFactory::creators) {
 	i=CoverageFactory::creators->begin();
 	e=CoverageFactory::creators->end();
-	
+
 	for(;i!=e;i++) {
 	  printf("%s\n",i->first.c_str());
 	}
@@ -124,7 +124,7 @@ int main(int argc,char * const argv[])
       if (AdapterFactory::creators) {
 	i=AdapterFactory::creators->begin();
 	e=AdapterFactory::creators->end();
-	
+
 	for(;i!=e;i++) {
 	  printf("%s\n",i->first.c_str());
 	}
@@ -139,7 +139,7 @@ int main(int argc,char * const argv[])
       if (ModelFactory::creators) {
 	i=ModelFactory::creators->begin();
 	e=ModelFactory::creators->end();
-	
+
 	for(;i!=e;i++) {
 	  printf("%s\n",i->first.c_str());
 	}
@@ -147,7 +147,7 @@ int main(int argc,char * const argv[])
     }
       return 0;
       break;
-    case 'D': 
+    case 'D':
       debug_enabled=true;
       break;
     case 'E':
@@ -180,7 +180,7 @@ int main(int argc,char * const argv[])
     default:
       return 2;
     }
- 
+
   if (optind == argc) {
     print_usage();
     error(0, 0, "test configuration file missing.\n");
@@ -190,7 +190,7 @@ int main(int argc,char * const argv[])
   signal(SIGPIPE, nop_signal_handler);
 
 #ifndef DROI
-  g_type_init ();  
+  g_type_init ();
 #endif
 
   {

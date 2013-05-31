@@ -463,7 +463,7 @@ if __name__ == "__main__":
         elif opt in ['-V', '--version']:
             try:
                 import fmbt_config
-                print "Version " + fmbt_config.fmbt_version
+                print "Version " + fmbt_config.fmbt_version + fmbt_config.fmbt_build_info
             except:
                 print "Version N/A"
             sys.exit(0)
