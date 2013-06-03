@@ -54,6 +54,13 @@ def setAdapterLogWriter(func):
     global _adapterlogWriter
     _adapterlogWriter = func
 
+def adapterLogWriter():
+    """
+    Return current low-level adapter log writer function.
+    """
+    global _adapterlogWriter
+    return _adapterlogWriter
+
 def reportOutput(msg):
     try: file("/tmp/fmbt.reportOutput", "a").write("%s\n" % (msg,))
     except: pass
