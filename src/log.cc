@@ -23,6 +23,9 @@
 
 #ifndef DROI
 #include <glib.h>
+#include <glib/gprintf.h>
+#else
+#define g_vasprintf vasprintf
 #endif
 
 void Log::push(std::string&s) {
@@ -48,7 +51,7 @@ void Log::vprint(const char* format,va_list ap,FILE* f,bool urldecode)
 {
   char* msg=NULL;
 
-  if (vasprintf(&msg,format,ap)>0) {
+  if (g_vasprintf(&msg,format,ap)>0) {
     if (urldecode) {
       write(unescape_string(msg), f);
     } else {
@@ -63,7 +66,7 @@ void Log::vuprint(const char* format,va_list ap)
 {
   char* msg=NULL;
 
-  if (vasprintf(&msg,format,ap)>0) {
+  if (g_vasprintf(&msg,format,ap)>0) {
     char* m=escape_string(msg);
     write(m);
     escape_free(m);
