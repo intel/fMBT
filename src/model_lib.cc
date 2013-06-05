@@ -17,6 +17,8 @@
  *
  */
 
+#ifndef __MINGW32__
+
 #include "log.hh"
 #include "model.hh"
 #include "null.hh"
@@ -80,3 +82,5 @@ namespace {
   }
   static ModelFactory::Register me("lib", lib_creator);
 }
+
+#endif
