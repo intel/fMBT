@@ -22,9 +22,44 @@
 #include <vector>
 #include <sys/time.h>
 #include <time.h>
+#include <glib.h>
 
 #ifndef DROI
 #include <boost/regex.hpp>
+#endif
+
+#ifdef __MINGW32__
+extern "C" {
+char *strndup(const char *s, size_t n);
+int vasprintf(char **strp, const char *fmt, va_list ap);
+
+}
+
+#define srand48 srand
+#define drand48() (double(rand())/RAND_MAX)
+#define random rand
+#define srandom srand
+
+# define timeradd(a, b, result)                                               \
+  do {                                                                        \
+    (result)->tv_sec = (a)->tv_sec + (b)->tv_sec;                             \
+    (result)->tv_usec = (a)->tv_usec + (b)->tv_usec;                          \
+    if ((result)->tv_usec >= 1000000)                                         \
+      {                                                                       \
+        ++(result)->tv_sec;                                                   \
+        (result)->tv_usec -= 1000000;                                         \
+      }                                                                       \
+  } while (0)
+# define timersub(a, b, result)                                               \
+  do {                                                                        \
+    (result)->tv_sec = (a)->tv_sec - (b)->tv_sec;                             \
+    (result)->tv_usec = (a)->tv_usec - (b)->tv_usec;                          \
+    if ((result)->tv_usec < 0) {                                              \
+      --(result)->tv_sec;                                                     \
+      (result)->tv_usec += 1000000;                                           \
+    }                                                                         \
+  } while (0)
+
 #endif
 
 #include "verdict.hh"
@@ -81,24 +116,30 @@ void  strvec(std::vector<std::string> & v,std::string& s,
 
 char* unescape_string(char* msg);
 void  unescape_string(std::string& msg);
-
+/*
 ssize_t nonblock_getline(char **lineptr, size_t *n,
 			 FILE *stream, char* &read_buf,
 			 size_t &read_buf_pos,
 			 const char delimiter = '\n');
+*/
+ssize_t nonblock_getline(char **lineptr, size_t *n,
+			 GIOChannel *stream, char* &read_buf,
+			 size_t &read_buf_pos);
 
-ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
+ssize_t getline(char **lineptr, size_t *n, GIOChannel *stream);
+
+ssize_t agetline(char **lineptr, size_t *n, GIOChannel *stream,
 		 char* &read_buf,size_t &read_buf_pos,Log& log);
-ssize_t bgetline(char **lineptr, size_t *n, FILE *stream, Log& log,bool magic=false);
+
+ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,bool magic);
 
 void block(int fd);
 void nonblock(int fd);
 
-int getint(FILE* out,FILE* in,Log& log,
+int getint(GIOChannel* out,GIOChannel* in,Log& log,
 	   int min=-42,int max=INT_MAX,Writable* w=NULL,bool magic=false);
-
-int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in,Log& log,
-	   int min=-42,int max=INT_MAX,Writable* w=NULL,bool magic=false);
+int getact(int** act,std::vector<int>& vec,GIOChannel* out,GIOChannel* in,
+	   Log& log,int min=-42,int max=INT_MAX,Writable* w=NULL,bool magic=false);
 
 void split(std::string val, std::string& name,
 	   std::string& param, const char* s=":");
@@ -124,6 +165,8 @@ void gettime(struct timeval *tv);
 void envstr(const char* name,std::string& val);
 std::string envstr(const char* name,const char* default_str);
 std::string envstr(const char* name);
+
+int fprintf(GIOChannel* stream, const char *format, ...);
 
 #define MAX_LINE_LENGTH (1024*16)
 

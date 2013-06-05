@@ -23,21 +23,28 @@
 #include <cstdlib>
 #include <algorithm>
 
-#ifndef DROI
 #include <boost/regex.hpp>
 #include <glib.h>
 #include <glib-object.h>
-#else
-#include <cctype>
-#include <cstdio>
-#endif
+#include <glib/gprintf.h>
 
 #include <string>
 #include <vector>
 #include <sstream>
 #include <fstream>
 
+#ifndef __MINGW32__
 #include <dlfcn.h>
+#else
+extern "C" {
+
+// For Dparse
+char *strndup(const char *s, size_t n)
+{
+  return g_strndup(s,n);
+}
+}
+#endif
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -55,9 +62,9 @@ void escape_free(const char* msg)
   g_free((void*)msg);
 #endif
 }
-
 void *load_lib(const std::string& libname,const std::string& model_filename)
 {
+#ifndef __MINGW32__
   std::string name_candidate(libname);
   std::string errormessages;
 
@@ -95,6 +102,9 @@ void *load_lib(const std::string& libname,const std::string& model_filename)
     fprintf(stderr, "%s", errormessages.c_str());
   }
   return handle;
+#else
+  return NULL;
+#endif
 }
 
 int find(const std::vector<std::string> &v,const std::string s,int def)
@@ -525,14 +535,18 @@ void strvec(std::vector<std::string>& v,std::string& s,
 
 void nonblock(int fd)
 {
+#ifndef __MINGW32__
   int flags = fcntl(fd, F_GETFL, 0);
   fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+#endif
 }
 
 void block(int fd)
 {
+#ifndef __MINGW32__
   int flags = fcntl(fd, F_GETFL, 0);
   fcntl(fd, F_SETFL, flags & (~O_NONBLOCK));
+#endif
 }
 
 /*
@@ -544,54 +558,112 @@ void block(int fd)
  * line.
  */
 
-ssize_t nonblock_getline(char **lineptr, size_t *n, FILE *stream,char* &read_buf, size_t &read_buf_pos, const char delimiter)
+ssize_t nonblock_getline(char **lineptr, size_t *n,
+			 GIOChannel *stream, char* &read_buf,
+			 size_t &read_buf_pos)
 {
-    int fd = fileno(stream);
-    if (!read_buf) {
-        read_buf = (char*)malloc(MAX_LINE_LENGTH);
-        if (!read_buf) return -2;
-        read_buf_pos = 0;
-    }
-    for (;;) {
-        /* look for line breaks in buffered string */
-        char *p = (char*)memchr(read_buf, delimiter, read_buf_pos);
-        /* if read buffer is full but contains no line breaks, return
-           contents of the buffer */
-        if (!p && read_buf_pos == MAX_LINE_LENGTH)
-            p = read_buf + read_buf_pos - 1;
-        if (p) {
-            size_t line_length = p - read_buf + 1;
-            size_t needed_space = line_length + 1; // include \0
-            if (*lineptr == NULL || *n < needed_space) {
-                if (*lineptr == NULL &&
-                    (*lineptr = (char*)std::malloc(needed_space)) == NULL) {
-                    return -1;
-                } else if ((*lineptr = (char*)std::realloc(*lineptr, needed_space)) == NULL) {
-                    return -1;
-                }
-                *n = needed_space;
-            }
-            memcpy(*lineptr, read_buf, line_length);
-            *((*lineptr) + line_length) = '\0';
-            memmove(read_buf, p + 1, read_buf_pos - (p - read_buf));
-            read_buf_pos -= line_length;
-            return line_length;
-        }
-        /* nothing found, try reading more content to the buffer */
-        ssize_t bytes_read = read(fd, read_buf + read_buf_pos,
-                                  MAX_LINE_LENGTH - read_buf_pos);
-        if (bytes_read == -1) {
-            return -1;
-        }
-        if (bytes_read == 0) {
-            return 0;
-        }
-        read_buf_pos += bytes_read;
-    }
+
+  gsize si;
+  g_io_channel_set_flags(stream,(GIOFlags)(G_IO_FLAG_NONBLOCK|(int)g_io_channel_get_flags(stream)),NULL);
+
+  if (!(g_io_channel_get_buffer_condition(stream)&G_IO_IN)) {
+    return 0;
+  }
+  g_io_channel_set_line_term(stream,NULL,-1);
+
+  GIOStatus st=
+    g_io_channel_read_line(stream,lineptr,&si,NULL,NULL);
+
+  if (st==G_IO_STATUS_EOF || G_IO_STATUS_AGAIN) {
+    return 0;
+  }
+
+  if (st==G_IO_STATUS_ERROR) {
+    return -1;
+  }
+
+  if (n)
+    *n=si;
+
+  return si;
+
+    // if (!read_buf) {
+    //     read_buf = (char*)malloc(MAX_LINE_LENGTH);
+    //     if (!read_buf) return -2;
+    //     read_buf_pos = 0;
+    // }
+    // for (;;) {
+    //     /* look for line breaks in buffered string */
+    //     char *p = (char*)memchr(read_buf, delimiter, read_buf_pos);
+    //     /* if read buffer is full but contains no line breaks, return
+    //        contents of the buffer */
+    //     if (!p && read_buf_pos == MAX_LINE_LENGTH)
+    //         p = read_buf + read_buf_pos - 1;
+    //     if (p) {
+    //         size_t line_length = p - read_buf + 1;
+    //         size_t needed_space = line_length + 1; // include \0
+    //         if (*lineptr == NULL || *n < needed_space) {
+    //             if (*lineptr == NULL &&
+    //                 (*lineptr = (char*)std::malloc(needed_space)) == NULL) {
+    //                 return -1;
+    //             } else if ((*lineptr = (char*)std::realloc(*lineptr, needed_space)) == NULL) {
+    //                 return -1;
+    //             }
+    //             *n = needed_space;
+    //         }
+    //         memcpy(*lineptr, read_buf, line_length);
+    //         *((*lineptr) + line_length) = '\0';
+    //         memmove(read_buf, p + 1, read_buf_pos - (p - read_buf));
+    //         read_buf_pos -= line_length;
+    //         return line_length;
+    //     }
+    //     /* nothing found, try reading more content to the buffer */
+    // 	// g_io_channel_read_chars(GIOChannel *channel,gchar *buf,
+    // 	//                         gsize count,gsize *bytes_read,
+    // 	//                         GError **error);
+    // 	//        ssize_t bytes_read = read(fd, read_buf + read_buf_pos,
+    //     //                          MAX_LINE_LENGTH - read_buf_pos);
+    // 	ssize_t bytes_read;
+    // 	GIOStatus st=
+    // 	  g_io_channel_read_chars(stream,read_buf + read_buf_pos,
+    // 				  MAX_LINE_LENGTH - read_buf_pos,&bytes_read,
+    // 				  NULL);
+    // 	if (st==G_IO_STATUS_EOF || G_IO_STATUS_AGAIN) {
+    // 	  return 0;
+    // 	}
+    // 	if (st==G_IO_STATUS_ERROR) {
+    // 	  return -1;
+    // 	}
+		
+    //     if (bytes_read == -1) {
+    //         return -1;
+    //     }
+    //     if (bytes_read == 0) {
+    //         return 0;
+    //     }
+
+    //     read_buf_pos += bytes_read;
+    // }
+}
+
+ssize_t getline(char **lineptr, size_t *n, GIOChannel *stream)
+{
+  gsize si;
+  gsize ret;
+  GIOStatus status;
+  do {
+    status=g_io_channel_read_line(stream,lineptr,&si,&ret,NULL);
+    *n=si;
+  } while (status==G_IO_STATUS_AGAIN);
+
+  if (status==G_IO_STATUS_ERROR) {
+    return -1;
+  }
+  return *n;
 }
 
 /* non-blocking getline, filter out log entries */
-ssize_t agetline(char **lineptr, size_t *n, FILE *stream,
+ssize_t agetline(char **lineptr, size_t *n, GIOChannel *stream,
                  char* &read_buf,size_t &read_buf_pos,Log& log)
 {
   ssize_t ret;
@@ -666,18 +738,52 @@ std::string to_string(Verdict::Verdict verdict)
 }
 
 /* blocking getline, filter out log entries */
-ssize_t bgetline(char **lineptr, size_t *n, FILE *stream, Log& log,bool magic)
+ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,bool magic)
 {
-  ssize_t ret;
+  gsize ret;
+  int loopc=0;
   bool log_redirect;
+
+  g_io_channel_set_line_term(stream,NULL,-1);
+
   do {
     log_redirect = false;
-    ret = getdelim(lineptr, n, '\n', stream);
+    // ret = getdelim(lineptr, n, '\n', stream);
+    GIOStatus status;
+    gsize si;
+    do {
+      loopc++;
+      status=g_io_channel_read_line(stream,lineptr,&si,&ret,NULL);
+      *n=si;
+    } while (status==G_IO_STATUS_AGAIN);
+
+    if (status==G_IO_STATUS_ERROR) {
+      ret=-1;
+    } else {
+      if (si) {
+	log.debug("We have %s",*lineptr);
+
+	if ((*lineptr)[si-1]==0x0d || (*lineptr)[si-1]==0x0a) {
+	  si--;
+	  (*lineptr)[si]=0;
+	}
+      }
+      if (si) {
+	if ((*lineptr)[si-1]==0x0d || (*lineptr)[si-1]==0x0a) {
+	  si--;
+	  (*lineptr)[si]=0;
+	}
+      }
+      *n=si;
+      ret=si;
+    }
+
+
     if (ret && ret != -1) {
       if (magic && strncmp(*lineptr,"fmbtmagic",9)!=0) {
 	// We have something to stdout
 	fprintf(stdout,"%s",*lineptr);
-	std::free(*lineptr);
+	g_free(*lineptr);
 	*lineptr = NULL;
 	log_redirect = true;
       } else {
@@ -690,7 +796,7 @@ ssize_t bgetline(char **lineptr, size_t *n, FILE *stream, Log& log,bool magic)
             log.print("<remote msg=\"%s\"/>\n",*lineptr+magic_length);
             if (*(*lineptr + magic_length-1) == 'e')
               fprintf(stderr, "%s\n", unescape_string(*lineptr+magic_length));
-            std::free(*lineptr);
+            g_free(*lineptr);
             *lineptr = NULL;
             log_redirect = true;
           } else {
@@ -703,66 +809,30 @@ ssize_t bgetline(char **lineptr, size_t *n, FILE *stream, Log& log,bool magic)
       }
     }
   } while (log_redirect);
-  return ret;
-}
 
-int getint(FILE* out,FILE* in,Log& log,int min,int max,Writable* w,bool magic)
-{
-  if (out) {
-    fflush(out);
-  }
-  char* line=NULL;
-  size_t n;
-  int ret=-42;
-  ssize_t s=bgetline(&line,&n,in,log,magic);
-  if (s && s != -1) {
-    ret=atoi(line);
-    if ((int)strspn(line,"-0123456789") != s-1 || (ret == 0 && line[0] != '0')) {
-      char *escaped_line = escape_string(line);
-      if (escaped_line) {
-        static const char* m[] = { "<remote error=\"I/O error: integer expected, got: %s\"/>\n",
-                                   "Remote expected integer, got \"%s\"\n"};
-        log.error(m, escaped_line);
-        escape_free(escaped_line);
-	if (w) {
-	  w->status=false;
-	  w->errormsg="Remote expected integer, got \""+std::string(line)+"\"";
-	}
-      }
-      ret=-42;
-    }
-  } else {
-    static const char* m[] = { "<remote error=\"I/O error: integer expected, got nothing.\"/>\n",
-                              "Remote expected integer, got nothing\n"};
-    log.error(m);
-    if (w) {
-      w->status=false;
-      w->errormsg="Remote expected integer, got nothing";
-    }
-  }
-  if (line) {
-    free(line);
-  }
-
-  if (w && (ret<min || ret>max)) {
-    w->status=false;
-    w->errormsg="Value out of range";
-  }
+  if (ret>=0)
+    log.debug("bgetline got string %s\n",*lineptr);
 
   return ret;
 }
 
-int getact(int** act,std::vector<int>& vec,FILE* out,FILE* in,Log& log,
-	   int min,int max,Writable* w,bool magic)
+
+/* blocking getline, filter out log entries */
+
+int getact(int** act,std::vector<int>& vec,GIOChannel* out,GIOChannel* in,
+	   Log& log,int min,int max,Writable* w,bool magic)
 {
-  fflush(out);
+  g_io_channel_flush(out,NULL);
   vec.resize(0);
   char* line=NULL;
   size_t n;
   int ret=-1;
   size_t s=bgetline(&line,&n,in,log,magic);
-  if (s != (size_t)-1 && s > 0 && line) {
-    if (strspn(line, " -0123456789") != s-1) {
+
+  printf("getact %s\n",line);
+
+  if (s != (size_t)-1 && s >= 0 && line) {
+    if (strspn(line, " -0123456789") != s) {
       char *escaped_line = escape_string(line);
       if (escaped_line) {
         static const char* m[] = {
@@ -935,9 +1005,13 @@ void sdel(std::vector<std::string*>* strvec)
 
 void gettime(struct timeval *tv)
 {
+#ifndef __MINGW32__
   struct timespec tp;
   clock_gettime(CLOCK_REALTIME,&tp);
   TIMESPEC_TO_TIMEVAL(tv,&tp);
+#else
+
+#endif
 }
 
 void find(std::vector<std::string>& from,std::vector<std::string>& what,std::vector<int>& result)
@@ -979,4 +1053,71 @@ void envstr(const char* name,std::string& val)
     val=_val;
   }
 
+}
+
+int fprintf(GIOChannel* stream, const char *format, ...)
+{
+  va_list ap;
+  gchar* buf=NULL;
+  int ret=0;
+  gsize bytes_written;
+  va_start(ap, format);
+  ret=g_vasprintf(&buf,format,ap);
+  if (buf) {
+    g_io_channel_write_chars(stream,buf,ret,&bytes_written,NULL);
+    g_free(buf);
+  }
+  va_end(ap);
+  return ret;
+}
+
+int getint(GIOChannel* out,GIOChannel* in,Log& log,
+	   int min,int max,Writable* w,bool magic)
+{
+  if (out) {
+    g_io_channel_flush(out,NULL);
+  }
+  char* line=NULL;
+  size_t n;
+  int ret=-42;
+  ssize_t s=bgetline(&line,&n,in,log,magic);
+  if (s && s != -1) {
+    ret=atoi(line);
+    log.debug("ret%i,s%i,strspn%i\n",ret,s,
+	      (int)strspn(line,"-0123456789"));
+    if ((int)strspn(line,"-0123456789") != s || (ret == 0 && line[0] != '0')) {
+      char *escaped_line = escape_string(line);
+      if (escaped_line) {
+        static const char* m[] = { "<remote error=\"I/O error: integer expected, got: %s\"/>\n",
+                                   "Remote expected integer, got \"%s\"\n"};
+        log.error(m, escaped_line);
+        escape_free(escaped_line);
+	if (w) {
+	  w->status=false;
+	  w->errormsg="Remote expected integer, got \""+std::string(line)+"\"";
+	}
+      }
+      ret=-42;
+    }
+  } else {
+    static const char* m[] = { "<remote error=\"I/O error: integer expected, got nothing.\"/>\n",
+                              "Remote expected integer, got nothing\n"};
+    log.error(m);
+    if (w) {
+      w->status=false;
+      w->errormsg="Remote expected integer, got nothing";
+    }
+  }
+  if (line) {
+    free(line);
+  }
+
+  if (w && (ret<min || ret>max)) {
+    w->status=false;
+    w->errormsg="Value out of range";
+  }
+
+  log.debug("getint %i",ret);
+
+  return ret;
 }
