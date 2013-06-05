@@ -16,6 +16,7 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+#ifndef __MINGW32__
 #include "adapter_timer.hh"
 #include "helper.hh"
 #include <cstdio>
@@ -188,3 +189,4 @@ int  Adapter_timer::observe(std::vector<int> &action,
 }
 
 FACTORY_DEFAULT_CREATOR(Adapter, Adapter_timer, "timer")
+#endif
