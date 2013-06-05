@@ -28,24 +28,24 @@ noinst_HEADERS += conf.g lts.g mrules.g covlang.g xrules.g lang.g uconf.g filter
 
 noinst_HEADERS += Android.mk Application.mk
 
-fmbt_CPPFLAGS                  = -Wall -pedantic -fPIC -I ./d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0  libxml-2.0` $(JVMCFLAGS) $(FMBTBUILDINFOCFLAGS)
-fmbt_ucheck_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0 libxml-2.0` $(FMBTBUILDINFOCFLAGS)
+fmbt_CPPFLAGS                  = -Wall -pedantic -fPIC -I ./d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) $(XML2_CFLAGS)  $(JVMCFLAGS) $(FMBTBUILDINFOCFLAGS)
+fmbt_ucheck_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) $(XML2_CFLAGS) $(FMBTBUILDINFOCFLAGS)
 fmbt_droid_CPPFLAGS            = -Wall -pedantic -fPIC -I d -I `pwd` -DDROI $(FMBTBUILDINFOCFLAGS)
-remote_adapter_loader_CPPFLAGS = -Wall -pedantic -I d -DDROI $(FMBTBUILDINFOCFLAGS)
-fmbt_cparsers_la_CPPFLAGS      = -Wall -pedantic -fPIC -I ./d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DCAPI $(FMBTBUILDINFOCFLAGS)
+remote_adapter_loader_CPPFLAGS = -Wall -pedantic -I d -DDROI $(FMBTBUILDINFOCFLAGS) $(GLIB_CFLAGS)
+fmbt_cparsers_la_CPPFLAGS      = -Wall -pedantic -fPIC -I ./d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) -DCAPI $(FMBTBUILDINFOCFLAGS)
 eye4graphics_la_CPPFLAGS       = -Wall -fPIC -I `pwd` `pkg-config --cflags Magick++` $(FMBTBUILDINFOCFLAGS)
-fmbt_aalc_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DINCDIR=\"${pkgincludedir}\" $(FMBTBUILDINFOCFLAGS)
+fmbt_aalc_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) -DINCDIR=\"${pkgincludedir}\" $(FMBTBUILDINFOCFLAGS)
 fmbt_aalp_CPPFLAGS	       = $(FMBTBUILDINFOCFLAGS)
-fmbt_log2lsts_CPPFLAGS	       = -Wall -pedantic -fPIC -I d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0 libxml-2.0` $(FMBTBUILDINFOCFLAGS)
+fmbt_log2lsts_CPPFLAGS	       = -Wall -pedantic -fPIC -I d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) $(XML2_CFLAGS) $(FMBTBUILDINFOCFLAGS)
 
-fmbt_LDFLAGS                   = -g $(JVMLDFLAGS) `pkg-config --libs glib-2.0 gobject-2.0 libedit libxml-2.0` -lboost_regex -Wl,-E -ldl
-fmbt_ucheck_LDFLAGS            = -g `pkg-config --libs glib-2.0 gobject-2.0 libedit libxml-2.0` -lboost_regex -Wl,-E -ldl
+fmbt_LDFLAGS                   = -g $(JVMLDFLAGS) $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E -ldl
+fmbt_ucheck_LDFLAGS            = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E -ldl
 fmbt_droid_LDFLAGS             = -Wl,-E -ldl
-fmbt_cparsers_la_LDFLAGS       = -g `pkg-config --libs glib-2.0 gobject-2.0 libedit` -lboost_regex -Wl,-E -ldl -avoid-version -module -shared -export-dynamic
+fmbt_cparsers_la_LDFLAGS       = -g $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E -ldl -avoid-version -module -shared -export-dynamic
 eye4graphics_la_LDFLAGS        = -g `pkg-config --libs Magick++` -avoid-version -module -shared
-remote_adapter_loader_LDFLAGS  = -g -ldl
-fmbt_aalc_LDFLAGS	       = -g `pkg-config --libs glib-2.0 gobject-2.0 libedit` -lboost_regex -Wl,-E -ldl
-fmbt_log2lsts_LDFLAGS 	       = -g `pkg-config --libs libedit glib-2.0 gobject-2.0 libedit libxml-2.0` -lboost_regex -Wl,-E -ldl
+remote_adapter_loader_LDFLAGS  = -g -ldl $(GLIB_LIBS)
+fmbt_aalc_LDFLAGS	       = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) -lboost_regex -Wl,-E -ldl
+fmbt_log2lsts_LDFLAGS 	       = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E -ldl
 
 fmbt_LDADD                     = d/libdparse.a
 fmbt_ucheck_LDADD              = d/libdparse.a
