@@ -41,9 +41,15 @@ public:
 
 protected:
 
+  GIOChannel* d_stdin;
+  GIOChannel* d_stdout;
+  GIOChannel* d_stderr;
+
+  /*
   FILE* d_stdin;
   FILE* d_stdout;
   FILE* d_stderr;
+  */
 
   std::string prm;
   

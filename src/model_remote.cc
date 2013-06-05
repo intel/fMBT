@@ -23,32 +23,32 @@
 
 int Model_remote::getActions(int** act)
 {
-  std::fprintf(d_stdin, "a\n");
+  fprintf(d_stdin, "a\n");
   return getact(act,actions,d_stdin,d_stdout,log);
 }
 
 int Model_remote::getIActions(int** act)
 {
-  std::fprintf(d_stdin, "i\n");
+  fprintf(d_stdin, "i\n");
   return getact(act,actions,d_stdin,d_stdout,log);
 }
 
 
 int Model_remote::execute(int action)
 {
-  std::fprintf(d_stdin, "%i\n", action);
+  fprintf(d_stdin, "%i\n", action);
   return getint(d_stdin,d_stdout,log);
 }
 
 int Model_remote::getprops(int** pro)
 {
-  std::fprintf(d_stdin, "p\n");
+  fprintf(d_stdin, "p\n");
   return getact(pro,props,d_stdin,d_stdout,log);
 }
 
 bool Model_remote::reset()
 {
-  std::fprintf(d_stdin, "r\n");
+  fprintf(d_stdin, "r\n");
   bool rv = (getint(d_stdin,d_stdout,log) == 1);
   if (!rv) {
     errormsg = "remote model failed to reset \"" + params + "\".\n"
@@ -60,12 +60,12 @@ bool Model_remote::reset()
 
 void Model_remote::push()
 {
-  std::fprintf(d_stdin, "u\n");
+  fprintf(d_stdin, "u\n");
 }
 
 void Model_remote::pop()
 {
-  std::fprintf(d_stdin, "o\n");
+  fprintf(d_stdin, "o\n");
 }
 
 bool Model_remote::init()
@@ -102,9 +102,9 @@ bool Model_remote::init()
     return false;
   }
 
-  d_stdin=fdopen(_stdin,"w");
-  d_stdout=fdopen(_stdout,"r");
-  d_stderr=fdopen(_stderr,"r");
+  d_stdin=g_io_channel_unix_new(_stdin);  
+  d_stdout=g_io_channel_unix_new(_stdout);
+  d_stderr=g_io_channel_unix_new(_stderr);
 
   int acount=getint(d_stdin,d_stdout,log);;
 
@@ -113,7 +113,7 @@ bool Model_remote::init()
   for(int i=0;i<acount;i++) {
     char* line=NULL;
     size_t n;
-    size_t s=getdelim(&line,&n,'\n',d_stdout);
+    size_t s=getline(&line,&n,d_stdout);
     if (!s) {
       status = false;
       return false;
@@ -133,7 +133,7 @@ bool Model_remote::init()
   for(int i=0;i<prop_count;i++) {
     char* line=NULL;
     size_t n;
-    size_t s=getdelim(&line,&n,'\n',d_stdout);
+    size_t s=getline(&line,&n,d_stdout);
     if (!s) {
       status = false;
       return false;
