@@ -16,7 +16,7 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
+#ifndef __MINGW32__
 #include "history_glob.hh"
 #include "helper.hh"
 #include <glob.h>
@@ -69,3 +69,4 @@ Alphabet* History_glob::set_coverage(Coverage* cov,
 }
 
 FACTORY_DEFAULT_CREATOR(History, History_glob, "glob")
+#endif
