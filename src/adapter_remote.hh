@@ -24,6 +24,16 @@ class Adapter_remote: public Adapter, public remote {
 public:
   Adapter_remote(Log& l, std::string& params, bool encode=true);
   virtual ~Adapter_remote() {
+    if (d_stdin) {
+      g_io_channel_close(d_stdin);
+    }
+    if (d_stdout) {
+      g_io_channel_close(d_stdout);
+    }
+    if (d_stderr) {
+      g_io_channel_close(d_stderr);
+    }
+    /*
     if (d_stdin) 
       fclose(d_stdin);
     if (d_stdout)
@@ -32,6 +42,7 @@ public:
       fclose(d_stderr);
     if (read_buf)
       free(read_buf);
+    */
   }
   virtual bool init();
 
@@ -43,9 +54,17 @@ protected:
 
   char* read_buf;
   size_t read_buf_pos;
+
+  /*
   FILE* d_stdin;
   FILE* d_stdout;
   FILE* d_stderr;
+  */
+
+  GIOChannel* d_stdin;
+  GIOChannel* d_stdout;
+  GIOChannel* d_stderr;
+
 
   std::string prm;
   bool urlencode;

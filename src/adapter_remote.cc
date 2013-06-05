@@ -35,7 +35,7 @@ bool Adapter_remote::init()
 {
   int _stdin,_stdout,_stderr;
   g_type_init ();
-
+  
   gchar **argv = NULL;
   gint argc;
   GError *gerr=NULL;
@@ -70,28 +70,35 @@ bool Adapter_remote::init()
 
   monitor();
 
+  d_stdin=g_io_channel_unix_new(_stdin);  
+  d_stdout=g_io_channel_unix_new(_stdout);
+  d_stderr=g_io_channel_unix_new(_stderr);
+
+  g_io_channel_set_flags(d_stderr,G_IO_FLAG_NONBLOCK,NULL);
+  /*
   d_stdin=fdopen(_stdin,"w");
   d_stdout=fdopen(_stdout,"r");
   d_stderr=fdopen(_stderr,"r");
+  */
 
-  std::fprintf(d_stdin,"%i\n",(int)actions->size());
+  fprintf(d_stdin,"%i\n",(int)actions->size());
 
   for(size_t i=0;i<actions->size();i++) {
     if (urlencode) {
       char* s=g_uri_escape_string((*actions)[i].c_str(),
                                   NULL,false);
 
-      std::fprintf(d_stdin,"%s\n",s);
+      fprintf(d_stdin,"%s\n",s);
       g_free(s);
     } else {
-      std::fprintf(d_stdin,"%s\n",(*actions)[i].c_str());
+      fprintf(d_stdin,"%s\n",(*actions)[i].c_str());
     }
 
   }
 
   nonblock(_stdin);
   nonblock(_stdout);
-  fflush(d_stdin);
+  g_io_channel_flush(d_stdin,NULL);
 
   return true;
 }
@@ -123,9 +130,9 @@ void Adapter_remote::execute(std::vector<int>& action)
   size_t si = 0;
   int e;
 
-  std::fprintf(d_stdin, "%i\n", action[0]);
+  fprintf(d_stdin, "%i\n", action[0]);
 
-  fflush(d_stdin);
+  g_io_channel_flush(d_stdin,NULL);
 
 readagain:
   while(g_main_context_iteration(NULL,FALSE));
