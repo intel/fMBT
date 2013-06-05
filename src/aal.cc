@@ -20,6 +20,7 @@
 #include "aal.hh"
 #include "helper.hh"
 #include <cstdlib>
+#include <glib/gprintf.h>
 
 std::map<std::string,aal*>* aal::storage=NULL;
 
@@ -50,7 +51,7 @@ void aal::log(const char* format, ...)
   char* pre_msg=NULL;
 
   va_start(ap, format);
-  if (vasprintf(&pre_msg,format,ap)>0) {
+  if (g_vasprintf(&pre_msg,format,ap)>0) {
     char* msg=escape_string(pre_msg);
     _log.print("<aal type=\"user\" msg=\"");
     _log.print("%s",msg);
