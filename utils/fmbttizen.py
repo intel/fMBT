@@ -605,17 +605,19 @@ def shellSOE(command):
     out, err = p.communicate()
     return True, (p.returncode, out, err)
 
-def waitOutput(nonblockingFd, expectedOutput, timeout, pollInterval=0.1):
+def waitOutput(nonblockingFd, acceptedOutputs, timeout, pollInterval=0.1):
     start = time.time()
     endTime = start + timeout
     s = ""
     try: s += nonblockingFd.read()
     except IOError: pass
-    while (not expectedOutput in s) and time.time() < endTime:
+    foundOutputs = [ao for ao in acceptedOutputs if ao in s]
+    while len(foundOutputs) == 0 and time.time() < endTime:
         time.sleep(pollInterval)
         try: s += nonblockingFd.read()
         except IOError: pass
-    return expectedOutput in s, s
+        foundOutputs = [ao for ao in acceptedOutputs if ao in s]
+    return foundOutputs, s
 
 _subAgents = {}
 def openSubAgent(username, password):
@@ -629,13 +631,14 @@ def openSubAgent(username, password):
     fl = fcntl.fcntl(p.stdout.fileno(), fcntl.F_GETFL)
     fcntl.fcntl(p.stdout.fileno(), fcntl.F_SETFL, fl | os.O_NONBLOCK)
 
-    asksPassword, output1 = waitOutput(p.stdout, "Password:", 5.0)
-    if asksPassword:
+    output2 = ""
+    seenPrompts, output1 = waitOutput(p.stdout, ["Password:", "FMBTAGENT"], 5.0)
+    if "Password:" in seenPrompts:
         p.stdin.write(password + "\\r")
         output1 = ""
+        seenPrompts, output2 = waitOutput(p.stdout, ["FMBTAGENT"], 5.0)
 
-    agentAlive, output2 = waitOutput(p.stdout, "FMBTAGENT", 5.0)
-    if not agentAlive:
+    if not "FMBTAGENT" in seenPrompts:
         p.terminate()
         return (None, 'fMBT agent with username "%s" does not answer.' % (username,),
                 output1 + output2)

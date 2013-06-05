@@ -27,6 +27,7 @@
 import cgi
 import ctypes
 import datetime
+import gc
 import inspect
 import os
 import shutil
@@ -335,6 +336,20 @@ class GUITestInterface(object):
                     pathSolver=_bitmapPathSolver(self._bitmapPathRootForRelativePaths, self._bitmapPath))
             else:
                 self._lastScreenshot = None
+        # Make sure unreachable Screenshot instances are released from
+        # memory.
+        gc.collect()
+        for obj in gc.garbage:
+            if isinstance(obj, Screenshot):
+                if hasattr(obj, "_logCallReturnValue"):
+                    # Some methods have been wrapped by visual
+                    # log. Break reference cycles to let gc collect
+                    # them.
+                    del obj.findItemsByBitmap
+                    del obj.findItemsByOcr
+        del gc.garbage[:]
+        gc.collect()
+
         return self._lastScreenshot
 
     def screenshot(self):
@@ -710,6 +725,38 @@ class GUITestInterface(object):
                 return True
         return False
 
+    def waitAnyBitmap(self, listOfBitmaps, colorMatch=None, opacityLimit=None, area=None, **waitKwArgs):
+        """
+        Wait until any of given bitmaps appears on screen.
+
+        Parameters:
+
+          listOfBitmaps (list of strings):
+                  list of bitmaps (filenames) to be waited for.
+
+          colorMatch, opacityLimit, area (optional):
+                  refer to verifyBitmap documentation.
+
+          waitTime, pollDelay (float, optional):
+                  refer to wait documentation.
+
+        Returns list of bitmaps appearing in the first screenshot that
+        contains at least one of the bitmaps. If none of the bitmaps
+        appear within the time limit, returns empty list.
+
+        Updates the last screenshot.
+        """
+        if not self._lastScreenshot: self.refreshScreenshot()
+        bitmapKwArgs = _bitmapKwArgs(colorMatch, opacityLimit, area, 1)
+        foundBitmaps = []
+        def observe():
+            for bitmap in listOfBitmaps:
+                if self._lastScreenshot.findItemsByBitmap(bitmap, **bitmapKwArgs):
+                    foundBitmaps.append(bitmap)
+            return foundBitmaps != []
+        self.wait(self.refreshScreenshot, observe, **waitKwArgs)
+        return foundBitmaps
+
     def waitBitmap(self, bitmap, colorMatch=None, opacityLimit=None, area=None, **waitKwArgs):
         """
         Wait until bitmap appears on screen.
@@ -730,10 +777,7 @@ class GUITestInterface(object):
 
         Updates the last screenshot.
         """
-        if not self._lastScreenshot: self.refreshScreenshot()
-        return self.wait(self.refreshScreenshot,
-                         self.verifyBitmap, (bitmap,), _bitmapKwArgs(colorMatch, opacityLimit, area),
-                         **waitKwArgs)
+        return self.waitAnyBitmap([bitmap], colorMatch, opacityLimit, area, **waitKwArgs) != []
 
     def waitOcrText(self, text, match=None, preprocess=None, area=None, **waitKwArgs):
         """
@@ -945,7 +989,7 @@ class _VisualLog:
         self._outFileObj = outFileObj
         self._testStep = -1
         self._actionName = None
-        self._callDepth = 0
+        self._callStack = []
         self._highlightCounter = 0
         self._screenshotWidth = screenshotWidth
         self._thumbnailWidth = thumbnailWidth
@@ -966,7 +1010,7 @@ class _VisualLog:
                  'tapBitmap', 'tapId', 'tapItem', 'tapOcrText',
                  'tapText', 'topApp', 'topWindow', 'type',
                  'verifyOcrText', 'verifyText', 'verifyBitmap',
-                  'waitBitmap', 'waitOcrText', 'waitText']
+                  'waitAnyBitmap', 'waitBitmap', 'waitOcrText', 'waitText']
         for a in attrs:
             if hasattr(device, a):
                 m = getattr(device, a)
@@ -977,7 +1021,7 @@ class _VisualLog:
     def close(self):
         if self._outFileObj != None:
             html = []
-            for c in xrange(self._callDepth):
+            for c in xrange(len(self._callStack)):
                 html.append('</table></tr>') # end call
             html.append('</table></div></td></tr></table></ul>') # end step
             html.append('</body></html>') # end html
@@ -1023,7 +1067,7 @@ class _VisualLog:
         calleeArgs = str(argv.locals['args']) + " " + str(argv.locals['kwargs'])
         callerFilename = inspect.currentframe().f_back.f_back.f_code.co_filename
         callerLineno = inspect.currentframe().f_back.f_back.f_lineno
-        imgHtml = self.imgToHtml(img, width, imgTip)
+        imgHtml = self.imgToHtml(img, width, imgTip, "call:%s" % (callee,))
         t = datetime.datetime.now()
         callHtml = '''
              <tr><td></td><td><table><tr>
@@ -1031,12 +1075,12 @@ class _VisualLog:
              </tr>
              %s''' % (self.htmlTimestamp(t), cgi.escape(callerFilename), callerLineno, cgi.escape(callee), cgi.escape(str(calleeArgs)), imgHtml)
         self.write(callHtml)
-        self._callDepth += 1
+        self._callStack.append(callee)
         return (self.timestamp(t), callerFilename, callerLineno)
 
     def logReturn(self, retval, img=None, width="", imgTip="", tip=""):
-        imgHtml = self.imgToHtml(img, width, imgTip)
-        self._callDepth -= 1
+        imgHtml = self.imgToHtml(img, width, imgTip, "return:%s" % (self._callStack[-1],))
+        self._callStack.pop()
         returnHtml = '''
              <tr>
                  <td>%s</td><td><div class="returnvalue"><a title="%s">== %s</a></div></td>
@@ -1046,7 +1090,7 @@ class _VisualLog:
 
     def logException(self):
         einfo = sys.exc_info()
-        self._callDepth -= 1
+        self._callStack.pop()
         excHtml = '''
              <tr>
                  <td>%s</td><td><div class="exception"><a title="%s">!! %s</a></div></td>
@@ -1165,9 +1209,12 @@ class _VisualLog:
             return retval
         return findItemsByOcrWRAP
 
-    def imgToHtml(self, img, width="", imgTip=""):
+    def imgToHtml(self, img, width="", imgTip="", imgClass=""):
+        if imgClass: imgClassAttr = 'class="%s" ' % (imgClass,)
+        else: imgClassAttr = ""
         if isinstance(img, Screenshot):
-            imgHtml = '<tr><td></td><td><img title="%s" src="%s" width="%s" alt="%s" /></td></tr>' % (
+            imgHtml = '<tr><td></td><td><img %stitle="%s" src="%s" width="%s" alt="%s" /></td></tr>' % (
+                imgClassAttr,
                 "%s refreshScreenshot() at %s:%s" % img._logCallReturnValue,
                 img.filename(),
                 self._screenshotWidth,
@@ -1178,8 +1225,8 @@ class _VisualLog:
                 imgTip = 'title="%s refreshScreenshot() at %s:%s"' % imgTip
             else:
                 imgTip = 'title="%s"' % (imgTip,)
-            imgHtml = '<tr><td></td><td><img %s src="%s" %s alt="%s" /></td></tr>' % (
-                imgTip, img, width, img)
+            imgHtml = '<tr><td></td><td><img %s%s src="%s" %s alt="%s" /></td></tr>' % (
+                imgClassAttr, imgTip, img, width, img)
         else:
             imgHtml = ""
         return imgHtml

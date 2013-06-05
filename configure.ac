@@ -1,4 +1,4 @@
-AC_INIT([fmbt], [0.9.3-0.rc0], [antti.kervinen@intel.com])
+AC_INIT([fmbt], [0.9.3-1], [antti.kervinen@intel.com])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
 
 AC_CONFIG_MACRO_DIR([m4])
@@ -33,6 +33,12 @@ AC_SUBST([NDK_BUILD])
 
 
 AC_SUBST([FMBT_VERSION], ['AC_PACKAGE_VERSION'])
+
+AC_ARG_WITH([build-info],
+            [AS_HELP_STRING([--with-build-info=string], [add extra build/version info])],
+            [FMBTBUILDINFO=$withval],
+            [FMBTBUILDINFO=m4_esyscmd_s([head -n 1 configure.ac | grep -q rc0 && echo -n \-&& git describe --always])])
+AC_SUBST([FMBTBUILDINFO])
 
 
 AS_IF([test "x$enable_android" != "xyes"],

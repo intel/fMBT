@@ -93,7 +93,7 @@ AAL_ACTIONREI = re.compile('{\s*"[^"]*"\s*noitca')
 AAL_INPUTRE   = re.compile('input\s"[^{]*"\s*{')
 AAL_INPUTREI  = re.compile('{\s*"[^"]*"\s*tupni')
 AAL_OUTPUTRE  = re.compile('output\s"[^"]*"\s*{')
-AAL_OUTPUTREI = re.compile('}\s*"[^"]*"\s*tuptuo')
+AAL_OUTPUTREI = re.compile('{\s*"[^"]*"\s*tuptuo')
 
 AAL_TAGRE     = re.compile('tag\s"[^{]*"\s*{')
 AAL_TAGREI    = re.compile('{\s*"[^"]*"\s*gat')
@@ -147,7 +147,7 @@ for opt, arg in opts:
         print __doc__
         sys.exit(0)
     elif opt in ['-V', '--version']:
-        print "Version " + fmbt_config.fmbt_version
+        print "Version " + fmbt_config.fmbt_version + fmbt_config.fmbt_build_info
         sys.exit(0)
     elif opt in ["-p", "--no-preview"]:
         if opt_preview_only:

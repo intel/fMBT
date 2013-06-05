@@ -1,1 +1,2 @@
 fmbt_version = "@VERSION@"
+fmbt_build_info = "@FMBTBUILDINFO@"

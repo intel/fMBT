@@ -1,8 +1,16 @@
-fmbt (0.9.3-0.rc0) unstable; urgency=low
+fmbt (0.9.3-1) unstable; urgency=low
 
-  * Development version.
+  * Bug fix release.
+  * fmbttizen:
+    - Support for Tizen 2.1 emulator and Blackbay & Lunchbox devices.
+  * fmbtandroid/fmbttizen/fmbtx11:
+    - Fixed memory leak in visual logging.
+  * Test generator + AAL/Python:
+    - Fixed execution of originally disabled actions in mrandom heuristic.
+  * fmbt-editor:
+    - Fixed tab completion in output action blocks.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 22 May 2013 14:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 3 Jun 2013 12:42:00 +0300
 
 fmbt (0.9.2-1) unstable; urgency=low
 

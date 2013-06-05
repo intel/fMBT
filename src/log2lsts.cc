@@ -59,7 +59,7 @@ public:
       if (prop.size()<hl.tnames.size()) {
 	prop.resize(hl.tnames.size());
       }
-      
+
       for(unsigned i=0;i<props.size();i++) {
 	log.debug("State %i, prop %i(%s)\n",
 		  trace.size(),props[i],hl.tnames[props[i]].c_str());
@@ -114,7 +114,7 @@ public:
 	static std::string err("verdict::error");
 	std::string s;
 	switch (verdict) {
-	case Verdict::FAIL: 
+	case Verdict::FAIL:
 	  s=fail;
 	  break;
 	case Verdict::PASS:
@@ -152,7 +152,7 @@ void print_usage()
 	      "Usage: fmbt-log2lsts [options] logfile\n"
 	      "Options:\n"
 	      "    -e     add test verdict to the end state as state proposition\n"
-	      "    -V     print version("VERSION")\n"
+	      "    -V     print version ("VERSION FMBTBUILDINFO")\n"
 	      "    -h     help\n"
 	      );
 }
@@ -171,7 +171,7 @@ int main(int argc,char * const argv[])
   };
 
 #ifndef DROI
-  g_type_init ();  
+  g_type_init ();
 #endif
 
   while ((c = getopt_long (argc, argv, "heVo:", long_opts, NULL)) != -1)
@@ -184,14 +184,14 @@ int main(int argc,char * const argv[])
 	  return 1;
 	}
 	outputfile=fopen(optarg,"w");
-	if (!outputfile) 
+	if (!outputfile)
           error(1,0,"cannot open output file \"%s\".",optarg);
 	break;
       case 'e':
 	verd=true;
 	break;
       case 'V':
-	printf("Version: "VERSION"\n");
+	printf("Version: "VERSION FMBTBUILDINFO"\n");
 	return 0;
 	break;
       case 'h':

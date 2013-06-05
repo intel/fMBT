@@ -176,7 +176,7 @@ int main(int argc,char** argv)
     switch (c)
     {
     case 'V':
-      printf("Version: "VERSION"\n");
+      printf("Version: "VERSION FMBTBUILDINFO"\n");
       return 0;
       break;
     case 'D':

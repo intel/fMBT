@@ -76,7 +76,7 @@ std::string pstr;
 extern std::string result;
 extern aalang* obj;
 
-std::string compile_command("g++ -fPIC -shared -x c++  - -I " 
+std::string compile_command("g++ -fPIC -shared -x c++  - -I "
 			    INCDIR
 			    " -o ");
 std::string prep_command("fmbt-aalp");
@@ -88,7 +88,7 @@ std::string prep_command("fmbt-aalp");
 static void
 parse_syntax_error_report(struct D_Parser *ap) {
   Parser *p = (Parser *)ap;
- 
+
   char *fn = d_dup_pathname_str(p->user.loc.pathname);
 
   p->user.loc.ws++;
@@ -132,9 +132,9 @@ int main(int argc,char** argv) {
 	  obj=new aalang_action;
 	  break;
 	}
-	break;	
+	break;
       case 'V':
-        printf("Version: "VERSION"\n");
+        printf("Version: "VERSION FMBTBUILDINFO"\n");
         return 0;
         break;
       case 'B':
@@ -183,7 +183,7 @@ int main(int argc,char** argv) {
   } else {
     s=readfile(argv[optind],prep_command.c_str(),status);
     if (status) {
-      error(1,0,"Preprocessing failure \"%s\".",argv[optind]);      
+      error(1,0,"Preprocessing failure \"%s\".",argv[optind]);
     }
   }
 
@@ -238,7 +238,7 @@ int main(int argc,char** argv) {
       pos+=wrote;
     } while (wrote>0 && pos<result.length());
     close(_stdin);
-    
+
     {
       int status;
       if (waitpid(pid, &status, 0)==-1)

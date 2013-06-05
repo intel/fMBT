@@ -11,6 +11,8 @@ pyexec_LTLIBRARIES = eye4graphics.la
 endif
 endif
 
+FMBTBUILDINFOCFLAGS=-DFMBTBUILDINFO='"@FMBTBUILDINFO@"'
+
 ##########################################
 # Define all sources in Sources.mk so that
 # the definitions can be shared between
@@ -26,14 +28,15 @@ noinst_HEADERS += conf.g lts.g mrules.g covlang.g xrules.g lang.g uconf.g filter
 
 noinst_HEADERS += Android.mk Application.mk
 
-fmbt_CPPFLAGS                  = -Wall -pedantic -fPIC -I ./d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0  libxml-2.0` $(JVMCFLAGS)
-fmbt_ucheck_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0 libxml-2.0`
-fmbt_droid_CPPFLAGS            = -Wall -pedantic -fPIC -I d -I `pwd` -DDROI
-remote_adapter_loader_CPPFLAGS = -Wall -pedantic -I d -DDROI
-fmbt_cparsers_la_CPPFLAGS      = -Wall -pedantic -fPIC -I ./d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DCAPI
-eye4graphics_la_CPPFLAGS       = -Wall -fPIC -I `pwd` `pkg-config --cflags Magick++`
-fmbt_aalc_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DINCDIR=\"${pkgincludedir}\"
-fmbt_log2lsts_CPPFLAGS	       = -Wall -pedantic -fPIC -I d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0 libxml-2.0`
+fmbt_CPPFLAGS                  = -Wall -pedantic -fPIC -I ./d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0  libxml-2.0` $(JVMCFLAGS) $(FMBTBUILDINFOCFLAGS)
+fmbt_ucheck_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0 libxml-2.0` $(FMBTBUILDINFOCFLAGS)
+fmbt_droid_CPPFLAGS            = -Wall -pedantic -fPIC -I d -I `pwd` -DDROI $(FMBTBUILDINFOCFLAGS)
+remote_adapter_loader_CPPFLAGS = -Wall -pedantic -I d -DDROI $(FMBTBUILDINFOCFLAGS)
+fmbt_cparsers_la_CPPFLAGS      = -Wall -pedantic -fPIC -I ./d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DCAPI $(FMBTBUILDINFOCFLAGS)
+eye4graphics_la_CPPFLAGS       = -Wall -fPIC -I `pwd` `pkg-config --cflags Magick++` $(FMBTBUILDINFOCFLAGS)
+fmbt_aalc_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0` -DINCDIR=\"${pkgincludedir}\" $(FMBTBUILDINFOCFLAGS)
+fmbt_aalp_CPPFLAGS	       = $(FMBTBUILDINFOCFLAGS)
+fmbt_log2lsts_CPPFLAGS	       = -Wall -pedantic -fPIC -I d -I `pwd` `pkg-config --cflags libedit glib-2.0 gobject-2.0 libxml-2.0` $(FMBTBUILDINFOCFLAGS)
 
 fmbt_LDFLAGS                   = -g $(JVMLDFLAGS) `pkg-config --libs glib-2.0 gobject-2.0 libedit libxml-2.0` -lboost_regex -Wl,-E -ldl
 fmbt_ucheck_LDFLAGS            = -g `pkg-config --libs glib-2.0 gobject-2.0 libedit libxml-2.0` -lboost_regex -Wl,-E -ldl
