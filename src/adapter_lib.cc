@@ -16,6 +16,7 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+#ifndef __MINGW32__
 #include "adapter.hh"
 #include "adapter_dummy.hh"
 #include "log.hh"
@@ -80,3 +81,4 @@ namespace {
 
   static AdapterFactory::Register me("lib", lib_creator);
 }
+#endif
