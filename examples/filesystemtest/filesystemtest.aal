@@ -3,9 +3,10 @@ aal "filesystemtest" {
     language "python" {
         import os
         import shutil
-        MOUNTPOINT = "/tmp"
-        DIRNAME = MOUNTPOINT + "/fmbt.filesystemtest"
-        SUBDIRNAME = DIRNAME + "/subdir"
+        import tempfile
+        MOUNTPOINT = tempfile.tempdir
+        DIRNAME = os.path.join( MOUNTPOINT , "fmbt.filesystemtest" )
+        SUBDIRNAME = os.path.join( DIRNAME , "subdir" )
     }
     variables { dir_exists, subdir_exists }
     initial_state {
@@ -109,3 +110,6 @@ aal "filesystemtest" {
         adapter() { assert not os.access(SUBDIRNAME, os.R_OK), "%s accessible" % (SUBDIRNAME,) }
     }
 }
+
+
+# C1*exp(k1*t) + C2*exp(k2*t)
