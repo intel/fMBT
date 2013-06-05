@@ -1180,24 +1180,30 @@ class _VisualLog:
             return retval
         return findItemsByOcrWRAP
 
+    def relFilePath(self, fileorFolderName, comp='.'):
+        return os.path.relpath(fileorFolderName, os.path.dirname(comp))
+
     def imgToHtml(self, img, width="", imgTip="", imgClass=""):
         if imgClass: imgClassAttr = 'class="%s" ' % (imgClass,)
         else: imgClassAttr = ""
+
         if isinstance(img, Screenshot):
+            imgHtmlName = self.relFilePath(img.filename(), self._outFileObj.name)
             imgHtml = '<tr><td></td><td><img %stitle="%s" src="%s" width="%s" alt="%s" /></td></tr>' % (
                 imgClassAttr,
                 "%s refreshScreenshot() at %s:%s" % img._logCallReturnValue,
-                img.filename(),
+                imgHtmlName,
                 self._screenshotWidth,
-                img.filename())
+                imgHtmlName)
         elif img:
             if width: width = 'width="%s"' % (width,)
             if type(imgTip) == tuple and len(imgTip) == 3:
                 imgTip = 'title="%s refreshScreenshot() at %s:%s"' % imgTip
             else:
                 imgTip = 'title="%s"' % (imgTip,)
+            imgHtmlName = self.relFilePath(img, self._outFileObj.name)
             imgHtml = '<tr><td></td><td><img %s%s src="%s" %s alt="%s" /></td></tr>' % (
-                imgClassAttr, imgTip, img, width, img)
+                imgClassAttr, imgTip, imgHtmlName, width, imgHtmlName)
         else:
             imgHtml = ""
         return imgHtml
