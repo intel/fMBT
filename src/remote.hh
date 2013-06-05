@@ -20,8 +20,9 @@
 #include <string>
 
 #include <sys/types.h>
+#ifndef __MINGW32__
 #include <sys/wait.h>
-
+#endif
 #include "writable.hh"
 
 class remote {
@@ -47,7 +48,7 @@ protected:
   static void watch_func(GPid pid,gint status,gpointer user_data) {
     remote* r;
     r=(remote*)user_data;
-
+#ifndef __MINGW32__
     if (WIFEXITED(status)) {
       // child terminated normally
       fprintf(stderr,"%s Terminated normally (%i)\n",r->prefix.c_str(),WEXITSTATUS(status)); // The exit status.
@@ -71,6 +72,7 @@ protected:
 	*(r->_status)=false;
       return;
     }
+#endif
     // Currently we don't care about the rest 
   }
   GPid pid;
