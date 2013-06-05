@@ -71,6 +71,24 @@ print fmbtandroid.Device().refreshView().dumpTree()
 
 * * *
 
+Open application grid from the home screen, unlock screen if necessary
+
+import fmbtandroid
+import time
+d = fmbtandroid.Device()
+d.pressHome()
+time.sleep(1)
+whatISee = d.waitAnyBitmap(["lockscreen-lock.png", "home-appgrid.png"])
+if "lockscreen-lock.png" in whatISee:
+    d.swipeBitmap("lockscreen-lock.png", "east")
+    time.sleep(1)
+    d.pressHome()
+    whatISee = d.waitAnyBitmap(["home-appgrid.png"])
+assert "home-appgrid.png" in whatISee, "Cannot find appgrid bitmap at"
+d.tapBitmap("home-appgrid.png")
+
+* * *
+
 Save generated device ini for modifications
 
 import fmbtandroid

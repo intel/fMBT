@@ -725,6 +725,38 @@ class GUITestInterface(object):
                 return True
         return False
 
+    def waitAnyBitmap(self, listOfBitmaps, colorMatch=None, opacityLimit=None, area=None, **waitKwArgs):
+        """
+        Wait until any of given bitmaps appears on screen.
+
+        Parameters:
+
+          listOfBitmaps (list of strings):
+                  list of bitmaps (filenames) to be waited for.
+
+          colorMatch, opacityLimit, area (optional):
+                  refer to verifyBitmap documentation.
+
+          waitTime, pollDelay (float, optional):
+                  refer to wait documentation.
+
+        Returns list of bitmaps appearing in the first screenshot that
+        contains at least one of the bitmaps. If none of the bitmaps
+        appear within the time limit, returns empty list.
+
+        Updates the last screenshot.
+        """
+        if not self._lastScreenshot: self.refreshScreenshot()
+        bitmapKwArgs = _bitmapKwArgs(colorMatch, opacityLimit, area, 1)
+        foundBitmaps = []
+        def observe():
+            for bitmap in listOfBitmaps:
+                if self._lastScreenshot.findItemsByBitmap(bitmap, **bitmapKwArgs):
+                    foundBitmaps.append(bitmap)
+            return foundBitmaps != []
+        self.wait(self.refreshScreenshot, observe, **waitKwArgs)
+        return foundBitmaps
+
     def waitBitmap(self, bitmap, colorMatch=None, opacityLimit=None, area=None, **waitKwArgs):
         """
         Wait until bitmap appears on screen.
@@ -745,10 +777,7 @@ class GUITestInterface(object):
 
         Updates the last screenshot.
         """
-        if not self._lastScreenshot: self.refreshScreenshot()
-        return self.wait(self.refreshScreenshot,
-                         self.verifyBitmap, (bitmap,), _bitmapKwArgs(colorMatch, opacityLimit, area),
-                         **waitKwArgs)
+        return self.waitAnyBitmap([bitmap], colorMatch, opacityLimit, area, **waitKwArgs) != []
 
     def waitOcrText(self, text, match=None, preprocess=None, area=None, **waitKwArgs):
         """
@@ -981,7 +1010,7 @@ class _VisualLog:
                  'tapBitmap', 'tapId', 'tapItem', 'tapOcrText',
                  'tapText', 'topApp', 'topWindow', 'type',
                  'verifyOcrText', 'verifyText', 'verifyBitmap',
-                  'waitBitmap', 'waitOcrText', 'waitText']
+                  'waitAnyBitmap', 'waitBitmap', 'waitOcrText', 'waitText']
         for a in attrs:
             if hasattr(device, a):
                 m = getattr(device, a)
