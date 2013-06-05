@@ -1180,15 +1180,19 @@ class _VisualLog:
             return retval
         return findItemsByOcrWRAP
 
-    def relFilePath(self, fileorFolderName, comp='.'):
-        return os.path.relpath(fileorFolderName, os.path.dirname(comp))
+    def relFilePath(self, fileOrDirName, fileLikeObj):
+        if hasattr(fileLikeObj, "name"):
+            referenceDir = os.path.dirname(fileLikeObj.name)
+        else:
+            return fileOrDirName # keep it absolute if there's no reference
+        return os.path.relpath(fileOrDirName, referenceDir)
 
     def imgToHtml(self, img, width="", imgTip="", imgClass=""):
         if imgClass: imgClassAttr = 'class="%s" ' % (imgClass,)
         else: imgClassAttr = ""
 
         if isinstance(img, Screenshot):
-            imgHtmlName = self.relFilePath(img.filename(), self._outFileObj.name)
+            imgHtmlName = self.relFilePath(img.filename(), self._outFileObj)
             imgHtml = '<tr><td></td><td><img %stitle="%s" src="%s" width="%s" alt="%s" /></td></tr>' % (
                 imgClassAttr,
                 "%s refreshScreenshot() at %s:%s" % img._logCallReturnValue,
@@ -1201,7 +1205,7 @@ class _VisualLog:
                 imgTip = 'title="%s refreshScreenshot() at %s:%s"' % imgTip
             else:
                 imgTip = 'title="%s"' % (imgTip,)
-            imgHtmlName = self.relFilePath(img, self._outFileObj.name)
+            imgHtmlName = self.relFilePath(img, self._outFileObj)
             imgHtml = '<tr><td></td><td><img %s%s src="%s" %s alt="%s" /></td></tr>' % (
                 imgClassAttr, imgTip, imgHtmlName, width, imgHtmlName)
         else:
