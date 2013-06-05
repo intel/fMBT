@@ -16,6 +16,7 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+#ifndef __MINGW32__
 
 #include "history_log.hh"
 
@@ -260,3 +261,4 @@ bool History_log::send_action(std::string& act,
 }
 
 FACTORY_DEFAULT_CREATOR(History, History_log, "log")
+#endif
