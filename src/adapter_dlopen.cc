@@ -26,6 +26,8 @@
  * passed to the loaded adapter.
  */
 
+#ifndef __MINGW32__
+
 #include "adapter_dlopen.hh"
 #include <cstdio>
 #include <sstream>
@@ -125,3 +127,5 @@ int  Adapter_dlopen::observe(std::vector<int> &action,
 }
 
 FACTORY_DEFAULT_CREATOR(Adapter, Adapter_dlopen, "dlopen")
+
+#endif
