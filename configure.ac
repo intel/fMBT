@@ -48,6 +48,9 @@ AS_IF([test "x$enable_android" != "xyes"],
     [PKG_CHECK_MODULES([GOBJECT], [gobject-2.0], [],
         AC_MSG_FAILURE([gobject-2.0 required if not --enable-android]))]
 
+    [PKG_CHECK_MODULES([MAGIC], [Magick++], [],
+        AC_MSG_FAILURE([Magick++ required if not --enable-android]))]
+
     [PKG_CHECK_MODULES([XML2], [libxml-2.0], [],
         AC_MSG_FAILURE([libxml-2.0 required if not --enable-android]))]
     )
