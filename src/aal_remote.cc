@@ -67,40 +67,59 @@ aal_remote::aal_remote(Log&l,std::string& s)
     return;
   }
 
-  nonblock(_stderr);
 
+  /*
+  nonblock(_stderr);
+  */
   monitor(&status);
 
   prefix="aal remote("+s+")";
 
+  d_stdin=g_io_channel_unix_new(_stdin);  
+  d_stdout=g_io_channel_unix_new(_stdout);
+  d_stderr=g_io_channel_unix_new(_stderr);
+
+  g_io_channel_set_encoding(d_stdout,NULL,NULL);
+
+  g_io_channel_set_flags(d_stderr,(GIOFlags)(G_IO_FLAG_NONBLOCK|
+				  (int)g_io_channel_get_flags(d_stderr))
+			 ,NULL);
+
+  /*
   d_stdin=fdopen(_stdin,"w");
   d_stdout=fdopen(_stdout,"r");
   d_stderr=fdopen(_stderr,"r");
+  */
+  _log.debug("Waiting for actions");
 
   ssize_t red=bgetline(&read_buf,&read_buf_pos,d_stdout,l,true);
+
+  _log.debug("aname %i",red);
 
   action_names.push_back("TAU");
 
   while (red>1) {
-    read_buf[red-1]='\0'; // no not include linefeed
     action_names.push_back(read_buf);
     red=bgetline(&read_buf,&read_buf_pos,d_stdout,l,true);
+    _log.debug("aname %i",red);
   }
 
+  _log.debug("Waiting for tags");
   red=bgetline(&read_buf,&read_buf_pos,d_stdout,l,true);
+  _log.debug("tname %i",red);
 
   tag_names.push_back("TAU");
 
   while (red>1) {
-    read_buf[red-1]='\0'; // no not include linefeed
     tag_names.push_back(read_buf);
     red=bgetline(&read_buf,&read_buf_pos,d_stdout,l,true);
+    _log.debug("tname %i",red);
   }
 
   free(read_buf);
   read_buf_pos=0;
 
-  fflush(d_stdin);
+  g_io_channel_flush(d_stdin,NULL);
 }
 
 void aal_remote::handle_stderr() {
@@ -108,6 +127,8 @@ void aal_remote::handle_stderr() {
   size_t n=0;
   char* read_buf=NULL;
   size_t read_buf_pos=0;
+
+  _log.debug("nonblock_getline %i",g_io_channel_get_flags(d_stderr));
 
   if (nonblock_getline(&line,&n,d_stderr,read_buf,read_buf_pos) && line) {
     const char * escaped = escape_string(line);
@@ -118,6 +139,7 @@ void aal_remote::handle_stderr() {
     }
     free(line);
   }
+  _log.debug("nonblock_getline ok");
   free(read_buf);
 }
 
@@ -128,12 +150,16 @@ int aal_remote::adapter_execute(int action,const char* params) {
     return 0;
   }
 
-  if (params)
-    std::fprintf(d_stdin, "ap%s\n",params);
+  _log.debug("adapter_execute enter");
 
-  std::fprintf(d_stdin, "a%i\n", action);
-  return getint(d_stdin,d_stdout,_log,Alphabet::ALPHABET_MIN,
+  if (params)
+    fprintf(d_stdin, "ap%s\n",params);
+
+  fprintf(d_stdin, "a%i\n", action);
+  int r= getint(d_stdin,d_stdout,_log,Alphabet::ALPHABET_MIN,
                 action_names.size(),this,true);
+  _log.debug("adapter_execute exit");
+  return r;
 }
 
 int aal_remote::model_execute(int action) {
@@ -148,7 +174,7 @@ int aal_remote::model_execute(int action) {
   while(g_main_context_iteration(NULL,FALSE));
   handle_stderr();
 
-  std::fprintf(d_stdin, "m%i\n", action);
+  fprintf(d_stdin, "m%i\n", action);
   return getint(d_stdin,d_stdout,_log,Alphabet::ALPHABET_MIN,
                 action_names.size(),this,true);
 }
@@ -166,7 +192,7 @@ void aal_remote::adapter_exit(Verdict::Verdict verdict,
   std::string me_reason(reason);
   escape_string(me_reason);
 
-  std::fprintf(d_stdin,"ae %s %s\n",to_string(verdict).c_str(),me_reason.c_str());
+  fprintf(d_stdin,"ae %s %s\n",to_string(verdict).c_str(),me_reason.c_str());
 
   while(g_main_context_iteration(NULL,FALSE));
   handle_stderr();
@@ -184,18 +210,38 @@ void aal_remote::push() {
     handle_stderr();
     if (accel==0 && _g_simulation_depth_hint > 0) {
       std::string s="lts"+to_string(_g_simulation_depth_hint+1)+"\n";
-      if (std::fprintf(d_stdin,s.c_str())!=(int)s.length()) {
+      if (fprintf(d_stdin,s.c_str())!=(int)s.length()) {
         status=false;
       }
-      fflush(d_stdin);
-      if (fflush(d_stdin)==EBADF) {
+      g_io_channel_flush(d_stdin,NULL);
+      if (g_io_channel_flush(d_stdin,NULL)!=G_IO_STATUS_NORMAL) {
         status=false;
       }
       int r=getint(d_stdin,d_stdout,_log,0,INT_MAX,this,true);
       if (status && r>0) {
-        char* lts_content = new char[r+1];
+        char* lts_content = new char[r+2]; 
         lts_content[r]=0;
-        fread(lts_content,1,r,d_stdout);
+        //fread(lts_content,1,r,d_stdout);	
+	//size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+	/*
+GIOStatus           g_io_channel_read_chars             (GIOChannel *channel,
+                                                         gchar *buf,
+                                                         gsize count,
+                                                         gsize *bytes_read,
+                                                         GError **error);
+	*/
+	
+	gsize bytes_read;
+	gsize total_read=0;
+	GIOStatus status;
+
+	do {
+	  bytes_read=0;
+	  status=g_io_channel_read_chars(d_stdout,lts_content+total_read,r-total_read,&bytes_read,NULL);
+	  total_read+=bytes_read;
+	} while (total_read<r && status != G_IO_STATUS_ERROR && 
+		 status != G_IO_STATUS_EOF );
+	_log.debug("Got %i bytes strlen %i",total_read,strlen(lts_content));
         lts=new Lts(_log,std::string("remote.lts#")+lts_content);
         delete[] lts_content;
         if (lts && lts->status && lts->init() && lts->reset() && lts->status) {
@@ -213,11 +259,11 @@ void aal_remote::push() {
       accel=-1; // do not try local lts acceleration another time
     }
 
-    if (std::fprintf(d_stdin,"mu\n")!=3) {
+    if (fprintf(d_stdin,"mu\n")!=3) {
       status=false;
     }
-    fflush(d_stdin);
-    if (fflush(d_stdin)==EBADF) {
+    g_io_channel_flush(d_stdin,NULL);
+    if (g_io_channel_flush(d_stdin,NULL)!=G_IO_STATUS_NORMAL) {
       status=false;
     }
   }
@@ -236,10 +282,10 @@ void aal_remote::pop() {
     } else {
       while(g_main_context_iteration(NULL,FALSE));
       handle_stderr();
-      if (std::fprintf(d_stdin,"mo\n")!=3) {
+      if (fprintf(d_stdin,"mo\n")!=3) {
         status=false;
       }
-      if (fflush(d_stdin)==EBADF) {
+      if (g_io_channel_flush(d_stdin,NULL)!=G_IO_STATUS_NORMAL) {
         status=false;
       }
     }
@@ -248,7 +294,7 @@ void aal_remote::pop() {
 
 bool aal_remote::reset() {
   handle_stderr();
-  std::fprintf(d_stdin, "mr\n");
+  fprintf(d_stdin, "mr\n");
   bool rv = (getint(d_stdin,d_stdout,_log,0,1,this,true) == 1);
   if (!rv) {
     errormsg = "aal_remote model failed to reset \"" + params + "\".\n"
@@ -259,7 +305,7 @@ bool aal_remote::reset() {
 }
 
 bool aal_remote::init() {
-  std::fprintf(d_stdin, "ai\n");
+  fprintf(d_stdin, "ai\n");
   bool rv = (getint(d_stdin,d_stdout,_log,0,1,this,true) == 1);
   if (!rv) {
     errormsg = "aal_remote adapter failed to init \"" + params + "\".\n"
@@ -283,7 +329,7 @@ int aal_remote::getActions(int** act) {
   while(g_main_context_iteration(NULL,FALSE));
   handle_stderr();
 
-  std::fprintf(d_stdin, "ma\n");
+  fprintf(d_stdin, "ma\n");
   if ((rv = getact(act,actions,d_stdin,d_stdout,_log,
                    1,action_names.size(),this,true)) >= 0) {
     return rv;
@@ -307,7 +353,7 @@ int aal_remote::getprops(int** pro) {
   while(g_main_context_iteration(NULL,FALSE));
   handle_stderr();
 
-  std::fprintf(d_stdin, "mp\n");
+  fprintf(d_stdin, "mp\n");
   if ((rv = getact(pro,tags,d_stdin,d_stdout,_log,
                    0,tag_names.size(),this,true)) >= 0) {
     return rv;
@@ -335,7 +381,7 @@ int aal_remote::check_tags(std::vector<int>& tag,std::vector<int>& t)
     s=s+" "+to_string(tag[i]);
   }
 
-  std::fprintf(d_stdin, "act%s\n",s.c_str());
+  fprintf(d_stdin, "act%s\n",s.c_str());
 
   if ((rv = getact(NULL,t,d_stdin,d_stdout,_log,
                    0,tag_names.size(),this,true)) >= 0) {
@@ -359,9 +405,9 @@ int aal_remote::observe(std::vector<int> &action, bool block)
   handle_stderr();
 
   if (block) {
-    std::fprintf(d_stdin, "aob\n"); // block
+    fprintf(d_stdin, "aob\n"); // block
   } else {
-    std::fprintf(d_stdin, "aop\n"); // poll
+    fprintf(d_stdin, "aop\n"); // poll
   }
   int action_alternatives = getact(NULL, action, d_stdin, d_stdout,_log,
                                    Alphabet::ALPHABET_MIN,

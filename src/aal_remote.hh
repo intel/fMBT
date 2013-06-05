@@ -32,13 +32,13 @@ public:
   aal_remote(Log&l,std::string&);
   virtual ~aal_remote() {
     if (d_stdin) {
-      fclose(d_stdin);
+      g_io_channel_close(d_stdin);
     }
     if (d_stdout) {
-      fclose(d_stdout);
+      g_io_channel_close(d_stdout);
     }
     if (d_stderr) {
-      fclose(d_stderr);
+      g_io_channel_close(d_stderr);
     }
     if (lts) {
       delete lts;
@@ -61,9 +61,15 @@ public:
 private:
   void handle_stderr();
 
+  /*
   FILE* d_stdin;
   FILE* d_stdout;
   FILE* d_stderr;
+  */
+
+  GIOChannel* d_stdin;
+  GIOChannel* d_stdout;
+  GIOChannel* d_stderr;
 
   int accel;
 
