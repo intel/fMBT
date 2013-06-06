@@ -501,6 +501,7 @@ elif 'QEMU Virtual CPU' in cpuinfo:
         "VOLUMEDOWN": "AT Translated Set 2 hardkeys",
         "HOME": "AT Translated Set 2 hardkeys"
         }
+    _inputKeyNameToCode["HOME"] = 139
 else:
     # Running on some other device
     hwKeyDevice = {
