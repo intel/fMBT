@@ -107,22 +107,50 @@ def _fileToQueue(f, outQueue):
     f.close()
 
 class Device(fmbtgti.GUITestInterface):
-    def __init__(self, debugAgentFile=None):
+    def __init__(self, serialNumber=None, debugAgentFile=None):
         """
         Parameters:
 
-          debugAgentFile (file-like object)
+          serialNumber (string, optional)
+                  the serial number of the device to be connected.
+                  The default is the first device in "sdb devices"
+                  list.
+
+          debugAgentFile (file-like object, optional)
                   record communication with the fMBT Tizen agent to
                   given file. The default is None: communication is
                   not recorded.
         """
         fmbtgti.GUITestInterface.__init__(self)
-        self.setConnection(TizenDeviceConnection(debugAgentFile=debugAgentFile))
+        self.setConnection(TizenDeviceConnection(serialNumber=serialNumber, debugAgentFile=debugAgentFile))
+        self._serialNumber = self._conn._serialNumber
 
     def close(self):
         fmbtgti.GUITestInterface.close(self)
         if hasattr(self, "_conn"):
             self._conn.close()
+
+    def connect(self):
+        """
+        Connect to the Tizen device.
+        """
+        if hasattr(self, "_conn"):
+            self._conn.open()
+            return True
+        else:
+            return False
+
+    def disconnect(self):
+        """
+        Close the current connection to Tizen device.
+
+        Returns True on success, otherwise False.
+        """
+        if hasattr(self, "_conn"):
+            self._conn.close()
+            return True
+        else:
+            return False
 
     def pressPower(self, **pressKeyKwArgs):
         """
@@ -224,8 +252,10 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
     TizenDeviceConnection copies _tizenAgent to Tizen device,
     and runs & communicates with it via sdb shell.
     """
-    def __init__(self, debugAgentFile=None):
-        self._serialNumber = self.recvSerialNumber()
+    def __init__(self, serialNumber=None, debugAgentFile=None):
+        if serialNumber == None: self._serialNumber = self.recvSerialNumber()
+        else: self._serialNumber = serialNumber
+
         self._sdbShell = None
         self._debugAgentFile = debugAgentFile
         self.open()
@@ -241,25 +271,29 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
 
         file(agentFilename, "w").write(_tizenAgent)
 
-        uploadCmd = ["sdb", "push", agentFilename, agentRemoteFilename]
+        uploadCmd = ["sdb", "-s", self._serialNumber, "push", agentFilename, agentRemoteFilename]
         try:
+            if self._serialNumber == "unknown":
+                raise TizenDeviceNotFoundError("Tizen device not found.")
+
             status, out, err = _run(uploadCmd, range(256))
             if status == 127:
-                raise TizenConnectionError('Executing "sdb push" failed. Check your Tizen SDK installation.')
+                raise TizenConnectionError('Executing "sdb -s %s push" failed. Check your Tizen SDK installation.' % (self._serialNumber,))
             elif status != 0:
                 if "device not found" in err:
-                    raise TizenDeviceNotFoundError("Tizen device not found.")
+                    raise TizenDeviceNotFoundError('Tizen device "%s" not found.' % (self._serialNumber,))
                 else:
                     raise TizenConnectionError('Executing "%s" failed: %s' % (' '.join(uploadCmd), err + " " + out))
 
             try:
-                self._sdbShell = subprocess.Popen(["sdb", "shell"], shell=False,
+                self._sdbShell = subprocess.Popen(["sdb", "-s", self._serialNumber, "shell"],
+                                                  shell=False,
                                                   stdin=subprocess.PIPE,
                                                   stdout=subprocess.PIPE,
                                                   stderr=subprocess.PIPE,
                                                   close_fds=True)
             except OSError, msg:
-                raise TizenConnectionError('Executing "sdb shell" failed. Check your Tizen SDK installation.')
+                raise TizenConnectionError('Executing "sdb -s %s shell" failed. Check your Tizen SDK installation.' % (self._serialNumber,))
             _g_sdbProcesses.add(self._sdbShell)
             self._sdbShellErrQueue = Queue.Queue()
             thread.start_new_thread(_fileToQueue, (self._sdbShell.stderr, self._sdbShellErrQueue))
@@ -268,7 +302,7 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
             try:
                 ok, version = self._agentCmd("python %s; exit" % (agentRemoteFilename,))
             except IOError:
-                raise TizenConnectionError('Connecting to Tizen device with "sdb shell" failed.')
+                raise TizenConnectionError('Connecting to a Tizen device/emulator with "sdb -s %s shell" failed.' % (self._serialNumber,))
         finally:
             os.remove(agentFilename)
         return ok
@@ -318,6 +352,7 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
             l = l.strip()
 
     def _agentCmd(self, command, retry=3):
+        if self._sdbShell == None: return False, "disconnected"
         if self._debugAgentFile: self._debugAgentFile.write(">0 %s\n" % (command,))
         try:
             self._sdbShell.stdin.write("%s\r" % (command,))
