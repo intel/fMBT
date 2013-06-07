@@ -466,6 +466,7 @@ libX11.XGetImage.restype      = ctypes.POINTER(XImage)
 libX11.XRootWindow.restype    = ctypes.c_uint32
 libX11.XOpenDisplay.restype   = ctypes.c_void_p
 libX11.XDefaultScreen.restype = ctypes.c_int
+libX11.XGetKeyboardMapping.restype = ctypes.POINTER(ctypes.c_uint32)
 
 # X11 constants, see Xlib.h
 
@@ -573,6 +574,16 @@ libX11.XGetGeometry(display, root_window, ref(__rw), ref(__x), ref(__y),
                     ref(root_width), ref(root_height), ref(__bwidth),
                     ref(root_depth))
 
+cMinKeycode        = ctypes.c_int(0)
+cMaxKeycode        = ctypes.c_int(0)
+cKeysymsPerKeycode = ctypes.c_int(0)
+libX11.XDisplayKeycodes(display, ref(cMinKeycode), ref(cMaxKeycode))
+keysyms = libX11.XGetKeyboardMapping(display,
+                                     cMinKeycode,
+                                     (cMaxKeycode.value - cMinKeycode.value) + 1,
+                                     ref(cKeysymsPerKeycode))
+shiftModifier = libX11.XKeysymToKeycode(display, libX11.XStringToKeysym("Shift_R"))
+
 def read_cmd():
     return sys.stdin.readline().strip()
 
@@ -601,16 +612,48 @@ def sendHwKey(keyName, delayBeforePress, delayBeforeRelease):
     os.close(fd)
     return True, None
 
+def specialCharToXString(c):
+    c2s = {'\\n': "Return",
+           ' ': "space", '!': "exclam", '"': "quotedbl",
+           '#': "numbersign", '$': "dollar", '%': "percent",
+           '&': "ambersand", "'": "apostrophe",
+           '(': "parenleft", ')': "parenright", '*': "asterisk",
+           '+': "plus", '-': "minus", '.': "period", '/': "slash",
+           ':': "colon", ';': "semicolon", '<': "less", '=': "equal",
+           '>': "greater", '?': "question", '@': "at",
+           '_': "underscore"}
+    return c2s.get(c, c)
+
+def typeChar(origChar):
+    modifiers = []
+    c         = specialCharToXString(origChar)
+    keysym    = libX11.XStringToKeysym(c)
+    if keysym == NoSymbol:
+        return False
+    keycode   = libX11.XKeysymToKeycode(display, keysym)
+
+    first = (keycode - cMinKeycode.value) * cKeysymsPerKeycode.value
+
+    try:
+        if chr(keysyms[first + 1]) == origChar:
+            modifiers.append(shiftModifier)
+    except ValueError: pass
+
+    for m in modifiers:
+        libXtst.XTestFakeKeyEvent(display, m, X_True, X_CurrentTime)
+
+    libXtst.XTestFakeKeyEvent(display, keycode, X_True, X_CurrentTime)
+    libXtst.XTestFakeKeyEvent(display, keycode, X_False, X_CurrentTime)
+
+    for m in modifiers[::-1]:
+        libXtst.XTestFakeKeyEvent(display, m, X_False, X_CurrentTime)
+    return True
+
 def typeSequence(s):
     skipped = []
     for c in s:
-        keysym = libX11.XStringToKeysym(c)
-        if keysym == NoSymbol:
+        if not typeChar(c):
             skipped.append(c)
-            continue
-        keycode = libX11.XKeysymToKeycode(display, keysym)
-        libXtst.XTestFakeKeyEvent(display, keycode, X_True, X_CurrentTime)
-        libXtst.XTestFakeKeyEvent(display, keycode, X_False, X_CurrentTime)
     if skipped: return False, skipped
     else: return True, skipped
 
