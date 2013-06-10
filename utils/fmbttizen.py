@@ -196,6 +196,18 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self.pressKey("HOME", **pressKeyKwArgs)
 
+    def setDisplayBacklightTime(self, timeout):
+        """
+        Set time the LCD backlight will be kept on.
+
+        Parameters:
+
+          timeout (integer):
+                  inactivity time in seconds after which the backlight
+                  will be switched off.
+        """
+        return self._conn.setDisplayBacklightTime(timeout)
+
     def shell(self, shellCommand):
         """
         Execute shell command through sdb shell.
@@ -391,6 +403,18 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
 
     def sendType(self, string):
         return self._agentCmd("kt %s" % (base64.b64encode(cPickle.dumps(string))))[0]
+
+    def setDisplayBacklightTime(self, timeout):
+        """
+        Set time the LCD backlight will be kept on.
+
+        Parameters:
+
+          timeout (integer):
+                  inactivity time in seconds after which the backlight
+                  will be switched off.
+        """
+        return self._agentCmd("bl %s" % (timeout,))
 
     def recvScreenshot(self, filename):
         rv, img = self._agentCmd("ss")
@@ -759,7 +783,16 @@ if __name__ == "__main__":
     write_response(True, "0.0")
     cmd = read_cmd()
     while cmd:
-        if cmd.startswith("tm "):   # touch move(x, y)
+        if cmd.startswith("bl "): # set display backlight time
+            if iAmRoot:
+                timeout = int(cmd[3:].strip())
+                try:
+                    file("/opt/var/kdb/db/setting/lcd_backlight_normal","wb").write(struct.pack("ii",0x29,timeout))
+                    write_response(True, None)
+                except Exception, e: write_response(False, e)
+            else:
+                write_response(*subAgentCommand("root", "tizen", cmd))
+        elif cmd.startswith("tm "):   # touch move(x, y)
             xs, ys = cmd[3:].strip().split()
             libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
             libX11.XFlush(display)
