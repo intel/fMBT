@@ -666,12 +666,9 @@ class GUITestInterface(object):
 
           opacityLimit (float, optional):
                   threshold for comparing pixels with non-zero alpha
-                  channel. 0.0 requires exact match independently of
-                  the opacity. Pixels less opaque than the given
-                  threshold are skipped in match comparison. The
-                  default is 0.95, that is, almost any non-zero alpha
-                  channel value on a pixel makes it always match to a
-                  whatever color on the screenshot.
+                  channel. Pixels less opaque than the given threshold
+                  are skipped in match comparison. The default is 0,
+                  that is, alpha channel is ignored.
 
           area ((left, top, right, bottom), optional):
                   search bitmap from the given area only. Left, top
@@ -853,7 +850,7 @@ class Screenshot(object):
     def filename(self):
         return self._filename
 
-    def findItemsByBitmap(self, bitmap, colorMatch=1.0, opacityLimit=.95, area=(0.0, 0.0, 1.0, 1.0), limit=-1, allowOverlap=True):
+    def findItemsByBitmap(self, bitmap, colorMatch=1.0, opacityLimit=0.0, area=(0.0, 0.0, 1.0, 1.0), limit=-1, allowOverlap=True):
         """
         Find items on the screenshot that match to bitmap.
 
