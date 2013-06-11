@@ -156,6 +156,7 @@ class GUITestInterface(object):
         self._screenSize = None
         self._visualLog = None
         self._visualLogFileObj = None
+        self._visualLogFilenames = set()
 
     def bitmapPath(self):
         """
@@ -173,6 +174,8 @@ class GUITestInterface(object):
     def close(self):
         self._lastScreenshot = None
         if self._visualLog:
+            if hasattr(self._visualLog._outFileObj, "name"):
+                self._visualLogFilenames.remove(self._visualLog._outFileObj.name)
             self._visualLog.close()
             if self._visualLogFileObj:
                 self._visualLogFileObj.close()
@@ -270,6 +273,11 @@ class GUITestInterface(object):
             outFileObj = filenameOrObj
             # someone else opened the file => someone else will close it
             self._visualLogFileObj = None
+        if hasattr(outFileObj, "name"):
+            if outFileObj.name in self._visualLogFilenames:
+                raise ValueError('Visual logging on file "%s" is already enabled' % (outFileObj.name,))
+            else:
+                self._visualLogFilenames.add(outFileObj.name)
         self._visualLog = _VisualLog(self, outFileObj, screenshotWidth, thumbnailWidth, timeFormat, delayedDrawing)
 
     def intCoords(self, (x, y)):
