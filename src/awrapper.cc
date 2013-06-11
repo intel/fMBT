@@ -20,6 +20,7 @@
 #include "awrapper.hh"
 #include <algorithm>
 #include "helper.hh"
+#include <string>
 
 std::string Awrapper::es("");
 
@@ -114,11 +115,23 @@ void Awrapper::set_actions(std::vector<std::string>* _actions)
 	continue;
       }
       // With parameters :)
-      std::pair<int,std::string&> ind(result,parameters[i]);
+#ifdef __MINGW32__
+      std::pair<int,std::string> 
+#else
+      std::pair<int,std::string&> 
+#endif
+	ind(result,parameters[i]);
       ada2aal[ind]=i;
     }
 
-    ada2aal[std::pair<int,std::string&>(result,es)]=i;
+#ifdef __MINGW32__
+    std::pair<int,std::string>
+#else
+    std::pair<int,std::string&>
+#endif
+      r(result,es);
+
+    ada2aal[r]=i;
     aal2ada[i]=result;
   }
 }
@@ -143,10 +156,18 @@ void Awrapper::execute(std::vector<int>& action)
   log.debug("return %i\n",tmp);
   int ret=0;
   if (tmp) {
+#ifdef __MINGW32__
+    ret=ada2aal[std::pair<int,std::string>(tmp,prm)];
+#else
     ret=ada2aal[std::pair<int,std::string&>(tmp,prm)];
+#endif
     if (!ret) {
       // Let't try without parameter...
+#ifdef __MINGW32__
+      ret=ada2aal[std::pair<int,std::string>(tmp,es)];
+#else
       ret=ada2aal[std::pair<int,std::string&>(tmp,es)];
+#endif
       if (!ret) {
         status=false;
         errormsg="returned action out of range";
@@ -191,7 +212,11 @@ int  Awrapper::observe(std::vector<int> &action,
   }
   std::vector<std::string>& wn=ada->getActionNames();
   for(int i=0;i<tmp;i++) {
-    int t=ada2aal[action[i],std::pair<int,std::string&>(action[i],es)];
+#ifdef __MINGW32__
+    int t=ada2aal[action[i],std::pair<int,std::string>(action[i],es)];
+#else
+ggg    int t=ada2aal[action[i],std::pair<int,std::string&>(action[i],es)];
+#endif
     log.debug("observed %i (%s), converted %i (%s)\n",action[i],wn[action[i]].c_str(),t,(*actions)[t].c_str());
     action[i]=t;
   }

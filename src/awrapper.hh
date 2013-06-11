@@ -42,7 +42,11 @@ public:
   virtual int check_tags(int* tag,int len,std::vector<int>& t);
 protected:
   static std::string es;
+#ifdef __MINGW32__
+  std::map<std::pair<int,std::string>, int > ada2aal;
+#else
   std::map<std::pair<int,std::string&>, int > ada2aal;
+#endif
   std::map<int,int> aal2ada;
   std::map<int,int> tagaal2ada;
   std::map<int,int> tagada2aal;
