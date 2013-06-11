@@ -34,10 +34,8 @@
 #include "verdict.hh"
 #include "config.h"
 
-#ifndef DROI
 #include <glib-object.h>
-#include <error.h>
-#else
+#ifdef __MINGW32__
 void error(int exitval, int dontcare, const char* format, ...)
 {
   va_list ap;
@@ -47,6 +45,8 @@ void error(int exitval, int dontcare, const char* format, ...)
   va_end(ap);
   exit(exitval);
 }
+#else
+#include <error.h>
 #endif
 
 #include <cstdio>
@@ -186,12 +186,10 @@ int main(int argc,char * const argv[])
     error(0, 0, "test configuration file missing.\n");
     return 32;
   }
-
+#ifndef __MINGW32__
   signal(SIGPIPE, nop_signal_handler);
-
-#ifndef DROI
-  g_type_init ();
 #endif
+  g_type_init ();
 
   {
     Log* log;
@@ -214,7 +212,7 @@ int main(int argc,char * const argv[])
       c.exit_status=4;
       error(0, 0, "%s\n", c.stringify().c_str());
       // Let's handle verdict
-      c.handle_hooks(Verdict::ERROR);
+      c.handle_hooks(Verdict::W_ERROR);
       return c.exit_status;
     }
     if (E) {

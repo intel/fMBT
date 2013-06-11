@@ -27,7 +27,7 @@
 
 time_t    Test_engine::end_time;
 
-#ifdef DROI
+#if defined(DROI) || defined(__MINGW32__)
 char* READLINE(const char* prompt)
 {
     char *s = (char*)malloc(1024);
@@ -66,6 +66,17 @@ extern "C" {
 #endif // ifdef DDROI else
 #include <cstdlib>
 #include <cstring>
+
+#ifdef __MINGW32__
+extern "C" {
+size_t strnlen(const char *s, size_t maxlen)
+{
+  const char *end =(const char*) memchr (s, '\0', maxlen);
+  return end ? (size_t) (end - s) : maxlen;
+}
+}
+#endif
+
 
 void Test_engine::print_time(struct timeval& start_time,
                              struct timeval& total_time)
@@ -283,19 +294,19 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
     while (adapter.observe(actions)>0) {
 
       if (!adapter.status) {
-        return stop_test(Verdict::ERROR, ("adapter error: "+adapter.errormsg).c_str());
+        return stop_test(Verdict::W_ERROR, ("adapter error: "+adapter.errormsg).c_str());
       }
 
       step_count++;
       action = policy.choose(actions);
       if ((action>0)&&((unsigned)action>=heuristic.get_model()->getActionNames().size())) {
-        return stop_test(Verdict::ERROR, std::string("adapter communication failure. Adapter returned action "+to_string(action)+" which is out of range").c_str());
+        return stop_test(Verdict::W_ERROR, std::string("adapter communication failure. Adapter returned action "+to_string(action)+" which is out of range").c_str());
       }
       log_adapter_output(log, adapter, action);
 
       if (!heuristic.execute(action)) {
         if (!heuristic.status) {
-          return stop_test(Verdict::ERROR, heuristic.errormsg.c_str());
+          return stop_test(Verdict::W_ERROR, heuristic.errormsg.c_str());
         }
         log.debug("Test_engine::run: Error: unexpected output from the SUT: %i '%s'\n",
                   action, heuristic.getActionName(action).c_str());
@@ -318,6 +329,11 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
     }
 
     action = heuristic.getIAction();
+
+    if (!heuristic.status) { 
+      return stop_test(Verdict::W_ERROR, "Heuristic error");
+    }
+
     if (action >= 0) {
       log.debug("Test_engine::run: test generator suggests executing %i '%s'\n",
                 action, heuristic.getActionName(action).c_str());
@@ -329,7 +345,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
 
     switch(action) {
     case Alphabet::ERROR: {
-      return stop_test(Verdict::ERROR, "Model error");
+      return stop_test(Verdict::W_ERROR, "Model error");
       break;
     }
     case Alphabet::DEADLOCK: {
@@ -342,7 +358,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
       int ret=adapter.observe(actions,true);
 
       if (!adapter.status) {
-        return stop_test(Verdict::ERROR, ("adapter error: "+adapter.errormsg).c_str());
+        return stop_test(Verdict::W_ERROR, ("adapter error: "+adapter.errormsg).c_str());
       }
 
       if (ret!=Alphabet::SILENCE && ret!=Alphabet::TIMEOUT) {
@@ -357,7 +373,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
       int value = adapter.observe(actions,true);
 
       if (!adapter.status) {
-        return stop_test(Verdict::ERROR, ("adapter error: "+adapter.errormsg).c_str());
+        return stop_test(Verdict::W_ERROR, ("adapter error: "+adapter.errormsg).c_str());
       }
 
       log.print("<observe %i/>\n",value);
@@ -375,7 +391,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
         // been a matching end condition that defines the
         // verdict for this case.
         // If not, let's return an error.
-        return stop_test(Verdict::ERROR,
+        return stop_test(Verdict::W_ERROR,
                          "TIMEOUT while communicating with adapter");
 
       } else if (value==Alphabet::SILENCE) {
@@ -390,7 +406,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
       }
 
       if (actions.empty()) {
-        return stop_test(Verdict::ERROR, "adapter communication failure");
+        return stop_test(Verdict::W_ERROR, "adapter communication failure");
       }
 
       action = actions[0]; // TODO: add policy here when it works
@@ -410,17 +426,17 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
       adapter.execute(actions);
 
       if (!adapter.status) {
-        return stop_test(Verdict::ERROR, ("adapter error: "+adapter.errormsg).c_str());
+        return stop_test(Verdict::W_ERROR, ("adapter error: "+adapter.errormsg).c_str());
       }
 
       if (actions.empty()) {
-        return stop_test(Verdict::ERROR, "adapter communication failure");
+        return stop_test(Verdict::W_ERROR, "adapter communication failure");
       }
       int adapter_response = policy.choose(actions);
 
       // Let's chect that adapter_response is in the valid range.
       if ((adapter_response>0) && ((unsigned)adapter_response>=heuristic.get_model()->getActionNames().size())) {
-        return stop_test(Verdict::ERROR, std::string("adapter communication failure. Adapter returned action "+to_string(adapter_response)+" which is out of range").c_str());
+        return stop_test(Verdict::W_ERROR, std::string("adapter communication failure. Adapter returned action "+to_string(adapter_response)+" which is out of range").c_str());
       }
 
       log_adapter_execute(log, adapter, adapter_response);
@@ -431,7 +447,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
 
       if (!heuristic.execute(adapter_response)) {
         if (!heuristic.status) {
-          return stop_test(Verdict::ERROR, heuristic.errormsg.c_str());
+          return stop_test(Verdict::W_ERROR, heuristic.errormsg.c_str());
         }
         std::string msg = "unexpected response to input \"" +
           heuristic.getActionName(action) + "\": ";
@@ -538,7 +554,7 @@ void Test_engine::interactive()
   std::vector<End_condition*> etags;
   std::vector<End_condition*> atags;
   std::string breakstr("breakpoint");
-#ifndef DROI
+#if !(defined(DROI) || defined(__MINGW32__))
   rl_outstream=stderr;
 #endif
 
