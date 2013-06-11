@@ -123,7 +123,7 @@ public:
 	case Verdict::INCONCLUSIVE:
 	  s=inco;
 	  break;
-	case Verdict::ERROR:
+	case Verdict::W_ERROR:
 	  s=err;
 	  break;
 	default:

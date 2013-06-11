@@ -60,7 +60,7 @@ public:
     case Verdict::INCONCLUSIVE:
       ret="inconc";
       break;
-    case Verdict::ERROR:
+    case Verdict::W_ERROR:
       ret="error";
       break;
     default:

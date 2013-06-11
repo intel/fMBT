@@ -53,7 +53,7 @@ class Conf:public Writable {
     log.push("fmbt_log");
     log.set_debug(debug_enabled);
 
-    End_condition *ec = new End_status_error(Verdict::ERROR,"");
+    End_condition *ec = new End_status_error(Verdict::W_ERROR,"");
     add_end_condition(ec);
 
     set_on_error("exit(4)");

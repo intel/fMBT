@@ -237,7 +237,7 @@ bool History_log::send_action(std::string& act,
       }
 
       if (act=="error") {
-	c->history(0,p,Verdict::ERROR);
+	c->history(0,p,Verdict::W_ERROR);
 	return true;
       }
 

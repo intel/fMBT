@@ -36,6 +36,7 @@
 #ifndef __MINGW32__
 #include <dlfcn.h>
 #else
+#include <windows.h>
 extern "C" {
 
 // For Dparse
@@ -710,7 +711,7 @@ Verdict::Verdict from_string(const std::string& s)
     return Verdict::INCONCLUSIVE;
   }
   if (s=="error") {
-    return Verdict::ERROR;
+    return Verdict::W_ERROR;
   }
   return Verdict::UNDEFINED;
 }
@@ -727,7 +728,7 @@ std::string to_string(Verdict::Verdict verdict)
   case Verdict::INCONCLUSIVE:
     return "inconclusive";
     break;
-  case Verdict::ERROR:
+  case Verdict::W_ERROR:
     return "error";
     break;
   default:
@@ -1010,7 +1011,10 @@ void gettime(struct timeval *tv)
   clock_gettime(CLOCK_REALTIME,&tp);
   TIMESPEC_TO_TIMEVAL(tv,&tp);
 #else
-
+  FILETIME ft; /*time since 1 Jan 1601 in 100ns units */
+  GetSystemTimeAsFileTime( &ft );
+  tv->tv_sec = (ft.dwHighDateTime-(116444736000000000LL))/10000000LL ;
+  tv->tv_usec  = (ft.dwLowDateTime/10LL) % 1000000LL ;
 #endif
 }
 

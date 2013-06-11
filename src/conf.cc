@@ -47,7 +47,7 @@ extern Conf* conf_obj;
     status=false;                               \
     errormsg=s;                                 \
     exit_status=-1;                             \
-    return Verdict::ERROR;                      \
+    return Verdict::W_ERROR;                      \
   }
 
 void Conf::load(std::string& name,std::string& content)
@@ -227,7 +227,7 @@ Verdict::Verdict Conf::execute(bool interactive) {
 
   if (!status) {
     errormsg = "cannot start executing test due to earlier errors: " + errormsg;
-    return Verdict::ERROR;
+    return Verdict::W_ERROR;
   }
 
   if (!adapter->init())
@@ -328,7 +328,7 @@ void Conf::handle_hooks(Verdict::Verdict v)
     hooklist=&inc_hooks;
     break;
   }
-  case Verdict::ERROR: {
+  case Verdict::W_ERROR: {
     hooklist=&error_hooks;
     break;
   }

@@ -27,7 +27,7 @@ namespace Verdict {
                    PASS,
                    INCONCLUSIVE,
 		   NOTIFY,
-                   ERROR } Verdict;
+                   W_ERROR } Verdict;
 
 }
 
