@@ -107,22 +107,50 @@ def _fileToQueue(f, outQueue):
     f.close()
 
 class Device(fmbtgti.GUITestInterface):
-    def __init__(self, debugAgentFile=None):
+    def __init__(self, serialNumber=None, debugAgentFile=None):
         """
         Parameters:
 
-          debugAgentFile (file-like object)
+          serialNumber (string, optional)
+                  the serial number of the device to be connected.
+                  The default is the first device in "sdb devices"
+                  list.
+
+          debugAgentFile (file-like object, optional)
                   record communication with the fMBT Tizen agent to
                   given file. The default is None: communication is
                   not recorded.
         """
         fmbtgti.GUITestInterface.__init__(self)
-        self.setConnection(TizenDeviceConnection(debugAgentFile=debugAgentFile))
+        self.setConnection(TizenDeviceConnection(serialNumber=serialNumber, debugAgentFile=debugAgentFile))
+        self._serialNumber = self._conn._serialNumber
 
     def close(self):
         fmbtgti.GUITestInterface.close(self)
         if hasattr(self, "_conn"):
             self._conn.close()
+
+    def connect(self):
+        """
+        Connect to the Tizen device.
+        """
+        if hasattr(self, "_conn"):
+            self._conn.open()
+            return True
+        else:
+            return False
+
+    def disconnect(self):
+        """
+        Close the current connection to Tizen device.
+
+        Returns True on success, otherwise False.
+        """
+        if hasattr(self, "_conn"):
+            self._conn.close()
+            return True
+        else:
+            return False
 
     def pressPower(self, **pressKeyKwArgs):
         """
@@ -167,6 +195,18 @@ class Device(fmbtgti.GUITestInterface):
                   refer to pressKey documentation.
         """
         return self.pressKey("HOME", **pressKeyKwArgs)
+
+    def setDisplayBacklightTime(self, timeout):
+        """
+        Set time the LCD backlight will be kept on.
+
+        Parameters:
+
+          timeout (integer):
+                  inactivity time in seconds after which the backlight
+                  will be switched off.
+        """
+        return self._conn.setDisplayBacklightTime(timeout)
 
     def shell(self, shellCommand):
         """
@@ -224,8 +264,10 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
     TizenDeviceConnection copies _tizenAgent to Tizen device,
     and runs & communicates with it via sdb shell.
     """
-    def __init__(self, debugAgentFile=None):
-        self._serialNumber = self.recvSerialNumber()
+    def __init__(self, serialNumber=None, debugAgentFile=None):
+        if serialNumber == None: self._serialNumber = self.recvSerialNumber()
+        else: self._serialNumber = serialNumber
+
         self._sdbShell = None
         self._debugAgentFile = debugAgentFile
         self.open()
@@ -241,25 +283,29 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
 
         file(agentFilename, "w").write(_tizenAgent)
 
-        uploadCmd = ["sdb", "push", agentFilename, agentRemoteFilename]
+        uploadCmd = ["sdb", "-s", self._serialNumber, "push", agentFilename, agentRemoteFilename]
         try:
+            if self._serialNumber == "unknown":
+                raise TizenDeviceNotFoundError("Tizen device not found.")
+
             status, out, err = _run(uploadCmd, range(256))
             if status == 127:
-                raise TizenConnectionError('Executing "sdb push" failed. Check your Tizen SDK installation.')
+                raise TizenConnectionError('Executing "sdb -s %s push" failed. Check your Tizen SDK installation.' % (self._serialNumber,))
             elif status != 0:
                 if "device not found" in err:
-                    raise TizenDeviceNotFoundError("Tizen device not found.")
+                    raise TizenDeviceNotFoundError('Tizen device "%s" not found.' % (self._serialNumber,))
                 else:
                     raise TizenConnectionError('Executing "%s" failed: %s' % (' '.join(uploadCmd), err + " " + out))
 
             try:
-                self._sdbShell = subprocess.Popen(["sdb", "shell"], shell=False,
+                self._sdbShell = subprocess.Popen(["sdb", "-s", self._serialNumber, "shell"],
+                                                  shell=False,
                                                   stdin=subprocess.PIPE,
                                                   stdout=subprocess.PIPE,
                                                   stderr=subprocess.PIPE,
                                                   close_fds=True)
             except OSError, msg:
-                raise TizenConnectionError('Executing "sdb shell" failed. Check your Tizen SDK installation.')
+                raise TizenConnectionError('Executing "sdb -s %s shell" failed. Check your Tizen SDK installation.' % (self._serialNumber,))
             _g_sdbProcesses.add(self._sdbShell)
             self._sdbShellErrQueue = Queue.Queue()
             thread.start_new_thread(_fileToQueue, (self._sdbShell.stderr, self._sdbShellErrQueue))
@@ -268,7 +314,7 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
             try:
                 ok, version = self._agentCmd("python %s; exit" % (agentRemoteFilename,))
             except IOError:
-                raise TizenConnectionError('Connecting to Tizen device with "sdb shell" failed.')
+                raise TizenConnectionError('Connecting to a Tizen device/emulator with "sdb -s %s shell" failed.' % (self._serialNumber,))
         finally:
             os.remove(agentFilename)
         return ok
@@ -318,6 +364,7 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
             l = l.strip()
 
     def _agentCmd(self, command, retry=3):
+        if self._sdbShell == None: return False, "disconnected"
         if self._debugAgentFile: self._debugAgentFile.write(">0 %s\n" % (command,))
         try:
             self._sdbShell.stdin.write("%s\r" % (command,))
@@ -356,6 +403,18 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
 
     def sendType(self, string):
         return self._agentCmd("kt %s" % (base64.b64encode(cPickle.dumps(string))))[0]
+
+    def setDisplayBacklightTime(self, timeout):
+        """
+        Set time the LCD backlight will be kept on.
+
+        Parameters:
+
+          timeout (integer):
+                  inactivity time in seconds after which the backlight
+                  will be switched off.
+        """
+        return self._agentCmd("bl %s" % (timeout,))
 
     def recvScreenshot(self, filename):
         rv, img = self._agentCmd("ss")
@@ -431,6 +490,7 @@ libX11.XGetImage.restype      = ctypes.POINTER(XImage)
 libX11.XRootWindow.restype    = ctypes.c_uint32
 libX11.XOpenDisplay.restype   = ctypes.c_void_p
 libX11.XDefaultScreen.restype = ctypes.c_int
+libX11.XGetKeyboardMapping.restype = ctypes.POINTER(ctypes.c_uint32)
 
 # X11 constants, see Xlib.h
 
@@ -501,6 +561,7 @@ elif 'QEMU Virtual CPU' in cpuinfo:
         "VOLUMEDOWN": "AT Translated Set 2 hardkeys",
         "HOME": "AT Translated Set 2 hardkeys"
         }
+    _inputKeyNameToCode["HOME"] = 139
 else:
     # Running on some other device
     hwKeyDevice = {
@@ -537,6 +598,16 @@ libX11.XGetGeometry(display, root_window, ref(__rw), ref(__x), ref(__y),
                     ref(root_width), ref(root_height), ref(__bwidth),
                     ref(root_depth))
 
+cMinKeycode        = ctypes.c_int(0)
+cMaxKeycode        = ctypes.c_int(0)
+cKeysymsPerKeycode = ctypes.c_int(0)
+libX11.XDisplayKeycodes(display, ref(cMinKeycode), ref(cMaxKeycode))
+keysyms = libX11.XGetKeyboardMapping(display,
+                                     cMinKeycode,
+                                     (cMaxKeycode.value - cMinKeycode.value) + 1,
+                                     ref(cKeysymsPerKeycode))
+shiftModifier = libX11.XKeysymToKeycode(display, libX11.XStringToKeysym("Shift_R"))
+
 def read_cmd():
     return sys.stdin.readline().strip()
 
@@ -565,16 +636,48 @@ def sendHwKey(keyName, delayBeforePress, delayBeforeRelease):
     os.close(fd)
     return True, None
 
+def specialCharToXString(c):
+    c2s = {'\\n': "Return",
+           ' ': "space", '!': "exclam", '"': "quotedbl",
+           '#': "numbersign", '$': "dollar", '%': "percent",
+           '&': "ambersand", "'": "apostrophe",
+           '(': "parenleft", ')': "parenright", '*': "asterisk",
+           '+': "plus", '-': "minus", '.': "period", '/': "slash",
+           ':': "colon", ';': "semicolon", '<': "less", '=': "equal",
+           '>': "greater", '?': "question", '@': "at",
+           '_': "underscore"}
+    return c2s.get(c, c)
+
+def typeChar(origChar):
+    modifiers = []
+    c         = specialCharToXString(origChar)
+    keysym    = libX11.XStringToKeysym(c)
+    if keysym == NoSymbol:
+        return False
+    keycode   = libX11.XKeysymToKeycode(display, keysym)
+
+    first = (keycode - cMinKeycode.value) * cKeysymsPerKeycode.value
+
+    try:
+        if chr(keysyms[first + 1]) == origChar:
+            modifiers.append(shiftModifier)
+    except ValueError: pass
+
+    for m in modifiers:
+        libXtst.XTestFakeKeyEvent(display, m, X_True, X_CurrentTime)
+
+    libXtst.XTestFakeKeyEvent(display, keycode, X_True, X_CurrentTime)
+    libXtst.XTestFakeKeyEvent(display, keycode, X_False, X_CurrentTime)
+
+    for m in modifiers[::-1]:
+        libXtst.XTestFakeKeyEvent(display, m, X_False, X_CurrentTime)
+    return True
+
 def typeSequence(s):
     skipped = []
     for c in s:
-        keysym = libX11.XStringToKeysym(c)
-        if keysym == NoSymbol:
+        if not typeChar(c):
             skipped.append(c)
-            continue
-        keycode = libX11.XKeysymToKeycode(display, keysym)
-        libXtst.XTestFakeKeyEvent(display, keycode, X_True, X_CurrentTime)
-        libXtst.XTestFakeKeyEvent(display, keycode, X_False, X_CurrentTime)
     if skipped: return False, skipped
     else: return True, skipped
 
@@ -680,7 +783,16 @@ if __name__ == "__main__":
     write_response(True, "0.0")
     cmd = read_cmd()
     while cmd:
-        if cmd.startswith("tm "):   # touch move(x, y)
+        if cmd.startswith("bl "): # set display backlight time
+            if iAmRoot:
+                timeout = int(cmd[3:].strip())
+                try:
+                    file("/opt/var/kdb/db/setting/lcd_backlight_normal","wb").write(struct.pack("ii",0x29,timeout))
+                    write_response(True, None)
+                except Exception, e: write_response(False, e)
+            else:
+                write_response(*subAgentCommand("root", "tizen", cmd))
+        elif cmd.startswith("tm "):   # touch move(x, y)
             xs, ys = cmd[3:].strip().split()
             libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
             libX11.XFlush(display)
