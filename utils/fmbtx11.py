@@ -29,7 +29,7 @@ class Screen(fmbtgti.GUITestInterface):
 class X11Connection(fmbtgti.GUITestConnection):
     def __init__(self):
         fmbtgti.GUITestConnection.__init__(self)
-        self.libX11 = ctypes.CDLL("libX11.so")
+        self.libX11 = ctypes.CDLL("libX11.so.6")
         self.libXtst = ctypes.CDLL("libXtst.so.6")
 
         self.libX11.XOpenDisplay.restype   = ctypes.c_void_p
