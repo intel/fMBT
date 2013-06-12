@@ -55,6 +55,7 @@ import atexit
 import base64
 import cPickle
 import commands
+import math
 import subprocess
 import os
 import Queue
@@ -151,6 +152,161 @@ class Device(fmbtgti.GUITestInterface):
             return True
         else:
             return False
+
+    def pinch(self, (x, y), startDistance, endDistance,
+              finger1Dir=90, finger2Dir=270, duration=1.0, movePoints=20,
+              sleepBeforeMove=0, sleepAfterMove=0):
+        """
+        Pinch (open or close) on coordinates (x, y).
+
+        Parameters:
+          x, y (integer):
+                  the central point of the gesture. Values in range
+                  [0.0, 1.0] are scaled to full screen width and
+                  height.
+
+          startDistance, endDistance (float):
+                  distance from both finger tips to the central point
+                  of the gesture, at the start and at the end of the
+                  gesture. Values in range [0.0, 1.0] are scaled up to
+                  the half of the diagonal of the screen.
+
+          finger1Dir, finger2Dir (integer, optional):
+                  directions for finger tip movements, in range [0,
+                  360]. 0 is to the east, 90 to the north, etc. The
+                  defaults are 90 and 270.
+
+          duration (float, optional):
+                  duration of the movement in seconds. The default is
+                  1.0.
+
+          movePoints (integer, optional):
+                  number of points to which finger tips are moved
+                  after laying them to the initial positions. The
+                  default is 20.
+
+          sleepBeforeMove, sleepAfterMove (float, optional):
+                  seconds to be slept after laying finger tips on the
+                  display 1) before the first move, and 2) after the
+                  last move before raising finger tips. The defaults
+                  are 0.0.
+        """
+        screenWidth, screenHeight = self.screenSize()
+        screenDiagonal = math.sqrt(screenWidth**2 + screenHeight**2)
+
+        if x == None: x = screenWidth / 2
+        elif 0.0 <= x <= 1.0: x = int(screenWidth * x)
+        if y == None: y = screenWidth / 2
+        elif 0.0 <= y <= 1.0: y = int(screenHeight * y)
+
+        if 0.0 <= startDistance <= 1.0: startDistanceInPixels = int(startDistance * screenDiagonal/2.0)
+        else: startDistanceInPixels = int(startDistance)
+
+        if 0.0 <= endDistance <= 1.0: endDistanceInPixels = int(endDistance * screenDiagonal/2.0)
+        else: endDistanceInPixels = int(endDistance)
+
+        finger1startX = x + math.cos(math.radians(finger1Dir)) * startDistanceInPixels
+        finger1startY = y + math.sin(math.radians(finger1Dir)) * startDistanceInPixels
+        finger1endX = x + math.cos(math.radians(finger1Dir)) * endDistanceInPixels
+        finger1endY = y + math.sin(math.radians(finger1Dir)) * endDistanceInPixels
+
+        finger2startX = x + math.cos(math.radians(finger2Dir)) * startDistanceInPixels
+        finger2startY = y + math.sin(math.radians(finger2Dir)) * startDistanceInPixels
+        finger2endX = x + math.cos(math.radians(finger2Dir)) * endDistanceInPixels
+        finger2endY = y + math.sin(math.radians(finger2Dir)) * endDistanceInPixels
+
+        return self._conn.sendMtLinearGesture([[(finger1startX, finger1startY), (finger1endX, finger1endY)],
+                                               [(finger2startX, finger2startY), (finger2endX, finger2endY)]],
+                                              duration, movePoints, sleepBeforeMove, sleepAfterMove)
+
+    def pinchBitmap(self, bitmap, startDistance, endDistance,
+                    colorMatch=None, opacityLimit=None, area=None, **pinchKwArgs):
+        """
+        Make the pinch gesture using the bitmap as central point.
+
+        Parameters:
+          bitmap (string):
+                  filename of the bitmap to be pinched.
+
+          startDistance, endDistance (float):
+                  distance from both finger tips to the central point
+                  of the gesture, at the start and at the end of the
+                  gesture. Values in range [0.0, 1.0] are scaled up to
+                  the half of the diagonal of the screen.
+
+          colorMatch, opacityLimit, area (optional):
+                  refer to verifyBitmap documentation.
+
+          rest of the parameters: refer to pinch documentation.
+        """
+        assert self._lastScreenshot != None, "Screenshot required."
+        items = self._lastScreenshot.findItemsByBitmap(bitmap, **fmbtgti._bitmapKwArgs(colorMatch, opacityLimit, area, 1))
+        if len(items) == 0:
+            return False
+        return self.pinchItem(items[0], startDistance, endDistance, **pinchKwArgs)
+
+    def pinchClose(self, (x, y) = (0.5, 0.5), startDistance=.3, endDistance=.05, **pinchKwArgs):
+        """
+        Make the close pinch gesture.
+
+        Parameters:
+          x, y (integer, optional):
+                  the central point of the gesture, the default is in
+                  the middle of the screen.
+
+          startDistance, endDistance (float, optional):
+                  refer to pinch documentation. The default is 0.3 and
+                  0.05.
+
+          rest of the parameters: refer to pinch documentation.
+        """
+        return self.pinch((x, y), startDistance, endDistance, **pinchKwArgs)
+
+    def pinchItem(self, viewItem, startDistance, endDistance, **pinchKwArgs):
+        """
+        Pinch the center point of viewItem.
+
+        Parameters:
+
+          viewItem (GUIItem object):
+                  item to be tapped, possibly returned by
+                  findItemsBy... methods in Screenshot or View.
+
+          pinchPos (pair of floats (x,y)):
+                  position to tap, relational to the bitmap.
+                  (0.0, 0.0) is the top-left corner,
+                  (1.0, 0.0) is the top-right corner,
+                  (1.0, 1.0) is the lower-right corner.
+                  Values < 0 and > 1 tap coordinates outside the item.
+
+          rest of the parameters: refer to pinch documentation.
+        """
+        if "pinchPos" in pinchKwArgs:
+            posX, posY = pinchKwArgs["pinchPos"]
+            del pinchKwArgs["pinchPos"]
+            x1, y1, x2, y2 = viewItem.bbox()
+            pinchCoords = (x1 + (x2-x1) * posX,
+                           y1 + (y2-y1) * posY)
+        else:
+            pinchCoords = viewItem.coords()
+        return self.pinch(pinchCoords, startDistance, endDistance, **pinchKwArgs)
+
+    def pinchOpen(self, (x, y) = (0.5, 0.5), startDistance=.05, endDistance=.3, **pinchKwArgs):
+        """
+        Make the open pinch gesture.
+
+        Parameters:
+          x, y (integer, optional):
+                  the central point of the gesture, the default is in
+                  the middle of the screen.
+
+          startDistance, endDistance (float, optional):
+                  refer to pinch documentation. The default is 0.05 and
+                  0.3.
+
+          for the rest of the parameters, refer to pinch documentation.
+        """
+        return self.pinch((x, y), startDistance, endDistance, **pinchKwArgs)
 
     def pressPower(self, **pressKeyKwArgs):
         """
@@ -389,6 +545,9 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
     def sendKeyUp(self, keyName):
         return self._agentCmd("ku %s" % (keyName,))[0]
 
+    def sendMtLinearGesture(self, *args):
+        return self._agentCmd("ml %s" % (base64.b64encode(cPickle.dumps(args))))[0]
+
     def sendTap(self, x, y):
         return self._agentCmd("tt %s %s 1" % (x, y))[0]
 
@@ -465,6 +624,8 @@ import time
 import zlib
 import termios
 
+iAmRoot = (os.getuid() == 0)
+
 libc           = ctypes.CDLL("libc.so.6")
 libX11         = ctypes.CDLL("libX11.so.6")
 libXtst        = ctypes.CDLL("libXtst.so.6")
@@ -538,6 +699,13 @@ if platform.architecture()[0] == "32bit": _input_event = 'IIHHi'
 else: _input_event = 'QQHHi'
 # Event and keycodes are in input.h, too.
 _EV_KEY = 0x01
+_EV_ABS             = 0x03
+_ABS_X              = 0x00
+_ABS_Y              = 0x01
+_ABS_MT_SLOT        = 0x2f
+_ABS_MT_POSITION_X  = 0x35
+_ABS_MT_POSITION_Y  = 0x36
+_ABS_MT_TRACKING_ID = 0x39
 
 # Set input device names (in /proc/bus/input/devices)
 # for pressing hardware keys.
@@ -553,6 +721,8 @@ if 'TRATS' in cpuinfo:
         "HOME": "gpio-keys"
         }
     _inputKeyNameToCode["HOME"] = 139
+    if iAmRoot:
+        mtInputDevFd = os.open("/dev/input/event2", os.O_WRONLY | os.O_NONBLOCK)
 elif 'QEMU Virtual CPU' in cpuinfo:
     # Running on Tizen emulator
     hwKeyDevice = {
@@ -562,14 +732,18 @@ elif 'QEMU Virtual CPU' in cpuinfo:
         "HOME": "AT Translated Set 2 hardkeys"
         }
     _inputKeyNameToCode["HOME"] = 139
+    if iAmRoot:
+        mtInputDevFd = os.open("/dev/input/event2", os.O_WRONLY | os.O_NONBLOCK)
 else:
-    # Running on some other device
+    # Running on Blackbay
     hwKeyDevice = {
         "POWER": "msic_power_btn",
         "VOLUMEUP": "gpio-keys",
         "VOLUMEDOWN": "gpio-keys",
         "HOME": "mxt224_key_0"
         }
+    if iAmRoot:
+        mtInputDevFd = os.open("/dev/input/event0", os.O_WRONLY | os.O_NONBLOCK)
 
 # Read input devices
 deviceToEventFile = {}
@@ -647,6 +821,86 @@ def specialCharToXString(c):
            '>': "greater", '?': "question", '@': "at",
            '_': "underscore"}
     return c2s.get(c, c)
+
+mtEvents = {} # slot -> (tracking_id, x, y)
+
+def mtEventSend(eventType, event, param):
+    t = time.time()
+    tsec = int(t)
+    tusec = int(1000000*(t-tsec))
+    os.write(mtInputDevFd, struct.pack(_input_event,
+        tsec, tusec, eventType, event, param))
+
+def mtGestureStart(x, y):
+    mtGestureStart.trackingId += 1
+    trackingId = mtGestureStart.trackingId
+
+    for freeSlot in xrange(16):
+        if not freeSlot in mtEvents: break
+    else: raise ValueError("No free multitouch event slots available")
+
+    mtEvents[freeSlot] = [trackingId, x, y]
+
+    mtEventSend(_EV_ABS, _ABS_MT_SLOT, freeSlot)
+    mtEventSend(_EV_ABS, _ABS_MT_TRACKING_ID, trackingId)
+    mtEventSend(_EV_ABS, _ABS_MT_POSITION_X, x)
+    mtEventSend(_EV_ABS, _ABS_MT_POSITION_Y, y)
+    mtEventSend(_EV_ABS, _ABS_X, x)
+    mtEventSend(_EV_ABS, _ABS_Y, y)
+    mtEventSend(0, 0, 0) # SYNC
+    return freeSlot
+mtGestureStart.trackingId = 0
+
+def mtGestureMove(slot, x, y):
+    if x == mtEvents[slot][1] and y == mtEvents[slot][2]: return
+    mtEventSend(_EV_ABS, _ABS_MT_SLOT, slot)
+    mtEventSend(_EV_ABS, _ABS_MT_TRACKING_ID, mtEvents[slot][0])
+    if x != mtEvents[slot][1] and 0 <= x <= root_width:
+        mtEventSend(_EV_ABS, _ABS_MT_POSITION_X, x)
+        mtEvents[slot][1] = x
+    if y != mtEvents[slot][2] and 0 <= y <= root_height:
+        mtEventSend(_EV_ABS, _ABS_MT_POSITION_Y, y)
+        mtEvents[slot][2] = y
+    if 0 <= x <= root_width:
+        mtEventSend(_EV_ABS, _ABS_X, x)
+    if 0 <= y <= root_height:
+        mtEventSend(_EV_ABS, _ABS_Y, y)
+    mtEventSend(0, 0, 0)
+
+def mtGestureEnd(slot):
+    mtEventSend(_EV_ABS, _ABS_MT_SLOT, slot)
+    mtEventSend(_EV_ABS, _ABS_MT_TRACKING_ID, -1)
+    mtEventSend(0, 0, 0) # SYNC
+    del mtEvents[slot]
+
+def mtLinearGesture(listOfStartEndPoints, duration, movePoints, sleepBeforeMove=0, sleepAfterMove=0):
+    # listOfStartEndPoints: [ [(finger1startX, finger1startY), (finger1endX, finger1endY)],
+    #                         [(finger2startX, finger2startY), (finger2endX, finger2endY)], ...]
+    startPoints = [startEnd[0] for startEnd in listOfStartEndPoints]
+    xDist = [startEnd[1][0] - startEnd[0][0] for startEnd in listOfStartEndPoints]
+    yDist = [startEnd[1][1] - startEnd[0][1] for startEnd in listOfStartEndPoints]
+    movePointsF = float(movePoints)
+    fingers = []
+    for (x, y) in startPoints:
+        fingers.append(mtGestureStart(x, y))
+
+    if sleepBeforeMove > 0: time.sleep(sleepBeforeMove)
+
+    if movePoints > 0:
+        intermediateSleep = float(duration) / movePoints
+        for i in xrange(1, movePoints + 1):
+            if intermediateSleep > 0:
+                time.sleep(intermediateSleep)
+            for fingerIndex, finger in enumerate(fingers):
+                mtGestureMove(finger,
+                              startPoints[fingerIndex][0] + int(xDist[fingerIndex]*i/movePointsF),
+                              startPoints[fingerIndex][1] + int(yDist[fingerIndex]*i/movePointsF))
+
+    if sleepAfterMove > 0: time.sleep(sleepAfterMove)
+
+    for finger in fingers:
+        mtGestureEnd(finger)
+    return True, None
 
 def typeChar(origChar):
     modifiers = []
@@ -771,7 +1025,6 @@ def closeSubAgents():
         subAgentCommand(username, None, "quit")
 
 if __name__ == "__main__":
-    iAmRoot = (os.getuid() == 0)
     if not "--keep-echo" in sys.argv:
         # Disable terminal echo
         origTermAttrs = termios.tcgetattr(sys.stdin.fileno())
@@ -835,6 +1088,14 @@ if __name__ == "__main__":
             rv, skippedSymbols = typeSequence(cPickle.loads(base64.b64decode(cmd[3:])))
             libX11.XFlush(display)
             write_response(rv, skippedSymbols)
+        elif cmd.startswith("ml "): # send multitouch linear gesture
+            if iAmRoot:
+                file("/tmp/debug-root","w").write(cmd[3:]+"\\n")
+                rv, _ = mtLinearGesture(*cPickle.loads(base64.b64decode(cmd[3:])))
+            else:
+                file("/tmp/debug-user","w").write(cmd)
+                rv, _ = subAgentCommand("root", "tizen", cmd)
+            write_response(rv, _)
         elif cmd.startswith("ss"): # save screenshot
             rv, compressedImage = takeScreenshot()
             write_response(rv, compressedImage)
