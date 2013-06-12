@@ -27,6 +27,16 @@
 #include "adapter.hh"
 #include "aal.hh"
 
+#ifdef __MINGW32__
+#define __MINGW_VERSION(major, minor) \
+  (__MINGW32_MAJOR_VERSION > (major) \
+   || (__MINGW32_MAJOR_VERSION == (major) \
+   && __MINGW32_MINOR_VERSION >= (minor)))
+#if __MINGW_VERSION(3,15)
+#define NEEDS_MINGWHACK
+#endif
+#endif
+
 class Awrapper: public Adapter {
 public:
   Awrapper(Log&l, std::string params, aal* _ada);
@@ -42,7 +52,7 @@ public:
   virtual int check_tags(int* tag,int len,std::vector<int>& t);
 protected:
   static std::string es;
-#ifdef __MINGW32__
+#ifdef NEEDS_MINGWHACK
   std::map<std::pair<int,std::string>, int > ada2aal;
 #else
   std::map<std::pair<int,std::string&>, int > ada2aal;

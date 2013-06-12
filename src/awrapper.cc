@@ -115,7 +115,7 @@ void Awrapper::set_actions(std::vector<std::string>* _actions)
 	continue;
       }
       // With parameters :)
-#ifdef __MINGW32__
+#ifdef  NEEDS_MINGWHACK
       std::pair<int,std::string> 
 #else
       std::pair<int,std::string&> 
@@ -124,7 +124,7 @@ void Awrapper::set_actions(std::vector<std::string>* _actions)
       ada2aal[ind]=i;
     }
 
-#ifdef __MINGW32__
+#ifdef  NEEDS_MINGWHACK
     std::pair<int,std::string>
 #else
     std::pair<int,std::string&>
@@ -156,14 +156,14 @@ void Awrapper::execute(std::vector<int>& action)
   log.debug("return %i\n",tmp);
   int ret=0;
   if (tmp) {
-#ifdef __MINGW32__
+#ifdef  NEEDS_MINGWHACK
     ret=ada2aal[std::pair<int,std::string>(tmp,prm)];
 #else
     ret=ada2aal[std::pair<int,std::string&>(tmp,prm)];
 #endif
     if (!ret) {
       // Let't try without parameter...
-#ifdef __MINGW32__
+#ifdef  NEEDS_MINGWHACK
       ret=ada2aal[std::pair<int,std::string>(tmp,es)];
 #else
       ret=ada2aal[std::pair<int,std::string&>(tmp,es)];
@@ -212,7 +212,7 @@ int  Awrapper::observe(std::vector<int> &action,
   }
   std::vector<std::string>& wn=ada->getActionNames();
   for(int i=0;i<tmp;i++) {
-#ifdef __MINGW32__
+#ifdef  NEEDS_MINGWHACK
     int t=ada2aal[action[i],std::pair<int,std::string>(action[i],es)];
 #else
 ggg    int t=ada2aal[action[i],std::pair<int,std::string&>(action[i],es)];
