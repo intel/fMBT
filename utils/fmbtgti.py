@@ -89,9 +89,12 @@ def _intCoords((x, y), (width, height)):
 
 ### Binding to eye4graphics.so
 _libpath = ["", "." + os.path.sep]
+suffix=".so"
+if sys.platform == "win32":
+    suffix=".dll"    
 for _dirname in _libpath:
     try:
-        eye4graphics = ctypes.CDLL(_dirname + "eye4graphics.so")
+        eye4graphics = ctypes.CDLL(os.path.join(_dirname , "eye4graphics"+suffix))
         break
     except: pass
 else:
