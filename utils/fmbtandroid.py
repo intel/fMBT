@@ -179,12 +179,11 @@ def _logFailedCommand(source, command, exitstatus, stdout, stderr):
 def _run(command, expectedExitStatus = None):
     if type(command) == str: shell=True
     else: shell=False
-
     try:
         p = subprocess.Popen(command, shell=shell,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE,
-                             close_fds=True)
+                             close_fds=False)
         if expectedExitStatus != None:
             out, err = p.communicate()
         else:
@@ -278,7 +277,7 @@ class Device(fmbtgti.GUITestInterface):
         elif deviceName == "":
             # Connect to an unspecified device.
             # Go through devices in "adb devices".
-            listDevicesCommand = "adb devices"
+            listDevicesCommand = ["adb.exe", "devices"]
             status, output, err = _run(listDevicesCommand, expectedExitStatus = [0, 127])
             if status == 127:
                 raise Exception('adb not found in PATH. Check your Android SDK installation.')
@@ -1140,7 +1139,7 @@ class _AndroidDeviceConnection:
             self._resetWindow()
 
             # check supported features
-            outputLines = self._runAdb("shell tar")[1].splitlines()
+            outputLines = self._runAdb(["shell","tar"])[1].splitlines()
             if len(outputLines) == 1 and "bin" in outputLines[0]:
                 self._shellSupportsTar = False
             else:
@@ -1175,7 +1174,7 @@ class _AndroidDeviceConnection:
         if type(command) == list:
             command = ["adb", "-s", self._serialNumber] + command
         else:
-            command = ("adb -s '%s' " % (self._serialNumber,)) + command
+            command = ["adb", "-s", self._serialNumber, command]
         return _run(command, expectedExitStatus = expect)
 
     def _runSetupCmd(self, cmd, expectedExitStatus = 0):
@@ -1185,18 +1184,18 @@ class _AndroidDeviceConnection:
         else: return True
 
     def _resetWindow(self):
-        setupCommands = ["shell service call window 1 i32 4939",
-                         "forward tcp:%s tcp:4939" % (self._w_port,)]
+        setupCommands = [["shell", "service" , "call", "window", "1", "i32", "4939"],
+                         ["forward", "tcp:"+str(self._w_port), "tcp:4939"]]
         for c in setupCommands:
             self._runSetupCmd(c)
 
     def _resetMonkey(self, timeout=3, pollDelay=.25):
-        self._runSetupCmd("shell monkey --port 1080", None)
+        self._runSetupCmd(["shell","monkey","--port","1080"], None)
         time.sleep(pollDelay)
         endTime = time.time() + timeout
 
         while time.time() < endTime:
-            self._runSetupCmd("forward tcp:%s tcp:1080" % (self._m_port,), 0)
+            self._runSetupCmd(["forward","tcp:"+str(self._m_port), "tcp:1080"])
             try:
                 self._monkeySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self._monkeySocket.connect((self._m_host, self._m_port))
@@ -1242,7 +1241,7 @@ class _AndroidDeviceConnection:
         if firstBootAfterFlashing:
             self._runAdb("root")
             time.sleep(2)
-            self._runAdb("shell rm /data/data/com.android.launcher/shared_prefs/com.android.launcher2.prefs.xml")
+            self._runAdb(["shell","rm","/data/data/com.android.launcher/shared_prefs/com.android.launcher2.prefs.xml"])
 
         self._runAdb("reboot")
         _adapterLog("rebooting " + self._serialNumber)
@@ -1279,7 +1278,7 @@ class _AndroidDeviceConnection:
         return width, height
 
     def recvTopAppWindow(self):
-        _, output, _ = self._runAdb("shell dumpsys window", 0)
+        _, output, _ = self._runAdb(["shell","dumpsys","window"], 0)
         if self._platformVersion >= "4.2":
             s = re.findall("mCurrentFocus=Window\{(#?[0-9A-Fa-f]{8})( [^ ]*)? (?P<winName>[^}]*)\}", output)
         else:
@@ -1354,7 +1353,7 @@ class _AndroidDeviceConnection:
         remotename = '/sdcard/' + os.path.basename(filename)
         os.write(fd, shellCommand + "\n")
         os.close(fd)
-        self._runAdb("push %s %s" % (filename, remotename), 0)
+        self._runAdb(["push",filename,remotename],0)
         cmd = "shell 'source %s >%s.out 2>%s.err; echo $? > %s.status" % ((remotename,)*4)
         if self._shellSupportsTar:
             # do everything we can in one command to minimise adb
@@ -1382,7 +1381,7 @@ class _AndroidDeviceConnection:
             stderr = self._cat(remotename + ".err")
             try: exitstatus = int(self._cat(remotename + ".status"))
             except: exitstatus = None
-            self._runAdb("shell rm -f '%s*'" % (remotename,))
+            self._runAdb(["shell","rm -f "+remotename])
         return exitstatus, stdout, stderr
 
     def recvViewData(self, retry=3):

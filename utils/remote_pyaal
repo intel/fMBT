@@ -62,7 +62,7 @@ Options:
 import sys
 import os
 import getopt
-import commands
+import subprocess
 import inspect
 import time
 import fmbt
@@ -437,7 +437,7 @@ if __name__ == "__main__":
     # Default values for commandline arguments
     log_filename = None
     opt_timeout = 1.0
-    opt_ppflags = ""
+    opt_ppflags = []
     opt_output_fileobj = None
     opt_lsts_depth = 5
     opt_lsts_hide_vars = []
@@ -459,7 +459,7 @@ if __name__ == "__main__":
         elif opt in ["-c"]:
             opt_c_exec_statements.append(arg)
         elif opt in ["-D"]:
-            opt_ppflags += "'-D"+arg+"' "
+            opt_ppflags += ['-D' , arg]
         elif opt in ['-V', '--version']:
             try:
                 import fmbt_config
@@ -495,8 +495,11 @@ if __name__ == "__main__":
     aal_filename = remainder[0]
 
     if aal_filename.endswith(".aal"):
-        cmd = "fmbt-aalc %s '%s'" % (opt_ppflags, aal_filename)
-        status, aal_code = commands.getstatusoutput(cmd)
+        cmd = ["fmbt-aalc"] + opt_ppflags + [ aal_filename ]
+	subout = subprocess.PIPE
+	p = subprocess.Popen(cmd,shell=False, stdout=subout,stderr=subout)
+	aal_code = p.stdout.read()
+	status = p.wait()
         if status != 0:
             fmbtstderr("AAL to Python conversion failed:\n%s" % (aal_code,))
             error("converting aal to python with command\n" +
