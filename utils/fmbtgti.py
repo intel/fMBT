@@ -777,6 +777,9 @@ class GUITestInterface(object):
 
         Returns True if waitFunc returns True - either immediately or
         before waitTime has expired - otherwise False.
+
+        refreshFunc will not be called if waitFunc returns immediately
+        True.
         """
         if waitFunc(*waitFuncArgs, **waitFuncKwargs):
             return True
@@ -810,7 +813,8 @@ class GUITestInterface(object):
         contains at least one of the bitmaps. If none of the bitmaps
         appear within the time limit, returns empty list.
 
-        Updates the last screenshot.
+        If the bitmap is not found from most recently refreshed
+        screenshot, waitAnyBitmap updates the screenshot.
         """
         if not self._lastScreenshot: self.refreshScreenshot()
         bitmapKwArgs = _bitmapKwArgs(colorMatch, opacityLimit, area, 1)
@@ -841,7 +845,8 @@ class GUITestInterface(object):
         Returns True if bitmap appeared within given time limit,
         otherwise False.
 
-        Updates the last screenshot.
+        If the bitmap is not found from most recently refreshed
+        screenshot, waitBitmap updates the screenshot.
         """
         return self.waitAnyBitmap([bitmap], colorMatch, opacityLimit, area, **waitKwArgs) != []
 
@@ -866,7 +871,8 @@ class GUITestInterface(object):
         Returns True if the text appeared within given time limit,
         otherwise False.
 
-        Updates the last screenshot.
+        If the text is not found from most recently refreshed
+        screenshot, waitOcrText updates the screenshot.
         """
         ocrKwArgs = {}
         if match != None: ocrKwArgs["match"] = match
