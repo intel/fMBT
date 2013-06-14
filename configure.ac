@@ -11,6 +11,8 @@ AM_PROG_LEX
 AC_PROG_LIBTOOL
 AC_CONFIG_HEADERS([config.h])
 
+LT_INIT(win32-dll)
+
 # TODO: configurable readline?
 # here we could fall back to reading standard input in READLINE,
 # see test_engine.cc.
