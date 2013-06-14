@@ -573,7 +573,7 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
                   inactivity time in seconds after which the backlight
                   will be switched off.
         """
-        return self._agentCmd("bl %s" % (timeout,))
+        return self._agentCmd("bl %s" % (timeout,))[0]
 
     def recvScreenshot(self, filename):
         rv, img = self._agentCmd("ss")
