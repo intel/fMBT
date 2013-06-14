@@ -337,7 +337,7 @@ class Device(fmbtgti.GUITestInterface):
           long, hold (optional):
                   refer to pressKey documentation.
         """
-        return self.pressKey("VOLUME_UP", **pressKeyKwArgs)
+        return self.pressKey("VOLUMEUP", **pressKeyKwArgs)
 
     def pressVolumeDown(self, **pressKeyKwArgs):
         """
@@ -348,7 +348,7 @@ class Device(fmbtgti.GUITestInterface):
           long, hold (optional):
                   refer to pressKey documentation.
         """
-        return self.pressKey("VOLUME_DOWN", **pressKeyKwArgs)
+        return self.pressKey("VOLUMEDOWN", **pressKeyKwArgs)
 
     def pressHome(self, **pressKeyKwArgs):
         """
