@@ -97,7 +97,7 @@ def error(msg):
     sys.exit(1)
 
 def read_from_log_timestamp_execaction(testlog_fileobj):
-    cmd = "fmbt-log -f '$st $as|FMBT-STATS|$ax'"
+    cmd = ["fmbt-log","-f","$st $as|FMBT-STATS|$ax"]
     p = subprocess.Popen(cmd, shell=True, stdin=testlog_fileobj.fileno(), stdout=subprocess.PIPE)
 
     timestamp_actionname_list = []
@@ -119,7 +119,7 @@ def read_from_log_timestamp_execaction(testlog_fileobj):
     return timestamp_actionname_list
 
 def read_from_log_possible_executed(testlog_fileobj):
-    cmd = "fmbt-log -f 'p:$am\\nx:$ax'"
+    cmd = ["fmbt-log", "-f", "p:$am\\nx:$ax"]
     p = subprocess.Popen(cmd, shell=True, stdin=testlog_fileobj.fileno(), stdout=subprocess.PIPE)
 
     possible_actions = []
@@ -138,7 +138,7 @@ def read_from_log_possible_executed(testlog_fileobj):
     return possible_actions, executed_actions
 
 def read_from_log_possible_executed_tags(testlog_fileobj):
-    cmd = "fmbt-log -s '|FMBT-STATS|' -f 'p:$am\\nx:$ax\\nt:$tb\\nT:$tg'"
+    cmd = ["fmbt-log", "-s", "|FMBT-STATS|", "-f", "p:$am\\nx:$ax\\nt:$tb\\nT:$tg"]
     p = subprocess.Popen(cmd, shell=True, stdin=testlog_fileobj.fileno(), stdout=subprocess.PIPE)
 
     possible_actions = []
@@ -160,7 +160,7 @@ def read_from_log_possible_executed_tags(testlog_fileobj):
     return possible_actions, executed_actions, tags
 
 def read_from_log_coverage_timestamp(testlog_fileobj):
-    cmd = "fmbt-log -f '$sb $st'"
+    cmd = ["fmbt-log","-f","$sb $st"]
     p = subprocess.Popen(cmd, shell=True, stdin=testlog_fileobj.fileno(), stdout=subprocess.PIPE)
 
     coverage_timestamp = []
