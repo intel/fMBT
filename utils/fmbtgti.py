@@ -29,6 +29,7 @@ import ctypes
 import datetime
 import gc
 import inspect
+import math
 import os
 import shutil
 import sys
@@ -86,6 +87,29 @@ def _intCoords((x, y), (width, height)):
     if 0 <= x <= 1 and type(x) == float: x = x * width
     if 0 <= y <= 1 and type(y) == float: y = y * height
     return (int(round(x)), int(round(y)))
+
+def _edgeDistanceInDirection((x, y), (width, height), direction):
+    x, y = _intCoords((x, y), (width, height))
+
+    direction = direction % 360 # -90 => 270, 765 => 45
+
+    dirRad = math.radians(direction)
+
+    if 0 < direction < 180:
+        distTopBottom = y / math.sin(dirRad)
+    elif 180 < direction < 360:
+        distTopBottom = -(height - y) / math.sin(dirRad)
+    else:
+        distTopBottom = float('inf')
+
+    if 90 < direction < 270:
+        distLeftRight = -x / math.cos(dirRad)
+    elif 270 < direction <= 360 or 0 <= direction < 90:
+        distLeftRight = (width - x) / math.cos(dirRad)
+    else:
+        distLeftRight = float('inf')
+
+    return min(distTopBottom, distLeftRight)
 
 ### Binding to eye4graphics.so
 _libpath = ["", "." + os.path.sep]
@@ -433,38 +457,63 @@ class GUITestInterface(object):
                 _fmbtLog('creating directory "%s" for screenshots failed: %s' % (self.screenshotDir(), e))
                 raise
 
-    def swipe(self, (x, y), direction, **dragKwArgs):
+    def swipe(self, (x, y), direction, distance=1.0, **dragKwArgs):
         """
-        swipe starting from coordinates (x, y) to direction ("n", "s",
-        "e" or "w"). Swipe ends to the edge of the screen.
+        swipe starting from coordinates (x, y) to given direction.
 
-        Coordinates and keyword arguments are the same as for the drag
-        function.
+        Parameters:
+
+          coordinates (floats in range [0.0, 1.0] or integers):
+                  floating point coordinates in range [0.0, 1.0] are
+                  scaled to full screen width and height, others are
+                  handled as absolute coordinate values.
+
+          direction (string or integer):
+                  Angle (0..360 degrees), or "north", "south", "east"
+                  and "west" (corresponding to angles 90, 270, 0 and
+                  180).
+
+          distance (float, optional):
+                  Swipe distance. Values in range [0.0, 1.0] are
+                  scaled to the distance from the coordinates to the
+                  edge of the screen. The default is 1.0: swipe to the
+                  edge of the screen.
+
+          rest of the parameters: refer to drag documentation.
 
         Returns True on success, False if sending input failed.
         """
-        d = direction.lower()
-        if d in ["n", "north"]: x2, y2 = self.intCoords((x, 0.0))
-        elif d in ["s", "south"]: x2, y2 = self.intCoords((x, 1.0))
-        elif d in ["e", "east"]: x2, y2 = self.intCoords((1.0, y))
-        elif d in ["w", "west"]: x2, y2 = self.intCoords((0.0, y))
-        else:
-            msg = 'Illegal direction "%s"' % (direction,)
-            raise Exception(msg)
+        if type(direction) == str:
+            d = direction.lower()
+            if d in ["n", "north"]: direction = 90
+            elif d in ["s", "south"]: direction = 270
+            elif d in ["e", "east"]: direction = 0
+            elif d in ["w", "west"]: direction = 180
+            else: raise ValueError('Illegal direction "%s"' % (direction,))
+
+        direction = direction % 360
+        x, y = self.intCoords((x, y))
+        dirRad = math.radians(direction)
+        distToEdge = _edgeDistanceInDirection((x, y), self.screenSize(), direction)
+
+        if distance > 1.0: distance = float(distance) / distToEdge
+
+        x2 = int(x + math.cos(dirRad) * distToEdge * distance)
+        y2 = int(y - math.sin(dirRad) * distToEdge * distance)
+
         return self.drag((x, y), (x2, y2), **dragKwArgs)
 
-    def swipeBitmap(self, bitmap, direction, colorMatch=None, opacityLimit=None, area=None, **dragKwArgs):
+    def swipeBitmap(self, bitmap, direction, distance=1.0, colorMatch=None, opacityLimit=None, area=None, **dragKwArgs):
         """
-        swipe starting from bitmap to direction ("n", "s", "e", or
-        "w"). Swipe ends to the edge of the screen.
+        swipe starting from bitmap to given direction.
 
         Parameters:
 
           bitmap (string)
                   bitmap from which swipe starts
 
-          direction (string)
-                  "n", "s", "e" or "w"
+          direction, distance
+                  refer to swipe documentation.
 
           colorMatch, opacityLimit, area (optional)
                   refer to verifyBitmap documentation.
@@ -479,14 +528,26 @@ class GUITestInterface(object):
         items = self._lastScreenshot.findItemsByBitmap(bitmap, **_bitmapKwArgs(colorMatch, opacityLimit, area, 1))
         if len(items) == 0:
             return False
-        return self.swipeItem(items[0], direction, **dragKwArgs)
+        return self.swipeItem(items[0], direction, distance, **dragKwArgs)
 
-    def swipeItem(self, viewItem, direction, **dragKwArgs):
+    def swipeItem(self, viewItem, direction, distance=1.0, **dragKwArgs):
         """
-        swipe starting from viewItem to direction ("n", "s", "e" or
-        "w"). Swipe ends to the edge of the screen.
+        swipe starting from viewItem to given direction.
 
-        Keyword arguments are the same as for the drag function.
+        Parameters:
+
+          viewItem (ViewItem)
+                  item from which swipe starts
+
+          direction, distance
+                  refer to swipe documentation.
+
+          colorMatch, opacityLimit, area (optional)
+                  refer to verifyBitmap documentation.
+
+          delayBeforeMoves, delayBetweenMoves, delayAfterMoves,
+          movePoints
+                  refer to drag documentation.
 
         Returns True on success, False if sending input failed.
         """
@@ -719,6 +780,9 @@ class GUITestInterface(object):
 
         Returns True if waitFunc returns True - either immediately or
         before waitTime has expired - otherwise False.
+
+        refreshFunc will not be called if waitFunc returns immediately
+        True.
         """
         if waitFunc(*waitFuncArgs, **waitFuncKwargs):
             return True
@@ -752,7 +816,8 @@ class GUITestInterface(object):
         contains at least one of the bitmaps. If none of the bitmaps
         appear within the time limit, returns empty list.
 
-        Updates the last screenshot.
+        If the bitmap is not found from most recently refreshed
+        screenshot, waitAnyBitmap updates the screenshot.
         """
         if not self._lastScreenshot: self.refreshScreenshot()
         bitmapKwArgs = _bitmapKwArgs(colorMatch, opacityLimit, area, 1)
@@ -783,7 +848,8 @@ class GUITestInterface(object):
         Returns True if bitmap appeared within given time limit,
         otherwise False.
 
-        Updates the last screenshot.
+        If the bitmap is not found from most recently refreshed
+        screenshot, waitBitmap updates the screenshot.
         """
         return self.waitAnyBitmap([bitmap], colorMatch, opacityLimit, area, **waitKwArgs) != []
 
@@ -808,7 +874,8 @@ class GUITestInterface(object):
         Returns True if the text appeared within given time limit,
         otherwise False.
 
-        Updates the last screenshot.
+        If the text is not found from most recently refreshed
+        screenshot, waitOcrText updates the screenshot.
         """
         ocrKwArgs = {}
         if match != None: ocrKwArgs["match"] = match
