@@ -92,7 +92,7 @@ def colors(lsts_obj, testlog_fileobj):
             if action_name == actionnames[action_index]:
                 return (current_state, action_index, dest_state)
 
-    cmd = "fmbt-log -f '$as*LSTS2DOT*$ax*LSTS2DOT*$tv'"
+    cmd = ["fmbt-log", "-f","$as*LSTS2DOT*$ax*LSTS2DOT*$tv"]
     p = subprocess.Popen(cmd, shell=True, stdin=testlog_fileobj.fileno(), stdout=subprocess.PIPE)
 
     # tr_colors dictionary maps transitions, that is (src, act, dst)
