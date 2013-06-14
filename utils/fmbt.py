@@ -39,7 +39,9 @@ def fmbtlog(msg, flush=True):
     except: pass
 
 def adapterlog(msg, flush=True):
-    try: file("/tmp/fmbt.adapterlog", "a").write("%s\n" % (msg,))
+    try:
+        _adapterlogWriter(file("/tmp/fmbt.adapterlog", "a"),
+                          formatAdapterLogMessage(msg,))
     except: pass
 
 def setAdapterLogWriter(func):
