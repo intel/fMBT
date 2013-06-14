@@ -169,7 +169,9 @@ class Device(fmbtgti.GUITestInterface):
                   distance from both finger tips to the central point
                   of the gesture, at the start and at the end of the
                   gesture. Values in range [0.0, 1.0] are scaled up to
-                  the half of the diagonal of the screen.
+                  the distance from the coordinates to the edge of the
+                  screen. Both finger tips will reach an edge if
+                  distance is 1.0.
 
           finger1Dir, finger2Dir (integer, optional):
                   directions for finger tip movements, in range [0,
@@ -194,26 +196,32 @@ class Device(fmbtgti.GUITestInterface):
         screenWidth, screenHeight = self.screenSize()
         screenDiagonal = math.sqrt(screenWidth**2 + screenHeight**2)
 
-        if x == None: x = screenWidth / 2
-        elif 0.0 <= x <= 1.0: x = int(screenWidth * x)
-        if y == None: y = screenWidth / 2
-        elif 0.0 <= y <= 1.0: y = int(screenHeight * y)
+        if x == None: x = 0.5
+        if y == None: y = 0.5
 
-        if 0.0 <= startDistance <= 1.0: startDistanceInPixels = int(startDistance * screenDiagonal/2.0)
+        x, y = self.intCoords((x, y))
+
+        if type(startDistance) == float and 0.0 <= startDistance <= 1.0:
+            startDistanceInPixels = (startDistance *
+                                     max(fmbtgti._edgeDistanceInDirection((x, y), self.screenSize(), finger1Dir),
+                                         fmbtgti._edgeDistanceInDirection((x, y), self.screenSize(), finger2Dir)))
         else: startDistanceInPixels = int(startDistance)
 
-        if 0.0 <= endDistance <= 1.0: endDistanceInPixels = int(endDistance * screenDiagonal/2.0)
+        if type(endDistance) == float and 0.0 <= endDistance <= 1.0:
+            endDistanceInPixels = (endDistance *
+                                   max(fmbtgti._edgeDistanceInDirection((x, y), self.screenSize(), finger1Dir),
+                                       fmbtgti._edgeDistanceInDirection((x, y), self.screenSize(), finger2Dir)))
         else: endDistanceInPixels = int(endDistance)
 
-        finger1startX = x + math.cos(math.radians(finger1Dir)) * startDistanceInPixels
-        finger1startY = y + math.sin(math.radians(finger1Dir)) * startDistanceInPixels
-        finger1endX = x + math.cos(math.radians(finger1Dir)) * endDistanceInPixels
-        finger1endY = y + math.sin(math.radians(finger1Dir)) * endDistanceInPixels
+        finger1startX = int(x + math.cos(math.radians(finger1Dir)) * startDistanceInPixels)
+        finger1startY = int(y + math.sin(math.radians(finger1Dir)) * startDistanceInPixels)
+        finger1endX = int(x + math.cos(math.radians(finger1Dir)) * endDistanceInPixels)
+        finger1endY = int(y + math.sin(math.radians(finger1Dir)) * endDistanceInPixels)
 
-        finger2startX = x + math.cos(math.radians(finger2Dir)) * startDistanceInPixels
-        finger2startY = y + math.sin(math.radians(finger2Dir)) * startDistanceInPixels
-        finger2endX = x + math.cos(math.radians(finger2Dir)) * endDistanceInPixels
-        finger2endY = y + math.sin(math.radians(finger2Dir)) * endDistanceInPixels
+        finger2startX = int(x + math.cos(math.radians(finger2Dir)) * startDistanceInPixels)
+        finger2startY = int(y + math.sin(math.radians(finger2Dir)) * startDistanceInPixels)
+        finger2endX = int(x + math.cos(math.radians(finger2Dir)) * endDistanceInPixels)
+        finger2endY = int(y + math.sin(math.radians(finger2Dir)) * endDistanceInPixels)
 
         return self._conn.sendMtLinearGesture([[(finger1startX, finger1startY), (finger1endX, finger1endY)],
                                                [(finger2startX, finger2startY), (finger2endX, finger2endY)]],
@@ -232,7 +240,8 @@ class Device(fmbtgti.GUITestInterface):
                   distance from both finger tips to the central point
                   of the gesture, at the start and at the end of the
                   gesture. Values in range [0.0, 1.0] are scaled up to
-                  the half of the diagonal of the screen.
+                  the distance from the bitmap to screen edge. Both
+                  finger tips will reach an edge if distance is 1.0.
 
           colorMatch, opacityLimit, area (optional):
                   refer to verifyBitmap documentation.
@@ -245,7 +254,7 @@ class Device(fmbtgti.GUITestInterface):
             return False
         return self.pinchItem(items[0], startDistance, endDistance, **pinchKwArgs)
 
-    def pinchClose(self, (x, y) = (0.5, 0.5), startDistance=.3, endDistance=.05, **pinchKwArgs):
+    def pinchClose(self, (x, y) = (0.5, 0.5), startDistance=0.5, endDistance=0.1, **pinchKwArgs):
         """
         Make the close pinch gesture.
 
@@ -255,8 +264,8 @@ class Device(fmbtgti.GUITestInterface):
                   the middle of the screen.
 
           startDistance, endDistance (float, optional):
-                  refer to pinch documentation. The default is 0.3 and
-                  0.05.
+                  refer to pinch documentation. The default is 0.5 and
+                  0.1.
 
           rest of the parameters: refer to pinch documentation.
         """
@@ -291,7 +300,7 @@ class Device(fmbtgti.GUITestInterface):
             pinchCoords = viewItem.coords()
         return self.pinch(pinchCoords, startDistance, endDistance, **pinchKwArgs)
 
-    def pinchOpen(self, (x, y) = (0.5, 0.5), startDistance=.05, endDistance=.3, **pinchKwArgs):
+    def pinchOpen(self, (x, y) = (0.5, 0.5), startDistance=0.1, endDistance=0.5, **pinchKwArgs):
         """
         Make the open pinch gesture.
 
@@ -301,8 +310,8 @@ class Device(fmbtgti.GUITestInterface):
                   the middle of the screen.
 
           startDistance, endDistance (float, optional):
-                  refer to pinch documentation. The default is 0.05 and
-                  0.3.
+                  refer to pinch documentation. The default is 0.1 and
+                  0.5.
 
           for the rest of the parameters, refer to pinch documentation.
         """
