@@ -1,8 +1,18 @@
-fmbt (0.9.4-0.rc0) unstable; urgency=low
+fmbt (0.9.4-1) unstable; urgency=low
 
-  * Development version.
+  * fmbttizen:
+    - multidevice support: control many Tizen devices in the same test.
+    - multitouch support, pinch() method introduced.
+    - setDisplayBacklightTime() added, affects lock screen timeout.
+    - type() improved.
+  * fmbtandroid/fmbttizen/fmbtx11:
+    - waitAnyBitmap(list-of-bitmaps) added.
+    - swipe supports free directions and distances.
+    - opacityLimit default to 0: *Bitmaps require exact match by default.
+    - visual log has relative image paths
+  * Minor bug fixes.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 5 Jun 2013 16:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 14 Jun 2013 12:42:00 +0300
 
 fmbt (0.9.3-1) unstable; urgency=low
 
