@@ -1,7 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env python
 
+#
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2011,2012 Intel Corporation.
+# Copyright (c) 2012-2013, Intel Corporation.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU Lesser General Public License,
@@ -15,160 +16,117 @@
 # You should have received a copy of the GNU Lesser General Public License along with
 # this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+"""
+Usage: fmbt-view [options] modelname.lsts
 
-print_help_and_quit()
-{
-    echo "Usage: fmbt-view [options] modelname.lsts"
-    echo ""
-    echo "  modelname.lsts is a file containing a state machine in LSTS"
-    echo "  format, or \"-\" for reading the lsts from standard input."
-    echo ""
-    echo "Options:"
-    echo "  -d      Debug (don't remove temporary files)."
-    echo "  -f <format>"
-    echo "          Default format is pdf. Other supported formats are:"
-    echo -n "         "; dot -Thelp 2>&1 | sed 's/.*://'
-    echo "  -h      Print help."
-    echo "  -l <logfile>"
-    echo "          Color states and transitions visited in the log."
-    echo "  -i      Invert coloring (highlights unvisited states)"
-    echo "  -o <outputfile>"
-    echo "          Write image to outputfile, do not display it."
-    echo "  -e <regexp>"
-    echo "          Erase transitions matching the regular expression."
-    echo "  -E <regexp>"
-    echo "          Erase transitions matching the regular expression"
-    echo "          unless they have been traversed in the given log"
-    echo "          (see -l)."
-    echo "  -O      Erase orphaned states, that is, states without any"
-    echo "          transitions."
-    echo "  -s <regexp>"
-    echo "          Show only transitions matching the regular expression."
-    echo "  -S <regexp>"
-    echo "          Show only transitions that match the regular"
-    echo "          expression and have been traversed in the given log"
-    echo "          (see -l)."
-    echo "  -U      Erase unvisited states."
-    exit 0
-}
+  modelname.lsts is a file containing a state machine in LSTS
+  format, or \-\ for reading the lsts from standard input.
 
-if [ "x$1" == "x" ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
-    print_help_and_quit
-fi
+Options:
+  -d      Debug (don't remove temporary files).
+  -f <format>
+          Default format is pdf. Other supported formats are:
+          ??? execute: dot -Thelp 2>&1 | sed 's/.*://'
+  -h      Print help.
+  -l <logfile>
+          Color states and transitions visited in the log.
+  -i      Invert coloring (highlights unvisited states)
+  -o <outputfile>
+          Write image to outputfile, do not display it.
+  -e <regexp>
+          Erase transitions matching the regular expression.
+  -E <regexp>
+          Erase transitions matching the regular expression
+          unless they have been traversed in the given log
+          (see -l).
+  -O      Erase orphaned states, that is, states without any
+          transitions.
+  -s <regexp>
+          Show only transitions matching the regular expression.
+  -S <regexp>
+          Show only transitions that match the regular
+          expression and have been traversed in the given log
+          (see -l).
 
-FORMAT=pdf
-LOGFILE=""
-OUTPUTFILE=""
-COLORING=""
-DISPLAY_IMAGE=1
-DEBUG=0
-ERASE_TRANSITIONS=""
-ERASE_UNTRAVERSED=""
-SHOW_TRANSITIONS=""
-SHOW_TRAVERSED=""
-ERASE_ORPHANED_STATES=""
-ERASE_UNVISITED_STATES=""
-while getopts df:hil:o:ve:E:s:S:OU opt
-do
-    case $opt in
-        d) DEBUG=1;;
-        h) print_help_and_quit;;
-        v) echo "Version"; exit 0;;
-        f) FORMAT=$OPTARG;;
-        i) COLORING="--invert-colors";;
-        l) LOGFILE="-l $OPTARG";;
-        o) OUTPUTFILE=$OPTARG; DISPLAY_IMAGE=0;;
+  -U      Erase unvisited states.
+"""
 
-        e) ERASE_TRANSITIONS=$ERASE_TRANSITIONS"--erase-transitions='$OPTARG' ";;
-        E) ERASE_UNTRAVERSED=$ERASE_UNTRAVERSED"--erase-untraversed-transitions='$OPTARG' ";;
-        s) SHOW_TRANSITIONS=$SHOW_TRANSITIONS"--show-transitions='$OPTARG' ";;
-        S) SHOW_TRAVERSED=$SHOW_TRAVERSED"--show-traversed-transitions='$OPTARG' ";;
-        O) ERASE_ORPHANED_STATES="-O ";;
-        U) ERASE_UNVISITED_STATES="-U ";;
-    esac
-done
-if [ "$OPTIND" != "$#" ]; then
-    echo "Invalid arguments, try -h for help."
-    exit 1;
-fi
-shift $(expr $OPTIND - 1)
 
-INPUTFILE="$1"
+import getopt
+import fmbt_config
+import tempfile
+import os
+import sys
+import subprocess
 
-if [ "$INPUTFILE" != "-" ] && [ ! -f "$INPUTFILE" ]; then
-    echo "Invalid input file \"$INPUTFILE\"."
-    exit 1
-fi
+if __name__ == "__main__":
+    opts, remainder = getopt.getopt(
+        sys.argv[1:],
+        "df:hil:o:ve:E:s:S:OU",
+        ["help","version"])
 
-if [ "$INPUTFILE" != "-" ]; then
-    grep -q 'Begin Lsts' "$INPUTFILE" || {
-        echo "\"$INPUTFILE\" is not an LSTS file"
-        exit 1
-    }
-fi
+    OUTPUTFILE = None
 
-UTILPATH="$(dirname "$0")"
-DOTFILE=$(mktemp --tmpdir --suffix .dot fmbt-view.tmp.XXXXXXXX) || {
-    echo "Can't create temporary file: $DOTFILE"
-    exit 1
-}
-ERRORFILE=$(mktemp --tmpdir --suffix .error fmbt-view.tmp.XXXXXXXX) || {
-    echo "Can't create temporary file: $ERRORFILE"
-    exit 1
-}
+    dot_command = ["dot"]
+    lsts2dot_command = ["lsts2dot",
+                        "--loops-in-states"]
 
-if [ "$OUTPUTFILE" == "" ]; then
-    OUTPUTFILE=$(mktemp --tmpdir --suffix ."$FORMAT" fmbt-view.tmp.XXXXXXXX) || {
-        echo "Can't create temporary file:""$OUTPUTFILE";
-        exit 1;
-    }
-fi
+    if len(remainder) > 0:
+        lsts2dot_command.extend(["-i", remainder[0]])
 
-remove_temp_files()
-{
-    if [ "$DEBUG" == "0" ]; then
-        rm -f "$DOTFILE" "$ERRORFILE"
-        if [ "$DISPLAY_IMAGE" == "1" ]; then
-            rm -f "$OUTPUTFILE"
-        fi
-    else
-        echo "Digraph without layout: $DOTFILE"
-        echo "Digraph wit layout:     $OUTPUTFILE"
-    fi
-}
+    for opt, arg in opts:
+        if opt in ["-h","--help"] or remainder == []:
+            print __doc__
+            sys.exit(0)    
+        elif opt in ["-v", "--version"]:
+            print "Version " + fmbt_config.fmbt_version + fmbt_config.fmbt_build_info
+            sys.exit(0)
+        elif opt in ["-f"]:
+            dot_command.extend(["-T" + arg])
+        elif opt in ["-i", "--invert-colors"]:
+            lsts2dot_command.extend(["--invert-colors"])
+        elif opt in ["-l"]:
+            lsts2dot_command.extend(["-l", arg])
+        elif opt in ["-o"]:
+            dot_command.extend(["-o", arg])
+            OUTPUTFILE = arg
+        elif opt in ["-e"]:
+            lsts2dot_command.extend(["--erase-transitions", arg])
+        elif opt in ["-E"]:
+            lsts2dot_command.extend(["--erase-untraversed-transitions",arg])
+        elif opt in ["-s"]:
+            lsts2dot_command.extend(["--show-transitions", arg]) # genius!
+        elif opt in ["-S"]:
+            lsts2dot_command.extend(["--show-traversed-transitions=",arg])
+        elif opt in ["-O"]:
+            lsts2dot_command.extend(["-O"])
+        elif opt in ["-U"]:
+            lsts2dot_command.extend(["-U"])
 
-for SIGNAL in INT QUIT TERM; do
-    trap "remove_temp_files; trap $SIGNAL; kill -$SIGNAL \$\$" $SIGNAL
-done
+    TMPDIR = tempfile.mkdtemp(prefix="fmbt-view")
+    DOTFILE=os.path.join(TMPDIR,"1.dot")
+    ERRORFILE=os.path.join(TMPDIR,"1.error")
 
-LSTS2DOT_COMMAND="$UTILPATH/lsts2dot --loops-in-states -i \"$INPUTFILE\" $COLORING $ERASE_TRANSITIONS $ERASE_UNTRAVERSED $SHOW_TRANSITIONS $SHOW_TRAVERSED $ERASE_ORPHANED_STATES $ERASE_UNVISITED_STATES $LOGFILE >$DOTFILE 2>$ERRORFILE"
+    DP=False
 
-if [ "$DEBUG" == "1" ]; then
-    echo Run: $LSTS2DOT_COMMAND
-fi
+    if not OUTPUTFILE:
+        OUTFILE=os.path.join(TMPDIR,"1.dotout")
+        dot_command.extend(["-o", OUTFILE])
+        DP=True
 
-eval $LSTS2DOT_COMMAND || {
-    echo "Error in converting state machine (lsts) into digraph (dot)"
-    cat $ERRORFILE
-    remove_temp_files
-    exit 1
-}
+    p = subprocess.Popen(lsts2dot_command,shell=False)
 
-eval dot -T$FORMAT -o"$OUTPUTFILE" < $DOTFILE  >$ERRORFILE 2>&1 || {
-    echo "Error in layouting digraph with Graphviz dot."
-    if grep -q Segmentation $ERRORFILE; then
-        echo "Possibly too many states."
-    fi
-    cat $ERRORFILE
-    remove_temp_files
-    exit 2
-}
+    if p.wait() != 0:
+        print "Error in converting state machine (lsts) into digraph (dot)"
+        exit(1)
 
-if [ "$DISPLAY_IMAGE" == "1" ]; then
-    eval display "$OUTPUTFILE" >$ERRORFILE 2>&1 || {
-        echo "Unexpected exit from display:"
-        cat $ERRORFILE
-    }
-fi
+    p = subprocess.Popen(dot_command,shell=False)
 
-remove_temp_files
+    if p.wait() != 0:
+        print "Error in layouting digraph with Graphviz dot."
+        exit(2)
+
+    if DP:
+        p = subprocess.Popen(["display", OUTFILE])
+        if p.wait() != 0:
+            print "Unexpected exit from display"
