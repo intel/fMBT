@@ -549,15 +549,21 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
             _g_readImage, SCREENSHOT_FILENAME)
     _, _g_hocr = _runcmd(cmd)
 
-    if not os.access(SCREENSHOT_FILENAME + ".html", os.R_OK):
+    hocr_filename = SCREENSHOT_FILENAME + ".html"
+
+    if not os.access(hocr_filename, os.R_OK):
         raise NoOCRResults("HOCR output missing. Tesseract OCR 3.02 or greater required.")
 
     # store every word and its coordinates
-    _g_words = _hocr2words(file(SCREENSHOT_FILENAME + ".html").read())
+    _g_words = _hocr2words(file(hocr_filename).read())
 
     # convert word coordinates to the unscaled pixmap
+    try:
+        ocr_page_line = [line for line in file(hocr_filename).readlines() if "class='ocr_page'" in line][0]
+    except IndexError:
+        raise NoOCRResults("Could not read ocr_page class information from %s" % (hocr_filename,))
 
-    scaled_width, scaled_height = re.findall('bbox 0 0 ([0-9]+)\s*([0-9]+)', _runcmd("grep ocr_page %s.html | head -n 1" % (SCREENSHOT_FILENAME,))[1])[0]
+    scaled_width, scaled_height = re.findall('bbox 0 0 ([0-9]+)\s*([0-9]+)', ocr_page_line)[0]
     scaled_width, scaled_height = float(scaled_width) / (float(x2-x1)/orig_width), float(scaled_height) / (float(y2-y1)/orig_height)
 
     for word in sorted(_g_words.keys()):
@@ -1359,7 +1365,7 @@ def _hocr2words(hocr):
     for name, code in htmlentitydefs.name2codepoint.iteritems():
         if code < 128:
             hocr = hocr.replace('&' + name + ';', chr(code))
-    ocr_word = re.compile('''<span class=['"]ocr_word["'] id=['"]([^']*)["'] title=['"]bbox ([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+)["'][^>]*>([^<]*)</span>''')
+    ocr_word = re.compile('''<span class=['"]ocrx?_word["'] id=['"]([^']*)["'] title=['"]bbox ([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+)["'][^>]*>([^<]*)</span>''')
     for word_id, bbox_left, bbox_top, bbox_right, bbox_bottom, word in ocr_word.findall(hocr):
         bbox_left, bbox_top, bbox_right, bbox_bottom = \
             int(bbox_left), int(bbox_top), int(bbox_right), int(bbox_bottom)
