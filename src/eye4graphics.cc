@@ -318,8 +318,8 @@ int iconsearch(std::vector<BoundingBox>& retval,
         /* Pixel-perfect match */
         int startXinArea = startX - searchArea.left;
         int startYinArea = startY - searchArea.top;
-        for (int y=startYinArea; y < hayy-neey; y++) {
-            for (int x=startXinArea; x < hayx-neex; x++) {
+        for (int y=startYinArea; y <= hayy-neey; y++) {
+            for (int x=startXinArea; x <= hayx-neex; x++) {
                 if (pixelperfect_match(hayx, neex, neey, x, y,
                                        hay_pixel, nee_pixel,
                                        colorDiff,
