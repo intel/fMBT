@@ -389,7 +389,7 @@ class Device(fmbtgti.GUITestInterface):
         """
         return _run(["sdb", "shell", shellCommand], expectedExitStatus=range(256))[1]
 
-    def shellSOE(self, shellCommand, username="", password=""):
+    def shellSOE(self, shellCommand, username="", password="", asyncStatus=None, asyncOut=None, asyncError=None):
         """
         Get status, output and error of executing shellCommand on Tizen device
 
@@ -408,12 +408,38 @@ class Device(fmbtgti.GUITestInterface):
                   password. The default is "tizen" for user "root",
                   otherwise "".
 
+          asyncStatus (string or None)
+                  filename (on device) to which the status of
+                  asynchronously executed shellCommand will be
+                  written. The default is None, that is, command will
+                  be run synchronously, and status will be returned in
+                  the tuple.
+
+          asyncOut (string or None)
+                  filename (on device) to which the standard output of
+                  asynchronously executed shellCommand will be
+                  written. The default is None.
+
+          asyncError (string or None)
+                  filename (on device) to which the standard error of
+                  asynchronously executed shellCommand will be
+                  written. The default is None.
+
         Returns tuple (exitStatus, standardOutput, standardError).
+
+        If asyncStatus, asyncOut or asyncError is a string,
+        shellCommand will be run asynchronously, and (0, None, None)
+        will be returned. In case of asynchronous execution, if any of
+        asyncStatus, asyncOut or asyncError is None, corresponding
+        output will be written to /dev/null. The shellCommand will be
+        executed even if the device would be disconnected. All async
+        files are opened for appending, allowing writes to the same
+        file.
         """
         if username == "root" and password == "":
-            return self._conn.shellSOE(shellCommand, username, "tizen")
+            return self._conn.shellSOE(shellCommand, username, "tizen", asyncStatus, asyncOut, asyncError)
         else:
-            return self._conn.shellSOE(shellCommand, username, password)
+            return self._conn.shellSOE(shellCommand, username, password, asyncStatus, asyncOut, asyncError)
 
 _g_sdbProcesses = set()
 def _forceCloseSdbProcesses():
@@ -609,9 +635,9 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
         s, o = commands.getstatusoutput("sdb get-serialno")
         return o.splitlines()[-1]
 
-    def shellSOE(self, shellCommand, username, password):
+    def shellSOE(self, shellCommand, username, password, asyncStatus, asyncOut, asyncError):
         _, (s, o, e) = self._agentCmd("es %s" % (base64.b64encode(cPickle.dumps(
-                        (shellCommand, username, password))),))
+                        (shellCommand, username, password, asyncStatus, asyncOut, asyncError))),))
         return s, o, e
 
     def target(self):
@@ -959,16 +985,52 @@ def takeScreenshot():
     libX11.XDestroyImage(image_p)
     return True, compressed_image
 
-def shellSOE(command):
+def shellSOE(command, asyncStatus, asyncOut, asyncError):
+    if (asyncStatus, asyncOut, asyncError) != (None, None, None):
+        # prepare for decoupled asynchronous execution
+        if asyncStatus == None: asyncStatus = "/dev/null"
+        if asyncOut == None: asyncOut = "/dev/null"
+        if asyncError == None: asyncError = "/dev/null"
+        try:
+            stdinFile = file("/dev/null", "r")
+            stdoutFile = file(asyncOut, "a+")
+            stderrFile = file(asyncError, "a+", 0)
+            statusFile = file(asyncStatus, "a+")
+        except IOError, e:
+            return False, (None, None, e)
+        try:
+            if os.fork() > 0:
+                # parent returns after successful fork, there no
+                # direct visibility to async child process beyond this
+                # point.
+                stdinFile.close()
+                stdoutFile.close()
+                stderrFile.close()
+                statusFile.close()
+                return True, (0, None, None)
+        except OSError, e:
+            return False, (None, None, e)
+        os.setsid()
+    else:
+        stdinFile = subprocess.PIPE
+        stdoutFile = subprocess.PIPE
+        stderrFile = subprocess.PIPE
     try:
         p = subprocess.Popen(command, shell=True,
-                             stdin=subprocess.PIPE,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE,
+                             stdin=stdinFile,
+                             stdout=stdoutFile,
+                             stderr=stderrFile,
                              close_fds=True)
     except Exception, e:
         return False, (None, None, e)
-    out, err = p.communicate()
+    if asyncStatus == None and asyncOut == None and asyncError == None:
+        # synchronous execution, read stdout and stderr
+        out, err = p.communicate()
+    else:
+        # asynchronous execution, store status to file
+        statusFile.write(str(p.wait()) + "\\n")
+        statusFile.close()
+        out, err = None, None
     return True, (p.returncode, out, err)
 
 def waitOutput(nonblockingFd, acceptedOutputs, timeout, pollInterval=0.1):
@@ -1109,12 +1171,12 @@ if __name__ == "__main__":
             rv, compressedImage = takeScreenshot()
             write_response(rv, compressedImage)
         elif cmd.startswith("es "): # execute shell
-            shellCmd, username, password = cPickle.loads(base64.b64decode(cmd[3:]))
+            shellCmd, username, password, asyncStatus, asyncOut, asyncError = cPickle.loads(base64.b64decode(cmd[3:]))
             if username == "":
-                rv, soe = shellSOE(shellCmd)
+                rv, soe = shellSOE(shellCmd, asyncStatus, asyncOut, asyncError)
             else:
                 rv, soe = subAgentCommand(username, password,
-                    "es " + base64.b64encode(cPickle.dumps((shellCmd, "", ""))))
+                    "es " + base64.b64encode(cPickle.dumps((shellCmd, "", "", asyncStatus, asyncOut, asyncError))))
             write_response(rv, soe)
         elif cmd.startswith("quit"): # quit
             write_response(rv, True)
