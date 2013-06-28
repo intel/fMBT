@@ -819,6 +819,7 @@ class GUITestInterface(object):
         If the bitmap is not found from most recently refreshed
         screenshot, waitAnyBitmap updates the screenshot.
         """
+        if listOfBitmaps == []: return []
         if not self._lastScreenshot: self.refreshScreenshot()
         bitmapKwArgs = _bitmapKwArgs(colorMatch, opacityLimit, area, 1)
         foundBitmaps = []
@@ -829,6 +830,46 @@ class GUITestInterface(object):
             return foundBitmaps != []
         self.wait(self.refreshScreenshot, observe, **waitKwArgs)
         return foundBitmaps
+
+    def waitAnyOcrText(self, listOfTexts, match=None, preprocess=None, area=None, **waitKwArgs):
+        """
+        Wait until OCR recognizes any of given texts on the screen.
+
+        Parameters:
+
+          listOfTexts (list of string):
+                  texts to be waited for.
+
+          match, preprocess (float and string, optional)
+                  refer to verifyOcrText documentation.
+
+          area ((left, top, right, bottom), optional):
+                  refer to verifyOcrText documentation.
+
+          waitTime, pollDelay (float, optional):
+                  refer to wait documentation.
+
+        Returns list of texts that appeared in the first screenshot
+        that contains at least one of the texts. If none of the texts
+        appear within the time limit, returns empty list.
+
+        If any of texts is not found from most recently refreshed
+        screenshot, waitAnyOcrText updates the screenshot.
+        """
+        if listOfTexts == []: return []
+        ocrKwArgs = {}
+        if match != None: ocrKwArgs["match"] = match
+        if preprocess != None: ocrKwArgs["preprocess"] = preprocess
+        if area != None: ocrKwArgs["area"] = area
+        if not self._lastScreenshot: self.refreshScreenshot()
+        foundTexts = []
+        def observe():
+            for text in listOfTexts:
+                if self.verifyOcrText(text, **ocrKwArgs):
+                    foundTexts.append(text)
+            return foundTexts != []
+        self.wait(self.refreshScreenshot, observe, **waitKwArgs)
+        return foundTexts
 
     def waitBitmap(self, bitmap, colorMatch=None, opacityLimit=None, area=None, **waitKwArgs):
         """
@@ -877,14 +918,7 @@ class GUITestInterface(object):
         If the text is not found from most recently refreshed
         screenshot, waitOcrText updates the screenshot.
         """
-        ocrKwArgs = {}
-        if match != None: ocrKwArgs["match"] = match
-        if preprocess != None: ocrKwArgs["preprocess"] = preprocess
-        if area != None: ocrKwArgs["area"] = area
-        if not self._lastScreenshot: self.refreshScreenshot()
-        return self.wait(self.refreshScreenshot,
-                         self.verifyOcrText, (text,), ocrKwArgs,
-                         **waitKwArgs)
+        return self.waitAnyOcrText([text], match, preprocess, area, **waitKwArgs) != []
 
 class Screenshot(object):
     """

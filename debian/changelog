@@ -1,8 +1,13 @@
-fmbt (0.9.5-0.rc0) unstable; urgency=low
+fmbt (0.9.5-1) unstable; urgency=low
 
-  * Development version.
+  * fmbtandroid/fmbttizen/fmbtx11:
+    - fixed OCR support with latest Tesseract (3.02.01).
+    - waitAnyOcrText(list-of-words) added.
+    - fixed fullscreen comparisons with verifyBitmap.
+  * fmbttizen:
+    - shellSOE supports asynchronous executions.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 14 Jun 2013 14:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 28 Jun 2013 16:42:00 +0300
 
 fmbt (0.9.4-1) unstable; urgency=low
 
