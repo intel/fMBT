@@ -17,7 +17,6 @@
  *
  */
 
-#include "eye4graphics.h"
 #include <math.h>
 #include <algorithm>
 #include <vector>
@@ -25,6 +24,8 @@
 
 #include <Magick++.h>
 using namespace Magick;
+
+#include "eye4graphics.h"
 
 #define COLORS 64
 
@@ -306,7 +307,7 @@ int iconsearch(std::vector<BoundingBox>& retval,
             haystack.type(GrayscaleType);
             needle.type(GrayscaleType);
         }
-
+	
         hay_pixel=haystack.getConstPixels(searchArea.left, searchArea.top, hayx, hayy);
         nee_pixel=needle.getConstPixels(0,0,neex,neey);
         search_id.hay_pixel = hay_pixel;
@@ -497,6 +498,13 @@ int openedImageDimensions(BoundingBox* bbox, const void * image)
     bbox->error  = 0;
     return 0;
 }
+
+void* openBlob(const void* blob,const char* pixelorder,int x,int y)
+{
+  Image* image = new Image(x,y,pixelorder,CharPixel,blob);
+  return static_cast<void*>(image);
+}
+
 
 void * openImage(const char* imagefile)
 {
