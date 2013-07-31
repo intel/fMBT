@@ -830,8 +830,6 @@ int getact(int** act,std::vector<int>& vec,GIOChannel* out,GIOChannel* in,
   int ret=-1;
   size_t s=bgetline(&line,&n,in,log,magic);
 
-  printf("getact %s\n",line);
-
   if (s != (size_t)-1 && s >= 0 && line) {
     if (strspn(line, " -0123456789") != s) {
       char *escaped_line = escape_string(line);
@@ -892,7 +890,6 @@ void regexpmatch(const std::string& regexp,std::vector<std::string>& f,
       }
     }
   } catch (...) {
-    printf("Exception...\n");
     for(unsigned int i=min;i<f.size();i++) {
       if (regexp == f[i]) {
 	result.push_back(a*i);
