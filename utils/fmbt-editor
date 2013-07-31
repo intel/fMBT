@@ -768,14 +768,13 @@ Keyboard shortcuts:<br>
                 for tag in self._tagfilter.keys():
                     if self._tagfilter[tag].isChecked():
                         show_hide_args.extend(["-T", tag])
-                py2lsts_cmd = ""
+                py2lsts_cmd = []
                 if self._menuOptionCFFD.isChecked():
                     # This CFFD-minimizing pipe does not work in Windows
                     py2lsts_cmd = "remote_pyaal -o - %s %s --lsts-depth %s '%s'|tvt.CFFD_normalize - -|fmbt-gt -i - -o '%s'" % (aal_ppflags, show_hide_args, preview_depth, self._aalcFileName, self._lstsFileName)
                 else:
                     # py2lsts_cmd = "remote_pyaal %s -o '%s'%s --lsts-depth %s '%s'" % (aal_ppflags, self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
                     py2lsts_cmd = ["remote_pyaal"] + aal_ppflags + ["-o", self._lstsFileName] + show_hide_args + ["--lsts-depth", str(preview_depth), self._aalcFileName]
-
                 validation_exitstatus, output = self.runcmd(py2lsts_cmd)
                 if validation_exitstatus != 0:
                     self.showError(output[1])
