@@ -40,17 +40,20 @@ Heuristic_weight* Hw;
 specs: spec |
        specs spec ;
 
-spec: osvec ',' strvec ':' int {
-            Hw->add(*$0.strvec,*$2.strvec,$4.val);
+spec: osvec ',' strvec operator int {
+            Hw->add(*$0.strvec,*$2.strvec,$4.val,$3.val);
             delete $0.strvec;
             delete $2.strvec;
         }
-    | strvec ':' int {
+    | strvec operator int {
             std::vector<std::string*>* tmp=new std::vector<std::string*>;
-            Hw->add(*tmp,*$0.strvec,$2.val);
+            Hw->add(*tmp,*$0.strvec,$2.val,$1.val);
             delete tmp;
             delete $0.strvec;
         };
+
+operator: ':' { $$.val=0; } |
+          '=' { $$.val=1; } ;
 
 osvec: { $$.strvec = new std::vector<std::string*>; }
     | strvec { $$.strvec = $0.strvec; };

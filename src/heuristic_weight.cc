@@ -48,7 +48,7 @@ float Heuristic_weight::getCoverage() {
 
 void Heuristic_weight::add(std::vector<std::string*> p,
 			   std::vector<std::string*> a,
-			   int w)
+			   int w,int o)
 {
   static int weight_id = 0;
   std::vector<int> props;
@@ -85,7 +85,13 @@ void Heuristic_weight::add(std::vector<std::string*> p,
 
   for(unsigned i=0;i<props.size();i++) {
     for(unsigned j=0;j<actions.size();j++) {
-      weights[std::pair<int,int>(props[i],actions[j])]+=w;
+      switch (o) {
+      case 1:
+	weights[std::pair<int,int>(props[i],actions[j])]=w;	
+	break;
+      default:
+	weights[std::pair<int,int>(props[i],actions[j])]+=w;
+      }
       weight_ids[std::pair<int,int>(props[i],actions[j])]=weight_id;
     }
   }

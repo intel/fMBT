@@ -41,7 +41,7 @@ public:
 
   void add(std::vector<std::string*> p,
 	   std::vector<std::string*> a,
-	   int w);
+	   int w,int o);
 
 protected:
   int weight_select(int i,int* actions);
