@@ -557,6 +557,7 @@ if __name__ == "__main__":
             msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
             msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
             msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
+            suffix=".dll"
         _g_bridge.communicate()
     else:
         aal.reset()
