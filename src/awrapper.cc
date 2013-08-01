@@ -215,7 +215,7 @@ int  Awrapper::observe(std::vector<int> &action,
 #ifdef  NEEDS_MINGWHACK
     int t=ada2aal[action[i],std::pair<int,std::string>(action[i],es)];
 #else
-ggg    int t=ada2aal[action[i],std::pair<int,std::string&>(action[i],es)];
+    int t=ada2aal[action[i],std::pair<int,std::string&>(action[i],es)];
 #endif
     log.debug("observed %i (%s), converted %i (%s)\n",action[i],wn[action[i]].c_str(),t,(*actions)[t].c_str());
     action[i]=t;
