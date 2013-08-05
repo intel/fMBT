@@ -793,7 +793,7 @@ ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,bool ma
           if (*(*lineptr + magic_length-1) == 'l' || *(*lineptr + magic_length-1) == 'e') {
             // remote log messages must be url encoded when sent through
             // the remote adapter protocol
-            *(*lineptr + ret - 1) = '\0';
+            *(*lineptr + ret) = '\0';
             log.print("<remote msg=\"%s\"/>\n",*lineptr+magic_length);
             if (*(*lineptr + magic_length-1) == 'e')
               fprintf(stderr, "%s\n", unescape_string(*lineptr+magic_length));
