@@ -783,7 +783,7 @@ ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,bool ma
     if (ret && ret != -1) {
       if (magic && strncmp(*lineptr,"fmbtmagic",9)!=0) {
 	// We have something to stdout
-	fprintf(stdout,"%s",*lineptr);
+	fprintf(stdout,"%s\n",*lineptr);
 	g_free(*lineptr);
 	*lineptr = NULL;
 	log_redirect = true;
