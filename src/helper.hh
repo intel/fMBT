@@ -22,7 +22,9 @@
 #include <vector>
 #include <sys/time.h>
 #include <time.h>
-#include <glib.h>
+
+struct  _GIOChannel;
+typedef struct _GIOChannel GIOChannel;
 
 #ifndef DROI
 #include <boost/regex.hpp>
