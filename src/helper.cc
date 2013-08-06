@@ -567,15 +567,12 @@ ssize_t nonblock_getline(char **lineptr, size_t *n,
   gsize si;
   g_io_channel_set_flags(stream,(GIOFlags)(G_IO_FLAG_NONBLOCK|(int)g_io_channel_get_flags(stream)),NULL);
 
-  if (!(g_io_channel_get_buffer_condition(stream)&G_IO_IN)) {
-    return 0;
-  }
   g_io_channel_set_line_term(stream,NULL,-1);
 
   GIOStatus st=
     g_io_channel_read_line(stream,lineptr,&si,NULL,NULL);
 
-  if (st==G_IO_STATUS_EOF || G_IO_STATUS_AGAIN) {
+  if (st==G_IO_STATUS_AGAIN) {
     return 0;
   }
 
@@ -660,6 +657,11 @@ ssize_t getline(char **lineptr, size_t *n, GIOChannel *stream)
   if (status==G_IO_STATUS_ERROR) {
     return -1;
   }
+
+  if (*n==0) {
+    return -1;
+  }
+
   return *n;
 }
 
@@ -757,6 +759,8 @@ ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,bool ma
       status=g_io_channel_read_line(stream,lineptr,&si,&ret,NULL);
       *n=si;
     } while (status==G_IO_STATUS_AGAIN);
+
+    log.debug("just read %s",*lineptr);
 
     if (status==G_IO_STATUS_ERROR) {
       ret=-1;
