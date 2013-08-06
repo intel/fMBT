@@ -26,10 +26,44 @@
 #endif
 
 #include "helper.hh"
+#include <glib.h>
+#include <glib/gprintf.h>
 
 History_log::History_log(Log& l, std::string params) :
-  History(l,params), alphabet_done(false), act(NULL), tag(NULL), c(NULL), a(NULL), myes(NULL), file(params)
+  History(l,params), alphabet_done(false), act(NULL), tag(NULL), c(NULL), a(NULL), myes(NULL)
 {
+  std::vector<std::string> prm;
+  commalist(params,prm);
+
+  if (prm.size()>0) {
+    file=prm[0];
+  }
+  for(unsigned i=1;i<prm.size();i++) {
+    switch (prm[i][0]) {
+    case 'a':
+      if (g_strrstr(prm[i].c_str()+1,"g")) {
+	model_getactions=true;
+      }
+      if (g_strrstr(prm[i].c_str()+1,"a")) {
+	adapter_execute=true;
+      }
+      if (g_strrstr(prm[i].c_str()+1,"b")) {
+	model_execute=true;
+      }
+      break;
+    case 't':
+      if (g_strrstr(prm[i].c_str()+1,"g")) {
+	tag_getprops=true;
+      }
+      if (g_strrstr(prm[i].c_str()+1,"a")) {
+	tag_checktags=true;
+      }
+      break;
+    case 'C':
+      coverage_execute=false;
+      break;
+    }
+  }
   separator=std::string(" ");
   anames.push_back("");
   tnames.push_back("");
@@ -157,6 +191,7 @@ Alphabet* History_log::set_coverage(Coverage* cov,
 				    Alphabet* alpha)
 {
   c=cov;
+  alp=alpha;
 
   if (alpha) {
     model_from_log=false;
@@ -221,36 +256,67 @@ bool History_log::send_action(std::string& act,
 
   if (c&&a) {
     if (verdict) {
-      if (act=="pass") {
-	c->history(0,p,Verdict::PASS);
-	return true;
+      if (coverage_execute) {
+	if (act=="pass") {
+	  c->history(0,p,Verdict::PASS);
+	  return true;
+	}
+	
+	if (act=="fail") {
+	  c->history(0,p,Verdict::FAIL);
+	  return true;
+	}
+	
+	if (act=="inconclusive") {
+	  c->history(0,p,Verdict::INCONCLUSIVE);
+	  return true;
+	}
+	
+	if (act=="error") {
+	  c->history(0,p,Verdict::W_ERROR);
+	  return true;
+	}
+	
+	if (act=="undefined") {
+	  c->history(0,p,Verdict::UNDEFINED);
+	  return true;
+	}
+	return false;
       }
-
-      if (act=="fail") {
-	c->history(0,p,Verdict::FAIL);
-	return true;
-      }
-
-      if (act=="inconclusive") {
-	c->history(0,p,Verdict::INCONCLUSIVE);
-	return true;
-      }
-
-      if (act=="error") {
-	c->history(0,p,Verdict::W_ERROR);
-	return true;
-      }
-
-      if (act=="undefined") {
-	c->history(0,p,Verdict::UNDEFINED);
-	return true;
-      }
-      return false;
+      return true;
     }
     int action=find(a->getActionNames(),act);
 
     if (action>0) {
-      c->history(action,p,Verdict::UNDEFINED);
+      if (coverage_execute) {
+	c->history(action,p,Verdict::UNDEFINED);
+      }
+      if (!model_from_log) {
+	Model* m=(Model*)alp;
+	if (model_getactions) {
+	  int** act;
+	  m->getActions(act);
+	}
+	
+	if (model_execute) {
+	  m->execute(action);
+	}
+      }
+      if (ada) {
+	if (adapter_execute) {
+	  std::vector<int> a;
+	  a.push_back(action);
+	  ada->execute(a);
+	}
+	
+	if (tag_getprops) {
+	  
+	}
+	
+	if (tag_checktags) {
+	  
+	}
+      }
       return true;
     } else {
       // Tau?

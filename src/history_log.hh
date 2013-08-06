@@ -25,6 +25,7 @@
 
 #include "alphabet_impl.hh"
 #include "model_yes.hh"
+#include "adapter.hh"
 
 class History_log: public History {
 public:
@@ -50,8 +51,10 @@ private:
 public:
   std::vector<std::string> anames;
   std::vector<std::string> tnames;
+  Adapter* ada;
 private:
   std::string separator;
+  Alphabet* alp;
 };
 
 #endif

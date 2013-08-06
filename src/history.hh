@@ -32,7 +32,7 @@ class Log;
 
 class History: public Writable {
 public:
-  History(Log& l, std::string params = "") : log(l) {test_verdict="N/A";log.ref();}
+  History(Log& l, std::string params = "") : model_getactions(false),model_execute(false),adapter_execute(false),tag_getprops(false),tag_checktags(false),coverage_execute(true),log(l) {test_verdict="N/A";log.ref();}
   virtual ~History() {log.unref();};
 
   virtual Alphabet* set_coverage(Coverage*,Alphabet* alpha) =0;
@@ -40,6 +40,14 @@ public:
   static struct timeval current_time;
   std::string test_verdict;
 protected:
+  bool model_getactions;
+  bool model_execute;
+  bool adapter_execute;
+  bool tag_getprops;
+  bool tag_checktags;
+
+  bool coverage_execute;
+
   Log& log;
 };
 
