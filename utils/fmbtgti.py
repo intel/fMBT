@@ -548,7 +548,49 @@ class GUITestInterface(object):
 
         Returns True on success, False if sending input failed.
         """
-        return self.swipe(viewItem.coords(), direction, **dragKwArgs)
+        return self.swipe(viewItem.coords(), direction, distance, **dragKwArgs)
+
+    def swipeOcrText(self, word, direction, distance=1.0, match=1.0, preprocess=None, area=(0, 0, 1.0, 1.0), **dragKwArgs):
+        """
+        Find the given word from the latest screenshot using OCR, and
+        tap it.
+
+        Parameters:
+
+          word (string):
+                  the word to be tapped.
+
+          direction, distance
+                  refer to swipe documentation.
+
+          match (float, optional):
+                  minimum match score in range [0.0, 1.0].
+                  The default is 1.0 (exact match).
+
+          preprocess (string, optional):
+                  preprocess filter to be used in OCR for better
+                  result. Refer to eyenfinger.autoconfigure to search
+                  for a good one.
+
+          area ((left, top, right, bottom), optional):
+                  search from the given area only. Left, top
+                  right and bottom are either absolute coordinates
+                  (integers) or floats in range [0.0, 1.0]. In the
+                  latter case they are scaled to screenshot
+                  dimensions. The default is (0.0, 0.0, 1.0, 1.0),
+                  that is, search everywhere in the screenshot.
+
+          delayBeforeMoves, delayBetweenMoves, delayAfterMoves,
+          movePoints
+                  refer to drag documentation.
+
+        Returns True on success, False if sending input failed.
+        """
+        assert self._lastScreenshot != None, "Screenshot required."
+        items = self._lastScreenshot.findItemsByOcr(word, match=match, preprocess=preprocess, area=area)
+        if len(items) == 0:
+            return False
+        return self.swipeItem(items[0], direction, distance, **dragKwArgs)
 
     def tap(self, (x, y), long=False, hold=0.0):
         """
