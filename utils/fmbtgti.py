@@ -553,12 +553,12 @@ class GUITestInterface(object):
     def swipeOcrText(self, word, direction, distance=1.0, match=1.0, preprocess=None, area=(0, 0, 1.0, 1.0), **dragKwArgs):
         """
         Find the given word from the latest screenshot using OCR, and
-        tap it.
+        swipe it.
 
         Parameters:
 
           word (string):
-                  the word to be tapped.
+                  the word to be swiped.
 
           direction, distance
                   refer to swipe documentation.
@@ -584,7 +584,7 @@ class GUITestInterface(object):
           movePoints
                   refer to drag documentation.
 
-        Returns True on success, False if sending input failed.
+        Returns True on success, False otherwise.
         """
         assert self._lastScreenshot != None, "Screenshot required."
         items = self._lastScreenshot.findItemsByOcr(word, match=match, preprocess=preprocess, area=area)
