@@ -291,6 +291,20 @@ bool History_log::send_action(std::string& act,
       if (coverage_execute) {
 	c->history(action,p,Verdict::UNDEFINED);
       }
+      if (ada) {
+	if (tag_checktags) {
+	  std::vector<int> mismatch_tags;
+	  ada->check_tags(& p[0],p.size(),mismatch_tags);
+	  /*
+	    ada->check_tags(int* tag,int len,std::vector<int>& t);
+	  */
+	}
+	if (adapter_execute) {
+	  std::vector<int> a;
+	  a.push_back(action);
+	  ada->execute(a);
+	}
+      }
       if (!model_from_log) {
 	Model* m=(Model*)alp;
 	if (model_getactions) {
@@ -301,20 +315,9 @@ bool History_log::send_action(std::string& act,
 	if (model_execute) {
 	  m->execute(action);
 	}
-      }
-      if (ada) {
-	if (adapter_execute) {
-	  std::vector<int> a;
-	  a.push_back(action);
-	  ada->execute(a);
-	}
-	
 	if (tag_getprops) {
-	  
-	}
-	
-	if (tag_checktags) {
-	  
+          int* tags = 0;
+	  m->getprops(&tags);
 	}
       }
       return true;
