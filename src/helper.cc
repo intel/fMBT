@@ -387,14 +387,14 @@ std::string capsulate(std::string s) {
   return t.str();
 }
 
-bool string2vector(Log& log,char* s,std::vector<int>& a,
+bool string2vector(Log& log,const char* s,std::vector<int>& a,
 		   int min,int max,Writable* w)
 {
   int v;
   int i=0;
   char* endp;
 
-  char* ss=s;
+  const char* ss=s;
   v=strtol(ss,&endp,10);
   a.resize(0);
   while (endp!=ss) {

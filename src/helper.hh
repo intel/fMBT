@@ -92,7 +92,7 @@ std::string removehash(std::string& s);
 class Writable;
 #include <climits>
 
-bool string2vector(Log& log,char* s,std::vector<int>& a,
+bool string2vector(Log& log,const char* s,std::vector<int>& a,
 		   int min=-42,int max=INT_MAX,Writable* w=NULL);
 
 #ifndef DROI

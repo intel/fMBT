@@ -34,6 +34,10 @@ public:
   virtual void push()=0;
   virtual void pop()=0;
 
+  virtual bool set_instance(int instance) {
+    return false;
+  }
+
   virtual void history(int action, std::vector<int>& props,
  		       Verdict::Verdict verdict) {
     if (action) 
