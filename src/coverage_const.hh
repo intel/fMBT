@@ -35,6 +35,10 @@ public:
     return std::string("const:")+to_string(val);
   }
 
+  virtual bool set_instance(int instance) {
+    return true;
+  }
+
   virtual void push() {}
   virtual void pop() {}
 

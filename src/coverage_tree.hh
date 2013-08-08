@@ -50,6 +50,8 @@ public:
 
   virtual void set_model(Model* _model);
 
+  virtual bool set_instance(int instance);
+
 protected:
   void precalc();
   int max_depth;
@@ -127,9 +129,11 @@ public:
   long node_count;
   long max_count;
 protected:
-  std::map<int,struct node*> exec;
+  std::map<int,struct node*>* exec;
 
   void print_tree(struct node* node,int depth);
+
+  std::map<int,std::map<int,struct node*>*> instance_map;
 
 };
 

@@ -23,17 +23,29 @@
 Coverage_Tree::Coverage_Tree(Log& l, std::string params) :
   Coverage(l), max_depth(2), push_depth(0)
 { 
-  exec[0] = &root_node;
+  set_instance(0);
+
+  (*exec)[0] = &root_node;
   set_max_depth(params);
   push();
 }
+
+bool Coverage_Tree::set_instance(int instance)
+{
+  if (instance_map.find(instance)==instance_map.end()) {
+    instance_map[instance] = new std::map<int,struct node*>;
+  }
+  exec=instance_map[instance];
+  return true;
+}
+
 
 void Coverage_Tree::push()
 {
   push_depth++;
   std::list<std::pair<struct node*, int> > a;
   push_restore.push(a);
-  exec_restore.push(exec);
+  exec_restore.push((*exec));
 }
 
 void Coverage_Tree::pop()
@@ -55,7 +67,7 @@ void Coverage_Tree::pop()
   }
   push_restore.pop();
 
-  exec=exec_restore.top();
+  (*exec)=exec_restore.top();
   exec_restore.pop();
   push_depth--;
 }
@@ -87,8 +99,8 @@ void Coverage_Tree::history(int action,std::vector<int>& props,
     execute(action);
   } else {
     // verdict. And now we should do ??
-    exec.clear();
-    exec[0] = &root_node;    
+    (*exec).clear();
+    (*exec)[0] = &root_node;    
   }
 }
 
@@ -121,8 +133,8 @@ bool Coverage_Tree::execute(int action)
       }
     }
     depth++;
-    next_node=exec[depth];
-    exec[depth]=current_node->nodes[action];
+    next_node=(*exec)[depth];
+    (*exec)[depth]=current_node->nodes[action];
     current_node=next_node;
   }
 
@@ -159,12 +171,12 @@ int Coverage_Tree::fitness(int* action,int n,float* fitness)
 
   for(int pos=0;pos<n;pos++) {
     float f=0;
-    struct node* no=exec[0];
+    struct node* no=(*exec)[0];
     for(int i=0;(i<max_depth)&& no;i++) {
       if (no->nodes[action[pos]]==NULL) {
 	f+=1.0/(i+1.0);
       }
-      no=exec[i+1];
+      no=(*exec)[i+1];
     }
     fitness[pos]=f;
     if (fitness[pos]>fitness[ret]) {

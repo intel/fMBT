@@ -28,6 +28,9 @@ public:
   Coverage_avoid(Log&l,std::string& params);
 
   virtual ~Coverage_avoid();
+
+  virtual bool set_instance(int instance);
+
   virtual void push();
   virtual void pop();
 

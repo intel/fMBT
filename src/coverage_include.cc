@@ -58,9 +58,12 @@ void Coverage_Include_base::set_model(Model* _model)
 
   ActionNames.push_back(""); // TAU
 
+  amap.resize(n.size()+1); // TAU
+
   for(unsigned i=1;i<n.size();i++) {
     if ((filteractions.find(i)==filteractions.end())==exclude) {
       log.debug("N: %s\n",n[i].c_str());
+      amap[i]=ActionNames.size();
       ActionNames.push_back(n[i]);
     }
   }

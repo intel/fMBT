@@ -53,9 +53,13 @@ public:
     }
   }
 
+  virtual bool set_instance(int instance) {
+    return child->set_instance(instance);
+  }
+
   virtual bool execute(int action) {
     if (child && ((filteractions.find(action)==filteractions.end())==exclude)) {
-      return child->execute(action);
+      return child->execute(amap[action]);
     }
     return true;
   }
@@ -84,6 +88,7 @@ protected:
   std::vector<std::string> ActionNames;
   std::vector<std::string> SPNames;
   std::set<int> filteractions;
+  std::vector<int> amap;
 };
 
 #endif

@@ -66,6 +66,16 @@ public:
     return errormsg;
   }
 
+  virtual bool set_instance(int instance) {
+    if (left->set_instance(instance)) {
+      if (right->set_instance(instance)) {
+	return true;
+      }
+      left->set_instance(0);
+    }
+    return false;
+  }
+
   virtual void push() { left->push();right->push(); }
   virtual void pop() { left->pop();right->pop(); }
 

@@ -117,6 +117,18 @@ public:
 
   virtual void set_model(Model* _model);
 
+  virtual bool set_instance(int instance) {
+    for(unsigned i=0;i<coverages.size();i++) {
+      if (!coverages[i]->set_instance(instance)) {
+	for(unsigned j=0;j<i;j++) {
+	  coverages[i]->set_instance(0);
+	  return false;
+	}
+      }
+    }
+    return true;
+  }
+
 protected:
   std::string params;
   std::vector<Coverage*> coverages;

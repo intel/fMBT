@@ -60,6 +60,10 @@ public:
     return true;
   }
 
+  virtual bool set_instance(int instance) {
+    return child->set_instance(instance);
+  }
+
   virtual float getCoverage() {
     if (child) {
       return child->getCoverage();
