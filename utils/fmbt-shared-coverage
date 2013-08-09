@@ -344,9 +344,9 @@ def error(msg):
 if __name__ == "__main__":
 
     opts, remainder = getopt.gnu_getopt(
-        sys.argv[1:], 'hkl:L:s:S',
+        sys.argv[1:], 'hkl:L:s:SV',
         ["help", "keep-session",
-         "log-file=", "session=", "session-server"])
+         "log-file=", "session=", "session-server", "version"])
 
     for opt, arg in opts:
         if opt in ["-h", "--help"]:
