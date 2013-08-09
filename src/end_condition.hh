@@ -25,10 +25,13 @@
 #include "heuristic.hh"
 #include "model.hh"
 #include <string>
+#include "log_null.hh"
 
 #ifndef DROI
 #include <glib.h>
 #endif
+
+#include "coverage_const.hh"
 
 class End_condition: public Writable {
 public:
@@ -146,7 +149,7 @@ public:
     return false;
   }
 };
-
+/*
 class End_condition_coverage: public End_condition {
 public:
   End_condition_coverage(Verdict::Verdict v, const std::string& p):
@@ -174,6 +177,7 @@ public:
     return false;
   }
 };
+*/
 
 class End_condition_tag: public End_condition {
 public:
@@ -298,6 +302,52 @@ public:
   }
 };
 
+
+class End_condition_coverage: public End_condition {
+public:
+  End_condition_coverage(Verdict::Verdict v, const std::string& p):
+    End_condition(v,p) {
+    counter = COVERAGE;
+    er="coverage reached";
+    status = true;
+    c = new_coverage(l,p);
+    if (c==NULL) {
+      status=false;
+      errormsg=param+" not valid coverage";
+    } else {
+      if ((dynamic_cast<Coverage_Const*>(c))!=NULL) {
+	cconst=true;
+	param_float = strtod(param.c_str(),NULL);
+      } else {
+	cconst=false;
+      }
+    }
+    set_model_done=false;
+  }
+  virtual ~End_condition_coverage() {
+    if (c)
+      delete c;
+  }
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags) {
+    if (!set_model_done) {
+      c->set_model(heuristic.get_model());
+      set_model_done=true;
+    }
+
+    if (cconst) {
+      return (heuristic.getCoverage() >= c->getCoverage());
+    }
+
+    if (action) {
+      c->execute(action);
+    }
+    return (c->getCoverage()==1.0);
+  }
+  Log_null l;
+  Coverage* c;
+  bool set_model_done;
+  bool cconst;
+};
 
 class End_condition_tagverify: public End_condition {
 public:

@@ -57,6 +57,8 @@ public:
 	  return;
 	}
 
+	prm=subs[0];
+
 	// Create remote connection.
 	int _stdin,_stdout,_stderr;
 	//g_type_init ();
@@ -132,24 +134,27 @@ public:
     // send action names
     
     fprintf(d_stdin,"%i\n",an.size());
+    fprintf(stdout,"%i\n",an.size());
     for(unsigned i=0;i<an.size();i++) {
       char* s=g_uri_escape_string(an[i].c_str(),
                                   NULL,false);
       fprintf(d_stdin,"%s\n",s);
+      fprintf(stdout,"%s\n",s);
       g_free(s);
     }
 
     // send tag names
 
     fprintf(d_stdin,"%i\n",sn.size());
+    fprintf(stdout,"%i\n",sn.size());
     for(unsigned i=0;i<sn.size();i++) {
       char* s=g_uri_escape_string(sn[i].c_str(),
                                   NULL,false);
       fprintf(d_stdin,"%s\n",s);
+      fprintf(stdout,"%s\n",s);
       g_free(s);
     }
-    
-    
+    receive_from_server();
   }
 
   virtual std::string stringify() {

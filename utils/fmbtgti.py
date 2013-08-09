@@ -515,6 +515,9 @@ class GUITestInterface(object):
           direction, distance
                   refer to swipe documentation.
 
+          startPos
+                  refer to swipeItem documentation.
+
           colorMatch, opacityLimit, area (optional)
                   refer to verifyBitmap documentation.
 
@@ -542,6 +545,14 @@ class GUITestInterface(object):
           direction, distance
                   refer to swipe documentation.
 
+          startPos (pair of floats (x,y)):
+                  position of starting swipe, relative to the item.
+                  (0.0, 0.0) is the top-left corner,
+                  (1.0, 0.0) is the top-right corner,
+                  (1.0, 1.0) is the lower-right corner.
+                  Values < 0.0 and > 1.0 start swiping from coordinates
+                  outside the item.
+
           colorMatch, opacityLimit, area (optional)
                   refer to verifyBitmap documentation.
 
@@ -551,7 +562,15 @@ class GUITestInterface(object):
 
         Returns True on success, False if sending input failed.
         """
-        return self.swipe(viewItem.coords(), direction, distance, **dragKwArgs)
+        if "startPos" in dragKwArgs:
+            posX, posY = dragKwArgs["startPos"]
+            del dragKwArgs["startPos"]
+            x1, y1, x2, y2 = viewItem.bbox()
+            swipeCoords = (x1 + (x2-x1) * posX,
+                           y1 + (y2-y1) * posY)
+        else:
+            swipeCoords = viewItem.coords()
+        return self.swipe(swipeCoords, direction, distance, **dragKwArgs)
 
     def swipeOcrText(self, word, direction, distance=1.0, match=1.0, preprocess=None, area=(0, 0, 1.0, 1.0), **dragKwArgs):
         """
@@ -565,6 +584,9 @@ class GUITestInterface(object):
 
           direction, distance
                   refer to swipe documentation.
+
+          startPos
+                  refer to swipeItem documentation.
 
           match (float, optional):
                   minimum match score in range [0.0, 1.0].
@@ -665,7 +687,7 @@ class GUITestInterface(object):
                   findItemsBy... methods in Screenshot or View.
 
           tapPos (pair of floats (x,y)):
-                  position to tap, relational to the bitmap.
+                  position to tap, relative to the item.
                   (0.0, 0.0) is the top-left corner,
                   (1.0, 0.0) is the top-right corner,
                   (1.0, 1.0) is the lower-right corner.
@@ -1155,9 +1177,9 @@ class _VisualLog:
                  'pressKey', 'pressMenu', 'pressPower',
                  'pressVolumeUp', 'pressVolumeDown',
                  'reboot', 'reconnect', 'refreshView',
-                 'shell', 'shellSOE', 'smsNumber',
-                 'supportsView', 'swipe',
-                 'swipeBitmap', 'swipeItem', 'systemProperty',
+                 'shell', 'shellSOE', 'smsNumber', 'supportsView',
+                 'swipe', 'swipeBitmap', 'swipeItem', 'swipeOcrText',
+                 'systemProperty',
                  'tapBitmap', 'tapId', 'tapItem', 'tapOcrText',
                  'tapText', 'topApp', 'topWindow', 'type',
                  'verifyOcrText', 'verifyText', 'verifyBitmap',

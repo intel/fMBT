@@ -28,11 +28,18 @@ void Coverage_shared::receive_from_server()
   size_t si = 0;
   std::vector<int> clients;
 
+  g_io_channel_flush(d_stdin,NULL);
+
   while(g_main_context_iteration(NULL,FALSE));
 
   if (getline(&s,&si,d_stdout)<0) {
     status=false;
     return;
+  }
+
+  if (strlen(s)>2) {
+    s[strlen(s)-2]='\0';
+    s++;
   }
 
   if (!string2vector(log,s,clients,0,INT_MAX,this)) {
@@ -90,3 +97,5 @@ void Coverage_shared::communicate(int action)
 
   receive_from_server();
 }
+
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_shared, "shared")
