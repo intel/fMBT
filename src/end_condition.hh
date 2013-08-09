@@ -310,6 +310,7 @@ public:
     counter = COVERAGE;
     er="coverage reached";
     status = true;
+    l.ref();
     c = new_coverage(l,p);
     if (c==NULL) {
       status=false;
