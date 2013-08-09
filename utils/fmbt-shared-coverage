@@ -19,19 +19,40 @@
 """
 fMBT coverage sharing for parallel test runs
 
+This program creates shared coverage sessions and shares coverage data
+in a session. All fMBT instances connected to the same coverage
+session share their coverage data. Coverage data is shared via
+standard input and output. There is a separate server process for each
+session.
+
 Usage: fmbt-shared-coverage [options]
 
 Options:
   -h      print help.
 
-  -k, --keep-after-last-client
-          do not kill server when last client exits.
+  -k, --keep-session
+          do not kill the session server when last client exits.
 
   -l, -L, --log-file <filename>
-          write server log to filename. -l, --log-file overwrites the
-          log, -L appends.
+          write session server log to filename. -l, --log-file
+          overwrites existing log, -L appends to it. If session server
+          is already running, this option has no effect. The server
+          does not log by default.
 
   -s, --session <id>
+          connect to session <id> (id is a natural number), the
+          default is 0. If there is no server for the session, it will
+          be automatically launched.
+
+  -S, --session-server
+          launch session server. Does not share coverage data.
+
+  -V, --version
+          print version number and exit.
+
+Usage example in fMBT test configuration:
+
+  coverage = shared(ssh user@host "fmbt-shared-coverage", perm(2))
 """
 
 import getopt
@@ -47,10 +68,11 @@ import urllib
 
 FORWARD_BLOCKSIZE = 4096
 
-opt_log_filename = "/tmp/fmbt-shared-coverage.%s.log" % (os.getpid(),)
-opt_keep_running_without_clients = False
-opt_shared_id = 0
 opt_fork_server = False
+opt_keep_running_without_clients = False
+opt_log_filename = None
+opt_overwrite_logfile = False
+opt_session_id = 0
 
 server_port = 10277
 
@@ -96,7 +118,9 @@ def run_client(port, from_fmbt, to_fmbt):
     return True
 
 def server_log(msg):
-    file(opt_log_filename, "a+").write("%s\n" % (msg,))
+    if opt_log_filename != None:
+        file(opt_log_filename, "a+").write("%.3f session %s %s\n" %
+                                           (time.time(), opt_session_id, msg))
 
 def recv_quoted_lines(f):
     """returns list of strings, None if failed"""
@@ -137,6 +161,28 @@ def convert_action(action_name, to_client):
 def convert_tag(tag_name, to_client):
     """return tag_number for to_client, or None"""
     return client_t2i[to_client].get(tag_name, None)
+
+def valid_execution(client_id, parsed_execution):
+    try:
+        action_number, tag_numbers = parsed_execution
+    except ValueError:
+        server_log("cannot split to action_number, tag_numbers: %s" %
+                   (parsed_execution,))
+    if client_id in client_i2a and client_id in client_i2t:
+        if action_number in client_i2a[client_id]:
+            for tag_number in tag_numbers:
+                if not tag_number in client_i2t[client_id]:
+                    server_log("invalid tag %s in client %s execution %s" %
+                               (tag_number, client_id, parsed_execution))
+                    return False
+            return True
+        else:
+            server_log("invalid action %s in client %s execution %s" %
+                       (action_number, client_id, parsed_execution))
+    else:
+        server_log("invalid client %s in execution %s" %
+                   (client_id, parsed_execution))
+    return False
 
 def queue_for_sharing(from_client, to_clients, parsed_execution):
     action_number, tag_numbers = parsed_execution
@@ -199,20 +245,22 @@ def serve_connection(conn):
         client_id = next_client_id
         next_client_id += 1
         clients.add(client_id)
-        server_log("new client: %s" % (client_id,))
+        server_log("new client %s" % (client_id,))
 
     try:
         to_fmbt = conn.makefile("w")
         from_fmbt = conn.makefile("r")
 
-        alphabet = recv_quoted_lines(from_fmbt)
-        server_log("client %s alphabet: %s" % (client_id, alphabet))
+        actions = recv_quoted_lines(from_fmbt)
+        server_log("client %s actions: %s" %
+                   (client_id, actions))
         tags = recv_quoted_lines(from_fmbt)
-        server_log("client %s tags: %s" % (client_id, tags))
+        server_log("client %s tags: %s" %
+                   (client_id, tags))
 
         with client_lock:
-            client_a2i[client_id] = {a:i for i, a in enumerate(alphabet)}
-            client_i2a[client_id] = {i:a for i, a in enumerate(alphabet)}
+            client_a2i[client_id] = {a:i for i, a in enumerate(actions)}
+            client_i2a[client_id] = {i:a for i, a in enumerate(actions)}
             client_t2i[client_id] = {t:i for i, t in enumerate(tags)}
             client_i2t[client_id] = {i:t for i, t in enumerate(tags)}
             client_unsent[client_id] = {}
@@ -227,15 +275,17 @@ def serve_connection(conn):
             reported_line = from_fmbt.readline().strip()
             parsed_execution = parse_execution(reported_line)
             if parsed_execution != None:
-                with client_lock:
-                    all_executions[client_id].append(parsed_execution)
-                    queue_for_sharing(client_id, client_unsent.keys(), parsed_execution)
+                if valid_execution(client_id, parsed_execution):
+                    with client_lock:
+                        all_executions[client_id].append(parsed_execution)
+                        queue_for_sharing(client_id, client_unsent.keys(), parsed_execution)
             with client_lock:
                 unsent = client_unsent[client_id]
                 client_unsent[client_id] = {}
             send_queued(unsent, to_fmbt)
 
     finally:
+        server_log("client %s left" % (client_id,))
         close(to_fmbt, from_fmbt, conn)
 
         with client_lock:
@@ -250,23 +300,33 @@ def serve_connection(conn):
                     os.kill(os.getpid(), signal.SIGTERM)
 
 def fork_server(port):
+    if opt_overwrite_logfile and opt_log_filename:
+        file(opt_log_filename, "w").close()
+
+    if opt_log_filename:
+        output_filename = opt_log_filename
+    else:
+        output_filename = "/dev/null"
+
     # The usual fork magic, cleaning up all connections to the parent process
-    if os.fork() > 0: return
+    if os.fork() > 0:
+        return
     os.chdir("/")
     os.umask(0)
     os.setsid()
 
-    if os.fork() > 0: sys.exit(0)
+    if os.fork() > 0:
+        sys.exit(0)
     sys.stdout.flush()
     sys.stderr.flush()
     _in = file("/dev/null", 'r')
-    _out = file(opt_log_filename, 'a+')
-    _err = file(opt_log_filename, 'a+', 0)
+    _out = file(output_filename, 'a+')
+    _err = file(output_filename, 'a+', 0)
     os.dup2(_in.fileno(), sys.stdin.fileno())
     os.dup2(_out.fileno(), sys.stdout.fileno())
     os.dup2(_err.fileno(), sys.stderr.fileno())
 
-    server_log("server pid: %s" % (os.getpid(),))
+    server_log("launching session %s server at port %s pid %s" % (opt_session_id, server_port, os.getpid()))
 
     # Start listening to the port
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -284,35 +344,42 @@ def error(msg):
 if __name__ == "__main__":
 
     opts, remainder = getopt.gnu_getopt(
-        sys.argv[1:], 'dhkl:L:s:S',
-        ["debug", "help", "keep-after-last-client",
+        sys.argv[1:], 'hkl:L:s:S',
+        ["help", "keep-session",
          "log-file=", "session=", "session-server"])
 
     for opt, arg in opts:
         if opt in ["-h", "--help"]:
             print __doc__
             sys.exit(0)
-        elif opt in ["-k", "--keep-after-last-client"]:
+        elif opt in ["-k", "--keep-session"]:
             opt_keep_running_without_clients = True
         elif opt in ["-l", "-L", "--log-file"]:
             opt_log_filename = arg
             if opt != "-L":
-                file(opt_log_filename, "w") # overwrite
+                opt_overwrite_logfile = True
         elif opt in ["-s", "--session"]:
             try:
-                opt_shared_id = int(arg)
-                assert server_port < server_port + opt_shared_id < 65535
-                server_port += opt_shared_id
+                opt_session_id = int(arg)
+                assert server_port < server_port + opt_session_id < 65535
+                server_port += opt_session_id
             except (AssertionError, ValueError):
                 error('Invalid id "%s", must be in range 0..%s' % (arg, 65535-server_port))
         elif opt in ["-S", "--session-server"]:
             opt_fork_server = True
+        elif opt in ['-V', '--version']:
+            try:
+                import fmbt_config
+                print "Version " + fmbt_config.fmbt_version + fmbt_config.fmbt_build_info
+            except:
+                print "Version N/A"
+            sys.exit(0)
 
     if opt_fork_server:
         fork_server(server_port)
     else:
         if not run_client(server_port, sys.stdin, sys.stdout):
-            subprocess.Popen(sys.argv + ["--session-server"], shell=False)
+            subprocess.Popen(["python"] + sys.argv + ["--session-server"], shell=False)
             time.sleep(1)
             if not run_client(server_port, sys.stdin, sys.stdout):
                 sys.exit(1)

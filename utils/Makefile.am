@@ -1,6 +1,6 @@
 if HAVE_PYTHON
 
-PYTHON_WRAPPERS = wrapperdir/fmbt-gt wrapperdir/fmbt-editor wrapperdir/fmbt-gteditor wrapperdir/fmbt-log wrapperdir/lsts2dot wrapperdir/fmbt-parallel wrapperdir/fmbt-stats wrapperdir/remote_pyaal wrapperdir/remote_python
+PYTHON_WRAPPERS = wrapperdir/fmbt-gt wrapperdir/fmbt-editor wrapperdir/fmbt-gteditor wrapperdir/fmbt-log wrapperdir/lsts2dot wrapperdir/fmbt-parallel wrapperdir/fmbt-shared-coverage wrapperdir/fmbt-stats wrapperdir/remote_pyaal wrapperdir/remote_python
 CLEANFILES = $(PYTHON_WRAPPERS)
 
 wrapperdir:
@@ -13,7 +13,7 @@ $(PYTHON_WRAPPERS): wrapperdir ../config.status
 
 dist_bin_SCRIPTS = $(PYTHON_WRAPPERS) fmbt-view remote_exec.sh
 
-pkgpython_PYTHON = aalmodel.py lsts.py fmbtparsers.py fmbt-editor fmbt-gt fmbt-gteditor fmbt-log fmbt-stats lsts2dot fmbt-parallel remote_pyaal remote_python fmbt_config.py
+pkgpython_PYTHON = aalmodel.py lsts.py fmbtparsers.py fmbt-editor fmbt-gt fmbt-gteditor fmbt-log fmbt-stats lsts2dot fmbt-parallel fmbt-shared-coverage remote_pyaal remote_python fmbt_config.py
 
 python_PYTHON = fmbtweb.py fmbt.py eyenfinger.py fmbtandroid.py fmbtgti.py fmbttizen.py fmbtx11.py fmbtlogger.py
 
