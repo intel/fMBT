@@ -63,12 +63,17 @@ void Coverage_shared::receive_from_server()
       status=false;
       continue;
     }
+    
+    std::string name,option;
 
+    param_cut(std::string(s),name,option);
     std::vector<std::string> p;
-    commalist(std::string(s),p);
+    commalist(option,p);
+
     for(unsigned j=0;status&&(j<p.size());j++) {
       std::vector<std::string> at;
-      commalist(p[j],at);
+      param_cut(p[j],name,option);
+      commalist(option,at);
       if (at.size()!=2) {
 	status=false;
 	continue;
