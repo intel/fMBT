@@ -17,14 +17,29 @@
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
 """
+fMBT coverage sharing for parallel test runs
+
+Usage: fmbt-shared-coverage [options]
+
+Options:
+  -h      print help.
+
+  -k, --keep-after-last-client
+          do not kill server when last client exits.
+
+  -l, -L, --log-file <filename>
+          write server log to filename. -l, --log-file overwrites the
+          log, -L appends.
+
+  -s, --session <id>
 """
 
-import copy
 import getopt
 import os
 import Queue
 import signal
 import socket
+import subprocess
 import sys
 import thread
 import time
@@ -32,15 +47,28 @@ import urllib
 
 FORWARD_BLOCKSIZE = 4096
 
-server_log_filename = "/tmp/fmbt-shared-coverage.log"
+opt_log_filename = "/tmp/fmbt-shared-coverage.%s.log" % (os.getpid(),)
+opt_keep_running_without_clients = False
+opt_shared_id = 0
+opt_fork_server = False
 
-def run_client(port):
+server_port = 10277
+
+def close(*args):
+    for a in args:
+        try:
+            a.close()
+        except (socket.error, IOError):
+            pass
+
+def run_client(port, from_fmbt, to_fmbt):
     """
     Client only connects to server and forwards stdin/stdout to/from
     server.
     """
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try: s.connect(("localhost", port))
+    try:
+        s.connect(("localhost", port))
     except socket.error:
         return False
 
@@ -50,111 +78,176 @@ def run_client(port):
         while 1:
             data = from_file.readline()
             if len(data) == 0:
-                try: from_file.close()
-                except IOError: pass
-                try: to_file.close()
-                except IOError: pass
                 break
             try:
                 to_file.write(data)
                 to_file.flush()
             except socket.error:
-                try: from_file.close()
-                except IOError: pass
-                try: to_file.close()
-                except IOError: pass
                 break
         dead_threads.put("me")
 
-    from_conn = s.makefile("r")
-    to_conn = s.makefile("w")
+    from_server = s.makefile("r")
+    to_server = s.makefile("w")
 
-    thread.start_new_thread(forward_everything, (sys.stdin, to_conn))
-    thread.start_new_thread(forward_everything, (from_conn, sys.stdout))
+    thread.start_new_thread(forward_everything, (from_fmbt, to_server))
+    thread.start_new_thread(forward_everything, (from_server, to_fmbt))
     dead_threads.get()
-    try: to_conn.close()
-    except socket.error: pass
-    try: from_conn.close()
-    except socket.error: pass
-    try: s.close()
-    except socket.error: pass
+    close(from_server, to_server, s, from_fmbt, to_fmbt)
     return True
 
 def server_log(msg):
-    file(server_log_filename, "a+").write("%s\n" % (msg,))
+    file(opt_log_filename, "a+").write("%s\n" % (msg,))
 
 def recv_quoted_lines(f):
     """returns list of strings, None if failed"""
     # protocol:
     # number of lines (integer)
     # <number of lines> * urlencoded line
-    try: number_of_lines = int(f.readline().strip())
-    except ValueError: return None
+    try:
+        number_of_lines = int(f.readline().strip())
+    except ValueError:
+        return None
     lines = []
-    for l in xrange(number_of_lines):
+    for _ in xrange(number_of_lines):
         lines.append(urllib.unquote(f.readline().strip()))
     return lines
 
-def send_executions(f, to_client, executed_dict):
-    clients = sorted(executed_dict.keys())
-    send_list = ["(%s)\n" % (" ".join([str(c) for c in clients]),)]
-    for client_id in clients:
-        send_list.append("(%s)\n" % executed_dict[client_id])
-    f.write("".join(send_list))
-    f.flush()
+def format_execution(action_number, tag_numbers):
+    return "(%s,%s)" % (action_number, " ".join([str(n) for n in tag_numbers]))
 
-def send_to_all_clients(from_client, reported_line):
-    l = reported_line.replace('(','').replace(')','')
-    action = int(l.split(',')[0])
-    tags = [int(t) for t in l.split(',')[1].split()]
+def parse_execution(reported_line):
+    """
+    parse (act, tag1 tag2, ...)
+    returns pair action_number, tuple-of-tag-numbers, or None on parse error"""
+    try:
+        l = reported_line.replace('(','').replace(')','')
+        if l.strip() == "": return None
+        action_number = int(l.split(',')[0])
+        if action_number < 0: return None
+        tag_numbers = [int(t) for t in l.split(',')[1].strip().split()]
+        return action_number, tag_numbers
+    except (IndexError, ValueError), e:
+        server_log('parse error on execution report: "%s" (%s)' % (reported_line, e))
+        return None
 
-    # TODO: convert/filter actions according to what is known by other
-    # clients, add to client_unsent.
+def convert_action(action_name, to_client):
+    """return action_number for to_client, or None"""
+    return client_a2i[to_client].get(action_name, None)
 
-    all_executions[from_client].append(reported_line)
+def convert_tag(tag_name, to_client):
+    """return tag_number for to_client, or None"""
+    return client_t2i[to_client].get(tag_name, None)
 
+def queue_for_sharing(from_client, to_clients, parsed_execution):
+    action_number, tag_numbers = parsed_execution
+    action_name = client_i2a[from_client][action_number]
+    tag_names = [client_i2t[from_client][n] for n in tag_numbers]
+
+    for to_client in to_clients:
+        # not queueing for self
+        if to_client == from_client: continue
+
+        to_client_action = convert_action(action_name, to_client)
+        # not queueing for clients who don't know action_name
+        if to_client_action == None: continue
+
+        # queue only tags known by to_client
+        to_client_tags = []
+        for tag_name in tag_names:
+            to_client_tag = convert_tag(tag_name, to_client)
+            if to_client_tag != None:
+                to_client_tags.append(to_client_tag)
+
+        # make sure there is a send queue for actions from this client
+        if not from_client in client_unsent[to_client]:
+            client_unsent[to_client][from_client] = []
+
+        # queue for sending
+        client_unsent[to_client][from_client].append(format_execution(to_client_action, to_client_tags))
+
+def queue_executions_so_far(to_client, executions_so_far):
+    client_ids = sorted(executions_so_far.keys())
+    for from_client in client_ids:
+        for parsed_execution in executions_so_far[from_client]:
+            queue_for_sharing(from_client, [to_client], parsed_execution)
+
+def send_queued(unsent, to_file):
+    from_clients = sorted(unsent.keys())
+    send_clients = []
+    send_executed = []
+    for from_client in from_clients:
+        if unsent[from_client]:
+            send_clients.append(str(from_client))
+            send_executed.append("(%s)\n" % ",".join([f_e for f_e in unsent[from_client]]))
+    to_file.write("(%s)\n" % (" ".join(send_clients),))
+    to_file.write("".join(send_executed))
+    to_file.flush()
+
+clients         = set()
 client_executed = {}   # client_id => list of actions
-client_alphabet = {}   # client_id => { action_name => int }
-client_tags     = {}   # client_id => { tag_name    => int }
+client_a2i      = {}   # client_id => { action_name => action_number }
+client_i2a      = {}   # client_id => { action_number => action_name }
+client_t2i      = {}   # client_id => { tag_name => tag_number }
+client_i2t      = {}   # client_id => { tag_number => tag_name }
 client_unsent   = {}   # client_id => { executed_client_id => list_of_strings }
 all_executions  = {}   # executed_client_id => list_of_strings
-next_client_id  = 0
+next_client_id  = 1
 client_lock = thread.allocate_lock()
 def serve_connection(conn):
     global next_client_id
     with client_lock:
         client_id = next_client_id
         next_client_id += 1
+        clients.add(client_id)
         server_log("new client: %s" % (client_id,))
 
-        to_conn = conn.makefile("w")
-        from_conn = conn.makefile("r")
+    try:
+        to_fmbt = conn.makefile("w")
+        from_fmbt = conn.makefile("r")
 
-    alphabet = recv_quoted_lines(from_conn)
-    server_log("client %s alphabet: %s" % (client_id, alphabet))
-    tags = recv_quoted_lines(from_conn)
-    server_log("client %s tags: %s" % (client_id, tags))
+        alphabet = recv_quoted_lines(from_fmbt)
+        server_log("client %s alphabet: %s" % (client_id, alphabet))
+        tags = recv_quoted_lines(from_fmbt)
+        server_log("client %s tags: %s" % (client_id, tags))
 
-    with client_lock:
-        client_alphabet[client_id] = {a:i for i, a in enumerate(alphabet)}
-        client_tags[client_id] = {t:i for i, t in enumerate(tags)}
-        client_unsent[client_id] = {}
-        all_executions[client_id] = []
-        executions_so_far = copy.deepcopy(all_executions)
-
-    # TODO: convert/filter items in executions_so_far suitable for
-    # client_id, and send then...
-    send_executions(to_conn, executions_so_far)
-
-    while 1:
-        reported_execution = from_conn.readline().strip()
         with client_lock:
-            send_to_all_clients(client_id, reported_execution)
+            client_a2i[client_id] = {a:i for i, a in enumerate(alphabet)}
+            client_i2a[client_id] = {i:a for i, a in enumerate(alphabet)}
+            client_t2i[client_id] = {t:i for i, t in enumerate(tags)}
+            client_i2t[client_id] = {i:t for i, t in enumerate(tags)}
+            client_unsent[client_id] = {}
+            all_executions[client_id] = []
+            queue_executions_so_far(client_id, all_executions)
+            unsent = client_unsent[client_id]
+            client_unsent[client_id] = {}
 
-    to_conn.close()
-    from_conn.close()
-    conn.close()
-    os.kill(os.getpid(), signal.SIGTERM)
+        send_queued(unsent, to_fmbt)
+
+        while 1:
+            reported_line = from_fmbt.readline().strip()
+            parsed_execution = parse_execution(reported_line)
+            if parsed_execution != None:
+                with client_lock:
+                    all_executions[client_id].append(parsed_execution)
+                    queue_for_sharing(client_id, client_unsent.keys(), parsed_execution)
+            with client_lock:
+                unsent = client_unsent[client_id]
+                client_unsent[client_id] = {}
+            send_queued(unsent, to_fmbt)
+
+    finally:
+        close(to_fmbt, from_fmbt, conn)
+
+        with client_lock:
+            clients.remove(client_id)
+            for d in (client_a2i, client_t2i, client_unsent):
+                if client_id in d:
+                    del d[client_id]
+
+        if not opt_keep_running_without_clients:
+            with client_lock:
+                if len(clients) == 0:
+                    os.kill(os.getpid(), signal.SIGTERM)
 
 def fork_server(port):
     # The usual fork magic, cleaning up all connections to the parent process
@@ -167,8 +260,8 @@ def fork_server(port):
     sys.stdout.flush()
     sys.stderr.flush()
     _in = file("/dev/null", 'r')
-    _out = file(server_log_filename, 'a+')
-    _err = file(server_log_filename, 'a+', 0)
+    _out = file(opt_log_filename, 'a+')
+    _err = file(opt_log_filename, 'a+', 0)
     os.dup2(_in.fileno(), sys.stdin.fileno())
     os.dup2(_out.fileno(), sys.stdout.fileno())
     os.dup2(_err.fileno(), sys.stderr.fileno())
@@ -181,7 +274,7 @@ def fork_server(port):
     s.bind((bind_host_name, port))
     s.listen(4)
     while 1:
-        conn, addr = s.accept()
+        conn, _ = s.accept()
         thread.start_new_thread(serve_connection, (conn,))
 
 def error(msg):
@@ -189,27 +282,37 @@ def error(msg):
     sys.exit(1)
 
 if __name__ == "__main__":
-    opt_shared_id = 0
-    server_port = 10277
 
     opts, remainder = getopt.gnu_getopt(
-        sys.argv[1:], 'i:dh',
-        ["debug", "help", "id="])
+        sys.argv[1:], 'dhkl:L:s:S',
+        ["debug", "help", "keep-after-last-client",
+         "log-file=", "session=", "session-server"])
 
     for opt, arg in opts:
-        if opt in ["-i", "--id"]:
+        if opt in ["-h", "--help"]:
+            print __doc__
+            sys.exit(0)
+        elif opt in ["-k", "--keep-after-last-client"]:
+            opt_keep_running_without_clients = True
+        elif opt in ["-l", "-L", "--log-file"]:
+            opt_log_filename = arg
+            if opt != "-L":
+                file(opt_log_filename, "w") # overwrite
+        elif opt in ["-s", "--session"]:
             try:
                 opt_shared_id = int(arg)
                 assert server_port < server_port + opt_shared_id < 65535
                 server_port += opt_shared_id
             except (AssertionError, ValueError):
-                error('Invalid id "%s", must be in range 0..%s' % (arg,65535-server_port))
-        elif opt in ["-h", "--help"]:
-            print __doc__
-            sys.exit(0)
+                error('Invalid id "%s", must be in range 0..%s' % (arg, 65535-server_port))
+        elif opt in ["-S", "--session-server"]:
+            opt_fork_server = True
 
-    if not run_client(server_port):
+    if opt_fork_server:
         fork_server(server_port)
-        time.sleep(1)
-        if not run_client(server_port):
-            sys.exit(1)
+    else:
+        if not run_client(server_port, sys.stdin, sys.stdout):
+            subprocess.Popen(sys.argv + ["--session-server"], shell=False)
+            time.sleep(1)
+            if not run_client(server_port, sys.stdin, sys.stdout):
+                sys.exit(1)
