@@ -1,0 +1,215 @@
+#!/usr/bin/env python
+#
+# fMBT, free Model Based Testing tool
+# Copyright (c) 2013, Intel Corporation.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU Lesser General Public License,
+# version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for
+# more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+"""
+"""
+
+import copy
+import getopt
+import os
+import Queue
+import signal
+import socket
+import sys
+import thread
+import time
+import urllib
+
+FORWARD_BLOCKSIZE = 4096
+
+server_log_filename = "/tmp/fmbt-shared-coverage.log"
+
+def run_client(port):
+    """
+    Client only connects to server and forwards stdin/stdout to/from
+    server.
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try: s.connect(("localhost", port))
+    except socket.error:
+        return False
+
+    dead_threads = Queue.Queue()
+
+    def forward_everything(from_file, to_file):
+        while 1:
+            data = from_file.readline()
+            if len(data) == 0:
+                try: from_file.close()
+                except IOError: pass
+                try: to_file.close()
+                except IOError: pass
+                break
+            try:
+                to_file.write(data)
+                to_file.flush()
+            except socket.error:
+                try: from_file.close()
+                except IOError: pass
+                try: to_file.close()
+                except IOError: pass
+                break
+        dead_threads.put("me")
+
+    from_conn = s.makefile("r")
+    to_conn = s.makefile("w")
+
+    thread.start_new_thread(forward_everything, (sys.stdin, to_conn))
+    thread.start_new_thread(forward_everything, (from_conn, sys.stdout))
+    dead_threads.get()
+    try: to_conn.close()
+    except socket.error: pass
+    try: from_conn.close()
+    except socket.error: pass
+    try: s.close()
+    except socket.error: pass
+    return True
+
+def server_log(msg):
+    file(server_log_filename, "a+").write("%s\n" % (msg,))
+
+def recv_quoted_lines(f):
+    """returns list of strings, None if failed"""
+    # protocol:
+    # number of lines (integer)
+    # <number of lines> * urlencoded line
+    try: number_of_lines = int(f.readline().strip())
+    except ValueError: return None
+    lines = []
+    for l in xrange(number_of_lines):
+        lines.append(urllib.unquote(f.readline().strip()))
+    return lines
+
+def send_executions(f, to_client, executed_dict):
+    clients = sorted(executed_dict.keys())
+    send_list = ["(%s)\n" % (" ".join([str(c) for c in clients]),)]
+    for client_id in clients:
+        send_list.append("(%s)\n" % executed_dict[client_id])
+    f.write("".join(send_list))
+    f.flush()
+
+def send_to_all_clients(from_client, reported_line):
+    l = reported_line.replace('(','').replace(')','')
+    action = int(l.split(',')[0])
+    tags = [int(t) for t in l.split(',')[1].split()]
+
+    # TODO: convert/filter actions according to what is known by other
+    # clients, add to client_unsent.
+
+    all_executions[from_client].append(reported_line)
+
+client_executed = {}   # client_id => list of actions
+client_alphabet = {}   # client_id => { action_name => int }
+client_tags     = {}   # client_id => { tag_name    => int }
+client_unsent   = {}   # client_id => { executed_client_id => list_of_strings }
+all_executions  = {}   # executed_client_id => list_of_strings
+next_client_id  = 0
+client_lock = thread.allocate_lock()
+def serve_connection(conn):
+    global next_client_id
+    with client_lock:
+        client_id = next_client_id
+        next_client_id += 1
+        server_log("new client: %s" % (client_id,))
+
+        to_conn = conn.makefile("w")
+        from_conn = conn.makefile("r")
+
+    alphabet = recv_quoted_lines(from_conn)
+    server_log("client %s alphabet: %s" % (client_id, alphabet))
+    tags = recv_quoted_lines(from_conn)
+    server_log("client %s tags: %s" % (client_id, tags))
+
+    with client_lock:
+        client_alphabet[client_id] = {a:i for i, a in enumerate(alphabet)}
+        client_tags[client_id] = {t:i for i, t in enumerate(tags)}
+        client_unsent[client_id] = {}
+        all_executions[client_id] = []
+        executions_so_far = copy.deepcopy(all_executions)
+
+    # TODO: convert/filter items in executions_so_far suitable for
+    # client_id, and send then...
+    send_executions(to_conn, executions_so_far)
+
+    while 1:
+        reported_execution = from_conn.readline().strip()
+        with client_lock:
+            send_to_all_clients(client_id, reported_execution)
+
+    to_conn.close()
+    from_conn.close()
+    conn.close()
+    os.kill(os.getpid(), signal.SIGTERM)
+
+def fork_server(port):
+    # The usual fork magic, cleaning up all connections to the parent process
+    if os.fork() > 0: return
+    os.chdir("/")
+    os.umask(0)
+    os.setsid()
+
+    if os.fork() > 0: sys.exit(0)
+    sys.stdout.flush()
+    sys.stderr.flush()
+    _in = file("/dev/null", 'r')
+    _out = file(server_log_filename, 'a+')
+    _err = file(server_log_filename, 'a+', 0)
+    os.dup2(_in.fileno(), sys.stdin.fileno())
+    os.dup2(_out.fileno(), sys.stdout.fileno())
+    os.dup2(_err.fileno(), sys.stderr.fileno())
+
+    server_log("server pid: %s" % (os.getpid(),))
+
+    # Start listening to the port
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    bind_host_name = "127.0.0.1" # only accept local connections
+    s.bind((bind_host_name, port))
+    s.listen(4)
+    while 1:
+        conn, addr = s.accept()
+        thread.start_new_thread(serve_connection, (conn,))
+
+def error(msg):
+    sys.stderr.write("%s\n" % (msg,))
+    sys.exit(1)
+
+if __name__ == "__main__":
+    opt_shared_id = 0
+    server_port = 10277
+
+    opts, remainder = getopt.gnu_getopt(
+        sys.argv[1:], 'i:dh',
+        ["debug", "help", "id="])
+
+    for opt, arg in opts:
+        if opt in ["-i", "--id"]:
+            try:
+                opt_shared_id = int(arg)
+                assert server_port < server_port + opt_shared_id < 65535
+                server_port += opt_shared_id
+            except (AssertionError, ValueError):
+                error('Invalid id "%s", must be in range 0..%s' % (arg,65535-server_port))
+        elif opt in ["-h", "--help"]:
+            print __doc__
+            sys.exit(0)
+
+    if not run_client(server_port):
+        fork_server(server_port)
+        time.sleep(1)
+        if not run_client(server_port):
+            sys.exit(1)
