@@ -71,7 +71,7 @@ std::string Coverage::stringify() {
   return std::string("");
 }
 
-Coverage* new_coverage(Log& l, std::string& s) {
+Coverage* new_coverage(Log& l,const std::string& s) {
   std::string name,option;
   param_cut(s,name,option);
   Coverage* ret=CoverageFactory::create(l, name, option);

@@ -60,7 +60,7 @@ public:
 
 FACTORY_DECLARATION(Coverage)
 
-Coverage* new_coverage(Log&, std::string&);
+Coverage* new_coverage(Log&,const std::string&);
 
 #include "model.hh"
 
