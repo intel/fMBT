@@ -580,6 +580,11 @@ Available measures, values and conditions:
                 (including 0.0 and 1.0), some other coverages like
                 path counters can return values greater than 1.0, too.
 
+        coverage(<coverage-type>)
+
+		finish with the verfict if coverage reaches 1.0
+		eg fail = coverage(usecase('o.*'))
+		
         deadlock
 
                 finish with the verdict if model is in a deadlock
