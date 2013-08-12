@@ -89,7 +89,7 @@ void Coverage_shared::receive_from_server()
     }
 
   }
-  
+  child->set_instance(0);  
 }
 
 void Coverage_shared::communicate(int action)
