@@ -16,17 +16,19 @@
 # You should have received a copy of the GNU Lesser General Public License along with
 # this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
 """
 Usage: fmbt-view [options] modelname.lsts
 
   modelname.lsts is a file containing a state machine in LSTS
-  format, or \-\ for reading the lsts from standard input.
+  format, or "-" for reading the lsts from standard input.
+  (You can convert AAL/Python to LSTS with remote_pyaal.)
 
 Options:
   -d      Debug (don't remove temporary files).
   -f <format>
           Default format is pdf. Other supported formats are:
-          ??? execute: dot -Thelp 2>&1 | sed 's/.*://'
+          %(see dot -Thelp)s
   -h      Print help.
   -l <logfile>
           Color states and transitions visited in the log.
@@ -47,48 +49,74 @@ Options:
           Show only transitions that match the regular
           expression and have been traversed in the given log
           (see -l).
-
   -U      Erase unvisited states.
 """
 
-
-import getopt
+import atexit
 import fmbt_config
-import tempfile
+import getopt
 import os
-import sys
+import shutil
 import subprocess
+import sys
+import tempfile
+import textwrap
+
+def cmd_output(*args, **kwargs):
+    return "".join(
+        subprocess.Popen(
+            *args, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,**kwargs).communicate())
+
+def cleanup_on_exit():
+    if DEBUG == False:
+        shutil.rmtree(TMPDIR, ignore_errors=True)
+atexit.register(cleanup_on_exit)
 
 if __name__ == "__main__":
     opts, remainder = getopt.getopt(
         sys.argv[1:],
         "df:hil:o:ve:E:s:S:OU",
-        ["help","version"])
+        ["debug", "help","version"])
 
-    OUTPUTFILE = None
+    OUTPUTFILE       = None
+    FORMAT           = "pdf"
 
-    dot_command = ["dot"]
-    lsts2dot_command = ["lsts2dot",
-                        "--loops-in-states"]
+    DISPLAY_RESULT   = False
+
+    TMPDIR           = tempfile.mkdtemp(prefix="fmbt-view.")
+    DOTFILE          = os.path.join(TMPDIR, "1.dot")
+    ERRORFILE        = os.path.join(TMPDIR, "1.error")
+
+    DEBUG            = False
+
+    dot_command      = ["dot"]
+    lsts2dot_command = ["lsts2dot", "--loops-in-states"]
 
     if len(remainder) > 0:
         lsts2dot_command.extend(["-i", remainder[0]])
 
     for opt, arg in opts:
-        if opt in ["-h","--help"] or remainder == []:
-            print __doc__
-            sys.exit(0)    
+        if opt in ["-d", "--debug"]:
+            DEBUG = True
+        elif opt in ["-h", "--help"] or remainder == []:
+            try:
+                supported_formats = cmd_output(["dotx", "-Thelp"]).split(':')[-1].strip()
+            except:
+                supported_formats = "*** error: graphviz dot not working! ***"
+            formatted_formats = ('\n' + 10 * " ").join(textwrap.wrap(supported_formats, 55))
+            print __doc__ % {'see dot -Thelp': formatted_formats + "."}
+            sys.exit(0)
         elif opt in ["-v", "--version"]:
             print "Version " + fmbt_config.fmbt_version + fmbt_config.fmbt_build_info
             sys.exit(0)
         elif opt in ["-f"]:
-            dot_command.extend(["-T" + arg])
+            FORMAT = arg
         elif opt in ["-i", "--invert-colors"]:
             lsts2dot_command.extend(["--invert-colors"])
         elif opt in ["-l"]:
             lsts2dot_command.extend(["-l", arg])
         elif opt in ["-o"]:
-            dot_command.extend(["-o", arg])
             OUTPUTFILE = arg
         elif opt in ["-e"]:
             lsts2dot_command.extend(["--erase-transitions", arg])
@@ -103,30 +131,26 @@ if __name__ == "__main__":
         elif opt in ["-U"]:
             lsts2dot_command.extend(["-U"])
 
-    TMPDIR = tempfile.mkdtemp(prefix="fmbt-view")
-    DOTFILE=os.path.join(TMPDIR,"1.dot")
-    ERRORFILE=os.path.join(TMPDIR,"1.error")
-
-    DP=False
-
-    if not OUTPUTFILE:
-        OUTFILE=os.path.join(TMPDIR,"1.dotout")
-        dot_command.extend(["-o", OUTFILE])
-        DP=True
-
-    p = subprocess.Popen(lsts2dot_command,shell=False)
+    p = subprocess.Popen(lsts2dot_command, shell=False,
+                         stdout=file(DOTFILE,"w"))
 
     if p.wait() != 0:
         print "Error in converting state machine (lsts) into digraph (dot)"
         exit(1)
 
-    p = subprocess.Popen(dot_command,shell=False)
+    if not OUTPUTFILE:
+        OUTPUTFILE = os.path.join(TMPDIR,"1.dotout")
+        DISPLAY_RESULT = True
+    dot_command.extend(["-o", OUTPUTFILE])
+    dot_command.extend(["-T" + FORMAT])
+
+    p = subprocess.Popen(dot_command, shell=False, stdin=file(DOTFILE))
 
     if p.wait() != 0:
         print "Error in layouting digraph with Graphviz dot."
         exit(2)
 
-    if DP:
-        p = subprocess.Popen(["display", OUTFILE])
+    if DISPLAY_RESULT:
+        p = subprocess.Popen(["display", OUTPUTFILE], shell=False)
         if p.wait() != 0:
             print "Unexpected exit from display"
