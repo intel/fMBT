@@ -25,7 +25,7 @@ session share their coverage data. Coverage data is shared via
 standard input and output. There is a separate server process for each
 session.
 
-Usage: fmbt-shared-coverage [options]
+Usage: fmbt-trace-share [options]
 
 Options:
   -h      print help.
@@ -52,7 +52,7 @@ Options:
 
 Usage example in fMBT test configuration:
 
-  coverage = shared(ssh user@host "fmbt-shared-coverage", perm(2))
+  coverage = shared(ssh user@host "fmbt-trace-share", perm(2))
 """
 
 import getopt

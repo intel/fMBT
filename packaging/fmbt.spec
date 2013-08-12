@@ -200,10 +200,10 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %{_bindir}/%{name}-gt
 %{_bindir}/%{name}-log2lsts
 %{_bindir}/%{name}-parallel
-%{_bindir}/%{name}-shared-coverage
+%{_bindir}/%{name}-trace-share
 %{python_sitelib}/%{name}/%{name}-gt
 %{python_sitelib}/%{name}/%{name}-parallel
-%{python_sitelib}/%{name}/%{name}-shared-coverage
+%{python_sitelib}/%{name}/%{name}-trace-share
 
 %files devel
 %defattr(-, root, root, -)
