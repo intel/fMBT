@@ -327,6 +327,14 @@ Available types & parameters:
                 permutations of any <count> actions in the test
                 model. If count is not given, it defaults to 2.
 
+	shared(<command>,type(params))
+
+		uses a child process that execute <command> as a
+		shared coverage connection. Communicates with the
+		child using fBMT shared coverage protocol.
+
+		uses coverage type(params) as local coverage.
+
         sum(type(params) [, type(params)...])
 
                 measures the sum of all coverages given as parameters.
