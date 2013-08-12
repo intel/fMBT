@@ -225,9 +225,12 @@ def send_queued(unsent, to_file):
         if unsent[from_client]:
             send_clients.append(str(from_client))
             send_executed.append("(%s)\n" % ",".join([f_e for f_e in unsent[from_client]]))
-    to_file.write("(%s)\n" % (" ".join(send_clients),))
-    to_file.write("".join(send_executed))
-    to_file.flush()
+    try:
+        to_file.write("(%s)\n" % (" ".join(send_clients),))
+        to_file.write("".join(send_executed))
+        to_file.flush()
+    except socket.error:
+        pass
 
 clients         = set()
 client_executed = {}   # client_id => list of actions
@@ -317,8 +320,11 @@ def fork_server(port):
 
     if os.fork() > 0:
         sys.exit(0)
-    sys.stdout.flush()
-    sys.stderr.flush()
+    try:
+        sys.stdout.flush()
+        sys.stderr.flush()
+    except (IOError, ValueError):
+        pass
     _in = file("/dev/null", 'r')
     _out = file(output_filename, 'a+')
     _err = file(output_filename, 'a+', 0)
