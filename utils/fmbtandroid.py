@@ -156,6 +156,7 @@ window = Launcher
 
 import commands
 import os
+import platform
 import random
 import re
 import shutil
@@ -176,6 +177,13 @@ def _logFailedCommand(source, command, exitstatus, stdout, stderr):
     _adapterLog('in %s command "%s" failed:\n    output: %s\n    error: %s\n    status: %s' %
                 (source, command, stdout, stderr, exitstatus))
 
+if platform.system() == "Windows":
+    _g_closeFds = False
+    _g_adbExecutable = "adb.exe"
+else:
+    _g_closeFds = True
+    _g_adbExecutable = "adb"
+
 def _run(command, expectedExitStatus = None):
     if type(command) == str: shell=True
     else: shell=False
@@ -183,7 +191,7 @@ def _run(command, expectedExitStatus = None):
         p = subprocess.Popen(command, shell=shell,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE,
-                             close_fds=False)
+                             close_fds=_g_closeFds)
         if expectedExitStatus != None:
             out, err = p.communicate()
         else:
@@ -277,7 +285,7 @@ class Device(fmbtgti.GUITestInterface):
         elif deviceName == "":
             # Connect to an unspecified device.
             # Go through devices in "adb devices".
-            listDevicesCommand = ["adb.exe", "devices"]
+            listDevicesCommand = [_g_adbExecutable, "devices"]
             status, output, err = _run(listDevicesCommand, expectedExitStatus = [0, 127])
             if status == 127:
                 raise Exception('adb not found in PATH. Check your Android SDK installation.')
@@ -674,7 +682,7 @@ class Device(fmbtgti.GUITestInterface):
                   refer to verifyText documentation. The default is
                   False.
 
-          tapPos (pair of floats (x,y)):
+          tapPos (pair of floats (x, y)):
                   refer to tapItem documentation.
 
           long, hold (optional):
@@ -801,7 +809,7 @@ class Ini:
             elif line.startswith(";") or line.startswith("#"):
                 continue
             elif '=' in line:
-                key, value = line.split('=',1)
+                key, value = line.split('=', 1)
                 if override or (section, key.strip()) not in self._conf:
                     self._conf[(section, key.strip())] = value.strip()
 
@@ -893,7 +901,7 @@ class ViewItem(fmbtgti.GUIItem):
             self._p["scrolling:mScrollX"] = 0
             self._p["scrolling:mScrollY"] = 0
         fmbtgti.GUIItem.__init__(self, className, self._calculateBbox(), dumpFilename)
-    def addChild(self,child): self._children.append(child)
+    def addChild(self, child): self._children.append(child)
     def _calculateBbox(self):
         left = int(self._p["layout:mLeft"])
         top = int(self._p["layout:mTop"])
@@ -1139,7 +1147,7 @@ class _AndroidDeviceConnection:
             self._resetWindow()
 
             # check supported features
-            outputLines = self._runAdb(["shell","tar"])[1].splitlines()
+            outputLines = self._runAdb(["shell", "tar"])[1].splitlines()
             if len(outputLines) == 1 and "bin" in outputLines[0]:
                 self._shellSupportsTar = False
             else:
@@ -1161,7 +1169,7 @@ class _AndroidDeviceConnection:
     def _cat(self, remoteFilename):
         fd, filename = tempfile.mkstemp("fmbtandroid-cat-")
         os.close(fd)
-        self._runAdb("pull '%s' %s" % (remoteFilename, filename), 0)
+        self._runAdb(["pull", remoteFilename, filename], 0)
         contents = file(filename).read()
         os.remove(filename)
         return contents
@@ -1190,12 +1198,12 @@ class _AndroidDeviceConnection:
             self._runSetupCmd(c)
 
     def _resetMonkey(self, timeout=3, pollDelay=.25):
-        self._runSetupCmd(["shell","monkey","--port","1080"], None)
+        self._runSetupCmd(["shell", "monkey", "--port", "1080"], None)
         time.sleep(pollDelay)
         endTime = time.time() + timeout
 
         while time.time() < endTime:
-            self._runSetupCmd(["forward","tcp:"+str(self._m_port), "tcp:1080"])
+            self._runSetupCmd(["forward", "tcp:"+str(self._m_port), "tcp:1080"])
             try:
                 self._monkeySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self._monkeySocket.connect((self._m_host, self._m_port))
@@ -1241,7 +1249,7 @@ class _AndroidDeviceConnection:
         if firstBootAfterFlashing:
             self._runAdb("root")
             time.sleep(2)
-            self._runAdb(["shell","rm","/data/data/com.android.launcher/shared_prefs/com.android.launcher2.prefs.xml"])
+            self._runAdb(["shell", "rm", "/data/data/com.android.launcher/shared_prefs/com.android.launcher2.prefs.xml"])
 
         self._runAdb("reboot")
         _adapterLog("rebooting " + self._serialNumber)
@@ -1278,7 +1286,7 @@ class _AndroidDeviceConnection:
         return width, height
 
     def recvTopAppWindow(self):
-        _, output, _ = self._runAdb(["shell","dumpsys","window"], 0)
+        _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0)
         if self._platformVersion >= "4.2":
             s = re.findall("mCurrentFocus=Window\{(#?[0-9A-Fa-f]{8})( [^ ]*)? (?P<winName>[^}]*)\}", output)
         else:
@@ -1344,7 +1352,7 @@ class _AndroidDeviceConnection:
         if status != 0:
             raise FMBTAndroidError("Failed to fetch screenshot from the device: %s. SD card required." % ((out + err).strip(),))
 
-        status, _, _ = self._runAdb(['shell','rm', remotefile], 0)
+        status, _, _ = self._runAdb(['shell', 'rm', remotefile], 0)
 
         return True
 
@@ -1353,7 +1361,7 @@ class _AndroidDeviceConnection:
         remotename = '/sdcard/' + os.path.basename(filename)
         os.write(fd, shellCommand + "\n")
         os.close(fd)
-        self._runAdb(["push",filename,remotename],0)
+        self._runAdb(["push", filename, remotename], 0)
         cmd = "shell 'source %s >%s.out 2>%s.err; echo $? > %s.status" % ((remotename,)*4)
         if self._shellSupportsTar:
             # do everything we can in one command to minimise adb
@@ -1381,7 +1389,7 @@ class _AndroidDeviceConnection:
             stderr = self._cat(remotename + ".err")
             try: exitstatus = int(self._cat(remotename + ".status"))
             except: exitstatus = None
-            self._runAdb(["shell","rm -f "+remotename])
+            self._runAdb(["shell", "rm -f "+remotename])
         return exitstatus, stdout, stderr
 
     def recvViewData(self, retry=3):
