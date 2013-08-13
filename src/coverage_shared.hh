@@ -27,6 +27,7 @@
 #include "remote.hh"
 #include "helper.hh"
 #include "glib.h"
+#include "model_cshared.hh"
 
 class Coverage_shared: public Coverage, public remote {
 public:
@@ -34,8 +35,8 @@ public:
     Coverage(l),
     remote(),
     push_depth(0),
-    child(NULL)
-
+    child(NULL),
+    model_cs(NULL)
   {
     std::vector<std::string> subs;
     commalist(params,subs);
@@ -125,8 +126,10 @@ public:
   virtual void set_model(Model* _model) {
     Coverage::set_model(_model);
 
-    if (child)
-      child->set_model(_model);
+    if (child) {
+      model_cs = new Model_cshared(log,_model);
+      child->set_model(model_cs);
+    }
 
     std::vector<std::string>& an=model->getActionNames();
     std::vector<std::string>& sn=model->getSPNames();
@@ -183,6 +186,9 @@ protected:
   GIOChannel* d_stdout;
   GIOChannel* d_stderr;
   std::string prm;
+
+  Model_cshared* model_cs;
+
 };
 
 #endif

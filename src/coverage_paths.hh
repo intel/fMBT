@@ -31,7 +31,11 @@ public:
     Coverage_report(l,_from,_to,_drop), filter_outputs(false),af(false),pf(true),unique(true) { traces_needed=false; }
   
   virtual ~Coverage_paths_base() {}
-
+  virtual bool set_instance(int instance) {
+    Coverage_report::set_instance(instance);
+    current_instance=instance;
+    return true;
+  }
   virtual float getCoverage() { 
     if (unique) {
       return (on_report&&online?0.5:0.0)+tcount.size();

@@ -37,6 +37,19 @@ public:
 
   }
 
+  virtual bool set_instance(int instance) {
+     Coverage_exec_filter::set_instance(instance);
+     instance_map_report[current_instance]=was_online;
+     if (instance_map_report.find(instance)==
+	 instance_map_report.end()) {
+       was_online=false;
+     } else {
+       was_online=instance_map_report[current_instance];
+     }
+
+     return true;
+  }
+
   virtual std::string stringify();
 
   virtual void push();
@@ -60,6 +73,8 @@ protected:
   virtual void on_find(int action,std::vector<int>&p);
   virtual void on_online(int action,std::vector<int>&p);
   virtual void on_offline(int action,std::vector<int>&p);
+
+  std::map<int,bool> instance_map_report;
 
   //  bool prop_set(std::vector<int> p,int npro,int* props);
 public:
