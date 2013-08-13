@@ -67,15 +67,11 @@ aal_remote::aal_remote(Log&l,std::string& s)
     return;
   }
 
-
-  /*
-  nonblock(_stderr);
-  */
   monitor(&status);
 
   prefix="aal remote("+s+")";
 
-  d_stdin=g_io_channel_unix_new(_stdin);  
+  d_stdin=g_io_channel_unix_new(_stdin);
   d_stdout=g_io_channel_unix_new(_stdout);
   d_stderr=g_io_channel_unix_new(_stderr);
 
@@ -85,11 +81,6 @@ aal_remote::aal_remote(Log&l,std::string& s)
 				  (int)g_io_channel_get_flags(d_stderr))
 			 ,NULL);
 
-  /*
-  d_stdin=fdopen(_stdin,"w");
-  d_stdout=fdopen(_stdout,"r");
-  d_stderr=fdopen(_stderr,"r");
-  */
   _log.debug("Waiting for actions");
 
   ssize_t red=bgetline(&read_buf,&read_buf_pos,d_stdout,l,true);
@@ -219,9 +210,9 @@ void aal_remote::push() {
       }
       int r=getint(d_stdin,d_stdout,_log,0,INT_MAX,this,true);
       if (status && r>0) {
-        char* lts_content = new char[r+2]; 
+        char* lts_content = new char[r+2];
         lts_content[r]=0;
-        //fread(lts_content,1,r,d_stdout);	
+        //fread(lts_content,1,r,d_stdout);
 	//size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
 	/*
 GIOStatus           g_io_channel_read_chars             (GIOChannel *channel,
@@ -230,7 +221,7 @@ GIOStatus           g_io_channel_read_chars             (GIOChannel *channel,
                                                          gsize *bytes_read,
                                                          GError **error);
 	*/
-	
+
 	gsize bytes_read;
 	gsize total_read=0;
 	GIOStatus status;
@@ -239,7 +230,7 @@ GIOStatus           g_io_channel_read_chars             (GIOChannel *channel,
 	  bytes_read=0;
 	  status=g_io_channel_read_chars(d_stdout,lts_content+total_read,r-total_read,&bytes_read,NULL);
 	  total_read+=bytes_read;
-	} while (total_read<r && status != G_IO_STATUS_ERROR && 
+	} while (total_read<r && status != G_IO_STATUS_ERROR &&
 		 status != G_IO_STATUS_EOF );
 	_log.debug("Got %i bytes strlen %i",total_read,strlen(lts_content));
         lts=new Lts(_log,std::string("remote.lts#")+lts_content);

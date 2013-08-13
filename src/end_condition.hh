@@ -129,7 +129,7 @@ public:
     counter = STEPS;
     er="step limit reached";
     char* endp;
-    
+
     param_long = strtol(param.c_str(),&endp,10);
     if (endp && endp[0]!=0) {
       status=false;
@@ -149,35 +149,6 @@ public:
     return false;
   }
 };
-/*
-class End_condition_coverage: public End_condition {
-public:
-  End_condition_coverage(Verdict::Verdict v, const std::string& p):
-    End_condition(v,p) {
-    counter = COVERAGE;
-    er="coverage reached";
-    char* endp;
-    
-    param_float = strtod(param.c_str(),&endp);
-    if (endp && endp[0]!=0) {
-      status=false;
-      errormsg=param+" not a valid coverage requirement";
-      return;
-    }
-    if (endp[0]==0) {
-      status = true;
-    } else {
-      errormsg=param+" is not a valid step count";
-      status = false;
-    }
-  }
-  virtual ~End_condition_coverage() {}
-  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags) {
-      if (heuristic.getCoverage() >= param_float) return true;
-    return false;
-  }
-};
-*/
 
 class End_condition_tag: public End_condition {
 public:
@@ -185,7 +156,7 @@ public:
     End_condition(v,p) {
     counter = STATETAG;
     er="tag reached";
-    status = true;    
+    status = true;
   }
   virtual ~End_condition_tag() {}
   virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags);
@@ -203,7 +174,7 @@ public:
     char* out = NULL;
     int stat;
     std::string ss = "date --date='" + param + "' +%s.%N";
-    
+
     if (g_spawn_command_line_sync(ss.c_str(), &out, NULL, &stat, NULL)) {
       if (!stat) {
 	// Store seconds to param_time and microseconds to param_long
@@ -269,7 +240,7 @@ public:
     if (state==Alphabet::DEADLOCK) {
       return true;
     }
-    
+
     return false;
   }
 };

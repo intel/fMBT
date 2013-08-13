@@ -28,7 +28,6 @@ typedef signed int int32_t;
 
 #endif
 
-
 extern "C" {
 
     typedef struct _bbox {
@@ -113,7 +112,8 @@ extern "C" {
     int openedImageDimensions(BoundingBox* bbox, const void * image);
 
     void* openImage(const char* imagefile);
-    void* openBlob(const void* blob,const char* pixelorder,int x,int y);
+
+    void* openBlob(const void* blob, const char* pixelorder, int x, int y);
 
     void closeImage(void* image);
 

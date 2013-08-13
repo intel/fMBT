@@ -110,6 +110,3 @@ aal "filesystemtest" {
         adapter() { assert not os.access(SUBDIRNAME, os.R_OK), "%s accessible" % (SUBDIRNAME,) }
     }
 }
-
-
-# C1*exp(k1*t) + C2*exp(k2*t)

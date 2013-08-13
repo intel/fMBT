@@ -330,7 +330,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
 
     action = heuristic.getIAction();
 
-    if (!heuristic.status) { 
+    if (!heuristic.status) {
       return stop_test(Verdict::W_ERROR, "Heuristic error");
     }
 
@@ -782,7 +782,7 @@ void Test_engine::interactive()
 	  param_cut(s,name,option);
 	  commalist(option,p);
 	  if (p.size()<1||p.size()>2) {
-	    goto unknown_command;	    
+	    goto unknown_command;
 	  }
 	  adapter.adapter_exit(from_string(p[0]),
 			       p.size()==2?p[1]:"");
@@ -793,7 +793,7 @@ void Test_engine::interactive()
 	  int cnt=1;
 	  mismatch_tags.clear();
 	  int failing_tags = adapter.check_tags((int*)&num,cnt,mismatch_tags);
-	  
+
 	  for(unsigned i=0;i<mismatch_tags.size();i++) {
 	    fprintf(stderr,"Tag %s (%i) fails\n",
 		    heuristic.get_model()

@@ -248,11 +248,14 @@ Available types & parameters:
 
                     ["tag-regexp"...,] "action-regexp"... : wdelta
 
+                    ["tag-regexp"...,] "action-regexp"... = abs_weight
+
                 wdelta (an integer) is added to the weight of actions
                 that match any of action-regexps. This has an effect
                 in states where a tag matches any of tag-regexps. If
                 tag-regexps are not defined, wdelta affects matching
-                actions in all states.
+                actions in all states. abs_weight is the absolute
+                weight value of actions.
 
                 By default, weight of every action is 0. If all
                 enabled actions have weight 0 or below, the choice is
@@ -327,13 +330,21 @@ Available types & parameters:
                 permutations of any <count> actions in the test
                 model. If count is not given, it defaults to 2.
 
-	shared(<command>,type(params))
+	shared(<command>, type(params))
 
-		uses a child process that execute <command> as a
-		shared coverage connection. Communicates with the
-		child using fBMT shared coverage protocol.
+		uses a child process, that executes <command>, for
+                sharing tested action sequences with other fMBT test
+                runs in the same session. The other fMBT test runs may
+                include already finished and currently running tests,
+                and new fMBTs may join the session while this test is
+                running. All traces covered by this and other fMBT
+                instances count as covered in the measured coverage,
+                defined by type(params).
 
-		uses coverage type(params) as local coverage.
+                Examples:
+
+                    shared(fmbt-trace-share --session 42, perm(1))
+                    shared(ssh user@host fmbt-trace-share, perm(2))
 
         sum(type(params) [, type(params)...])
 
@@ -588,11 +599,11 @@ Available measures, values and conditions:
                 (including 0.0 and 1.0), some other coverages like
                 path counters can return values greater than 1.0, too.
 
-        coverage(<coverage-type>)
+        coverage(<type(params)>)
 
-		finish with the verfict if coverage reaches 1.0
-		eg fail = coverage(usecase('o.*'))
-		
+		finish with the verfict if coverage type(params)
+		reaches 1.0.
+
         deadlock
 
                 finish with the verdict if model is in a deadlock
@@ -648,6 +659,8 @@ Examples:
         inconc = duration(7 seconds)
 
         fail   = tag(this_should_never_happen)
+
+        fail   = coverage(usecase('o:.*Error.*'))
 
         fail   = deadlock
 
