@@ -115,7 +115,7 @@ def _edgeDistanceInDirection((x, y), (width, height), direction):
 _libpath = ["", "." + os.path.sep]
 suffix=".so"
 if sys.platform == "win32":
-    suffix=".dll"    
+    suffix=".dll"
 for _dirname in _libpath:
     try:
         eye4graphics = ctypes.CDLL(os.path.join(_dirname , "eye4graphics"+suffix))

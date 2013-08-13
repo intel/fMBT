@@ -35,7 +35,7 @@ bool Adapter_remote::init()
 {
   int _stdin,_stdout,_stderr;
   g_type_init ();
-  
+
   gchar **argv = NULL;
   gint argc;
   GError *gerr=NULL;
@@ -70,16 +70,11 @@ bool Adapter_remote::init()
 
   monitor();
 
-  d_stdin=g_io_channel_unix_new(_stdin);  
+  d_stdin=g_io_channel_unix_new(_stdin);
   d_stdout=g_io_channel_unix_new(_stdout);
   d_stderr=g_io_channel_unix_new(_stderr);
 
   g_io_channel_set_flags(d_stderr,G_IO_FLAG_NONBLOCK,NULL);
-  /*
-  d_stdin=fdopen(_stdin,"w");
-  d_stdout=fdopen(_stdout,"r");
-  d_stderr=fdopen(_stderr,"r");
-  */
 
   fprintf(d_stdin,"%i\n",(int)actions->size());
 

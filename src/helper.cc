@@ -584,64 +584,6 @@ ssize_t nonblock_getline(char **lineptr, size_t *n,
     *n=si;
 
   return si;
-
-    // if (!read_buf) {
-    //     read_buf = (char*)malloc(MAX_LINE_LENGTH);
-    //     if (!read_buf) return -2;
-    //     read_buf_pos = 0;
-    // }
-    // for (;;) {
-    //     /* look for line breaks in buffered string */
-    //     char *p = (char*)memchr(read_buf, delimiter, read_buf_pos);
-    //     /* if read buffer is full but contains no line breaks, return
-    //        contents of the buffer */
-    //     if (!p && read_buf_pos == MAX_LINE_LENGTH)
-    //         p = read_buf + read_buf_pos - 1;
-    //     if (p) {
-    //         size_t line_length = p - read_buf + 1;
-    //         size_t needed_space = line_length + 1; // include \0
-    //         if (*lineptr == NULL || *n < needed_space) {
-    //             if (*lineptr == NULL &&
-    //                 (*lineptr = (char*)std::malloc(needed_space)) == NULL) {
-    //                 return -1;
-    //             } else if ((*lineptr = (char*)std::realloc(*lineptr, needed_space)) == NULL) {
-    //                 return -1;
-    //             }
-    //             *n = needed_space;
-    //         }
-    //         memcpy(*lineptr, read_buf, line_length);
-    //         *((*lineptr) + line_length) = '\0';
-    //         memmove(read_buf, p + 1, read_buf_pos - (p - read_buf));
-    //         read_buf_pos -= line_length;
-    //         return line_length;
-    //     }
-    //     /* nothing found, try reading more content to the buffer */
-    // 	// g_io_channel_read_chars(GIOChannel *channel,gchar *buf,
-    // 	//                         gsize count,gsize *bytes_read,
-    // 	//                         GError **error);
-    // 	//        ssize_t bytes_read = read(fd, read_buf + read_buf_pos,
-    //     //                          MAX_LINE_LENGTH - read_buf_pos);
-    // 	ssize_t bytes_read;
-    // 	GIOStatus st=
-    // 	  g_io_channel_read_chars(stream,read_buf + read_buf_pos,
-    // 				  MAX_LINE_LENGTH - read_buf_pos,&bytes_read,
-    // 				  NULL);
-    // 	if (st==G_IO_STATUS_EOF || G_IO_STATUS_AGAIN) {
-    // 	  return 0;
-    // 	}
-    // 	if (st==G_IO_STATUS_ERROR) {
-    // 	  return -1;
-    // 	}
-		
-    //     if (bytes_read == -1) {
-    //         return -1;
-    //     }
-    //     if (bytes_read == 0) {
-    //         return 0;
-    //     }
-
-    //     read_buf_pos += bytes_read;
-    // }
 }
 
 ssize_t getline(char **lineptr, size_t *n, GIOChannel *stream)
@@ -751,7 +693,6 @@ ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,bool ma
 
   do {
     log_redirect = false;
-    // ret = getdelim(lineptr, n, '\n', stream);
     GIOStatus status;
     gsize si;
     do {
