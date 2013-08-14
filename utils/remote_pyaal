@@ -547,6 +547,7 @@ if __name__ == "__main__":
     aal._log = _log
     aal.timeout = opt_timeout
     aal._variables['fmbtlog'] = fmbtlog
+    aal._variables['__file__'] = aal_filename
 
     if not opt_output_fileobj:
         _g_bridge = RemoteAALBridge(aal)
