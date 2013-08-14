@@ -382,7 +382,7 @@ public:
 
   class unit_manyleaf: public unit {
   public:
-    unit_manyleaf() {abort();}
+    unit_manyleaf() {}
     virtual ~unit_manyleaf() {}
 
     virtual void set_instance(int instance,int current_instance, 
