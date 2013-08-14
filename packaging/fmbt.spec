@@ -184,13 +184,14 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 
 %files utils
 %defattr(-, root, root, -)
-%{_bindir}/%{name}-view
 %{_bindir}/%{name}-log
 %{_bindir}/%{name}-stats
+%{_bindir}/%{name}-view
 %{_bindir}/lsts2dot
 %{_bindir}/%{name}-ucheck
 %{python_sitelib}/%{name}/%{name}-log
 %{python_sitelib}/%{name}/%{name}-stats
+%{python_sitelib}/%{name}/%{name}-view
 %{python_sitelib}/%{name}/lsts2dot
 
 %files coreutils
