@@ -192,7 +192,9 @@ public:
     }
 
     virtual void set_instance(int instance,int current_instance, bool force=false) {
-      // not implemented...
+      child->set_instance(instance,current_instance,true);
+      walk_instance_map[current_instance]=executed;
+      executed=walk_instance_map[instance];
     }
 
     virtual ~unit_walk() {
@@ -332,6 +334,9 @@ public:
     std::map<std::vector<int >, int> tcount;
     std::vector<std::map<std::vector<int >, int> > tcount_save;
     bool minimi;
+
+    std::map<int,std::vector<int> > walk_instance_map;
+
   };
 
   class unit_many: public unit {
