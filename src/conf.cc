@@ -71,6 +71,12 @@ void Conf::load(std::string& name,std::string& content)
     return;
   }
 
+  std::string dirname(g_path_get_dirname(name.c_str()));
+
+  if (dirname!=".") {
+    g_setenv("AAL_INCLUDE_PREFIX",dirname.c_str(),TRUE);
+  }
+
   std::string ss(s);
   free(s);
   ss=ss+"\n"+content;
