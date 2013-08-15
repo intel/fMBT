@@ -403,6 +403,8 @@ Other previewer options are:
 Special variables and functions in AAL/Python
 ---------------------------------------------
 
+__file__ - string that contains the name of the AAL file.
+
 action_name - string that contains the name of an action.
 
         Available: in guard(), body() and action() blocks of actions.
