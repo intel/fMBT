@@ -7,7 +7,9 @@
 #include <stack>
 #include "config.h"
 #include <getopt.h>
+#include <string>
 
+std::list<std::string> include_path;
 std::list<YY_BUFFER_STATE> istack;
 std::list<int> lstack;
 std::list<std::string> fstack;
@@ -28,6 +30,26 @@ enum {
 
 int state=NONE;
 std::stack<bool> echo_stack;
+
+FILE* include_search_open(std::string& f)
+{
+  FILE* st=fopen(f.c_str(), "r" );
+
+  if (st) {
+    return st;
+  }
+  for(std::list<std::string>::iterator i=include_path.begin();
+      i!=include_path.end();i++) {
+    std::string s=*i+"/"+f;
+    st=fopen(s.c_str(), "r" );
+    if (st) {
+      f=s;
+      return st;
+    }
+  }
+  return st;
+}
+
 %}
 
 %Start STR
@@ -47,8 +69,8 @@ std::stack<bool> echo_stack;
     switch (state) {
     case INC: {
       std::string s(yytext+1,strlen(yytext)-2);
+      FILE* st=include_search_open(s);
       fprintf(yyout,"# 1 \"%s\"\x0A",s.c_str(),fstack.size()+1);
-      FILE* st=fopen( s.c_str(), "r" );
       if (st) {
 	istack.push_back(YY_CURRENT_BUFFER);
 	lstack.push_back(lineno);
@@ -160,6 +182,7 @@ void print_usage()
     "Options:\n"
     "    -D     define preprocessor flag\n"
     "    -h     print usage\n"
+    "    -I     include path"
     "    -V     print version\n"
     );
 }
@@ -172,9 +195,14 @@ int main(int argc,char** argv)
     {0, 0, 0, 0}
   };
   int c;
-  while ((c = getopt_long (argc, argv, "hD:V", long_opts, NULL)) != -1) {
+  while ((c = getopt_long (argc, argv, "hD:VI:", long_opts, NULL)) != -1) {
     switch (c)
     {
+    case 'I': {
+      std::string s(optarg);
+      include_path.push_back(s);
+      break;
+    }
     case 'V':
       printf("Version: "VERSION FMBTBUILDINFO"\n");
       return 0;

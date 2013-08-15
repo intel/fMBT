@@ -447,7 +447,7 @@ if __name__ == "__main__":
 
     # Parse arguments
     opts, remainder = getopt.gnu_getopt(
-        sys.argv[1:], 'c:dhl:L:t:o:D:H:S:VT:',
+        sys.argv[1:], 'c:dhl:L:t:o:D:H:S:VT:I:',
         ["debug", "help", "log-file=", "timeout=", "output=",
          "lsts-depth=", "lsts-hide-var=", "lsts-show-var=", "version"])
 
@@ -460,6 +460,8 @@ if __name__ == "__main__":
             opt_c_exec_statements.append(arg)
         elif opt in ["-D"]:
             opt_ppflags += ['-D' , arg]
+        elif opt in ["-I"]:
+            opt_ppflags += ['-I' , arg]
         elif opt in ['-V', '--version']:
             try:
                 import fmbt_config

@@ -115,9 +115,15 @@ int main(int argc,char** argv) {
     {0, 0, 0, 0}
   };
 
-  while ((c = getopt_long (argc, argv, "B:b:hco:D:Vl:", long_opts, NULL)) != -1) {
+  while ((c = getopt_long (argc, argv, "B:b:hco:D:Vl:I:", long_opts, NULL)) != -1) {
     switch (c)
       {
+      case 'I': {
+        if (prep_command != "")
+          prep_command=prep_command+" -I"+optarg+" ";
+	break;
+      }
+
       case 'l':
 	if (obj) {
 	  printf("Only on -l parameter supported\n");
