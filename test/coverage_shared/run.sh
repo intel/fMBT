@@ -21,7 +21,7 @@ LOGFILE=/tmp/fmbt.test.coverage_shared.log
 export PATH=../../src:../../utils:$PATH
 source ../functions.sh
 
-ateststep "coverage shared, one client"
+teststep "coverage shared, one client"
 
 fmbt -l shared.log shared.conf >> $LOGFILE 2>&1 || {
     echo "failed because fmbt exit status 0 expected" >>$LOGFILE
