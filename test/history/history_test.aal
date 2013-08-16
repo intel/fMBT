@@ -1,0 +1,18 @@
+aal "history_test" {
+  language: python {}
+  variables {
+    body_run
+  }
+  initial_state {
+    body_run = False
+  }
+
+ input "action" {
+    body() {
+        body_run = True
+    }
+ }
+ input "body_run" {
+     guard() { return not body_run }
+ }
+}
