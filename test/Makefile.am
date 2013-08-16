@@ -1,10 +1,12 @@
-TESTS = interactivemode/run.sh tutorial/run.sh adapters/run.sh examples/run.sh aalpython/run.sh fmbt-stats/run.sh coverage/run.sh exitvalue/run.sh history/run.sh eyenfinger/run.sh remoteerror/run.sh reporting/run.sh weight/run.sh
+TESTS = interactivemode/run.sh tutorial/run.sh adapters/run.sh examples/run.sh aalpython/run.sh fmbt-stats/run.sh coverage/run.sh coverage_shared/run.sh exitvalue/run.sh history/run.sh eyenfinger/run.sh remoteerror/run.sh reporting/run.sh weight/run.sh
 
 dist_noinst_SCRIPTS = aalpython/run.sh aalpython/adapter_exceptions.aal aalpython/adapter_exceptions.conf aalpython/changing_model_in_adapter.aal aalpython/changing_model_in_adapter.conf aalpython/changing_model_in_adapter.expected aalpython/controlflow.aal aalpython/controlflow.conf aalpython/mycounter.py aalpython/nested.aal aalpython/nested.conf aalpython/outputs.aal aalpython/tags.aal aalpython/tags-allfail.conf aalpython/tags.conf aalpython/tags-fail.conf aalpython/test1.py.aal
 
 dist_noinst_SCRIPTS += adapters/run.sh adapters/timer/run.sh adapters/timer/timer.conf adapters/timer/timer.gt adapters/timer/timer.mrules
 
 dist_noinst_SCRIPTS += coverage/run.sh coverage/abc.gt coverage/abc_reg.gt coverage/coffee.gt coverage/t1.gt coverage/t2.gt coverage/twocounters.aal
+
+dist_noinst_SCRIPTS += coverage_shared/run.sh coverage_shared/shared.conf coverage_shared/two.aal coverage_shared/two.conf
 
 dist_noinst_SCRIPTS += examples/run.sh
 
