@@ -48,7 +48,7 @@ Coverage* CoverageFactory::create(Log& log, std::string name,
 
 
 Coverage::Coverage(Log& l) :
-  model(NULL), log(l)
+  model(NULL), current_instance(0),log(l)
 {
   log.ref();
   on_report=false;

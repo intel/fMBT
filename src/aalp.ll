@@ -7,13 +7,18 @@
 #include <stack>
 #include "config.h"
 #include <getopt.h>
+#include <string>
+#include <vector>
 
+#include <libgen.h> // dirname
+
+std::list<std::string> include_path;
 std::list<YY_BUFFER_STATE> istack;
 std::list<int> lstack;
 std::list<std::string> fstack;
 std::map<std::string,bool> def;
 int lineno=1;
-
+char* inc_prefix=NULL;
 using namespace std;
 bool echo=true;
 enum {
@@ -28,6 +33,57 @@ enum {
 
 int state=NONE;
 std::stack<bool> echo_stack;
+
+FILE* _include_search_open(std::string& f)
+{
+  FILE* st=fopen(f.c_str(), "r" );
+  if (st) {
+    return st;
+  }
+
+  if (inc_prefix) {
+    std::string s(inc_prefix);
+    s=s+"/"+f;
+    st=fopen(f.c_str(), "r" );
+    if (st) {
+      f=s;
+      return st;
+    }
+  }
+
+  for(std::list<std::string>::iterator i=include_path.begin();
+      i!=include_path.end();i++) {
+    std::string s=*i+"/"+f;
+    st=fopen(s.c_str(), "r" );
+    if (st) {
+      f=s;
+      return st;
+    }
+    if (inc_prefix) {
+      s=std::string(inc_prefix)+"/"+s;
+      st=fopen(s.c_str(), "r" );
+      if (st) {
+	f=s;
+	return st;
+      }
+    }
+  }
+
+  return st;
+}
+
+FILE* include_search_open(std::string& f) {
+  FILE* st=_include_search_open(f);
+  if (st) {
+    char* tmp=strdup(f.c_str());
+    char* dname=dirname(tmp);
+    free(tmp);
+    std::string ss(dname);
+    include_path.push_back(ss);
+  }
+  return st;
+}
+
 %}
 
 %Start STR
@@ -47,8 +103,8 @@ std::stack<bool> echo_stack;
     switch (state) {
     case INC: {
       std::string s(yytext+1,strlen(yytext)-2);
+      FILE* st=include_search_open(s);
       fprintf(yyout,"# 1 \"%s\"\x0A",s.c_str(),fstack.size()+1);
-      FILE* st=fopen( s.c_str(), "r" );
       if (st) {
 	istack.push_back(YY_CURRENT_BUFFER);
 	lstack.push_back(lineno);
@@ -147,6 +203,7 @@ std::stack<bool> echo_stack;
     istack.pop_back();
     lstack.pop_back();
     fstack.pop_back();
+    include_path.pop_back();
     fprintf(yyout,"# %i \"%s\"\x0A",lineno,fstack.back().c_str(),fstack.size());
   }
 }
@@ -160,8 +217,34 @@ void print_usage()
     "Options:\n"
     "    -D     define preprocessor flag\n"
     "    -h     print usage\n"
+    "    -I     include path"
     "    -V     print version\n"
     );
+}
+
+void strvec(std::vector<std::string>& v,std::string& s,
+            const std::string& separator)
+{
+  unsigned long cutpos;
+
+  while ((cutpos=s.find_first_of(separator))!=s.npos) {
+    std::string a=s.substr(0,cutpos);
+    v.push_back(a);
+    s=s.substr(cutpos+1);
+  }
+
+  v.push_back(s);
+}
+
+void include_path_append(const char* path) {
+  if (path) {
+    std::vector<std::string> vec;
+    std::string s(path);
+    strvec(vec,s,":");
+    for(unsigned i=0;i<vec.size();i++) {
+      include_path.push_back(vec[i]);
+    }
+  }
 }
 
 int main(int argc,char** argv)
@@ -172,9 +255,15 @@ int main(int argc,char** argv)
     {0, 0, 0, 0}
   };
   int c;
-  while ((c = getopt_long (argc, argv, "hD:V", long_opts, NULL)) != -1) {
+  include_path.push_back("");
+  while ((c = getopt_long (argc, argv, "hD:VI:", long_opts, NULL)) != -1) {
     switch (c)
     {
+    case 'I': {
+      std::string s(optarg);
+      include_path.push_back(s);
+      break;
+    }
     case 'V':
       printf("Version: "VERSION FMBTBUILDINFO"\n");
       return 0;
@@ -195,9 +284,20 @@ int main(int argc,char** argv)
     return -1;
   }
 
+  include_path_append(getenv("AAL_INCLUDE_PATH"));
+  inc_prefix=getenv("AAL_INCLUDE_PREFIX");
+
   if (optind < argc) { // preprocessed file given on command line
-    fstack.push_back(argv[optind]);
-    yyset_in(fopen(argv[optind], "r" ));
+    std::string filename(argv[optind]);
+    FILE* st=include_search_open(filename);
+    if (!st) {
+      fprintf(stderr,"Can't open input file %s\n",argv[optind]);
+      return -1;
+    }
+    yyset_in(st);
+    if (!inc_prefix) {
+    }
+    fstack.push_back(filename.c_str());
   } else {
     fstack.push_back("/dev/stdin");
   }

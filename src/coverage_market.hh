@@ -57,6 +57,16 @@ public:
     }
   }
 
+  virtual bool set_instance(int instance) {
+    for (unsigned int i = 0; i < Units.size(); i++) {
+      Units[i]->set_instance(instance,current_instance);
+      // Is this actually needed?
+      Units[i]->update();
+    }
+    current_instance=instance;
+    return true;
+  }
+
   virtual void push() {
     for (unsigned int i = 0; i < Units.size(); i++) Units[i]->push();
   };
@@ -111,6 +121,7 @@ public:
     virtual void push()=0;
     virtual void pop()=0;
     virtual void reset() {}
+    virtual void set_instance(int instance,int current_instance, bool force=false) =0;
     val value;
   };
 
@@ -130,6 +141,11 @@ public:
     virtual ~unit_perm() {
       delete child;
     }
+
+    virtual void set_instance(int instance,int current_instance, bool force=false) {
+      child->set_instance(instance);
+    }
+
     virtual void push()
     {
       child->push();
@@ -174,6 +190,13 @@ public:
     unit_walk(unit* c,bool _min):child(c),count(0),minimi(_min) {
       push_depth=0;
     }
+
+    virtual void set_instance(int instance,int current_instance, bool force=false) {
+      child->set_instance(instance,current_instance,true);
+      walk_instance_map[current_instance]=executed;
+      executed=walk_instance_map[instance];
+    }
+
     virtual ~unit_walk() {
       delete child;
     }
@@ -311,6 +334,9 @@ public:
     std::map<std::vector<int >, int> tcount;
     std::vector<std::map<std::vector<int >, int> > tcount_save;
     bool minimi;
+
+    std::map<int,std::vector<int> > walk_instance_map;
+
   };
 
   class unit_many: public unit {
@@ -359,6 +385,15 @@ public:
     unit_manyleaf() {}
     virtual ~unit_manyleaf() {}
 
+    virtual void set_instance(int instance,int current_instance, 
+			      bool forced=false) {
+      if (forced) {
+	manyleaf_instance_map[current_instance]=value;
+	value=manyleaf_instance_map[instance];
+      }
+    }
+    
+
     virtual void reset() {
       unit::value.first=0;
       for(unsigned i=0;i<value.size();i++) {
@@ -397,6 +432,7 @@ public:
     std::vector<int> value;
     std::stack<std::vector<int> > st;
     std::stack<val> st2;
+    std::map<int,std::vector<int> > manyleaf_instance_map;
   };
 
   class unit_manyleafand: public unit_manyleaf {
@@ -468,6 +504,11 @@ public:
     unit_manyand() {}
     virtual ~unit_manyand() {
     }
+
+    virtual void set_instance(int instance,int current_instance, bool force=false) {
+      // not implemented..
+    }
+
     virtual void update() {
       units[0]->update();
       value=units[0]->get_value();
@@ -485,6 +526,11 @@ public:
     unit_manyor() {}
     virtual ~unit_manyor() {
     }
+
+    virtual void set_instance(int instance,int current_instance, bool force=false) {
+      // not implemented..
+    }
+
     virtual void update() {
       units[0]->update();
       value=units[0]->get_value();
@@ -502,6 +548,11 @@ public:
   class unit_dual: public unit {
   public:
     unit_dual(unit* l,unit* r):left(l),right(r) {
+    }
+
+    virtual void set_instance(int instance,int current_instance, bool force=false) {
+      left ->set_instance(instance,current_instance,force);
+      right->set_instance(instance,current_instance,force);      
     }
 
     virtual void reset() {
@@ -537,6 +588,7 @@ public:
   class unit_and: public unit_dual {
   public:
     unit_and(unit* l,unit* r) : unit_dual(l,r) {}
+
     virtual void update() {
       left->update();
       right->update();
@@ -551,6 +603,7 @@ public:
   class unit_or: public unit_dual {
   public:
     unit_or(unit* l,unit* r) : unit_dual(l,r) {}
+
     virtual void update() {
       left->update();
       right->update();
@@ -569,6 +622,10 @@ public:
   class unit_not: public unit {
   public:
     unit_not(unit *c):child(c) {
+    }
+
+    virtual void set_instance(int instance,int current_instance, bool force=false) {
+      child->set_instance(instance,current_instance,force);
     }
 
     virtual void reset() {
@@ -603,6 +660,11 @@ public:
   public:
     int cpos;
     std::stack<int> csave;
+
+    virtual void set_instance(int instance,int current_instance, bool force=false) {
+      // not implemented..
+    }
+
     unit_then(unit* l,unit* r) {
       unit_then* ut=dynamic_cast<unit_then*>(r);
       cpos=0;
@@ -668,6 +730,13 @@ public:
   public:
     unit_then_(unit* l,unit* r) : unit_dual(l,r) {}
     virtual ~unit_then_()  {}
+
+    virtual void set_instance(int instance,int current_instance, bool force=false) {
+      left ->set_instance(instance,current_instance,true);
+      right->set_instance(instance,current_instance,true);
+    }
+
+
     virtual void execute(int action) {
       // if left, then right
       left->update();
@@ -698,6 +767,13 @@ public:
       value.second=count;
     }
 
+    virtual void set_instance(int instance,int current_instance, bool force=false) {
+      if (force) {
+	leaf_instance_map[current_instance]=value.first;
+	value.first=leaf_instance_map[instance];
+      }
+    }
+
     virtual void reset() {
       value.first=0;
     }
@@ -725,11 +801,16 @@ public:
   protected:
     int my_action;
     std::stack<val> st;
+    std::map<int,int> leaf_instance_map;
   };
 
   class unit_mult: public unit {
   public:
     unit_mult(unit* l,int i): max(i),child(l),count(0) {
+    }
+
+    virtual void set_instance(int instance,int current_instance, bool force=false) {
+      child->set_instance(instance,current_instance,force);
     }
 
     virtual void reset() {

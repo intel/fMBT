@@ -18,8 +18,8 @@ examplesofflinetestsuitedir = @docdir@/examples/offline-test-suite
 
 dist_examplesaalcomponents_DATA =	\
 	aal-components/basesystem.aal	\
-	aal-components/calc.actions	\
-	aal-components/clock.actions	\
+	aal-components/aal_lib/calc.actions	\
+	aal-components/aal_lib/clock.actions	\
 	aal-components/fullsystem.conf	\
 	aal-components/README
 

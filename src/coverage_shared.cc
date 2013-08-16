@@ -63,9 +63,8 @@ void Coverage_shared::receive_from_server()
       status=false;
       continue;
     }
-    
-    std::string name,option;
 
+    std::string name,option;
     param_cut(std::string(s),name,option);
     std::vector<std::string> p;
     commalist(option,p);
@@ -84,12 +83,15 @@ void Coverage_shared::receive_from_server()
 	status=false;
       } else {
 	// We should pass tags...
+	model_cs->n=tags.size();
+	model_cs->pr=& tags[0];
 	child->execute(act);
       }
     }
 
   }
   child->set_instance(0);  
+  model_cs->pr=NULL;
 }
 
 void Coverage_shared::communicate(int action)
@@ -98,7 +100,22 @@ void Coverage_shared::communicate(int action)
     return;
   }
   // First, send action
-  fprintf(d_stdin,"(%i,)\n",action);
+  int *pr;
+  int n=model->getprops(&pr);
+
+  if (n) {
+    std::string tags;
+    for(int i=0;i<n;i++) {
+      if (i) {
+	tags=tags+" "+to_string(pr[i]);
+      } else {
+	tags=to_string(pr[i]);
+      }
+    }
+    fprintf(d_stdin,"(%i,%s)\n",action,tags.c_str());
+  } else {
+    fprintf(d_stdin,"(%i,)\n",action);
+  }
 
   receive_from_server();
 }

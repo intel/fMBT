@@ -53,9 +53,10 @@ public:
 
 protected:
   Model* model;
+  int current_instance;
 public:
   Log& log;
-  bool on_report;
+  bool on_report;  
 };
 
 FACTORY_DECLARATION(Coverage)
