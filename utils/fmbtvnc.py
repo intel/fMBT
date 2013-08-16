@@ -21,7 +21,65 @@ This is library implements fMBT GUITestInterface for Windows.
 
 import fmbt
 import fmbtgti
-import gtkvnc
+
+import threading
+import Queue
+import logging
+
+from twisted.internet import reactor
+from twisted.internet.defer import maybeDeferred
+from twisted.python.log import PythonLoggingObserver
+from twisted.python.failure import Failure
+
+from vncdotool import command
+from vncdotool.client import VNCDoToolFactory, VNCDoToolClient
+
+
+class ThreadedVNCClientProxy(object):
+
+    def __init__(self, factory):
+        self.factory = factory
+        self.queue = Queue.Queue()
+
+    def connect(self, host, port=5900):
+        reactor.callWhenRunning(reactor.connectTCP, host, port, self.factory)
+
+    def start(self):
+        self.thread = threading.Thread(target=reactor.run, name='Twisted',
+                                       kwargs={'installSignalHandlers': False})
+        self.thread.daemon = True
+        self.thread.start()
+
+        return self.thread
+
+    def join(self):
+        def _stop(result):
+            reactor.stop()
+
+        reactor.callFromThread(self.factory.deferred.addBoth, _stop)
+        self.thread.join()
+
+    def __getattr__(self, attr):
+        method = getattr(VNCDoToolClient, attr)
+
+        def _releaser(result):
+            self.queue.put(result)
+            return result
+
+        def _callback(protocol, *args, **kwargs):
+            d = maybeDeferred(method, protocol, *args, **kwargs)
+            d.addBoth(_releaser)
+            return d
+
+        def proxy_call(*args, **kwargs):
+            reactor.callFromThread(self.factory.deferred.addCallback,
+                                   _callback, *args, **kwargs)
+            result = self.queue.get()
+            if isinstance(result, Failure):
+                raise VNCDoThreadError(result)
+
+        return proxy_call
+
 
 def _adapterLog(msg):
     fmbt.adapterlog("fmbtvnc %s" % (msg,))
@@ -31,34 +89,60 @@ class VNC(fmbtgti.GUITestInterface):
         fmbtgti.GUITestInterface.__init__(self)
         self.setConnection(VncdeviceConnection(Host=host, Port=port))
 
+    def init(self):
+        self._conn.init()
+    
+
 class VncdeviceConnection(fmbtgti.GUITestConnection):
     def __init__(self, Host, Port=5900):
 #        fmbtgti.GUITestInterface.__init__(self)
-        self.dpy = gtkvnc.Display()
         self.HOST = Host
         self.PORT = Port
-        print Host + ":" + str(Port)
-        print self.dpy.open_host(Host, str(Port))
-        print self.dpy.is_open()
-        print self.dpy.get_height()
-        print self.dpy.get_width()
+        self.first_shot = True
+        observer = PythonLoggingObserver()
+        observer.start()
+        factory = VNCDoToolFactory()
+        self.client = ThreadedVNCClientProxy(factory)
+        self.client.connect(self.HOST,self.PORT)
+        self.client.start()
+
+    def init(self):
+        return True
 
     def close(self):
-        fmbtgti.GUITestInterface.close(self)        
-        self.dpy.close()
+        self.client.close()
 
-    def sendPress(self, keyName):
-        self.dpy.send_key([keyName])
+    def sendPress(self, key):
+        self.client.keyPress(key)
+
+    def sendKeyDown(self,key):
+        self.client.keyDown(key)
+
+    def sendKeyUp(self,key):
+        self.client.keyUp(key)
+
+    def sendTouchDown(self, x, y):
+        self.client.mouseMove(x,y)
+        self.client.mouseDown(1)
+
+    def sendTouchUp(self, x, y):
+        self.client.mouseMove(x,y)
+        self.client.mouseUp(1)
 
     def sendTap(self,x,y):
-        self.dpy.send_pointer(x=x,y=y,button_mask=1)
+        print "tap %i %i" % (x,y)
+        self.client.mouseMove(x,y)
+        self.client.mousePress(1)
+
+    def sendTouchMove(self, x, y):
+        self.client.mouseMove(x,y)
 
     def recvScreenshot(self, filename):
-        print self.dpy.is_open()
-        print self.dpy.get_height()
-        print self.dpy.get_width()
-        pix=self.dpy.get_pixbuf()
-        pix.save(filename=filename,type=filename.split(".")[-1])
+        if self.first_shot:
+            self.client.captureScreen(filename)
+            self.first_shot = False
+        self.client.captureScreen(filename)
+        return True
 
     def target(self):
-        return "VNC " + self.HOST + ":" + str(self.PORT)
+        return "VNC-" + self.HOST + ":" + str(self.PORT)
