@@ -32,81 +32,127 @@ class X11Connection(fmbtgti.GUITestConnection):
         self.libX11 = ctypes.CDLL("libX11.so.6")
         self.libXtst = ctypes.CDLL("libXtst.so.6")
 
-        self.libX11.XOpenDisplay.restype   = ctypes.c_void_p
-        self.libX11.XDefaultScreen.restype = ctypes.c_int
+        self.libX11.XOpenDisplay.restype        = ctypes.c_void_p
+        self.libX11.XDefaultScreen.restype      = ctypes.c_int
+        if ctypes.sizeof(ctypes.c_void_p) == 4: # 32-bit
+            self.libX11.XGetKeyboardMapping.restype = ctypes.POINTER(ctypes.c_uint32)
+        else: # 64-bit
+            self.libX11.XGetKeyboardMapping.restype = ctypes.POINTER(ctypes.c_uint64)
 
-        self.X_True = ctypes.c_int(1)
-        self.X_False = ctypes.c_int(0)
-        self.X_CurrentTime = ctypes.c_ulong(0)
-        self.NULL = ctypes.c_char_p(0)
-        self.display = self.libX11.XOpenDisplay(self.NULL)
-        self.current_screen = self.libX11.XDefaultScreen(self.display)
+        self._X_True         = ctypes.c_int(1)
+        self._X_False        = ctypes.c_int(0)
+        self._X_CurrentTime  = ctypes.c_ulong(0)
+        self._NULL           = ctypes.c_char_p(0)
+        self._NoSymbol       = 0
+        self._display        = self.libX11.XOpenDisplay(self._NULL)
+        self._current_screen = self.libX11.XDefaultScreen(self._display)
+
+        ref                      = ctypes.byref
+        self._cMinKeycode        = ctypes.c_int(0)
+        self._cMaxKeycode        = ctypes.c_int(0)
+        self._cKeysymsPerKeycode = ctypes.c_int(0)
+        self.libX11.XDisplayKeycodes(self._display, ref(self._cMinKeycode), ref(self._cMaxKeycode))
+        self._keysyms = self.libX11.XGetKeyboardMapping(
+            self._display, self._cMinKeycode, (self._cMaxKeycode.value - self._cMinKeycode.value) + 1,
+            ref(self._cKeysymsPerKeycode))
+        self._modifierKeycodes = []
+        self._shiftModifier  = self.libX11.XKeysymToKeycode(self._display, self.libX11.XStringToKeysym("Shift_L"))
+        self._level3Modifier = self.libX11.XKeysymToKeycode(self._display, self.libX11.XStringToKeysym("ISO_Level3_Shift"))
+        self._specialCharToXString = {
+            '\n': "Return", '\\': "backslash",
+            ' ': "space", '_': "underscore", '!': "exclam", '"': "quotedbl",
+            '#': "numbersign", '$': "dollar", '%': "percent",
+            '&': "ambersand", "'": "apostrophe",
+            '(': "parenleft", ')': "parenright",
+            '[': "bracketleft", ']': "bracketright",
+            '{': "braceleft", '}': "braceright",
+            '|': "bar", '~': "asciitilde",
+            '*': "asterisk", '+': "plus", '-': "minus", '/': "slash",
+            '.': "period", ',': "comma", ':': "colon", ';': "semicolon",
+            '<': "less", '=': "equal", '>': "greater",
+            '?': "question", '@': "at"}
 
     def __del__(self):
-        self.libX11.XCloseDisplay(self.display)
+        self.libX11.XCloseDisplay(self._display)
 
-    def _thingToKeycode(self, key):
-        keysym = self.libX11.XStringToKeysym(key)
-        if keysym == 0:
-            return None
-        return self.libX11.XKeysymToKeycode(self.display, keysym)
+    def _typeChar(self, origChar, press=True, release=True):
+        modifiers = []
+        c         = self._specialCharToXString.get(origChar, origChar)
+        keysym    = self.libX11.XStringToKeysym(c)
+        if keysym == self._NoSymbol:
+            return False
+        keycode   = self.libX11.XKeysymToKeycode(self._display, keysym)
+
+        first = (keycode - self._cMinKeycode.value) * self._cKeysymsPerKeycode.value
+
+        for modifier_index, modifier in enumerate([self._shiftModifier, None, None, self._level3Modifier]):
+            if modifier == None: continue
+            try:
+                if chr(self._keysyms[first + modifier_index + 1]) == origChar:
+                    modifiers.append(modifier)
+                    break
+            except ValueError: pass
+
+        for m in modifiers:
+            self.libXtst.XTestFakeKeyEvent(self._display, m, self._X_True, self._X_CurrentTime)
+            self.libX11.XFlush(self._display)
+
+        if press:
+            self.libXtst.XTestFakeKeyEvent(self._display, keycode, self._X_True, self._X_CurrentTime)
+        if release:
+            self.libXtst.XTestFakeKeyEvent(self._display, keycode, self._X_False, self._X_CurrentTime)
+        self.libX11.XFlush(self._display)
+
+        for m in modifiers[::-1]:
+            self.libXtst.XTestFakeKeyEvent(self._display, m, self._X_False, self._X_CurrentTime)
+            self.libX11.XFlush(self._display)
+
+        return True
 
     def sendTap(self, x, y):
-        self.libXtst.XTestFakeMotionEvent(self.display, self.current_screen, int(x), int(y), self.X_CurrentTime)
-        self.libXtst.XTestFakeButtonEvent(self.display, 1, self.X_True, self.X_CurrentTime)
-        self.libXtst.XTestFakeButtonEvent(self.display, 1, self.X_False, self.X_CurrentTime)
-        self.libX11.XFlush(self.display)
+        self.libXtst.XTestFakeMotionEvent(self._display, self._current_screen, int(x), int(y), self._X_CurrentTime)
+        self.libXtst.XTestFakeButtonEvent(self._display, 1, self._X_True, self._X_CurrentTime)
+        self.libXtst.XTestFakeButtonEvent(self._display, 1, self._X_False, self._X_CurrentTime)
+        self.libX11.XFlush(self._display)
         return True
 
     def sendPress(self, key):
-        keycode = self._thingToKeycode(key)
-        if keycode == None: return False
-        self.libXtst.XTestFakeKeyEvent(self.display, keycode, self.X_True, self.X_CurrentTime)
-        self.libXtst.XTestFakeKeyEvent(self.display, keycode, self.X_False, self.X_CurrentTime)
-        self.libX11.XFlush(self.display)
-	return True
+	return self._typeChar(key, press=True, release=True)
 
     def sendKeyDown(self, key):
-        keycode = self._thingToKeycode(key)
-        if keycode == None: return False
-        self.libXtst.XTestFakeKeyEvent(self.display, keycode, self.X_True, self.X_CurrentTime)
-        self.libX11.XFlush(self.display)
-        return True
+        return self._typeChar(key, press=True, release=False)
 
     def sendKeyUp(self, key):
-        keycode = self._thingToKeycode(key)
-        if keycode == None: return False
-        self.libXtst.XTestFakeKeyEvent(self.display, keycode, self.X_False, self.X_CurrentTime)
-        self.libX11.XFlush(self.display)
-        return True
+        return self._typeChar(key, press=False, release=True)
 
     def sendTouchMove(self, x, y):
-        self.libXtst.XTestFakeMotionEvent(self.display, self.current_screen, int(x), int(y), self.X_CurrentTime)
-        self.libX11.XFlush(self.display)
+        self.libXtst.XTestFakeMotionEvent(self._display, self._current_screen, int(x), int(y), self._X_CurrentTime)
+        self.libX11.XFlush(self._display)
         return True
 
     def sendTouchDown(self, x, y):
-        self.libXtst.XTestFakeMotionEvent(self.display, self.current_screen, int(x), int(y), self.X_CurrentTime)
-        self.libXtst.XTestFakeButtonEvent(self.display, 1, self.X_True, self.X_CurrentTime)
-        self.libX11.XFlush(self.display)
+        self.libXtst.XTestFakeMotionEvent(self._display, self._current_screen, int(x), int(y), self._X_CurrentTime)
+        self.libXtst.XTestFakeButtonEvent(self._display, 1, self._X_True, self._X_CurrentTime)
+        self.libX11.XFlush(self._display)
         return True
 
     def sendTouchUp(self, x, y):
-        self.libXtst.XTestFakeMotionEvent(self.display, self.current_screen, int(x), int(y), self.X_CurrentTime)
-        self.libXtst.XTestFakeButtonEvent(self.display, 1, self.X_False, self.X_CurrentTime)
-        self.libX11.XFlush(self.display)
+        self.libXtst.XTestFakeMotionEvent(self._display, self._current_screen, int(x), int(y), self._X_CurrentTime)
+        self.libXtst.XTestFakeButtonEvent(self._display, 1, self._X_False, self._X_CurrentTime)
+        self.libX11.XFlush(self._display)
         return True
 
     def sendType(self, string):
+        success = True
         for character in string:
-            self.sendPress(character)
-        return True
+            success = success and self.sendPress(character)
+        return success
 
     def sendTap(self, x, y):
-        self.libXtst.XTestFakeMotionEvent(self.display, self.current_screen, int(x), int(y), self.X_CurrentTime)
-        self.libXtst.XTestFakeButtonEvent(self.display, 1, self.X_True, self.X_CurrentTime)
-        self.libXtst.XTestFakeButtonEvent(self.display, 1, self.X_False, self.X_CurrentTime)
-        self.libX11.XFlush(self.display)
+        self.libXtst.XTestFakeMotionEvent(self._display, self._current_screen, int(x), int(y), self._X_CurrentTime)
+        self.libXtst.XTestFakeButtonEvent(self._display, 1, self._X_True, self._X_CurrentTime)
+        self.libXtst.XTestFakeButtonEvent(self._display, 1, self._X_False, self._X_CurrentTime)
+        self.libX11.XFlush(self._display)
         return True
 
     def recvScreenshot(self, filename):
