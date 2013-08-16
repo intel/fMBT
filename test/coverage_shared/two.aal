@@ -1,0 +1,94 @@
+aal "two" {
+  language: python {
+    import pexpect
+    import time
+    fmbt_launch_command = "fmbt -i shared.conf"
+
+    def requireOutput_1(s, timeout=4):
+        log("client 1 waiting for "+s)
+        assert p1.expect(s, timeout) == 0
+
+    def requireOutput_2(s, timeout=4):
+        log("client 2 waiting for "+s)
+        assert p2.expect(s, timeout) == 0
+
+    def command_1(c):
+        log("sending command 1: " + c)
+        p1.write(c + "\n")
+
+    def command_2(c):
+        log("sending command 2: " + c)
+        p2.write(c + "\n")
+    }
+
+    variables {
+       c1_start,c2_start,c1_end,c2_end,expected_coverage
+    }
+
+    initial_state {
+        c1_start=False
+        c1_start=False
+        c2_end=False
+        c2_end=False
+        expected_coverage=0
+    }
+
+    adapter_init {
+        global p1
+        global p2
+        p1 = pexpect.spawn(fmbt_launch_command)
+        p2 = pexpect.spawn(fmbt_launch_command)
+    }
+
+    action "ic1a1" {
+        body() { c1_start=True }
+        adapter() {
+            command_1('s1')
+            requireOutput_1('coverage="%i.000000"' % expected_coverage)
+            requireOutput_1('fMBT>')
+            command_1('s1')
+            requireOutput_1('fMBT>')
+        }
+    }
+    action "ic2a1" {
+        body() { c2_start=True }
+        adapter() {
+            command_2('s1')
+            requireOutput_2('coverage="%i.000000"' % expected_coverage)
+            requireOutput_2('fMBT>')
+            command_2('s1')
+            requireOutput_2('fMBT>')
+        }
+    }
+
+    action "ic1a2" {
+        body() {
+            if (c1_start):
+                c1_start=False
+        }
+        adapter() {
+            if (c1_start):
+                expected_coverage=expected_coverage+1
+            command_1('s2')
+            requireOutput_1('coverage="%i.000000"' % expected_coverage)
+            requireOutput_1('fMBT>')
+            command_1('s1')
+            requireOutput_1('fMBT>')
+        }
+     }
+    action "ic2a2" {
+        body() {
+            if (c2_start):
+                c2_start=False
+        }
+        adapter() {
+            if (c2_start):
+                expected_coverage=expected_coverage+1
+            command_2('s2')
+            requireOutput_2('coverage="%i.000000"' % expected_coverage)
+            requireOutput_2('fMBT>')
+            command_2('s1')
+            requireOutput_2('fMBT>')
+        }
+    }
+}
