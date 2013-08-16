@@ -68,11 +68,12 @@ import urllib
 
 FORWARD_BLOCKSIZE = 4096
 
-opt_fork_server = False
+opt_debug                        = False
+opt_fork_server                  = False
 opt_keep_running_without_clients = False
-opt_log_filename = None
-opt_overwrite_logfile = False
-opt_session_id = 0
+opt_log_filename                 = None
+opt_overwrite_logfile            = False
+opt_session_id                   = 0
 
 server_port = 10277
 
@@ -257,9 +258,12 @@ def serve_connection(conn):
         actions = recv_quoted_lines(from_fmbt)
         server_log("client %s actions: %s" %
                    (client_id, actions))
+        assert type(actions) == list
+
         tags = recv_quoted_lines(from_fmbt)
         server_log("client %s tags: %s" %
                    (client_id, tags))
+        assert type(tags) == list
 
         with client_lock:
             client_a2i[client_id] = {a:i for i, a in enumerate(actions)}
@@ -275,8 +279,10 @@ def serve_connection(conn):
         send_queued(unsent, to_fmbt)
 
         while 1:
-            reported_line = from_fmbt.readline().strip()
-            parsed_execution = parse_execution(reported_line)
+            reported_line = from_fmbt.readline()
+            if len(reported_line) == 0:
+                break
+            parsed_execution = parse_execution(reported_line.strip())
             if parsed_execution != None:
                 if valid_execution(client_id, parsed_execution):
                     with client_lock:
@@ -300,7 +306,7 @@ def serve_connection(conn):
         if not opt_keep_running_without_clients:
             with client_lock:
                 if len(clients) == 0:
-                    os.kill(os.getpid(), signal.SIGTERM)
+                    os.kill(os.getpid(), signal.SIGHUP)
 
 def fork_server(port):
     if opt_overwrite_logfile and opt_log_filename:
@@ -311,26 +317,27 @@ def fork_server(port):
     else:
         output_filename = "/dev/null"
 
-    # The usual fork magic, cleaning up all connections to the parent process
-    if os.fork() > 0:
-        return
-    os.chdir("/")
-    os.umask(0)
-    os.setsid()
+    if opt_debug == False:
+        # The usual fork magic, cleaning up all connections to the parent process
+        if os.fork() > 0:
+            return
+        os.chdir("/")
+        os.umask(0)
+        os.setsid()
 
-    if os.fork() > 0:
-        sys.exit(0)
-    try:
-        sys.stdout.flush()
-        sys.stderr.flush()
-    except (IOError, ValueError):
-        pass
-    _in = file("/dev/null", 'r')
-    _out = file(output_filename, 'a+')
-    _err = file(output_filename, 'a+', 0)
-    os.dup2(_in.fileno(), sys.stdin.fileno())
-    os.dup2(_out.fileno(), sys.stdout.fileno())
-    os.dup2(_err.fileno(), sys.stderr.fileno())
+        if os.fork() > 0:
+            sys.exit(0)
+        try:
+            sys.stdout.flush()
+            sys.stderr.flush()
+        except (IOError, ValueError):
+            pass
+        _in = file("/dev/null", 'r')
+        _out = file(output_filename, 'a+')
+        _err = file(output_filename, 'a+', 0)
+        os.dup2(_in.fileno(), sys.stdin.fileno())
+        os.dup2(_out.fileno(), sys.stdout.fileno())
+        os.dup2(_err.fileno(), sys.stderr.fileno())
 
     server_log("launching session %s server at port %s pid %s" % (opt_session_id, server_port, os.getpid()))
 
@@ -350,12 +357,14 @@ def error(msg):
 if __name__ == "__main__":
 
     opts, remainder = getopt.gnu_getopt(
-        sys.argv[1:], 'hkl:L:s:SV',
+        sys.argv[1:], 'dhkl:L:s:SV',
         ["help", "keep-session",
          "log-file=", "session=", "session-server", "version"])
 
     for opt, arg in opts:
-        if opt in ["-h", "--help"]:
+        if opt in ["-d", "--debug"]:
+            opt_debug = True
+        elif opt in ["-h", "--help"]:
             print __doc__
             sys.exit(0)
         elif opt in ["-k", "--keep-session"]:
