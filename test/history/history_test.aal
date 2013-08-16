@@ -8,11 +8,19 @@ aal "history_test" {
   }
 
  input "action" {
+    guard() {
+        return not body_run
+    }
     body() {
         body_run = True
     }
  }
  input "body_run" {
-     guard() { return not body_run }
+    guard() {
+        return body_run
+    }
+    body() {
+        body_run = False
+    }
  }
 }

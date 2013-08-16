@@ -43,7 +43,6 @@ teststep "history: old syntax one-step tests, separate logs"
     && testpassed \
     || testfailed
 
-
 teststep "history: generating log"
 fmbt history_test.conf -o 'pass=steps(1)' -l run1.log >> $LOGFILE 2>&1 || {
     testfailed
@@ -51,7 +50,13 @@ fmbt history_test.conf -o 'pass=steps(1)' -l run1.log >> $LOGFILE 2>&1 || {
 testpassed
 
 teststep "history: executing body"
-fmbt history_test.conf -o 'fail=steps(2)' -o 'history=log(run1.log,a:b)'  >> $LOGFILE 2>&1 || {
-    testfailed
-}
-testpassed
+fmbt history_test.conf -o 'fail=steps(2)' -o 'history=log(run1.log,a:b)'  >> $LOGFILE 2>&1 \
+    && testpassed \
+    || testfailed
+
+
+teststep "history: not executing body"
+fmbt history_test.conf -o 'fail=steps(2)' -o 'history=log(run1.log)'  >> $LOGFILE 2>&1 \
+    && testfailed \
+    || testpassed
+
