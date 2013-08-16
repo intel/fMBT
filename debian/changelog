@@ -1,8 +1,22 @@
-fmbt (0.9.6-0.rc0) unstable; urgency=low
+fmbt (0.10-1) unstable; urgency=low
 
-  * Development version.
+  * coverages:
+    - Coverage sharing for multiple simultaneous test runs.
+      Example: test run A gets informed that feature X was just covered
+      by test run B, so A can skip it and start covering feature Y.
+    - Any coverages can be used in end conditions.
+  * fmbtandroid/fmbttizen/fmbtx11:
+    - swipeOcrText added.
+    - startPos parameter added for all swipes.
+  * fmbtx11: typing enabled for many special characters.
+  * AAL:
+    - The compiler supports include paths.
+  * test generation:
+    - weight heuristic accepts both absolute and relative weights.
+  * Windows support first steps:
+    - It is possible (not easy) to build and run fMBT on Windows.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 5 Aug 2013 09:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 16 Aug 2013 15:42:00 +0300
 
 fmbt (0.9.5-1) unstable; urgency=low
 
