@@ -685,7 +685,7 @@ std::string to_string(Verdict::Verdict verdict)
 /* blocking getline, filter out log entries */
 ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,bool magic)
 {
-  gsize ret;
+  ssize_t ret;
   int loopc=0;
   bool log_redirect;
 
@@ -697,7 +697,7 @@ ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,bool ma
     gsize si;
     do {
       loopc++;
-      status=g_io_channel_read_line(stream,lineptr,&si,&ret,NULL);
+      status=g_io_channel_read_line(stream,lineptr,&si,(gsize*)&ret,NULL);
       *n=si;
     } while (status==G_IO_STATUS_AGAIN);
 

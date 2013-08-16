@@ -32,13 +32,13 @@ public:
   aal_remote(Log&l,std::string&);
   virtual ~aal_remote() {
     if (d_stdin) {
-      g_io_channel_close(d_stdin);
+      g_io_channel_shutdown(d_stdin,TRUE,NULL);
     }
     if (d_stdout) {
-      g_io_channel_close(d_stdout);
+      g_io_channel_shutdown(d_stdout,TRUE,NULL);
     }
     if (d_stderr) {
-      g_io_channel_close(d_stderr);
+      g_io_channel_shutdown(d_stderr,TRUE,NULL);
     }
     if (lts) {
       delete lts;

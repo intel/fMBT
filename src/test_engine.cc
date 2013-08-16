@@ -792,7 +792,7 @@ void Test_engine::interactive()
 	  num=std::atoi(s+2);
 	  int cnt=1;
 	  mismatch_tags.clear();
-	  int failing_tags = adapter.check_tags((int*)&num,cnt,mismatch_tags);
+	  adapter.check_tags((int*)&num,cnt,mismatch_tags);
 
 	  for(unsigned i=0;i<mismatch_tags.size();i++) {
 	    fprintf(stderr,"Tag %s (%i) fails\n",

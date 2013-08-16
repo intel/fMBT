@@ -212,20 +212,9 @@ void aal_remote::push() {
       if (status && r>0) {
         char* lts_content = new char[r+2];
         lts_content[r]=0;
-        //fread(lts_content,1,r,d_stdout);
-	//size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
-	/*
-GIOStatus           g_io_channel_read_chars             (GIOChannel *channel,
-                                                         gchar *buf,
-                                                         gsize count,
-                                                         gsize *bytes_read,
-                                                         GError **error);
-	*/
-
 	gsize bytes_read;
 	gsize total_read=0;
 	GIOStatus status;
-
 	do {
 	  bytes_read=0;
 	  status=g_io_channel_read_chars(d_stdout,lts_content+total_read,r-total_read,&bytes_read,NULL);
