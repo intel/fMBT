@@ -1167,6 +1167,9 @@ class _VisualLog:
         self._screenshotWidth = screenshotWidth
         self._thumbnailWidth = thumbnailWidth
         self._timeFormat = timeFormat
+        self._userFrameId = 0
+        self._userFunction = ""
+        self._userCallCount = 0
         eyenfinger.iSetDefaultDelayedDrawing(delayedDrawing)
         device.refreshScreenshot = self.refreshScreenshotLogger(device.refreshScreenshot)
         device.tap = self.tapLogger(device.tap)
@@ -1224,22 +1227,30 @@ class _VisualLog:
     def logBlock(self):
         ts = fmbt.getTestStep()
         an = fmbt.getActionName()
+        if ts == -1 or an == "undefined":
+            an = self._userFunction
+            ts = self._userCallCount
         if self._testStep != ts or self._actionName != an:
             if self._blockId != 0: self.write('</table></div></td></tr></table></ul>')
             actionHtml = '''\n\n<ul><li><table><tr><td>%s</td><td><div class="step"><a id="blockId%s" href="javascript:showHide('S%s')">%s. %s</a></div><div class="funccalls" id="S%s"><table>\n''' % (
-                self.htmlTimestamp(), self._blockId, self._blockId, ts, an, self._blockId)
+                self.htmlTimestamp(), self._blockId, self._blockId, ts, cgi.escape(an), self._blockId)
             self.write(actionHtml)
             self._testStep = ts
             self._actionName = an
             self._blockId += 1
 
     def logCall(self, img=None, width="", imgTip=""):
-        self.logBlock()
         callee = inspect.currentframe().f_back.f_code.co_name[:-4] # cut "WRAP"
         argv = inspect.getargvalues(inspect.currentframe().f_back)
         calleeArgs = str(argv.locals['args']) + " " + str(argv.locals['kwargs'])
-        callerFilename = inspect.currentframe().f_back.f_back.f_code.co_filename
-        callerLineno = inspect.currentframe().f_back.f_back.f_lineno
+        callerFrame = inspect.currentframe().f_back.f_back
+        callerFilename = callerFrame.f_code.co_filename
+        callerLineno = callerFrame.f_lineno
+        if len(self._callStack) == 0 and (self._userFunction == '<module>' or not self._userFrameId in [(id(se[0]), getattr(se[0].f_back, "f_lasti", None)) for se in inspect.stack()]):
+            self._userFunction = callerFrame.f_code.co_name
+            self._userCallCount += 1
+            self._userFrameId = (id(callerFrame), getattr(callerFrame.f_back, "f_lasti", None))
+        self.logBlock()
         imgHtml = self.imgToHtml(img, width, imgTip, "call:%s" % (callee,))
         t = datetime.datetime.now()
         callHtml = '''
