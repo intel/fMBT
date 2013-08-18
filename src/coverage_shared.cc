@@ -58,39 +58,43 @@ void Coverage_shared::receive_from_server()
       continue;
     }
 
-    // Prepare the 
-    if (!child->set_instance(clients[i])) {
-      status=false;
-      continue;
-    }
-
-    std::string name,option;
-    param_cut(std::string(s),name,option);
-    std::vector<std::string> p;
-    commalist(option,p);
-
-    for(unsigned j=0;status&&(j<p.size());j++) {
-      std::vector<std::string> at;
-      param_cut(p[j],name,option);
-      commalist(option,at);
-      if (at.size()!=2) {
+    if (read_data) {
+      
+      // Prepare the 
+      if (!child->set_instance(clients[i])) {
 	status=false;
 	continue;
       }
-      int act=atoi(at[0].c_str());
-      std::vector<int> tags;
-      if (!string2vector(log,at[1].c_str(),tags,0,INT_MAX,this)) {
-	status=false;
-      } else {
-	// We should pass tags...
-	model_cs->n=tags.size();
-	model_cs->pr=& tags[0];
-	child->execute(act);
+      
+      std::string name,option;
+      param_cut(std::string(s),name,option);
+      std::vector<std::string> p;
+      commalist(option,p);
+      
+      for(unsigned j=0;status&&(j<p.size());j++) {
+	std::vector<std::string> at;
+	param_cut(p[j],name,option);
+	commalist(option,at);
+	if (at.size()!=2) {
+	  status=false;
+	  continue;
+	}
+	int act=atoi(at[0].c_str());
+	std::vector<int> tags;
+	if (!string2vector(log,at[1].c_str(),tags,0,INT_MAX,this)) {
+	  status=false;
+	} else {
+	  // We should pass tags...
+	  model_cs->n=tags.size();
+	  model_cs->pr=& tags[0];
+	  child->execute(act);
+	}
       }
     }
-
   }
-  child->set_instance(0);  
+  if (read_data) {
+    child->set_instance(0);
+  }
   model_cs->pr=NULL;
 }
 
@@ -99,25 +103,30 @@ void Coverage_shared::communicate(int action)
   if (!status) {
     return;
   }
-  // First, send action
-  int *pr;
-  int n=model->getprops(&pr);
-
-  if (n) {
-    std::string tags;
-    for(int i=0;i<n;i++) {
-      if (i) {
-	tags=tags+" "+to_string(pr[i]);
-      } else {
-	tags=to_string(pr[i]);
+  if (write_data) {
+    // First, send action
+    int *pr;
+    int n=model->getprops(&pr);
+    
+    if (n) {
+      std::string tags;
+      for(int i=0;i<n;i++) {
+	if (i) {
+	  tags=tags+" "+to_string(pr[i]);
+	} else {
+	  tags=to_string(pr[i]);
+	}
       }
+      fprintf(d_stdin,"(%i,%s)\n",action,tags.c_str());
+    } else {
+      fprintf(d_stdin,"(%i,)\n",action);
     }
-    fprintf(d_stdin,"(%i,%s)\n",action,tags.c_str());
   } else {
-    fprintf(d_stdin,"(%i,)\n",action);
+    fprintf(d_stdin,"()\n");
   }
-
   receive_from_server();
 }
 
 FACTORY_DEFAULT_CREATOR(Coverage, Coverage_shared, "shared")
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_shared_wo, "shared_wo")
+FACTORY_DEFAULT_CREATOR(Coverage, Coverage_shared_poll, "shared_ro")

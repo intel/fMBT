@@ -36,7 +36,9 @@ public:
     remote(),
     push_depth(0),
     child(NULL),
-    model_cs(NULL)
+    model_cs(NULL),
+    write_data(true),
+    read_data(true)
   {
     std::vector<std::string> subs;
     commalist(params,subs);
@@ -52,7 +54,7 @@ public:
 	}
       }
       if (status) {
-	if (!child->set_instance(0)) {
+	if (read_data && !child->set_instance(0)) {
 	  status=false;
 	  errormsg="Coverage \""+ subs[1] +"\" doesn't support shared coverage";
 	  return;
@@ -188,7 +190,32 @@ protected:
   std::string prm;
 
   Model_cshared* model_cs;
+  bool write_data;
+  bool read_data;
+};
+
+class Coverage_shared_poll: public Coverage_shared {
+public:
+  Coverage_shared_poll(Log&l, std::string& params): Coverage_shared(l,params) {
+    write_data=false;
+  }
+
+  virtual ~Coverage_shared_poll() {
+  }
 
 };
+
+class Coverage_shared_wo: public Coverage_shared {
+public:
+  Coverage_shared_wo(Log&l, std::string& params): Coverage_shared(l,params) {
+    read_data=false;
+  }
+
+  virtual ~Coverage_shared_wo() {
+  }
+
+};
+
+
 
 #endif
