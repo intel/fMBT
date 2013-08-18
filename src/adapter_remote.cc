@@ -34,8 +34,9 @@
 bool Adapter_remote::init()
 {
   int _stdin,_stdout,_stderr;
+#if !GLIB_CHECK_VERSION(2, 35, 0)
   g_type_init ();
-
+#endif
   gchar **argv = NULL;
   gint argc;
   GError *gerr=NULL;
