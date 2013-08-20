@@ -453,7 +453,7 @@ def imageSize(imageFilename):
         return None, None
     return struct_bbox.right, struct_bbox.bottom
 
-def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=None, ocrArea=(0, 0, 1.0, 1.0)):
+def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=None, ocrArea=(0, 0, 1.0, 1.0), ocrPageSegModes=(3,)):
     """
     Read the contents of the given window or other source. If neither
     of windowId or source is given, reads the contents of active
@@ -478,6 +478,12 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
 
         capture      save image with read words highlighted to this
                      file. Default: None (nothing is saved).
+
+        ocrArea      (top, left, right, bottom) coordinates -
+                     area of the image to be read with OCR.
+
+        ocrPageSegModes
+                     tuple of integers, see tesseract -pagesegmodes
 
     Returns list of words detected by OCR from the read object.
     """
@@ -544,18 +550,20 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
             preprocess = (preprocess[:resize_m.start()] +
                           ("-resize %sx" % (newXResize,)) +
                           preprocess[resize_m.end():])
-    cmd = "convert %s %s %s %s && tesseract %s %s -l eng hocr" % (
-            _g_origImage, croparea, preprocess, _g_readImage,
-            _g_readImage, SCREENSHOT_FILENAME)
-    _, _g_hocr = _runcmd(cmd)
+    _g_words = {}
+    for psm in ocrPageSegModes:
+        cmd = "convert %s %s %s %s && tesseract %s %s -l eng -psm %s hocr" % (
+                _g_origImage, croparea, preprocess, _g_readImage,
+                _g_readImage, SCREENSHOT_FILENAME, psm)
+        _, _g_hocr = _runcmd(cmd)
 
-    hocr_filename = SCREENSHOT_FILENAME + ".html"
+        hocr_filename = SCREENSHOT_FILENAME + ".html"
 
-    if not os.access(hocr_filename, os.R_OK):
-        raise NoOCRResults("HOCR output missing. Tesseract OCR 3.02 or greater required.")
+        if not os.access(hocr_filename, os.R_OK):
+            raise NoOCRResults("HOCR output missing. Tesseract OCR 3.02 or greater required.")
 
-    # store every word and its coordinates
-    _g_words = _hocr2words(file(hocr_filename).read())
+        # store every word and its coordinates
+        _g_words.update(_hocr2words(file(hocr_filename).read()))
 
     # convert word coordinates to the unscaled pixmap
     try:
