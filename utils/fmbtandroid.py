@@ -372,7 +372,7 @@ class Device(fmbtgti.GUITestInterface):
 
         Return True if successful, otherwise False.
         """
-        callCommand = "service call phone 2 s16 %s" % (number,)
+        callCommand = "am start -a android.intent.action.CALL -d 'tel:%s'" % (number,)
         status, out, err = self.shellSOE(callCommand)
         if status != 0:
             _logFailedCommand("callNumber", callCommand, status, out, err)
