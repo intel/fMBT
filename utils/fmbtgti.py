@@ -40,10 +40,14 @@ import types
 import fmbt
 import eyenfinger
 
+# See imagemagick convert parameters.
 _OCRPREPROCESS =  [
     '-sharpen 5 -filter Mitchell %(zoom)s -sharpen 5 -level 60%%,60%%,3.0 -sharpen 5',
     '-sharpen 5 -level 90%%,100%%,3.0 -filter Mitchell -sharpen 5'
     ]
+
+# See tesseract -pagesegmode.
+_OCRPAGESEGMODES = [3]
 
 def _fmbtLog(msg):
     fmbt.fmbtlog("fmbtandroid: %s" % (msg,))
@@ -1120,7 +1124,7 @@ class Screenshot(object):
             self._ocrWordsArea = area
             for ppfilter in preprocess:
                 pp = ppfilter % { "zoom": "-resize %sx" % (self._screenSize[0] * 2) }
-                eyenfinger.iRead(source=self._filename, ocr=True, preprocess=pp, ocrArea=area)
+                eyenfinger.iRead(source=self._filename, ocr=True, preprocess=pp, ocrArea=area, ocrPageSegModes=_OCRPAGESEGMODES)
                 self._ocrWords[ppfilter] = eyenfinger._g_words
 
     def __str__(self):

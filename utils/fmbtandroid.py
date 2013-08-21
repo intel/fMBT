@@ -1362,14 +1362,14 @@ class _AndroidDeviceConnection:
         os.write(fd, shellCommand + "\n")
         os.close(fd)
         self._runAdb(["push", filename, remotename], 0)
-        cmd = "shell 'source %s >%s.out 2>%s.err; echo $? > %s.status" % ((remotename,)*4)
+        cmd = "source %s >%s.out 2>%s.err; echo $? > %s.status" % ((remotename,)*4)
         if self._shellSupportsTar:
             # do everything we can in one command to minimise adb
             # commands: execute command, record results, package,
             # print uuencoded package and remove remote temp files
-            cmd += "; cd %s; tar czf - %s.out %s.err %s.status | uuencode %s.tar.gz; rm -f %s*'" % (
+            cmd += "; cd %s; tar czf - %s.out %s.err %s.status | uuencode %s.tar.gz; rm -f %s*" % (
                 (os.path.dirname(remotename),) + ((os.path.basename(remotename),) * 5))
-            status, output, error = self._runAdb(cmd, 0)
+            status, output, error = self._runAdb(["shell", cmd], 0)
             file(filename, "w").write(output)
             uu.decode(filename, out_file=filename + ".tar.gz")
             import tarfile
@@ -1383,8 +1383,7 @@ class _AndroidDeviceConnection:
             os.remove(filename + ".tar.gz")
         else:
             # need to pull files one by one, slow.
-            cmd += "'"
-            self._runAdb(cmd, 0)
+            self._runAdb(["shell", cmd], 0)
             stdout = self._cat(remotename + ".out")
             stderr = self._cat(remotename + ".err")
             try: exitstatus = int(self._cat(remotename + ".status"))
