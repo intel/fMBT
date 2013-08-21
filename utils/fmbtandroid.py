@@ -372,7 +372,7 @@ class Device(fmbtgti.GUITestInterface):
 
         Return True if successful, otherwise False.
         """
-        callCommand = "service call phone 2 s16 %s" % (number,)
+        callCommand = "am start -a android.intent.action.CALL -d 'tel:%s'" % (number,)
         status, out, err = self.shellSOE(callCommand)
         if status != 0:
             _logFailedCommand("callNumber", callCommand, status, out, err)
@@ -1198,11 +1198,10 @@ class _AndroidDeviceConnection:
             self._runSetupCmd(c)
 
     def _resetMonkey(self, timeout=3, pollDelay=.25):
-        self._runSetupCmd(["shell", "monkey", "--port", "1080"], None)
-        time.sleep(pollDelay)
         endTime = time.time() + timeout
-
         while time.time() < endTime:
+            self._runSetupCmd(["shell", "monkey", "--port", "1080"], None)
+            time.sleep(pollDelay)
             self._runSetupCmd(["forward", "tcp:"+str(self._m_port), "tcp:1080"])
             try:
                 self._monkeySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
