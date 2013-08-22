@@ -117,6 +117,13 @@ extern "C" {
 
     void closeImage(void* image);
 
-    void bgrx2rgb(char* data, int width, int height);
+    /*
+     * bgrx2rgb - convert 4-bytes-per-pixel bitmap data (BGRx) to RGB.
+     *
+     * Return value:
+     *    0: all pixels are black
+     *    > 0: there is at least one non-black pixel
+     */
+    int bgrx2rgb(char* data, int width, int height);
 
 }

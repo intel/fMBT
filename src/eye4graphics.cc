@@ -532,14 +532,17 @@ void closeImage(void * image)
         delete static_cast<Image*>(image);
 }
 
-void bgrx2rgb(char* data, int width, int height)
+int bgrx2rgb(char* data, int width, int height)
 {
+    int has_nonblack_pixels = 0;
     for (int i = 0; i < height * width; ++i) {
         char tmp = data[4*i];
+        if (tmp != '\0') has_nonblack_pixels = 1;
         data[3*i] = data[4*i + 2];
         data[3*i + 1] = data[4*i + 1];
         data[3*i + 2] = tmp;
     }
+    return has_nonblack_pixels;
 }
 
 // make library:
