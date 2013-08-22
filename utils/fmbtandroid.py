@@ -184,15 +184,21 @@ else:
     _g_closeFds = True
     _g_adbExecutable = "adb"
 
-def _run(command, expectedExitStatus = None):
-    if type(command) == str: shell=True
-    else: shell=False
+def _run(command, expectedExitStatus = None, timeout=None):
+    if type(command) == str:
+        if timeout != None:
+            command = "timeout %s %s" % (timeout, command)
+        shell=True
+    else:
+        if timeout != None:
+            command = ["timeout", str(timeout)] + command
+        shell=False
     try:
         p = subprocess.Popen(command, shell=shell,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE,
                              close_fds=_g_closeFds)
-        if expectedExitStatus != None:
+        if expectedExitStatus != None or timeout != None:
             out, err = p.communicate()
         else:
             out, err = ('', None)
@@ -215,7 +221,7 @@ def _run(command, expectedExitStatus = None):
             if "error: device not found" in err:
                 raise AndroidDeviceNotFound(msg)
             else:
-                raise Exception(msg)
+                raise FMBTAndroidRunError(msg)
 
     return (exitStatus, out, err)
 
@@ -288,7 +294,7 @@ class Device(fmbtgti.GUITestInterface):
             listDevicesCommand = [_g_adbExecutable, "devices"]
             status, output, err = _run(listDevicesCommand, expectedExitStatus = [0, 127])
             if status == 127:
-                raise Exception('adb not found in PATH. Check your Android SDK installation.')
+                raise FMBTAndroidError('adb not found in PATH. Check your Android SDK installation.')
             outputLines = [l.strip() for l in output.splitlines()]
             try: deviceLines = outputLines[outputLines.index("List of devices attached")+1:]
             except: deviceLines = []
@@ -296,7 +302,7 @@ class Device(fmbtgti.GUITestInterface):
             deviceLines = [l for l in deviceLines if l.strip() != ""]
 
             if deviceLines == []:
-                raise Exception('No devices found with "%s"' % (listDevicesCommand,))
+                raise AndroidDeviceNotFound('No devices found with "%s"' % (listDevicesCommand,))
 
             potentialDevices = [line.split()[0] for line in deviceLines]
 
@@ -509,7 +515,7 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self.pressKey("KEYCODE_VOLUME_DOWN", **pressKeyKwArgs)
 
-    def reboot(self, reconnect=True, firstBoot=False):
+    def reboot(self, reconnect=True, firstBoot=False, timeout=120):
         """
         Reboot the device.
 
@@ -525,9 +531,13 @@ class Device(fmbtgti.GUITestInterface):
                   flashed. Requires that "adb root" works. The default
                   is False.
 
+          timeout (integer, optional)
+                  Timeout in seconds for reconnecting after reboot.
+                  The default is 120 s.
+
         Returns True on success, otherwise False.
         """
-        return self._conn.reboot(reconnect, firstBoot, 120)
+        return self._conn.reboot(reconnect, firstBoot, timeout)
 
     def reconnect(self):
         """
@@ -1174,7 +1184,7 @@ class _AndroidDeviceConnection:
         os.remove(filename)
         return contents
 
-    def _runAdb(self, command, expectedExitStatus=0):
+    def _runAdb(self, command, expectedExitStatus=0, timeout=None):
         if not self._stopOnError:
             expect = None
         else:
@@ -1183,13 +1193,16 @@ class _AndroidDeviceConnection:
             command = ["adb", "-s", self._serialNumber] + command
         else:
             command = ["adb", "-s", self._serialNumber, command]
-        return _run(command, expectedExitStatus = expect)
+        return _run(command, expectedExitStatus=expect, timeout=timeout)
 
     def _runSetupCmd(self, cmd, expectedExitStatus = 0):
         _adapterLog('setting up connections: "%s"' % (cmd,))
-        exitStatus, _, _ = self._runAdb(cmd, expectedExitStatus)
-        if exitStatus == 0: return True
-        else: return True
+        try:
+            self._runAdb(cmd, expectedExitStatus)
+        except (FMBTAndroidRunError, AndroidDeviceNotFound), e:
+            _adapterLog("connection setup problem: %s" % (e,))
+            return False
+        return True
 
     def _resetWindow(self):
         setupCommands = [["shell", "service" , "call", "window", "1", "i32", "4939"],
@@ -1200,9 +1213,13 @@ class _AndroidDeviceConnection:
     def _resetMonkey(self, timeout=3, pollDelay=.25):
         endTime = time.time() + timeout
         while time.time() < endTime:
-            self._runSetupCmd(["shell", "monkey", "--port", "1080"], None)
+            if not self._runSetupCmd(["shell", "monkey", "--port", "1080"], None):
+                time.sleep(pollDelay)
+                continue
             time.sleep(pollDelay)
-            self._runSetupCmd(["forward", "tcp:"+str(self._m_port), "tcp:1080"])
+            if not self._runSetupCmd(["forward", "tcp:"+str(self._m_port), "tcp:1080"]):
+                time.sleep(pollDelay)
+                continue
             try:
                 self._monkeySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self._monkeySocket.connect((self._m_host, self._m_port))
@@ -1254,8 +1271,10 @@ class _AndroidDeviceConnection:
         _adapterLog("rebooting " + self._serialNumber)
 
         if reconnect:
-            self._runAdb("wait-for-device")
             endTime = time.time() + timeout
+            status, _, _ = self._runAdb("wait-for-device", expectedExitStatus=None, timeout=timeout)
+            if status != 0:
+                raise AndroidDeviceNotFound('"timeout %s adb wait-for-device" status %s' % (timeout, status))
             while time.time() < endTime:
                 try:
                     if self._resetMonkey(timeout=1, pollDelay=1):
@@ -1264,8 +1283,9 @@ class _AndroidDeviceConnection:
                     pass
                 time.sleep(1)
             else:
-                _adapterLog("reboot: reconnecting to " + self._serialNumber + " failed")
-                return False
+                msg = "reboot: reconnecting to " + self._serialNumber + " failed"
+                _adapterLog(msg)
+                raise AndroidConnectionError(msg)
             self._resetWindow()
         return True
 
@@ -1415,6 +1435,7 @@ class _AndroidDeviceConnection:
             _adapterLog("recvViewData: window socket error: %s" % (msg,))
             if retry > 0:
                 self._resetWindow()
+                time.sleep(0.5)
                 return self.recvViewData(retry=retry-1)
             else:
                 msg = "recvViewData: cannot read window socket"
@@ -1425,6 +1446,7 @@ class _AndroidDeviceConnection:
             except: pass
 
 class FMBTAndroidError(Exception): pass
+class FMBTAndroidRunError(FMBTAndroidError): pass
 class AndroidConnectionError(FMBTAndroidError): pass
 class AndroidConnectionLost(AndroidConnectionError): pass
 class AndroidDeviceNotFound(AndroidConnectionError): pass
