@@ -1,8 +1,17 @@
-fmbt (0.10.1-0.rc0) unstable; urgency=low
+fmbt (0.10.1-1) unstable; urgency=low
 
-  * Development version.
+  * Bugfix release.
+  * fmbtandroid/fmbttizen/fmbtx11:
+    - fixed loading eye4graphics.so
+    - fmbtgti._OCRPAGESEGMODES improves OCR
+  * fmbttizen: retry XGetImage on blank frame.
+  * fmbtandroid
+    - reboot() does not hang (wait-for-device timed out)
+    - callNumber() works on Android 4.3.
+    - shellSOE() fixed.
+    - wake() added
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 20 Aug 2013 11:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 26 Aug 2013 15:42:00 +0300
 
 fmbt (0.10-1) unstable; urgency=low
 
