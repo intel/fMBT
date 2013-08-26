@@ -27,6 +27,7 @@
 import cgi
 import ctypes
 import datetime
+import distutils.sysconfig
 import gc
 import inspect
 import math
@@ -116,7 +117,7 @@ def _edgeDistanceInDirection((x, y), (width, height), direction):
     return min(distTopBottom, distLeftRight)
 
 ### Binding to eye4graphics.so
-_libpath = ["", "." + os.path.sep]
+_libpath = ["", ".", distutils.sysconfig.get_python_lib(plat_specific=1)]
 suffix=".so"
 if sys.platform == "win32":
     suffix=".dll"
