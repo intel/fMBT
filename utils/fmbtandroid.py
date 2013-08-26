@@ -765,6 +765,12 @@ class Device(fmbtgti.GUITestInterface):
                          self.verifyText, (text,), {'partial': partial},
                          **waitKwArgs)
 
+    def wake(self):
+        """
+        Force the device to wake up.
+        """
+        return self._conn.sendWake()
+
     def _loadDeviceAndTestINIs(self, homeDir, deviceName, iniFile):
         if deviceName != None:
             _deviceIniFilename = homeDir + os.sep + "etc" + os.sep + deviceName + ".ini"
@@ -1354,6 +1360,9 @@ class _AndroidDeviceConnection:
                                 (text, word))
                     return False
         return True
+
+    def sendWake(self):
+        return self._monkeyCommand("wake")[0]
 
     def recvScreenshot(self, filename):
         """
