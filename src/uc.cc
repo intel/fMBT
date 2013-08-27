@@ -77,7 +77,9 @@ int main(int argc,char * const argv[])
   OutputFormat* of=NULL;
 
 #ifndef DROI
+#if !GLIB_CHECK_VERSION(2, 35, 0)
   g_type_init ();
+#endif
 #endif
 
   static struct option long_opts[] = {
