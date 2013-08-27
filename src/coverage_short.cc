@@ -21,7 +21,7 @@
 #include "model.hh"
 #include "helper.hh"
 
-Coverage_Short::Coverage_Short(Log& l, std::string& _params) :
+Coverage_Short::Coverage_Short(Log& l,const std::string& _params) :
   Coverage(l), params(_params),props_total(0)
 {
   

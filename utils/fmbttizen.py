@@ -610,8 +610,11 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
         """
         return self._agentCmd("bl %s" % (timeout,))[0]
 
-    def recvScreenshot(self, filename):
-        rv, img = self._agentCmd("ss")
+    def recvScreenshot(self, filename, blankFrameRetry=3):
+        if blankFrameRetry > 5:
+            rv, img = self._agentCmd("ss")
+        else:
+            rv, img = self._agentCmd("ss R") # resetXConnection
         if rv == False:
             return False
         try:
@@ -622,7 +625,9 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
         if len(data) != width * height * 4:
             raise FMBTTizenError("Image data size mismatch.")
 
-        fmbtgti.eye4graphics.bgrx2rgb(data, width, height);
+        if fmbtgti.eye4graphics.bgrx2rgb(data, width, height) == 0 and blankFrameRetry > 0:
+            time.sleep(0.5)
+            return self.recvScreenshot(filename, blankFrameRetry - 1)
 
         # TODO: use libimagemagick directly to save data to png?
         ppm_header = "P6\n%d %d\n%d\n" % (width, height, 255)
@@ -789,10 +794,16 @@ for _l in file("/proc/bus/input/devices"):
         except Exception, e: pass
 
 # Connect to X server, get root window size for screenshots
-display        = libX11.XOpenDisplay(X_NULL)
-current_screen = libX11.XDefaultScreen(display)
-root_window    = libX11.XRootWindow(display, current_screen)
-X_AllPlanes    = libX11.XAllPlanes()
+display = None
+def resetXConnection():
+    global display, current_screen, root_window, X_AllPlanes
+    if display != None:
+        libX11.XCloseDisplay(display)
+    display        = libX11.XOpenDisplay(X_NULL)
+    current_screen = libX11.XDefaultScreen(display)
+    root_window    = libX11.XRootWindow(display, current_screen)
+    X_AllPlanes    = libX11.XAllPlanes()
+resetXConnection()
 
 ref            = ctypes.byref
 __rw           = ctypes.c_uint(0)
@@ -1168,6 +1179,8 @@ if __name__ == "__main__":
                 rv, _ = subAgentCommand("root", "tizen", cmd)
             write_response(rv, _)
         elif cmd.startswith("ss"): # save screenshot
+            if "R" in cmd:
+                resetXConnection()
             rv, compressedImage = takeScreenshot()
             write_response(rv, compressedImage)
         elif cmd.startswith("es "): # execute shell

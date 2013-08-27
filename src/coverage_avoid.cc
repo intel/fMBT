@@ -29,7 +29,7 @@ Coverage_avoid::~Coverage_avoid()
   }
 }
 
-Coverage_avoid::Coverage_avoid(Log& l, std::string& params) :
+Coverage_avoid::Coverage_avoid(Log& l,const std::string& params) :
   Coverage(l),
   depth(0)
 {

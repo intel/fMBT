@@ -171,7 +171,9 @@ int main(int argc,char * const argv[])
   };
 
 #ifndef DROI
+#if !GLIB_CHECK_VERSION(2, 35, 0)
   g_type_init ();
+#endif
 #endif
 
   while ((c = getopt_long (argc, argv, "heVo:", long_opts, NULL)) != -1)

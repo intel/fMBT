@@ -98,7 +98,7 @@ public:
     float v;
   };
 
-  Coverage_Min(Log& l, std::string& params,unit* _u);
+  Coverage_Min(Log& l,const std::string& params,unit* _u);
   virtual ~Coverage_Min() {
     delete u;
     for(unsigned i=0;i<coverages.size();i++) {

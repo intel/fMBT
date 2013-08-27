@@ -31,7 +31,7 @@
 
 class Coverage_shared: public Coverage, public remote {
 public:
-  Coverage_shared(Log&l, std::string& params): 
+  Coverage_shared(Log&l,const std::string& params): 
     Coverage(l),
     remote(),
     push_depth(0),

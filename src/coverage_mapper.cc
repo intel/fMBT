@@ -37,7 +37,7 @@ extern D_ParserTables parser_tables_mrules;
 
 extern Rules* amobj;
 
-Coverage_Mapper::Coverage_Mapper(Log& l, std::string params) :
+Coverage_Mapper::Coverage_Mapper(Log& l,const std::string& params) :
   Coverage(l),depth(0)
 {
   load(params);
@@ -243,10 +243,9 @@ void Coverage_Mapper::set_model(Model* _model)
   }
 }
 
-bool Coverage_Mapper::load(std::string& name)
+void Coverage_Mapper::load(const std::string& name)
 {
   load_name = name;
-  return true;
 }
 
 bool Coverage_Mapper::pload(std::string& name)

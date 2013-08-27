@@ -40,7 +40,7 @@ class Coverage_Short: public Coverage {
 
 public:
   class unit;
-  Coverage_Short(Log& l, std::string& params);
+  Coverage_Short(Log& l,const std::string& params);
 
   virtual void push();
   virtual void pop();
