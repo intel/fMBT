@@ -31,7 +31,7 @@ class Log;
 
 class Heuristic: public Writable {
 public:
-  Heuristic(Log& l, std::string params = "");
+  Heuristic(Log& l);
   virtual ~Heuristic();
 
   /** \brief execute an action, returns true on success

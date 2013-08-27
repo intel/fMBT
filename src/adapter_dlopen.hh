@@ -20,7 +20,7 @@
 
 class Adapter_dlopen: public Adapter {
 public:
-  Adapter_dlopen(Log& l, std::string params = "");
+  Adapter_dlopen(Log& l,const std::string& params);
   virtual ~Adapter_dlopen();
   virtual void set_actions(std::vector<std::string>* _actions);
   virtual bool init();

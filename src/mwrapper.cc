@@ -29,7 +29,7 @@ Mwrapper::~Mwrapper()
 
 
 Mwrapper::Mwrapper(Log&l, aal* _model):
-  Model(l), model(_model)
+  Model(l,""), model(_model)
 {
   if (model) {
     model->ref();

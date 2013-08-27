@@ -25,7 +25,7 @@ int _g_simulation_depth_hint;
 
 FACTORY_IMPLEMENTATION(Model)
 
-Model::Model(Log&l, std::string params_):
+Model::Model(Log&l,const std::string& params_):
 log(l), parent(NULL), params(params_)
 {
   log.ref();

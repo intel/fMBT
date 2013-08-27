@@ -32,7 +32,7 @@ class Writable;
 
 class Model: public Writable, public Alphabet {
 public:
-  Model(Log&l, std::string params_ = "");
+  Model(Log&l,const std::string& params_);
   virtual ~Model();
 
   //! Returns names of all actions available.
