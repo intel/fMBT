@@ -29,7 +29,7 @@
 
 class Heuristic_greedy : public Heuristic {
 public:
-  Heuristic_greedy(Log& l, std::string params = "");
+  Heuristic_greedy(Log& l,const std::string& params);
 
   virtual bool execute(int action);
 

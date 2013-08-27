@@ -22,7 +22,7 @@
 
 class Heuristic_include : public Heuristic_include_base {
 public:
-  Heuristic_include(Log&l, std::string params):
+  Heuristic_include(Log&l,const std::string& params):
     Heuristic_include_base(l,params,false) {
   }
 };
@@ -30,12 +30,12 @@ public:
 class Heuristic_exclude : public Heuristic_include_base {
 public:
 
-  Heuristic_exclude(Log&l, std::string params): Heuristic_include_base(l,params,true) {
+  Heuristic_exclude(Log&l,const std::string& params): Heuristic_include_base(l,params,true) {
   }
 };
 
 
-Heuristic_include_base::Heuristic_include_base(Log& l, std::string params,bool invert) :
+Heuristic_include_base::Heuristic_include_base(Log& l,const std::string& params,bool invert) :
   Heuristic(l), exclude(invert),child(NULL),hr(l,""),mf(l,params,invert)
 {
   if (mf.fa.size()>=2) {

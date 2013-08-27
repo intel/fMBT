@@ -20,7 +20,7 @@
 #include "heuristic_random.hh"
 #include <stdlib.h>
 
-Heuristic_random::Heuristic_random(Log& l, std::string params) :
+Heuristic_random::Heuristic_random(Log& l,const std::string& params) :
   Heuristic(l)
 {
   unsigned int random_seed = 0;

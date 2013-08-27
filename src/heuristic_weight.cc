@@ -30,7 +30,7 @@ extern "C" {
 
 extern Heuristic_weight* Hw;
 
-Heuristic_weight::Heuristic_weight(Log& l, std::string params) :
+Heuristic_weight::Heuristic_weight(Log& l,const std::string& params) :
   Heuristic(l),prm(params)
 {
 }
