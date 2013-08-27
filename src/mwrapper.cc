@@ -27,8 +27,7 @@ Mwrapper::~Mwrapper()
   }
 }
 
-
-Mwrapper::Mwrapper(Log&l, aal* _model):
+Mwrapper::Mwrapper(Log&l,const std::string& params, aal* _model):
   Model(l,""), model(_model)
 {
   if (model) {

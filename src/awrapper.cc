@@ -31,7 +31,7 @@ Awrapper::~Awrapper()
   }
 }
 
-Awrapper::Awrapper(Log&l, aal* _ada):
+Awrapper::Awrapper(Log&l,const std::string& params, aal* _ada):
   Adapter(l), ada(_ada) {
   if (ada==NULL) {
     status=false;

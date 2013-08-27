@@ -432,7 +432,7 @@ namespace {
     aal* al=al_helper(l,params);
 
     if (al) {
-      return new Awrapper(l,al);
+      return new Awrapper(l,params,al);
     }
     return NULL;
   }
@@ -441,7 +441,7 @@ namespace {
     aal* al=al_helper(l,params);
 
     if (al) {
-      return new Mwrapper(l,al);
+      return new Mwrapper(l,params,al);
     }
     return NULL;
   }
