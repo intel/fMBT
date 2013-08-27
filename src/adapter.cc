@@ -26,7 +26,7 @@ struct timeval Adapter::current_time;
 int Adapter::sleeptime = 0;
 FACTORY_IMPLEMENTATION(Adapter)
 
-Adapter::Adapter(Log& l) :
+Adapter::Adapter(Log& l,const std::string& _param) :
 log(l), actions(NULL), tags(NULL), parent(NULL)
 {
   log.ref();
