@@ -72,7 +72,7 @@ History_log::History_log(Log& l, std::string params) :
 
 History_log::~History_log()
 {
-  if (act) 
+  if (act)
     free(act);
   if (tag)
     free(tag);
@@ -102,7 +102,7 @@ void History_log::processNode(xmlTextReaderPtr reader)
       }
     }
   }
-  
+
   if (!alphabet_done) {
     if ((xmlTextReaderDepth(reader)==2) &&
 	(strcmp((const char*)name,"action_name")==0)) {
@@ -150,7 +150,7 @@ void History_log::processNode(xmlTextReaderPtr reader)
     log.debug("FOUND ACT %s\n",act);
     send_action();
   }
-  
+
   if ((xmlTextReaderDepth(reader)==3) &&
       (strcmp((const char*)name,"tags")==0)) {
     // tags
@@ -160,7 +160,7 @@ void History_log::processNode(xmlTextReaderPtr reader)
     tag=(char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"enabled");
     log.debug("FOUND TAG %s\n",tag);
   }
-  
+
   if ((xmlTextReaderDepth(reader)==3) &&
       (strcmp((const char*)name,"stop")==0)) {
     log.debug("STOP\n");
@@ -215,7 +215,7 @@ Alphabet* History_log::set_coverage(Coverage* cov,
   }
   xmlCleanupParser();
   xmlMemoryDump();
- 
+
   return myes;
 }
 
@@ -225,7 +225,7 @@ void History_log::send_action()
   std::string t(tag);
 
   std::vector<std::string> props;
-  
+
   if (t!="") {
     strvec(props,t,separator);
     for(unsigned i=0;i<props.size();i++) {
@@ -261,22 +261,22 @@ bool History_log::send_action(std::string& act,
 	  c->history(0,p,Verdict::PASS);
 	  return true;
 	}
-	
+
 	if (act=="fail") {
 	  c->history(0,p,Verdict::FAIL);
 	  return true;
 	}
-	
+
 	if (act=="inconclusive") {
 	  c->history(0,p,Verdict::INCONCLUSIVE);
 	  return true;
 	}
-	
+
 	if (act=="error") {
 	  c->history(0,p,Verdict::W_ERROR);
 	  return true;
 	}
-	
+
 	if (act=="undefined") {
 	  c->history(0,p,Verdict::UNDEFINED);
 	  return true;
@@ -308,10 +308,10 @@ bool History_log::send_action(std::string& act,
       if (!model_from_log) {
 	Model* m=(Model*)alp;
 	if (model_getactions) {
-	  int** act;
+	  int** act = 0;
 	  m->getActions(act);
 	}
-	
+
 	if (model_execute) {
 	  m->execute(action);
 	}
@@ -326,7 +326,7 @@ bool History_log::send_action(std::string& act,
     }
   }
 
-  return false;  
+  return false;
 }
 
 FACTORY_DEFAULT_CREATOR(History, History_log, "log")
