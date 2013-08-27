@@ -114,7 +114,7 @@ void Model::setparent(Model* m)
   parent = m;
 }
 
-Model* new_model(Log& l, std::string& s) {
+Model* new_model(Log& l,const std::string& s) {
   std::string name,option;
   param_cut(s,name,option);
   Model* ret=ModelFactory::create(l, name, option);

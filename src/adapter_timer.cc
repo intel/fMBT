@@ -26,7 +26,7 @@
 #include <time.h>
 #include <math.h>
 
-Adapter_timer::Adapter_timer(Log& l,std::string params): Adapter::Adapter(l)
+Adapter_timer::Adapter_timer(Log& l,const std::string& params): Adapter::Adapter(l)
 {
   
 }

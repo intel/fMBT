@@ -22,7 +22,7 @@
 
 class Adapter_remote: public Adapter, public remote {
 public:
-  Adapter_remote(Log& l, std::string& params, bool encode=true);
+  Adapter_remote(Log& l,const std::string& params, bool encode=true);
   virtual ~Adapter_remote() {
     if (d_stdin) {
       g_io_channel_shutdown(d_stdin,TRUE,NULL);

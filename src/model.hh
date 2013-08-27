@@ -112,6 +112,6 @@ protected:
 
 FACTORY_DECLARATION(Model)
 
-Model* new_model(Log& l, std::string& s);
+Model* new_model(Log& l,const std::string& s);
 
 #endif

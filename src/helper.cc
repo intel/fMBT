@@ -193,9 +193,9 @@ void remove_force(std::string& s,char only)
   s=ss;
 }
 
-std::string removehash(std::string& s);
+std::string removehash(const std::string& s);
 
-std::string filetype(std::string& _s)
+std::string filetype(const std::string& _s)
 {
   std::string s=removehash(_s);
   size_t found=s.find_last_of(".");
@@ -276,7 +276,7 @@ void escape_string(std::string& msg)
   escape_free(s);
 }
 
-std::string removehash(std::string& s)
+std::string removehash(const std::string& s)
 {
   unsigned long cutpos = s.find_last_of("#");
   if (cutpos == s.npos) {

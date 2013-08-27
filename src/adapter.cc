@@ -26,7 +26,7 @@ struct timeval Adapter::current_time;
 int Adapter::sleeptime = 0;
 FACTORY_IMPLEMENTATION(Adapter)
 
-Adapter::Adapter(Log& l, std::string params) :
+Adapter::Adapter(Log& l) :
 log(l), actions(NULL), tags(NULL), parent(NULL)
 {
   log.ref();
@@ -129,7 +129,7 @@ const char* Adapter::getUActionName(int action)
   return unames[action];
 }
 
-Adapter* new_adapter(Log& l, std::string& s) {
+Adapter* new_adapter(Log& l,const std::string& s) {
   std::string name,option;
   param_cut(s,name,option);
   Adapter* ret=AdapterFactory::create(l, name, option);
