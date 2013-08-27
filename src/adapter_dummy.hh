@@ -20,7 +20,7 @@
 
 class Adapter_dummy: public Adapter {
 public:
-  Adapter_dummy(Log& l, std::string params);
+  Adapter_dummy(Log& l,const std::string& params);
 
   virtual void execute(std::vector<int>& action);
   virtual int  observe(std::vector<int> &action,bool block=false);

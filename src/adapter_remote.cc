@@ -108,7 +108,7 @@ std::string Adapter_remote::stringify()
   return t.str();
 }
 
-Adapter_remote::Adapter_remote(Log& l, std::string& params, bool encode) :
+Adapter_remote::Adapter_remote(Log& l,const std::string& params, bool encode) :
   Adapter::Adapter(l),remote(), read_buf(NULL), read_buf_pos(0),
   d_stdin(NULL), d_stdout(NULL), d_stderr(NULL),
   urlencode(encode)

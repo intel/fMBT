@@ -25,7 +25,7 @@ int _g_simulation_depth_hint;
 
 FACTORY_IMPLEMENTATION(Model)
 
-Model::Model(Log&l, std::string params_):
+Model::Model(Log&l,const std::string& params_):
 log(l), parent(NULL), params(params_)
 {
   log.ref();
@@ -114,7 +114,7 @@ void Model::setparent(Model* m)
   parent = m;
 }
 
-Model* new_model(Log& l, std::string& s) {
+Model* new_model(Log& l,const std::string& s) {
   std::string name,option;
   param_cut(s,name,option);
   Model* ret=ModelFactory::create(l, name, option);

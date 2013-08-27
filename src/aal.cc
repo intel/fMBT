@@ -64,8 +64,6 @@ void aal::log(const char* format, ...)
 }
 
 namespace {
-
-
   aal* al_helper() {
 
     if (aal::storage==NULL) {
@@ -78,20 +76,20 @@ namespace {
     return aal::storage->begin()->second;
   }
 
-  Adapter* adapter_creator(Log& l, std::string params = "") {
+  Adapter* adapter_creator(Log& l,std::string params) {
     aal* al=al_helper();
 
     if (al) {
-      return new Awrapper(l,params,al);
+      return new Awrapper(l,al);
     }
     return NULL;
   }
 
-  Model* model_creator(Log& l, std::string params) {
+  Model* model_creator(Log& l,std::string params) {
     aal* al=al_helper();
 
     if (al) {
-      return new Mwrapper(l,params,al);
+      return new Mwrapper(l,al);
     }
     return NULL;
   }

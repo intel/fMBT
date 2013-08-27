@@ -26,7 +26,7 @@
 
 extern int _g_simulation_depth_hint;
 
-Heuristic_greedy::Heuristic_greedy(Log& l, std::string params) :
+Heuristic_greedy::Heuristic_greedy(Log& l,const std::string& params) :
   Heuristic(l), m_search_depth(0), m_burst(false)
 {
   m_search_depth = atoi(params.c_str());

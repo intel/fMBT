@@ -10,7 +10,7 @@
 
 #define debugprint(args ...) fprintf(stderr, args)
 
-Heuristic_minerror::Heuristic_minerror(Log& l, std::string params):
+Heuristic_minerror::Heuristic_minerror(Log& l,const std::string& params):
     Heuristic::Heuristic(l, params),
     m_search_depth(6),
     m_key_action(-1)

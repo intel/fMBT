@@ -22,7 +22,7 @@
 #include <sstream>
 #include <cstdlib>
 
-Adapter_model::Adapter_model(Log& l, std::string params) :
+Adapter_model::Adapter_model(Log& l,const std::string& params) :
   Adapter::Adapter(l)
 {
   model = new_model(log,params);

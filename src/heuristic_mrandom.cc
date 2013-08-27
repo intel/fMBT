@@ -29,7 +29,7 @@ Heuristic_mrandom::~Heuristic_mrandom()
   }
 }
 
-Heuristic_mrandom::Heuristic_mrandom(Log& l, std::string params) :
+Heuristic_mrandom::Heuristic_mrandom(Log& l,const std::string& params) :
   Heuristic(l)
 {
   float total=0;

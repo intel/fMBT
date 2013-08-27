@@ -23,7 +23,7 @@
 #include <cstdlib>
 #include "conf.hh"
 
-Adapter_dummy::Adapter_dummy(Log& l, std::string params) :
+Adapter_dummy::Adapter_dummy(Log& l,const std::string& params) :
   Adapter::Adapter(l), tau(0), sil(0)
 {
   std::vector<std::string> s;

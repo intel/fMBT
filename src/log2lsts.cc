@@ -40,7 +40,7 @@ void error(int exitval, int dontcare, const char* format, ...)
 
 class ltscoverage: public Coverage {
 public:
-  ltscoverage(Log&l,History_log& _h, bool _verd): Coverage(l), prop_count(0), verd(_verd), lts(l), hl(_h)
+  ltscoverage(Log&l,History_log& _h, bool _verd): Coverage(l), prop_count(0), verd(_verd), lts(l,""), hl(_h)
   {}
   virtual ~ltscoverage() {}
   virtual void push() {}

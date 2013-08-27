@@ -21,7 +21,7 @@
 
 class Adapter_model: public Adapter {
 public:
-  Adapter_model(Log& l, std::string params);
+  Adapter_model(Log& l,const std::string& params);
   virtual bool init();
 
   virtual void execute(std::vector<int> &action);

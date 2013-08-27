@@ -41,7 +41,7 @@
     return;               \
   }
 
-Adapter_dlopen::Adapter_dlopen(Log& log, std::string params) :
+Adapter_dlopen::Adapter_dlopen(Log& log,const std::string& params) :
   Adapter::Adapter(log),
   loaded_adapter(NULL),
   library_handle(NULL)

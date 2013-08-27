@@ -49,7 +49,7 @@ class Adapter: public Writable {
 public:
   static struct timeval current_time;
   static int sleeptime;
-  Adapter(Log& l, std::string params = "");
+  Adapter(Log& l);
   virtual ~Adapter();
   virtual void set_actions(std::vector<std::string>* _actions);
   virtual void set_tags(std::vector<std::string>* _tags);
@@ -139,6 +139,6 @@ FACTORY_DECLARATION(Adapter)
   }                                                \
 }
 
-Adapter* new_adapter(Log&, std::string&);
+Adapter* new_adapter(Log&,const std::string&);
 
 #endif

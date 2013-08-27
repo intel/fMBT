@@ -31,7 +31,7 @@
 
 class Heuristic_include_base : public Heuristic {
 public:
-  Heuristic_include_base(Log& l, std::string params,bool invert);
+  Heuristic_include_base(Log& l,const std::string& params,bool invert);
   virtual ~Heuristic_include_base() {
     if (child) {
       delete child;
