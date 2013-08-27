@@ -219,7 +219,7 @@ void aal_remote::push() {
 	  bytes_read=0;
 	  status=g_io_channel_read_chars(d_stdout,lts_content+total_read,r-total_read,&bytes_read,NULL);
 	  total_read+=bytes_read;
-	} while (total_read<r && status != G_IO_STATUS_ERROR &&
+	} while ((signed)total_read<r && status != G_IO_STATUS_ERROR &&
 		 status != G_IO_STATUS_EOF );
 	_log.debug("Got %i bytes strlen %i",total_read,strlen(lts_content));
         lts=new Lts(_log,std::string("remote.lts#")+lts_content);
@@ -428,11 +428,11 @@ namespace {
     return al;
   }
 
-  Adapter* adapter_creator(Log& l, std::string params = "") {
+  Adapter* adapter_creator(Log& l, std::string params) {
     aal* al=al_helper(l,params);
 
     if (al) {
-      return new Awrapper(l,params,al);
+      return new Awrapper(l,al);
     }
     return NULL;
   }
@@ -441,7 +441,7 @@ namespace {
     aal* al=al_helper(l,params);
 
     if (al) {
-      return new Mwrapper(l,params,al);
+      return new Mwrapper(l,al);
     }
     return NULL;
   }
