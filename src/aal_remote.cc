@@ -212,16 +212,16 @@ void aal_remote::push() {
       if (status && r>0) {
         char* lts_content = new char[r+2];
         lts_content[r]=0;
-	gsize bytes_read;
-	gsize total_read=0;
-	GIOStatus status;
-	do {
-	  bytes_read=0;
-	  status=g_io_channel_read_chars(d_stdout,lts_content+total_read,r-total_read,&bytes_read,NULL);
-	  total_read+=bytes_read;
-	} while (total_read<r && status != G_IO_STATUS_ERROR &&
-		 status != G_IO_STATUS_EOF );
-	_log.debug("Got %i bytes strlen %i",total_read,strlen(lts_content));
+        gsize bytes_read;
+        gsize total_read=0;
+        GIOStatus status;
+        do {
+          bytes_read=0;
+          status=g_io_channel_read_chars(d_stdout,lts_content+total_read,r-total_read,&bytes_read,NULL);
+          total_read+=bytes_read;
+        } while ((long)total_read < r && status != G_IO_STATUS_ERROR &&
+                 status != G_IO_STATUS_EOF );
+        _log.debug("Got %i bytes strlen %i",total_read,strlen(lts_content));
         lts=new Lts(_log,std::string("remote.lts#")+lts_content);
         delete[] lts_content;
         if (lts && lts->status && lts->init() && lts->reset() && lts->status) {
