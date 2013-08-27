@@ -25,7 +25,7 @@
 
 class Coverage_trace: public Coverage {
 public:
-  Coverage_trace(Log&l,std::string& _params);
+  Coverage_trace(Log&l,const std::string& _params);
 
   virtual ~Coverage_trace();
   virtual void push();

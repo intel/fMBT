@@ -25,7 +25,7 @@
 
 class Coverage_uniq: public Coverage {
 public:
-  Coverage_uniq(Log& l, std::string params = "");
+  Coverage_uniq(Log& l,const std::string& params);
   virtual ~Coverage_uniq();
   virtual std::string stringify();
 

@@ -20,7 +20,7 @@
 #include "coverage_uniq.hh"
 #include <algorithm>
 
-Coverage_uniq::Coverage_uniq(Log& l,std::string params) :Coverage(l)
+Coverage_uniq::Coverage_uniq(Log& l,const std::string& params) :Coverage(l)
 {
   std::string lens,sub;
   // Hmm. Parameters?

@@ -21,7 +21,7 @@
 #include "model.hh"
 #include "helper.hh"
 
-Coverage_Min::Coverage_Min(Log& l, std::string& _params,unit* _u) :
+Coverage_Min::Coverage_Min(Log& l,const std::string& _params,unit* _u) :
   Coverage(l), params(_params),u(_u)
 {
   std::vector<std::string> s;
@@ -128,17 +128,17 @@ void Coverage_Min::set_model(Model* _model) {
 }
 
 namespace {
-  Coverage* min_creator_func( Log& log, std::string params= "")
+  Coverage* min_creator_func( Log& log,const std::string params)
   {
     return new Coverage_Min(log, params,new Coverage_Min::unit_min);
   }
 
-  Coverage* max_creator_func( Log& log, std::string params= "")
+  Coverage* max_creator_func( Log& log, std::string params)
   {
     return new Coverage_Min(log, params,new Coverage_Min::unit_max);
   }
 
-  Coverage* sum_creator_func( Log& log, std::string params= "")
+  Coverage* sum_creator_func( Log& log, std::string params)
   {
     return new Coverage_Min(log, params,new Coverage_Min::unit_sum);
   }

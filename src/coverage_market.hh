@@ -50,7 +50,7 @@ class Coverage_Market: public Coverage {
 
 public:
   class unit;
-  Coverage_Market(Log& l, std::string& _params);
+  Coverage_Market(Log& l,const std::string& _params);
   virtual ~Coverage_Market() {
     for(size_t i=0;i<Units.size();i++) {
       delete Units[i];
