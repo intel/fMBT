@@ -266,10 +266,18 @@ def serve_connection(conn):
         assert type(tags) == list
 
         with client_lock:
-            client_a2i[client_id] = {a:i for i, a in enumerate(actions)}
-            client_i2a[client_id] = {i:a for i, a in enumerate(actions)}
-            client_t2i[client_id] = {t:i for i, t in enumerate(tags)}
-            client_i2t[client_id] = {i:t for i, t in enumerate(tags)}
+            client_a2i[client_id] = {}
+            client_i2a[client_id] = {}
+            for i, a in enumerate(actions):
+                client_a2i[client_id][a] = i
+                client_i2a[client_id][i] = a
+
+            client_t2i[client_id] = {}
+            client_i2t[client_id] = {}
+            for i, t in enumerate(tags):
+                client_t2i[client_id][t] = i
+                client_i2t[client_id][i] = t
+
             client_unsent[client_id] = {}
             all_executions[client_id] = []
             queue_executions_so_far(client_id, all_executions)
