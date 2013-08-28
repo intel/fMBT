@@ -15,95 +15,41 @@
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
 """
-This is library implements fMBT GUITestInterface for Windows.
-
+This is library implements fMBT GUITestInterface for VNC.
 """
 
 import fmbt
 import fmbtgti
 
-import threading
-import Queue
-import logging
-
-from twisted.internet import reactor
-from twisted.internet.defer import maybeDeferred
-from twisted.python.log import PythonLoggingObserver
-from twisted.python.failure import Failure
-
-from vncdotool import command
-from vncdotool.client import VNCDoToolFactory, VNCDoToolClient
-
-
-class ThreadedVNCClientProxy(object):
-
-    def __init__(self, factory):
-        self.factory = factory
-        self.queue = Queue.Queue()
-
-    def connect(self, host, port=5900):
-        reactor.callWhenRunning(reactor.connectTCP, host, port, self.factory)
-
-    def start(self):
-        self.thread = threading.Thread(target=reactor.run, name='Twisted',
-                                       kwargs={'installSignalHandlers': False})
-        self.thread.daemon = True
-        self.thread.start()
-
-        return self.thread
-
-    def join(self):
-        def _stop(result):
-            reactor.stop()
-
-        reactor.callFromThread(self.factory.deferred.addBoth, _stop)
-        self.thread.join()
-
-    def __getattr__(self, attr):
-        method = getattr(VNCDoToolClient, attr)
-
-        def _releaser(result):
-            self.queue.put(result)
-            return result
-
-        def _callback(protocol, *args, **kwargs):
-            d = maybeDeferred(method, protocol, *args, **kwargs)
-            d.addBoth(_releaser)
-            return d
-
-        def proxy_call(*args, **kwargs):
-            reactor.callFromThread(self.factory.deferred.addCallback,
-                                   _callback, *args, **kwargs)
-            result = self.queue.get()
-            if isinstance(result, Failure):
-                raise VNCDoThreadError(result)
-
-        return proxy_call
+import twisted.python.log
+import vncdotool.client
+import vncdotool.api
 
 
 def _adapterLog(msg):
     fmbt.adapterlog("fmbtvnc %s" % (msg,))
 
-class VNC(fmbtgti.GUITestInterface):
+
+class Screen(fmbtgti.GUITestInterface):
     def __init__(self, host, port=5900):
         fmbtgti.GUITestInterface.__init__(self)
-        self.setConnection(VncdeviceConnection(Host=host, Port=port))
+        self.setConnection(VNCConnection(host, port))
 
     def init(self):
         self._conn.init()
-    
 
-class VncdeviceConnection(fmbtgti.GUITestConnection):
-    def __init__(self, Host, Port=5900):
-#        fmbtgti.GUITestInterface.__init__(self)
-        self.HOST = Host
-        self.PORT = Port
+
+class VNCConnection(fmbtgti.GUITestConnection):
+    def __init__(self, host, port=5900):
+        fmbtgti.GUITestConnection.__init__(self)
+        self._host = host
+        self._port = port
         self.first_shot = True
-        observer = PythonLoggingObserver()
+        observer = twisted.python.log.PythonLoggingObserver()
         observer.start()
-        factory = VNCDoToolFactory()
-        self.client = ThreadedVNCClientProxy(factory)
-        self.client.connect(self.HOST,self.PORT)
+        factory = vncdotool.client.VNCDoToolFactory()
+        self.client = vncdotool.api.ThreadedVNCClientProxy(factory)
+        self.client.connect(self._host, self._port)
         self.client.start()
 
     def init(self):
@@ -130,7 +76,6 @@ class VncdeviceConnection(fmbtgti.GUITestConnection):
         self.client.mouseUp(1)
 
     def sendTap(self,x,y):
-        print "tap %i %i" % (x,y)
         self.client.mouseMove(x,y)
         self.client.mousePress(1)
 
@@ -145,4 +90,4 @@ class VncdeviceConnection(fmbtgti.GUITestConnection):
         return True
 
     def target(self):
-        return "VNC-" + self.HOST + ":" + str(self.PORT)
+        return "VNC-" + self._host + ":" + str(self._port)
