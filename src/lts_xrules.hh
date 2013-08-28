@@ -25,7 +25,7 @@
 
 class Lts_xrules : public Model {
 public:
-  Lts_xrules(Log&l, std::string params): Model(l, params) {}
+  Lts_xrules(Log&l,const std::string& params): Model(l, params) {}
   virtual ~Lts_xrules() {
     if (_res_iactions) {
       delete [] _res_iactions;

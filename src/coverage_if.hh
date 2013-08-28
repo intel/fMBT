@@ -25,7 +25,7 @@
 
 class Coverage_compare: public Coverage {
 public:
-  Coverage_compare(Log&l, std::string& params): Coverage(l) {
+  Coverage_compare(Log&l,const std::string& params): Coverage(l) {
     std::vector<std::string> subs;
     commalist(params,subs);
     if (subs.size()==2) {

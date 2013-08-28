@@ -34,8 +34,9 @@
 bool Adapter_remote::init()
 {
   int _stdin,_stdout,_stderr;
+#if !GLIB_CHECK_VERSION(2, 35, 0)
   g_type_init ();
-
+#endif
   gchar **argv = NULL;
   gint argc;
   GError *gerr=NULL;
@@ -107,7 +108,7 @@ std::string Adapter_remote::stringify()
   return t.str();
 }
 
-Adapter_remote::Adapter_remote(Log& l, std::string& params, bool encode) :
+Adapter_remote::Adapter_remote(Log& l,const std::string& params, bool encode) :
   Adapter::Adapter(l),remote(), read_buf(NULL), read_buf_pos(0),
   d_stdin(NULL), d_stdout(NULL), d_stderr(NULL),
   urlencode(encode)

@@ -27,7 +27,7 @@
 
 class Coverage_Mapper: public Coverage, Rules {
 public:
-  Coverage_Mapper(Log& l, std::string params = "");
+  Coverage_Mapper(Log& l,const std::string& params);
   virtual ~Coverage_Mapper() {
     for(unsigned i=0;i<coverages.size();i++) {
       if (coverages[i]) {
@@ -54,7 +54,7 @@ public:
 
   virtual int fitness(int* actions,int n, float* fitness);
 
-  bool load(std::string& name);
+  void load(const std::string& name);
 
   virtual void add_file(unsigned index, std::string& adaptername);
   virtual void add_result_action(std::string* name);

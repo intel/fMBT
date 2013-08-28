@@ -25,7 +25,7 @@
 
 class Coverage_avoid: public Coverage {
 public:
-  Coverage_avoid(Log&l,std::string& params);
+  Coverage_avoid(Log&l,const std::string& params);
 
   virtual ~Coverage_avoid();
 

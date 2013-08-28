@@ -25,7 +25,7 @@
 
 class Coverage_Steps: public Coverage {
 public:
-  Coverage_Steps(Log&l, std::string& params): Coverage(l),val(-1),count(0),reset_value(-1) {
+  Coverage_Steps(Log&l,const std::string& params): Coverage(l),val(-1),count(0),reset_value(-1) {
     if (params!="") {
       std::vector<std::string> subs;
       commalist(params,subs);

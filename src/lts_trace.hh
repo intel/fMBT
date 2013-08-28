@@ -24,7 +24,7 @@
 
 class Lts_trace: public Lts {
 public:
-  Lts_trace(Log&l, std::string params): Lts(l, params) {}
+  Lts_trace(Log&l,const std::string& params): Lts(l, params) {}
   virtual bool init();
 protected:
   std::string trace2model(char*);

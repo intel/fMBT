@@ -31,7 +31,7 @@
 
 class Heuristic_weight : public Heuristic {
 public:
-  Heuristic_weight(Log& l, std::string params);
+  Heuristic_weight(Log& l,const std::string& params);
   virtual ~Heuristic_weight();
   virtual float getCoverage();
   virtual int getAction();

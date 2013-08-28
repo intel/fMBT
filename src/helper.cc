@@ -193,9 +193,9 @@ void remove_force(std::string& s,char only)
   s=ss;
 }
 
-std::string removehash(std::string& s);
+std::string removehash(const std::string& s);
 
-std::string filetype(std::string& _s)
+std::string filetype(const std::string& _s)
 {
   std::string s=removehash(_s);
   size_t found=s.find_last_of(".");
@@ -276,7 +276,7 @@ void escape_string(std::string& msg)
   escape_free(s);
 }
 
-std::string removehash(std::string& s)
+std::string removehash(const std::string& s)
 {
   unsigned long cutpos = s.find_last_of("#");
   if (cutpos == s.npos) {
@@ -685,7 +685,7 @@ std::string to_string(Verdict::Verdict verdict)
 /* blocking getline, filter out log entries */
 ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,bool magic)
 {
-  gsize ret;
+  ssize_t ret;
   int loopc=0;
   bool log_redirect;
 
@@ -697,7 +697,7 @@ ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,bool ma
     gsize si;
     do {
       loopc++;
-      status=g_io_channel_read_line(stream,lineptr,&si,&ret,NULL);
+      status=g_io_channel_read_line(stream,lineptr,&si,(gsize*)&ret,NULL);
       *n=si;
     } while (status==G_IO_STATUS_AGAIN);
 

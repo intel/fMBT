@@ -21,7 +21,7 @@
 #include "model.hh"
 #include "helper.hh"
 
-Coverage_Market::Coverage_Market(Log& l, std::string& _params) :
+Coverage_Market::Coverage_Market(Log& l,const std::string& _params) :
     Coverage(l)
 {
   params = _params;

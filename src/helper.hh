@@ -77,7 +77,7 @@ bool  isInputName(const std::string& name);
 bool  isOutputName(const std::string& name);
 void  clear_whitespace(std::string& s);
 void  clear_coding(std::string& s);
-std::string filetype(std::string& s);
+std::string filetype(const std::string& s);
 #ifndef DROI
 char* readfile(const char* filename,const char* preprocess);
 char* readfile(const char* filename,const char* preprocess,int& status);
@@ -87,7 +87,7 @@ std::string capsulate(std::string s);
 char* escape_string(const char* msg);
 void escape_string(std::string& msg);
 void escape_free(const char* msg);
-std::string removehash(std::string& s);
+std::string removehash(const std::string& s);
 
 class Writable;
 #include <climits>

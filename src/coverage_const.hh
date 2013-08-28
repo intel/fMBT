@@ -25,8 +25,7 @@
 
 class Coverage_Const: public Coverage {
 public:
-
-  Coverage_Const(Log&l, std::string& params): Coverage(l) {
+  Coverage_Const(Log&l,const std::string& params): Coverage(l) {
     val=atof(params.c_str());
   }
 

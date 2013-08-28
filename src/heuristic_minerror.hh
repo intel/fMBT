@@ -93,7 +93,7 @@
 
 class Heuristic_minerror : public Heuristic {
 public:
-  Heuristic_minerror(Log& l, std::string params = "");
+  Heuristic_minerror(Log& l,const std::string& params);
 
   virtual bool execute(int action);
 

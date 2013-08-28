@@ -189,8 +189,9 @@ int main(int argc,char * const argv[])
 #ifndef __MINGW32__
   signal(SIGPIPE, nop_signal_handler);
 #endif
+#if !GLIB_CHECK_VERSION(2, 35, 0)
   g_type_init ();
-
+#endif
   {
     Log* log;
 

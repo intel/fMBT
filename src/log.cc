@@ -105,8 +105,8 @@ void Log::error(const char** format,...)
 
   for (unsigned int i=1; i<element.size(); i++) fprintf(out, "    ");
 
-  va_start(ap0, format[0]);
-  va_start(ap1, format[1]);
+  va_start(ap0, format);
+  va_start(ap1, format);
   vprint(format[0],ap0);
   vprint(format[1],ap1,stderr,true);
   va_end(ap0);

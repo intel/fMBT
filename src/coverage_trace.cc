@@ -30,7 +30,7 @@ Coverage_trace::~Coverage_trace()
   }
 }
 
-Coverage_trace::Coverage_trace(Log& l, std::string& _params) :
+Coverage_trace::Coverage_trace(Log& l, const std::string& _params) :
   Coverage(l), params(_params),pos(0)
 {
 }
