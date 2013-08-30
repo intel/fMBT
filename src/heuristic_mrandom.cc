@@ -50,8 +50,8 @@ Heuristic_mrandom::Heuristic_mrandom(Log& l,const std::string& params) :
       errormsg=std::string("Can't create heuristic ")+s[i+1];
       return;
     }
-    h.push_back(std::pair<float,Heuristic*>(f,heu));
     total+=f;
+    h.push_back(std::pair<float,Heuristic*>(total,heu));
   }
 
   if (h.empty()) {
@@ -109,7 +109,9 @@ bool Heuristic_mrandom::execute(int action)
   bool ret=true;
   for(unsigned i=0;i<h.size();i++) {
     model->push();
+    my_coverage->push();
     ret&=h[i].second->execute(action);
+    my_coverage->pop();
     model->pop();
   }
   ret&=Heuristic::execute(action);
