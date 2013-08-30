@@ -1364,7 +1364,7 @@ class _AndroidDeviceConnection:
     def sendWake(self):
         return self._monkeyCommand("wake")[0]
 
-    def recvScreenshot(self, filename):
+    def recvScreenshot(self, filename, retry=2, retryDelay=1.0):
         """
         Capture a screenshot and copy the image file to given path or
         system temp folder.
@@ -1381,6 +1381,14 @@ class _AndroidDeviceConnection:
             raise FMBTAndroidError("Failed to fetch screenshot from the device: %s. SD card required." % ((out + err).strip(),))
 
         status, _, _ = self._runAdb(['shell', 'rm', remotefile], 0)
+
+        if os.path.getsize(filename) == 0:
+            _adapterLog("received screenshot of size 0")
+            if retry > 0:
+                time.sleep(retryDelay)
+                return self.recvScreenshot(filename, retry-1, retryDelay)
+            else:
+                raise FMBTAndroidError("Screenshot file size 0")
 
         return True
 
