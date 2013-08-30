@@ -175,6 +175,202 @@ class GUITestConnection(object):
         """
         return "GUITestConnectionTarget"
 
+class OcrEngine(object):
+    """
+    This is an abstract interface for OCR Engines that can be plugged
+    into fmbtgti.GUITestInterface instances and Screenshots.
+
+    To implement an OCR Engine, you need to override _findOcr() at
+    minimum. For efficient caching of results and freeing cached
+    results, you may need to override _addScreenshot() and
+    _removeScreenshot(), too.
+
+    A typical usage if OcrEngine instance:
+    - oe.addScreenshot(ss)
+    - oe.findOcr(ss, text1, <engine/screenshot/find-specific-args>)
+    - oe.findOcr(ss, text2, <engine/screenshot/find-specific-args>)
+    - oe.removeScreenshot(ss)
+
+    Note, however, that there may be several screenshots added before
+    they are removed.
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        Parameters:
+
+          findOcrDefaults (optional, dictionary)
+                  default keyword arguments and values to be used in
+                  findOcr(...) calls.
+
+                  For example, if engine is instantiated as:
+
+                  oe = OcrEngine(findOcrDefaults={"match":0.8})
+
+                  following calls will invoke _findOcr with the same
+                  parameters:
+
+                  oe.findOcr(screenshot, "hello")
+
+                  oe.findOcr(screenshot, "hello", match=0.8)
+
+                  oe._findOcr(screenshot, "hello", match=0.8)
+
+        """
+        if "findOcrDefaults" in kwargs:
+            self.setFindOcrDefaults(**kwargs["findOcrDefaults"])
+        self._screenshots = {}
+
+    def addScreenshot(self, screenshot, **findOcrDefaults):
+        """
+        Prepare for finding text from the screenshot.
+
+        Parameters:
+
+          screenshot (fmbtgti.Screenshot)
+                  screenshot object to be searched from.
+
+          other parameters (optional)
+                  findOCR defaults for this screenshot.
+
+        Notice that there may be many screenshots simultaneously.
+        Do not keep reference to the screenshot object.
+        """
+        self.setScreenshotFindOcrDefaults(screenshot, **findOcrDefaults)
+        return self._addScreenshot(screenshot, **findOcrDefaults)
+
+    def _addScreenshot(self, screenshot, **findOcrDefaults):
+        pass
+
+    def removeScreenshot(self, screenshot):
+        """
+        OCR queries on the screenshot will not be made anymore.
+        """
+        self._removeScreenshot(screenshot)
+        try:
+            del self._ssFindOcrDefaults[id(screenshot)]
+        except KeyError:
+            raise KeyError('screenshot "%s" does not have findOcrDefaults. '
+                           'If OcrEngine.addScreenshot() is overridden, it '
+                           '*must* call parent\'s addScreenshot.')
+
+    def _removeScreenshot(self, screenshot):
+        pass
+
+    def setFindOcrDefaults(self, **findOcrDefaults):
+        return self._setFindOcrDefaults(findOcrDefaults, screenshot=None)
+
+    def setScreenshotFindOcrDefaults(self, screenshot, **findOcrDefaults):
+        return self._setFindOcrDefaults(findOcrDefaults, screenshot=screenshot)
+
+    def _setFindOcrDefaults(self, defaults, screenshot=None):
+        """
+        Set default values for optional arguments for findOcr().
+
+        Parameters:
+
+          defaults (dictionary)
+                  Default keyword arguments and their values.
+
+          screenshot (optional, fmbtgti.Screenshot instance)
+                  Use the defaults for findOcr on this screenshot. If
+                  the defaults are None, make them default for all
+                  screenshots. Screenshot-specific defaults override
+                  engine default.
+        """
+        if screenshot == None:
+            self._findOcrDefaults = defaults
+        else:
+            self._ssFindOcrDefaults[id(screenshot)] = defaults
+
+    def findOcrDefaults(self, screenshot=None):
+        if screenshot == None:
+            return self._findOcrDefaults
+        elif id(screenshot) in self._ssFindOcrDefaults:
+            return self._ssFindOcrDefaults[id(screenshot)]
+        else:
+            return None
+
+    def findOcr(self, screenshot, text, **kwargs):
+        """
+        Return list of fmbtgti.GUIItems that match to text.
+        """
+        ssId = id(screenshot)
+        if ssId in self._ssFindOcrDefaults:
+            for arg in self._ssFindOcrDefaults[ssId]:
+                if not arg in kwargs:
+                    kwargs[arg] = self._ssFindOcrDefaults[ssId][arg]
+        for arg in self._findOcrDefaults:
+            if not arg in kwargs:
+                kwargs[arg] = self._findOcrDefaults[arg]
+        return self._findOcr(text, **kwargs)
+
+    def _findOcr(self, screenshot, text, **kwargs):
+        """
+        Find appearances of text from the screenshot.
+
+        Parameters:
+
+          screenshot (fmbtgti.Screenshot)
+                  Screenshot from which text is to be searched
+                  for. Use Screenshot.filename() to get the filename.
+
+          text (string)
+                  text to be searched for.
+
+          other arguments (engine specific)
+                  kwargs contain keyword arguments given to
+                  findOcr(screenshot, text, ...), already extended
+                  first with screenshot-specific findOcrDefaults, then
+                  with engine-specific findOcrDefaults.
+
+        Return list of fmbtgti.GUIItems.
+        """
+        raise NotImplementedError("_findOcr needed but not implemented.")
+
+def _EyenfingerOcrEngine(OcrEngine):
+    def __init__(self, *args, **kwargs):
+        self.setFindOcrDefaults(
+            area = (0, 0, 1.0, 1.0),
+            preprocess = _OCRPREPROCESS,
+            pagesegmodes = _OCRPAGESEGMODES)
+        OcrEngine.__init__(self, *args, **kwargs)
+        self._ss = {} # OCR results for screenshots
+
+    def _addScreenshot(self, screenshot, findOcrDefaults):
+        ssId = id(screenshot)
+        self._ss[ssId] = collections.namedtuple("Results", ("filename", "preprocess", "area", "words"))(
+            screenshot.filename(), None, None, None)
+
+    def _findOcr(self, screenshot, text, match=None, **kwargs):
+        ssId = id(screenshot)
+        self._assumeOcrResults(screenshot, **kwargs)
+
+        for ppfilter in self._ss[ssId].words.keys():
+            try:
+                eyenfinger._g_words = self._ss[ssId].words[ppfilter]
+                (score, word), bbox = eyenfinger.iVerifyWord(text, match=match)
+                break
+            except eyenfinger.BadMatch:
+                continue
+        else:
+            return []
+        return [GUIItem("OCR word", bbox, self._filename, ocrFind=text, ocrFound=word)]
+
+    def _assumeOcrResults(self, screenshot, preprocess=None, area=None, pagesegmodes=None):
+        ssId = id(screenshot)
+
+        if self._ss[ssId].words == None or self._ss[ssId].preprocess != preprocess or self._ss[ssId].area != area:
+            if not type(preprocess) in (list, tuple):
+                preprocess = [preprocess]
+            self._ss[ssId].words = {}
+            self._ss[ssId].preprocess = preprocess
+            self._ss[ssId].area = area
+            for ppfilter in preprocess:
+                pp = ppfilter % { "zoom": "-resize %sx" % (self._ss[ssId]._screenSize[0] * 2) }
+                eyenfinger.iRead(source=self._ss[ssId].filename, ocr=True, preprocess=pp, ocrArea=area, ocrPageSegModes=pagesegmodes)
+                self._ss[ssId].words[ppfilter] = eyenfinger._g_words
+
+
 class GUITestInterface(object):
     def __init__(self):
         self._bitmapPath = ""
@@ -183,6 +379,7 @@ class GUITestInterface(object):
         self._lastScreenshot = None
         self._longPressHoldTime = 2.0
         self._longTapHoldTime = 2.0
+        self._ocrEngine = None
         self._screenshotDir = None
         self._screenshotDirDefault = "screenshots"
         self._screenSize = None
@@ -363,7 +560,8 @@ class GUITestInterface(object):
             if type(forcedScreenshot) == str:
                 self._lastScreenshot = Screenshot(
                     screenshotFile=forcedScreenshot,
-                    pathSolver=_bitmapPathSolver(self._bitmapPathRootForRelativePaths, self._bitmapPath))
+                    pathSolver=_bitmapPathSolver(self._bitmapPathRootForRelativePaths, self._bitmapPath),
+                    ocrEngine=self._ocrEngine)
             else:
                 self._lastScreenshot = forcedScreenshot
         else:
@@ -994,10 +1192,11 @@ class Screenshot(object):
     Screenshot class takes and holds a screenshot (bitmap) of device
     display, or a forced bitmap file if device connection is not given.
     """
-    def __init__(self, screenshotFile=None, pathSolver=None):
+    def __init__(self, screenshotFile=None, pathSolver=None, ocrEngine=None):
         self._filename = screenshotFile
         self._pathSolver = pathSolver
         self._e4gImage = eye4graphics.openImage(self._filename)
+        self._ocrEngine = ocrEngine
         struct_bbox = _Bbox(0,0,0,0,0)
         eye4graphics.openedImageDimensions(ctypes.byref(struct_bbox), self._e4gImage)
         self._screenSize = (struct_bbox.right, struct_bbox.bottom)
@@ -1012,6 +1211,8 @@ class Screenshot(object):
 
     def __del__(self):
         eye4graphics.closeImage(self._e4gImage)
+        if self._ocrEngine:
+            self._ocrEngine.removeScreenshot(self)
 
     def size(self):
         return self._screenSize
@@ -1097,22 +1298,16 @@ class Screenshot(object):
         return self._cache[cacheKey]
 
     def findItemsByOcr(self, text, preprocess=None, match=1.0, area=(0, 0, 1.0, 1.0)):
-        self._assumeOcrWords(preprocess=preprocess, area=area)
-        for ppfilter in self._ocrWords.keys():
-            try:
-                eyenfinger._g_words = self._ocrWords[ppfilter]
-                (score, word), bbox = eyenfinger.iVerifyWord(text, match=match)
-                break
-            except eyenfinger.BadMatch:
-                continue
-        else:
-            return []
-        return [GUIItem("OCR word", bbox, self._filename, ocrFind=text, ocrFound=word)]
-
+        if self._ocrEngine != None: # user-defined OcrEngine
+            return self._ocrEngine.findOcr(self, text, **engineArgs)
+        ???
     def save(self, fileOrDirName):
         shutil.copy(self._filename, fileOrDirName)
 
     def _assumeOcrWords(self, preprocess=None, area=None):
+        if self._ocrEngine:
+            self._ocrEngine.addScreenshot(self)
+
         if preprocess == None:
             preprocess = self._ocrPreprocess
         if area == None:
