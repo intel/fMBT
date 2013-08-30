@@ -49,9 +49,6 @@ bool Heuristic::execute(int action)
     my_coverage->execute(action);
   }
 
-  for(size_t i=0;i<coverage.size();i++) {
-    coverage[i]->execute(action);
-  }
   return true;
 }
 
