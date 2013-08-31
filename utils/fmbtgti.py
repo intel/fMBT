@@ -50,6 +50,8 @@ _OCRPREPROCESS =  [
 # See tesseract -pagesegmode.
 _OCRPAGESEGMODES = [3]
 
+_g_defaultOcrEngine = None
+
 def _fmbtLog(msg):
     fmbt.fmbtlog("fmbtandroid: %s" % (msg,))
 
@@ -183,7 +185,8 @@ class OcrEngine(object):
     To implement an OCR Engine, you need to override _findOcr() at
     minimum. For efficient caching of results and freeing cached
     results, you may need to override _addScreenshot() and
-    _removeScreenshot(), too.
+    _removeScreenshot(), too. Users are likely to appreciate, if you
+    can provide _dumpOcrWords().
 
     A typical usage if OcrEngine instance:
     - oe.addScreenshot(ss)
@@ -256,6 +259,22 @@ class OcrEngine(object):
     def _removeScreenshot(self, screenshot):
         pass
 
+    def registerAsDefaultOcrEngine(self):
+        """
+        Use this OCR Engine instance by default for all new
+        GUITestInterface instances.
+
+        Once registered, this engine instance will be used by new
+        fmbtandroid.Device, fmbttizen.Device, fmbtx11.Screen and
+        fmbtvnc.Screen instances.
+
+        Returns previous global default OCR Engine instance.
+        """
+        global _g_defaultOcrEngine
+        prevDefault = _g_defaultOcrEngine
+        _g_defaultOcrEngine = self
+        return prevDefault
+
     def setFindOcrDefaults(self, **findOcrDefaults):
         return self._setFindOcrDefaults(findOcrDefaults, screenshot=None)
 
@@ -327,12 +346,13 @@ class OcrEngine(object):
         """
         raise NotImplementedError("_findOcr needed but not implemented.")
 
-def _EyenfingerOcrEngine(OcrEngine):
+class _EyenfingerOcrEngine(OcrEngine):
     def __init__(self, *args, **kwargs):
         self.setFindOcrDefaults(
-            area = (0, 0, 1.0, 1.0),
-            preprocess = _OCRPREPROCESS,
-            pagesegmodes = _OCRPAGESEGMODES)
+            area = (0.0, 0.0, 1.0, 1.0),
+            match = 1.0,
+            pagesegmodes = _OCRPAGESEGMODES,
+            preprocess = _OCRPREPROCESS)
         OcrEngine.__init__(self, *args, **kwargs)
         self._ss = {} # OCR results for screenshots
 
@@ -356,6 +376,16 @@ def _EyenfingerOcrEngine(OcrEngine):
             return []
         return [GUIItem("OCR word", bbox, self._filename, ocrFind=text, ocrFound=word)]
 
+    def _dumpOcrWords(self, screenshot, **kwargs):
+        self._assumeOcrResults(screenshot, **kwargs)
+        w = []
+        for ppfilter in self._ss[ssId].preprocess:
+            for word in self._ss[ssId].words[ppfilter]:
+                for appearance, (wid, middle, bbox) in enumerate(self._ss[ssId].words[ppfilter][word]):
+                    (x1, y1, x2, y2) = bbox
+                    w.append((word, x1, y1))
+        return sorted(set(w), key=lambda i:(i[2]/8, i[1]))
+
     def _assumeOcrResults(self, screenshot, preprocess=None, area=None, pagesegmodes=None):
         ssId = id(screenshot)
 
@@ -370,16 +400,21 @@ def _EyenfingerOcrEngine(OcrEngine):
                 eyenfinger.iRead(source=self._ss[ssId].filename, ocr=True, preprocess=pp, ocrArea=area, ocrPageSegModes=pagesegmodes)
                 self._ss[ssId].words[ppfilter] = eyenfinger._g_words
 
+_EyenfingerOcrEngine().registerAsDefaultOcrEngine()
+
 
 class GUITestInterface(object):
-    def __init__(self):
+    def __init__(self, ocrEngine=None):
         self._bitmapPath = ""
         self._bitmapPathRootForRelativePaths = ""
         self._conn = None
         self._lastScreenshot = None
         self._longPressHoldTime = 2.0
         self._longTapHoldTime = 2.0
-        self._ocrEngine = None
+        if ocrEngine == None:
+            self._ocrEngine = _g_defaultOcrEngine
+        else:
+            self._ocrEngine = ocrEngine
         self._screenshotDir = None
         self._screenshotDirDefault = "screenshots"
         self._screenSize = None
@@ -1215,19 +1250,13 @@ class Screenshot(object):
             self._ocrEngine.removeScreenshot(self)
 
     def size(self):
+        """
+        Returns screenshot size in pixels, as pair (width, height).
+        """
         return self._screenSize
 
-    def dumpOcrWords(self, preprocess=None, area=None):
-        if preprocess == None: preprocess = self._ocrWordsPreprocess
-        if area == None: area = self._ocrWordsArea
-        self._assumeOcrWords(preprocess=preprocess, area=area)
-        w = []
-        for ppfilter in self._ocrWords:
-            for word in self._ocrWords[ppfilter]:
-                for appearance, (wid, middle, bbox) in enumerate(self._ocrWords[ppfilter][word]):
-                    (x1, y1, x2, y2) = bbox
-                    w.append((word, x1, y1))
-        return sorted(set(w), key=lambda i:(i[2]/8, i[1]))
+    def dumpOcrWords(self, **kwargs):
+        return self._ocrEngine.dumpOcrWords(**kwargs)
 
     def filename(self):
         return self._filename
@@ -1297,31 +1326,14 @@ class Screenshot(object):
         eye4graphics.closeImage(e4gIcon)
         return self._cache[cacheKey]
 
-    def findItemsByOcr(self, text, preprocess=None, match=1.0, area=(0, 0, 1.0, 1.0)):
+    def findItemsByOcr(self, text, **engineArgs):
         if self._ocrEngine != None: # user-defined OcrEngine
             return self._ocrEngine.findOcr(self, text, **engineArgs)
-        ???
+        else:
+            raise RuntimeError('Trying to use OCR on "%s" without OcrEngine.' % (self.filename(),))
+
     def save(self, fileOrDirName):
         shutil.copy(self._filename, fileOrDirName)
-
-    def _assumeOcrWords(self, preprocess=None, area=None):
-        if self._ocrEngine:
-            self._ocrEngine.addScreenshot(self)
-
-        if preprocess == None:
-            preprocess = self._ocrPreprocess
-        if area == None:
-            area = (0, 0, 1.0, 1.0)
-        if self._ocrWords == None or self._ocrWordsPreprocess != preprocess or self._ocrWordsArea != area:
-            if not type(preprocess) in (list, tuple):
-                preprocess = [preprocess]
-            self._ocrWords = {}
-            self._ocrWordsPreprocess = preprocess
-            self._ocrWordsArea = area
-            for ppfilter in preprocess:
-                pp = ppfilter % { "zoom": "-resize %sx" % (self._screenSize[0] * 2) }
-                eyenfinger.iRead(source=self._filename, ocr=True, preprocess=pp, ocrArea=area, ocrPageSegModes=_OCRPAGESEGMODES)
-                self._ocrWords[ppfilter] = eyenfinger._g_words
 
     def __str__(self):
         return 'Screenshot(filename="%s")' % (self._filename,)
