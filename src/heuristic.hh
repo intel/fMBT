@@ -54,7 +54,6 @@ public:
   virtual void set_model(Model* _model);
 
 protected:
-  //  std::vector<Coverage*> coverage;
   Model* model;
   Coverage* my_coverage;
   std::string none;
