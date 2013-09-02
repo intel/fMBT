@@ -72,7 +72,7 @@ def _takeDragArgs(d):
          "delayAfterMoves", "movePoints"), d)
 
 def _takeTapArgs(d):
-    return _takeArgs(("long", "hold"), d)
+    return _takeArgs(("long", "hold", "tapPos"), d)
 
 def _takeWaitArgs(d):
     return _takeArgs(("waitTime", "pollDelay"), d)
