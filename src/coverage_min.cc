@@ -35,6 +35,11 @@ Coverage_Min::Coverage_Min(Log& l,const std::string& _params,unit* _u) :
       return;
     }
     coverages.push_back(cov);
+    if (!cov->status) {
+      status=false;
+      errormsg="coverage error at "+s[i]+ ":"+ cov->errormsg;
+      return;
+    }
   }
 }
 
