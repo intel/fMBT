@@ -1430,7 +1430,9 @@ class GUIItem(object):
         if self._bitmap:
             extras += ', bitmap="%s"' % (self._bitmap,)
         if self._ocrFind:
-            extras += ', find="%s", found="%s"' % (self._ocrFind, self._ocrFound)
+            extras += ', find="%s"' % (self._ocrFind,)
+        if self._ocrFound:
+            extras += ', found="%s"' % (self._ocrFound,)
         if self._screenshot:
             extras += ', screenshot="%s"' % (self._screenshot,)
         return ('GUIItem("%s", bbox=%s%s)'  % (
