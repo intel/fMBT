@@ -19,6 +19,12 @@ This library implements fmbt GUITestInterface for X.
 """
 
 import fmbtgti
+
+fmbtgti._OCRPREPROCESS = [
+    "",
+    "-sharpen 5 -level 90%%,100%%,3.0 -sharpen 5"
+    ]
+
 import ctypes
 
 class Screen(fmbtgti.GUITestInterface):

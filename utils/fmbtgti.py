@@ -68,7 +68,7 @@ def _bitmapKwArgs(colorMatch=None, opacityLimit=None, area=None, limit=None):
 
 def _takeDragArgs(d):
     return _takeArgs(
-        ("delayBeforeMoves", "delayBetweenMoves",
+        ("startPos", "delayBeforeMoves", "delayBetweenMoves",
          "delayAfterMoves", "movePoints"), d)
 
 def _takeTapArgs(d):
@@ -892,9 +892,6 @@ class GUITestInterface(object):
                   (1.0, 1.0) is the lower-right corner.
                   Values < 0.0 and > 1.0 start swiping from coordinates
                   outside the item.
-
-          colorMatch, opacityLimit, area (optional)
-                  refer to verifyBitmap documentation.
 
           delayBeforeMoves, delayBetweenMoves, delayAfterMoves,
           movePoints
