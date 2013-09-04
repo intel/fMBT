@@ -19,21 +19,34 @@
 #include "coverage_tree.hh"
 #include "model.hh"
 #include <cstdlib>
+#include "helper.hh"
 
-Coverage_Tree::Coverage_Tree(Log& l, std::string params) :
-  Coverage(l), max_depth(2), push_depth(0)
+Coverage_Tree::Coverage_Tree(Log& l,const std::string& _params) :
+  Coverage(l), max_depth(2), push_depth(0),have_filter(false), params(_params)
 { 
   set_instance(0);
+  commalist(params,subs);
 
-  (*exec)[0] = &root_node;
-  set_max_depth(params);
+  (*exec)[0].first = &root_node;
+  set_max_depth(subs[0]);
   push();
+
+  printf("size %i, max_depth %i\n",
+	 (int)subs.size(),max_depth);
+
+  if ((subs.size()>1) && (((unsigned)max_depth+1)!=subs.size())) {
+    status=false;
+    errormsg="incorrect number of params. Expecting "+to_string(max_depth+1);
+  }
+  if (subs.size()>1) {
+    have_filter=true;
+  }
 }
 
 bool Coverage_Tree::set_instance(int instance)
 {
   if (instance_map.find(instance)==instance_map.end()) {
-    instance_map[instance] = new std::map<int,struct node*>;
+    instance_map[instance] = new std::map<int,std::pair<struct node*,bool> >;
   }
   exec=instance_map[instance];
   return true;
@@ -46,6 +59,7 @@ void Coverage_Tree::push()
   std::list<std::pair<struct node*, int> > a;
   push_restore.push(a);
   exec_restore.push((*exec));
+  node_count_restore.push(node_count);
 }
 
 void Coverage_Tree::pop()
@@ -57,7 +71,6 @@ void Coverage_Tree::pop()
     = push_restore.top().end();
 
   while(i!=e) {
-    node_count--;
     int action=i->second;
     struct node* current_node=i->first;
     delete current_node->nodes[action];
@@ -69,21 +82,58 @@ void Coverage_Tree::pop()
 
   (*exec)=exec_restore.top();
   exec_restore.pop();
+
+  node_count=node_count_restore.top();
+  node_count_restore.pop();
+
   push_depth--;
 }
 
 void Coverage_Tree::precalc()
 {
   if (model) {
+    if (have_filter) {
+      strlist(subs);
+      // We have a filter!
+      for(int i=0;i<max_depth;i++) {
+	std::string& filt=subs[i+1];
+	std::vector<int> result;
+	regexpmatch(filt,model->getActionNames(),result);
+	if (result.empty()) {
+	  status=false;
+	  errormsg="No match for regexp "+filt;
+	}
+	act_depth.push_back(result.size());
+	for(unsigned j=0;j<result.size();j++) {
+	  mask[std::pair<int,int>(i,result[j])]=true;
+	}
+      }
+    }
+
     node_count=1;
     max_count=0;
-    int acount=model->getActionNames().size()-1;
-    long ccount=acount;
-    for(int i=1;i<=max_depth;i++) {
+    long ccount=1;
+    for(int i=0;i<max_depth;i++) {
+      ccount*=actions_at_depth(i);
       max_count+=ccount;
-      ccount*=acount;
     }
   }
+}
+
+int Coverage_Tree::actions_at_depth(int depth) {
+  if (!have_filter) {
+    static int retval=model->getActionNames().size()-1;
+    return retval;
+  }
+  return act_depth[depth];
+}
+
+bool Coverage_Tree::filter(int depth,int action)
+{
+  if (!have_filter) {
+    return true;
+  }
+  return mask[std::pair<int,int>(depth,action)];
 }
 
 void Coverage_Tree::set_model(Model* _model)
@@ -100,7 +150,7 @@ void Coverage_Tree::history(int action,std::vector<int>& props,
   } else {
     // verdict. And now we should do ??
     (*exec).clear();
-    (*exec)[0] = &root_node;    
+    (*exec)[0].first = &root_node;
   }
 }
 
@@ -119,22 +169,21 @@ bool Coverage_Tree::execute(int action)
   struct node* next_node;
   int depth=0;
   while (current_node && depth<max_depth) {
+    bool filt=filter(depth,action);
     if (current_node->nodes[action]==NULL) {
       current_node->nodes[action]=new struct node;
       current_node->nodes[action]->action=action;
-      node_count++;
+      if (filt) {
+	node_count++;
+      }
       if (push_depth) {
-	/*
-	std::pair<struct node*, int> a(current_node,action);
-	push_restore.front().push_front(a);
-	*/
 	push_restore.top().push_front(std::pair<struct node*, int> 
 				      (current_node,action));
       }
     }
     depth++;
-    next_node=(*exec)[depth];
-    (*exec)[depth]=current_node->nodes[action];
+    next_node=(*exec)[depth].first;
+    (*exec)[depth]=std::pair<struct node*, bool>(current_node->nodes[action],filt);
     current_node=next_node;
   }
 
@@ -171,12 +220,12 @@ int Coverage_Tree::fitness(int* action,int n,float* fitness)
 
   for(int pos=0;pos<n;pos++) {
     float f=0;
-    struct node* no=(*exec)[0];
+    struct node* no=(*exec)[0].first;
     for(int i=0;(i<max_depth)&& no;i++) {
       if (no->nodes[action[pos]]==NULL) {
 	f+=1.0/(i+1.0);
       }
-      no=(*exec)[i+1];
+      no=(*exec)[i+1].first;
     }
     fitness[pos]=f;
     if (fitness[pos]>fitness[ret]) {

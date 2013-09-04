@@ -34,7 +34,7 @@
 class Coverage_Tree: public Coverage {
 
 public:
-  Coverage_Tree(Log& l, std::string params);
+  Coverage_Tree(Log& l,const std::string& _params);
   virtual ~Coverage_Tree();
   virtual void push();
   virtual void pop();
@@ -54,6 +54,7 @@ public:
 
 protected:
   void precalc();
+  bool filter(int depth,int action);
   int max_depth;
 
   /* 
@@ -122,18 +123,26 @@ protected:
 
   int push_depth;
   std::stack<std::list<std::pair<struct node*, int> > > push_restore;
-  std::stack<std::map<int,struct node*> > exec_restore;
+  std::stack<std::map<int,std::pair<struct node*,bool> > > exec_restore;
+  std::stack<long > node_count_restore;
 
   struct node root_node;
 public:
   long node_count;
   long max_count;
 protected:
-  std::map<int,struct node*>* exec;
+  bool have_filter;
+  std::string params;
+  std::vector<std::string> subs;
+  std::map<int,std::pair<struct node*,bool> >* exec;
+
+  std::map<std::pair<int,int>, bool> mask;
+  std::vector<int> act_depth;
 
   void print_tree(struct node* node,int depth);
+  int actions_at_depth(int depth);
 
-  std::map<int,std::map<int,struct node*>*> instance_map;
+  std::map<int,std::map<int,std::pair<struct node*,bool> >*> instance_map;
 
 };
 
