@@ -42,49 +42,56 @@ import fmbt
 import eyenfinger
 
 # See imagemagick convert parameters.
-_OCRPREPROCESS =  [
-    '-sharpen 5 -filter Mitchell %(zoom)s -sharpen 5 -level 60%%,60%%,3.0 -sharpen 5',
-    '-sharpen 5 -level 90%%,100%%,3.0 -filter Mitchell -sharpen 5'
-    ]
+_OCRPREPROCESS = [
+    ''
+]
 
 # See tesseract -pagesegmode.
 _OCRPAGESEGMODES = [3]
 
-_g_defaultOcrEngine = None
+_g_defaultOcrEngine = None # optical character recognition engine
+_g_defaultOirEngine = None # optical image recognition engine
+_g_ocrEngines = []
+_g_oirEngines = []
 
 def _fmbtLog(msg):
-    fmbt.fmbtlog("fmbtandroid: %s" % (msg,))
+    fmbt.fmbtlog("fmbtgti: %s" % (msg,))
 
 def _filenameTimestamp():
     return datetime.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
 
-def _bitmapKwArgs(colorMatch=None, opacityLimit=None, area=None, limit=None):
-    bitmapKwArgs = {}
-    if colorMatch != None  : bitmapKwArgs['colorMatch'] = colorMatch
-    if opacityLimit != None: bitmapKwArgs['opacityLimit'] = opacityLimit
-    if area != None        : bitmapKwArgs['area'] = area
-    if limit != None       : bitmapKwArgs['limit'] = limit
-    return bitmapKwArgs
-
 def _takeDragArgs(d):
-    return _takeArgs(
-        ("startPos", "delayBeforeMoves", "delayBetweenMoves",
-         "delayAfterMoves", "movePoints"), d)
+    return _takeArgs(("startPos", "delayBeforeMoves", "delayBetweenMoves",
+                      "delayAfterMoves", "movePoints"), d)
 
 def _takeTapArgs(d):
-    return _takeArgs(("long", "hold", "tapPos"), d)
+    return _takeArgs(("tapPos", "long", "hold",), d)
 
 def _takeWaitArgs(d):
     return _takeArgs(("waitTime", "pollDelay"), d)
 
-def _takeOcrArgs(screenshot, d, thatsAll=False):
-    return _takeArgs(screenshot.ocrEngine()._findTextArgNames(), d, thatsAll)
+def _takeOirArgs(screenshotOrOirEngine, d, thatsAll=False):
+    if isinstance(screenshotOrOirEngine, Screenshot):
+        oirEngine = screenshotOrOirEngine.oirEngine()
+    else:
+        oirEngine = screenshotOrOirEngine
+    return _takeArgs(oirEngine._findBitmapArgNames(), d, thatsAll)
+
+def _takeOcrArgs(screenshotOrOcrEngine, d, thatsAll=False):
+    if isinstance(screenshotOrOcrEngine, Screenshot):
+        ocrEngine = screenshotOrOcrEngine.ocrEngine()
+    else:
+        ocrEngine = screenshotOrOcrEngine
+    return _takeArgs(ocrEngine._findTextArgNames(), d, thatsAll)
 
 def _takeArgs(argNames, d, thatsAll=False):
     """
     Returns pair:
         (dict of items where key in argNames,
          dict of items that were left in d)
+
+    If thatsAll is True, require that all arguments have been
+    consumed.
     """
     retval = {}
     for a in argNames:
@@ -95,29 +102,6 @@ def _takeArgs(argNames, d, thatsAll=False):
                         ('", "'.join(sorted(d.keys()))))
     return retval, d
 
-def _bitmapPathSolver(rootDirForRelativePaths, bitmapPath):
-    def _solver(bitmap, checkReadable=True):
-        if bitmap.startswith("/"):
-            path = [os.path.dirname(bitmap)]
-            bitmap = os.path.basename(bitmap)
-        else:
-            path = []
-
-            for singleDir in bitmapPath.split(":"):
-                if not singleDir.startswith("/"):
-                    path.append(os.path.join(rootDirForRelativePaths, singleDir))
-                else:
-                    path.append(singleDir)
-
-        for singleDir in path:
-            retval = os.path.join(singleDir, bitmap)
-            if not checkReadable or os.access(retval, os.R_OK):
-                break
-
-        if checkReadable and not os.access(retval, os.R_OK):
-            raise ValueError('Bitmap "%s" not readable in bitmapPath %s' % (bitmap, ':'.join(path)))
-        return retval
-    return _solver
 
 def _intCoords((x, y), (width, height)):
     if 0 <= x <= 1 and type(x) == float: x = x * width
@@ -168,6 +152,11 @@ class _Bbox(ctypes.Structure):
                 ("error", ctypes.c_int32)]
 ### end of binding to eye4graphics.so
 
+def _e4gImageDimensions(e4gImage):
+    struct_bbox = _Bbox(0, 0, 0, 0, 0)
+    eye4graphics.openedImageDimensions(ctypes.byref(struct_bbox), e4gImage)
+    return (struct_bbox.right, struct_bbox.bottom)
+
 class GUITestConnection(object):
     """
     Implements GUI testing primitives needed by GUITestInterface.
@@ -206,7 +195,62 @@ class GUITestConnection(object):
         """
         return "GUITestConnectionTarget"
 
-class OcrEngine(object):
+class OrEngine(object):
+    """
+    Optical recognition engine. Base class for OCR and OIR engines,
+    enables registering engine instances.
+    """
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def register(self, defaultOcr=False, defaultOir=False):
+        """
+        Register this engine instance to the list of OCR and/or OIR
+        engines.
+
+        Parameters:
+
+          defaultOcr (optional, boolean):
+                  if True, use this OCR engine by default in all new
+                  GUITestInterface instances. The default is False.
+
+          defaultOir (optional, boolean):
+                  if True, use this OIR engine by default in all new
+                  GUITestInterface instances. The default is False.
+
+        Returns the index with which the engine was registered to the
+        list of OCR or OIR engines. If this instance implements both
+        OCR and OIR engines, returns pair (OCR index, OIR index).
+        """
+        # Allow a single engine implement both OCR and OIR engine
+        # interfaces. Therefore, it must be possible to call
+        # e.register(defaultOcr=True, defaultOir=True).
+        #
+        global _g_defaultOcrEngine, _g_defaultOirEngine
+        global _g_ocrEngines, _g_oirEngines
+
+        engineIndexes = []
+
+        if isinstance(self, OcrEngine):
+            if not self in _g_ocrEngines:
+                _g_ocrEngines.append(self)
+            engineIndexes.append(_g_ocrEngines.index(self))
+            if defaultOcr:
+                _g_defaultOcrEngine = self
+
+        if isinstance(self, OirEngine):
+            if not self in _g_oirEngines:
+                _g_oirEngines.append(self)
+            engineIndexes.append(_g_oirEngines.index(self))
+            if defaultOir:
+                _g_defaultOirEngine = self
+
+        if len(engineIndexes) == 1:
+            return engineIndexes[0]
+        else:
+            return engineIndexes
+
+class OcrEngine(OrEngine):
     """
     This is an abstract interface for OCR engines that can be plugged
     into fmbtgti.GUITestInterface instances and Screenshots.
@@ -232,9 +276,11 @@ class OcrEngine(object):
     removed.
     """
     def __init__(self, *args, **kwargs):
+        super(OcrEngine, self).__init__(*args, **kwargs)
         self._ssFindTextDefaults = {}
         self._findTextDefaults = {}
-        self._screenshots = {}
+        ocrFindArgs, _ = _takeOcrArgs(self, kwargs)
+        self._setFindTextDefaults(ocrFindArgs)
 
     def dumpOcr(self, screenshot, **kwargs):
         """
@@ -282,22 +328,6 @@ class OcrEngine(object):
 
     def _removeScreenshot(self, screenshot):
         pass
-
-    def registerAsDefaultOcrEngine(self):
-        """
-        Use this OCR engine instance by default for all new
-        GUITestInterface instances.
-
-        Once registered, this engine instance will be used by new
-        fmbtandroid.Device, fmbttizen.Device, fmbtx11.Screen and
-        fmbtvnc.Screen instances.
-
-        Returns previous global default OCR engine instance.
-        """
-        global _g_defaultOcrEngine
-        prevDefault = _g_defaultOcrEngine
-        _g_defaultOcrEngine = self
-        return prevDefault
 
     def setFindTextDefaults(self, **findTextDefaults):
         return self._setFindTextDefaults(findTextDefaults, screenshot=None)
@@ -384,32 +414,33 @@ class OcrEngine(object):
         """
         raise NotImplementedError("_findText needed but not implemented.")
 
+
 class _EyenfingerOcrEngine(OcrEngine):
     """
-    OCR engine specific parameters, can be used in all
-    ...OcrText() methods:
+    OCR engine parameters that can be used in all
+    ...OcrText() methods (swipeOcrText, tapOcrText, findItemsByOcrText, ...):
 
-          match (float, optional):
-                  minimum match score in range [0.0, 1.0].
-                  The default is 1.0 (exact match).
+      match (float, optional):
+              minimum match score in range [0.0, 1.0].  The default is
+              1.0 (exact match).
 
-          area ((left, top, right, bottom), optional):
-                  search from the given area only. Left, top
-                  right and bottom are either absolute coordinates
-                  (integers) or floats in range [0.0, 1.0]. In the
-                  latter case they are scaled to screenshot
-                  dimensions. The default is (0.0, 0.0, 1.0, 1.0),
-                  that is, search everywhere in the screenshot.
+      area ((left, top, right, bottom), optional):
+              search from the given area only. Left, top, right and
+              bottom are either absolute coordinates (integers) or
+              floats in range [0.0, 1.0]. In the latter case they are
+              scaled to screenshot dimensions. The default is (0.0,
+              0.0, 1.0, 1.0), that is, search everywhere in the
+              screenshot.
 
-          pagesegmodes (list of integers, optional):
-                  try all integers as tesseract -pagesegmode
-                  arguments. The default is [3], another good
-                  option could be [3, 6].
+      pagesegmodes (list of integers, optional):
+              try all integers as tesseract -pagesegmode
+              arguments. The default is [3], another good option could
+              be [3, 6].
 
-          preprocess (string, optional):
-                  preprocess filter to be used in OCR for better
-                  result. Refer to eyenfinger.autoconfigure to search
-                  for a good one.
+      preprocess (string, optional):
+              preprocess filter to be used in OCR for better
+              result. Refer to eyenfinger.autoconfigure to search for
+              a good one.
 
     """
     class _OcrResults(object):
@@ -422,13 +453,12 @@ class _EyenfingerOcrEngine(OcrEngine):
             self.area = None
             self.words = None
 
-    def __init__(self, *args, **kwargs):
-        OcrEngine.__init__(self, *args, **kwargs)
-        self.setFindTextDefaults(
-            area = (0.0, 0.0, 1.0, 1.0),
-            match = 1.0,
-            pagesegmodes = _OCRPAGESEGMODES,
-            preprocess = _OCRPREPROCESS)
+    def __init__(self, *args, **engineDefaults):
+        engineDefaults["area"] = engineDefaults.get("area", (0.0, 0.0, 1.0, 1.0))
+        engineDefaults["match"] = engineDefaults.get("match", 1.0)
+        engineDefaults["pagesegmodes"] = engineDefaults.get("pagesegmodes", _OCRPAGESEGMODES)
+        engineDefaults["preprocess"] = engineDefaults.get("preprocess", _OCRPREPROCESS)
+        super(_EyenfingerOcrEngine, self).__init__(*args, **engineDefaults)
         self._ss = {} # OCR results for screenshots
 
     def _addScreenshot(self, screenshot, **findTextDefaults):
@@ -481,22 +511,363 @@ class _EyenfingerOcrEngine(OcrEngine):
                 eyenfinger.iRead(source=self._ss[ssId].filename, ocr=True, preprocess=pp, ocrArea=area, ocrPageSegModes=pagesegmodes)
                 self._ss[ssId].words[ppfilter] = eyenfinger._g_words
 
-_EyenfingerOcrEngine().registerAsDefaultOcrEngine()
+def _defaultOcrEngine():
+    if _g_defaultOcrEngine:
+        return _g_defaultOcrEngine
+    else:
+        _EyenfingerOcrEngine().register(defaultOcr=True)
+        return _g_defaultOcrEngine
+
+class OirEngine(OrEngine):
+    """
+    This is an abstract interface for OIR (optical image recognition)
+    engines that can be plugged into fmbtgti.GUITestInterface
+    instances and Screenshots.
+
+    To implement an OIR engine, you need to override _findBitmap() at
+    minimum. See _findBitmap documentation in this class for
+    requirements.
+
+    This base class provides full set of OIR parameters to
+    _findBitmap. The parameters are combined from
+
+    - OirEngine find defaults, specified when OirEngine is
+      instantiated.
+
+    - Screenshot instance find defaults.
+
+    - bitmap / bitmap directory find defaults (read from the
+      .fmbtoirrc that is in the same directory as the bitmap).
+
+    - ...Bitmap() method parameters.
+
+    The latter in the list override the former.
+
+
+    For efficient caching of results and freeing cached results, you
+    can override _addScreenshot() and _removeScreenshot(). Every
+    screenshot is added before findBitmap().
+
+    A typical usage of OirEngine instance:
+    - oe.addScreenshot(ss)
+    - oe.findBitmap(ss, bmpFilename1, <engine/screenshot/find-specific-args>)
+    - oe.findBitmap(ss, bmpFilename2, <engine/screenshot/find-specific-args>)
+    - oe.removeScreenshot(ss)
+
+    Note that there may be several screenshots added before they are
+    removed. ss is a Screenshot instance. Do not keep references to
+    Screenshot intances, otherwise garbage collector will not remove
+    them.
+    """
+    def __init__(self, *args, **kwargs):
+        super(OirEngine, self).__init__(*args, **kwargs)
+        self._ssFindBitmapDefaults = {}
+        self._findBitmapDefaults = {}
+        oirArgs, _ = _takeOirArgs(self, kwargs)
+        self._setFindBitmapDefaults(oirArgs)
+
+    def addScreenshot(self, screenshot, **findBitmapDefaults):
+        """
+        Prepare for finding bitmap from the screenshot.
+
+        Parameters:
+
+          screenshot (fmbtgti.Screenshot)
+                  screenshot object to be searched from.
+
+          other parameters (optional)
+                  findBitmap defaults for this screenshot.
+
+        Notice that there may be many screenshots simultaneously.
+        Do not keep reference to the screenshot object.
+        """
+        self.setScreenshotFindBitmapDefaults(screenshot, **findBitmapDefaults)
+        return self._addScreenshot(screenshot, **findBitmapDefaults)
+
+    def _addScreenshot(self, screenshot, **findBitmapDefaults):
+        pass
+
+    def removeScreenshot(self, screenshot):
+        """
+        OIR queries on the screenshot will not be made anymore.
+        """
+        self._removeScreenshot(screenshot)
+        try:
+            del self._ssFindBitmapDefaults[id(screenshot)]
+        except KeyError:
+            raise KeyError('screenshot "%s" does not have findBitmapDefaults. '
+                           'If OirEngine.addScreenshot() is overridden, it '
+                           '*must* call parent\'s addScreenshot.' % (screenshot.filename(),))
+
+    def _removeScreenshot(self, screenshot):
+        pass
+
+    def setFindBitmapDefaults(self, **findBitmapDefaults):
+        return self._setFindBitmapDefaults(findBitmapDefaults, screenshot=None)
+
+    def setScreenshotFindBitmapDefaults(self, screenshot, **findBitmapDefaults):
+        return self._setFindBitmapDefaults(findBitmapDefaults, screenshot=screenshot)
+
+    def _setFindBitmapDefaults(self, defaults, screenshot=None):
+        """
+        Set default values for optional arguments for findBitmap().
+
+        Parameters:
+
+          defaults (dictionary)
+                  Default keyword arguments and their values.
+
+          screenshot (optional, fmbtgti.Screenshot instance)
+                  Use the defaults for findBitmap on this screenshot. If
+                  the defaults are None, make them default for all
+                  screenshots. Screenshot-specific defaults override
+                  engine default.
+        """
+        if screenshot == None:
+            self._findBitmapDefaults = defaults
+        else:
+            self._ssFindBitmapDefaults[id(screenshot)] = defaults
+
+    def findBitmapDefaults(self, screenshot=None):
+        if screenshot == None:
+            return self._findBitmapDefaults
+        elif id(screenshot) in self._ssFindBitmapDefaults:
+            return self._ssFindBitmapDefaults[id(screenshot)]
+        else:
+            return None
+
+    def _findBitmapArgNames(self):
+        """
+        Returns names of optional findBitmap arguments.
+        """
+        return inspect.getargspec(self._findBitmap).args[3:]
+
+    def __oirArgs(self, screenshot, bitmap, **priorityArgs):
+        oirArgs = {}
+        oirArgs.update(self._findBitmapDefaults)
+        ssId = id(screenshot)
+        if ssId in self._ssFindBitmapDefaults:
+            oirArgs.update(self._ssFindBitmapDefaults[ssId])
+        # TODO: bitmap dir defaults: look for .fmbtoirrc in the bitmap
+        # directory, apply arguments from there:
+        # bitmaps = .*
+        # scale = 1.2
+        oirArgs.update(priorityArgs)
+        return oirArgs
+
+    def findBitmap(self, screenshot, bitmap, **kwargs):
+        """
+        Return list of fmbtgti.GUIItems that match to bitmap.
+        """
+        oirArgs = self.__oirArgs(screenshot, bitmap, **kwargs)
+        return self._findBitmap(screenshot, bitmap, **oirArgs)
+
+    def _findBitmap(self, screenshot, bitmap, **kwargs):
+        """
+        Find appearances of bitmap from the screenshot.
+
+        Parameters:
+
+          screenshot (fmbtgti.Screenshot)
+                  Screenshot from which bitmap is to be searched
+                  for. Use Screenshot.filename() to get the filename.
+
+          bitmap (string)
+                  bitmap to be searched for.
+
+          other arguments (engine specific)
+                  kwargs contain keyword arguments given to
+                  findBitmap(screenshot, bitmap, ...), already extended
+                  first with screenshot-specific findBitmapDefaults, then
+                  with engine-specific findBitmapDefaults.
+
+                  _findBitmap *must* define all engine parameters as
+                  explicit keyword arguments:
+
+                  def _findBitmap(self, screenshot, bitmap, engArg1=42):
+                      ...
+
+        Returns list of fmbtgti.GUIItems.
+        """
+        raise NotImplementedError("_findBitmap needed but not implemented.")
+
+
+class _Eye4GraphicsOirEngine(OirEngine):
+    """
+    OIR engine parameters that can be used in all
+    ...Bitmap() methods (swipeBitmap, tapBitmap, findItemsByBitmap, ...):
+
+      colorMatch (float, optional):
+              required color matching accuracy. The default is 1.0
+              (exact match). For instance, 0.75 requires that every
+              pixel's every RGB component value on the bitmap is at
+              least 75 % match with the value of corresponding pixel's
+              RGB component in the screenshot.
+
+      opacityLimit (float, optional):
+              threshold for comparing pixels with non-zero alpha
+              channel. Pixels less opaque than the given threshold are
+              skipped in match comparison. The default is 0, that is,
+              alpha channel is ignored.
+
+      area ((left, top, right, bottom), optional):
+              search bitmap from the given area only. Left, top right
+              and bottom are either absolute coordinates (integers) or
+              floats in range [0.0, 1.0]. In the latter case they are
+              scaled to screenshot dimensions. The default is (0.0,
+              0.0, 1.0, 1.0), that is, search everywhere in the
+              screenshot.
+
+      limit (integer, optional):
+              number of returned matches is limited to the limit. The
+              default is -1: all matches are returned. Applicable in
+              findItemsByBitmap.
+
+      allowOverlap (boolean, optional):
+              allow returned icons to overlap. If False, returned list
+              contains only non-overlapping bounding boxes.  The
+              default is True: every bounding box that contains
+              matching bitmap is returned.
+    """
+    def __init__(self, *args, **engineDefaults):
+        engineDefaults["colorMatch"] = engineDefaults.get("colorMatch", 1.0)
+        engineDefaults["opacityLimit"] = engineDefaults.get("opacityLimit", 0.0)
+        engineDefaults["area"] = engineDefaults.get("area", (0.0, 0.0, 1.0, 1.0))
+        engineDefaults["limit"] = engineDefaults.get("limit", -1)
+        engineDefaults["allowOverlap"] = engineDefaults.get("allowOverlap", True)
+        OirEngine.__init__(self, *args, **engineDefaults)
+        self._openedImages = {}
+        self._findBitmapCache = {}
+
+    def _addScreenshot(self, screenshot, **findBitmapDefaults):
+        filename = screenshot.filename()
+        self._openedImages[filename] = eye4graphics.openImage(filename)
+        # make sure size() is available, this can save an extra
+        # opening of the screenshot file.
+        if screenshot.size(allowReadingFile=False) == None:
+            screenshot.setSize(_e4gImageDimensions(self._openedImages[filename]))
+        self._findBitmapCache[filename] = {}
+
+    def _removeScreenshot(self, screenshot):
+        filename = screenshot.filename()
+        eye4graphics.closeImage(self._openedImages[filename])
+        del self._openedImages[filename]
+        del self._findBitmapCache[filename]
+
+    def _findBitmap(self, screenshot, bitmap, colorMatch=None,
+                    opacityLimit=None, area=None, limit=None,
+                    allowOverlap=None):
+        """
+        Find items on the screenshot that match to bitmap.
+        """
+        ssFilename = screenshot.filename()
+        ssSize = screenshot.size()
+        cacheKey = (bitmap, colorMatch, opacityLimit, area, limit)
+        if cacheKey in self._findBitmapCache[ssFilename]:
+            return self._findBitmapCache[ssFilename][cacheKey]
+        self._findBitmapCache[ssFilename][cacheKey] = []
+        e4gIcon = eye4graphics.openImage(bitmap)
+        matchCount = 0
+        leftTopRightBottomZero = (_intCoords((area[0], area[1]), ssSize) +
+                                  _intCoords((area[2], area[3]), ssSize) +
+                                  (0,))
+        struct_area_bbox = _Bbox(*leftTopRightBottomZero)
+        struct_bbox = _Bbox(0, 0, 0, 0, 0)
+        contOpts = 0 # search for the first hit
+        while True:
+            if matchCount == limit: break
+            result = eye4graphics.findNextIcon(
+                ctypes.byref(struct_bbox),
+                ctypes.c_void_p(self._openedImages[ssFilename]),
+                ctypes.c_void_p(e4gIcon),
+                0, # no fuzzy matching
+                ctypes.c_double(colorMatch),
+                ctypes.c_double(opacityLimit),
+                ctypes.byref(struct_area_bbox),
+                ctypes.c_int(contOpts))
+            contOpts = 1 # search for the next hit
+            if result < 0: break
+            bbox = (int(struct_bbox.left), int(struct_bbox.top),
+                    int(struct_bbox.right), int(struct_bbox.bottom))
+            addToFoundItems = True
+            if allowOverlap == False:
+                for guiItem in self._findBitmapCache[ssFilename][cacheKey]:
+                    itemLeft, itemTop, itemRight, itemBottom = guiItem.bbox()
+                    if ((itemLeft <= bbox[0] <= itemRight or itemLeft <= bbox[2] <= itemRight) and
+                        (itemTop <= bbox[1] <= itemBottom or itemTop <= bbox[3] <= itemBottom)):
+                        if ((itemLeft < bbox[0] < itemRight or itemLeft < bbox[2] < itemRight) or
+                            (itemTop < bbox[1] < itemBottom or itemTop < bbox[3] < itemBottom)):
+                            addToFoundItems = False
+                            break
+            if addToFoundItems:
+                self._findBitmapCache[ssFilename][cacheKey].append(
+                    GUIItem("bitmap", bbox, ssFilename, bitmap=bitmap))
+                matchCount += 1
+        eye4graphics.closeImage(e4gIcon)
+        return self._findBitmapCache[ssFilename][cacheKey]
+
+def _defaultOirEngine():
+    if _g_defaultOirEngine:
+        return _g_defaultOirEngine
+    else:
+        _Eye4GraphicsOirEngine().register(defaultOir=True)
+        return _g_defaultOirEngine
+
+
+class _Paths(object):
+    def __init__(self, bitmapPath, relativeRoot):
+        self.bitmapPath = bitmapPath
+        self.relativeRoot = relativeRoot
+
+    def abspath(self, bitmap, checkReadable=True):
+        if bitmap.startswith("/"):
+            path = [os.path.dirname(bitmap)]
+            bitmap = os.path.basename(bitmap)
+        else:
+            path = []
+
+            for singleDir in self.bitmapPath.split(":"):
+                if not singleDir.startswith("/"):
+                    path.append(os.path.join(self.relativeRoot, singleDir))
+                else:
+                    path.append(singleDir)
+
+        for singleDir in path:
+            retval = os.path.join(singleDir, bitmap)
+            if not checkReadable or os.access(retval, os.R_OK):
+                break
+
+        if checkReadable and not os.access(retval, os.R_OK):
+            raise ValueError('Bitmap "%s" not readable in bitmapPath %s' % (bitmap, ':'.join(path)))
+        return retval
 
 
 class GUITestInterface(object):
-    def __init__(self, ocrEngine=None):
-        self._bitmapPath = ""
-        self._bitmapPathRootForRelativePaths = ""
+    def __init__(self, ocrEngine=None, oirEngine=None):
+        self._paths = _Paths("", "")
         self._conn = None
         self._lastScreenshot = None
         self._longPressHoldTime = 2.0
         self._longTapHoldTime = 2.0
         self._ocrEngine = None
+        self._oirEngine = None
+
         if ocrEngine == None:
-            self.setOcrEngine(_g_defaultOcrEngine)
+            self.setOcrEngine(_defaultOcrEngine())
         else:
-            self.setOcrEngine(ocrEngine)
+            if type(ocrEngine) == int:
+                self.setOcrEngine(_g_ocrEngines[ocrEngine])
+            else:
+                self.setOcrEngine(ocrEngine)
+
+        if oirEngine == None:
+            self.setOirEngine(_defaultOirEngine())
+        else:
+            if type(oirEngine) == int:
+                self.setOirEngine(_g_oirEngines[oirEngine])
+            else:
+                self.setOirEngine(oirEngine)
+
         self._screenshotDir = None
         self._screenshotDirDefault = "screenshots"
         self._screenSize = None
@@ -508,14 +879,14 @@ class GUITestInterface(object):
         """
         Returns bitmapPath from which bitmaps are searched for.
         """
-        return self._bitmapPath
+        return self._paths.bitmapPath
 
     def bitmapPathRoot(self):
         """
         Returns the path that prefixes all relative directories in
         bitmapPath.
         """
-        return self._bitmapPathRootForRelativePaths
+        return self._paths.relativeRoot
 
     def close(self):
         self._lastScreenshot = None
@@ -642,6 +1013,13 @@ class GUITestInterface(object):
         """
         return self._ocrEngine
 
+    def oirEngine(self):
+        """
+        Returns the OIR engine that is used by default for new
+        screenshots.
+        """
+        return self._oirEngine
+
     def pressKey(self, keyName, long=False, hold=0.0):
         """
         Press a key.
@@ -685,8 +1063,9 @@ class GUITestInterface(object):
             if type(forcedScreenshot) == str:
                 self._lastScreenshot = Screenshot(
                     screenshotFile=forcedScreenshot,
-                    pathSolver=_bitmapPathSolver(self._bitmapPathRootForRelativePaths, self._bitmapPath),
-                    ocrEngine=self._ocrEngine)
+                    paths = self._paths,
+                    ocrEngine=self._ocrEngine,
+                    oirEngine=self._oirEngine)
             else:
                 self._lastScreenshot = forcedScreenshot
         else:
@@ -696,8 +1075,9 @@ class GUITestInterface(object):
             if self._conn.recvScreenshot(screenshotFile):
                 self._lastScreenshot = Screenshot(
                     screenshotFile=screenshotFile,
-                    pathSolver=_bitmapPathSolver(self._bitmapPathRootForRelativePaths, self._bitmapPath),
-                    ocrEngine=self._ocrEngine)
+                    paths = self._paths,
+                    ocrEngine=self._ocrEngine,
+                    oirEngine=self._oirEngine)
             else:
                 self._lastScreenshot = None
         # Make sure unreachable Screenshot instances are released from
@@ -742,7 +1122,7 @@ class GUITestInterface(object):
 
     def setBitmapPath(self, bitmapPath, rootForRelativePaths=None):
         """
-        Set new bitmapPath.
+        Set new path for finding bitmaps.
 
         Parameters:
 
@@ -762,9 +1142,9 @@ class GUITestInterface(object):
           will look for /home/X/bitmaps/start.png,
           /home/X/icons/start.png and /tmp/start.png, in this order.
         """
-        self._bitmapPath = bitmapPath
+        self._paths.bitmapPath = bitmapPath
         if rootForRelativePaths != None:
-            self._bitmapPathRootForRelativePaths = rootForRelativePaths
+            self._paths.relativeRoot = rootForRelativePaths
 
     def setConnection(self, conn):
         """
@@ -779,13 +1159,24 @@ class GUITestInterface(object):
 
     def setOcrEngine(self, ocrEngine):
         """
-        Set OCR engine that will be used by default to new
-        screenshots.
+        Set OCR (optical character recognition) engine that will be
+        used by default in new screenshots.
 
         Returns previous default.
         """
         prevDefault = self._ocrEngine
         self._ocrEngine = ocrEngine
+        return prevDefault
+
+    def setOirEngine(self, oirEngine):
+        """
+        Set OIR (optical image recognition) engine that will be used
+        by default in new screenshots.
+
+        Returns previous default.
+        """
+        prevDefault = self._oirEngine
+        self._oirEngine = oirEngine
         return prevDefault
 
     def setScreenshotDir(self, screenshotDir):
@@ -797,7 +1188,7 @@ class GUITestInterface(object):
                 _fmbtLog('creating directory "%s" for screenshots failed: %s' % (self.screenshotDir(), e))
                 raise
 
-    def swipe(self, (x, y), direction, distance=1.0, **dragKwArgs):
+    def swipe(self, (x, y), direction, distance=1.0, **dragArgs):
         """
         swipe starting from coordinates (x, y) to given direction.
 
@@ -841,9 +1232,9 @@ class GUITestInterface(object):
         x2 = int(x + math.cos(dirRad) * distToEdge * distance)
         y2 = int(y - math.sin(dirRad) * distToEdge * distance)
 
-        return self.drag((x, y), (x2, y2), **dragKwArgs)
+        return self.drag((x, y), (x2, y2), **dragArgs)
 
-    def swipeBitmap(self, bitmap, direction, distance=1.0, colorMatch=None, opacityLimit=None, area=None, **dragKwArgs):
+    def swipeBitmap(self, bitmap, direction, distance=1.0, **dragAndOirArgs):
         """
         swipe starting from bitmap to given direction.
 
@@ -858,8 +1249,8 @@ class GUITestInterface(object):
           startPos
                   refer to swipeItem documentation.
 
-          colorMatch, opacityLimit, area (optional)
-                  refer to verifyBitmap documentation.
+          optical image recognition arguments (optional)
+                  refer to help(obj.oirEngine()).
 
           delayBeforeMoves, delayBetweenMoves, delayAfterMoves,
           movePoints
@@ -868,12 +1259,15 @@ class GUITestInterface(object):
         Returns True on success, False if sending input failed.
         """
         assert self._lastScreenshot != None, "Screenshot required."
-        items = self._lastScreenshot.findItemsByBitmap(bitmap, **_bitmapKwArgs(colorMatch, opacityLimit, area, 1))
+        dragArgs, rest = _takeDragArgs(dragAndOirArgs)
+        oirArgs, _ = _takeOirArgs(self._lastScreenshot, rest, thatsAll=True)
+        oirArgs["limit"] = 1
+        items = self._lastScreenshot.findItemsByBitmap(bitmap, **oirArgs)
         if len(items) == 0:
             return False
-        return self.swipeItem(items[0], direction, distance, **dragKwArgs)
+        return self.swipeItem(items[0], direction, distance, **dragArgs)
 
-    def swipeItem(self, viewItem, direction, distance=1.0, **dragKwArgs):
+    def swipeItem(self, viewItem, direction, distance=1.0, **dragArgs):
         """
         swipe starting from viewItem to given direction.
 
@@ -899,15 +1293,15 @@ class GUITestInterface(object):
 
         Returns True on success, False if sending input failed.
         """
-        if "startPos" in dragKwArgs:
-            posX, posY = dragKwArgs["startPos"]
-            del dragKwArgs["startPos"]
+        if "startPos" in dragArgs:
+            posX, posY = dragArgs["startPos"]
+            del dragArgs["startPos"]
             x1, y1, x2, y2 = viewItem.bbox()
             swipeCoords = (x1 + (x2-x1) * posX,
                            y1 + (y2-y1) * posY)
         else:
             swipeCoords = viewItem.coords()
-        return self.swipe(swipeCoords, direction, distance, **dragKwArgs)
+        return self.swipe(swipeCoords, direction, distance, **dragArgs)
 
     def swipeOcrText(self, text, direction, distance=1.0, **dragAndOcrArgs):
         """
@@ -935,7 +1329,7 @@ class GUITestInterface(object):
         """
         assert self._lastScreenshot != None, "Screenshot required."
         dragArgs, rest = _takeDragArgs(dragAndOcrArgs)
-        ocrArgs, rest = _takeOcrArgs(self._lastScreenshot, rest, thatsAll=True)
+        ocrArgs, _ = _takeOcrArgs(self._lastScreenshot, rest, thatsAll=True)
         items = self._lastScreenshot.findItemsByOcr(text, **ocrArgs)
         if len(items) == 0:
             return False
@@ -974,7 +1368,7 @@ class GUITestInterface(object):
         else:
             return self._conn.sendTap(x, y)
 
-    def tapBitmap(self, bitmap, colorMatch=None, opacityLimit=None, area=None, **tapKwArgs):
+    def tapBitmap(self, bitmap, **tapAndOirArgs):
         """
         Find a bitmap from the latest screenshot, and tap it.
 
@@ -983,8 +1377,8 @@ class GUITestInterface(object):
           bitmap (string):
                   filename of the bitmap to be tapped.
 
-          colorMatch, opacityLimit, area (optional):
-                  refer to verifyBitmap documentation.
+          optical image recognition arguments (optional)
+                  refer to help(obj.oirEngine()).
 
           tapPos (pair of floats (x,y)):
                   refer to tapItem documentation.
@@ -995,12 +1389,15 @@ class GUITestInterface(object):
         Returns True if successful, otherwise False.
         """
         assert self._lastScreenshot != None, "Screenshot required."
-        items = self._lastScreenshot.findItemsByBitmap(bitmap, **_bitmapKwArgs(colorMatch, opacityLimit, area, 1))
+        tapArgs, rest = _takeTapArgs(tapAndOirArgs)
+        oirArgs, _ = _takeOirArgs(self._lastScreenshot, rest, thatsAll=True)
+        oirArgs["limit"] = 1
+        items = self._lastScreenshot.findItemsByBitmap(bitmap, **oirArgs)
         if len(items) == 0:
             return False
-        return self.tapItem(items[0], **tapKwArgs)
+        return self.tapItem(items[0], **tapArgs)
 
-    def tapItem(self, viewItem, **tapKwArgs):
+    def tapItem(self, viewItem, **tapArgs):
         """
         Tap the center point of viewItem.
 
@@ -1020,15 +1417,15 @@ class GUITestInterface(object):
           long, hold (optional):
                   refer to tap documentation.
         """
-        if "tapPos" in tapKwArgs:
-            posX, posY = tapKwArgs["tapPos"]
-            del tapKwArgs["tapPos"]
+        if "tapPos" in tapArgs:
+            posX, posY = tapArgs["tapPos"]
+            del tapArgs["tapPos"]
             x1, y1, x2, y2 = viewItem.bbox()
             tapCoords = (x1 + (x2-x1) * posX,
                          y1 + (y2-y1) * posY)
         else:
             tapCoords = viewItem.coords()
-        return self.tap(tapCoords, **tapKwArgs)
+        return self.tap(tapCoords, **tapArgs)
 
     def tapOcrText(self, text, **tapAndOcrArgs):
         """
@@ -1049,7 +1446,7 @@ class GUITestInterface(object):
         """
         assert self._lastScreenshot != None, "Screenshot required."
         tapArgs, rest = _takeTapArgs(tapAndOcrArgs)
-        ocrArgs, rest = _takeOcrArgs(self._lastScreenshot, rest, thatsAll=True)
+        ocrArgs, _ = _takeOcrArgs(self._lastScreenshot, rest, thatsAll=True)
         items = self._lastScreenshot.findItemsByOcr(text, **ocrArgs)
         if len(items) == 0: return False
         return self.tapItem(items[0], **tapArgs)
@@ -1078,7 +1475,7 @@ class GUITestInterface(object):
         ocrArgs, _ = _takeOcrArgs(self._lastScreenshot, ocrArgs, thatsAll=True)
         return self._lastScreenshot.findItemsByOcr(text, **ocrArgs) != []
 
-    def verifyBitmap(self, bitmap, colorMatch=None, opacityLimit=None, area=None):
+    def verifyBitmap(self, bitmap, **oirArgs):
         """
         Verify that bitmap is present in the last screenshot.
 
@@ -1087,32 +1484,13 @@ class GUITestInterface(object):
           bitmap (string):
                   filename of the bitmap file to be searched for.
 
-          colorMatch (float, optional):
-                  required color matching accuracy. The default is 1.0
-                  (exact match). For instance, 0.75 requires that
-                  every pixel's every RGB component value on the
-                  bitmap is at least 75 % match with the value of
-                  corresponding pixel's RGB component in the
-                  screenshot.
-
-          opacityLimit (float, optional):
-                  threshold for comparing pixels with non-zero alpha
-                  channel. Pixels less opaque than the given threshold
-                  are skipped in match comparison. The default is 0,
-                  that is, alpha channel is ignored.
-
-          area ((left, top, right, bottom), optional):
-                  search bitmap from the given area only. Left, top
-                  right and bottom are either absolute coordinates
-                  (integers) or floats in range [0.0, 1.0]. In the
-                  latter case they are scaled to screenshot
-                  dimensions. The default is (0.0, 0.0, 1.0, 1.0),
-                  that is, search everywhere in the screenshot.
+          optical image recognition arguments (optional)
+                  refer to help(obj.oirEngine()).
         """
         assert self._lastScreenshot != None, "Screenshot required."
-        if self._lastScreenshot == None:
-            return False
-        return self._lastScreenshot.findItemsByBitmap(bitmap, **_bitmapKwArgs(colorMatch, opacityLimit, area, 1)) != []
+        oirArgs, _ = _takeOirArgs(self._lastScreenshot, oirArgs, thatsAll=True)
+        oirArgs["limit"] = 1
+        return self._lastScreenshot.findItemsByBitmap(bitmap, **oirArgs) != []
 
     def wait(self, refreshFunc, waitFunc, waitFuncArgs=(), waitFuncKwargs={}, waitTime = 5.0, pollDelay = 1.0):
         """
@@ -1156,7 +1534,7 @@ class GUITestInterface(object):
                 return True
         return False
 
-    def waitAnyBitmap(self, listOfBitmaps, colorMatch=None, opacityLimit=None, area=None, **waitKwArgs):
+    def waitAnyBitmap(self, listOfBitmaps, **waitAndOirArgs):
         """
         Wait until any of given bitmaps appears on screen.
 
@@ -1165,8 +1543,8 @@ class GUITestInterface(object):
           listOfBitmaps (list of strings):
                   list of bitmaps (filenames) to be waited for.
 
-          colorMatch, opacityLimit, area (optional):
-                  refer to verifyBitmap documentation.
+          optical image recognition arguments (optional)
+                  refer to help(obj.oirEngine()).
 
           waitTime, pollDelay (float, optional):
                   refer to wait documentation.
@@ -1180,14 +1558,15 @@ class GUITestInterface(object):
         """
         if listOfBitmaps == []: return []
         if not self._lastScreenshot: self.refreshScreenshot()
-        bitmapKwArgs = _bitmapKwArgs(colorMatch, opacityLimit, area, 1)
+        waitArgs, rest = _takeWaitArgs(waitAndOirArgs)
+        oirArgs, _ = _takeOirArgs(self._lastScreenshot, rest, thatsAll=True)
         foundBitmaps = []
         def observe():
             for bitmap in listOfBitmaps:
-                if self._lastScreenshot.findItemsByBitmap(bitmap, **bitmapKwArgs):
+                if self._lastScreenshot.findItemsByBitmap(bitmap, **oirArgs):
                     foundBitmaps.append(bitmap)
             return foundBitmaps != []
-        self.wait(self.refreshScreenshot, observe, **waitKwArgs)
+        self.wait(self.refreshScreenshot, observe, **waitArgs)
         return foundBitmaps
 
     def waitAnyOcrText(self, listOfTexts, **waitAndOcrArgs):
@@ -1215,7 +1594,7 @@ class GUITestInterface(object):
         if listOfTexts == []: return []
         if not self._lastScreenshot: self.refreshScreenshot()
         waitArgs, rest = _takeWaitArgs(waitAndOcrArgs)
-        ocrArgs, rest = _takeOcrArgs(self._lastScreenshot, rest, thatsAll=True)
+        ocrArgs, _ = _takeOcrArgs(self._lastScreenshot, rest, thatsAll=True)
         foundTexts = []
         def observe():
             for text in listOfTexts:
@@ -1225,7 +1604,7 @@ class GUITestInterface(object):
         self.wait(self.refreshScreenshot, observe, **waitArgs)
         return foundTexts
 
-    def waitBitmap(self, bitmap, colorMatch=None, opacityLimit=None, area=None, **waitKwArgs):
+    def waitBitmap(self, bitmap, **waitAndOirArgs):
         """
         Wait until bitmap appears on screen.
 
@@ -1234,8 +1613,8 @@ class GUITestInterface(object):
           bitmap (string):
                   filename of the bitmap to be waited for.
 
-          colorMatch, opacityLimit, area (optional):
-                  refer to verifyBitmap documentation.
+          optical image recognition arguments (optional)
+                  refer to help(obj.oirEngine()).
 
           waitTime, pollDelay (float, optional):
                   refer to wait documentation.
@@ -1246,7 +1625,7 @@ class GUITestInterface(object):
         If the bitmap is not found from most recently refreshed
         screenshot, waitBitmap updates the screenshot.
         """
-        return self.waitAnyBitmap([bitmap], colorMatch, opacityLimit, area, **waitKwArgs) != []
+        return self.waitAnyBitmap([bitmap], **waitAndOirArgs) != []
 
     def waitOcrText(self, text, **waitAndOcrArgs):
         """
@@ -1276,35 +1655,49 @@ class Screenshot(object):
     Screenshot class takes and holds a screenshot (bitmap) of device
     display, or a forced bitmap file if device connection is not given.
     """
-    def __init__(self, screenshotFile=None, pathSolver=None, ocrEngine=None):
+    def __init__(self, screenshotFile=None, paths=None, ocrEngine=None, oirEngine=None):
         self._filename = screenshotFile
-        self._pathSolver = pathSolver
-        self._e4gImage = eye4graphics.openImage(self._filename)
         self._ocrEngine = ocrEngine
         self._ocrEngineNotified = False
-        struct_bbox = _Bbox(0, 0, 0, 0, 0)
-        eye4graphics.openedImageDimensions(ctypes.byref(struct_bbox), self._e4gImage)
-        self._screenSize = (struct_bbox.right, struct_bbox.bottom)
-        # The bitmap held inside screenshot object is never updated.
-        # If new screenshot is taken, this screenshot object disappears.
-        # => cache all search hits
-        self._cache = {}
+        self._oirEngine = oirEngine
+        self._oirEngineNotified = False
+        self._screenSize = None
+        self._paths = paths
 
     def __del__(self):
-        eye4graphics.closeImage(self._e4gImage)
         if self._ocrEngine and self._ocrEngineNotified:
             self._ocrEngine.removeScreenshot(self)
+        if self._oirEngine and self._oirEngineNotified:
+            if (self._ocrEngineNotified == False or
+                id(self._oirEngine) != id(self._ocrEngine)):
+                self._oirEngine.removeScreenshot(self)
 
-    def size(self):
+    def setSize(self, screenSize):
+        self._screenSize = screenSize
+
+    def size(self, allowReadingFile=True):
         """
         Returns screenshot size in pixels, as pair (width, height).
         """
+        if self._screenSize == None and allowReadingFile:
+            e4gImage = eye4graphics.openImage(self._filename)
+            self._screenSize = _e4gImageDimensions(e4gImage)
+            eye4graphics.closeImage(e4gImage)
         return self._screenSize
 
     def _notifyOcrEngine(self):
         if self._ocrEngine and not self._ocrEngineNotified:
             self._ocrEngine.addScreenshot(self)
             self._ocrEngineNotified = True
+            if id(self._ocrEngine) == id(self._oirEngine):
+                self._oirEngineNotified = True
+
+    def _notifyOirEngine(self):
+        if self._oirEngine and not self._oirEngineNotified:
+            self._oirEngine.addScreenshot(self)
+            self._oirEngineNotified = True
+            if id(self._oirEngine) == id(self._ocrEngine):
+                self._ocrEngineNotified = True
 
     def dumpOcr(self, **kwargs):
         """
@@ -1324,83 +1717,29 @@ class Screenshot(object):
     def filename(self):
         return self._filename
 
-    def findItemsByBitmap(self, bitmap, colorMatch=1.0, opacityLimit=0.0, area=(0.0, 0.0, 1.0, 1.0), limit=-1, allowOverlap=True):
-        """
-        Find items on the screenshot that match to bitmap.
-
-        Parameters:
-
-          bitmap (string):
-                  filename of the bitmap
-
-          colorMatch, opacityLimit, area (optional):
-                  see verifyBitmap documentation.
-
-          limit (integer, optional):
-                  number of returned matches is limited to the
-                  limit. The default is -1: all matches are returned.
-
-          allowOverlap (boolean, optional):
-                  allow returned icons to overlap. If False, returned
-                  list contains only non-overlapping bounding boxes.
-                  The default is True: every bounding box that contains
-                  matching bitmap is returned.
-        """
-        bitmap = self._pathSolver(bitmap)
-        cacheKey = (bitmap, colorMatch, opacityLimit, area, limit)
-        if cacheKey in self._cache:
-            return self._cache[(bitmap, colorMatch, opacityLimit, area, limit)]
-        self._cache[cacheKey] = []
-        e4gIcon = eye4graphics.openImage(bitmap)
-        matchCount = 0
-        leftTopRightBottomZero = (_intCoords((area[0], area[1]), self._screenSize) +
-                                  _intCoords((area[2], area[3]), self._screenSize) +
-                                  (0,))
-        struct_area_bbox = _Bbox(*leftTopRightBottomZero)
-        struct_bbox = _Bbox(0, 0, 0, 0, 0)
-        contOpts = 0 # search for the first hit
-        while True:
-            if matchCount == limit: break
-            result = eye4graphics.findNextIcon(ctypes.byref(struct_bbox),
-                                               ctypes.c_void_p(self._e4gImage),
-                                               ctypes.c_void_p(e4gIcon),
-                                               0, # no fuzzy matching
-                                               ctypes.c_double(colorMatch),
-                                               ctypes.c_double(opacityLimit),
-                                               ctypes.byref(struct_area_bbox),
-                                               ctypes.c_int(contOpts))
-            contOpts = 1 # search for the next hit
-            if result < 0: break
-            bbox = (int(struct_bbox.left), int(struct_bbox.top),
-                    int(struct_bbox.right), int(struct_bbox.bottom))
-            addToFoundItems = True
-            if allowOverlap == False:
-                for guiItem in self._cache[cacheKey]:
-                    itemLeft, itemTop, itemRight, itemBottom = guiItem.bbox()
-                    if ((itemLeft <= bbox[0] <= itemRight or itemLeft <= bbox[2] <= itemRight) and
-                        (itemTop <= bbox[1] <= itemBottom or itemTop <= bbox[3] <= itemBottom)):
-                        if ((itemLeft < bbox[0] < itemRight or itemLeft < bbox[2] < itemRight) or
-                            (itemTop < bbox[1] < itemBottom or itemTop < bbox[3] < itemBottom)):
-                            addToFoundItems = False
-                            break
-            if addToFoundItems:
-                self._cache[cacheKey].append(GUIItem("bitmap", bbox, self._filename, bitmap=bitmap))
-                matchCount += 1
-        eye4graphics.closeImage(e4gIcon)
-        return self._cache[cacheKey]
-
-    def findItemsByOcr(self, text, **engineArgs):
-        if self._ocrEngine != None: # user-defined OcrEngine
-            self._notifyOcrEngine()
-            return self._ocrEngine.findText(self, text, **engineArgs)
+    def findItemsByBitmap(self, bitmap, **oirEngineArgs):
+        if self._oirEngine != None:
+            self._notifyOirEngine()
+            return self._oirEngine.findBitmap(
+                self, self._paths.abspath(bitmap), **oirEngineArgs)
         else:
-            raise RuntimeError('Trying to use OCR on "%s" without OcrEngine.' % (self.filename(),))
+            raise RuntimeError('Trying to use OIR on "%s" without OIR engine.' % (self.filename(),))
+
+    def findItemsByOcr(self, text, **ocrEngineArgs):
+        if self._ocrEngine != None:
+            self._notifyOcrEngine()
+            return self._ocrEngine.findText(self, text, **ocrEngineArgs)
+        else:
+            raise RuntimeError('Trying to use OCR on "%s" without OCR engine.' % (self.filename(),))
 
     def save(self, fileOrDirName):
         shutil.copy(self._filename, fileOrDirName)
 
     def ocrEngine(self):
         return self._ocrEngine
+
+    def oirEngine(self):
+        return self._oirEngine
 
     def __str__(self):
         return 'Screenshot(filename="%s")' % (self._filename,)
@@ -1645,7 +1984,7 @@ class _VisualLog:
     def findItemsByBitmapLogger(loggerSelf, origMethod, screenshotObj):
         def findItemsByBitmapWRAP(*args, **kwargs):
             bitmap = args[0]
-            loggerSelf.logCall(img=screenshotObj._pathSolver(bitmap))
+            loggerSelf.logCall(img=screenshotObj._paths.abspath(bitmap))
             retval = loggerSelf.doCallLogException(origMethod, args, kwargs)
             if len(retval) == 0:
                 loggerSelf.logReturn("not found in", img=screenshotObj, tip=origMethod.func_name)
