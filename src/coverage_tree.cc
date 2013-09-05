@@ -94,11 +94,12 @@ void Coverage_Tree::precalc()
   if (model) {
     if (have_filter) {
       strlist(subs);
+      std::vector<std::string> &model_action_names=model->getActionNames();
       // We have a filter!
       for(int i=0;i<max_depth;i++) {
 	std::string& filt=subs[i+1];
 	std::vector<int> result;
-	regexpmatch(filt,model->getActionNames(),result);
+	regexpmatch(filt,model_action_names,result);
 	if (result.empty()) {
 	  status=false;
 	  errormsg="No match for regexp "+filt;
@@ -168,14 +169,14 @@ bool Coverage_Tree::execute(int action)
   struct node* current_node=&root_node;
   struct node* next_node;
   int depth=0;
-  while (current_node && depth<max_depth) {
+  bool _filt=true;
+  while (depth<max_depth) {
     bool filt=filter(depth,action);
-    if (current_node->nodes[action]==NULL) {
+    _filt&=filt;
+    if (_filt && current_node->nodes[action]==NULL) {
       current_node->nodes[action]=new struct node;
       current_node->nodes[action]->action=action;
-      if (filt) {
-	node_count++;
-      }
+      node_count++;
       if (push_depth) {
 	push_restore.top().push_front(std::pair<struct node*, int> 
 				      (current_node,action));
@@ -183,7 +184,12 @@ bool Coverage_Tree::execute(int action)
     }
     depth++;
     next_node=(*exec)[depth].first;
-    (*exec)[depth]=std::pair<struct node*, bool>(current_node->nodes[action],filt);
+    bool _filt_tmp=(*exec)[depth].second;
+    if (current_node) 
+      (*exec)[depth]=std::pair<struct node*, bool>(current_node->nodes[action],_filt);
+    else 
+      (*exec)[depth]=std::pair<struct node*, bool>(current_node,_filt);      
+    _filt=_filt_tmp;
     current_node=next_node;
   }
 
