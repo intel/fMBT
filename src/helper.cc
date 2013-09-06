@@ -314,7 +314,7 @@ char* readfile(const char* filename,const char* preprocess,int& status)
  }
 #endif
 
-char* readfile(const char* filename)
+char* _readfile(const char* filename)
 {
   std::string fn(filename);
   unsigned long cutpos = fn.find_last_of("#");
@@ -366,6 +366,19 @@ char* readfile(const char* filename)
   } else {
     return unescape_string(strdup(fn.substr(cutpos+1).c_str()));
   }
+}
+
+char* readfile(const char* filename) {
+  char* ret=_readfile(filename);
+  if (!ret) {
+    const char* prefix=g_getenv("AAL_INCLUDE_PREFIX");
+    if (prefix) {
+      gchar* fname = g_build_filename(prefix,filename,NULL);
+      ret=_readfile(fname);
+      g_free(fname);
+    }
+  }
+  return ret;
 }
 
 std::string capsulate(std::string s) {

@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <libgen.h> // dirname
+#include <glib.h>
 
 std::list<std::string> include_path;
 std::list<YY_BUFFER_STATE> istack;
@@ -53,14 +54,18 @@ FILE* _include_search_open(std::string& f)
 
   for(std::list<std::string>::iterator i=include_path.begin();
       i!=include_path.end();i++) {
-    std::string s=*i+"/"+f;
+    char* fname = g_build_filename(i->c_str(),f.c_str(),NULL);
+    std::string s(fname);
+    g_free(fname);
     st=fopen(s.c_str(), "r" );
     if (st) {
       f=s;
       return st;
     }
     if (inc_prefix) {
-      s=std::string(inc_prefix)+"/"+s;
+      fname = g_build_filename(inc_prefix,s.c_str(),NULL);
+      s=std::string(fname);
+      g_free(fname);
       st=fopen(s.c_str(), "r" );
       if (st) {
 	f=s;

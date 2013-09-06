@@ -35,7 +35,7 @@ remote_adapter_loader_CPPFLAGS = -Wall -pedantic -I d -DDROI $(FMBTBUILDINFOCFLA
 fmbt_cparsers_la_CPPFLAGS      = -Wall -pedantic -fPIC -I ./d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) -DCAPI $(FMBTBUILDINFOCFLAGS)
 eye4graphics_la_CPPFLAGS       = -Wall -fPIC -I `pwd` $(MAGIC_CFLAGS) $(FMBTBUILDINFOCFLAGS)
 fmbt_aalc_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) -DINCDIR=\"${pkgincludedir}\" $(FMBTBUILDINFOCFLAGS)
-fmbt_aalp_CPPFLAGS	       = $(FMBTBUILDINFOCFLAGS)
+fmbt_aalp_CPPFLAGS	       = $(FMBTBUILDINFOCFLAGS) $(GLIB_CFLAGS)
 fmbt_log2lsts_CPPFLAGS	       = -Wall -pedantic -fPIC -I d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) $(XML2_CFLAGS) $(FMBTBUILDINFOCFLAGS)
 
 fmbt_LDFLAGS                   = -g $(JVMLDFLAGS) $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E -ldl
@@ -45,6 +45,7 @@ fmbt_cparsers_la_LDFLAGS       = -g $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS)
 eye4graphics_la_LDFLAGS        = -g $(MAGIC_LIBS) -avoid-version -module -shared
 remote_adapter_loader_LDFLAGS  = -g -ldl $(GLIB_LIBS)
 fmbt_aalc_LDFLAGS	       = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) -lboost_regex -Wl,-E -ldl
+fmbt_aalp_LDFLAGS	       = -g $(GLIB_LIBS)
 fmbt_log2lsts_LDFLAGS 	       = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E -ldl
 
 fmbt_LDADD                     = d/libdparse.a
