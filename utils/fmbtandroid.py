@@ -170,6 +170,12 @@ import uu
 import fmbt
 import fmbtgti
 
+# See imagemagick convert parameters.
+fmbtgti._OCRPREPROCESS =  [
+    '-sharpen 5 -filter Mitchell %(zoom)s -sharpen 5 -level 60%%,60%%,3.0 -sharpen 5',
+    '-sharpen 5 -level 90%%,100%%,3.0 -filter Mitchell -sharpen 5'
+    ]
+
 def _adapterLog(msg):
     fmbt.adapterlog("fmbtandroid: %s" % (msg,))
 

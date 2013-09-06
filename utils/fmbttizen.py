@@ -67,6 +67,17 @@ import zlib
 import fmbt
 import fmbtgti
 
+# See imagemagick convert parameters.
+fmbtgti._OCRPREPROCESS =  [
+    '-sharpen 5 -filter Mitchell %(zoom)s -sharpen 5 -level 60%%,60%%,3.0 -sharpen 5',
+    '-sharpen 5 -level 90%%,100%%,3.0 -filter Mitchell -sharpen 5'
+    ]
+
+def _takePinchArgs(d):
+    return fmbtgti._takeArgs(("finger1Dir", "finger2Dir", "duration",
+                              "movePoints", "sleepBeforeMove",
+                              "sleepAfterMove"), d)
+
 def _adapterLog(msg):
     fmbt.adapterlog("fmbttizen: %s" % (msg,))
 
@@ -228,7 +239,7 @@ class Device(fmbtgti.GUITestInterface):
                                               duration, movePoints, sleepBeforeMove, sleepAfterMove)
 
     def pinchBitmap(self, bitmap, startDistance, endDistance,
-                    colorMatch=None, opacityLimit=None, area=None, **pinchKwArgs):
+                    **pinchAndOirArgs):
         """
         Make the pinch gesture using the bitmap as central point.
 
@@ -243,16 +254,21 @@ class Device(fmbtgti.GUITestInterface):
                   the distance from the bitmap to screen edge. Both
                   finger tips will reach an edge if distance is 1.0.
 
-          colorMatch, opacityLimit, area (optional):
-                  refer to verifyBitmap documentation.
+          optical image recognition arguments (optional)
+                  refer to help(obj.oirEngine()).
 
           rest of the parameters: refer to pinch documentation.
+
+        Returns True if successful, otherwise False.
         """
         assert self._lastScreenshot != None, "Screenshot required."
-        items = self._lastScreenshot.findItemsByBitmap(bitmap, **fmbtgti._bitmapKwArgs(colorMatch, opacityLimit, area, 1))
+        pinchArgs, rest = _takePinchArgs(pinchAndOirArgs)
+        oirArgs, _ = fmbtgti._takeOirArgs(self._lastScreenshot, rest, thatsAll=True)
+        oirArgs["limit"] = 1
+        items = self._lastScreenshot.findItemsByBitmap(bitmap, **oirArgs)
         if len(items) == 0:
             return False
-        return self.pinchItem(items[0], startDistance, endDistance, **pinchKwArgs)
+        return self.pinchItem(items[0], startDistance, endDistance, **pinchArgs)
 
     def pinchClose(self, (x, y) = (0.5, 0.5), startDistance=0.5, endDistance=0.1, **pinchKwArgs):
         """
