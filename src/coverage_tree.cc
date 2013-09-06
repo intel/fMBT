@@ -31,9 +31,6 @@ Coverage_Tree::Coverage_Tree(Log& l,const std::string& _params) :
   set_max_depth(subs[0]);
   push();
 
-  printf("size %i, max_depth %i\n",
-	 (int)subs.size(),max_depth);
-
   if ((subs.size()>1) && (((unsigned)max_depth+1)!=subs.size())) {
     status=false;
     errormsg="incorrect number of params. Expecting "+to_string(max_depth+1);
