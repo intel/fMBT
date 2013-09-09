@@ -24,10 +24,22 @@ Coverage_Join::Coverage_Join(Log& l,const std::string& param)
   : Coverage(l), child(NULL)
 {
   commalist(param,subs);
+
   if (subs.size()>1) {
     child=new_coverage(l,subs.back());
   }
-  status&=(child!=NULL);
+
+  if (child==NULL) {
+    status=false;
+    errormsg="Can't create coverage:"+subs.back();
+    return;
+  }
+
+  if (!child->status) {
+    status=false;
+    errormsg="coverage error at "+subs.back()+ ":"+ child->errormsg;
+  }
+
 }
 
 void Coverage_Join::handle_sub(const std::string& sub)
