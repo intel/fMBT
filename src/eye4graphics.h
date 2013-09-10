@@ -78,6 +78,9 @@ extern "C" {
      * - threshold, colorMatch, opacityLimit, searchArea - see findSingleIcon
      * - continueOpts   - if 0, find the first match (ignore bbox value)
      *                    if non-zero, find the next match
+     * - scale          - scale for icon
+     * - neeRectSize    - area on icon, counter part must be in image
+     * - hayRectSize    - area on image, counter part for area in icon
      *
      * Return value:
      *     see findSingleIcon
@@ -90,7 +93,10 @@ extern "C" {
                      const double colorMatch,
                      const double opacityLimit,
                      const BoundingBox* searchArea,
-                     const int continueOpts);
+                     const int continueOpts,
+                     const float scale,
+                     const int neeRectSize,
+                     const int hayRectSize);
 
     /*
      * imageDimensions

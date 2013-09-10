@@ -731,8 +731,7 @@ class OirEngine(OrEngine):
 
 
 class _Eye4GraphicsOirEngine(OirEngine):
-    """
-    OIR engine parameters that can be used in all
+    """OIR engine parameters that can be used in all
     ...Bitmap() methods (swipeBitmap, tapBitmap, findItemsByBitmap, ...):
 
       colorMatch (float, optional):
@@ -766,6 +765,21 @@ class _Eye4GraphicsOirEngine(OirEngine):
               contains only non-overlapping bounding boxes.  The
               default is True: every bounding box that contains
               matching bitmap is returned.
+
+      scale (float, optional):
+              scale to be applied to the bitmap. The default is 1.0.
+
+      bitmapColorRect (integer, optional):
+              size of pixel rectangle on bitmap for which there must
+              be same color on corresponding screenshot rectangle.  If
+              scale is 1.0, default is 1 (rectangle is 1x1). If scale
+              != 1.0, the default is 2 (rectangle is 2x2).
+
+      screenshotColorRect (integer, optional):
+              size of pixel rectangle on screenshot in which there
+              must be a same color pixel as in the corresponding
+              rectangle on bitmap. The default is scale *
+              bitmapColorRect.
     """
     def __init__(self, *args, **engineDefaults):
         engineDefaults["colorMatch"] = engineDefaults.get("colorMatch", 1.0)
@@ -773,6 +787,9 @@ class _Eye4GraphicsOirEngine(OirEngine):
         engineDefaults["area"] = engineDefaults.get("area", (0.0, 0.0, 1.0, 1.0))
         engineDefaults["limit"] = engineDefaults.get("limit", -1)
         engineDefaults["allowOverlap"] = engineDefaults.get("allowOverlap", True)
+        engineDefaults["scale"] = engineDefaults.get("scale", 1.0)
+        engineDefaults["bitmapColorRect"] = engineDefaults.get("bitmapColorRect", 0)
+        engineDefaults["screenshotColorRect"] = engineDefaults.get("screenshotColorRect", 0)
         OirEngine.__init__(self, *args, **engineDefaults)
         self._openedImages = {}
         self._findBitmapCache = {}
@@ -794,7 +811,8 @@ class _Eye4GraphicsOirEngine(OirEngine):
 
     def _findBitmap(self, screenshot, bitmap, colorMatch=None,
                     opacityLimit=None, area=None, limit=None,
-                    allowOverlap=None):
+                    allowOverlap=None, scale=None,
+                    bitmapColorRect=None, screenshotColorRect=None):
         """
         Find items on the screenshot that match to bitmap.
         """
@@ -822,7 +840,10 @@ class _Eye4GraphicsOirEngine(OirEngine):
                 ctypes.c_double(colorMatch),
                 ctypes.c_double(opacityLimit),
                 ctypes.byref(struct_area_bbox),
-                ctypes.c_int(contOpts))
+                ctypes.c_int(contOpts),
+                ctypes.c_float(scale),
+                ctypes.c_int(bitmapColorRect),
+                ctypes.c_int(screenshotColorRect))
             contOpts = 1 # search for the next hit
             if result < 0: break
             bbox = (int(struct_bbox.left), int(struct_bbox.top),
