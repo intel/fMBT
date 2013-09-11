@@ -731,8 +731,7 @@ class OirEngine(OrEngine):
 
 
 class _Eye4GraphicsOirEngine(OirEngine):
-    """
-    OIR engine parameters that can be used in all
+    """OIR engine parameters that can be used in all
     ...Bitmap() methods (swipeBitmap, tapBitmap, findItemsByBitmap, ...):
 
       colorMatch (float, optional):
@@ -763,16 +762,51 @@ class _Eye4GraphicsOirEngine(OirEngine):
 
       allowOverlap (boolean, optional):
               allow returned icons to overlap. If False, returned list
-              contains only non-overlapping bounding boxes.  The
-              default is True: every bounding box that contains
-              matching bitmap is returned.
+              contains only non-overlapping bounding boxes. The
+              default is False.
+
+      scale (float, optional):
+              scale to be applied to the bitmap. The default is 1.0.
+
+      bitmapPixelSize (integer, optional):
+              size of pixel rectangle on bitmap for which there must
+              be same color on corresponding screenshot rectangle.  If
+              scale is 1.0, default is 1 (rectangle is 1x1). If scale
+              != 1.0, the default is 2 (rectangle is 2x2).
+
+      screenshotPixelSize (integer, optional):
+              size of pixel rectangle on screenshot in which there
+              must be a same color pixel as in the corresponding
+              rectangle on bitmap. The default is scale *
+              bitmapPixelSize.
+
+
+    If unsure about parameters, but you have a bitmap that should be
+    detected in a screenshot, try obj.ocrEngine().adjustParameters().
+
+    Example:
+
+    d.enableVisualLog("params.html")
+    screenshot = d.refreshScreenshot()
+    results = d.oirEngine().adjustParameters(screenshot, "mybitmap.png")
+    if results:
+        item, params = results[0]
+        print "found %s with parameters:" % (item,)
+        print "\n".join(sorted(["  %s = %s" % (k, params[k]) for k in params]))
+        print "verify:", d.verifyBitmap("mybitmap.png", **params)
+
+    Notice, that you can force refreshScreenshot to load old screenshot:
+    d.refreshScreenshot("old.png")
     """
     def __init__(self, *args, **engineDefaults):
         engineDefaults["colorMatch"] = engineDefaults.get("colorMatch", 1.0)
         engineDefaults["opacityLimit"] = engineDefaults.get("opacityLimit", 0.0)
         engineDefaults["area"] = engineDefaults.get("area", (0.0, 0.0, 1.0, 1.0))
         engineDefaults["limit"] = engineDefaults.get("limit", -1)
-        engineDefaults["allowOverlap"] = engineDefaults.get("allowOverlap", True)
+        engineDefaults["allowOverlap"] = engineDefaults.get("allowOverlap", False)
+        engineDefaults["scale"] = engineDefaults.get("scale", 1.0)
+        engineDefaults["bitmapPixelSize"] = engineDefaults.get("bitmapPixelSize", 0)
+        engineDefaults["screenshotPixelSize"] = engineDefaults.get("screenshotPixelSize", 0)
         OirEngine.__init__(self, *args, **engineDefaults)
         self._openedImages = {}
         self._findBitmapCache = {}
@@ -792,15 +826,82 @@ class _Eye4GraphicsOirEngine(OirEngine):
         del self._openedImages[filename]
         del self._findBitmapCache[filename]
 
+    def adjustParameters(self, screenshot, bitmap,
+                         scaleRange = [p/100.0 for p in range(110,210,10)],
+                         colorMatchRange = [p/100.0 for p in range(100,60,-10)],
+                         pixelSizeRange = range(2,5),
+                         resultCount = 1,
+                         **oirArgs):
+        """
+        Search for scale, colorMatch, bitmapPixelSize and
+        screenshotPixelSize parameters that find the bitmap in the
+        screenshot.
+
+        Parameters:
+          screenshot (Screenshot instance):
+                  screenshot that contains the bitmap.
+
+          bitmap (string):
+                  bitmap filename.
+
+          scaleRange (list of floats, optional):
+                  scales to go through.
+                  The default is: 1.1, 1.2, ... 2.0.
+
+          colorMatchRange (list of floats, optional):
+                  colorMatches to try out.
+                  The default is: 1.0, 0.9, ... 0.7.
+
+          pixelSizeRange (list of integers, optional):
+                  values for bitmapPixelSize and screenshotPixelSize.
+                  The default is: [2, 3]
+
+          resultCount (integer, optional):
+                  number of parameter combinations to be found.
+                  The default is 1. 0 is unlimited.
+
+          other OIR parameters: as usual, refer to engine documentation.
+
+        Returns list of pairs: (GUIItem, findParams), where
+        GUIItem is the detected item (GUIItem.bbox() is the box around it),
+        and findParams is a dictionary containing the parameters.
+        """
+        if not screenshot.filename() in self._findBitmapCache:
+            self.addScreenshot(screenshot)
+            ssAdded = True
+        else:
+            ssAdded = False
+        retval = []
+        for colorMatch in colorMatchRange:
+            for pixelSize in pixelSizeRange:
+                for scale in scaleRange:
+                    findParams = oirArgs.copy()
+                    findParams.update({"colorMatch": colorMatch,
+                                       "limit": 1,
+                                       "scale": scale,
+                                       "bitmapPixelSize": pixelSize,
+                                       "screenshotPixelSize": pixelSize})
+                    results = self.findBitmap(screenshot, bitmap,
+                                               **findParams)
+                    if results:
+                        retval.append((results[0], findParams))
+                        if len(retval) == resultCount:
+                            return retval
+        if ssAdded:
+            self.removeScreenshot(screenshot)
+        return retval
+
     def _findBitmap(self, screenshot, bitmap, colorMatch=None,
                     opacityLimit=None, area=None, limit=None,
-                    allowOverlap=None):
+                    allowOverlap=None, scale=None,
+                    bitmapPixelSize=None, screenshotPixelSize=None):
         """
         Find items on the screenshot that match to bitmap.
         """
         ssFilename = screenshot.filename()
         ssSize = screenshot.size()
-        cacheKey = (bitmap, colorMatch, opacityLimit, area, limit)
+        cacheKey = (bitmap, colorMatch, opacityLimit, area, limit,
+                    scale, bitmapPixelSize, screenshotPixelSize)
         if cacheKey in self._findBitmapCache[ssFilename]:
             return self._findBitmapCache[ssFilename][cacheKey]
         self._findBitmapCache[ssFilename][cacheKey] = []
@@ -822,7 +923,10 @@ class _Eye4GraphicsOirEngine(OirEngine):
                 ctypes.c_double(colorMatch),
                 ctypes.c_double(opacityLimit),
                 ctypes.byref(struct_area_bbox),
-                ctypes.c_int(contOpts))
+                ctypes.c_int(contOpts),
+                ctypes.c_float(scale),
+                ctypes.c_int(bitmapPixelSize),
+                ctypes.c_int(screenshotPixelSize))
             contOpts = 1 # search for the next hit
             if result < 0: break
             bbox = (int(struct_bbox.left), int(struct_bbox.top),
