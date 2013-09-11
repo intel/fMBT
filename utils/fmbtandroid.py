@@ -1322,7 +1322,11 @@ class _AndroidDeviceConnection:
             s = re.findall("mCurrentFocus=Window\{(#?[0-9A-Fa-f]{8})( [^ ]*)? (?P<winName>[^}]*)\}", output)
         else:
             s = re.findall("mCurrentFocus=Window\{(#?[0-9A-Fa-f]{8}) (?P<winName>[^ ]*) [^ ]*\}", output)
-        if s and len(s[0][-1].strip()) > 1: topWindowName = s[0][-1]
+        if s and len(s[-1][-1].strip()) > 1:
+            topWindowName = s[-1][-1]
+            if len(s) > 0:
+                _adapterLog('recvTopAppWindow warning: several mCurrentFocus windows: "%s"'
+                            % ('", "'.join([w[-1] for w in s]),))
         else: topWindowName = None
 
         s = re.findall("mFocusedApp=AppWindowToken.*ActivityRecord\{#?[0-9A-Fa-f]{8}( [^ ]*)? (?P<appName>[^}]*)\}", output)
