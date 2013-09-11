@@ -394,6 +394,11 @@ following special comments understood by the editor.
 
 Other previewer options are:
 
+# preview-depth: <integer>
+
+        Show model state space only to this depth from the initial
+        state. Rest of the states and transitions are not generated.
+
 # preview-image-path: <list of directories separated by colons>
 
         In order to show images on tooltips, look for them from
