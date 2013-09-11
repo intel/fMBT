@@ -337,6 +337,11 @@ static int iconsearch(std::vector<BoundingBox>& retval,
         startY > searchArea.bottom)
         return -1;
 
+    if (startX > _hayPixelSize/2) startX -= _hayPixelSize/2;
+    if (startY > _hayPixelSize/2) startY -= _hayPixelSize/2;
+    if (startX < searchArea.left) startX = searchArea.left;
+    if (startY < searchArea.top) startY = searchArea.top;
+
     int hayx = haystack.columns();
     int hayy = haystack.rows();
     int neex = needle.columns();
@@ -365,6 +370,7 @@ static int iconsearch(std::vector<BoundingBox>& retval,
                 needle.type(TrueColorMatteType);
             } else {
                 haystack.type(TrueColorType);
+
                 needle.type(TrueColorType);
             }
         } else {
@@ -402,10 +408,10 @@ static int iconsearch(std::vector<BoundingBox>& retval,
                                        scale,
                                        _neePixelSize, _hayPixelSize)) {
                     BoundingBox bbox;
-                    bbox.left = x + searchArea.left;
-                    bbox.top = y + searchArea.top;
-                    bbox.right = bbox.left + int(neex*scale);
-                    bbox.bottom = bbox.top + int(neey*scale);
+                    bbox.left = x + searchArea.left + _hayPixelSize/2;
+                    bbox.top = y + searchArea.top + _hayPixelSize/2;
+                    bbox.right = bbox.left + int(neex*scale) + _hayPixelSize/2;
+                    bbox.bottom = bbox.top + int(neey*scale) + _hayPixelSize/2;
                     bbox.error = 0;
                     retval.push_back(bbox);
                     return 1;
