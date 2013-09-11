@@ -964,7 +964,12 @@ void gettime(struct timeval *tv)
 #ifndef __MINGW32__
   struct timespec tp;
   clock_gettime(CLOCK_REALTIME,&tp);
+#ifdef TIMESPEC_TO_TIMEVAL
   TIMESPEC_TO_TIMEVAL(tv,&tp);
+#else
+  tv->tv_sec=tp.tv_sec;
+  tv->tv_usec=tp.tv_nsec/1000;
+#endif
 #else
   FILETIME ft; /*time since 1 Jan 1601 in 100ns units */
   GetSystemTimeAsFileTime( &ft );
