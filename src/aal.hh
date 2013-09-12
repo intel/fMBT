@@ -114,11 +114,6 @@ protected:
   std::vector<std::string> tag_names; /* tag/state proposition names.. */
   Log& _log;
   std::string params;
-  /*
-public:
-  std::string errormsg;
-  bool status;
-  */
 };
 
 #include "model.hh"
