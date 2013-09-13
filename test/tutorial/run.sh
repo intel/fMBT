@@ -63,7 +63,7 @@ teststep "run:$(cat fmbt.1)..."
 rm -rf /tmp/fmbt.mkrmdir
 rm -f mkrmdir.log
 source fmbt.1 >> $LOGFILE 2>&1
-if [ "$(fmbt-log -f '$tr' mkrmdir.log)" != "coverage reached" ]; then
+if [ "$(fmbt-log -f '$tr' mkrmdir.log)" != "coverage 1.0 reached" ]; then
     echo "coverage was not reached" >> $LOGFILE
     testfailed
 fi

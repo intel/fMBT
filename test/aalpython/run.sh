@@ -63,7 +63,7 @@ teststep "remote_pyaal adapter in test execution..."
 MYCOUNTERLOG=$(python -c 'import mycounter; print mycounter.log_filename')
 rm -f "$MYCOUNTERLOG"
 fmbt test.conf 2>test.verdict | tee test.log >> $LOGFILE
-if [ "$(cat test.verdict)" == "pass: coverage reached" ] &&
+if [ "$(cat test.verdict)" == "pass: coverage .5 reached" ] &&
     ( tail -n1 "$MYCOUNTERLOG" | grep -q "dec called" ) >>$LOGFILE 2>&1; then
     testpassed
 else
