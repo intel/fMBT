@@ -35,6 +35,44 @@ enum {
 int state=NONE;
 std::stack<bool> echo_stack;
 
+void clear_whitespace(std::string& s){
+  std::string white (" \t\f\v\n\r"); /* more whilespace? */
+  size_t pos;
+
+  pos=s.find_last_not_of(white);
+  if (pos==std::string::npos) {
+    s.clear();
+  } else {
+    s.erase(pos+1);
+    pos=s.find_first_not_of(white);
+    if (pos!=std::string::npos) {
+      s=s.substr(pos);
+    }
+  }
+}
+
+bool inc_split(std::string& s) {
+  bool ret=true;
+  size_t pos;
+  pos=s.find_last_not_of("\"");
+  if (pos!=std::string::npos) {
+    s.erase(pos+1);
+    pos=s.find_first_of("\"");
+    if (pos!=std::string::npos) {
+      std::string def_str;
+      if (pos>1)
+	def_str=s.substr(0,pos-1);
+      s=s.substr(pos+1);
+      clear_whitespace(def_str);
+      if (!def_str.empty()) {
+	ret=def[def_str];
+      }
+    }
+  }
+
+  return ret;
+}
+
 FILE* _include_search_open(std::string& f)
 {
   FILE* st=fopen(f.c_str(), "r" );
@@ -103,44 +141,43 @@ FILE* include_search_open(std::string& f) {
   }
 }
 
-<STR>[^ \t\n]+ {
+<STR>[^\n]+ {
   if (echo) {
+    std::string s(yytext,strlen(yytext));
+    clear_whitespace(s);
     switch (state) {
     case INC: {
-      std::string s(yytext+1,strlen(yytext)-2);
-      FILE* st=include_search_open(s);
-      fprintf(yyout,"# 1 \"%s\"\x0A",s.c_str(),fstack.size()+1);
-      if (st) {
-	istack.push_back(YY_CURRENT_BUFFER);
-	lstack.push_back(lineno);
-	fstack.push_back(s);
-	lineno=1;
-	yy_switch_to_buffer(yy_create_buffer( st, YY_BUF_SIZE ) );
-      } else {
-      	fprintf(stderr,"No such file \"%s\"\n",s.c_str());
-	exit(-1);
+      if (inc_split(s)) {
+	FILE* st=include_search_open(s);
+	fprintf(yyout,"# 1 \"%s\"\x0A",s.c_str(),fstack.size()+1);
+	if (st) {
+	  istack.push_back(YY_CURRENT_BUFFER);
+	  lstack.push_back(lineno);
+	  fstack.push_back(s);
+	  lineno=1;
+	  yy_switch_to_buffer(yy_create_buffer( st, YY_BUF_SIZE ) );
+	} else {
+	  fprintf(stderr,"No such file \"%s\"\n",s.c_str());
+	  exit(-1);
+	}
       }
       break;
     }
     case DEF: {
-      std::string s(yytext+1,strlen(yytext)-2);
       def[s]=true;
       break;
     }
     case UND: {
-      std::string s(yytext+1,strlen(yytext)-2);
       def[s]=false;
       break;
     }
     case IF: {
-      std::string s(yytext+1,strlen(yytext)-2);
       if (!def[s]) {
 	echo=false;
       }
       break;
     }
     case IFN: {
-      std::string s(yytext+1,strlen(yytext)-2);
       if (def[s]) {
 	echo=false;
       }
