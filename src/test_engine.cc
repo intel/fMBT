@@ -462,7 +462,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
 
       // This is here on purpose. We want to check break condition after
       // checking if the response is 'correct'
-      if (break_check && -1 != (condition_i = matching_end_condition(step_count,0,adapter_response))) {
+      if (-1 != (condition_i = matching_end_condition(step_count,0,adapter_response))) {
         goto out;
       }
 

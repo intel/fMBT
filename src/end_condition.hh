@@ -279,19 +279,29 @@ public:
   End_condition_coverage(Verdict::Verdict v, const std::string& p):
     End_condition(v,p) {
     counter = COVERAGE;
-    er="coverage reached";
+    if (p.empty()) {
+      er="coverage reached";
+    } else {
+      er="coverage "+p+" reached";
+    }
     status = true;
+    cconst=false;
     l.ref();
     c = new_coverage(l,p);
     if (c==NULL) {
       status=false;
       errormsg=param+" not valid coverage";
     } else {
-      if ((dynamic_cast<Coverage_Const*>(c))!=NULL) {
-	cconst=true;
-	param_float = strtod(param.c_str(),NULL);
+      if (c->status) {
+	if ((dynamic_cast<Coverage_Const*>(c))!=NULL) {
+	  cconst=true;
+	  param_float = strtod(param.c_str(),NULL);
+	} else {
+	  cconst=false;
+	}
       } else {
-	cconst=false;
+	status=false;
+	errormsg=c->errormsg;
       }
     }
     set_model_done=false;
@@ -310,10 +320,17 @@ public:
       return (heuristic.getCoverage() >= c->getCoverage());
     }
 
-    if (action) {
+    if (c->status == false) {
+      errormsg=c->errormsg;
+      er=errormsg;
+      status=false;
+      return true;
+    }
+
+    if (action>0) {
       c->execute(action);
     }
-    return (c->getCoverage()==1.0);
+    return (c->getCoverage()>=1.0);
   }
   Log_null l;
   Coverage* c;
