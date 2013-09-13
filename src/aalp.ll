@@ -143,13 +143,18 @@ FILE* include_search_open(std::string& f) {
 
 <STR>[^\n]+ {
   if (echo) {
-    std::string s(yytext,strlen(yytext));
-    clear_whitespace(s);
+    std::string sinc(yytext,strlen(yytext));
+    clear_whitespace(sinc);
+    std::string s(sinc);
+    if (!s.empty() && s[0]=='"' && s[s.length()-1]=='"') {
+     s.erase(s.length()-1);
+     s=s.substr(1);
+    }
     switch (state) {
     case INC: {
-      if (inc_split(s)) {
-	FILE* st=include_search_open(s);
-	fprintf(yyout,"# 1 \"%s\"\x0A",s.c_str(),fstack.size()+1);
+      if (inc_split(sinc)) {
+	FILE* st=include_search_open(sinc);
+	fprintf(yyout,"# 1 \"%s\"\x0A",sinc.c_str(),fstack.size()+1);
 	if (st) {
 	  istack.push_back(YY_CURRENT_BUFFER);
 	  lstack.push_back(lineno);
@@ -157,7 +162,7 @@ FILE* include_search_open(std::string& f) {
 	  lineno=1;
 	  yy_switch_to_buffer(yy_create_buffer( st, YY_BUF_SIZE ) );
 	} else {
-	  fprintf(stderr,"No such file \"%s\"\n",s.c_str());
+	  fprintf(stderr,"No such file \"%s\"\n",sinc.c_str());
 	  exit(-1);
 	}
       }
