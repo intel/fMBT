@@ -284,9 +284,10 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
   //if (verify_tags(tags) > 0) return stop_test(Verdict::FAIL, m_verdict_msg.c_str());
   verify_tags(tags);
   log_status(log, step_count, heuristic.getCoverage());
-  while (-1 == (condition_i = matching_end_condition(step_count))) {
+  int act=-1;
+  while (-1 == (condition_i = matching_end_condition(step_count,0,act))) {
     action=0;
-
+    act=-1;
     gettime(&Adapter::current_time);
     log.print("<current_time time=\"%i.%06i\"/>\n",Adapter::current_time.tv_sec,
               Adapter::current_time.tv_usec);
@@ -462,7 +463,8 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
 
       // This is here on purpose. We want to check break condition after
       // checking if the response is 'correct'
-      if (-1 != (condition_i = matching_end_condition(step_count,0,adapter_response))) {
+      act=adapter_response;
+      if (break_check && -1 != (condition_i = matching_end_condition(step_count,0,adapter_response))) {
         goto out;
       }
 
