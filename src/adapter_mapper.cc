@@ -523,6 +523,4 @@ void Adapter_mapper::adapter_exit(Verdict::Verdict verdict,
   }
 }
 
-
-
 FACTORY_DEFAULT_CREATOR(Adapter, Adapter_mapper, "mapper")

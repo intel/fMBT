@@ -139,7 +139,6 @@ bool isInputName(const std::string& name)
     (name.c_str()[0]=='d');
 }
 
-
 void clear_whitespace(std::string& s){
   std::string white (" \t\f\v\n\r"); /* more whilespace? */
   size_t pos;
@@ -155,7 +154,6 @@ void clear_whitespace(std::string& s){
     }
   }
 }
-
 
 void clear_coding(std::string& s){
   std::string coding ("\"");
