@@ -23,7 +23,7 @@
 
 Coverage_Tree::Coverage_Tree(Log& l,const std::string& _params) :
   Coverage(l), max_depth(2), push_depth(0),have_filter(false), params(_params)
-{ 
+{
   set_instance(0);
   commalist(params,subs);
 
@@ -96,7 +96,7 @@ void Coverage_Tree::precalc()
       for(int i=0;i<max_depth;i++) {
 	std::string& filt=subs[i+1];
 	std::vector<int> result;
-	regexpmatch(filt,model_action_names,result,1);
+        regexpmatch(filt,model_action_names,result,false,1,1);
 	if (result.empty()) {
 	  status=false;
 	  errormsg="No match for regexp "+filt;
@@ -175,17 +175,17 @@ bool Coverage_Tree::execute(int action)
       current_node->nodes[action]->action=action;
       node_count++;
       if (push_depth) {
-	push_restore.top().push_front(std::pair<struct node*, int> 
+	push_restore.top().push_front(std::pair<struct node*, int>
 				      (current_node,action));
       }
     }
     depth++;
     next_node=(*exec)[depth].first;
     bool _filt_tmp=(*exec)[depth].second;
-    if (current_node) 
+    if (current_node)
       (*exec)[depth]=std::pair<struct node*, bool>(current_node->nodes[action],_filt);
-    else 
-      (*exec)[depth]=std::pair<struct node*, bool>(current_node,_filt);      
+    else
+      (*exec)[depth]=std::pair<struct node*, bool>(current_node,_filt);
     _filt=_filt_tmp;
     current_node=next_node;
   }
@@ -215,7 +215,7 @@ void Coverage_Tree::print_tree(struct node* node,int depth)
 int Coverage_Tree::fitness(int* action,int n,float* fitness)
 {
   int ret=0;
-  
+
   if (log.is_debug()) {
     log.debug("Tree\n");
     print_tree(&root_node,0);
@@ -235,7 +235,7 @@ int Coverage_Tree::fitness(int* action,int n,float* fitness)
       ret=pos;
     }
   }
-  
+
   return ret;
 }
 
