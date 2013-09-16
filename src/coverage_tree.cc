@@ -96,7 +96,7 @@ void Coverage_Tree::precalc()
       for(int i=0;i<max_depth;i++) {
 	std::string& filt=subs[i+1];
 	std::vector<int> result;
-	regexpmatch(filt,model_action_names,result);
+	regexpmatch(filt,model_action_names,result,1);
 	if (result.empty()) {
 	  status=false;
 	  errormsg="No match for regexp "+filt;
