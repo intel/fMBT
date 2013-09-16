@@ -41,8 +41,33 @@ FACTORY_ATEXIT(EndHook)
 FACTORY_CREATORS(EndHook)
 FACTORY_ADD_FACTORY(EndHook)
 
+EndHookExit::EndHookExit(Conf* _c,std::string& s): EndHook(_c,s) {
+  char* endp;
+  exit_status=strtol(s.c_str(),&endp,10);
+  if (*endp) {
+    cov=new_coverage(c->log,s);
+    if (c==NULL) {
+      status=false;
+      errormsg="Can't create coverage "+s;
+    } else if (!c->status) {
+      status=false;
+      errormsg="Error on coverage "+s+":"+c->errormsg;
+    }
+  }
+}
+
+EndHookExit::~EndHookExit() {
+  if (cov) 
+    delete cov;
+}
+
+
 void EndHookExit::run(){
-  c->exit_status=exit_status;
+  if (cov && cov->status) {
+    c->exit_status=cov->getCoverage();
+  } else {
+    c->exit_status=exit_status;
+  }
 }
 
 void EndHookInteractive::run() {

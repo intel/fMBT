@@ -71,7 +71,7 @@ engine_cov: 'engine.cov' '=' float {
               o << $2.f;
               std::string s(o.str());
               conf_obj->add_end_condition(
-                new End_condition_coverage(Verdict::PASS, s));
+                new End_condition_coverage(conf_obj,Verdict::PASS, s));
               }
             } ;
 
@@ -84,7 +84,7 @@ engine_count: 'engine.count' '=' int {
               o << $2.val;
               std::string s(o.str());
               conf_obj->add_end_condition(
-                new End_condition_steps(Verdict::PASS,s));
+                new End_condition_steps(conf_obj,Verdict::PASS,s));
              }
             } ;
 
@@ -93,7 +93,7 @@ engine_tag: 'engine.tag' '=' string {
             fprintf(stderr, "pass = \"statetag:%s\"\n", $2.str->c_str());
             fprintf(stderr, "instead.\n");
             conf_obj->add_end_condition(
-                new End_condition_tag(Verdict::PASS, *$2.str));
+                new End_condition_tag(conf_obj,Verdict::PASS, *$2.str));
             delete $2.str;
             } ;
 
@@ -102,7 +102,7 @@ engine_time: 'engine.endtime' '=' string {
             fprintf(stderr, "pass = \"duration:%s\"\n", $2.str->c_str());
             fprintf(stderr, "instead.\n");
             conf_obj->add_end_condition(
-                new End_condition_duration(Verdict::PASS, *$2.str));
+                new End_condition_duration(conf_obj,Verdict::PASS, *$2.str));
             delete $2.str;
             } ;
 

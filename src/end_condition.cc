@@ -27,7 +27,8 @@
 
 #include "helper.hh"
 
-End_condition::End_condition(Verdict::Verdict v, const std::string& p)
+End_condition::End_condition(Conf* _conf,
+			     Verdict::Verdict v, const std::string& p)
   : verdict(v), param(p),
     param_float(-1.0), param_long(-1), param_time(-1),notify_step(-1)
 {
@@ -38,13 +39,13 @@ End_condition::~End_condition()
 
 }
 
-End_condition* new_end_condition(Verdict::Verdict v,const std::string& s)
+End_condition* new_end_condition(Verdict::Verdict v,const std::string& s,Conf* conf)
 {
   End_condition* ret=NULL;
   std::string name,option;
   param_cut(s,name,option);
 
-  ret = End_conditionFactory::create(v,name,option);
+  ret = End_conditionFactory::create(v,name,option,conf);
 
   if (ret) {
     return ret;
@@ -52,7 +53,7 @@ End_condition* new_end_condition(Verdict::Verdict v,const std::string& s)
 
   //Let's try old thing.
   split(s, name, option);
-  ret = End_conditionFactory::create(v,name,option);
+  ret = End_conditionFactory::create(v,name,option,conf);
 
   if (ret) {
       fprintf(stderr,
@@ -62,6 +63,37 @@ End_condition* new_end_condition(Verdict::Verdict v,const std::string& s)
 
 
   return ret;
+}
+
+End_condition_coverage::End_condition_coverage(Conf* _conf,Verdict::Verdict v, const std::string& p):
+  End_condition(_conf,v,p) {
+  counter = COVERAGE;
+  if (p.empty()) {
+    er="coverage reached";
+  } else {
+    er="coverage "+p+" reached";
+  }
+  status = true;
+  cconst=false;
+  l.ref();
+  c = new_coverage(l,p);
+  if (c==NULL) {
+    status=false;
+    errormsg=param+" not valid coverage";
+  } else {
+    if (c->status) {
+      if ((dynamic_cast<Coverage_Const*>(c))!=NULL) {
+	cconst=true;
+	param_float = strtod(param.c_str(),NULL);
+      } else {
+	cconst=false;
+	_conf->set_model(c);
+      }
+    } else {
+      status=false;
+      errormsg=c->errormsg;
+    }
+  }
 }
 
 bool End_condition_tag::match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags) {
@@ -155,15 +187,21 @@ bool End_condition_tagverify::evaluate_filter(std::vector<std::string>& tags,std
 #undef FACTORY_CREATE_PARAMS
 #undef FACTORY_CREATOR_PARAMS
 #undef FACTORY_CREATOR_PARAMS2
+#undef FACTORY_CREATE_DEFAULT_PARAMS
+
+#define FACTORY_CREATE_DEFAULT_PARAMS /* */ 
 
 #define FACTORY_CREATE_PARAMS Verdict::Verdict v,	               \
                        std::string name,                               \
-                       std::string params
+                       std::string params,                             \
+                       Conf* co
 
-#define FACTORY_CREATOR_PARAMS Verdict::Verdict v, std::string params
-#define FACTORY_CREATOR_PARAMS2 v, params
+#define FACTORY_CREATOR_PARAMS Verdict::Verdict v, std::string params,Conf* co
+#define FACTORY_CREATOR_PARAMS2 v, params,co
 
 FACTORY_IMPLEMENTATION(End_condition)
+#undef FACTORY_CREATOR_PARAMS2
+#define FACTORY_CREATOR_PARAMS2 co, v, params
 
 FACTORY_DEFAULT_CREATOR(End_condition, End_condition_steps,     "steps")
 FACTORY_DEFAULT_CREATOR(End_condition, End_condition_coverage,  "coverage")

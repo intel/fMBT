@@ -2,11 +2,11 @@ LOCAL_ADAPTERS = adapter.cc awrapper.cc adapter_model.cc adapter_mapper.cc adapt
 
 LOCAL_HEURISTICS =  heuristic.cc heuristic_random.cc heuristic_mrandom.cc heuristic_greedy.cc weight.g.d_parser.cc heuristic_weight.cc heuristic_include.cc
 
-LOCAL_COVERAGES = coverage.cc coverage_exec_filter.cc coverage_mapper.cc coverage_tree.cc coverage_prop.cc coverage_uniq.cc filter.g.d_parser.cc set.g.d_parser.cc coverage_set.cc coverage_avoid.cc coverage_trace.cc coverage_min.cc coverage_const.cc coverage_paths.cc coverage_report.cc paths.g.d_parser.cc coverage_include.cc coverage_join.cc coverage_end_condition.cc coverage_if.cc coverage_short.cc covlang.g.d_parser.cc coverage_market.cc coverage_restart.cc
+LOCAL_COVERAGES = coverage.cc coverage_exec_filter.cc coverage_mapper.cc coverage_tree.cc coverage_prop.cc coverage_uniq.cc filter.g.d_parser.cc set.g.d_parser.cc coverage_set.cc coverage_avoid.cc coverage_trace.cc coverage_min.cc coverage_const.cc coverage_paths.cc coverage_report.cc paths.g.d_parser.cc coverage_include.cc coverage_join.cc coverage_end_condition.cc coverage_if.cc coverage_short.cc covlang.g.d_parser.cc coverage_market.cc coverage_restart.cc coverage_nohistory.cc
 
 LOCAL_MODELS = model.cc mwrapper.cc lts.cc model_lib.cc model_yes.cc
 
-COMMON_SOURCES = fmbt.cc test_engine.cc log.cc helper.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc  $(LOCAL_ADAPTERS) $(LOCAL_HEURISTICS) $(LOCAL_COVERAGES) $(LOCAL_MODELS) conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc alg_bdfs.cc history.cc end_condition.cc null.cc aal.cc endhook.cc
+COMMON_SOURCES = fmbt.cc test_engine.cc log.cc helper.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc  $(LOCAL_ADAPTERS) $(LOCAL_HEURISTICS) $(LOCAL_COVERAGES) $(LOCAL_MODELS) conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc alg_bdfs.cc history.cc end_condition.cc null.cc aal.cc endhook.cc coverage_of.cc
 
 fmbt_SOURCES                  = $(COMMON_SOURCES) adapter_dlopen.cc adapter_remote.cc lts_remote.cc lts_trace.cc xrules_remote.cc coverage_shared.cc coverage_tema_seq.cc history_remote.cc model_remote.cc aal_java.cc aal_remote.cc history_log.cc history_multi.cc history_glob.cc
 

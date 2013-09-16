@@ -49,14 +49,13 @@ EndHook* new_endhook(Conf*, const std::string&);
 
 class EndHookExit: public EndHook {
 public:
-  EndHookExit(Conf* _c,std::string& s): EndHook(_c,s) {
-    exit_status=atoi(s.c_str());
-  }
-  virtual ~EndHookExit() {}
+  EndHookExit(Conf* _c,std::string& s);
+  virtual ~EndHookExit();
   virtual void run();
   virtual std::string stringify();
 
   int exit_status;
+  Coverage* cov;
 };
 
 class EndHookInteractive: public EndHook {

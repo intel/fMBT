@@ -33,6 +33,8 @@
 
 #include "coverage_const.hh"
 
+class Conf;
+
 class End_condition: public Writable {
 public:
   typedef enum {
@@ -47,7 +49,7 @@ public:
     TAGVERIFY
   } Counter;
 
-  End_condition(Verdict::Verdict v, const std::string& p);
+  End_condition(Conf* _conf,Verdict::Verdict v, const std::string& p);
   virtual ~End_condition();
 
   virtual std::string stringify() {
@@ -122,10 +124,12 @@ public:
   int  notify_step;
 };
 
+#include "conf.hh"
+
 class End_condition_steps: public End_condition {
 public:
-  End_condition_steps(Verdict::Verdict v, const std::string& p):
-    End_condition(v,p) {
+  End_condition_steps(Conf* _conf,Verdict::Verdict v, const std::string& p):
+    End_condition(_conf,v,p) {
     counter = STEPS;
     er="step limit reached";
     char* endp;
@@ -152,8 +156,8 @@ public:
 
 class End_condition_tag: public End_condition {
 public:
-  End_condition_tag(Verdict::Verdict v, const std::string& p):
-    End_condition(v,p) {
+  End_condition_tag(Conf* _conf,Verdict::Verdict v, const std::string& p):
+    End_condition(_conf,v,p) {
     counter = STATETAG;
     er="tag reached";
     status = true;
@@ -164,8 +168,8 @@ public:
 
 class End_condition_duration: public End_condition {
 public:
-  End_condition_duration(Verdict::Verdict v, const std::string& p):
-    End_condition(v,p) {
+  End_condition_duration(Conf* _conf,Verdict::Verdict v, const std::string& p):
+    End_condition(_conf,v,p) {
     counter = DURATION;
     er="time limit reached";
     status=true;
@@ -211,8 +215,8 @@ public:
 
 class End_condition_noprogress: public End_condition {
 public:
-  End_condition_noprogress(Verdict::Verdict v, const std::string& p):
-    End_condition(v,p) {
+  End_condition_noprogress(Conf* _conf,Verdict::Verdict v, const std::string& p):
+    End_condition(_conf,v,p) {
     counter = NOPROGRESS;
     er="no progress limit reached";
     param_long = atol(param.c_str());
@@ -229,8 +233,8 @@ public:
 
 class End_condition_deadlock: public End_condition {
 public:
-  End_condition_deadlock(Verdict::Verdict v, const std::string& p):
-    End_condition(v,p) {
+  End_condition_deadlock(Conf* _conf,Verdict::Verdict v, const std::string& p):
+    End_condition(_conf,v,p) {
     counter = DEADLOCK;
     er="deadlock reached";
     status = true;
@@ -247,8 +251,8 @@ public:
 
 class End_status_error: public End_condition {
 public:
-  End_status_error(Verdict::Verdict v, const std::string& p):
-    End_condition(v,p) {
+  End_status_error(Conf* _conf,Verdict::Verdict v, const std::string& p):
+    End_condition(_conf,v,p) {
     counter = STATUS;
     status = true;
   }
@@ -259,8 +263,8 @@ public:
 
 class End_condition_action: public End_condition {
 public:
-  End_condition_action(Verdict::Verdict v, const std::string& p):
-    End_condition(v,p) {
+  End_condition_action(Conf* _conf,Verdict::Verdict v, const std::string& p):
+    End_condition(_conf,v,p) {
     counter = ACTION;
     er="executed break action";
     status = true;
@@ -276,45 +280,13 @@ public:
 
 class End_condition_coverage: public End_condition {
 public:
-  End_condition_coverage(Verdict::Verdict v, const std::string& p):
-    End_condition(v,p) {
-    counter = COVERAGE;
-    if (p.empty()) {
-      er="coverage reached";
-    } else {
-      er="coverage "+p+" reached";
-    }
-    status = true;
-    cconst=false;
-    l.ref();
-    c = new_coverage(l,p);
-    if (c==NULL) {
-      status=false;
-      errormsg=param+" not valid coverage";
-    } else {
-      if (c->status) {
-	if ((dynamic_cast<Coverage_Const*>(c))!=NULL) {
-	  cconst=true;
-	  param_float = strtod(param.c_str(),NULL);
-	} else {
-	  cconst=false;
-	}
-      } else {
-	status=false;
-	errormsg=c->errormsg;
-      }
-    }
-    set_model_done=false;
-  }
+  End_condition_coverage(Conf* _conf,Verdict::Verdict v, const std::string& p);
+
   virtual ~End_condition_coverage() {
     if (c)
       delete c;
   }
   virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags) {
-    if (!set_model_done) {
-      c->set_model(heuristic.get_model());
-      set_model_done=true;
-    }
 
     if (cconst) {
       return (heuristic.getCoverage() >= c->getCoverage());
@@ -334,14 +306,13 @@ public:
   }
   Log_null l;
   Coverage* c;
-  bool set_model_done;
   bool cconst;
 };
 
 class End_condition_tagverify: public End_condition {
 public:
-  End_condition_tagverify(Verdict::Verdict v, const std::string& p):
-    End_condition(v,p) {
+  End_condition_tagverify(Conf* _conf,Verdict::Verdict v, const std::string& p):
+    End_condition(_conf,v,p) {
     counter = TAGVERIFY;
     status = true;
   }
@@ -355,19 +326,25 @@ public:
 #undef FACTORY_CREATE_PARAMS
 #undef FACTORY_CREATOR_PARAMS
 #undef FACTORY_CREATOR_PARAMS2
+#undef FACTORY_CREATE_DEFAULT_PARAMS
 
-#define FACTORY_CREATE_PARAMS Verdict::Verdict v,	               \
+#define FACTORY_CREATE_DEFAULT_PARAMS 
+
+#define FACTORY_CREATE_PARAMS Verdict::Verdict v,		       \
                        std::string name,                               \
-                       std::string params
+                       std::string params,			       \
+                       Conf* co
 
-#define FACTORY_CREATOR_PARAMS Verdict::Verdict v, std::string params
-#define FACTORY_CREATOR_PARAMS2 v, params
+#define FACTORY_CREATOR_PARAMS Verdict::Verdict v, std::string params,Conf* co
+#define FACTORY_CREATOR_PARAMS2 co,v,params
 
 FACTORY_DECLARATION(End_condition)
 
 #undef FACTORY_CREATE_PARAMS
 #undef FACTORY_CREATOR_PARAMS
 #undef FACTORY_CREATOR_PARAMS2
+#undef FACTORY_CREATE_DEFAULT_PARAMS
+#define FACTORY_CREATE_DEFAULT_PARAMS = ""
 
 #define FACTORY_CREATE_PARAMS Log& log,                                \
                        std::string name,                               \
@@ -376,7 +353,6 @@ FACTORY_DECLARATION(End_condition)
 #define FACTORY_CREATOR_PARAMS Log& log, std::string params
 #define FACTORY_CREATOR_PARAMS2 log, params
 
-
-End_condition* new_end_condition(Verdict::Verdict,const std::string&);
+End_condition* new_end_condition(Verdict::Verdict,const std::string&,Conf* c=NULL);
 
 #endif

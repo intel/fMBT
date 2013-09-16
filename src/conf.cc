@@ -20,6 +20,7 @@
 #include "dparse.h"
 #include "helper.hh"
 #include "history.hh"
+#include "coverage_of.hh"
 #include <cstring>
 
 #ifndef DROI
@@ -49,6 +50,32 @@ extern Conf* conf_obj;
     exit_status=-1;                             \
     return Verdict::W_ERROR;                      \
   }
+
+
+Conf::Conf(Log& l, bool debug_enabled)
+  :log(l), exit_status(0), exit_interactive(false),
+   heuristic_name("random"), coverage_name("perm"),
+   adapter_name("dummy"), end_time(-1),
+   on_error("exit(1)"), on_fail("interactive"),
+   on_pass("exit(0)"), on_inconc("exit(1)"),
+   heuristic(NULL), model(NULL),
+   adapter(NULL),coverage(NULL),
+   disable_tagverify(false)
+{
+  // Reserve first slot for THE coverage
+  set_model_callbacks.push_back(NULL);
+  log.ref();
+  log.push("fmbt_log");
+  log.set_debug(debug_enabled);
+  
+  End_condition *ec = new End_status_error(this,Verdict::W_ERROR,"");
+  add_end_condition(ec);
+  
+  set_on_error("exit(4)");
+  set_on_fail("interactive");
+  set_on_pass("exit(0)");
+  set_on_inconc("exit(1)");
+}
 
 void Conf::load(std::string& name,std::string& content)
 {
@@ -126,7 +153,14 @@ void Conf::load(std::string& name,std::string& content)
 
   heuristic->set_model(model);
 
-  coverage->set_model(model);
+  set_model_callbacks[0]=coverage;
+
+  for(std::vector<Coverage*>::iterator i=set_model_callbacks.begin();i!=set_model_callbacks.end();i++) {
+    (*i)->set_model(model);
+    if (!((*i)->status)) {
+      RETURN_ERROR_VOID("Coverage error: " + (*i)->stringify());      
+    }
+  }
 
   adapter = new_adapter(log, adapter_name);
 
@@ -146,6 +180,10 @@ void Conf::load(std::string& name,std::string& content)
     errormsg=adapter->errormsg;
     return;
   }
+
+  // Handle post set_model calls.
+
+  
 
   // Parse adapter-tags filter (if any)
   for(unsigned i=0;i<disable_tags.size();i++) {
@@ -168,9 +206,10 @@ void Conf::load(std::string& name,std::string& content)
   /* handle history */
   for(unsigned i=0;i<history.size();i++) {
     History* h=new_history(log,*history[i]);
+    Coverage_of cof(log,set_model_callbacks);
 
     if (h) {
-      h->set_coverage(coverage,model);
+      h->set_coverage(&cof,model);
       if (!h->status) {
 	errormsg=h->errormsg;
 	delete h;
@@ -183,9 +222,6 @@ void Conf::load(std::string& name,std::string& content)
   }
 
   adapter->set_actions(&model->getActionNames());
-
-  if (!coverage->status)
-    RETURN_ERROR_VOID("Coverage error: " + coverage->stringify());
 
   if (!adapter->status)
     RETURN_ERROR_VOID("Adapter error: " + adapter->stringify());
@@ -275,10 +311,10 @@ Verdict::Verdict Conf::execute(bool interactive) {
     }
     // Add default end conditions (if coverage is reached, test is passed)
     if (!end_by_coverage) {
-      end_conditions.push_back(new End_condition_coverage(Verdict::PASS, "1.0"));
+      end_conditions.push_back(new End_condition_coverage(this,Verdict::PASS, "1.0"));
     }
     if (!end_by_tagverify && !disable_tagverify) {
-      end_conditions.push_back(new End_condition_tagverify(Verdict::FAIL, ""));
+      end_conditions.push_back(new End_condition_tagverify(this,Verdict::FAIL, ""));
     }
   }
 
@@ -366,7 +402,7 @@ void Conf::set_observe_sleep(std::string &s)
 void Conf::add_end_condition(Verdict::Verdict v,std::string& s)
 
 {
-  End_condition *ec = new_end_condition(v,s);
+  End_condition *ec = new_end_condition(v,s,this);
 
   if (ec==NULL) {
     status=false;
@@ -374,6 +410,11 @@ void Conf::add_end_condition(Verdict::Verdict v,std::string& s)
   } else {
     add_end_condition(ec);
   }
+}
+
+void Conf::set_model(Coverage* _c)
+{
+  set_model_callbacks.push_back(_c);
 }
 
 void hook_delete(EndHook* e);

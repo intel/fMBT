@@ -104,6 +104,7 @@ Test_engine::Test_engine(Heuristic& h,Adapter& a,Log& l,Policy& p,std::vector<En
     disabled_tags(_disabled_tags)
 {
   p.set_model(h.get_model());
+  // Set rest of the models also..
 }
 
 Test_engine::~Test_engine()
@@ -620,7 +621,8 @@ void Test_engine::interactive()
 
         num=atoi(s+1);
         if (num>0) {
-          e=new End_condition_steps(Verdict::INCONCLUSIVE,breakstr);
+	  // Configuration not needed in the steps end condition
+          e=new End_condition_steps(NULL,Verdict::INCONCLUSIVE,breakstr);
           e->param_long=step_count+num;
           end_conditions.push_back(e);
         }
@@ -657,7 +659,7 @@ void Test_engine::interactive()
         num=std::atoi(s+1);
         if (num>0 && num<=ana.size()) {
           // Add breakpoint
-          End_condition* e=new End_condition_action(Verdict::INCONCLUSIVE,
+          End_condition* e=new End_condition_action(NULL,Verdict::INCONCLUSIVE,
                                                     breakstr);
           e->param_long=num;
           atags.push_back(e);
@@ -688,7 +690,7 @@ void Test_engine::interactive()
         unsigned int tag_count=ana.size();
         if (num>0 && num<=tag_count) {
           // Add breakpoint
-          End_condition* e=new End_condition_tag(Verdict::INCONCLUSIVE,
+          End_condition* e=new End_condition_tag(NULL,Verdict::INCONCLUSIVE,
                                                  breakstr);
           e->param_long=num;
           etags.push_back(e);

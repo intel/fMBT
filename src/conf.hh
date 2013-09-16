@@ -39,29 +39,8 @@ EndHook* new_endhook(Conf* c,const std::string& s);
 class Conf:public Writable {
  public:
   friend class EndHookInteractive;
-  Conf(Log& l, bool debug_enabled=false)
-    :log(l), exit_status(0), exit_interactive(false),
-     heuristic_name("random"), coverage_name("perm"),
-     adapter_name("dummy"), end_time(-1),
-     on_error("exit(1)"), on_fail("interactive"),
-     on_pass("exit(0)"), on_inconc("exit(1)"),
-     heuristic(NULL), model(NULL),
-     adapter(NULL),coverage(NULL),
-     disable_tagverify(false)
-  {
-    log.ref();
-    log.push("fmbt_log");
-    log.set_debug(debug_enabled);
+  Conf(Log& l, bool debug_enabled=false);
 
-    End_condition *ec = new End_status_error(Verdict::W_ERROR,"");
-    add_end_condition(ec);
-
-    set_on_error("exit(4)");
-    set_on_fail("interactive");
-    set_on_pass("exit(0)");
-    set_on_inconc("exit(1)");
-
-  }
   virtual ~Conf();
 
   void disable_tagchecking(std::string&);
@@ -69,6 +48,8 @@ class Conf:public Writable {
   void disable_tagchecking() {
     disable_tagverify=true;
   }
+
+  void set_model(Coverage* c);
 
   void set_model(std::string& s) {
     //split(s, model_name, model_param);
@@ -104,7 +85,12 @@ class Conf:public Writable {
   }
 
   void add_end_condition(End_condition *ec) {
-    end_conditions.push_back(ec);
+    if (ec->status) {
+      end_conditions.push_back(ec);
+    } else {
+      status=false;
+      errormsg=ec->errormsg;
+    }
   }
 
   void add_end_condition(Verdict::Verdict v,std::string& s);
@@ -152,6 +138,7 @@ class Conf:public Writable {
   bool disable_tagverify;
   std::map<int,bool> disabled_tags;
   std::vector<std::string> disable_tags;
+  std::vector<Coverage*> set_model_callbacks;
 };
 
 #endif
