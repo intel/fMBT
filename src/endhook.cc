@@ -53,6 +53,8 @@ EndHookExit::EndHookExit(Conf* _c,std::string& s): EndHook(_c,s) {
       status=false;
       errormsg="Error on coverage "+s+":"+c->errormsg;
     }
+  } else {
+    cov=NULL;
   }
 }
 
