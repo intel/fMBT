@@ -324,11 +324,13 @@ Available types & parameters:
                 measure the maximum and minimum value of all coverages
                 given as parameters.
 
-        perm[(count)]
+        perm[(count [, action-regexp...])]
 
                 measures the percentage of coverage of all
                 permutations of any <count> actions in the test
-                model. If count is not given, it defaults to 2.
+                model. If count is not given, it defaults to
+                2. action-regexps limit counting only permutations of
+                certain actions.
 
 	shared(<command>, type(params))
 
@@ -512,6 +514,12 @@ Examples:
                 CA, CB and CC have been executed. Suitable for
                 regression tests. Notice that not all permutations can
                 be covered because of test model. See End conditions.
+
+        coverage = perm(2, ".*", "iReceivePhoneCall")
+
+                coverage reaches 1.0 when all action pairs with the
+                last action being "iReceivePhoneCall" have been
+                covered.
 
         coverage = uwalks(from 'iOrderCoffee' to 'iCancelOrder')
 
