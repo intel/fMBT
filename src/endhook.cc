@@ -19,6 +19,7 @@
 
 #include "conf.hh"
 #include "endhook.hh"
+#include "end_condition.hh"
 #include <sstream>
 #include <list>
 
@@ -54,6 +55,11 @@ EndHookExit::EndHookExit(Conf* _c,std::string& s): EndHook(_c,s) {
     } else if (!cov->status) {
       status=false;
       errormsg="Error on coverage "+s+":"+cov->errormsg;
+    } else {
+      End_condition_dummy* ec=new End_condition_dummy(c,Verdict::NOTIFY,"");
+      c->set_model(cov);
+      ec->c=cov;
+      c->add_end_condition(ec);
     }
   } else {
     cov=NULL;
