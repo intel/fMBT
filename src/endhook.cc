@@ -43,18 +43,25 @@ FACTORY_ADD_FACTORY(EndHook)
 
 EndHookExit::EndHookExit(Conf* _c,std::string& s): EndHook(_c,s) {
   char* endp;
-  exit_status=strtol(s.c_str(),&endp,10);
-  if (*endp) {
-    cov=new_coverage(c->log,s);
-    if (c==NULL) {
+  std::string name,option;
+  param_cut(s,name,option);
+
+  if (name=="coverage") {
+    cov=new_coverage(c->log,option);
+    if (cov==NULL) {
       status=false;
       errormsg="Can't create coverage "+s;
-    } else if (!c->status) {
+    } else if (!cov->status) {
       status=false;
-      errormsg="Error on coverage "+s+":"+c->errormsg;
+      errormsg="Error on coverage "+s+":"+cov->errormsg;
     }
   } else {
     cov=NULL;
+    exit_status=strtol(s.c_str(),&endp,10);
+    if (*endp) {
+      status=false;
+      errormsg="Not an integer "+s;
+    }
   }
 }
 
