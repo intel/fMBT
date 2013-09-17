@@ -1,8 +1,39 @@
-fmbt (0.10.2-0.rc0) unstable; urgency=low
+fmbt (0.11-1) unstable; urgency=low
 
-  * Development version.
+  * coverages:
+    - perm allows defining permutations to be covered with
+      higher granularity. For instance,
+      coverage = perm(2, ".*", "iReceiveCall")
+      tests that "iReceiveCall" works after every test step.
+  * end conditions and exit hooks:
+    - custom coverages can be used in end conditions:
+          fail = coverage(usecase("oErrorObserved"))
+      fails the test immediately if oErrorObserved actions is
+      reported.
+    - coverages can be used in exit status:
+          on_pass = exit(coverage(usecase("iReceiveCall")))
+      in passed tests, exit status will be 1 if iReceiveCall
+      test step was tested, otherwise 0.
+  * fmbtandroid/tizen/x11/vnc:
+    - .fmbtoirrc file in a bitmap directory defines default OIR
+      (optical image recognition) parameters for bitmaps in the
+      directory. For instance, if .fmbtoirrc can contain line
+          colorMatch = 0.8
+    - Plugin-interface for OCR and OIR engines makes it easy to
+      implement and use different character/image recognition routines.
+      See help(fmbtgti.OirEngine) and help(fmbtgti.OcrEngine).
+    - Scale and pixelSize parameter support added to the default OIR.
+      Enables recognizing images with different scaling than original
+      bitmaps, and brings in fuzziness to bitmap matching with reasonably
+      low likelyhood of false positives.
+    - adjustParameters methods in the default OIR engine helps
+      finding OIR parameters (scale, pixelSize, colorMatch) for
+      hard-to-find bitmaps.
+  * fmbtvnc:
+    - Working prototype of fmbtgti interface for VNC servers.
+  * many fixes and cleanups.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 27 Aug 2013 14:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 17 Sep 2013 14:42:00 +0300
 
 fmbt (0.10.1-1) unstable; urgency=low
 
