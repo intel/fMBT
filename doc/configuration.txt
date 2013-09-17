@@ -695,9 +695,9 @@ Available types & parameters:
 
         exit(status)
 
-                exit with the given exit status.
-		status can be a number or a coverage
-		eg. exit(coverage(walks("oBar" to "iHome")))
+                exit with the given exit status. status can be a
+                number or a coverage expression whose value (floor)
+                will be returned as exit status.
 
         interactive
 
@@ -706,6 +706,12 @@ Available types & parameters:
 Examples:
 
         on_fail   = exit(1)
+
+        on_pass   = exit(coverage(sum(16,usecase('iInteresting'))))
+
+                if test is passed, exit status will be
+                - 16, if iInteresting step was not executed during the test.
+                - 17, if iInteresting was executed during the test.
 
         on_inconc = interactive
 

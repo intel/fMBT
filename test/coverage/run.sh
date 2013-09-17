@@ -54,7 +54,6 @@ if [ 1.000000 != $l ]; then
     testfailed
 fi
 done
-
 testpassed
 
 teststep "coverage min..."
@@ -350,11 +349,56 @@ on_pass   = "exit(0)"
 on_fail   = "exit(1)"
 on_inconc = "exit(2)"
 EOF
-
 ../../src/fmbt cinclude.conf -l cinclude.log 2> cinclude.txt || {
     testfailed
     exit 1
 }
+testpassed
+
+teststep "coverage include-inconc coverage..."
+cat > include-inconc.conf <<EOF
+model     = lsts_remote(fmbt-gt -f 'abc_reg.gt')
+heuristic = lookahead(2)
+coverage  = include("i[AC]", "iB", perm(2))
+pass      = coverage(1.1)
+fail      = steps(8)
+fail      = coverage(usecase("iA[0-9]"))
+inconc    = coverage(usecase(("iB" then "iB") and ("iB" then "iC") and not "iA."))
+on_pass   = exit(0)
+on_fail   = exit(1)
+on_inconc = exit(coverage(sum(usecase("iB"),usecase("iC"),usecase("iA[0-9]"))))
+on_error  = exit(4)
+EOF
+fmbt -l include-inconc.log include-inconc.conf >>$LOGFILE 2>&1
+exit_status=$?
+if [ "$exit_status" != "2" ]; then
+    echo "expected exit status 2, got $exit_status from fmbt -l include-inconc.log include-inconc.conf" >>$LOGFILE
+    testfailed
+    exit 1
+fi
+testpassed
+
+teststep "coverage exclude + perm regexps..."
+cat > exclude-perm-regexps.conf <<EOF
+model     = "lsts_remote(fmbt-gt -f coffee.gt)"
+heuristic = "lookahead(7)"
+coverage  = exclude(".*(Insert|Collect).*", perm(2, "i(Choose|Order).*", "iCancel.*"))
+pass      = steps(7)
+inconc    = coverage(usecase("iCollect.*"))
+on_pass   = exit(0)
+on_fail   = exit(1)
+on_inconc = exit(2)
+on_error  = exit(4)
+EOF
+fmbt -l exclude-perm-regexps.log exclude-perm-regexps.conf >>$LOGFILE  2>&1 || {
+    echo "failed to pass fmbt -l exclude-perm-regexps.log exclude-perm-regexps.conf" >> $LOGFILE
+    testfailed
+}
+if [ "$(fmbt-log -f '$sc' exclude-perm-regexps.log | tail -n 1)" != "0.666667" ]; then
+    echo "coverage 0.666667 expected, got $(fmbt-log -f '$sc' exclude-perm-regexps.log | tail -n 1)" >>$LOGFILE
+    testfailed
+fi
+testpassed
 
 fmbt-log -f \$sc cinclude.log|tail -1|while read f
 do
