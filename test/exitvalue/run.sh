@@ -204,4 +204,19 @@ else
     testpassed
 fi
 
+teststep "Coverage usecase as exit value "
+cat > test.conf <<EOF
+model=lsts_remote(fmbt-gt 'P(s,p)->T(s,"iA",s)')
+coverage=perm(1)
+on_pass=exit(coverage(sum(2,usecase("iA"))))
+EOF
+
+fmbt test.conf   >>$LOGFILE 2>&1
+if [ $? -ne 3 ]
+then
+    testfailed
+else
+    testpassed
+fi
+
 exec ./run_new.sh
