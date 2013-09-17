@@ -309,6 +309,21 @@ public:
   bool cconst;
 };
 
+class End_condition_dummy: public End_condition {
+public:
+  End_condition_dummy(Conf* _conf,Verdict::Verdict v, const std::string& p):
+    End_condition(_conf,v,p) {
+    counter = ACTION;
+    status = true;
+  }
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags) {
+    c->execute(action);
+    return false;
+  }
+
+  Coverage* c;
+};
+
 class End_condition_tagverify: public End_condition {
 public:
   End_condition_tagverify(Conf* _conf,Verdict::Verdict v, const std::string& p):
