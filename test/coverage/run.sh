@@ -366,7 +366,7 @@ fail      = coverage(usecase("iA[0-9]"))
 inconc    = coverage(usecase(("iB" then "iB") and ("iB" then "iC") and not "iA."))
 on_pass   = exit(0)
 on_fail   = exit(1)
-on_inconc = exit(coverage(sum(1,usecase("iC"))))
+on_inconc = exit(coverage(sum(usecase("iB"),usecase("iC"),usecase("iA[0-9]"))))
 on_error  = exit(4)
 EOF
 fmbt -l include-inconc.log include-inconc.conf >>$LOGFILE 2>&1
