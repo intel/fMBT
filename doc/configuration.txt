@@ -696,6 +696,8 @@ Available types & parameters:
         exit(status)
 
                 exit with the given exit status.
+		status can be a number or a coverage
+		eg. exit(coverage(walks("oBar" to "iHome")))
 
         interactive
 
