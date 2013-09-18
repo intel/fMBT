@@ -125,9 +125,13 @@ int Coverage_Min::fitness(int* action,int n,float* fitness)
 
 void Coverage_Min::set_model(Model* _model) {
   Coverage::set_model(_model);
-  for(unsigned i=0;i<coverages.size();i++) {
+  for(unsigned i=0;i<coverages.size()&&status;i++) {
     if (coverages[i]) {
       coverages[i]->set_model(model);
+      if (!(coverages[i]->status)) {
+	errormsg=coverages[i]->errormsg;
+	status=false;
+      }
     }
   }  
 }
