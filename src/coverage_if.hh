@@ -89,6 +89,16 @@ public:
       left->set_model(model);
       right->set_model(model);
     }
+    if (left->status==false) {
+      status=false;
+      errormsg+=left->errormsg;
+      return;
+    }
+    if (right->status==false) {
+      status=false;
+      errormsg+=right->errormsg;
+      return;
+    }
   }
 
   virtual bool execute(int action) {
