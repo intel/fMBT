@@ -44,7 +44,6 @@ protected:
   std::vector<int> act;
   unsigned pos;
   std::stack<int> st;
-  std::vector<std::pair<float,Coverage*> > h;
 private:
 
 };

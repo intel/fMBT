@@ -25,9 +25,6 @@
 
 Coverage_trace::~Coverage_trace()
 {
-  for(unsigned i=0;i<h.size();i++) {
-    delete h[i].second;
-  }
 }
 
 Coverage_trace::Coverage_trace(Log& l, const std::string& _params) :
