@@ -153,6 +153,18 @@ bool End_condition_tagverify::evaluate_filter(std::vector<std::string>& tag)
   return evaluate_filter(tag,param);
 }
 
+std::string End_condition_dummy::stringify() {
+  if (!status) {
+    if (!c) {
+      return "Can't create coverage " + param;
+    }
+    if (!c->status) {
+      return "Coverage error " + c->errormsg;
+    }
+    return "????";
+  }
+  return errormsg;
+}
 
 bool End_condition_tagverify::evaluate_filter(std::vector<std::string>& tags,std::string& s)
 {

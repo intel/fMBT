@@ -46,7 +46,8 @@ public:
     DEADLOCK,
     ACTION,
     STATUS,
-    TAGVERIFY
+    TAGVERIFY,
+    DUMMY
   } Counter;
 
   End_condition(Conf* _conf,Verdict::Verdict v, const std::string& p);
@@ -95,7 +96,9 @@ public:
       name="failing_tag";
       break;
     case ACTION:
+      return "ACTION";
     case STATUS:
+      return "STATUS";
     default:
       return "";
     }
@@ -313,9 +316,12 @@ class End_condition_dummy: public End_condition {
 public:
   End_condition_dummy(Conf* _conf,Verdict::Verdict v, const std::string& p):
     End_condition(_conf,v,p) {
-    counter = ACTION;
+    counter = DUMMY;
     status = true;
   }
+
+  virtual std::string stringify();
+
   virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags) {
     c->execute(action);
     return false;
