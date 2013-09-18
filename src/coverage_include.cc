@@ -72,6 +72,8 @@ void Coverage_Include_base::set_model(Model* _model)
   submodel=new Model_yes(log,"");
   submodel->set_model(alpha);
   child->set_model(submodel);
+  status=child->status;
+  errormsg=child->errormsg;
 }
 
 class Coverage_Include: public Coverage_Include_base {

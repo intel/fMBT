@@ -111,6 +111,12 @@ void Coverage_Join::set_model(Model* _model)
   submodel=new Model_yes(log,"");
   submodel->set_model(alpha);
   child->set_model(submodel);
+
+  if (child->status==false) {
+    status=false;
+    errormsg=child->errormsg;
+  }
+
 }
 
 FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Join, "join")

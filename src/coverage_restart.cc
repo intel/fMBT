@@ -129,8 +129,15 @@ void Coverage_Restart::set_model(Model* _model)
   left->set_model(model);
   right->set_model(model);
 
-  if (!left->status || !right->status) {
+  if (left->status==false) {
     status=false;
+    errormsg+=left->errormsg;
+    return;
+  }
+  if (right->status==false) {
+    status=false;
+    errormsg+=right->errormsg;
+    return;
   }
 }
 

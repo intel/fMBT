@@ -114,8 +114,12 @@ int Coverage_avoid::fitness(int* actions,int n, float* fitness)
 
 void Coverage_avoid::set_model(Model* _model) {
   Coverage::set_model(_model);
-  for(unsigned i=0;i<h.size();i++) {
+  for(unsigned i=0;i<h.size()&&status;i++) {
     h[i].second->set_model(_model);
+    if (h[i].second->status==false) {
+      errormsg=h[i].second->errormsg;
+      status=false;
+    }
   }
 }
 
