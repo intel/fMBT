@@ -1,3 +1,10 @@
+fmbt (0.11.1-1) unstable; urgency=low
+
+  * Bugfix release.
+    - fixed reporting end condition init problem
+
+ -- Pablo Virolainen <pablo.virolainen@intel.com>  Wed, 18 Sep 2013 10:19:22 +0300
+
 fmbt (0.11-1) unstable; urgency=low
 
   * coverages:
