@@ -1,3 +1,9 @@
+fmbt (0.11.2-0.rc0) unstable; urgency=low
+
+  * Development version.
+
+ -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 18 Aug 2013 15:42:00 +0300
+
 fmbt (0.11.1-1) unstable; urgency=low
 
   * Bugfix release.
