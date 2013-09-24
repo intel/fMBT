@@ -51,14 +51,14 @@ static std::pair<std::string,std::pair<std::string,int> > pa;
 
 static void name_syntax_error_report(struct D_Parser *ap) {
     Parser *p = (Parser *)ap;
-    
+
     char *fn = d_dup_pathname_str(p->user.loc.pathname);
-    
+
     fprintf(stderr,"%s:%d: name error '%s' already defined at %s:%d\n",
                     fn,p->user.loc.line,pa.first.c_str(),
                     pa.second.first.c_str(),
                     pa.second.second);
-    
+
     FREE(fn);
 }
 
@@ -127,10 +127,10 @@ parser: parallel | serial ;
 serial_start: 'serial' { obj->serial(true); } ;
 parallel_start: 'parallel' { obj->parallel(true); } ;
 
-serial: serial_start '{' ( act | tag | parser )+ '}'
+serial: serial_start '{' ( act | tag )+ '}'
         { obj->serial(false); } ;
 
-parallel: parallel_start '{' ( act | tag | parser )+ '}'
+parallel: parallel_start '{' ( act | tag )+ '}'
         { obj->parallel(false); } ;
 
 act: ( 'action' astr | 'input' istr | 'output' ostr ) {
@@ -171,7 +171,7 @@ astr:   string          {
 istr:   string          {
             std::string* tmp=new std::string("i:" + *$0.str);
             delete $0.str;
-            if (obj->check_name(tmp,$n0.start_loc.pathname,$n0.start_loc.line)) { 
+            if (obj->check_name(tmp,$n0.start_loc.pathname,$n0.start_loc.line)) {
                 raise_name_error($n0.start_loc,(Parser*)_parser,tmp);
             }
             obj->set_name(tmp,true,aalang::IACT);
