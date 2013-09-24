@@ -29,6 +29,7 @@ class AALModel:
         self._variables['name'] = lambda name: self._all_names.index(name)
         self._variables['variable'] = lambda varname: self._variables[varname]
         self._variables['assign'] = lambda varname, v: self._variables.__setitem__(varname, v)
+        self._variables['guard_list'] = []
         self._stack = []
         self._stack_executed_actions = []
         self._adapter_exit_executed = False
@@ -44,7 +45,13 @@ class AALModel:
             i += 1
 
     def call(self, func, call_arguments = ()):
+        guard_list = None
         try:
+            func_name = func.__name__
+            if func_name.endswith("guard"):
+                guard_list = self._variables['guard_list']
+                guard_list.append(
+                    getattr(self, func_name.replace("guard", "name")))
             fmbt._g_simulated_actions = self._stack_executed_actions
             if hasattr(func,"requires"):
                 for prerequire in func.requires:
@@ -62,6 +69,9 @@ class AALModel:
             self._log("Exception %s in %s: %s" % (e.__class__, func.func_name, e))
             self._log(traceback.format_exc())
             raise
+        finally:
+            if guard_list != None:
+                guard_list.pop()
 
     def call_exception_handler(self, handler_name, action_name, exc):
         rv = self._variables[handler_name](action_name, exc)
