@@ -29,10 +29,9 @@
 
 class Conf;
 
-#define FACTORY_CREATOR_PARAMS Conf* _c, std::string params
-#define FACTORY_CREATOR_PARAMS2 _c, params
-#define FACTORY_CREATE_PARAMS Conf* _c, std::string name, std::string params
-
+#define FACTORY_CREATOR_PARAMS Conf* _c,int _lineno, std::string params
+#define FACTORY_CREATOR_PARAMS2 _c, _lineno, params
+#define FACTORY_CREATE_PARAMS Conf* _c,int _lineno, std::string name, std::string params
 
 FACTORY_CREATE(EndHook)
 FACTORY_DEFAULT_CREATOR(EndHook, EndHookExit, "exit")
@@ -42,11 +41,11 @@ FACTORY_ATEXIT(EndHook)
 FACTORY_CREATORS(EndHook)
 FACTORY_ADD_FACTORY(EndHook)
 
-EndHookExit::EndHookExit(Conf* _c,std::string& s): EndHook(_c,s) {
+EndHookExit::EndHookExit(Conf* _c,int _lineno,std::string& s): EndHook(_c,s) {
   char* endp;
   std::string name,option;
   param_cut(s,name,option);
-
+  lineno=_lineno;
   if (name=="coverage") {
     cov=new_coverage(c->log,option);
     if (cov==NULL) {
@@ -69,7 +68,11 @@ EndHookExit::EndHookExit(Conf* _c,std::string& s): EndHook(_c,s) {
       errormsg="Not an integer "+s;
     }
   }
+  if (cov) {
+    cov->lineno=lineno;
+  }
 }
+
 
 EndHookExit::~EndHookExit() {
   if (cov) 
@@ -130,18 +133,18 @@ std::string EndHookInteractive::stringify() {
 }
 
 
-EndHook* new_endhook(Conf* c,const std::string& s)
+EndHook* new_endhook(Conf* c,const std::string& s,int _lineno)
 {
   std::string name,option;
   param_cut(s,name,option);
-  EndHook* ret=EndHookFactory::create(c, name, option);
+  EndHook* ret=EndHookFactory::create(c, _lineno, name, option);
   if (ret) {
     return ret;
   }
 
   //Let's try old thing.
   split(s, name, option);
-  ret=EndHookFactory::create(c, name, option);
+   ret=EndHookFactory::create(c, _lineno, name, option);
 
   if (ret) {
     fprintf(stderr,"DEPRECATED END SYNTAX. %s\nNew syntax is %s(%s)\n",

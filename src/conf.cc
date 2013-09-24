@@ -36,10 +36,14 @@ extern "C" {
 }
 
 extern Conf* conf_obj;
-#define RETURN_ERROR_VOID(s) {                  \
+#define RETURN_ERROR_VOID(i,s) {		\
     log.pop();                                  \
     status=false;                               \
-    errormsg=s;                                 \
+    if (i>0) {                                  \
+      errormsg=name+":"+to_string(i)+" " + s;	\
+    } else {					\
+      errormsg=s;				\
+    }						\
     return;                                     \
   }
 
@@ -55,7 +59,9 @@ extern Conf* conf_obj;
 Conf::Conf(Log& l, bool debug_enabled)
   :log(l), exit_status(0), exit_interactive(false),
    heuristic_name("random"), coverage_name("perm"),
-   adapter_name("dummy"), end_time(-1),
+   adapter_name("dummy"), model_lineno(-1), heuristic_lineno(-1),
+   coverage_lineno(-1),adapter_lineno(-1),
+   end_time(-1),
    on_error("exit(1)"), on_fail("interactive"),
    on_pass("exit(0)"), on_inconc("exit(1)"),
    heuristic(NULL), model(NULL),
@@ -108,11 +114,11 @@ void Conf::load(std::string& name,std::string& content)
   free(s);
   ss=ss+"\n"+content;
   if ((name!="" && s==NULL))
-    RETURN_ERROR_VOID("Loading \"" + name + "\" failed.");
+    RETURN_ERROR_VOID(-1,"Loading \"" + name + "\" failed.");
 
   if (ss=="")
-    RETURN_ERROR_VOID("Empty configuration");
-
+    RETURN_ERROR_VOID(-1,"Empty configuration");
+  
   bool ret=dparse(p,(char*)ss.c_str(),std::strlen(ss.c_str()));
 
   ret=p->syntax_errors==0 && ret;
@@ -120,20 +126,24 @@ void Conf::load(std::string& name,std::string& content)
   free_D_Parser(p);
 
   if (!ret) {
-    RETURN_ERROR_VOID("Parsing \"" + name + "\" failed.");
+    RETURN_ERROR_VOID(-1,"Parsing \"" + name + "\" failed.");
   }
 
   conf_obj=tmp;
 
   if ((heuristic=new_heuristic(log,heuristic_name)) == NULL)
-    RETURN_ERROR_VOID("Creating heuristic \"" + heuristic_name + "\" failed.");
+    RETURN_ERROR_VOID(heuristic_lineno,"Creating heuristic \"" +
+		      heuristic_name + "\" failed.");
+
+  heuristic->lineno = heuristic_lineno;
 
   if (heuristic->status==false)
-    RETURN_ERROR_VOID("Error in heuristic \"" + heuristic_name + "\":" +
+    RETURN_ERROR_VOID(heuristic_lineno,"Error in heuristic \"" +
+		      heuristic_name + "\":" +
                       heuristic->errormsg);
 
   if ((model=new_model(log, model_name)) == NULL) {
-    RETURN_ERROR_VOID("Creating model \"" +
+    RETURN_ERROR_VOID(model_lineno,"Creating model \"" +
                       filetype(model_name)
                       + "\" failed.");
   }
@@ -141,13 +151,19 @@ void Conf::load(std::string& name,std::string& content)
   coverage = new_coverage(log,coverage_name);
 
   if (coverage == NULL)
-    RETURN_ERROR_VOID("Creating coverage \"" + coverage_name + "\" failed.");
+    RETURN_ERROR_VOID(coverage_lineno,
+		      "Creating coverage \"" +
+		      coverage_name + "\" failed.");
+
+  coverage->lineno=coverage_lineno;
 
   if (!coverage->status)
-    RETURN_ERROR_VOID("Error in coverage \"" + coverage_name + "\": " + coverage->errormsg);
+    RETURN_ERROR_VOID(coverage->lineno,
+		      "Error in coverage \"" +
+		      coverage_name + "\": " + coverage->errormsg);
 
   if (!model->status || !model->init() || !model->reset())
-    RETURN_ERROR_VOID("Error in model: " + model->stringify());
+    RETURN_ERROR_VOID(model->lineno,"Error in model: " + model->stringify());
 
   heuristic->set_coverage(coverage);
 
@@ -158,14 +174,17 @@ void Conf::load(std::string& name,std::string& content)
   for(std::vector<Coverage*>::iterator i=set_model_callbacks.begin();i!=set_model_callbacks.end();i++) {
     (*i)->set_model(model);
     if (!((*i)->status)) {
-      RETURN_ERROR_VOID("Coverage error: " + (*i)->stringify());      
+      RETURN_ERROR_VOID((*i)->lineno,"Coverage error: " + (*i)->stringify());
     }
   }
 
   adapter = new_adapter(log, adapter_name);
 
   if (adapter == NULL)
-    RETURN_ERROR_VOID("Creating adapter \"" + adapter_name + "\" failed.");
+    RETURN_ERROR_VOID(adapter_lineno,
+		      "Creating adapter \"" + adapter_name + "\" failed.");
+
+  adapter->lineno = adapter_lineno;
 
   if (!adapter->status) {
     status=false;
@@ -205,26 +224,27 @@ void Conf::load(std::string& name,std::string& content)
 
   /* handle history */
   for(unsigned i=0;i<history.size();i++) {
-    History* h=new_history(log,*history[i]);
+    History* h=new_history(log,* (history[i].first));
     Coverage_of cof(log,set_model_callbacks);
 
     if (h) {
+      h->lineno=history[i].second;
       h->set_coverage(&cof,model);
       if (!h->status) {
 	errormsg=h->errormsg;
 	delete h;
-	RETURN_ERROR_VOID(errormsg);
+	RETURN_ERROR_VOID(h->lineno,errormsg);
       }
       delete h;
     } else {
-      RETURN_ERROR_VOID("Creating history \""+ *history[i] + "\" failed.");
+      RETURN_ERROR_VOID(history[i].second,"Creating history \""+ *(history[i].first) + "\" failed.");
     }
   }
 
   adapter->set_actions(&model->getActionNames());
 
   if (!adapter->status)
-    RETURN_ERROR_VOID("Adapter error: " + adapter->stringify());
+    RETURN_ERROR_VOID(adapter->lineno,"Adapter error: " + adapter->stringify());
 
   log.pop();
 }
@@ -399,8 +419,7 @@ void Conf::set_observe_sleep(std::string &s)
   Adapter::sleeptime=atoi(s.c_str());
 }
 
-void Conf::add_end_condition(Verdict::Verdict v,std::string& s)
-
+void Conf::add_end_condition(Verdict::Verdict v,std::string& s,int line)
 {
   End_condition *ec = new_end_condition(v,s,this);
 
@@ -408,9 +427,31 @@ void Conf::add_end_condition(Verdict::Verdict v,std::string& s)
     status=false;
     errormsg=errormsg+"Creating end condition \""+s+"\" failed.\n";
   } else {
+    ec->lineno=line;
     add_end_condition(ec);
   }
 }
+
+void Conf::set_on_error(const std::string &s,int line) {
+  EndHook* e=new_endhook(this,s,line);
+  error_hooks.push_back(e);
+}
+
+void Conf::set_on_fail(const std::string &s,int line) {
+  EndHook* e=new_endhook(this,s,line);
+  fail_hooks.push_back(e);
+}
+
+void Conf::set_on_pass(const std::string &s,int line) {
+  EndHook* e=new_endhook(this,s,line);
+  pass_hooks.push_back(e);
+}
+
+void Conf::set_on_inconc(const std::string &s,int line) {
+  EndHook* e=new_endhook(this,s,line);
+  inc_hooks.push_back(e);
+}
+
 
 void Conf::set_model(Coverage* _c)
 {
@@ -441,8 +482,8 @@ Conf::~Conf() {
   coverage=NULL;
 
   for(unsigned i=0;i<history.size();i++) {
-    if (history[i]) {
-      delete history[i];
+    if (history[i].first) {
+      delete history[i].first;
     }
   }
 
