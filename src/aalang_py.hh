@@ -32,7 +32,8 @@ typedef std::pair<std::string,fileline> codefileline;
 class aalang_py: public aalang {
 public:
   aalang_py(): aalang(), name(NULL), action_cnt(1),
-               tag_cnt(1), /*acnt("1"),tcnt("1"),*/ m_lines_in_vars(0), tag(false),
+               tag_cnt(1), serial_cnt(1), /*acnt("1"),tcnt("1"),*/
+               m_lines_in_vars(0), tag(false),
 	       adapter(false) {
         default_body   ="pass";
         default_guard  ="return 1";
@@ -68,6 +69,7 @@ protected:
   codefileline m_adapter;
   int action_cnt;
   int tag_cnt;
+  int serial_cnt;
   //std::string acnt;
   //std::string tcnt;
   std::string s;
@@ -83,11 +85,15 @@ protected:
   std::string requires;
 
   std::list<bool> ta_stack;
+  std::list<int> serial_stack;
   std::list<std::vector<std::pair<std::string,int > > > ma_stack;
   std::stack<codefileline> ma_save;
 
+  const std::string class_name() const;
   std::string action_helper(const codefileline& cfl,std::string s,
 			    std::string& funcname,int i,std::string& acnt);
+  const std::string serial_guard(bool cls=false) const;
+  const std::string serial_step(bool cls=false) const;
 };
 
 #endif
