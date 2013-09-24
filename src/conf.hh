@@ -51,38 +51,34 @@ class Conf:public Writable {
 
   void set_model(Coverage* c);
 
-  void set_model(std::string& s) {
+  void set_model(std::string& s,int line) {
     //split(s, model_name, model_param);
     //param_cut(s, model_name, model_param);
+    model_lineno=line;
     model_name=s;
   }
-  void set_heuristic(std::string& s) {
+  void set_heuristic(std::string& s,int line) {
     heuristic_name=s;
+    heuristic_lineno=line;
     //split(s, heuristic_name, heuristic_param);
     //param_cut(s, heuristic_name, heuristic_param);
   }
-  void set_coverage(std::string& s) {
+  void set_coverage(std::string& s,int line) {
     //split(s, coverage_name, coverage_param);
     //param_cut(s,coverage_name,coverage_param);
     coverage_name=s;
+    coverage_lineno=line;
   }
-  void set_adapter(std::string& s) {
+  void set_adapter(std::string& s,int line) {
     //split(s, adapter_name, adapter_param);
     //param_cut(s, adapter_name, adapter_param);
     adapter_name=s;
+    adapter_lineno=line;
   }
-  void set_on_error(const std::string &s) {
-    error_hooks.push_back(new_endhook(this,s));
-  }
-  void set_on_fail(const std::string &s) {
-    fail_hooks.push_back(new_endhook(this,s));
-  }
-  void set_on_pass(const std::string &s) {
-    pass_hooks.push_back(new_endhook(this,s));
-  }
-  void set_on_inconc(const std::string &s) {
-    inc_hooks.push_back(new_endhook(this,s));
-  }
+  void set_on_error(const std::string &s,int line=-1);
+  void set_on_fail(const std::string &s,int line=-1);
+  void set_on_pass(const std::string &s,int line=-1);
+  void set_on_inconc(const std::string &s,int line=-1);
 
   void add_end_condition(End_condition *ec) {
     if (ec->status) {
@@ -93,12 +89,12 @@ class Conf:public Writable {
     }
   }
 
-  void add_end_condition(Verdict::Verdict v,std::string& s);
+  void add_end_condition(Verdict::Verdict v,std::string& s,int line);
 
   void set_observe_sleep(std::string &s);
 
-  void add_history(std::string* s) {
-    history.push_back(s);
+  void add_history(std::string* s,int line) {
+    history.push_back(std::pair<std::string*,int>(s,line));
   }
 
   Verdict::Verdict execute(bool interactive=false);
@@ -119,11 +115,16 @@ class Conf:public Writable {
   bool exit_interactive;
  protected:
   std::list<EndHook*> pass_hooks,fail_hooks,inc_hooks,error_hooks;
-  std::vector<std::string*> history;
+  std::vector<std::pair<std::string*,int> > history;
   std::string model_name;
   std::string heuristic_name;
   std::string coverage_name;
   std::string adapter_name;
+
+  int model_lineno;
+  int heuristic_lineno;
+  int coverage_lineno;
+  int adapter_lineno;
 
   std::vector<End_condition*> end_conditions;
 

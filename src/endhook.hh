@@ -27,9 +27,9 @@
 
 class Conf;
 
-#define FACTORY_CREATOR_PARAMS Conf* _c, std::string params
-#define FACTORY_CREATOR_PARAMS2 _c, params
-#define FACTORY_CREATE_PARAMS Conf* _c, std::string name, std::string params
+#define FACTORY_CREATOR_PARAMS Conf* _c,int _lineno, std::string params
+#define FACTORY_CREATOR_PARAMS2 _c, _lineno, params
+#define FACTORY_CREATE_PARAMS Conf* _c,int _lineno, std::string name, std::string params
 
 #include "factory.hh"
 
@@ -45,11 +45,11 @@ public:
 
 
 FACTORY_DECLARATION(EndHook)
-EndHook* new_endhook(Conf*, const std::string&);
+EndHook* new_endhook(Conf*, const std::string&,int _lineno=-1);
 
 class EndHookExit: public EndHook {
 public:
-  EndHookExit(Conf* _c,std::string& s);
+  EndHookExit(Conf* _c,int _lineno,std::string& s);
   virtual ~EndHookExit();
   virtual void run();
   virtual std::string stringify();
@@ -60,7 +60,8 @@ public:
 
 class EndHookInteractive: public EndHook {
 public:
-  EndHookInteractive(Conf* _c,std::string& s): EndHook(_c,s) {
+  EndHookInteractive(Conf* _c,int _lineno,std::string& s): EndHook(_c,s) {
+    lineno=_lineno;
   }
   virtual ~EndHookInteractive() {}
   virtual std::string stringify();

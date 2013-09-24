@@ -23,11 +23,12 @@
 
 class Writable {
 public:
-  Writable(): status(true), errormsg("") {}
+  Writable(): status(true), errormsg(""),lineno(-1) {}
   virtual ~Writable() {}
   virtual std::string stringify() { if (!status) return errormsg; else return ""; }
   bool status;
   std::string errormsg;
+  int lineno;
 };
 
 #endif
