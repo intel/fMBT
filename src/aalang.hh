@@ -59,6 +59,9 @@ public:
   virtual void set_aexit(std::string* iai,const char*,int,int)     = 0;
   virtual void set_guard(std::string* gua,const char*,int,int)     = 0;
 
+  virtual void parallel(bool start) {}; //                            = 0;
+  virtual void serial(bool start)   {}; //                            = 0;
+
   virtual void set_push(std::string* p,const char*,int,int)        = 0;
   virtual void set_pop(std::string* p,const char*,int,int)         = 0;
 

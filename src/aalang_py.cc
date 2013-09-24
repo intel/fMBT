@@ -276,6 +276,15 @@ void aalang_py::set_guard(std::string* gua,const char* file,int line,int col)
   m_guard = codefileline(*gua,fileline(file,line));
 }
 
+void aalang_py::parallel(bool start) {
+
+}
+
+void aalang_py::serial(bool start) {
+
+}
+
+
 void aalang_py::set_push(std::string* p,const char* file,int line,int col)
 {
   push=*p;

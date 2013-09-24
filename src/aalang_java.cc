@@ -64,6 +64,14 @@ void aalang_java::set_namestr(std::string* _name)
   s+="public class "+*name+"{\n\t";
 }
 
+void aalang_java::parallel(bool start) {
+
+}
+
+void aalang_java::serial(bool start) {
+
+}
+
 void aalang_java::set_variables(std::string* var,const char* file,int line,int col)
 {
   s+="//variables\n"+*var+"\n";

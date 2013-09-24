@@ -150,6 +150,14 @@ void aalang_cpp::set_aexit(std::string* iai,const char* file,int line,int col)
   }
 }
 
+void aalang_cpp::parallel(bool start) {
+
+}
+
+void aalang_cpp::serial(bool start) {
+
+}
+
 void aalang_cpp::set_push(std::string* p,const char* file,int line,int col)
 {
   push=to_line(file,line)+*p;
