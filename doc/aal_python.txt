@@ -461,6 +461,31 @@ adapter_exception_handler(action_name, exc) - hook adapter exceptions
 
         Example: TODO
 
+
+guard_list - list of block names why the guard is executed
+
+        Available: in guard() blocks of tags and actions.
+
+        Contains names of blocks because of which the guard is
+        evaluated. The last name in guard_list is the name of the
+        current block. The first name in the list is the innermost
+        block whose guard is evaluated.
+
+        Example: the guard of "outer" tag disables all actions in
+        "inner-1" tag, leaving "world" as the only enabled action.
+
+        tag "outer" {
+            guard() {
+                return "inner-1" not in guard_list
+            }
+            tag "inner-1" {
+                input "hello" {}
+            }
+            tag "inner-2" {
+                input "world" {}
+            }
+        }
+
 log(message) - function that writes messages to remote_pyaal's log
 
         Available: everywhere.
