@@ -121,18 +121,22 @@ const std::string aalang_py::class_name() const
   return "_gen_" + *name;
 }
 
-const std::string aalang_py::serial_guard(bool cls) const
+const std::string aalang_py::serialN(const std::string postfix, bool cls) const
 {
-  std::string guard_name = "serial" + to_string(serial_stack.back()) + "guard";
-  if (cls) return class_name() + "." + guard_name;
-  else return guard_name;
+  // returns [cls.]serial(currentblock)<postfix>
+  std::string full_name = "serial" + to_string(serial_stack.back()) + postfix;
+  if (cls) return class_name() + "." + full_name;
+  else return full_name;
 }
 
-const std::string aalang_py::serial_step(bool cls) const
+const std::string aalang_py::serialN_1(const std::string postfix, bool cls) const
 {
-  std::string step_name = "serial" + to_string(serial_stack.back()) + "step";
-  if (cls) return class_name() + "." + step_name;
-  else return step_name;
+  // returns [cls.]serial(outerblock "N-1")<postfix>
+  std::list<int>::const_iterator outer_serial = serial_stack.end();
+  --outer_serial; --outer_serial;
+  std::string full_name = "serial" + to_string(*outer_serial) + postfix;
+  if (cls) return class_name() + "." + full_name;
+  else return full_name;
 }
 
 void default_if_empty(std::string& s, const std::string& default_value)
@@ -300,27 +304,47 @@ void aalang_py::parallel(bool start) {
 }
 
 void aalang_py::serial(bool start) {
-    if (start) {
-      serial_stack.push_back(serial_cnt);
-      s += "\n"
-        "    def " + serial_guard() + "():\n"
-        "        return " + serial_guard(true) + "_active_block == guard_list[-2]\n"
-        "    " + serial_guard() + ".blocks = []\n"
-        "    def " + serial_step() + "():\n"
-        "        " + serial_guard(true) + "_active_block_num = (" +
-        serial_guard(true) + "_active_block_num + 1) % " + serial_guard(true) +
-        "_block_count\n" +
-        "        " + serial_guard(true) + "_active_block = " + serial_guard(true) +
-        ".blocks[" + serial_guard(true) + "_active_block_num]\n";
-      serial_cnt += 1;
-    } else {
-      s += "\n"
-        "    " + serial_guard() + "_block_count = len(" + serial_guard() + ".blocks)\n"
-        "    if " + serial_guard() + "_block_count > 0:\n"
-        "        " + serial_guard() + "_active_block_num = 0\n"
-        "        " + serial_guard() + "_active_block = " + serial_guard() + ".blocks[0]\n";
-      serial_stack.pop_back();
+  if (start) {
+    serial_stack.push_back(serial_cnt);
+    s += "\n"
+      "    " + serialN("name") + " = \"" + serialN("") + "\"\n"
+      "    def " + serialN("guard") + "():\n"
+      "        return " + serialN("guard", true) +
+      "_active_block == guard_list[-2]\n"
+      "    " + serialN("guard") + ".blocks = []\n"
+      "    def " + serialN("step") + "():\n"
+      "        " + serialN("guard", true) + "_active_block_num = (" +
+      serialN("guard", true) + "_active_block_num + 1) % " +
+      serialN("guard", true) + "_block_count\n" +
+      "        " + serialN("guard", true) + "_active_block = " +
+      serialN("guard", true) + ".blocks[" + serialN("guard", true) +
+      "_active_block_num]\n"
+      ;
+    if (serial_stack.size() > 1) {
+      // nested block:
+      // - if all subblocks were executed, notify outer block
+      // - executing subblocks requires outer block permission.
+      s +=
+        "        if " + serialN("guard", true) + "_active_block_num == 0:\n"
+        "            eval(" + serialN_1("step", true) + ".func_code)\n"
+        ;
+
+      s += "    " + serialN("guard") + ".requires = [\"" + serialN_1("guard") +
+        "\"]\n"
+        "    " + serialN_1("guard") + ".blocks.append(\"" +
+        serialN("") + "\")\n";
     }
+    serial_cnt += 1;
+  } else {
+    s += "\n"
+      "    " + serialN("guard") + "_block_count = len(" + serialN("guard") +
+      ".blocks)\n"
+      "    if " + serialN("guard") + "_block_count > 0:\n"
+      "        " + serialN("guard") + "_active_block_num = 0\n"
+      "        " + serialN("guard") + "_active_block = " + serialN("guard") +
+      ".blocks[0]\n";
+    serial_stack.pop_back();
+  }
 }
 
 void aalang_py::set_push(std::string* p,const char* file,int line,int col)
@@ -370,7 +394,7 @@ void aalang_py::next_action()
     }
 
     if (!serial_stack.empty()) {
-      s += "    " + serial_guard(false) + ".blocks.append(\"" + multiname[i].first + "\")\n";
+      s += "    " + serialN("guard") + ".blocks.append(\"" + multiname[i].first + "\")\n";
     }
     /* actionXguard */
 
@@ -379,7 +403,7 @@ void aalang_py::next_action()
     // action + acnt + guard.requires=[...];
     s+="    action" + acnt + "guard.requires = [" + requires + "]\n";
     if (!serial_stack.empty()) {
-      s+="    action" + acnt + "guard.requires += [\"" + serial_guard(false) + "\"]\n";
+      s+="    action" + acnt + "guard.requires += [\"" + serialN("guard") + "\"]\n";
     }
 
     s+=python_lineno_wrapper(m_guard,funcname,3+m_lines_in_vars,4,
@@ -393,7 +417,7 @@ void aalang_py::next_action()
                              "\\\"\")");
     if (!serial_stack.empty()) {
       s += "    action" + acnt + "body.postcall = ["
-        + serial_step(false) + "]\n";
+        + serialN("step") + "]\n";
     }
     /* actionXadapter */
     s+=action_helper(m_adapter,"adapter",funcname,i,acnt);

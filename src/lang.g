@@ -127,7 +127,7 @@ parser: parallel | serial ;
 serial_start: 'serial' { obj->serial(true); } ;
 parallel_start: 'parallel' { obj->parallel(true); } ;
 
-serial: serial_start '{' ( act | tag )+ '}'
+serial: serial_start '{' ( act | tag | parser )+ '}'
         { obj->serial(false); } ;
 
 parallel: parallel_start '{' ( act | tag )+ '}'

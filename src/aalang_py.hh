@@ -92,8 +92,8 @@ protected:
   const std::string class_name() const;
   std::string action_helper(const codefileline& cfl,std::string s,
 			    std::string& funcname,int i,std::string& acnt);
-  const std::string serial_guard(bool cls=false) const;
-  const std::string serial_step(bool cls=false) const;
+  const std::string serialN(const std::string postfix, bool cls=false) const;
+  const std::string serialN_1(const std::string postfix, bool cls=false) const;
 };
 
 #endif
