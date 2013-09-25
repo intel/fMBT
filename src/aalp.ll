@@ -150,6 +150,15 @@ FILE* include_search_open(std::string& f) {
      s.erase(s.length()-1);
      s=s.substr(1);
     }
+
+    if (state!=INC && s[0]=='"') {
+      std::string ss=s.substr(1);
+      unsigned long cutpos=ss.find_first_of("\"");
+      if (cutpos != ss.npos) {
+        s=ss.substr(0,cutpos);
+      }
+    }
+
     switch (state) {
     case INC: {
       if (inc_split(sinc)) {
