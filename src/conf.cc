@@ -322,7 +322,8 @@ Verdict::Verdict Conf::execute(bool interactive) {
 	((End_condition_tagverify*) e)
 	  ->evaluate_filter(model->getSPNames());
       }
-      if (e->counter == End_condition::COVERAGE) {
+      if ((e->verdict==Verdict::PASS) && 
+	  (e->counter == End_condition::COVERAGE)) {
         end_by_coverage = true;
       }
       if (e->counter == End_condition::DURATION) {
