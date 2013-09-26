@@ -139,6 +139,13 @@ const std::string aalang_py::serialN_1(const std::string postfix, bool cls) cons
   else return full_name;
 }
 
+const int aalang_py::serial_stackN_1() const
+{
+  std::list<int>::const_iterator outer_serial = serial_stack.end();
+  --outer_serial; --outer_serial;
+  return *outer_serial;
+}
+
 void default_if_empty(std::string& s, const std::string& default_value)
 {
   size_t first_nonspace = s.find_first_not_of(" \t\n\r");
@@ -163,6 +170,7 @@ void aalang_py::set_name(std::string* name,bool first,ANAMETYPE t)
     multiname.clear();
     tag = false;
     adapter = false;
+    serial_stack.push_back(0); // inside action block
   }
 
   multiname.push_back(std::pair<std::string,int>(*name,action_cnt));
@@ -320,19 +328,18 @@ void aalang_py::serial(bool start) {
       serialN("guard", true) + ".blocks[" + serialN("guard", true) +
       "_active_block_num]\n"
       ;
-    if (serial_stack.size() > 1) {
+    if (serial_stack.size() > 1 && serial_stack.back() != 0) {
       // nested block:
       // - if all subblocks were executed, notify outer block
       // - executing subblocks requires outer block permission.
       s +=
         "        if " + serialN("guard", true) + "_active_block_num == 0:\n"
         "            eval(" + serialN_1("step", true) + ".func_code)\n"
-        ;
-
-      s += "    " + serialN("guard") + ".requires = [\"" + serialN_1("guard") +
+        "    " + serialN("guard") + ".requires = [\"" + serialN_1("guard") +
         "\"]\n"
         "    " + serialN_1("guard") + ".blocks.append(\"" +
-        serialN("") + "\")\n";
+        serialN("") + "\")\n"
+        ;
     }
     serial_cnt += 1;
   } else {
@@ -376,6 +383,7 @@ void aalang_py::next_action()
 {
   std::string acnt;
   guard_requires.pop_back();
+  serial_stack.pop_back();
   requires = to_list(guard_requires);
 
   for (unsigned int i = 0; i < multiname.size(); i++) {
@@ -393,7 +401,7 @@ void aalang_py::next_action()
       this_is_input = true;
     }
 
-    if (!serial_stack.empty()) {
+    if (!serial_stack.empty() && serial_stack.back() != 0) {
       s += "    " + serialN("guard") + ".blocks.append(\"" + multiname[i].first + "\")\n";
     }
     /* actionXguard */
@@ -402,7 +410,7 @@ void aalang_py::next_action()
 
     // action + acnt + guard.requires=[...];
     s+="    action" + acnt + "guard.requires = [" + requires + "]\n";
-    if (!serial_stack.empty()) {
+    if (!serial_stack.empty() && serial_stack.back() != 0) {
       s+="    action" + acnt + "guard.requires += [\"" + serialN("guard") + "\"]\n";
     }
 
@@ -415,7 +423,7 @@ void aalang_py::next_action()
     s+=python_lineno_wrapper(m_body,funcname,3+m_lines_in_vars,4,
                              ", \"body of action \\\"" + multiname[i].first +
                              "\\\"\")");
-    if (!serial_stack.empty()) {
+    if (!serial_stack.empty() && serial_stack.back() != 0) {
       s += "    action" + acnt + "body.postcall = ["
         + serialN("step") + "]\n";
     }

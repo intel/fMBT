@@ -94,6 +94,7 @@ protected:
 			    std::string& funcname,int i,std::string& acnt);
   const std::string serialN(const std::string postfix, bool cls=false) const;
   const std::string serialN_1(const std::string postfix, bool cls=false) const;
+  const int serial_stackN_1() const;
 };
 
 #endif
