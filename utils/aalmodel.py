@@ -209,7 +209,7 @@ class AALModel:
         for varname in self._push_variables:
             stack_element[varname] = copy.deepcopy(self._variables[varname])
         if self._has_serial:
-            stack_element["!serial_abn"] = self._get_all("guard_active_block_num", "serial")
+            stack_element["!serial_abn"] = copy.deepcopy(self._get_all("guard_active_block_num", "serial"))
             stack_element["!serial_ab"] = self._get_all("guard_active_block", "serial")
         self._stack.append(stack_element)
         self._stack_executed_actions.append([])
