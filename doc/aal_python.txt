@@ -84,6 +84,13 @@ Shorthands "input" and "output" can be used instead of "action". In
 this case names are automatically prefixed by "i:" and "o:",
 respectively.
 
+Shorthand blocks "serial" and "parallel" can contain actions or nested
+serial and parallel blocks. Actions and subblocks inside a serial
+block are executed in a loop, starting from the first block. On the
+other hand, actions or subblocks inside a parallel block can be
+executed in any order, but they can be executed again only after
+executing every action and subblock has been executed exactly once.
+
 Comments in AAL are written after "#" on their own lines. Commenting
 syntax inside code blocks is the same as in the programming language
 in use.
@@ -232,9 +239,10 @@ reached". Otherwise, "verdict" and "reason" are None.
 AAL/Python syntax
 -----------------
 
-The code between "{" and "}" is Python except for in one
-case. Variables block is a comma-separated list of names of
-variables. Continued line should end with "\".
+The code in language, initial_state, adapter_init, adapter_exit,
+guard(), body() and adapter() blocks is Python. Variables block is a
+comma-separated list of names of variables. Continued line should end
+with "\".
 
 Example:
 
@@ -265,6 +273,38 @@ same or separate lines as "{" and "}". In multiline blocks each
 statement must be written to its own line. Indentation depth of the
 first line in a block is not meaningful, but the rest of the lines
 must be indented according to Python rules.
+
+Actions can be nested in tags. This avoids repeating the same checks
+in guard()s of actions that have something in common. For instance,
+launching applications when in the homescreen can be modelled without
+checking homescreen view in guards of every action:
+
+tag "homescreen" {
+    guard() { return view == "homescreen" }
+
+    input "app1 launch" { body() { view = "app1" } }
+    input "app2 launch" { body() { view = "app2" } }
+    input "app3 launch" { body() { view = "app3" } }
+}
+
+Serial and parallel blocks can save a lot of effort in writing
+guards. For example, all possible interleavings of two users filling
+up a questionnaire, can be modelled as follows:
+
+parallel {
+    serial {
+         input "Alice login" {}
+         input "Alice answer 1" {}
+         input "Alice answer 2" {}
+         input "Alice logout" {}
+    }
+    serial {
+         input "Bob login" {}
+         input "Bob answer 1" {}
+         input "Bob answer 2" {}
+         input "Bob logout" {}
+    }
+}
 
 
 AAL/Python tools
