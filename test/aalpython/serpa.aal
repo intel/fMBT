@@ -1,0 +1,24 @@
+aal "noname" {
+    language "python" {}
+    # preview-depth: 7
+    initial_state {}
+    serial {
+        input "start" {}
+        parallel {
+            serial {
+                input "a0" {}
+                input "a1" {}
+            }
+            serial {
+                input "b0" {}
+            }
+        }
+        serial {
+            input "c" {}
+        }
+        parallel {
+            input "d0" {}
+            input "d1" {}
+        }
+    }
+}
