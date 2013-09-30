@@ -273,6 +273,18 @@ fi
 
 testpassed
 
+teststep "remote_pyaal serial and parallel"
+if ! fmbt serpa.conf > serpa.stdout 2>serpa.stderr; then
+    echo "failed because exit status 0 expected from fmbt serpa.conf" >>$LOGFILE
+    testfailed
+fi
+
+if [ "$(fmbt-log -f '$sc' serpa.stdout | tail -n 1)" != "6.000000" ]; then
+    echo "failed because 6 uinputs expected in serpa.stdout" >>$LOGFILE
+    testfailed
+fi
+testpassed
+
 teststep "remote_pyaal control flow with nondet sut"
 if ! fmbt controlflow.conf > controlflow.stdout 2>controlflow.stderr; then
     echo "failed because expected exit status 0 from fmbt controlflow.conf" >>$LOGFILE
