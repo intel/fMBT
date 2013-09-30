@@ -352,6 +352,8 @@ char* _readfile(const char* filename)
             while (cont_pos < file_len && contents[cont_pos] != '\n')
                 cont_pos++;
             if (cont_pos < file_len) cont_pos++; // skip new line char
+	    cleaned_up_contents[clean_pos] = '\n';
+	    clean_pos++;
         } else {
             prev_char = cleaned_up_contents[clean_pos] = contents[cont_pos];
             cont_pos++;
