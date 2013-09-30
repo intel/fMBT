@@ -156,8 +156,8 @@ class AALModel:
         if i in self._enabled_actions_stack[-1] or self.call(self._all_guards[i-1]):
             self.call(self._all_bodies[i-1])
             if self._has_serial:
-                for postfunc in getattr(self._all_bodies[i-1], "postcall", []):
-                    self.call(postfunc)
+                for postfunc in getattr(self, self._all_bodies[i-1].__name__ + "_postcall", []):
+                    getattr(self, postfunc)(fmbt._g_actionName)
             if len(self._stack) == 0:
                 fmbt._g_testStep += 1
             if len(self._stack_executed_actions) > 0:
