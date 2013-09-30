@@ -26,17 +26,6 @@ std::string to_list(std::list<std::string>& l) {
     return "";
   }
   std::string ret="\"" +  l.back() + "\"";
-
-  /*
-  std::list<std::string>::iterator i=l.begin();
-  if (i==l.end()) {
-    return ret;
-  }
-  i++;
-  for(;i!=l.end();i++) {
-    ret=ret + " , " + "\"" + *i + "(\"";
-  }
-  */
   return ret;
 }
 
@@ -446,7 +435,7 @@ void aalang_py::next_action()
       this_is_input = true;
     }
 
-    if (!serial_stack.empty()) {
+    if (!serial_stack.empty() && serial_stack.back() != 0) {
       s += "    " + serialN("guard") + ".blocks.append(\"" + multiname[i].first + "\")\n";
       if (serial_stack.back() > 0) {
         // action is inside serial block
