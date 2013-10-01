@@ -24,6 +24,8 @@
 #include <string>
 #include <vector>
 #include <list>
+#include <stack>
+
 #include "helper.hh"
 
 class aalang_cpp: public aalang {
@@ -75,6 +77,15 @@ protected:
   std::map<bool,int> tag_adapter;
   std::list<bool> tstack;
   std::list<int> name_cnt_stack;
+  
+  std::stack<int> outter_stack;
+  int outters;
+  int current_outter;
+
+  std::stack<int> inner_stack;
+  int current_inner;
+
+  std::vector<std::list<std::string> > inner_names;
 };
 
 #endif

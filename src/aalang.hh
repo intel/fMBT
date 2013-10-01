@@ -24,6 +24,8 @@
 #include <map>
 #include <stdio.h>
 
+#include "d.h"
+
 class aalang {
 public:
   enum ANAMETYPE {
@@ -32,8 +34,12 @@ public:
     OBSERVE
   };
 
-  aalang() {}
+  aalang() { pars = NULL; }
   virtual ~aalang() {};
+
+  void set_parser(Parser* p) {
+    pars=p;
+  }
 
   virtual bool check_name(std::string* name,const char* _file,int _line) {
     if (names.find(*name)!=names.end()) {
@@ -80,6 +86,7 @@ public:
   virtual std::string stringify() = 0;
   virtual void set_starter(std::string* st,const char*, int, int) = 0;
 protected:
+  Parser* pars;
   std::string default_guard;
   std::string default_body;
   std::string default_adapter;
