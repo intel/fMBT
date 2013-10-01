@@ -24,7 +24,7 @@ class AALModel:
         self._all_tagnames = self._get_all("name", "tag")
         self._all_tagguards = self._get_all("guard", "tag")
         self._all_tagadapters = self._get_all("adapter", "tag")
-        if len(self._get_all("guard_active_block_num", "serial")) > 0:
+        if len(self._get_all("guard_next_block", "serial")) > 0:
             self._has_serial = True
         else:
             self._has_serial = False
@@ -156,8 +156,8 @@ class AALModel:
         if i in self._enabled_actions_stack[-1] or self.call(self._all_guards[i-1]):
             self.call(self._all_bodies[i-1])
             if self._has_serial:
-                for postfunc in getattr(self._all_bodies[i-1], "postcall", []):
-                    self.call(postfunc)
+                for postfunc in getattr(self, self._all_bodies[i-1].__name__ + "_postcall", []):
+                    getattr(self, postfunc)(fmbt._g_actionName)
             if len(self._stack) == 0:
                 fmbt._g_testStep += 1
             if len(self._stack_executed_actions) > 0:
@@ -209,8 +209,7 @@ class AALModel:
         for varname in self._push_variables:
             stack_element[varname] = copy.deepcopy(self._variables[varname])
         if self._has_serial:
-            stack_element["!serial_abn"] = self._get_all("guard_active_block_num", "serial")
-            stack_element["!serial_ab"] = self._get_all("guard_active_block", "serial")
+            stack_element["!serial_abn"] = copy.deepcopy(self._get_all("guard_next_block", "serial"))
         self._stack.append(stack_element)
         self._stack_executed_actions.append([])
         self._enabled_actions_stack.append(set(self._enabled_actions_stack[-1]))
@@ -222,8 +221,7 @@ class AALModel:
             if varname.startswith("!"): continue
             self._variables[varname] = stack_element[varname]
         if self._has_serial:
-            self._set_all_class("guard_active_block_num", "serial", stack_element["!serial_abn"])
-            self._set_all_class("guard_active_block", "serial", stack_element["!serial_ab"])
+            self._set_all_class("guard_next_block", "serial", stack_element["!serial_abn"])
         self._enabled_actions_stack.pop()
 
     def state(self, discard_variables = set([]), include_variables=None):
@@ -238,7 +236,7 @@ class AALModel:
                 continue
             rv_list.append("%s = %s" % (varname, repr(self._variables[varname])))
         if self._has_serial:
-            rv_list.append("!serial = %s" % (self._get_all("guard_active_block_num", "serial"),))
+            rv_list.append("!serial = %s" % (self._get_all("guard_next_block", "serial"),))
         return '\n'.join(rv_list)
 
     def observe(self, block):

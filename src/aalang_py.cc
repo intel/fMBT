@@ -26,17 +26,6 @@ std::string to_list(std::list<std::string>& l) {
     return "";
   }
   std::string ret="\"" +  l.back() + "\"";
-
-  /*
-  std::list<std::string>::iterator i=l.begin();
-  if (i==l.end()) {
-    return ret;
-  }
-  i++;
-  for(;i!=l.end();i++) {
-    ret=ret + " , " + "\"" + *i + "(\"";
-  }
-  */
   return ret;
 }
 
@@ -124,7 +113,7 @@ const std::string aalang_py::class_name() const
 const std::string aalang_py::serialN(const std::string postfix, bool cls) const
 {
   // returns [cls.]serial(currentblock)<postfix>
-  std::string full_name = "serial" + to_string(serial_stack.back()) + postfix;
+  std::string full_name = "serial" + to_string(abs(serial_stack.back())) + postfix;
   if (cls) return class_name() + "." + full_name;
   else return full_name;
 }
@@ -134,7 +123,7 @@ const std::string aalang_py::serialN_1(const std::string postfix, bool cls) cons
   // returns [cls.]serial(outerblock "N-1")<postfix>
   std::list<int>::const_iterator outer_serial = serial_stack.end();
   --outer_serial; --outer_serial;
-  std::string full_name = "serial" + to_string(*outer_serial) + postfix;
+  std::string full_name = "serial" + to_string(abs(*outer_serial)) + postfix;
   if (cls) return class_name() + "." + full_name;
   else return full_name;
 }
@@ -308,7 +297,52 @@ void aalang_py::set_guard(std::string* gua,const char* file,int line,int col)
 }
 
 void aalang_py::parallel(bool start) {
+  if (start) {
+    serial_stack.push_back(-serial_cnt); // parallel is negative
+    std::string sNg =
+    s += "\n"
+      "    " + serialN("name") + " = \"" + serialN("") + "\"\n"
+      "    def " + serialN("guard") + "():\n"
+      "        return guard_list[-2] in " + serialN("guard", true) +
+      "_next_block\n"
+      "    " + serialN("guard") + ".blocks = []\n"
+      "    " + serialN("guard") + "_next_block = set()\n"
+      "    def " + serialN("step") + "(self, upper):\n"
+      "        " + serialN("guard", true) + "_next_block.remove("
+      "upper)\n"
+      "        if not " + serialN("guard", true) + "_next_block:\n" +
+      "            " + serialN("guard", true) + "_next_block = set(" +
+      serialN("guard", true) + ".blocks)\n"
+      ;
+    if (serial_stack.size() > 1 && serial_stack.back() != 0) {
+      // nested block:
+      // - if all subblocks were executed, notify outer block
+      // - executing subblocks requires outer block permission.
+      s +=
+        "        if len(" + serialN("guard", true) + "_next_block) == len(" +
+        serialN("guard", true) + ".blocks):\n"
+        "            self." + serialN_1("step") + "(\"" + serialN("") + "\")\n"
+        "    " + serialN("guard") + ".requires = [\"" + serialN_1("guard") +
+        "\"]\n"
+        "    " + serialN_1("guard") + ".blocks.append(\"" +
+        serialN("") + "\")\n"
+        ;
 
+      if (serial_stackN_1() > 0) {
+        // parallel is inside serial block
+        s += "    " + serialN_1("guard") + "_next_block.insert(0, \"" +
+          serialN("") + "\")\n";
+
+      } else {
+        // parallel is inside parallel block
+        s += "    " + serialN_1("guard") + "_next_block.add(\"" +
+          serialN("") + "\")\n";
+      }
+    }
+    serial_cnt += 1;
+  } else {
+    serial_stack.pop_back();
+  }
 }
 
 void aalang_py::serial(bool start) {
@@ -318,38 +352,38 @@ void aalang_py::serial(bool start) {
       "    " + serialN("name") + " = \"" + serialN("") + "\"\n"
       "    def " + serialN("guard") + "():\n"
       "        return " + serialN("guard", true) +
-      "_active_block == guard_list[-2]\n"
+      "_next_block[-1] == guard_list[-2]\n"
       "    " + serialN("guard") + ".blocks = []\n"
-      "    def " + serialN("step") + "():\n"
-      "        " + serialN("guard", true) + "_active_block_num = (" +
-      serialN("guard", true) + "_active_block_num + 1) % " +
-      serialN("guard", true) + "_block_count\n" +
-      "        " + serialN("guard", true) + "_active_block = " +
-      serialN("guard", true) + ".blocks[" + serialN("guard", true) +
-      "_active_block_num]\n"
+      "    " + serialN("guard") + "_next_block = []\n"
+      "    def " + serialN("step") + "(self, upper):\n"
+      "        " + serialN("guard", true) + "_next_block.pop()\n"
+      "        if not " + serialN("guard", true) + "_next_block:\n"
+      "            " + serialN("guard", true) + "_next_block = " +
+      serialN("guard", true) + ".blocks[::-1]\n"
       ;
     if (serial_stack.size() > 1 && serial_stack.back() != 0) {
       // nested block:
       // - if all subblocks were executed, notify outer block
       // - executing subblocks requires outer block permission.
       s +=
-        "        if " + serialN("guard", true) + "_active_block_num == 0:\n"
-        "            eval(" + serialN_1("step", true) + ".func_code)\n"
+        "            self." + serialN_1("step") + "(\"" + serialN("") + "\")\n"
         "    " + serialN("guard") + ".requires = [\"" + serialN_1("guard") +
         "\"]\n"
-        "    " + serialN_1("guard") + ".blocks.append(\"" +
-        serialN("") + "\")\n"
+        "    " + serialN_1("guard") + ".blocks.append(\"" + serialN("")+"\")\n"
         ;
+
+      if (serial_stackN_1() > 0) {
+        // serial inside serial block
+        s += "    " + serialN_1("guard") + "_next_block.insert(0, \"" +
+          serialN("") + "\")\n";
+      } else {
+        // serial inside parallel block
+        s += "    " + serialN_1("guard") + "_next_block.add(\"" +
+          serialN("") + "\")\n";
+      }
     }
     serial_cnt += 1;
   } else {
-    s += "\n"
-      "    " + serialN("guard") + "_block_count = len(" + serialN("guard") +
-      ".blocks)\n"
-      "    if " + serialN("guard") + "_block_count > 0:\n"
-      "        " + serialN("guard") + "_active_block_num = 0\n"
-      "        " + serialN("guard") + "_active_block = " + serialN("guard") +
-      ".blocks[0]\n";
     serial_stack.pop_back();
   }
 }
@@ -403,6 +437,14 @@ void aalang_py::next_action()
 
     if (!serial_stack.empty() && serial_stack.back() != 0) {
       s += "    " + serialN("guard") + ".blocks.append(\"" + multiname[i].first + "\")\n";
+      if (serial_stack.back() > 0) {
+        // action is inside serial block
+        s += "    " + serialN("guard") + "_next_block.insert(0, \"" + multiname[i].first + "\")\n";
+
+      } else if (serial_stack.back() < 0) {
+        // action is inside parallel block
+        s += "    " + serialN("guard") + "_next_block.add(\"" + multiname[i].first + "\")\n";
+      }
     }
     /* actionXguard */
 
@@ -424,8 +466,8 @@ void aalang_py::next_action()
                              ", \"body of action \\\"" + multiname[i].first +
                              "\\\"\")");
     if (!serial_stack.empty() && serial_stack.back() != 0) {
-      s += "    action" + acnt + "body.postcall = ["
-        + serialN("step") + "]\n";
+      s += "    action" + acnt + "body_postcall = [\""
+        + serialN("step") + "\"]\n";
     }
     /* actionXadapter */
     s+=action_helper(m_adapter,"adapter",funcname,i,acnt);
