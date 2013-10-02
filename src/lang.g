@@ -117,22 +117,26 @@ int bstr_scan(char *ops, void *ops_cache, d_loc_t *loc,
 }
 }
 
-aal: comment* aal_start header+ ( ( act | tag | parser ) (act | tag | parser | comment )* )? '}' comment* ;
+aal: comment* aal_start header+ ( ( act | tag | parser ) (act | tag | parser | header )* )? '}' comment* ;
 
 aal_start: 'aal' string '{' language {
             obj->set_namestr($1.str);
         } ;
 
-header: variables | ainit | aexit | istate | push | pop | comment;
+header: variables | ainit | aexit | istate | push | pop | comment ;
 
 comment: '#' "[^\n]*" { } ;
 
-parser: parallel | serial ;
+params: | '(' paramlist ')' ;
+
+paramlist: string | paramlist ',' string ;
+
+parser: parallel params | serial params ;
 
 serial_start: 'serial' { obj->serial(true); } ;
 parallel_start: 'parallel' { obj->parallel(true); } ;
 
-spinc: (comment)* ( act | tag | parser ) ( act | tag | parser | comment )* ;
+spinc: (comment)* ( act | tag | parser ) ( act | tag | parser | header )* ;
 
 serial: serial_start '{' spinc '}'
         { obj->serial(false); } ;
@@ -160,7 +164,7 @@ act: ( 'action' astr | 'input' istr | 'output' ostr ) {
             guard=abg_stack.top();abg_stack.pop();
         } ;
 
-ab: (comment|guard|body|adapter|tag|act|parser)*;
+ab: (header|guard|body|adapter|tag|act|parser)*;
 
 astr:   string          {
             if (obj->check_name($0.str,$n0.start_loc.pathname,$n0.start_loc.line)) {
