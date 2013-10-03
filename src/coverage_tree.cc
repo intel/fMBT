@@ -159,6 +159,12 @@ Coverage_Tree::~Coverage_Tree()
   } else {
     abort();
   }
+
+  for(std::map<int,std::map<int,std::pair<struct node*,bool> >*>::iterator i=
+	instance_map.begin();i!=instance_map.end();i++) {
+    delete i->second;
+  }	
+
 }
 
 bool Coverage_Tree::execute(int action)
