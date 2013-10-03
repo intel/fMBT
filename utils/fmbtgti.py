@@ -765,8 +765,11 @@ class _Eye4GraphicsOirEngine(OirEngine):
               contains only non-overlapping bounding boxes. The
               default is False.
 
-      scale (float, optional):
-              scale to be applied to the bitmap. The default is 1.0.
+      scale (float or pair of floats, optional):
+              scale to be applied to the bitmap before
+              matching. Single float is a factor for both X and Y
+              axis, pair of floats is (xScale, yScale). The default is
+              1.0.
 
       bitmapPixelSize (integer, optional):
               size of pixel rectangle on bitmap for which there must
@@ -797,6 +800,7 @@ class _Eye4GraphicsOirEngine(OirEngine):
 
     Notice, that you can force refreshScreenshot to load old screenshot:
     d.refreshScreenshot("old.png")
+
     """
     def __init__(self, *args, **engineDefaults):
         engineDefaults["colorMatch"] = engineDefaults.get("colorMatch", 1.0)
@@ -906,6 +910,8 @@ class _Eye4GraphicsOirEngine(OirEngine):
             return self._findBitmapCache[ssFilename][cacheKey]
         self._findBitmapCache[ssFilename][cacheKey] = []
         e4gIcon = eye4graphics.openImage(bitmap)
+        if e4gIcon == 0:
+            raise IOError('Cannot open bitmap "%s".' % (bitmap,))
         matchCount = 0
         leftTopRightBottomZero = (_intCoords((area[0], area[1]), ssSize) +
                                   _intCoords((area[2], area[3]), ssSize) +
@@ -913,6 +919,10 @@ class _Eye4GraphicsOirEngine(OirEngine):
         struct_area_bbox = _Bbox(*leftTopRightBottomZero)
         struct_bbox = _Bbox(0, 0, 0, 0, 0)
         contOpts = 0 # search for the first hit
+        try:
+            xscale, yscale = scale
+        except TypeError:
+            xscale = yscale = float(scale)
         while True:
             if matchCount == limit: break
             result = eye4graphics.findNextIcon(
@@ -924,7 +934,8 @@ class _Eye4GraphicsOirEngine(OirEngine):
                 ctypes.c_double(opacityLimit),
                 ctypes.byref(struct_area_bbox),
                 ctypes.c_int(contOpts),
-                ctypes.c_float(scale),
+                ctypes.c_float(xscale),
+                ctypes.c_float(yscale),
                 ctypes.c_int(bitmapPixelSize),
                 ctypes.c_int(screenshotPixelSize))
             contOpts = 1 # search for the next hit
@@ -976,24 +987,37 @@ class _OirRc(object):
 
     def __init__(self, directory):
         self._key2value = {}
+        self._altValues = []
         for line in file(os.path.join(directory, _OirRc._filename)):
             line = line.strip()
             if line == "" or line[0] in "#;":
                 continue
+            elif line == "alternative":
+                self._altValues.append(self._key2value)
+                self._key2value = {}
             elif "=" in line:
                 key, value_str = line.split("=", 1)
+                value_str = value_str.strip()
                 try: value = int(value_str)
                 except ValueError:
                     try: value = float(value_str)
                     except ValueError:
-                        value = value_str.strip()
+                        if value_str[0] in "([\"'": # tuple, list, string
+                            value = eval(value_str)
+                        else:
+                            value = value_str
                 self._key2value[key.strip()] = value
+        self._altValues.append(self._key2value)
+        self._key2value = self._altValues[0]
 
     def __getattr__(self, key):
         return self._key2value[key]
 
     def args(self):
         return self._key2value
+
+    def altArgs(self):
+        return self._altValues
 
 
 class _Paths(object):
@@ -1928,13 +1952,20 @@ class Screenshot(object):
         if self._oirEngine != None:
             self._notifyOirEngine()
             oirRc = self._paths.oirRc(bitmap)
-            if oirRc:
-                oirArgs, _ = _takeOirArgs(self._oirEngine, oirRc.args().copy())
-                oirArgs.update(oirFindArgs)
+            results = []
+            if oirRc.altArgs():
+                for oirArgs in oirRc.altArgs():
+                    oirArgs, _ = _takeOirArgs(self._oirEngine, oirArgs.copy())
+                    oirArgs.update(oirFindArgs)
+                    results.extend(self._oirEngine.findBitmap(
+                        self, self._paths.abspath(bitmap), **oirArgs))
+                    if results: break
             else:
                 oirArgs = oirFindArgs
-            return self._oirEngine.findBitmap(
-                self, self._paths.abspath(bitmap), **oirArgs)
+                results.extend(self._oirEngine.findBitmap(
+                    self, self._paths.abspath(bitmap), **oirArgs))
+            return results
+
         else:
             raise RuntimeError('Trying to use OIR on "%s" without OIR engine.' % (self.filename(),))
 

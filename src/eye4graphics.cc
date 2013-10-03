@@ -130,26 +130,27 @@ inline bool same_rect(const int hayxsize,
 }
 
 static bool pixelperfect_match(const int hayxsize,
-                               const int neex, const int neey,
+                               const int neexsize, const int neeysize,
                                const int x, const int y,
                                const PixelPacket *hay_pixel,
                                const PixelPacket *nee_pixel,
                                const int colorDiff,
                                const unsigned char skipTransparency,
-                               const float scale,
+                               const float xscale,
+                               const float yscale,
                                const int neePixelSize,
                                const int hayPixelSize)
 {
     /* try to fail fast, quick middle-row lookup */
     int samples = 16;
-    int stepx = neex >= samples ? int(neex*scale)/samples : 1;
+    int stepx = neexsize >= samples ? int(neexsize*xscale)/samples : 1;
     if (stepx > 8) stepx = 8;
-    for (int _x=0, _y=int(neey*scale)/2;
-         _x < int(neex*scale);
+    for (int _x=0, _y=int(neeysize*yscale)/2;
+         _x + neePixelSize < int(neexsize*xscale);
          _x+=stepx) {
-        if (!same_rect(hayxsize, neex,
+        if (!same_rect(hayxsize, neexsize,
                        (hay_pixel + hayxsize*(y+_y) + x+_x),
-                       (nee_pixel + neex*int(_y/scale) + int(_x/scale)),
+                       (nee_pixel + neexsize*int(_y/yscale) + int(_x/xscale)),
                        colorDiff,
                        skipTransparency,
                        neePixelSize, hayPixelSize)) {
@@ -159,16 +160,17 @@ static bool pixelperfect_match(const int hayxsize,
 
     /* next a quick diagonal sweep */
     samples = 8;
-    stepx = neex >= samples ? int(neex*scale)/samples : 1;
-    int stepy = neey >= samples ? int(neey*scale)/samples : 1;
+    stepx = neexsize >= samples ? int(neexsize*xscale)/samples : 1;
+    int stepy = neeysize >= samples ? int(neeysize*yscale)/samples : 1;
     if (stepx > 16) stepx = 16;
     if (stepy > 16) stepy = 16;
     for (int _x=0, _y=0;
-         _x < int(neex*scale) && _y + neePixelSize < int(neey*scale);
+         _x + neePixelSize < int(neexsize*xscale) &&
+         _y + neePixelSize < int(neeysize*yscale);
          _x+=stepx, _y+=stepy) {
-        if (!same_rect(hayxsize, neex,
+        if (!same_rect(hayxsize, neexsize,
                        (hay_pixel + hayxsize*(y+_y) + x+_x),
-                       (nee_pixel + neex*int(_y/scale) + int(_x/scale)),
+                       (nee_pixel + neexsize*int(_y/yscale) + int(_x/xscale)),
                        colorDiff,
                        skipTransparency,
                        neePixelSize, hayPixelSize)) {
@@ -177,11 +179,11 @@ static bool pixelperfect_match(const int hayxsize,
     }
 
     /* full check, pixel-by-pixel */
-    for(int _y=0; _y+neePixelSize < int(neey*scale); _y++) {
-        for(int _x=0; _x+neePixelSize < int(neex*scale); _x++) {
-            if (!same_rect(hayxsize, neex,
+    for(int _y=0; _y+neePixelSize < int(neeysize*yscale); _y++) {
+        for(int _x=0; _x+neePixelSize < int(neexsize*xscale); _x++) {
+            if (!same_rect(hayxsize, neexsize,
                            (hay_pixel + hayxsize*(y+_y) + x+_x),
-                           (nee_pixel + neex*int(_y/scale) + int(_x/scale)),
+                           (nee_pixel + neexsize*int(_y/yscale) + int(_x/xscale)),
                            colorDiff,
                            skipTransparency,
                            neePixelSize, hayPixelSize)) {
@@ -290,11 +292,12 @@ long normdiag_error(int hayxsize,int neex,int neey,int x,int y,
  *                     10 - big differences allowed
  *                 The smaller the threshold the faster the search.
  *
- *     scale      - default: 1.0
+ *     xscale     - default: 1.0
+ *     yscale     - default: 1.0
  *     neePixelSize - size of pixel rectangle on needle, default:
- *                  1 for scale 1.0, 2 for scale > 1.0
+ *                  1 for xscale 1.0, 2 for xscale > 1.0
  *     hayPixelSize - size of pixel rectangle on haystack, default:
- *                  ceil(neePixelSize * scale)
+ *                  ceil(neePixelSize * xscale)
  *
  * Return value:
  *     1         - icon candidate found
@@ -310,7 +313,8 @@ static int iconsearch(std::vector<BoundingBox>& retval,
                       const double opacityLimit,
                       int startX,
                       int startY,
-                      const float scale,
+                      const float xscale,
+                      const float yscale,
                       const int neePixelSize,
                       const int hayPixelSize)
 {
@@ -325,9 +329,9 @@ static int iconsearch(std::vector<BoundingBox>& retval,
     typedef std::pair<long, std::pair<int,int> > Candidate;
     std::vector< Candidate > candidates;
 
-    int _neePixelSize = scale > 1.0 ? 2 : 1;
+    int _neePixelSize = xscale > 1.0 ? 2 : 1;
     if (neePixelSize > 0) _neePixelSize = neePixelSize;
-    int _hayPixelSize = hayPixelSize > 0 ? hayPixelSize : _ceil(_neePixelSize * scale);
+    int _hayPixelSize = hayPixelSize > 0 ? hayPixelSize : _ceil(_neePixelSize * xscale);
 
     if (startX == 0) startX = searchArea.left;
     if (startY == 0) startY = searchArea.top;
@@ -389,8 +393,8 @@ static int iconsearch(std::vector<BoundingBox>& retval,
         /* Pixel-perfect match */
         int startXinArea = startX - searchArea.left;
         int startYinArea = startY - searchArea.top;
-        for (int y=startYinArea; y+hayPixelSize <= hayy-neey; y++) {
-            for (int x=startXinArea; x+hayPixelSize <= hayx-neex; x++) {
+        for (int y=startYinArea; y+hayPixelSize < hayy-int(neey*yscale); y++) {
+            for (int x=startXinArea; x+hayPixelSize < hayx-int(neex*xscale); x++) {
                 if (ignoreBoxes) {
                     bool skipCoordinates = false;
                     BoundingBoxConstIterator it = ignore.begin();
@@ -405,13 +409,13 @@ static int iconsearch(std::vector<BoundingBox>& retval,
                                        hay_pixel, nee_pixel,
                                        colorDiff,
                                        skipTransparency,
-                                       scale,
+                                       xscale, yscale,
                                        _neePixelSize, _hayPixelSize)) {
                     BoundingBox bbox;
                     bbox.left = x + searchArea.left + _hayPixelSize/2;
                     bbox.top = y + searchArea.top + _hayPixelSize/2;
-                    bbox.right = bbox.left + int(neex*scale) + _hayPixelSize/2;
-                    bbox.bottom = bbox.top + int(neey*scale) + _hayPixelSize/2;
+                    bbox.right = bbox.left + int(neex*xscale) +_hayPixelSize/2;
+                    bbox.bottom = bbox.top + int(neey*yscale) +_hayPixelSize/2;
                     bbox.error = 0;
                     retval.push_back(bbox);
                     return 1;
@@ -506,7 +510,8 @@ int findSingleIcon(BoundingBox* bbox,
                               colorMatch,
                               opacityLimit,
                               searchArea, 0,
-                              1.0, 0, 0);
+                              1.0, 1.0,
+                              0, 0);
 
     closeImage(needle);
     closeImage(haystack);
@@ -521,7 +526,8 @@ int findNextIcon(BoundingBox* bbox,
                  const double opacityLimit,
                  const BoundingBox* searchArea,
                  const int continueOpts,
-                 const float scale,
+                 const float xscale,
+                 const float yscale,
                  const int neePixelSize,
                  const int hayPixelSize)
 {
@@ -539,7 +545,7 @@ int findNextIcon(BoundingBox* bbox,
         startX = bbox->left + 1;
         startY = bbox->top;
         if (hayPixelSize > 1 ||
-            (hayPixelSize == 0 && scale != 1.0)) {
+            (hayPixelSize == 0 && xscale != 1.0)) {
             /* bbox passes last hit to iconsearch */
             ignore.push_back(*bbox);
         }
@@ -558,7 +564,7 @@ int findNextIcon(BoundingBox* bbox,
                    threshold,
                    colorMatch, opacityLimit,
                    startX, startY,
-                   scale,
+                   xscale, yscale,
                    neePixelSize, hayPixelSize) > 0
         && found.size() > 0) {
         *bbox = found[0];
