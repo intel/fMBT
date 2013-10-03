@@ -512,19 +512,19 @@ std::string aalang_py::stringify()
 {
   s += indent(4,"\n    def adapter_init():\n") + "\n" + 
     indent(8,"for x in "+class_name()+".adapter_init_list:\n"
-	   "    ret = eval(x.func_code)\n"
+	   "    ret = x()\n"
 	   "    if not ret and ret != None:\n"
 	   "        return ret\n"
 	   "return True\n") + "\n" +
     indent(4,"\n    def initial_state():\n") + "\n" + 
     indent(8,"for x in "+class_name()+".initial_state_list:\n"
-	   "    ret = eval(x.func_code)\n"
+	   "    ret = x()\n"
 	   "    if not ret and ret != None:\n"
 	   "        return ret\n"
 	   "return True\n") +"\n" +
-    indent(4,"\n    def adapter_exit():\n") + "\n" + 
+    indent(4,"\n    def adapter_exit(verdict,reason):\n") + "\n" + 
     indent(8,"for x in "+class_name()+".adapter_exit_list:\n"
-	   "    ret = eval(x.func_code)\n"
+	   "    ret = x(verdict,reason)\n"
 	   "    if not ret and ret != None:\n"
 	   "        return ret\n"
 	   "return True\n")+ "\n" ;
