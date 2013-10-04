@@ -324,7 +324,7 @@ void aalang_py::set_guard(std::string* gua,const char* file,int line,int col)
   m_guard = codefileline(tmp,fileline(file,line));
 }
 
-void aalang_py::parallel(bool start,std::list<std::string>* params) {
+void aalang_py::parallel(bool start,std::list<std::string>* __params) {
   if (start) {
     serial_stack.push_back(-serial_cnt); // parallel is negative
     std::string sNg =
@@ -371,11 +371,9 @@ void aalang_py::parallel(bool start,std::list<std::string>* params) {
   } else {
     serial_stack.pop_back();
   }
-  if (params) 
-    delete params;
 }
 
-void aalang_py::serial(bool start,std::list<std::string>* params) {
+void aalang_py::serial(bool start,std::list<std::string>* __params) {
   if (start) {
     serial_stack.push_back(serial_cnt);
     s += "\n"
@@ -416,8 +414,6 @@ void aalang_py::serial(bool start,std::list<std::string>* params) {
   } else {
     serial_stack.pop_back();
   }
-  if (params) 
-    delete params;
 }
 
 void aalang_py::set_push(std::string* p,const char* file,int line,int col)
