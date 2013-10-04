@@ -1953,7 +1953,7 @@ class Screenshot(object):
             self._notifyOirEngine()
             oirRc = self._paths.oirRc(bitmap)
             results = []
-            if oirRc.altArgs():
+            if oirRc and oirRc.altArgs():
                 for oirArgs in oirRc.altArgs():
                     oirArgs, _ = _takeOirArgs(self._oirEngine, oirArgs.copy())
                     oirArgs.update(oirFindArgs)
