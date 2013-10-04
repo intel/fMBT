@@ -32,38 +32,54 @@ Bitmap matching (Optical Image Recognition, OIR)
 
 Bitmaps are searched from the directories listed in bitmapPath.
 
-If a bitmap is found in a directory, OIR parameters for matching the
-bitmap are loaded from .fmbtoirrc file in the directory.
+If a bitmap is found in a directory, default OIR parameters for
+matching the bitmap are loaded from .fmbtoirrc file in the directory.
 
 If a bitmap is not found in a directory, but .fmbtoirrc in the
-directory contains
+directory contains lines like
 
-  includedir = directory-2
+  includedir = alt-directory
 
-then the bitmap file is immediately searched from directory-2, too. If
-found from there, OIR parameters from .fmbtoirrc in the current
-directory are used instead of directory-2/.fmbtoirrc.
+then the bitmap file is searched from alt-directory, too. If found
+from there, OIR parameters defined in .fmbtoirrc below the includedir
+line will be used for matching alt-directory/bitmap.
+
+There can be several includedir lines, and many alternative sets of
+OIR parameters can be given for each includedir. Sets are separated by
+"alternative" line in the file.
 
 Example:
 
 Assume that bitmaps/android-4.2/device-A contains bitmaps captured
 from the screen of device A.
 
-If device B has higher resolution so that bitmaps of A have to be
-scaled up by factor 1.3 to match device B, then it is enough to create
-bitmaps/android-4.2/device-B directory with .fmbtoirrc file that
-contains:
+Assume device B has higher resolution so that bitmaps of A have to be
+scaled up by factor 1.3 or 1.2 - depending on bitmap - to match device
+B. This can be handled by creating bitmaps/android-4.2/device-B
+directory with .fmbtoirrc file that contains:
 
+# OIR parameters for bitmaps in device-B in case some bitmaps will be
+# created directly from device-B screenshots.
+colorMatch = 0.9
+
+# Two alternative parameter sets for bitmaps in device-A
 includedir = ../device-A
 scale = 1.3
-match = 0.95
+colorMatch = 0.9
+bitmapPixelSize = 3
+screenshotPixelSize = 3
+
+alternative
+scale = 1.2
+colorMatch = 0.8
+bitmapPixelSize = 3
+bitmapPixelSize = 3
 
 After that, device B can be tested without taking new screenshot.
 
 d = fmbtandroid.Device()
 d.setBitmapPath("bitmaps/android-4.2/device-B")
 
-This requires that OIREngine supports scale and match parameters.
 """
 
 import cgi
@@ -987,46 +1003,49 @@ class _OirRc(object):
 
     def __init__(self, directory):
         self._key2value = {}
-        self._altValues = []
+        curdir = "."
+        self._dir2oirArgsList = {curdir: [{}]}
         for line in file(os.path.join(directory, _OirRc._filename)):
             line = line.strip()
             if line == "" or line[0] in "#;":
                 continue
             elif line == "alternative":
-                self._altValues.append(self._key2value)
+                self._dir2oirArgsList[curdir].append({}) # new set of args
                 self._key2value = {}
             elif "=" in line:
                 key, value_str = line.split("=", 1)
                 value_str = value_str.strip()
-                try: value = int(value_str)
-                except ValueError:
-                    try: value = float(value_str)
+                if key.strip().lower() == "includedir":
+                    curdir = value_str
+                    self._dir2oirArgsList[curdir] = [{}]
+                else:
+                    try: value = int(value_str)
                     except ValueError:
-                        if value_str[0] in "([\"'": # tuple, list, string
-                            value = eval(value_str)
-                        else:
-                            value = value_str
-                self._key2value[key.strip()] = value
-        self._altValues.append(self._key2value)
-        self._key2value = self._altValues[0]
+                        try: value = float(value_str)
+                        except ValueError:
+                            if value_str[0] in "([\"'": # tuple, list, string
+                                value = eval(value_str)
+                            else:
+                                value = value_str
+                    self._dir2oirArgsList[curdir][-1][key.strip()] = value
 
-    def __getattr__(self, key):
-        return self._key2value[key]
+    def searchDirs(self):
+        return self._dir2oirArgsList.keys()
 
-    def args(self):
-        return self._key2value
-
-    def altArgs(self):
-        return self._altValues
+    def oirArgsList(self, searchDir):
+        return self._dir2oirArgsList[searchDir]
 
 
 class _Paths(object):
     def __init__(self, bitmapPath, relativeRoot):
         self.bitmapPath = bitmapPath
         self.relativeRoot = relativeRoot
-        self._oirRcs = {} # OIR parameters for bitmaps
+        self._oirAL = {} # OIR parameters for bitmaps
+        self._abspath = {} # bitmap to abspath
 
     def abspath(self, bitmap, checkReadable=True):
+        if bitmap in self._abspath:
+            return self._abspath[bitmap]
         if bitmap.startswith("/"):
             path = [os.path.dirname(bitmap)]
             bitmap = os.path.basename(bitmap)
@@ -1041,34 +1060,43 @@ class _Paths(object):
         for singleDir in path:
             retval = os.path.join(singleDir, bitmap)
             if not checkReadable or os.access(retval, os.R_OK):
-                self._oirRcs[retval] = _OirRc.load(singleDir)
+                oirRc = _OirRc.load(singleDir)
+                if oirRc:
+                    self._oirAL[retval] = oirRc.oirArgsList(".")
+                else:
+                    self._oirAL[retval] = [{}]
+                self._oirAL[bitmap] = self._oirAL[retval]
                 break
             else:
                 # bitmap is not in singleDir, but there might be .fmbtoirrc
                 oirRc = _OirRc.load(singleDir)
-                if hasattr(oirRc, "includedir"):
-                    if oirRc.includedir.startswith("/"):
-                        retval = os.path.join(oirRc.includedir, bitmap)
-                    else:
-                        retval = os.path.join(singleDir, oirRc.includedir, bitmap)
-                    if os.access(retval, os.R_OK):
-                        self._oirRcs[retval] = oirRc
-                        break
+                if oirRc:
+                    for d in oirRc.searchDirs():
+                        if d.startswith("/"):
+                            candidate = os.path.join(d, bitmap)
+                        else:
+                            candidate = os.path.join(singleDir, d, bitmap)
+                        if os.access(candidate, os.R_OK):
+                            self._oirAL[candidate] = oirRc.oirArgsList(d)
+                            self._oirAL[bitmap] = self._oirAL[candidate]
+                            retval = candidate
+                            break
 
         if checkReadable and not os.access(retval, os.R_OK):
             raise ValueError('Bitmap "%s" not readable in bitmapPath %s' % (bitmap, ':'.join(path)))
+        self._abspath[bitmap] = retval
         return retval
 
-    def oirRc(self, bitmap):
-        """Returns OIR parameters associated to the bitmap by appropriate
-        .fmbtoirrc file
+    def oirArgsList(self, bitmap):
+        """Returns list of alternative OIR parameters associated to the bitmap
+        by appropriate .fmbtoirrc file
         """
-        if bitmap in self._oirRcs:
-            return self._oirRcs[bitmap]
+        if bitmap in self._oirAL:
+            return self._oirAL[bitmap]
         else:
             absBitmap = self.abspath(bitmap)
-            if absBitmap in self._oirRcs:
-                return self._oirRcs[absBitmap]
+            if absBitmap in self._oirAL:
+                return self._oirAL[absBitmap]
             else:
                 return None
 
@@ -1951,10 +1979,10 @@ class Screenshot(object):
     def findItemsByBitmap(self, bitmap, **oirFindArgs):
         if self._oirEngine != None:
             self._notifyOirEngine()
-            oirRc = self._paths.oirRc(bitmap)
+            oirArgsList = self._paths.oirArgsList(bitmap)
             results = []
-            if oirRc and oirRc.altArgs():
-                for oirArgs in oirRc.altArgs():
+            if oirArgsList:
+                for oirArgs in oirArgsList:
                     oirArgs, _ = _takeOirArgs(self._oirEngine, oirArgs.copy())
                     oirArgs.update(oirFindArgs)
                     results.extend(self._oirEngine.findBitmap(
