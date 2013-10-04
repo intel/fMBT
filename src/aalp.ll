@@ -251,8 +251,17 @@ FILE* include_search_open(std::string& f) {
      fprintf(yyout,"\n");
   }
   if (istack.empty()) {
+    if (YY_CURRENT_BUFFER->yy_input_file !=stdin) {
+      fclose(YY_CURRENT_BUFFER->yy_input_file);
+    } else {
+      fflush(stdin);
+    }
+    yy_delete_buffer( YY_CURRENT_BUFFER );
     yyterminate();
   } else {
+    if (YY_CURRENT_BUFFER->yy_input_file !=stdin) {
+      fclose(YY_CURRENT_BUFFER->yy_input_file);
+    }
     yy_delete_buffer( YY_CURRENT_BUFFER );
     yy_switch_to_buffer(istack.back());
     lineno=lstack.back();
@@ -357,7 +366,9 @@ int main(int argc,char** argv)
   } else {
     fstack.push_back("/dev/stdin");
   }
+
   yylex();
+  yylex_destroy();
 
   return 0;
 }

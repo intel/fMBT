@@ -41,6 +41,8 @@ public:
         default_adapter="pass";
     };
 
+  ~aalang_py();
+
   virtual void set_starter(std::string* st,const char*,int,int);
   virtual void set_name(std::string* name,bool first=false,ANAMETYPE t=DEFACTION);
   virtual void set_namestr(std::string* name);
@@ -52,8 +54,8 @@ public:
   virtual void set_aexit(std::string* iai,const char*,int,int);
   virtual void set_guard(std::string* gua,const char*,int,int);
 
-  virtual void parallel(bool start);
-  virtual void serial(bool start);
+  virtual void parallel(bool start,std::list<std::string>* params);
+  virtual void serial(bool start,std::list<std::string>* params);
 
   virtual void set_push(std::string* p,const char*,int,int);
   virtual void set_pop(std::string* p,const char*,int,int);
