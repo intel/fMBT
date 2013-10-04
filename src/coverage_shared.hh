@@ -121,6 +121,22 @@ public:
   }
 
   virtual ~Coverage_shared() {
+    if (d_stdin) {
+      g_io_channel_shutdown(d_stdin,TRUE,NULL);
+      g_io_channel_unref(d_stdin);
+    }
+    if (d_stdout) {
+      g_io_channel_shutdown(d_stdout,TRUE,NULL);
+      g_io_channel_unref(d_stdout);
+    }
+    if (d_stderr) {
+      g_io_channel_shutdown(d_stderr,TRUE,NULL);
+      g_io_channel_unref(d_stderr);
+    }
+
+    if (model_cs)
+      delete model_cs;
+
     if (child) 
       delete child;
   }

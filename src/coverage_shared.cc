@@ -25,6 +25,7 @@ void Coverage_shared::receive_from_server()
   std::vector<std::string> tmp;
 
   char* s = NULL;
+  char* ss;
   size_t si = 0;
   std::vector<int> clients;
 
@@ -37,20 +38,25 @@ void Coverage_shared::receive_from_server()
     return;
   }
 
+  ss=s;
   if (strlen(s)>2) {
     s[strlen(s)-2]='\0';
     s++;
   }
 
   if (!string2vector(log,s,clients,0,INT_MAX,this)) {
+    g_free(s);
     status=false;
     return;
   }
+  s=ss;
 
   // Read each client...
   for(unsigned i=0;i<clients.size();i++) {
     if (getline(&s,&si,d_stdout)<0) {
       status=false;
+      if (s)
+	g_free(s);
       return;
     }
 
@@ -92,6 +98,9 @@ void Coverage_shared::receive_from_server()
       }
     }
   }
+  if (s)
+    g_free(s);
+  s=NULL;
   if (read_data) {
     child->set_instance(0);
   }

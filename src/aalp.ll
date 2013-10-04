@@ -120,8 +120,8 @@ FILE* include_search_open(std::string& f) {
   if (st) {
     char* tmp=strdup(f.c_str());
     char* dname=dirname(tmp);
-    free(tmp);
     std::string ss(dname);
+    free(tmp);
     include_path.push_back(ss);
   }
   return st;

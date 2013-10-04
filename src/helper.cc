@@ -582,6 +582,12 @@ ssize_t nonblock_getline(char **lineptr, size_t *n,
 
   g_io_channel_set_line_term(stream,NULL,-1);
 
+  if (*lineptr) {
+    g_free(*lineptr);
+    *lineptr=NULL; 
+    *n=0;
+  }
+
   GIOStatus st=
     g_io_channel_read_line(stream,lineptr,&si,NULL,NULL);
 
@@ -604,6 +610,13 @@ ssize_t getline(char **lineptr, size_t *n, GIOChannel *stream)
   gsize si;
   gsize ret;
   GIOStatus status;
+
+  if (*lineptr) {
+    g_free(*lineptr);
+    *lineptr=NULL; 
+    *n=0;
+  }
+  
   do {
     status=g_io_channel_read_line(stream,lineptr,&si,&ret,NULL);
     *n=si;
@@ -849,7 +862,6 @@ void regexpmatch(const std::string& regexp,std::vector<std::string>& f,
   try {
     boost::regex expression(regexp);
     boost::cmatch what;
-
     for(unsigned int i=min;i<f.size();i++) {
       if (regexp == f[i] || boost::regex_match(f[i].c_str(), what, expression)) {
 	result.push_back(a*i);
@@ -862,7 +874,6 @@ void regexpmatch(const std::string& regexp,std::vector<std::string>& f,
       }
     }
   }
-
 #endif
 }
 
