@@ -134,6 +134,9 @@ public:
       g_io_channel_unref(d_stderr);
     }
 
+    if (model_cs)
+      delete model_cs;
+
     if (child) 
       delete child;
   }
