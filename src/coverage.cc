@@ -18,6 +18,7 @@
  */
 #include "coverage.hh"
 #include "helper.hh"
+#include <math.h>
 
 FACTORY_ATEXIT(Coverage)
 FACTORY_CREATORS(Coverage)
@@ -35,7 +36,7 @@ Coverage* CoverageFactory::create(Log& log, std::string name,
   } else {
     char* endp;
     float val=strtof(name.c_str(),&endp);
-    if (*endp==0 && val>=0.0) {
+    if (*endp==0 && (val>=0.0 || isnan(val))) {
       c=(*creators)["const"];
       if (c) {
 	return c(log,name);

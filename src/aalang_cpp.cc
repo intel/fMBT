@@ -42,7 +42,7 @@ std::string to_call(std::list<std::string>& l) {
 
 aalang_cpp::aalang_cpp(): aalang(),action_cnt(1), tag_cnt(1), name_cnt(0),
 			  istate(NULL),ainit(NULL), aexit(NULL), name(NULL),
-			  tag(false)
+			  tag(false),outters(0),current_outter(-1),current_inner(0)
 {
   default_guard="return true;//default"; 
   default_body="";
@@ -83,6 +83,10 @@ void aalang_cpp::set_starter(std::string* st,const char* file,int line,int col)
 
 void aalang_cpp::set_name(std::string* name,bool first,ANAMETYPE t)
 {
+  current_inner++;
+  if (current_outter>0) {
+    inner_names[current_outter-1].push_back(*name);
+  }
   if (first) {
     tstack.push_back(tag);
     tag=false;
@@ -152,9 +156,76 @@ void aalang_cpp::set_aexit(std::string* iai,const char* file,int line,int col)
 
 void aalang_cpp::parallel(bool start) {
 
+  if (start) {
+    inner_stack.push(current_inner);
+    current_inner=0;
+
+    outter_stack.push(current_outter);
+    outters++;
+    current_outter=outters;
+    inner_names.resize(outters);
+
+    s=s+"struct {\n"
+      "std::map<std::string,bool> pos;\n"
+      "std::map<int,std::string> name;\n"
+      "} outer" + to_string(current_outter) + ";\n";
+  } else {
+
+    std::string varname = 
+      "outer"+to_string(current_outter)+".pos";
+    
+    s=s+"void outer_body" + to_string(current_outter) + "(const std::string& name) {\n" +
+      varname + "[name]=true;\n" +
+      "if ("+varname+".size()=="+to_string(current_inner)+") {\n" +
+      varname+".clear();\n"
+      "}\n"
+    "}\n";
+
+    s=s+"bool outer_guard" + to_string(current_outter) + "(const std::string& name) {\n" +
+      "return !" + varname + "[name];\n"
+   "}\n";
+
+    current_outter=outter_stack.top();
+    outter_stack.pop();
+
+    current_inner=inner_stack.top();
+    inner_stack.pop();
+  }
+
 }
 
 void aalang_cpp::serial(bool start) {
+
+  if (start) {
+    inner_stack.push(current_inner);
+    current_inner=0;
+
+    outter_stack.push(current_outter);
+    outters++;
+    current_outter=outters;
+    inner_names.resize(outters);
+
+    s=s+"struct {\n"
+      "int pos;\n"
+      "std::map<int,std::string> name;\n"
+      "} outer" + to_string(current_outter) + ";\n";
+  } else {
+    std::string varname = 
+      "outer"+to_string(current_outter)+".pos";
+    std::string nametlb =
+      "outer"+to_string(current_outter)+".name";
+    
+    s=s+"void outer_body" + to_string(current_outter) + "(const std::string& name) {\n" +
+      varname + "=(" + varname + "+1)%" + to_string(current_inner) + ";\n"
+    "}\n";
+
+    s=s+"bool outer_guard" + to_string(current_outter) + "(const std::string& name) {\n" +
+      "return " + nametlb + "[" + varname + "] == name;\n"
+    "}\n";
+
+    current_outter=outter_stack.top();
+    outter_stack.pop();
+  }
 
 }
 
@@ -209,14 +280,22 @@ void aalang_cpp::next_tag()
 
 void aalang_cpp::set_guard(std::string* gua,const char* file,int line,int col)
 {
+  std::string outer_guard_call;
+
+  if (current_outter != -1) {
+    outer_guard_call = "if (!outer_guard" + to_string(current_outter) + "(name)) { return false; }\n";
+  }
+
   if (gua!=&default_guard) {
     *gua="{\n" + *gua + "\n}\n" + default_guard;
   }
   if (tag) {
     s+=to_line(file,line)+"bool tag"+to_string(tag_cnt)+"_guard(const std::string& name) {\n"+
+      outer_guard_call+
       *gua+"\n}\n";
   } else {
     s+=to_line(file,line)+"bool action"+to_string(action_cnt)+"_guard(const std::string& name) {\n"+
+      outer_guard_call+
       *gua+"\n}\n";
   }
   if (gua!=&default_guard) 
@@ -225,7 +304,13 @@ void aalang_cpp::set_guard(std::string* gua,const char* file,int line,int col)
 
 void aalang_cpp::set_body(std::string* bod,const char* file,int line,int col)
 {
-  s+=to_line(file,line)+"void action"+to_string(action_cnt)+"_body(const std::string& name) {\n"+*bod+"\n}\n";
+  std::string outer_body_call;
+
+  if (current_outter != -1) {
+    outer_body_call = "outer_body" + to_string(current_outter) + "(name);\n";
+  }
+
+  s+=to_line(file,line)+"void action"+to_string(action_cnt)+"_body(const std::string& name) {\n" + outer_body_call +*bod+"\n}\n";
   if (bod!=&default_body) 
     delete bod; 
 }
@@ -282,6 +367,15 @@ std::string aalang_cpp::stringify()
   for(std::list<std::vector<std::string> >::iterator i=tname.begin();i!=tname.end();i++) {
     for(std::vector<std::string>::iterator j=i->begin();j!=i->end();j++) {
       s+="\ttag_names.push_back(\""+*j+"\");\n";
+    }
+  }
+
+  for(unsigned i=0;i<inner_names.size();i++) {
+    int count=1;
+    for(std::list<std::string>::iterator j=inner_names[i].begin();j!=inner_names[i].end();j++) {
+      s+="\touter"+to_string(i+1)+".name["+to_string(count)+"]="
+	"std::string(\""+*j+"\");\n";
+      count++;
     }
   }
 

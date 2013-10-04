@@ -104,7 +104,9 @@ void Conf::load(std::string& name,std::string& content)
     return;
   }
 
-  std::string dirname(g_path_get_dirname(name.c_str()));
+  gchar* t1=g_path_get_dirname(name.c_str());
+  std::string dirname(t1);
+  g_free(t1);
 
   if (dirname!=".") {
     g_setenv("AAL_INCLUDE_PREFIX",dirname.c_str(),TRUE);
@@ -327,7 +329,7 @@ Verdict::Verdict Conf::execute(bool interactive) {
         end_by_coverage = true;
       }
       if (e->counter == End_condition::DURATION) {
-        end_time = e->param_time;
+	end_time = e->param_time;
       }
     }
     // Add default end conditions (if coverage is reached, test is passed)

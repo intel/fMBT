@@ -34,7 +34,8 @@ public:
   aalang_py(): aalang(), name(NULL), action_cnt(1),
                tag_cnt(1), serial_cnt(1), /*acnt("1"),tcnt("1"),*/
                m_lines_in_vars(0), tag(false),
-	       adapter(false) {
+	       adapter(false),adapter_init_counter(0),model_init_counter(0),
+               adapter_exit_counter(0) {
         default_body   ="pass";
         default_guard  ="return 1";
         default_adapter="pass";
@@ -95,6 +96,12 @@ protected:
   const std::string serialN(const std::string postfix, bool cls=false) const;
   const std::string serialN_1(const std::string postfix, bool cls=false) const;
   const int serial_stackN_1() const;
+
+  int adapter_init_counter;
+  int model_init_counter;
+
+  int adapter_exit_counter;
+
 };
 
 #endif

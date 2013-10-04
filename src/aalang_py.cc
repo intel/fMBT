@@ -178,13 +178,17 @@ void aalang_py::set_namestr(std::string* _name)
     "class " + class_name() + "(aalmodel.AALModel):\n"
     "    def __init__(self):\n"
     "        aalmodel.AALModel.__init__(self, globals())\n";
+  s+="    adapter_init_list = []\n";
+  s+="    initial_state_list = []\n";
+  s+="    adapter_exit_list = []\n";
+  s+="    push_variables_set = set()\n";
 }
 
 void aalang_py::set_variables(std::string* var,const char* file,int line,int col)
 {
   std::string ivar = indent(0,*var);
   if (ivar!="") {
-    variables="        global " + indent(0,*var) + "\n";
+    variables+="        global " + indent(0,*var) + "\n";
   }
   m_lines_in_vars = std::count(variables.begin(), variables.end(), '\n');
   delete var;
@@ -192,28 +196,37 @@ void aalang_py::set_variables(std::string* var,const char* file,int line,int col
 
 void aalang_py::set_istate(std::string* ist,const char* file,int line,int col)
 {
-  const std::string funcname("initial_state");
+  model_init_counter++;
+  const std::string funcname("initial_state"+to_string(model_init_counter));
   s += "\n    def " + funcname + "():\n" + variables +
     indent(8, *ist) + "\n" +
     indent(8, "pass") + "\n";
   s += python_lineno_wrapper(file,line,funcname,1+m_lines_in_vars,4);
+  s += indent(4,"initial_state_list.append("+funcname+")")+"\n";
+  s += indent(4,"push_variables_set.update("+funcname+".func_code.co_names)")+"\n";
 }
 
 void aalang_py::set_ainit(std::string* iai,const char* file,int line,int col)
 {
+  adapter_init_counter++;
   const std::string r("return 1");
-  const std::string funcname("adapter_init");
+  const std::string funcname("adapter_init"+to_string(adapter_init_counter));
   s += "\n    def " + funcname + "():\n" + variables +
     indent(8, *iai) + "\n" + indent(8, r) + "\n";
   s += python_lineno_wrapper(file,line,funcname,1+m_lines_in_vars,4);
+
+  s += indent(4,"adapter_init_list.append("+funcname+")")+"\n";
 }
 
 void aalang_py::set_aexit(std::string* iai,const char* file,int line,int col)
 {
-  const std::string funcname("adapter_exit");
+  adapter_exit_counter++;
+  const std::string funcname("adapter_exit"+to_string(adapter_exit_counter));
   s += "\n    def " + funcname + "(verdict,reason):\n" + variables +
     indent(8, *iai) + "\n" "\n";
   s += python_lineno_wrapper(file,line,funcname,1+m_lines_in_vars,4);
+
+  s += indent(4,"adapter_exit_list.append("+funcname+")")+"\n";
 }
 
 void aalang_py::set_tagname(std::string* name,bool first)
@@ -497,5 +510,24 @@ void aalang_py::next_action()
 
 std::string aalang_py::stringify()
 {
+  s += indent(4,"\n    def adapter_init():\n") + "\n" + 
+    indent(8,"for x in "+class_name()+".adapter_init_list:\n"
+	   "    ret = x()\n"
+	   "    if not ret and ret != None:\n"
+	   "        return ret\n"
+	   "return True\n") + "\n" +
+    indent(4,"\n    def initial_state():\n") + "\n" + 
+    indent(8,"for x in "+class_name()+".initial_state_list:\n"
+	   "    ret = x()\n"
+	   "    if not ret and ret != None:\n"
+	   "        return ret\n"
+	   "return True\n") +"\n" +
+    indent(4,"\n    def adapter_exit(verdict,reason):\n") + "\n" + 
+    indent(8,"for x in "+class_name()+".adapter_exit_list:\n"
+	   "    ret = x(verdict,reason)\n"
+	   "    if not ret and ret != None:\n"
+	   "        return ret\n"
+	   "return True\n")+ "\n" ;
+
   return s + "\nModel = _gen_" + *name + "\n";
 }
