@@ -144,6 +144,7 @@ void default_if_empty(std::string& s, const std::string& default_value)
 void aalang_py::set_starter(std::string* st,const char* file,int line,int col)
 {
   s+=indent(0, *st)+"\n";
+  delete st;
 }
 
 
@@ -169,6 +170,14 @@ void aalang_py::set_name(std::string* name,bool first,ANAMETYPE t)
     guard_requires.push_back("action"+to_string(action_cnt-1)+"guard");
   }
 
+  delete name;
+
+}
+
+aalang_py::~aalang_py()
+{
+  if (name)
+    delete name;
 }
 
 void aalang_py::set_namestr(std::string* _name)
@@ -204,6 +213,7 @@ void aalang_py::set_istate(std::string* ist,const char* file,int line,int col)
   s += python_lineno_wrapper(file,line,funcname,1+m_lines_in_vars,4);
   s += indent(4,"initial_state_list.append("+funcname+")")+"\n";
   s += indent(4,"push_variables_set.update("+funcname+".func_code.co_names)")+"\n";
+  delete ist;
 }
 
 void aalang_py::set_ainit(std::string* iai,const char* file,int line,int col)
@@ -216,6 +226,7 @@ void aalang_py::set_ainit(std::string* iai,const char* file,int line,int col)
   s += python_lineno_wrapper(file,line,funcname,1+m_lines_in_vars,4);
 
   s += indent(4,"adapter_init_list.append("+funcname+")")+"\n";
+  delete iai;
 }
 
 void aalang_py::set_aexit(std::string* iai,const char* file,int line,int col)
@@ -227,6 +238,7 @@ void aalang_py::set_aexit(std::string* iai,const char* file,int line,int col)
   s += python_lineno_wrapper(file,line,funcname,1+m_lines_in_vars,4);
 
   s += indent(4,"adapter_exit_list.append("+funcname+")")+"\n";
+  delete iai;
 }
 
 void aalang_py::set_tagname(std::string* name,bool first)
@@ -305,11 +317,14 @@ void aalang_py::next_tag()
 
 void aalang_py::set_guard(std::string* gua,const char* file,int line,int col)
 {
-  default_if_empty(*gua, "return True");
-  m_guard = codefileline(*gua,fileline(file,line));
+  std::string tmp=*gua;
+  if (gua!=&default_guard) 
+    delete gua;
+  default_if_empty(tmp, "return True");
+  m_guard = codefileline(tmp,fileline(file,line));
 }
 
-void aalang_py::parallel(bool start) {
+void aalang_py::parallel(bool start,std::list<std::string>* __params) {
   if (start) {
     serial_stack.push_back(-serial_cnt); // parallel is negative
     std::string sNg =
@@ -358,7 +373,7 @@ void aalang_py::parallel(bool start) {
   }
 }
 
-void aalang_py::serial(bool start) {
+void aalang_py::serial(bool start,std::list<std::string>* __params) {
   if (start) {
     serial_stack.push_back(serial_cnt);
     s += "\n"
@@ -415,15 +430,21 @@ void aalang_py::set_pop(std::string* p,const char* file,int line,int col)
 
 void aalang_py::set_body(std::string* bod,const char* file,int line,int col)
 {
-  default_if_empty(*bod, "pass");
-  m_body = codefileline(*bod,fileline(file,line));
+  std::string tmp=*bod;
+  if (bod!=&default_body)
+    delete bod;
+  default_if_empty(tmp, "pass");
+  m_body = codefileline(tmp,fileline(file,line));
 }
 
 void aalang_py::set_adapter(std::string* ada,const char* file,int line,int col)
 {
   adapter = true;
-  default_if_empty(*ada, "pass");
-  m_adapter = codefileline(*ada,fileline(file,line));
+  std::string tmp=*ada;
+  if (ada!=&default_adapter)
+    delete ada;
+  default_if_empty(tmp, "pass");
+  m_adapter = codefileline(tmp,fileline(file,line));
 }
 
 void aalang_py::next_action()

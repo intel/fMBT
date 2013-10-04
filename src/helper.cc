@@ -704,7 +704,15 @@ ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,bool ma
 
   g_io_channel_set_line_term(stream,NULL,-1);
 
+
   do {
+
+    if (*lineptr) {
+      g_free(*lineptr);
+      *lineptr=NULL; 
+      *n=0;
+    }
+
     log_redirect = false;
     GIOStatus status;
     gsize si;

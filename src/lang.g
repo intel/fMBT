@@ -21,12 +21,14 @@
 #include <vector>
 #include <stdlib.h>
 #include <string>
+#include <list>
 #include <stdio.h>
 
 std::string result("");
 
 typedef struct _node {
   std::string* str;
+  std::list<std::string> params;
 } node;
 #ifdef D_ParseNode_User
 #undef D_ParseNode_User
@@ -129,20 +131,27 @@ comment: '#' "[^\n]*" { } ;
 
 params: | '(' paramlist ')' ;
 
-paramlist: string | paramlist ',' string ;
+paramlist: string {
+            $$.params.push_back(*$0.str);
+            delete $0.str;
+        } | paramlist ',' string {
+            $0.params.push_back(*$2.str);
+            $$.params = $0.params;
+            delete $2.str;
+        } ;
 
-parser: parallel params | serial params ;
+parser: parallel | serial ;
 
-serial_start: 'serial' { obj->serial(true); } ;
-parallel_start: 'parallel' { obj->parallel(true); } ;
+serial_start: 'serial' params { obj->serial(true,& $1.params); } ;
+parallel_start: 'parallel' params { obj->parallel(true,& $1.params); } ;
 
 spinc: (comment)* ( act | tag | parser ) ( act | tag | parser | header )* ;
 
 serial: serial_start '{' spinc '}'
-        { obj->serial(false); } ;
+        { obj->serial(false,NULL); } ;
 
 parallel: parallel_start '{' spinc '}'
-        { obj->parallel(false); } ;
+        { obj->parallel(false,NULL); } ;
 
 act: ( 'action' astr | 'input' istr | 'output' ostr ) {
             abg_stack.push(guard);

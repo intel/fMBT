@@ -107,7 +107,8 @@ aal_remote::aal_remote(Log&l,std::string& s)
     _log.debug("tname %i",red);
   }
 
-  free(read_buf);
+  g_free(read_buf);
+  read_buf=NULL;
   read_buf_pos=0;
 
   g_io_channel_flush(d_stdin,NULL);
