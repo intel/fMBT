@@ -137,17 +137,32 @@ validating the state in the perspective of the tag has succeeded.
 
 Listening to outputs
 
-First, adapter() blocks of all output actions are executed. If the
-adapter() of an action returns False (or None), output was not
-observed and nothing else is done to the action. If the adapter()
-block of the action returns True, output corresponding to this action
-was observed. The observation is validated by executing the guard() of
-the action.
+Before listening to outputs, the test generator has checked which
+actions can be executed in the current state by evaluating all
+guard() blocks.
 
-If the guard() returns True, observation is allowed in the current
-state. The model is updated by executing the body() block of the
-action. If the guard() returns False, the test will fail due to
-observing the output in a state where it must not appear.
+When listening to outputs, adapter() blocks of output actions are
+executed until one of them reports observation of an action, or none
+of them reports observations. In more detail, if the adapter() of an
+action returns False (or None), the action was not observed and
+nothing else will be done for it. If the adapter() block returns True,
+this action has been observed. If the adapter() returns some other
+action, that action has been observed.
+
+Next, observed action is validated, that is, it is checked whether the
+observation is allowed by the model in the current state. If the
+guard() of the observed action returned False before listening to
+outputs, test engine tries to validate observed action by re-executing
+its guard() again. (This allows adapter() block to change model
+variable in some complex cases like non-deterministic system under
+test, so that execution of the action is after all allowed under new
+conditions.)
+
+If the guard() of the observed action returned True, execution of
+observed action is allowed in the current state. The model is updated
+by executing the body() of the action. On the other hand, if the
+guard() returned False in both cases, the test will fail due to
+observing an action that is not allowed in the current state.
 
 If the adapter() block raises an error, the test stops with an error.
 

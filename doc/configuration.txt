@@ -580,8 +580,9 @@ Define under which conditions testing must be stopped with a given
 verdict. There can be many end conditions that result in the same
 verdict.
 
-If any verdicts on coverage is not given, there is a default coverage
-end condition: pass = coverage(1.0).
+If end conditions of the form "pass = coverage(...)" are not defined,
+then the default end condition "pass = coverage(1.0)" is used. This
+can be disabled by using "pass = coverage(inf)".
 
 Syntax:
 
