@@ -16,7 +16,7 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
+#include "helper.hh"
 #include "heuristic_greedy.hh"
 #include "alg_bdfs.hh"
 #include <stdlib.h>
@@ -130,7 +130,8 @@ int Heuristic_greedy::getIAction()
       if (!alg.status) {
         status=false;
 	errormsg = "Alg:" + alg.errormsg;
-	return 0;
+	retval = 0;
+	goto done;
       }
 
       if (m_path.size() > 0) {

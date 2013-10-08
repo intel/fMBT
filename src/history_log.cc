@@ -30,7 +30,7 @@
 #include <glib/gprintf.h>
 
 History_log::History_log(Log& l, std::string params) :
-  History(l,params), alphabet_done(false), act(NULL), tag(NULL), c(NULL), a(NULL), myes(NULL)
+  History(l,params), alphabet_done(false), act(NULL), tag(NULL), c(NULL), a(NULL), myes(NULL), ada(NULL)
 {
   std::vector<std::string> prm;
   commalist(params,prm);

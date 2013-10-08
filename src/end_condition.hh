@@ -198,6 +198,9 @@ public:
       errormsg += ss + "'";
       status = false;
     }
+    if (out) {
+      g_free(out);
+    }
 #else
     char* endp;
     long r = strtol(param.c_str(), &endp, 10);
