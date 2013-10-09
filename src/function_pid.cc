@@ -17,29 +17,16 @@
  *
  */
 
-#ifndef __heuristic_random_hh__
-#define __heuristic_random_hh__
+#include "function_pid.hh"
 
-#include <vector>
-#include <string>
+Function_pid::Function_pid(const std::string& param) {
+}
 
-#include "heuristic.hh"
-#include "coverage.hh"
-#include "lts.hh"
-#include <stdlib.h>
-#include <time.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-class Random;
+signed long Function_pid::val() {
+  return getpid();
+}
 
-class Heuristic_random : public Heuristic {
-public:
-  Heuristic_random(Log& l,const std::string& params);
-  virtual float getCoverage();
-  virtual int getAction();
-  virtual int getIAction();
-private:
-  int select(int i,int* actions);
-  Random* r;
-};
-
-#endif
+FACTORY_DEFAULT_CREATOR(Function, Function_pid, "pid")

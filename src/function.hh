@@ -17,29 +17,24 @@
  *
  */
 
-#ifndef __heuristic_random_hh__
-#define __heuristic_random_hh__
+#ifndef __FUNCTION_HH__
 
-#include <vector>
-#include <string>
+#define FACTORY_CREATOR_PARAMS std::string params
+#define FACTORY_CREATOR_PARAMS2 params
+#define FACTORY_CREATE_PARAMS                                          \
+                       std::string name,                               \
+                       std::string params
 
-#include "heuristic.hh"
-#include "coverage.hh"
-#include "lts.hh"
-#include <stdlib.h>
-#include <time.h>
+#include "factory.hh"
+#include "writable.hh"
 
-class Random;
-
-class Heuristic_random : public Heuristic {
+class Function: public Writable {
 public:
-  Heuristic_random(Log& l,const std::string& params);
-  virtual float getCoverage();
-  virtual int getAction();
-  virtual int getIAction();
-private:
-  int select(int i,int* actions);
-  Random* r;
+  virtual ~Function() { }
+  virtual signed long val() = 0;
 };
 
-#endif
+FACTORY_DECLARATION(Function)
+Function* new_function(const std::string&);
+
+#endif /* __FUNCTION_HH__ */

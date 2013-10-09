@@ -16,30 +16,38 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+#define _RANDOM_INTERNAL_
+#include "function.hh"
+#include "random_c.hh"
 
-#ifndef __heuristic_random_hh__
-#define __heuristic_random_hh__
+Random_C::Random_C(const std::string& param) {
+  max_val = RAND_MAX;
+  if (param=="") {
+    global=true;
+  } else {
+    Function* f=new_function(param);
+    if (f==NULL) {
+      status=false;
+      errormsg="Can't create function "+param;
+      return;
+    }
 
-#include <vector>
-#include <string>
+    if (!f->status) {
+      status=false;
+      errormsg="Function error:"+f->errormsg;
+    }
 
-#include "heuristic.hh"
-#include "coverage.hh"
-#include "lts.hh"
-#include <stdlib.h>
-#include <time.h>
+    seed = f->val();
+    global=false;
+    delete f;
+  }
+}
 
-class Random;
+unsigned long Random_C::rand() {
+  if (global) {
+    return rand();
+  }
+  return rand_r(&seed);
+}
 
-class Heuristic_random : public Heuristic {
-public:
-  Heuristic_random(Log& l,const std::string& params);
-  virtual float getCoverage();
-  virtual int getAction();
-  virtual int getIAction();
-private:
-  int select(int i,int* actions);
-  Random* r;
-};
-
-#endif
+FACTORY_DEFAULT_CREATOR(Random, Random_C, "C")

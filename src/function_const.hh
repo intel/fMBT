@@ -17,29 +17,16 @@
  *
  */
 
-#ifndef __heuristic_random_hh__
-#define __heuristic_random_hh__
+#ifndef __FUNCTION_const_HH__
+#include "function.hh"
 
-#include <vector>
-#include <string>
-
-#include "heuristic.hh"
-#include "coverage.hh"
-#include "lts.hh"
-#include <stdlib.h>
-#include <time.h>
-
-class Random;
-
-class Heuristic_random : public Heuristic {
+class Function_const: public Function {
 public:
-  Heuristic_random(Log& l,const std::string& params);
-  virtual float getCoverage();
-  virtual int getAction();
-  virtual int getIAction();
-private:
-  int select(int i,int* actions);
-  Random* r;
+  Function_const(const std::string& param);
+  virtual ~Function_const() {}
+  virtual signed long val();
+  signed long stored_val;
 };
 
-#endif
+
+#endif /* __FUNCTION_const_HH__ */

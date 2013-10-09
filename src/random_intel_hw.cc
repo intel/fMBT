@@ -17,29 +17,20 @@
  *
  */
 
-#ifndef __heuristic_random_hh__
-#define __heuristic_random_hh__
+#define _RANDOM_INTERNAL_
+#include "random_intel_hw.hh"
 
-#include <vector>
-#include <string>
+Random_Intel_HW::Random_Intel_HW(const std::string& param) {
+  max_val = 4294967295U;
+}
 
-#include "heuristic.hh"
-#include "coverage.hh"
-#include "lts.hh"
-#include <stdlib.h>
-#include <time.h>
+unsigned long Random_Intel_HW::rand() {
+  unsigned int ret;
 
-class Random;
+  while (!__builtin_ia32_rdrand32_step(&ret)) {}
 
-class Heuristic_random : public Heuristic {
-public:
-  Heuristic_random(Log& l,const std::string& params);
-  virtual float getCoverage();
-  virtual int getAction();
-  virtual int getIAction();
-private:
-  int select(int i,int* actions);
-  Random* r;
-};
+  return ret;
+}
 
-#endif
+FACTORY_DEFAULT_CREATOR(Random, Random_Intel_HW, "intel")
+FACTORY_DEFAULT_CREATOR(Function, Random_Intel_HW, "intel")

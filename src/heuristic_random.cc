@@ -16,7 +16,19 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+#include "function.hh"
+#include "random.hh"
+#undef FACTORY_CREATOR_PARAMS
+#undef FACTORY_CREATOR_PARAMS2 
+#undef FACTORY_CREATE_PARAMS
 
+#define FACTORY_CREATOR_PARAMS Log& log,std::string params
+#define FACTORY_CREATOR_PARAMS2 log, params
+#define FACTORY_CREATE_PARAMS Log& log,                                \
+                       std::string name,                               \
+                       std::string params
+
+#include "helper.hh"
 #include "heuristic_random.hh"
 #include <stdlib.h>
 
@@ -27,7 +39,18 @@ Heuristic_random::Heuristic_random(Log& l,const std::string& params) :
   if (params == "") {
     random_seed = time(NULL);
   } else {
-    random_seed = atoi(params.c_str());
+    Function *f=new_function(params);
+    if (f) {
+      if (!f->status) {
+	errormsg=f->errormsg;
+	status=false;
+      } else {
+	random_seed = f->val();
+      }
+    } else {
+      errormsg=std::string("Can't parse ") + params;
+      status=false;
+    }
   }
   log.print("<heuristic_random seed=\"%d\"/>\n", random_seed);
   srandom(random_seed);

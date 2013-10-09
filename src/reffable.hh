@@ -17,29 +17,26 @@
  *
  */
 
-#ifndef __heuristic_random_hh__
-#define __heuristic_random_hh__
+#ifndef __reffable_hh__
+#define __reffable_hh__
 
-#include <vector>
-#include <string>
-
-#include "heuristic.hh"
-#include "coverage.hh"
-#include "lts.hh"
-#include <stdlib.h>
-#include <time.h>
-
-class Random;
-
-class Heuristic_random : public Heuristic {
+class reffable {
 public:
-  Heuristic_random(Log& l,const std::string& params);
-  virtual float getCoverage();
-  virtual int getAction();
-  virtual int getIAction();
-private:
-  int select(int i,int* actions);
-  Random* r;
+  reffable(): refcount(0) {}
+  virtual ~reffable() {}
+
+  void ref() {
+    refcount++;
+  }
+
+  void unref() {
+    refcount--;
+    if (refcount<=0) {
+      delete this;
+    }
+  }
+protected:
+  int refcount;
 };
 
 #endif

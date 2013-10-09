@@ -17,29 +17,20 @@
  *
  */
 
-#ifndef __heuristic_random_hh__
-#define __heuristic_random_hh__
+#include "function_const.hh"
 
-#include <vector>
-#include <string>
+Function_const::Function_const(const std::string& param) {
+  char* endp;
+  stored_val=strtol(param.c_str(),&endp,0);
+  if (*endp!=0) {
+    status=false;
+    errormsg="incalid charasters at const ";
+    errormsg+=endp;
+  }
+}
 
-#include "heuristic.hh"
-#include "coverage.hh"
-#include "lts.hh"
-#include <stdlib.h>
-#include <time.h>
+signed long Function_const::val() {
+  return stored_val;
+}
 
-class Random;
-
-class Heuristic_random : public Heuristic {
-public:
-  Heuristic_random(Log& l,const std::string& params);
-  virtual float getCoverage();
-  virtual int getAction();
-  virtual int getIAction();
-private:
-  int select(int i,int* actions);
-  Random* r;
-};
-
-#endif
+FACTORY_DEFAULT_CREATOR(Function, Function_const, "const")

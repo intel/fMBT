@@ -23,11 +23,12 @@
 #include <stack>
 #include <stdarg.h>
 #include <stdio.h>
+#include "reffable.hh"
 
-class Log {
+class Log: public reffable {
 public:
-  Log(FILE* f,bool de=false): refcount(0), out(f), debug_enabled(de)  { }
-  Log(): refcount(0), out(stderr), debug_enabled(false)  { }
+  Log(FILE* f,bool de=false): out(f), debug_enabled(de)  { }
+  Log(): out(stderr), debug_enabled(false)  { }
   virtual ~Log() { if (out!=stderr) { fclose(out); } }
   virtual void push(std::string&);
   virtual void push(const char*);
@@ -47,20 +48,8 @@ public:
     return debug_enabled;
   }
 
-  void ref() {
-    refcount++;
-  }
-
-  void unref() {
-    refcount--;
-    if (refcount<=0) {
-      delete this;
-    }
-  }
-
-
 protected:
-  int refcount;
+
   virtual void write(const char* msg,FILE* f);
   virtual void write(const char* msg)
   {

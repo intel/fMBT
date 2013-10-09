@@ -17,29 +17,18 @@
  *
  */
 
-#ifndef __heuristic_random_hh__
-#define __heuristic_random_hh__
+#ifndef __RANDOM_C_HH__
+#include "random.hh"
 
-#include <vector>
-#include <string>
-
-#include "heuristic.hh"
-#include "coverage.hh"
-#include "lts.hh"
-#include <stdlib.h>
-#include <time.h>
-
-class Random;
-
-class Heuristic_random : public Heuristic {
+class Random_C: public Random {
 public:
-  Heuristic_random(Log& l,const std::string& params);
-  virtual float getCoverage();
-  virtual int getAction();
-  virtual int getIAction();
-private:
-  int select(int i,int* actions);
-  Random* r;
+  Random_C(const std::string& param);
+  virtual ~Random_C() {}
+  virtual unsigned long rand();
+  //virtual double rand48();
+  bool global;
+  unsigned int seed;
 };
 
-#endif
+
+#endif /* __RANDOM_C_HH__ */

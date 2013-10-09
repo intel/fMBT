@@ -1,6 +1,6 @@
 /*
  * fMBT, free Model Based Testing tool
- * Copyright (c) 2011, Intel Corporation.
+ * Copyright (c) 2012, Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU Lesser General Public License,
@@ -17,29 +17,14 @@
  *
  */
 
-#ifndef __heuristic_random_hh__
-#define __heuristic_random_hh__
+#include "coverage_random.hh"
+#include "random.hh"
 
-#include <vector>
-#include <string>
-
-#include "heuristic.hh"
-#include "coverage.hh"
-#include "lts.hh"
-#include <stdlib.h>
-#include <time.h>
-
-class Random;
-
-class Heuristic_random : public Heuristic {
-public:
-  Heuristic_random(Log& l,const std::string& params);
-  virtual float getCoverage();
-  virtual int getAction();
-  virtual int getIAction();
-private:
-  int select(int i,int* actions);
-  Random* r;
-};
-
-#endif
+float Coverage_random::getCoverage() {
+  float ret=parent->getCoverage();
+  if (!parent->status) {
+    status=false;
+    errormsg=parent->errormsg;
+  }
+  return ret * (1.0+2.0*var*r->rand48()-var);
+}

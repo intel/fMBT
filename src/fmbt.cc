@@ -91,7 +91,9 @@ int main(int argc,char * const argv[])
     {0, 0, 0, 0}
   };
 
-  while ((c = getopt_long (argc, argv, "DEL:heil:qCo:VAM", long_opts, NULL)) != -1)
+  srandom(time(NULL));
+  srand48(time(NULL));
+  while ((c = getopt_long (argc, argv, "DEL:heil:qCo:VAMH", long_opts, NULL)) != -1)
     switch (c)
     {
     case 'V':
@@ -117,6 +119,24 @@ int main(int argc,char * const argv[])
     }
       return 0;
       break;
+
+    case 'H': {
+      /* For debugging. print heuristic modules */
+      std::map<std::string, HeuristicFactory::creator>::iterator i;
+      std::map<std::string, HeuristicFactory::creator>::iterator e;
+      if (HeuristicFactory::creators) {
+	i=HeuristicFactory::creators->begin();
+	e=HeuristicFactory::creators->end();
+
+	for(;i!=e;i++) {
+	  printf("%s\n",i->first.c_str());
+	}
+      }
+    }
+      return 0;
+      break;
+
+
     case 'A': {
       /* For debugging. print adapter modules */
       std::map<std::string, AdapterFactory::creator>::iterator i;

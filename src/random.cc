@@ -17,29 +17,29 @@
  *
  */
 
-#ifndef __heuristic_random_hh__
-#define __heuristic_random_hh__
+#include "helper.hh"
+#define _RANDOM_INTERNAL_
+#include "random.hh"
 
-#include <vector>
-#include <string>
+FACTORY_IMPLEMENTATION(Random)
 
-#include "heuristic.hh"
-#include "coverage.hh"
-#include "lts.hh"
-#include <stdlib.h>
-#include <time.h>
+Random* new_random(const std::string& s) {
+  std::string name,option;
+  param_cut(s,name,option);
+  Random* ret=RandomFactory::create(name, option);
 
-class Random;
+  if (ret) {
+    return ret;
+  }
 
-class Heuristic_random : public Heuristic {
-public:
-  Heuristic_random(Log& l,const std::string& params);
-  virtual float getCoverage();
-  virtual int getAction();
-  virtual int getIAction();
-private:
-  int select(int i,int* actions);
-  Random* r;
-};
+  //Let's try old thing.
+  split(s, name, option);
+  ret=RandomFactory::create(name, option);
 
-#endif
+  if (ret) {
+    fprintf(stderr,"DEPRECATED RANDOM SYNTAX. %s\nNew syntax is %s(%s)\n",
+	    s.c_str(),name.c_str(),option.c_str());
+  }
+  return ret;
+}
+
