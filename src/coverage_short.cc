@@ -20,11 +20,18 @@
 #include "coverage_short.hh"
 #include "model.hh"
 #include "helper.hh"
+#include "random.hh"
 
 Coverage_Short::Coverage_Short(Log& l,const std::string& _params) :
   Coverage(l), params(_params),props_total(0)
 {
-  
+  r=Random::default_random();
+}
+
+Coverage_Short::~Coverage_Short()
+{
+  if (r)
+    r->unref();
 }
 
 void Coverage_Short::history(int action,
@@ -93,7 +100,7 @@ int Coverage_Short::fitness(int* action,int n,float* fitness)
     log.print("<fitness action tags=\"%s\"/>\n",s.c_str());
 
     if (m<fitness[i] ||
-	(m==fitness[i] && (((float)random())/RAND_MAX)>0.2)) {
+	(m==fitness[i] && (r->drand48()>0.2))) {
       pos=i;
       m=fitness[i];
     }

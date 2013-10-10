@@ -23,6 +23,8 @@
 #include <cstring>
 #include <algorithm>
 
+#include "random.hh"
+
 #include "dparse.h"
 extern "C" {
   extern D_ParserTables parser_tables_weight;
@@ -31,12 +33,41 @@ extern "C" {
 extern Heuristic_weight* Hw;
 
 Heuristic_weight::Heuristic_weight(Log& l,const std::string& params) :
-  Heuristic(l),prm(params)
+  Heuristic(l), r(NULL)
 {
+  std::vector<std::string> subs;
+  commalist(params,subs);
+  switch (subs.size()) {
+  case 2:
+    prm=subs[0];
+    r=new_random(subs[1]);
+
+    if (!r) {
+      status=false;
+      errormsg="Can't create random "+subs[1];
+    } else {
+      if (!r->status) {
+	status=false;
+	errormsg=r->errormsg;
+      }
+    }
+    
+    break;
+  case 1:
+    prm=subs[0];
+    r=Random::default_random();
+    break;
+  default:
+    status=false;
+    errormsg="Illegal amount of parameters ("+to_string((unsigned int)subs.size())+"). Expecting 1 or 2";
+  }
+  
 }
 
 Heuristic_weight::~Heuristic_weight()
 {
+  if (r) 
+    r->unref();
 }
 
 float Heuristic_weight::getCoverage() {
@@ -140,10 +171,10 @@ int Heuristic_weight::weight_select(int i,int* actions)
 
   // Total weight 0?
   if (total==0.0) {
-    return (((float)random())/RAND_MAX)*i;
+    return r->drand48()*i;
   }
 
-  float cut=drand48()*total;
+  float cut=r->drand48()*total;
   int pos;
   for(pos=0;cut>f[pos];cut-=f[pos],pos++);
 

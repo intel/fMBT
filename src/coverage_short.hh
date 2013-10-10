@@ -35,13 +35,14 @@
 #include <list>
 
 class Model;
-
+class Random;
 class Coverage_Short: public Coverage {
 
 public:
   class unit;
   Coverage_Short(Log& l,const std::string& params);
 
+  virtual ~Coverage_Short();
   virtual void push();
   virtual void pop();
 
@@ -57,6 +58,7 @@ public:
 protected:
   std::string params;
   int props_total;
+  Random* r;
 };
 
 

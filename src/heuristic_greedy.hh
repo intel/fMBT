@@ -27,9 +27,12 @@
 #include "coverage.hh"
 #include "lts.hh"
 
+class Random;
+
 class Heuristic_greedy : public Heuristic {
 public:
   Heuristic_greedy(Log& l,const std::string& params);
+  virtual ~Heuristic_greedy();
 
   virtual bool execute(int action);
 
@@ -39,6 +42,7 @@ private:
   int m_search_depth;
   bool m_burst;
   std::vector<int> m_path;
+  Random* r;
 };
 
 #endif

@@ -21,6 +21,7 @@
 #include <cstdio>
 #include <sstream>
 #include <cstdlib>
+#include "random.hh"
 
 Adapter_model::Adapter_model(Log& l,const std::string& params) :
   Adapter::Adapter(l)
@@ -28,6 +29,7 @@ Adapter_model::Adapter_model(Log& l,const std::string& params) :
   model = new_model(log,params);
   model->init();
   model->reset();
+  r=Random::default_random();
 }
 
 bool Adapter_model::init()
@@ -69,6 +71,13 @@ void Adapter_model::execute(std::vector<int> &action)
 
   log.pop();
 }
+
+Adapter_model::~Adapter_model()
+{
+  if (r)
+    r->unref();
+}
+
 
 int  Adapter_model::observe(std::vector<int> &action,bool block)
 {

@@ -19,9 +19,12 @@
 #include "adapter.hh"
 #include "model.hh"
 
+class Random;
+
 class Adapter_model: public Adapter {
 public:
   Adapter_model(Log& l,const std::string& params);
+  virtual ~Adapter_model();
   virtual bool init();
 
   virtual void execute(std::vector<int> &action);
@@ -31,4 +34,5 @@ private:
   Model* model;
   std::vector<int> adapter2model;
   std::vector<int> model2adapter;
+  Random* r;
 };

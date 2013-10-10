@@ -35,6 +35,7 @@ Random_C::Random_C(const std::string& param) {
     if (!f->status) {
       status=false;
       errormsg="Function error:"+f->errormsg;
+      return;
     }
 
     seed = f->val();

@@ -17,9 +17,10 @@
  *
  */
 
-#include "helper.hh"
+#include "params.hh"
 #define _RANDOM_INTERNAL_
 #include "random.hh"
+#include <stdio.h>
 
 FACTORY_IMPLEMENTATION(Random)
 
@@ -43,3 +44,13 @@ Random* new_random(const std::string& s) {
   return ret;
 }
 
+Random* Random::_default_random=NULL;
+
+Random* Random::default_random() {
+  if (!_default_random) {
+    std::string rname("C");
+    _default_random = new_random(rname);
+  }
+  _default_random->ref();
+  return _default_random;
+}

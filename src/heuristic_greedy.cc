@@ -23,6 +23,7 @@
 #include <string.h>
 #include <vector>
 #include <algorithm>
+#include "random.hh"
 
 extern int _g_simulation_depth_hint;
 
@@ -33,7 +34,16 @@ Heuristic_greedy::Heuristic_greedy(Log& l,const std::string& params) :
   if (strchr(params.c_str(), 'b')) {
     m_burst = true;
   }
+  r = Random::default_random();
 }
+
+Heuristic_greedy::~Heuristic_greedy()
+{
+  if (r)
+    r->unref();
+}
+
+
 
 bool Heuristic_greedy::execute(int action)
 {
@@ -68,7 +78,7 @@ int Heuristic_greedy::getAction()
   }
 
   /* Fall back to random selection */
-  pos=(((float)random())/RAND_MAX)*i;
+  pos=r->drand48()*i;
   return actions[pos];
 }
 
@@ -159,7 +169,7 @@ int Heuristic_greedy::getIAction()
   }
 
   /* Fall back to random selection. */
-  retval = input_actions[(int)((((float)random())/RAND_MAX)*input_action_count)];
+  retval = input_actions[(int)(r->drand48()*input_action_count)];
 
 done:
   delete[] input_actions;

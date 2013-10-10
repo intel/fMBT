@@ -29,6 +29,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+class Random;
+
 class Heuristic_mrandom : public Heuristic {
 public:
   Heuristic_mrandom(Log& l,const std::string& params);
@@ -41,6 +43,7 @@ public:
   virtual void set_coverage(Coverage* c);
 protected:
   std::vector<std::pair<float,Heuristic*> > h;
+  Random* r;
 };
 
 #endif

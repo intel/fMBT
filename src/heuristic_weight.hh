@@ -29,6 +29,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+class Random;
+
 class Heuristic_weight : public Heuristic {
 public:
   Heuristic_weight(Log& l,const std::string& params);
@@ -44,6 +46,7 @@ public:
 	   int w,int o);
 
 protected:
+  Random* r;
   int weight_select(int i,int* actions);
   std::map<std::pair<int,int>, float> weights;
   std::map<std::pair<int,int>, int> weight_ids;

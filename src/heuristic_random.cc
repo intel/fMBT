@@ -35,25 +35,25 @@
 Heuristic_random::Heuristic_random(Log& l,const std::string& params) :
   Heuristic(l)
 {
-  unsigned int random_seed = 0;
   if (params == "") {
-    random_seed = time(NULL);
+    r = Random::default_random();
   } else {
-    Function *f=new_function(params);
-    if (f) {
-      if (!f->status) {
-	errormsg=f->errormsg;
-	status=false;
-      } else {
-	random_seed = f->val();
-      }
-    } else {
-      errormsg=std::string("Can't parse ") + params;
+    r = new_random(params);
+    if (!r) {
       status=false;
+      errormsg="Can't create random "+params;
+      return;
+    }
+    if (!r->status) {
+      status=false;
+      errormsg=r->errormsg;
     }
   }
-  log.print("<heuristic_random seed=\"%d\"/>\n", random_seed);
-  srandom(random_seed);
+}
+
+Heuristic_random::~Heuristic_random() {
+  if (r)
+    r->unref();
 }
 
 float Heuristic_random::getCoverage() {
@@ -80,7 +80,7 @@ int Heuristic_random::getAction()
 
 int Heuristic_random::select(int i,int* actions)
 {
-  int pos=(((float)random())/RAND_MAX)*i;
+  int pos=r->drand48()*i;
 
   return actions[pos];
 }

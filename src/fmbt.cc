@@ -91,8 +91,6 @@ int main(int argc,char * const argv[])
     {0, 0, 0, 0}
   };
 
-  srandom(time(NULL));
-  srand48(time(NULL));
   while ((c = getopt_long (argc, argv, "DEL:heil:qCo:VAMH", long_opts, NULL)) != -1)
     switch (c)
     {

@@ -18,6 +18,7 @@
  */
 
 #ifndef __RANDOM_HH__
+#define __RANDOM_HH__
 
 #ifdef FACTORY_CREATOR_PARAMS
 
@@ -38,19 +39,22 @@
 #include "writable.hh"
 #include "reffable.hh"
 
+class Random;
 class Random: public Writable, public reffable {
 public:
   virtual ~Random() { }
   virtual unsigned long rand() = 0;
-  virtual double rand48() {
+  virtual double drand48() {
     return (1.0*rand()) / (1.0*max_val);
   }
   unsigned long max_val;
+  static Random* _default_random;
+  static Random* default_random();
 };
 
 FACTORY_DECLARATION(Random)
 
-//Random* new_random(const std::string&);
+Random* new_random(const std::string&);
 
 #ifndef _RANDOM_INTERNAL_
 

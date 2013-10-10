@@ -22,11 +22,15 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "random.hh"
+
 Heuristic_mrandom::~Heuristic_mrandom()
 {
   for(unsigned i=0;i<h.size();i++) {
     delete h[i].second;
   }
+  if (r)
+    r->unref();
 }
 
 Heuristic_mrandom::Heuristic_mrandom(Log& l,const std::string& params) :
@@ -34,6 +38,8 @@ Heuristic_mrandom::Heuristic_mrandom(Log& l,const std::string& params) :
 {
   float total=0;
   std::vector<std::string> s;
+
+  r = Random::default_random();
 
   commalist(params,s);
 
@@ -74,7 +80,7 @@ float Heuristic_mrandom::getCoverage() {
 
 int Heuristic_mrandom::getAction()
 {
-  float cut=drand48();
+  float cut=r->drand48();
 
   for(unsigned i=0;i<h.size();i++) {
     if (cut<h[i].first) {
@@ -86,7 +92,7 @@ int Heuristic_mrandom::getAction()
 
 int Heuristic_mrandom::getIAction()
 {
-  float cut=drand48();
+  float cut=r->drand48();
 
   for(unsigned i=0;i<h.size();i++) {
     if (cut<h[i].first) {

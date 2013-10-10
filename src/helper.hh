@@ -143,21 +143,16 @@ int getint(GIOChannel* out,GIOChannel* in,Log& log,
 int getact(int** act,std::vector<int>& vec,GIOChannel* out,GIOChannel* in,
 	   Log& log,int min=-42,int max=INT_MAX,Writable* w=NULL,bool magic=false);
 
-void split(std::string val, std::string& name,
-	   std::string& param, const char* s=":");
-
 void regexpmatch(const std::string& regexp,std::vector<std::string>& f,
 		 std::vector<int>& result,bool clear=true,int a=1,int min=0);
 
-void param_cut(std::string val,std::string& name,
-	       std::string& option);
+#include "params.hh"
 
 void strlist(std::vector<std::string>& s);
 
 void find(std::vector<std::string>& from,std::vector<std::string>& what,std::vector<int>& result);
 
 void commalist(const std::string& s,std::vector<std::string>& vec, bool remove_whitespace=true);
-void remove_force(std::string& s,char only=0);
 class EndHook;
 void hook_runner(EndHook* e);
 void sdel(std::vector<std::string*>* strvec);

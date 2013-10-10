@@ -26,5 +26,5 @@ float Coverage_random::getCoverage() {
     status=false;
     errormsg=parent->errormsg;
   }
-  return ret * (1.0+2.0*var*r->rand48()-var);
+  return ret * (1.0+2.0*var*r->drand48()-var);
 }

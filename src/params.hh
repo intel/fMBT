@@ -16,31 +16,18 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+#ifndef __PARAMS_HH__
+#define __PARAMS_HH__
 
-#ifndef __heuristic_random_hh__
-#define __heuristic_random_hh__
-
-#include <vector>
 #include <string>
 
-#include "heuristic.hh"
-#include "coverage.hh"
-#include "lts.hh"
-#include <stdlib.h>
-#include <time.h>
+void remove_force(std::string& s,char only=0);
 
-class Random;
+void param_cut(std::string val,std::string& name,
+	       std::string& option);
 
-class Heuristic_random : public Heuristic {
-public:
-  Heuristic_random(Log& l,const std::string& params);
-  virtual ~Heuristic_random();
-  virtual float getCoverage();
-  virtual int getAction();
-  virtual int getIAction();
-private:
-  int select(int i,int* actions);
-  Random* r;
-};
+void split(std::string val, std::string& name,
+	   std::string& param, const char* s=":");
 
-#endif
+
+#endif /* __PARAMS_HH__ */
