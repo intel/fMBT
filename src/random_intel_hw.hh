@@ -21,17 +21,25 @@
 #include "function.hh"
 #include "random.hh"
 
-class Random_Intel_HW: public Random, public Function {
+class Random_Intel_HW: public Random {
 public:
   Random_Intel_HW(const std::string& param);
   virtual ~Random_Intel_HW() {}
   virtual unsigned long rand();
-  virtual signed long val() {
-    return rand();
-  };
   //virtual double rand48();
-  bool global;
-  unsigned int seed;
+};
+
+class Random_Intel_HWf: public Function {
+public:
+  Random_Intel_HWf(const std::string& param):r(param) {
+    status=r.status;
+    errormsg=r.errormsg;
+  }
+  virtual ~Random_Intel_HWf() {}
+  virtual signed long val() {
+    return r.rand();
+  };
+  Random_Intel_HW r;
 };
 
 

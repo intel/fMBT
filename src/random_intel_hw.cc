@@ -19,8 +19,22 @@
 
 #define _RANDOM_INTERNAL_
 #include "random_intel_hw.hh"
+#include "writable.hh"
+#include <cpuid.h>
+
+#ifndef bit_RDRND
+#define bit_RDRND       (1 << 30)
+#endif
 
 Random_Intel_HW::Random_Intel_HW(const std::string& param) {
+  unsigned int level,eax,ebx,ecx,edx;
+  __cpuid(level,eax,ebx,ecx,edx);
+
+  if (!(ecx&bit_RDRND)) {
+    status=false;
+    errormsg="Intel hardware random not supported";
+  }
+
   max_val = 4294967295U;
 }
 
@@ -33,4 +47,4 @@ unsigned long Random_Intel_HW::rand() {
 }
 
 FACTORY_DEFAULT_CREATOR(Random, Random_Intel_HW, "intel")
-FACTORY_DEFAULT_CREATOR(Function, Random_Intel_HW, "intel")
+FACTORY_DEFAULT_CREATOR(Function, Random_Intel_HWf, "intel")
