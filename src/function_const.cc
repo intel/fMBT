@@ -17,20 +17,32 @@
  *
  */
 
+#define _FUNCTION_INTERNAL_
 #include "function_const.hh"
 
 Function_const::Function_const(const std::string& param) {
   char* endp;
   stored_val=strtol(param.c_str(),&endp,0);
   if (*endp!=0) {
-    status=false;
-    errormsg="incalid charasters at const ";
-    errormsg+=endp;
+    stored_fval=strtof(param.c_str(),&endp);
+    if (*endp!=0) {
+      status=false;
+      errormsg="incalid charasters at const ";
+      errormsg+=endp;      
+    } else {
+      stored_val=stored_fval;
+    }
+  } else {
+    stored_fval=stored_val;
   }
 }
 
 signed long Function_const::val() {
   return stored_val;
+}
+
+float Function_const::fval() {
+  return stored_fval;
 }
 
 FACTORY_DEFAULT_CREATOR(Function, Function_const, "const")

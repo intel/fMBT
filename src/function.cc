@@ -17,18 +17,9 @@
  *
  */
 
+#define _FUNCTION_INTERNAL_
 #include "params.hh"
 #include "function.hh"
-
-#undef FACTORY_CREATOR_PARAMS
-#undef FACTORY_CREATOR_PARAMS2 
-#undef FACTORY_CREATE_PARAMS
-
-#define FACTORY_CREATOR_PARAMS std::string params
-#define FACTORY_CREATOR_PARAMS2 params
-#define FACTORY_CREATE_PARAMS                                          \
-                       std::string name,                               \
-                       std::string params
 
 FACTORY_IMPLEMENTATION(Function)
 

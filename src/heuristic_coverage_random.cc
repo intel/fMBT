@@ -26,6 +26,7 @@
 #include <algorithm>
 
 #include "random.hh"
+#include "function.hh"
 
 Heuristic_coverage_random::Heuristic_coverage_random(Log& l,const std::string& params) :
   Heuristic(l),h(NULL),sub_coverage(NULL),var(0.1),r(NULL)
@@ -38,10 +39,44 @@ Heuristic_coverage_random::Heuristic_coverage_random(Log& l,const std::string& p
     errormsg="Too many parameters";
     return;
   }
+
+  if (subs.size()==3) {
+    r=new_random(subs[2]);
+    if (!r) {
+      status=false;
+      errormsg="Can't create random "+subs[2];
+      return;
+    }
+  }
+
+  if (subs.size()>1) {
+    Function* f = new_function(subs[1]);
+    if (!f) {
+      status=false;
+      errormsg = "Does not compute " + subs[1];
+    } else {
+      if (!f->status) {
+	status=false;
+	errormsg=f->errormsg;
+      } else {
+	// We have something!
+	var = f->fval();
+      }
+      delete f;
+    }
+  }
+  
   
   if (!r) {
+    r=Random::default_random();
     // default random
   }
+
+  if (!r->status) {
+    status=false;
+    errormsg+=r->errormsg;
+  }
+
 }
 
 Heuristic_coverage_random::~Heuristic_coverage_random()

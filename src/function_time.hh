@@ -25,6 +25,7 @@ public:
   Function_time(const std::string& param);
   virtual ~Function_time() {}
   virtual signed long val();
+  virtual float fval();
 };
 
 

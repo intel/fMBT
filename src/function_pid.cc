@@ -17,6 +17,7 @@
  *
  */
 
+#define _FUNCTION_INTERNAL_
 #include "function_pid.hh"
 
 Function_pid::Function_pid(const std::string& param) {

@@ -32,9 +32,26 @@ class Function: public Writable {
 public:
   virtual ~Function() { }
   virtual signed long val() = 0;
+  virtual float fval() {
+    return val();
+  }
 };
 
 FACTORY_DECLARATION(Function)
 Function* new_function(const std::string&);
+
+#ifndef _FUNCTION_INTERNAL_
+
+#undef FACTORY_CREATOR_PARAMS
+#undef FACTORY_CREATOR_PARAMS2
+#undef FACTORY_CREATE_PARAMS
+
+#define FACTORY_CREATE_PARAMS Log& log,                                \
+                       std::string name,                               \
+                       std::string params
+#define FACTORY_CREATOR_PARAMS Log& log, std::string params
+#define FACTORY_CREATOR_PARAMS2 log, params
+
+#endif /*  _FUNCTION_INTERNAL_ */
 
 #endif /* __FUNCTION_HH__ */

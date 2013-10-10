@@ -39,6 +39,9 @@ public:
   virtual signed long val() {
     return r.rand();
   };
+  virtual float fval() {
+    return r.drand48();
+  };
   Random_Intel_HW r;
 };
 

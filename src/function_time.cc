@@ -17,6 +17,7 @@
  *
  */
 
+#define _FUNCTION_INTERNAL_
 #include "function_time.hh"
 
 Function_time::Function_time(const std::string& param) {
@@ -26,6 +27,15 @@ Function_time::Function_time(const std::string& param) {
 
 signed long Function_time::val() {
   return time(NULL);
+}
+
+#include "helper.hh"
+
+float Function_time::fval() {
+  struct timeval tv;
+  gettime(&tv);
+  return (1.0*tv.tv_sec) + (1.0*tv.tv_usec)/1000000.0;
+
 }
 
 FACTORY_DEFAULT_CREATOR(Function, Function_time, "time")
