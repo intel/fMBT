@@ -54,10 +54,10 @@ Random* new_random(const std::string& s) {
   ret=RandomFactory::create(name, option);
 
   if (ret) {
+    ret->ref();
     if (ret->single) {
       static_support[name]=r_store(ret);
     }
-    ret->ref();
     return ret;
   }
 
