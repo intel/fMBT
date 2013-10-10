@@ -19,6 +19,7 @@
 #define _RANDOM_INTERNAL_
 #include "function.hh"
 #include "random_c.hh"
+#include <cstdlib>
 
 Random_C::Random_C(const std::string& param) {
   max_val = RAND_MAX;
@@ -47,7 +48,7 @@ Random_C::Random_C(const std::string& param) {
 
 unsigned long Random_C::rand() {
   if (global) {
-    return rand();
+    return std::rand();
   }
   return rand_r(&seed);
 }
