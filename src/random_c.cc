@@ -24,6 +24,7 @@ Random_C::Random_C(const std::string& param) {
   max_val = RAND_MAX;
   if (param=="") {
     global=true;
+    single=true;
   } else {
     Function* f=new_function(param);
     if (f==NULL) {

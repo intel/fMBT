@@ -24,22 +24,67 @@
 
 FACTORY_IMPLEMENTATION(Random)
 
+class r_store {
+public:
+  r_store(): r(NULL) {
+
+  }
+  r_store(Random* _r):r(_r) {
+    r->ref();
+  }
+  ~r_store() {
+    if (r)
+      r->unref();
+  }
+  Random* r;
+};
+
 Random* new_random(const std::string& s) {
+  static std::map<const std::string,r_store> static_support;
   std::string name,option;
   param_cut(s,name,option);
-  Random* ret=RandomFactory::create(name, option);
+
+  Random* ret=static_support[name].r;
 
   if (ret) {
+    ret->ref();
+    return ret;
+  }
+
+  ret=RandomFactory::create(name, option);
+
+  if (ret) {
+    if (ret->single) {
+      static_support[name]=r_store(ret);
+    }
+    ret->ref();
     return ret;
   }
 
   //Let's try old thing.
   split(s, name, option);
+
+  ret=static_support[name].r;
+
+  if (ret) {
+    ret->ref();
+    fprintf(stderr,"DEPRECATED RANDOM SYNTAX. %s\nNew syntax is %s(%s)\n",
+	    s.c_str(),name.c_str(),option.c_str());
+
+    return ret;
+  }
+
+
   ret=RandomFactory::create(name, option);
 
   if (ret) {
     fprintf(stderr,"DEPRECATED RANDOM SYNTAX. %s\nNew syntax is %s(%s)\n",
 	    s.c_str(),name.c_str(),option.c_str());
+
+    if (ret->single) {
+      static_support[name]=r_store(ret);
+    }
+    ret->ref();
   }
   return ret;
 }

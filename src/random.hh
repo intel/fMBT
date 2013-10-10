@@ -42,7 +42,8 @@
 class Random;
 class Random: public Writable, public reffable {
 public:
-  virtual ~Random() { }
+  Random(): single(false) {}
+  virtual ~Random() {}
   virtual unsigned long rand() = 0;
   virtual double drand48() {
     return (1.0*rand()) / (1.0*max_val);
@@ -50,6 +51,7 @@ public:
   unsigned long max_val;
   static Random* _default_random;
   static Random* default_random();
+  bool single;
 };
 
 FACTORY_DECLARATION(Random)

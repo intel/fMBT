@@ -36,6 +36,7 @@ Random_Intel_HW::Random_Intel_HW(const std::string& param) {
   }
 
   max_val = 4294967295U;
+  single=true;
 }
 
 unsigned long Random_Intel_HW::rand() {
