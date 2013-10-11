@@ -37,7 +37,7 @@ Function* new_function(const std::string& s) {
   strtod(s.c_str(),&endp);
 
   if (*endp==0) {
-    ret=FunctionFactory::create("const", option);
+    ret=FunctionFactory::create("const", name);
   }
 
   return ret;

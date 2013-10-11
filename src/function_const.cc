@@ -22,6 +22,11 @@
 
 Function_const::Function_const(const std::string& param) {
   char* endp;
+  if (param=="") {
+    errormsg="empthy constant?";
+    status=false;
+    return;
+  }
   stored_val=strtol(param.c_str(),&endp,0);
   if (*endp!=0) {
     stored_fval=strtof(param.c_str(),&endp);

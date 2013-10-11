@@ -54,3 +54,4 @@ unsigned long Random_C::rand() {
 }
 
 FACTORY_DEFAULT_CREATOR(Random, Random_C, "C")
+FACTORY_DEFAULT_CREATOR(Random, Random_C, "c")
