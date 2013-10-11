@@ -55,6 +55,14 @@ conf_entry: model               |
 
 default_random: 'default' '[' 'random' ']' '=' string {
             Random::_default_random = new_random(*$5.str);
+            if (!Random::_default_random) {
+                printf("Can't create default random %s\n",$5.str->c_str());
+            } else {
+                if (!Random::_default_random->status) {
+                    printf("Error in default random %s: %s\n",$5.str->c_str(),
+                           Random::_default_random->errormsg.c_str());
+                }
+            }
             delete $5.str;
         } ;
 

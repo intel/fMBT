@@ -83,7 +83,7 @@ TR_RE = re.compile("([!]?)T\(\s*([^),]+)\s*,\s*([^\"),]+|\"[^\"]*\")\s*,\s*([^),
 SP_RE = re.compile("([!]?)P\(\s*([^),]+)\s*,\s*([^)]+)\s*\)")
 NEWRULE_RE = re.compile("[ ]*'[ ]*")
 AALP_RE = re.compile('^[ ]*(\^((ifdef|include)[ ]+"[^"]+")|\^endif)\s*$')
-CF_RE = re.compile("^(model|adapter|heuristic|coverage|history|((on_)?(pass|fail|inconc)))\s*=.*$")
+CF_RE = re.compile('^(model|adapter|heuristic|default\[random\]|coverage|history|((on_)?(pass|fail|inconc)))\s*=.*$')
 
 AAL_AALRE     = re.compile('aal\s"[^"]*"\s*{')
 AAL_AALREI    = re.compile('{\s*"[^"]*"\s*laa')
@@ -2098,7 +2098,7 @@ class ConfHighlighter(QtGui.QSyntaxHighlighter):
 
         keywordPatterns = ["^model\\b", "^adapter\\b",
                            "^disable_tag_checking\\b",
-                           "^heuristic\\b",
+                           "^heuristic\\b", "^default\\b",
                            "^coverage\\b", "^history\\b",
                            "^(on_)?(pass|fail|inconc)\\b"]
 
