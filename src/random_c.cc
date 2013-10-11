@@ -19,6 +19,7 @@
 #define _RANDOM_INTERNAL_
 #include "function.hh"
 #include "random_c.hh"
+#include "params.hh"
 #include <cstdlib>
 
 Random_C::Random_C(const std::string& param) {
@@ -40,11 +41,21 @@ Random_C::Random_C(const std::string& param) {
       return;
     }
 
-    seed = f->val();
+    initial_seed = seed = f->val();
     global=false;
     delete f;
   }
 }
+
+std::string Random_C::stringify() {
+  if (status) {
+    if (global) 
+      return std::string("c");
+    return std::string("c(")+to_string(initial_seed)+")";
+  }
+  return Random::stringify();
+}
+
 
 unsigned long Random_C::rand() {
   if (global) {

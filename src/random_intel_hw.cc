@@ -47,5 +47,14 @@ unsigned long Random_Intel_HW::rand() {
   return ret;
 }
 
+std::string Random_Intel_HW::stringify() {
+  if (status) {
+    return std::string("intel");
+  }
+
+  return Random::stringify();
+
+}
+
 FACTORY_DEFAULT_CREATOR(Random, Random_Intel_HW, "intel")
 FACTORY_DEFAULT_CREATOR(Function, Random_Intel_HWf, "intel")

@@ -26,6 +26,7 @@ public:
   Random_Intel_HW(const std::string& param);
   virtual ~Random_Intel_HW() {}
   virtual unsigned long rand();
+  virtual std::string stringify();
   //virtual double rand48();
 };
 
