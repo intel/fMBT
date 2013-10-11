@@ -29,6 +29,7 @@ typedef struct _node {
 #include "conf.hh"
 #include "verdict.hh"
 #include "end_condition.hh"
+#include "random.hh"
 Conf* conf_obj;
 }
 
@@ -49,7 +50,13 @@ conf_entry: model               |
             on_fail             |
             on_pass             |
             on_inconc           |
+            default_random      |
             tag_checking        ;
+
+default_random: 'default' '[' 'random' ']' '=' string {
+            Random::_default_random = new_random(*$5.str);
+            delete $5.str;
+        } ;
 
 tag_checking: 'disable_tag_checking' { conf_obj->disable_tagchecking(); } 
             | 'disable_tag_checking' '=' string { conf_obj->disable_tagchecking(*$2.str); delete $2.str; } ;
