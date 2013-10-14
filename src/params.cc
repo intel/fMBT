@@ -90,3 +90,12 @@ void param_cut(std::string val,std::string& name,
   }
   name=val;
 }
+
+#include <sstream>
+
+std::string to_string(const unsigned t)
+{
+  std::stringstream ss;
+  ss << t;
+  return ss.str();
+}

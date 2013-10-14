@@ -29,5 +29,6 @@ void param_cut(std::string val,std::string& name,
 void split(std::string val, std::string& name,
 	   std::string& param, const char* s=":");
 
+std::string to_string(const unsigned t);
 
 #endif /* __PARAMS_HH__ */

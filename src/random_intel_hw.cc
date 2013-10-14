@@ -28,6 +28,7 @@
 
 Random_Intel_HW::Random_Intel_HW(const std::string& param) {
   unsigned int level,eax,ebx,ecx,edx;
+  level=1;
   __cpuid(level,eax,ebx,ecx,edx);
 
   if (!(ecx&bit_RDRND)) {
@@ -42,7 +43,7 @@ Random_Intel_HW::Random_Intel_HW(const std::string& param) {
 unsigned long Random_Intel_HW::rand() {
   unsigned int ret;
 
-  while (!__builtin_ia32_rdrand32_step(&ret)) {}
+  while (!__builtin_ia32_rdrand32_step(&ret));
 
   return ret;
 }

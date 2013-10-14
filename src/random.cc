@@ -39,8 +39,21 @@ public:
   Random* r;
 };
 
+extern "C" {
+int                g_ascii_strcasecmp                  (const char *s1,
+                                                         const char *s2);
+}
+
+struct incasesensitivecomparator {
+  bool operator()(const std::string& l, const std::string& r) const {
+    return g_ascii_strcasecmp(l.c_str(),r.c_str());
+  }
+};
+
+
 Random* new_random(const std::string& s) {
-  static std::map<const std::string,r_store> static_support;
+   static std::map<const std::string,r_store,incasesensitivecomparator> 
+    static_support;
   std::string name,option;
   param_cut(s,name,option);
 
@@ -95,7 +108,8 @@ Random* Random::default_random() {
   if (!_default_random) {
     std::string rname("C");
     _default_random = new_random(rname);
+  } else {
+    _default_random->ref();
   }
-  _default_random->ref();
   return _default_random;
 }

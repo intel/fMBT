@@ -195,7 +195,7 @@ char* unescape_string(char* msg)
   int j=0;
 
   for(int i=0;i<l;i++) {
-    if (msg[i]=='%') {
+    if (msg[i]=='%' && i+2<l) {
       char* endp;
       char s[] = {
         msg[i+1],msg[i+2],0 };
@@ -482,13 +482,6 @@ std::string to_string(const struct timeval&t,bool minutes)
   } else {
     ss << t.tv_sec << "." << std::setfill('0') << std::setw(6) << t.tv_usec;
   }
-  return ss.str();
-}
-
-std::string to_string(const unsigned t)
-{
-  std::stringstream ss;
-  ss << t;
   return ss.str();
 }
 

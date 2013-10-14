@@ -61,6 +61,10 @@ default_random: 'default' '[' 'random' ']' '=' string {
                 if (!Random::_default_random->status) {
                     printf("Error in default random %s: %s\n",$5.str->c_str(),
                            Random::_default_random->errormsg.c_str());
+                } else {
+                    conf_obj->log.push("default");
+                    conf_obj->log.print("<random init=\"%s\"/>\n",Random::_default_random->stringify().c_str());
+                    conf_obj->log.pop();
                 }
             }
             delete $5.str;

@@ -77,6 +77,19 @@ Heuristic_coverage_random::Heuristic_coverage_random(Log& l,const std::string& p
     errormsg+=r->errormsg;
   }
 
+  h = new_heuristic(l,subs[0]);
+
+  if (!h) {
+    errormsg="Can't create heuristic "+subs[0];
+    status=false;
+    return;
+  }
+
+  if (!h->status) {
+    errormsg=h->errormsg;
+    status=false;
+  }
+
 }
 
 Heuristic_coverage_random::~Heuristic_coverage_random()

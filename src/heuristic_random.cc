@@ -44,9 +44,14 @@ Heuristic_random::Heuristic_random(Log& l,const std::string& params) :
       errormsg="Can't create random "+params;
       return;
     }
+    r->ref();
     if (!r->status) {
       status=false;
       errormsg=r->errormsg;
+    } else {
+      log.push(params.c_str());
+      log.print("<random init==\"%s\"/>\n",r->stringify().c_str());
+      log.pop();
     }
   }
 }
