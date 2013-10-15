@@ -66,6 +66,7 @@ iClickWord("[initial", clickPos=(-2,3), capture="highlight.png", dryRun=True)
 '
 """
 
+import distutils.sysconfig
 import time
 import subprocess
 import re
@@ -203,13 +204,14 @@ except ImportError:
 try:
     import ctypes
     _libpath = ["",
-                "." + os.path.sep,
-                "." + os.path.sep + ".libs" + os.path.sep,
-                os.path.dirname(__file__) + os.path.sep,
-                os.path.dirname(__file__) + os.path.sep + ".libs" + os.path.sep]
+                ".",
+                os.path.join(".", ".libs"),
+                os.path.dirname(__file__),
+                os.path.join(os.path.dirname(__file__), ".libs"),
+                distutils.sysconfig.get_python_lib(plat_specific=1)]
     for _dirname in _libpath:
         try:
-            eye4graphics = ctypes.CDLL(_dirname + "eye4graphics.so")
+            eye4graphics = ctypes.CDLL(os.path.join(_dirname, "eye4graphics.so"))
             break
         except: pass
     else:
