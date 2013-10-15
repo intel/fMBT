@@ -1223,14 +1223,18 @@ class _AndroidDeviceConnection:
             self._runSetupCmd(c)
 
     def _resetMonkey(self, timeout=3, pollDelay=.25):
+        tryKillingMonkeyOnFailure = 1
+        failureCountSinceKill = 0
         endTime = time.time() + timeout
         while time.time() < endTime:
             if not self._runSetupCmd(["shell", "monkey", "--port", "1080"], None):
                 time.sleep(pollDelay)
+                failureCountSinceKill += 1
                 continue
             time.sleep(pollDelay)
             if not self._runSetupCmd(["forward", "tcp:"+str(self._m_port), "tcp:1080"]):
                 time.sleep(pollDelay)
+                failureCountSinceKill += 1
                 continue
             try:
                 self._monkeySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -1242,8 +1246,13 @@ class _AndroidDeviceConnection:
                     self._monkeySocket.settimeout(5.0)
                     return True
             except Exception, e:
-                pass
+                failureCountSinceKill += 1
             time.sleep(pollDelay)
+            if failureCountSinceKill > 2 and tryKillingMonkeyOnFailure > 0:
+                self._runSetupCmd(["shell", "pkill", "monkey"])
+                tryKillingMonkeyOnFailure -= 1
+                failureCountSinceKill = 0
+                time.sleep(pollDelay)
         if self._stopOnError:
             msg = 'Android monkey error: cannot connect to "adb shell monkey --port 1080" to device %s' % (self._serialNumber)
             _adapterLog(msg)
