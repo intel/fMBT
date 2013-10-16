@@ -30,8 +30,11 @@ public:
   Coverage_random(Log&l,Coverage* _parent,float _var,Random* _r): Coverage(l),parent(_parent),var(_var), r(_r) { }
 
   virtual ~Coverage_random() {
+    /* We don't delete parent, because coverage_random is created by
+       heuristic_coverage_random and it handles the deletation.
     if (parent)
       delete parent;
+    */
   }
 
   virtual void push() { 
