@@ -28,12 +28,12 @@ fmbtgti._OCRPREPROCESS = [
 import ctypes
 
 class Screen(fmbtgti.GUITestInterface):
-    def __init__(self):
+    def __init__(self, display=""):
         fmbtgti.GUITestInterface.__init__(self)
-        self.setConnection(X11Connection())
+        self.setConnection(X11Connection(display))
 
 class X11Connection(fmbtgti.GUITestConnection):
-    def __init__(self):
+    def __init__(self, display):
         fmbtgti.GUITestConnection.__init__(self)
         self.libX11 = ctypes.CDLL("libX11.so.6")
         self.libXtst = ctypes.CDLL("libXtst.so.6")
@@ -50,7 +50,14 @@ class X11Connection(fmbtgti.GUITestConnection):
         self._X_CurrentTime  = ctypes.c_ulong(0)
         self._NULL           = ctypes.c_char_p(0)
         self._NoSymbol       = 0
-        self._display        = self.libX11.XOpenDisplay(self._NULL)
+        if display and isinstance(display, str):
+            self._display        = self.libX11.XOpenDisplay(display)
+        elif not display:
+            self._display        = self.libX11.XOpenDisplay(self._NULL)
+        else:
+            raise ValueError('Invalid display: "%s"')
+        if not self._display:
+            raise X11ConnectionError("Cannot connect to X11 display")
         self._current_screen = self.libX11.XDefaultScreen(self._display)
 
         ref                      = ctypes.byref
@@ -79,7 +86,8 @@ class X11Connection(fmbtgti.GUITestConnection):
             '?': "question", '@': "at"}
 
     def __del__(self):
-        self.libX11.XCloseDisplay(self._display)
+        if self._display:
+            self.libX11.XCloseDisplay(self._display)
 
     def _typeChar(self, origChar, press=True, release=True):
         modifiers = []
@@ -168,3 +176,6 @@ class X11Connection(fmbtgti.GUITestConnection):
         commands.getstatusoutput("xwd -root -out '%s.xwd'" % (filename,))
         commands.getstatusoutput("convert '%s.xwd' '%s'" % (filename, filename))
         return True
+
+class FMBTX11Error(Exception): pass
+class X11ConnectionError(Exception): pass
