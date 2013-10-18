@@ -31,26 +31,35 @@ def _adapterLog(msg):
 
 
 class Screen(fmbtgti.GUITestInterface):
-    def __init__(self, host, port=5900):
+    def __init__(self, hostspec, port=5900, password=None):
         fmbtgti.GUITestInterface.__init__(self)
-        self.setConnection(VNCConnection(host, port))
+        self.setConnection(VNCConnection(hostspec, port, password))
 
     def init(self):
         self._conn.init()
 
 
 class VNCConnection(fmbtgti.GUITestConnection):
-    def __init__(self, host, port=5900):
+    def __init__(self, hostspec, port, password):
         fmbtgti.GUITestConnection.__init__(self)
-        self._host = host
-        self._port = port
+        if ":" in hostspec: # host:vncdisplay
+            self._host, display = hostspec.split(":",1)
+            try: self._port = 5900 + int(display)
+            except ValueError:
+                raise VNCConnectionError('Invalid VNC display "%s", use hostspec "host:displaynum"' % (display,))
+        else:
+            self._host = hostspec
+            self._port = port
         self.first_shot = True
         observer = twisted.python.log.PythonLoggingObserver()
         observer.start()
         factory = vncdotool.client.VNCDoToolFactory()
+        factory.password = password
         self.client = vncdotool.api.ThreadedVNCClientProxy(factory)
-        if self.client.connect(self._host, self._port) == None:
-            raise VNCConnectionError('Cannot connect to VNC host "%s" port "%s"' % (self._host, self._port))
+        self.client.connect(self._host, self._port)
+        # todo: detect failed connection
+        # raise VNCConnectionError('Cannot connect to VNC host "%s" port "%s"' % (self._host, self._port))
+        self.client.start()
 
     def init(self):
         return True
