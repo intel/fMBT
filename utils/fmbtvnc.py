@@ -49,8 +49,8 @@ class VNCConnection(fmbtgti.GUITestConnection):
         observer.start()
         factory = vncdotool.client.VNCDoToolFactory()
         self.client = vncdotool.api.ThreadedVNCClientProxy(factory)
-        self.client.connect(self._host, self._port)
-        self.client.start()
+        if self.client.connect(self._host, self._port) == None:
+            raise VNCConnectionError('Cannot connect to VNC host "%s" port "%s"' % (self._host, self._port))
 
     def init(self):
         return True
@@ -82,6 +82,10 @@ class VNCConnection(fmbtgti.GUITestConnection):
     def sendTouchMove(self, x, y):
         self.client.mouseMove(x,y)
 
+    def sendType(self, text):
+        for key in text:
+            self.client.keyPress(key)
+
     def recvScreenshot(self, filename):
         if self.first_shot:
             self.client.captureScreen(filename)
@@ -90,4 +94,7 @@ class VNCConnection(fmbtgti.GUITestConnection):
         return True
 
     def target(self):
-        return "VNC-" + self._host + ":" + str(self._port)
+        return "VNC-" + self._host + "-" + str(self._port)
+
+class FMBTVNCError(Exception): pass
+class VNCConnectionError(Exception): pass
