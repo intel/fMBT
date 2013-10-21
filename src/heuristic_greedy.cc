@@ -35,6 +35,7 @@ Heuristic_greedy::Heuristic_greedy(Log& l,const std::string& params) :
     m_burst = true;
   }
   r = Random::default_random();
+  r->ref();
 }
 
 Heuristic_greedy::~Heuristic_greedy()
