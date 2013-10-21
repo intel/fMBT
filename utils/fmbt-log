@@ -29,10 +29,13 @@ Options:
   -f, --format=<fmt>
           fmt defines output format. Default format is '$ax'.
           Available fields:
+          $ab - action's adapter block execution begin timestamp
+          $ae - action's adapter block execution end timestamp
           $al - adapter log message (timestamp included)
           $aL - adapter log message payload (timestamp removed)
           $am - actions recognised by the model
           $as - action suggested to top-level adapter
+          $at - action's adapter block execution time
           $ax - action actually executed in top-level adapter
           $mc - mapper adapter configuration
           $mn - mapper adapter number
@@ -87,6 +90,26 @@ def TAU_formatter(s):
    if s == "TAU": return "[unidentified action]"
    return s
 
+def time_formatter(s):
+    return _g_time_formatter(s)
+
+def starttime_formatter(s):
+    starttime_formatter.last = float(s)
+    return _g_time_formatter(s)
+
+def endtime_formatter(s):
+    endtime_formatter.last = float(s)
+    return _g_time_formatter(s)
+
+def duration_formatter(s):
+    endtime_formatter(s)
+    if (hasattr(starttime_formatter, "last") and
+        hasattr(endtime_formatter, "last")):
+        duration = endtime_formatter.last - starttime_formatter.last
+    else:
+        duration = float("NaN")
+    return "%.6f" % (duration,)
+
 def remove_preceding_timestamp_formatter(s):
     m = remove_preceding_timestamp_formatter_re.match(s)
     if not m:
@@ -94,12 +117,18 @@ def remove_preceding_timestamp_formatter(s):
     return s[m.end():]
 remove_preceding_timestamp_formatter_re=re.compile('[0-9]+\.[0-9]{4} ')
 
+_g_time_format = None
+_g_time_formatter = identity_formatter
+
 fields = {
+    '$ab' : ['<suggested_action type=', '"', 5, starttime_formatter],
+    '$ae' : ['<action type=', '"', 5, endtime_formatter],
     '$ax' : ['<action type=', '"', 3, TAU_formatter],
     '$as' : ['<suggested_action type=', '"', 3, identity_formatter],
     '$am' : ['<action_name name=', '"', 1, identity_formatter],
     '$al' : ['<remote msg=', '"', 1, identity_formatter],
     '$aL' : ['<remote msg=', '"', 1, remove_preceding_timestamp_formatter],
+    '$at' : ['<action type=', '"', 5, duration_formatter],
     '$ms' : ['<redirect id=', '"', 5, identity_formatter],
     '$mc' : ['<redirect id=', '"', 3, identity_formatter],
     '$mn' : ['<redirect id=', '"', 1, identity_formatter],
@@ -108,7 +137,7 @@ fields = {
     '$eb' : ['<status steps=', '"', 5, already_done_formatter_e],
     '$ec' : ['<status steps=', '"', 5, identity_formatter],
     '$sn' : ['<status steps=', '"', 1, identity_formatter],
-    '$st' : ['<current_time time=', '"', 1, identity_formatter],
+    '$st' : ['<current_time time=', '"', 1, time_formatter],
     '$tg' : ['<tags enabled=', '"', 1, identity_formatter],
     '$tv' : ['<stop verdict=', '"', 1, identity_formatter],
     '$tr' : ['<stop verdict=', '"', 3, identity_formatter],
@@ -205,8 +234,8 @@ if __name__ == '__main__':
         elif opt in ['-s', '--separator']:
             VALUE_SEPARATOR = arg
         elif opt in ['-t', '--time-format']:
-            time_format = arg
-            fields['$st'][3] = lambda s: datetime.datetime.fromtimestamp(float(s)).strftime(time_format)
+            _g_time_format = arg
+            _g_time_formatter = lambda s: datetime.datetime.fromtimestamp(float(s)).strftime(_g_time_format)
         elif opt in ['-o', '--output'] and not arg in ['', '-']:
             output_file_obj = file(arg, 'w')
 
