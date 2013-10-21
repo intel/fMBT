@@ -31,8 +31,14 @@ Options:
               data is sorted by the field ("min", "max", "median",
               "total", "count" or "name").
 
-          speed[:n[,n2...]]    - test step execution speed
+          speed[:n|"include="regex] - test step execution speed
               average execution speed of previous n (n2, ...) steps.
+              If "include="regex is given, then only actions matching
+              regex are included in the results.
+
+          duration[:n|"include="regex] - test step durations
+              the same as "speed", but show duration (s)
+              instead of execution speed (steps/s).
 
           dist[:steps[,"uniq"][,"sort"]] - number of executed steps
               If the steps is "next" or "prev", shows the distribution
@@ -95,6 +101,45 @@ MAXSPEED=100000
 def error(msg):
     sys.stderr.write('fmbt-stats: ' + msg + '\n')
     sys.exit(1)
+
+def read_from_log_duration_execaction(testlog_fileobj, include_regexps = []):
+    cmd = ["fmbt-log","-f","$st $as|FMBT-STATS|$ax"]
+    p = subprocess.Popen(cmd, shell=False, stdin=testlog_fileobj.fileno(), stdout=subprocess.PIPE)
+
+    duration_actionname_list = []
+    prev_timestamp = None
+    try:
+        line = p.stdout.readline()
+        current_action = None
+        current_action_start = None
+        while line:
+            space = line.find(" ")
+            actionname1, actionname2 = line[space+1:-1].split('|FMBT-STATS|')
+            this_timestamp = float(line[:space])
+
+            if current_action:
+                duration_actionname_list.append((this_timestamp - current_action_start, current_action))
+
+            if actionname1 == actionname2:
+                current_action = actionname1
+            else:
+                current_action = "%s => %s" % (actionname1, actionname2)
+
+            current_action_start = this_timestamp
+
+            if include_regexps:
+                for ire in include_regexps:
+                    if ire.match(actionname1) or ire.match(actionname2):
+                        break # match!
+                else:
+                    # include regexps given but none of them match
+                    current_action = None
+            line = p.stdout.readline()
+    except Exception, e:
+        error('invalid line in fmbt-log output: "%s"' % line[:-1])
+
+    if duration_actionname_list == []: error('no data')
+    return duration_actionname_list
 
 def read_from_log_timestamp_execaction(testlog_fileobj):
     cmd = ["fmbt-log","-f","$st $as|FMBT-STATS|$ax"]
@@ -308,15 +353,34 @@ plot [0:%(last_value)s] '%(plot_datafilename)s' using 1:2 with lines
 
         finish_plotting(plot_datafilename, gnuplot_commands)
 
-def stats_speed(arg, testlog_fileobj, output_fileobj, plot_filename):
+def stats_speed(arg, testlog_fileobj, output_fileobj, plot_filename, print_duration=False):
 
-    try: averages = [int(a) for a in arg.split(',')]
-    except: error("syntax error in speed arguments, expected integer[, integer...]")
+    include_regexps = []
+    averages = []
+    for a in arg.split(','):
+        if a.lower().startswith('include='):
+            r = re.compile(a.split('=',1)[1])
+            try:
+                include_regexps.append(r)
+            except:
+                error('syntax error in speed include regular expression "%s"'
+                      % (r,))
+        elif a:
+            try:
+                averages.append(int(a))
+            except ValueError:
+                error('syntax error in speed argument "%s"'
+                      % (a,))
+    if averages == []:
+        averages = [1]
+
+    if print_duration:
+        title = 'Average test step duration [s]'
+    else:
+        title = 'Average execution speed [test steps / s]'
 
     def format_data(out_format, data_speed_columns):
         if len(data_speed_columns) == 0: return []
-        title = 'Average execution speed [test steps / s]'
-
         column_count = len(data_speed_columns[0])
         header_format, datarow_format, footer_format = {}, {}, {}
         header_format['plot'] = '# ' + title + '\n#' + (' '.join(['%11s' for _ in xrange(column_count)])) + '\n'
@@ -339,20 +403,23 @@ def stats_speed(arg, testlog_fileobj, output_fileobj, plot_filename):
         output_table.append(footer_format[out_format])
         return output_table
 
-    timestamp_action_list = read_from_log_timestamp_execaction(testlog_fileobj)
+    timestamp_action_list = read_from_log_duration_execaction(testlog_fileobj, include_regexps)
 
     data = []
-    for i in xrange(min(averages), len(timestamp_action_list)):
-        this_timestamp = timestamp_action_list[i][0]
+    last_durations = [[] for _ in xrange(len(averages))]
+    for i in xrange(len(timestamp_action_list)): # xrange(min(averages), len(timestamp_action_list)):
+        this_duration = timestamp_action_list[i][0]
         data.append([])
-        for avg in averages:
-            if avg > i: avg = i
-            prev_timestamp_avg = timestamp_action_list[i-avg][0]
-            # if timestamps are equal, use MAXSPEED instead of
-            # dividing by zero
-            if (this_timestamp-prev_timestamp_avg) == 0: data[-1].append(MAXSPEED)
-            else: data[-1].append( avg/(this_timestamp-prev_timestamp_avg) )
-
+        for avg_index, avg in enumerate(averages):
+            if len(last_durations[avg_index]) >= avg:
+                last_durations[avg_index].pop(0)
+            last_durations[avg_index].append(this_duration)
+            avg_duration = sum(last_durations[avg_index]) / len(last_durations[avg_index])
+            if print_duration:
+                data[-1].append(avg_duration)
+            else:
+                if avg_duration == 0: data[-1].append(MAXSPEED)
+                else: data[-1].append( 1/avg_duration )
 
     write_output_file(output_fileobj, format_data, data)
 
@@ -365,13 +432,14 @@ def stats_speed(arg, testlog_fileobj, output_fileobj, plot_filename):
                 "'%s' using :%s title \"%s step(s)\"  with lines" % (
                     plot_datafilename, column + 1, averages[column]))
         gnuplot_commands = """
-set ylabel "Average execution speed [test steps / s]"
+set ylabel "%(title)s"
 set xlabel "Test step"
 set log y
 %(plot_term)s
 set grid ytics noxtics
 plot %(plot_columns)s
-""" % { 'plot_term': plot_term,
+""" % { 'title': title,
+        'plot_term': plot_term,
         'plot_filename': plot_filename,
         'plot_columns' : ','.join(plot_columns) }
 
@@ -736,12 +804,13 @@ if __name__ == '__main__':
             param = 'total'
         t = stats_times(param, testlog_fileobj, output_fileobj, plot_filename)
 
-    elif output_format.startswith('speed'):
+    elif output_format.startswith('speed') or output_format.startswith("duration"):
         if ':' in output_format:
             param = output_format.split(':',1)[1]
         else:
             param = '1'
-        t = stats_speed(param, testlog_fileobj, output_fileobj, plot_filename)
+        print_duration = output_format.startswith("duration")
+        t = stats_speed(param, testlog_fileobj, output_fileobj, plot_filename, print_duration)
 
     elif output_format.startswith('dist'):
         if ':' in output_format:
