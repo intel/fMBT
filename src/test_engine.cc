@@ -114,7 +114,9 @@ Test_engine::~Test_engine()
 namespace {
   /* logging helpers */
   void log_tag_type_name(Log& log, const char *tag, const char *type, const char *name) {
-    log.print("<%s type=\"%s\" name=\"%s\"/>\n", tag, type, name);
+    gettime(&Adapter::current_time);
+    log.print("<%s type=\"%s\" name=\"%s\" time=\"%i.%06i\"/>\n", tag, type,
+	      name,Adapter::current_time.tv_sec,Adapter::current_time.tv_usec);
   }
   void log_adapter_suggest(Log& log, Adapter& adapter, int action) {
     log_tag_type_name(log, "suggested_action", "input", adapter.getUActionName(action));
