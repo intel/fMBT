@@ -325,6 +325,23 @@ void aalang_py::set_guard(std::string* gua,const char* file,int line,int col)
 }
 
 void aalang_py::parallel(bool start,std::list<std::string>* __params) {
+  bool single=false;
+
+  /* debug... print params  */
+  if (__params) {
+    std::list<std::string>::iterator b=
+      __params->begin();
+    std::list<std::string>::iterator e=
+      __params->end();
+    
+    for(std::list<std::string>::iterator i=b;i!=e;i++) {
+      if (*i == "single") {
+	single=true;
+      }
+    }
+  } else {
+  }
+
   if (start) {
     serial_stack.push_back(-serial_cnt); // parallel is negative
     std::string sNg =
@@ -339,9 +356,13 @@ void aalang_py::parallel(bool start,std::list<std::string>* __params) {
       "        " + serialN("guard", true) + "_next_block.remove("
       "upper)\n"
       "        if not " + serialN("guard", true) + "_next_block:\n" +
-      "            " + serialN("guard", true) + "_next_block = set(" +
-      serialN("guard", true) + ".blocks)\n"
-      ;
+      "            " + serialN("guard", true) + "_next_block";
+
+    if (single) {
+      s += " = set([])\n";
+    } else {
+      s += " = set(" + serialN("guard", true) + ".blocks)\n";
+    }
     if (serial_stack.size() > 1 && serial_stack.back() != 0) {
       // nested block:
       // - if all subblocks were executed, notify outer block
