@@ -27,8 +27,9 @@ pkginclude_HEADERS = adapter.hh factory.hh writable.hh log.hh aal.hh model.hh aw
 noinst_HEADERS += conf.g lts.g mrules.g covlang.g xrules.g lang.g uconf.g filter.g weight.g set.g paths.g
 
 noinst_HEADERS += Android.mk Application.mk
-
+if RDRND
 AM_CXXFLAGS = -mrdrnd
+endif
 
 fmbt_CPPFLAGS                  = -Wall -pedantic -fPIC -I ./d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) $(XML2_CFLAGS)  $(JVMCFLAGS) $(FMBTBUILDINFOCFLAGS)
 fmbt_ucheck_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) $(XML2_CFLAGS) $(FMBTBUILDINFOCFLAGS)
@@ -47,7 +48,7 @@ fmbt_cparsers_la_LDFLAGS       = -g $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS)
 eye4graphics_la_LDFLAGS        = -g $(MAGIC_LIBS) -avoid-version -module -shared
 remote_adapter_loader_LDFLAGS  = -g -ldl $(GLIB_LIBS)
 fmbt_aalc_LDFLAGS	       = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) -lboost_regex -Wl,-E -ldl
-fmbt_aalp_LDFLAGS	       = -g $(GLIB_LIBS)
+fmbt_aalp_LDFLAGS	       = -g $(GLIB_LIBS) -lboost_regex -ldl
 fmbt_log2lsts_LDFLAGS 	       = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E -ldl
 
 fmbt_LDADD                     = d/libdparse.a

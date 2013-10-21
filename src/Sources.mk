@@ -6,7 +6,11 @@ LOCAL_COVERAGES = coverage.cc coverage_exec_filter.cc coverage_mapper.cc coverag
 
 LOCAL_MODELS = model.cc mwrapper.cc lts.cc model_lib.cc model_yes.cc
 
-COMMON_SOURCES = fmbt.cc test_engine.cc log.cc helper.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc  $(LOCAL_ADAPTERS) $(LOCAL_HEURISTICS) $(LOCAL_COVERAGES) $(LOCAL_MODELS) conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc alg_bdfs.cc history.cc end_condition.cc null.cc aal.cc endhook.cc coverage_of.cc  random.cc random_c.cc random_intel_hw.cc function.cc function_pid.cc function_const.cc function_time.cc params.cc
+COMMON_SOURCES = fmbt.cc test_engine.cc log.cc helper.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc  $(LOCAL_ADAPTERS) $(LOCAL_HEURISTICS) $(LOCAL_COVERAGES) $(LOCAL_MODELS) conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc alg_bdfs.cc history.cc end_condition.cc null.cc aal.cc endhook.cc coverage_of.cc  random.cc random_c.cc function.cc function_pid.cc function_const.cc function_time.cc params.cc
+
+if RDRND
+COMMON_SOURCES += random_intel_hw.hh
+endif
 
 fmbt_SOURCES                  = $(COMMON_SOURCES) adapter_dlopen.cc adapter_remote.cc lts_remote.cc lts_trace.cc xrules_remote.cc coverage_shared.cc coverage_tema_seq.cc history_remote.cc model_remote.cc aal_java.cc aal_remote.cc history_log.cc history_multi.cc history_glob.cc
 
@@ -22,6 +26,6 @@ fmbt_cparsers_la_SOURCES      = xrules.g.d_parser.cc lts.g.d_parser.cc helper.cc
 
 eye4graphics_la_SOURCES       = eye4graphics.cc
 
-fmbt_aalp_SOURCES = aalp.ll
+fmbt_aalp_SOURCES = aalp.ll helper.cc params.cc log.cc
 
 fmbt_log2lsts_SOURCES = log2lsts.cc lts.cc model.cc log.cc coverage.cc lts.g.d_parser.cc history.cc helper.cc history_log.cc model_yes.cc params.cc

@@ -21,6 +21,10 @@ PKG_CHECK_MODULES([LIBEDIT], [libedit], [],
 
 AC_CHECK_LIB([rt], [clock_gettime])
 
+AC_ARG_ENABLE(rdrnd, AC_HELP_STRING([--enable-rdrnd],
+    [enable intel hw random]), [enable_rdrnd=${enableval}])
+AM_CONDITIONAL(RDRND, test "${enable_rdrnd}" = "yes")
+
 AC_ARG_ENABLE(android, AC_HELP_STRING([--enable-android],
     [enable building fmbt_droid]), [enable_android=${enableval}])
 AM_CONDITIONAL(ANDROID, test "${enable_android}" = "yes")
