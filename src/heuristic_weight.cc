@@ -46,6 +46,7 @@ Heuristic_weight::Heuristic_weight(Log& l,const std::string& params) :
       status=false;
       errormsg="Can't create random "+subs[1];
     } else {
+      r->ref();
       if (!r->status) {
 	status=false;
 	errormsg=r->errormsg;
@@ -56,6 +57,7 @@ Heuristic_weight::Heuristic_weight(Log& l,const std::string& params) :
   case 1:
     prm=subs[0];
     r=Random::default_random();
+    r->ref();
     break;
   default:
     status=false;
