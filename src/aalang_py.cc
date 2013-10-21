@@ -318,7 +318,7 @@ void aalang_py::next_tag()
 void aalang_py::set_guard(std::string* gua,const char* file,int line,int col)
 {
   std::string tmp=*gua;
-  if (gua!=&default_guard) 
+  if (gua!=&default_guard)
     delete gua;
   default_if_empty(tmp, "return True");
   m_guard = codefileline(tmp,fileline(file,line));
@@ -333,7 +333,7 @@ void aalang_py::parallel(bool start,std::list<std::string>* __params) {
       __params->begin();
     std::list<std::string>::iterator e=
       __params->end();
-    
+
     for(std::list<std::string>::iterator i=b;i!=e;i++) {
       if (*i == "single") {
 	single=true;
@@ -359,7 +359,7 @@ void aalang_py::parallel(bool start,std::list<std::string>* __params) {
       "            " + serialN("guard", true) + "_next_block";
 
     if (single) {
-      s += " = set([])\n";
+      s += " = set()\n";
     } else {
       s += " = set(" + serialN("guard", true) + ".blocks)\n";
     }
@@ -404,7 +404,7 @@ void aalang_py::serial(bool start,std::list<std::string>* __params) {
       __params->begin();
     std::list<std::string>::iterator e=
       __params->end();
-    
+
     for(std::list<std::string>::iterator i=b;i!=e;i++) {
       if (*i == "single") {
 	single=true;
@@ -426,7 +426,7 @@ void aalang_py::serial(bool start,std::list<std::string>* __params) {
       "        if not " + serialN("guard", true) + "_next_block:\n"
       "            " + serialN("guard", true) + "_next_block";
     if (single) {
-      s += ".insert(0,None)";
+      s += ".append(None)\n";
     } else {
       s += " = " + serialN("guard", true) + ".blocks[::-1]\n";
     }
@@ -572,19 +572,19 @@ void aalang_py::next_action()
 
 std::string aalang_py::stringify()
 {
-  s += indent(4,"\n    def adapter_init():\n") + "\n" + 
+  s += indent(4,"\n    def adapter_init():\n") + "\n" +
     indent(8,"for x in "+class_name()+".adapter_init_list:\n"
 	   "    ret = x()\n"
 	   "    if not ret and ret != None:\n"
 	   "        return ret\n"
 	   "return True\n") + "\n" +
-    indent(4,"\n    def initial_state():\n") + "\n" + 
+    indent(4,"\n    def initial_state():\n") + "\n" +
     indent(8,"for x in "+class_name()+".initial_state_list:\n"
 	   "    ret = x()\n"
 	   "    if not ret and ret != None:\n"
 	   "        return ret\n"
 	   "return True\n") +"\n" +
-    indent(4,"\n    def adapter_exit(verdict,reason):\n") + "\n" + 
+    indent(4,"\n    def adapter_exit(verdict,reason):\n") + "\n" +
     indent(8,"for x in "+class_name()+".adapter_exit_list:\n"
 	   "    ret = x(verdict,reason)\n"
 	   "    if not ret and ret != None:\n"
