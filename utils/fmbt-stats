@@ -103,37 +103,32 @@ def error(msg):
     sys.exit(1)
 
 def read_from_log_duration_execaction(testlog_fileobj, include_regexps = []):
-    cmd = ["fmbt-log","-f","$st $as|FMBT-STATS|$ax"]
+    cmd = ["fmbt-log","-f","$at $as|FMBT-STATS|$ax"]
     p = subprocess.Popen(cmd, shell=False, stdin=testlog_fileobj.fileno(), stdout=subprocess.PIPE)
 
     duration_actionname_list = []
-    prev_timestamp = None
     try:
         line = p.stdout.readline()
-        current_action = None
-        current_action_start = None
         while line:
             space = line.find(" ")
             actionname1, actionname2 = line[space+1:-1].split('|FMBT-STATS|')
-            this_timestamp = float(line[:space])
-
-            if current_action:
-                duration_actionname_list.append((this_timestamp - current_action_start, current_action))
+            this_duration = float(line[:space])
 
             if actionname1 == actionname2:
                 current_action = actionname1
             else:
                 current_action = "%s => %s" % (actionname1, actionname2)
 
-            current_action_start = this_timestamp
-
+            skip_this_action = False
             if include_regexps:
                 for ire in include_regexps:
                     if ire.match(actionname1) or ire.match(actionname2):
                         break # match!
                 else:
                     # include regexps given but none of them match
-                    current_action = None
+                    skip_this_action = True
+            if not skip_this_action:
+                duration_actionname_list.append((this_duration, current_action))
             line = p.stdout.readline()
     except Exception, e:
         error('invalid line in fmbt-log output: "%s"' % line[:-1])
