@@ -31,25 +31,34 @@ def _adapterLog(msg):
 
 
 class Screen(fmbtgti.GUITestInterface):
-    def __init__(self, host, port=5900):
+    def __init__(self, hostspec, port=5900, password=None):
         fmbtgti.GUITestInterface.__init__(self)
-        self.setConnection(VNCConnection(host, port))
+        self.setConnection(VNCConnection(hostspec, port, password))
 
     def init(self):
         self._conn.init()
 
 
 class VNCConnection(fmbtgti.GUITestConnection):
-    def __init__(self, host, port=5900):
+    def __init__(self, hostspec, port, password):
         fmbtgti.GUITestConnection.__init__(self)
-        self._host = host
-        self._port = port
+        if ":" in hostspec: # host:vncdisplay
+            self._host, display = hostspec.split(":",1)
+            try: self._port = 5900 + int(display)
+            except ValueError:
+                raise VNCConnectionError('Invalid VNC display "%s", use hostspec "host:displaynum"' % (display,))
+        else:
+            self._host = hostspec
+            self._port = port
         self.first_shot = True
         observer = twisted.python.log.PythonLoggingObserver()
         observer.start()
         factory = vncdotool.client.VNCDoToolFactory()
+        factory.password = password
         self.client = vncdotool.api.ThreadedVNCClientProxy(factory)
         self.client.connect(self._host, self._port)
+        # todo: detect failed connection
+        # raise VNCConnectionError('Cannot connect to VNC host "%s" port "%s"' % (self._host, self._port))
         self.client.start()
 
     def init(self):
@@ -82,6 +91,10 @@ class VNCConnection(fmbtgti.GUITestConnection):
     def sendTouchMove(self, x, y):
         self.client.mouseMove(x,y)
 
+    def sendType(self, text):
+        for key in text:
+            self.client.keyPress(key)
+
     def recvScreenshot(self, filename):
         if self.first_shot:
             self.client.captureScreen(filename)
@@ -90,4 +103,7 @@ class VNCConnection(fmbtgti.GUITestConnection):
         return True
 
     def target(self):
-        return "VNC-" + self._host + ":" + str(self._port)
+        return "VNC-" + self._host + "-" + str(self._port)
+
+class FMBTVNCError(Exception): pass
+class VNCConnectionError(Exception): pass
