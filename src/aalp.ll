@@ -13,6 +13,12 @@
 #include <libgen.h> // dirname
 #include <glib.h>
 
+#include <unistd.h>
+#include "helper.hh"
+#include "log_null.hh"
+
+Log_null lokki;
+
 std::list<std::string> include_path;
 std::list<YY_BUFFER_STATE> istack;
 std::list<int> lstack;
@@ -34,22 +40,6 @@ enum {
 
 int state=NONE;
 std::stack<bool> echo_stack;
-
-void clear_whitespace(std::string& s){
-  std::string white (" \t\f\v\n\r"); /* more whilespace? */
-  size_t pos;
-
-  pos=s.find_last_not_of(white);
-  if (pos==std::string::npos) {
-    s.clear();
-  } else {
-    s.erase(pos+1);
-    pos=s.find_first_not_of(white);
-    if (pos!=std::string::npos) {
-      s=s.substr(pos);
-    }
-  }
-}
 
 bool inc_split(std::string& s) {
   bool ret=true;
@@ -125,6 +115,47 @@ FILE* include_search_open(std::string& f) {
     include_path.push_back(ss);
   }
   return st;
+}
+
+gint d_in=0,d_out=0,d_err=0;
+GIOChannel *c_in=NULL,*c_out=NULL,*c_err=NULL;
+char* python_block(const char* input,FILE* yyout) {
+  int status;
+  GError* er=NULL;
+  char* r=NULL;
+  gsize len;
+  gsize t_pos;
+  if (!c_in) {
+    gint argc=0;
+    GError *gerr=NULL;
+    gchar **argv = NULL; 
+    g_shell_parse_argv("aalp_helper.py",&argc,&argv,&gerr);
+
+    g_spawn_async_with_pipes(NULL,argv,NULL,(GSpawnFlags)(G_SPAWN_SEARCH_PATH|G_SPAWN_DO_NOT_REAP_CHILD),NULL,NULL,NULL,&d_in,&d_out,&d_err,&er);
+    
+    if (er) {
+      printf("ERROR:%s\n",er->message);
+      exit(1);
+    }
+    
+    if (d_in) {
+      c_in=g_io_channel_unix_new(d_in);
+      c_out=g_io_channel_unix_new(d_out);
+      c_err=g_io_channel_unix_new(d_err);
+
+      g_io_channel_set_encoding(c_in,NULL,NULL);
+      g_io_channel_set_encoding(c_out,NULL,NULL);
+    }
+  }
+
+  len=-1;
+
+  fprintf(c_in,"%s\n",input+2);
+  g_io_channel_flush(c_in,NULL);
+
+  bgetline(&r,&len,c_out,lokki,false);
+
+  return r;
 }
 
 %}
@@ -234,6 +265,10 @@ FILE* include_search_open(std::string& f) {
   BEGIN 0;
 }
 
+^#\[[^\n]+ {
+  fprintf(yyout,"%s",python_block(yytext,yyout));
+}
+
 [^\n] {
   if (echo)
      fprintf(yyout,"%c",  yytext[0]);
@@ -287,19 +322,6 @@ void print_usage()
     );
 }
 
-void strvec(std::vector<std::string>& v,std::string& s,
-            const std::string& separator)
-{
-  unsigned long cutpos;
-
-  while ((cutpos=s.find_first_of(separator))!=s.npos) {
-    std::string a=s.substr(0,cutpos);
-    v.push_back(a);
-    s=s.substr(cutpos+1);
-  }
-
-  v.push_back(s);
-}
 
 void include_path_append(const char* path) {
   if (path) {
