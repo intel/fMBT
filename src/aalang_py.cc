@@ -374,6 +374,23 @@ void aalang_py::parallel(bool start,std::list<std::string>* __params) {
 }
 
 void aalang_py::serial(bool start,std::list<std::string>* __params) {
+
+  bool single=false;
+
+  /* debug... print params  */
+  if (__params) {
+    std::list<std::string>::iterator b=
+      __params->begin();
+    std::list<std::string>::iterator e=
+      __params->end();
+    
+    for(std::list<std::string>::iterator i=b;i!=e;i++) {
+      if (*i == "single") {
+	single=true;
+      }
+    }
+  } else {
+  }
   if (start) {
     serial_stack.push_back(serial_cnt);
     s += "\n"
@@ -386,9 +403,12 @@ void aalang_py::serial(bool start,std::list<std::string>* __params) {
       "    def " + serialN("step") + "(self, upper):\n"
       "        " + serialN("guard", true) + "_next_block.pop()\n"
       "        if not " + serialN("guard", true) + "_next_block:\n"
-      "            " + serialN("guard", true) + "_next_block = " +
-      serialN("guard", true) + ".blocks[::-1]\n"
-      ;
+      "            " + serialN("guard", true) + "_next_block";
+    if (single) {
+      s += ".insert(0,None)";
+    } else {
+      s += " = " + serialN("guard", true) + ".blocks[::-1]\n";
+    }
     if (serial_stack.size() > 1 && serial_stack.back() != 0) {
       // nested block:
       // - if all subblocks were executed, notify outer block

@@ -28,7 +28,7 @@ std::string result("");
 
 typedef struct _node {
   std::string* str;
-  std::list<std::string> params;
+  std::list<std::string>* params;
 } node;
 #ifdef D_ParseNode_User
 #undef D_ParseNode_User
@@ -129,21 +129,22 @@ header: variables | ainit | aexit | istate | push | pop | comment ;
 
 comment: '#' "[^\n]*" { } ;
 
-params: | '(' paramlist ')' ;
+params: { $$.params = NULL; } | '(' paramlist ')' { $$.params=$1.params; } ;
 
-paramlist: string {
-            $$.params.push_back(*$0.str);
+paramlist: pstring {
+            $$.params = new std::list<std::string>;
+            $$.params->push_back(*$0.str);
             delete $0.str;
-        } | paramlist ',' string {
-            $0.params.push_back(*$2.str);
+        } | paramlist ',' pstring {
+            $0.params->push_back(*$2.str);
             $$.params = $0.params;
             delete $2.str;
         } ;
 
 parser: parallel | serial ;
 
-serial_start: 'serial' params { obj->serial(true,& $1.params); } ;
-parallel_start: 'parallel' params { obj->parallel(true,& $1.params); } ;
+serial_start: 'serial' params { obj->serial(true, $1.params); } ;
+parallel_start: 'parallel' params { obj->parallel(true, $1.params); } ;
 
 spinc: (comment)* ( act | tag | parser ) ( act | tag | parser | header )* ;
 
@@ -326,4 +327,8 @@ bstr: (${scan bstr_scan(ops,ops_cache)})* {
             } ;
 
 string: "\"([^\"\\]|\\[^])*\"" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2);
+        };
+
+pstring: "[a-zA-Z]+" { 
+            $$.str = new std::string($n0.start_loc.s,$n0.end-$n0.start_loc.s);
         };
