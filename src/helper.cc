@@ -561,7 +561,7 @@ ssize_t nonblock_getline(char **lineptr, size_t *n,
 
   if (*lineptr) {
     g_free(*lineptr);
-    *lineptr=NULL; 
+    *lineptr=NULL;
     *n=0;
   }
 
@@ -590,10 +590,10 @@ ssize_t getline(char **lineptr, size_t *n, GIOChannel *stream)
 
   if (*lineptr) {
     g_free(*lineptr);
-    *lineptr=NULL; 
+    *lineptr=NULL;
     *n=0;
   }
-  
+
   do {
     status=g_io_channel_read_line(stream,lineptr,&si,&ret,NULL);
     *n=si;
@@ -691,6 +691,7 @@ ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,bool ma
   ssize_t ret;
   int loopc=0;
   bool log_redirect;
+  bool sensible_line;
 
   g_io_channel_set_line_term(stream,NULL,-1);
 
@@ -699,11 +700,12 @@ ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,bool ma
 
     if (*lineptr) {
       g_free(*lineptr);
-      *lineptr=NULL; 
+      *lineptr=NULL;
       *n=0;
     }
 
     log_redirect = false;
+    sensible_line = false;
     GIOStatus status;
     gsize si;
     do {
@@ -718,6 +720,7 @@ ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,bool ma
       ret=-1;
     } else {
       if (si) {
+        sensible_line = true;
 	log.debug("We have %s",*lineptr);
 
 	if ((*lineptr)[si-1]==0x0d || (*lineptr)[si-1]==0x0a) {
@@ -736,7 +739,7 @@ ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,bool ma
     }
 
 
-    if (ret && ret != -1) {
+    if (sensible_line) {
       if (magic && strncmp(*lineptr,"fmbtmagic",9)!=0) {
 	// We have something to stdout
 	fprintf(stdout,"%s\n",*lineptr);
