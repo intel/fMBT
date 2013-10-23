@@ -130,6 +130,10 @@ Requires: %{name}-python
 Provides fmbttizen.py, a Python library for Tizen GUI testing.
 The library needs Smart Development Bridge (sdb) from Tizen SDK.
 
+%description adapter-vnc
+Provides fmbtvnc.py, a Python library for GUI testing through VNC.
+The library needs vncdotool.
+
 %package adapter-x11
 Summary: fMBT adapter for Tizen GUI testing through USB
 Requires: %{name}-adapter-eyenfinger
@@ -255,6 +259,10 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %defattr(-, root, root, -)
 %{python_sitelib}/fmbttizen.py*
 %{python_sitelib}/fmbttizen-agent.py*
+
+%files adapter-vnc
+%defattr(-, root, root, -)
+%{python_sitelib}/fmbtvnc.py*
 
 %files adapter-x11
 %defattr(-, root, root, -)
