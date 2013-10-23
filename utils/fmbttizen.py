@@ -388,7 +388,7 @@ class Device(fmbtgti.GUITestInterface):
                   inactivity time in seconds after which the backlight
                   will be switched off.
         """
-        return self._conn.setDisplayBacklightTime(timeout)
+        return self._conn.sendDisplayBacklightTime(timeout)
 
     def shell(self, shellCommand):
         """
@@ -484,15 +484,16 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
         self.close()
 
     def open(self):
+        if self._serialNumber == "unknown":
+            raise TizenDeviceNotFoundError("Tizen device not found.")
+
         self.close()
 
-        agentFilename = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) + \
-                        "/" + "fmbttizen-agent.py"
+        agentFilename = os.path.join(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))),
+                                     "fmbttizen-agent.py")
         agentRemoteFilename = "/tmp/fmbttizen-agent.py"
 
         uploadCmd = ["sdb", "-s", self._serialNumber, "push", agentFilename, agentRemoteFilename]
-        if self._serialNumber == "unknown":
-            raise TizenDeviceNotFoundError("Tizen device not found.")
 
         status, out, err = _run(uploadCmd, range(256))
         if status == 127:
@@ -611,16 +612,7 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
     def sendType(self, string):
         return self._agentCmd("kt %s" % (base64.b64encode(cPickle.dumps(string))))[0]
 
-    def setDisplayBacklightTime(self, timeout):
-        """
-        Set time the LCD backlight will be kept on.
-
-        Parameters:
-
-          timeout (integer):
-                  inactivity time in seconds after which the backlight
-                  will be switched off.
-        """
+    def sendDisplayBacklightTime(self, timeout):
         return self._agentCmd("bl %s" % (timeout,))[0]
 
     def recvScreenshot(self, filename, blankFrameRetry=3):

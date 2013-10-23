@@ -254,6 +254,7 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %files adapter-tizen
 %defattr(-, root, root, -)
 %{python_sitelib}/fmbttizen.py*
+%{python_sitelib}/fmbttizen-agent.py*
 
 %files adapter-x11
 %defattr(-, root, root, -)

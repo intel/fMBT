@@ -403,7 +403,7 @@ def shellSOE(command, asyncStatus, asyncOut, asyncError):
         out, err = p.communicate()
     else:
         # asynchronous execution, store status to file
-        statusFile.write(str(p.wait()) + "\\n")
+        statusFile.write(str(p.wait()) + "\n")
         statusFile.close()
         out, err = None, None
     return True, (p.returncode, out, err)
