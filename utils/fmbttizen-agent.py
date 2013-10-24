@@ -163,10 +163,17 @@ elif 'mxt224_key_0' in devices:
 else:
     # Unknown platform, guessing best possible defaults
     _d = devices.split("\n\n")
-    try: power_devname = re.findall('Name=\"([^"]*)\"', [i for i in _d if "power" in i.lower()][0])
-    except IndexError: power_devname = "gpio-keys"
-    try: touch_device = re.findall('[ =](event[0-9]+)\s',  [i for i in _d if "touch" in i.lower()][0])
-    except IndexError: touch_device = "/dev/input/event0"
+    try:
+        power_devname = re.findall('Name=\"([^"]*)\"', [i for i in _d if "power" in i.lower()][0])[0]
+    except IndexError:
+        power_devname = "gpio-keys"
+    try:
+        touch_device = "/dev/input/" + re.findall('[ =](event[0-9]+)\s',  [i for i in _d if "touch" in i.lower()][0])[0]
+    except IndexError:
+        try:
+            touch_device = "/dev/input/" + re.findall('[ =](event[0-9]+)\s',  [i for i in _d if "mouse0" in i.lower()][0])[0]
+        except IndexError:
+            touch_device = "/dev/input/event0"
     hwKeyDevice = {
         "POWER": power_devname,
         "VOLUMEUP": "gpio-keys",
@@ -179,7 +186,7 @@ else:
 
 # Read input devices
 deviceToEventFile = {}
-for _l in file("/proc/bus/input/devices"):
+for _l in devices.splitlines():
     if _l.startswith('N: Name="'): _device = _l.split('"')[1]
     elif _l.startswith("H: Handlers=") and "event" in _l:
         try: deviceToEventFile[_device] = "/dev/input/" + re.findall("(event[0-9]+)", _l)[0]
