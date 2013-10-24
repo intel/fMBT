@@ -115,6 +115,8 @@ _ABS_MT_TRACKING_ID = 0x39
 # for pressing hardware keys.
 try: cpuinfo = file("/proc/cpuinfo").read()
 except: cpuinfo = ""
+try: devices = file("/proc/bus/input/devices").read()
+except: devices = ""
 
 if 'TRATS' in cpuinfo:
     # Running on Lunchbox
@@ -138,7 +140,17 @@ elif 'QEMU Virtual CPU' in cpuinfo:
     _inputKeyNameToCode["HOME"] = 139
     if iAmRoot:
         mtInputDevFd = os.open("/dev/input/event2", os.O_WRONLY | os.O_NONBLOCK)
-else:
+elif 'Synaptics_RMI4_touchkey' in devices:
+    # Running on Geek
+    hwKeyDevice = {
+        "POWER": "mid_powerbtn",
+        "VOLUMEUP": "gpio-keys",
+        "VOLUMEDOWN": "gpio-keys",
+        "HOME": "Synaptics_RMI4_touchkey"
+        }
+    if iAmRoot:
+        mtInputDevFd = os.open("/dev/input/event1", os.O_WRONLY | os.O_NONBLOCK)
+elif 'mxt224_key_0' in devices:
     # Running on Blackbay
     hwKeyDevice = {
         "POWER": "msic_power_btn",
@@ -148,6 +160,22 @@ else:
         }
     if iAmRoot:
         mtInputDevFd = os.open("/dev/input/event0", os.O_WRONLY | os.O_NONBLOCK)
+else:
+    # Unknown platform, guessing best possible defaults
+    _d = devices.split("\n\n")
+    try: power_devname = re.findall('Name=\"([^"]*)\"', [i for i in _d if "power" in i.lower()][0])
+    except IndexError: power_devname = "gpio-keys"
+    try: touch_device = re.findall('[ =](event[0-9]+)\s',  [i for i in _d if "touch" in i.lower()][0])
+    except IndexError: touch_device = "/dev/input/event0"
+    hwKeyDevice = {
+        "POWER": power_devname,
+        "VOLUMEUP": "gpio-keys",
+        "VOLUMEDOWN": "gpio-keys",
+        "HOME": "gpio-keys"
+        }
+    if iAmRoot:
+        mtInputDevFd = os.open(touch_device, os.O_WRONLY | os.O_NONBLOCK)
+    del _d
 
 # Read input devices
 deviceToEventFile = {}
