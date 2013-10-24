@@ -18,6 +18,11 @@
  */
 
 #ifndef __FUNCTION_HH__
+#define __FUNCTION_HH__
+
+#undef FACTORY_CREATOR_PARAMS
+#undef FACTORY_CREATOR_PARAMS2
+#undef FACTORY_CREATE_PARAMS
 
 #define FACTORY_CREATOR_PARAMS std::string params
 #define FACTORY_CREATOR_PARAMS2 params
