@@ -224,7 +224,7 @@ def specialCharToXString(c):
     c2s = {'\n': "Return",
            ' ': "space", '!': "exclam", '"': "quotedbl",
            '#': "numbersign", '$': "dollar", '%': "percent",
-           '&': "ambersand", "'": "apostrophe",
+           '&': "ampersand", "'": "apostrophe",
            '(': "parenleft", ')': "parenright", '*': "asterisk",
            '+': "plus", '-': "minus", '.': "period", '/': "slash",
            ':': "colon", ';': "semicolon", '<': "less", '=': "equal",

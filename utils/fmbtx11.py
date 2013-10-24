@@ -75,7 +75,7 @@ class X11Connection(fmbtgti.GUITestConnection):
             '\n': "Return", '\\': "backslash",
             ' ': "space", '_': "underscore", '!': "exclam", '"': "quotedbl",
             '#': "numbersign", '$': "dollar", '%': "percent",
-            '&': "ambersand", "'": "apostrophe",
+            '&': "ampersand", "'": "apostrophe",
             '(': "parenleft", ')': "parenright",
             '[': "bracketleft", ']': "bracketright",
             '{': "braceleft", '}': "braceright",
