@@ -321,6 +321,12 @@ parallel {
     }
 }
 
+Serial and parallel blocks can be parameterised. Parameters:
+
+single          block can be executed at most once.
+
+                Example: serial(single) { input "x" {} }
+
 
 AAL/Python tools
 ----------------
