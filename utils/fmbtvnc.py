@@ -95,34 +95,43 @@ class VNCConnection(fmbtgti.GUITestConnection):
 
     def close(self):
         self.client.close()
+        return True
 
     def sendPress(self, key):
         self.client.keyPress(key)
+        return True
 
     def sendKeyDown(self,key):
         self.client.keyDown(key)
+        return True
 
     def sendKeyUp(self,key):
         self.client.keyUp(key)
+        return True
 
     def sendTouchDown(self, x, y):
         self.client.mouseMove(x,y)
         self.client.mouseDown(1)
+        return True
 
     def sendTouchUp(self, x, y):
         self.client.mouseMove(x,y)
         self.client.mouseUp(1)
+        return True
 
     def sendTap(self,x,y):
         self.client.mouseMove(x,y)
         self.client.mousePress(1)
+        return True
 
     def sendTouchMove(self, x, y):
         self.client.mouseMove(x,y)
+        return True
 
     def sendType(self, text):
         for key in text:
             self.client.keyPress(key)
+        return True
 
     def recvScreenshot(self, filename):
         if self._updatedImage:
