@@ -526,6 +526,14 @@ if __name__ == "__main__":
                 except Exception, e: write_response(False, e)
             else:
                 write_response(*subAgentCommand("root", "tizen", cmd))
+        elif cmd.startswith("gd"):   # get display status
+            try:
+                p = subprocess.Popen(['/usr/bin/xset', 'q'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                out, err = p.communicate()
+                if "Monitor is Off" in out: write_response(True, "Off")
+                elif "Monitor is On" in out: write_response(True, "On")
+                else: write_response(False, err)
+            except Exception, e: write_response(False, e)
         elif cmd.startswith("tm "):   # touch move(x, y)
             xs, ys = cmd[3:].strip().split()
             libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
