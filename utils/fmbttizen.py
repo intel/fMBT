@@ -165,6 +165,12 @@ class Device(fmbtgti.GUITestInterface):
         else:
             return False
 
+    def displayStatus(self):
+        """
+        Returns status of device display, "On" or "Off".
+        """
+        return self._conn.recvDisplayStatus()
+
     def pinch(self, (x, y), startDistance, endDistance,
               finger1Dir=90, finger2Dir=270, duration=1.0, movePoints=20,
               sleepBeforeMove=0, sleepAfterMove=0):
@@ -614,6 +620,12 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
 
     def sendDisplayBacklightTime(self, timeout):
         return self._agentCmd("bl %s" % (timeout,))[0]
+
+    def recvDisplayStatus(self):
+        status = self._agentCmd("gd")
+        if status[0] == False:
+            raise FMBTTizenError("Error reading display status '%s'" % (status[2],))
+        return status[1]
 
     def recvScreenshot(self, filename, blankFrameRetry=3):
         if blankFrameRetry > 5:
