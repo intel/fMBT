@@ -30,41 +30,46 @@ import termios
 
 iAmRoot = (os.getuid() == 0)
 
-libc           = ctypes.CDLL("libc.so.6")
-libX11         = ctypes.CDLL("libX11.so.6")
-libXtst        = ctypes.CDLL("libXtst.so.6")
+try:
+    libc           = ctypes.CDLL("libc.so.6")
+    libX11         = ctypes.CDLL("libX11.so.6")
+    libXtst        = ctypes.CDLL("libXtst.so.6")
+    g_Xavailable = True
+except OSError:
+    g_Xavailable = False
 
-class XImage(ctypes.Structure):
-    _fields_ = [
-        ('width'            , ctypes.c_int),
-        ('height'           , ctypes.c_int),
-        ('xoffset'          , ctypes.c_int),
-        ('format'           , ctypes.c_int),
-        ('data'             , ctypes.c_void_p),
-        ('byte_order'       , ctypes.c_int),
-        ('bitmap_unit'      , ctypes.c_int),
-        ('bitmap_bit_order' , ctypes.c_int),
-        ('bitmap_pad'       , ctypes.c_int),
-        ('depth'            , ctypes.c_int),
-        ('bytes_per_line'   , ctypes.c_int),
-        ('bits_per_pixel'   , ctypes.c_int)]
+if g_Xavailable:
+    class XImage(ctypes.Structure):
+        _fields_ = [
+            ('width'            , ctypes.c_int),
+            ('height'           , ctypes.c_int),
+            ('xoffset'          , ctypes.c_int),
+            ('format'           , ctypes.c_int),
+            ('data'             , ctypes.c_void_p),
+            ('byte_order'       , ctypes.c_int),
+            ('bitmap_unit'      , ctypes.c_int),
+            ('bitmap_bit_order' , ctypes.c_int),
+            ('bitmap_pad'       , ctypes.c_int),
+            ('depth'            , ctypes.c_int),
+            ('bytes_per_line'   , ctypes.c_int),
+            ('bits_per_pixel'   , ctypes.c_int)]
 
-libc.write.argtypes           = [ctypes.c_int, ctypes.c_void_p, ctypes.c_size_t]
-libX11.XAllPlanes.restype     = ctypes.c_ulong
-libX11.XGetImage.restype      = ctypes.POINTER(XImage)
-libX11.XRootWindow.restype    = ctypes.c_uint32
-libX11.XOpenDisplay.restype   = ctypes.c_void_p
-libX11.XDefaultScreen.restype = ctypes.c_int
-libX11.XGetKeyboardMapping.restype = ctypes.POINTER(ctypes.c_uint32)
+    libc.write.argtypes           = [ctypes.c_int, ctypes.c_void_p, ctypes.c_size_t]
+    libX11.XAllPlanes.restype     = ctypes.c_ulong
+    libX11.XGetImage.restype      = ctypes.POINTER(XImage)
+    libX11.XRootWindow.restype    = ctypes.c_uint32
+    libX11.XOpenDisplay.restype   = ctypes.c_void_p
+    libX11.XDefaultScreen.restype = ctypes.c_int
+    libX11.XGetKeyboardMapping.restype = ctypes.POINTER(ctypes.c_uint32)
 
-# X11 constants, see Xlib.h
+    # X11 constants, see Xlib.h
 
-X_CurrentTime  = ctypes.c_ulong(0)
-X_False        = ctypes.c_int(0)
-X_NULL         = ctypes.c_void_p(0)
-X_True         = ctypes.c_int(1)
-X_ZPixmap      = ctypes.c_int(2)
-NoSymbol       = 0
+    X_CurrentTime  = ctypes.c_ulong(0)
+    X_False        = ctypes.c_int(0)
+    X_NULL         = ctypes.c_void_p(0)
+    X_True         = ctypes.c_int(1)
+    X_ZPixmap      = ctypes.c_int(2)
+    NoSymbol       = 0
 
 # InputKeys contains key names known to input devices, see
 # linux/input.h or http://www.usb.org/developers/hidpage. The order is
@@ -193,39 +198,40 @@ for _l in devices.splitlines():
         except Exception, e: pass
 
 # Connect to X server, get root window size for screenshots
-display = None
-def resetXConnection():
-    global display, current_screen, root_window, X_AllPlanes
-    if display != None:
-        libX11.XCloseDisplay(display)
-    display        = libX11.XOpenDisplay(X_NULL)
-    current_screen = libX11.XDefaultScreen(display)
-    root_window    = libX11.XRootWindow(display, current_screen)
-    X_AllPlanes    = libX11.XAllPlanes()
-resetXConnection()
+if g_Xavailable:
+    display = None
+    def resetXConnection():
+        global display, current_screen, root_window, X_AllPlanes
+        if display != None:
+            libX11.XCloseDisplay(display)
+        display        = libX11.XOpenDisplay(X_NULL)
+        current_screen = libX11.XDefaultScreen(display)
+        root_window    = libX11.XRootWindow(display, current_screen)
+        X_AllPlanes    = libX11.XAllPlanes()
+    resetXConnection()
 
-ref            = ctypes.byref
-__rw           = ctypes.c_uint(0)
-__x            = ctypes.c_int(0)
-__y            = ctypes.c_int(0)
-root_width     = ctypes.c_uint(0)
-root_height    = ctypes.c_uint(0)
-__bwidth       = ctypes.c_uint(0)
-root_depth     = ctypes.c_uint(0)
+    ref            = ctypes.byref
+    __rw           = ctypes.c_uint(0)
+    __x            = ctypes.c_int(0)
+    __y            = ctypes.c_int(0)
+    root_width     = ctypes.c_uint(0)
+    root_height    = ctypes.c_uint(0)
+    __bwidth       = ctypes.c_uint(0)
+    root_depth     = ctypes.c_uint(0)
 
-libX11.XGetGeometry(display, root_window, ref(__rw), ref(__x), ref(__y),
-                    ref(root_width), ref(root_height), ref(__bwidth),
-                    ref(root_depth))
+    libX11.XGetGeometry(display, root_window, ref(__rw), ref(__x), ref(__y),
+                        ref(root_width), ref(root_height), ref(__bwidth),
+                        ref(root_depth))
 
-cMinKeycode        = ctypes.c_int(0)
-cMaxKeycode        = ctypes.c_int(0)
-cKeysymsPerKeycode = ctypes.c_int(0)
-libX11.XDisplayKeycodes(display, ref(cMinKeycode), ref(cMaxKeycode))
-keysyms = libX11.XGetKeyboardMapping(display,
-                                     cMinKeycode,
-                                     (cMaxKeycode.value - cMinKeycode.value) + 1,
-                                     ref(cKeysymsPerKeycode))
-shiftModifier = libX11.XKeysymToKeycode(display, libX11.XStringToKeysym("Shift_R"))
+    cMinKeycode        = ctypes.c_int(0)
+    cMaxKeycode        = ctypes.c_int(0)
+    cKeysymsPerKeycode = ctypes.c_int(0)
+    libX11.XDisplayKeycodes(display, ref(cMinKeycode), ref(cMaxKeycode))
+    keysyms = libX11.XGetKeyboardMapping(display,
+                                         cMinKeycode,
+                                         (cMaxKeycode.value - cMinKeycode.value) + 1,
+                                         ref(cKeysymsPerKeycode))
+    shiftModifier = libX11.XKeysymToKeycode(display, libX11.XStringToKeysym("Shift_R"))
 
 def read_cmd():
     return sys.stdin.readline().strip()
