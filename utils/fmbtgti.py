@@ -801,7 +801,7 @@ class _Eye4GraphicsOirEngine(OirEngine):
 
 
     If unsure about parameters, but you have a bitmap that should be
-    detected in a screenshot, try obj.ocrEngine().adjustParameters().
+    detected in a screenshot, try obj.oirEngine().adjustParameters().
 
     Example:
 
