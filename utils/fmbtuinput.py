@@ -20,15 +20,15 @@
 """
 This library offers Python interface for Linux uinput system.
 
-MouseDevice, TouchDevice and KeyboardDevice classes can be used for
+Mouse, Touch and Keyboard classes can be used for
 creating new mouse, touch and keyboard devices and synthesizing user
 inputs through those devices.
 """
 
 cmdline_usage = """
-Usage: python uinput.py -p <list-of-input-device-files>
+Usage: python fmbtuinput.py -p <list-of-input-device-files>
 
-Example: python uinput.py -p /dev/input/event*
+Example: python fmbtuinput.py -p /dev/input/event*
 """
 
 import fcntl
@@ -661,13 +661,13 @@ class InputDevice(object):
 class InputDeviceError(Exception):
     pass
 
-class MouseDevice(InputDevice):
+class Mouse(InputDevice):
     def __init__(self):
         InputDevice.__init__(self)
         self._x = 0
         self._y = 0
 
-    def create(self, name="Simulated Mouse",
+    def create(self, name="Virtual fMBT Mouse",
                vendor=0xf4b7, product=0x4053, version=1):
 
         self.startCreating(name, vendor, product, version)
@@ -684,12 +684,18 @@ class MouseDevice(InputDevice):
         self.finishCreating()
 
     def move(self, x, y):
-        x_delta = x - self._x
-        y_delta = y - self._y
-        self.send("EV_REL", "REL_X", x_delta)
-        self.send("EV_REL", "REL_Y", y_delta)
+        deltaX = x - self._x
+        deltaY = y - self._y
+        self.send("EV_REL", "REL_X", deltaX)
+        self.send("EV_REL", "REL_Y", deltaY)
         self.sync()
         self.setXY(x, y)
+
+    def moveRel(self, deltaX, deltaY):
+        self.send("EV_REL", "REL_X", deltaX)
+        self.send("EV_REL", "REL_Y", deltaY)
+        self.sync()
+        self.setXY(self._x + deltaX, self._y + deltaY)
 
     def press(self, button):
         buttonCode = toButtonCode(button)
@@ -713,14 +719,17 @@ class MouseDevice(InputDevice):
         self.press(button)
         self.release(button)
 
-class TouchDevice(InputDevice):
+class Touch(InputDevice):
+    """
+    Simulates touchpanel and touchpad
+    """
     def __init__(self):
         InputDevice.__init__(self)
         self._maxX = None
         self._maxY = None
         self._maxPressure = None
 
-    def create(self, name="Simulated Touchscreen",
+    def create(self, name="Virtual fMBT Touchdevice",
                vendor=0xf4b7, product=0x70c5, version=1,
                maxX=0xffff, maxY=0xffff, maxPressure=0xffff):
         absmin = [0 for _ in xrange(abs_count)]
@@ -752,33 +761,34 @@ class TouchDevice(InputDevice):
         self.send("EV_ABS", "ABS_Y", y)
         self.sync()
 
-    def fingerPress(self, finger, x, y):
+    def pressFinger(self, finger, x, y):
         """Add a finger to current multitouch gesture. If multitouch gesture
         is not started, it starts automatically.
         """
-        pass
+        raise NotImplementedError
 
-    def fingerRelease(self, finger):
+    def releaseFinger(self, finger):
         """Remove a finger from current multitouch gesture. When last finger
         is raised from the screen, multitouch gesture ends."""
-        pass
+        raise NotImplementedError
 
-    def fingerMove(self, finger, x, y):
+    def moveFinger(self, finger, x, y):
         """Move a finger in current multitouch gesture"""
-        pass
+        raise NotImplementedError
 
 
-class KeyboardDevice(InputDevice):
+class Keyboard(InputDevice):
     def __init__(self):
         InputDevice.__init__(self)
 
-    def create(self, name="Simulated Keyboard",
+    def create(self, name="Virtual fMBT Keyboard",
                vendor=0xf4b7, product=0x4ebd, version=1):
-        self.startCreating(name, vendor, product, vendor, version)
+        self.startCreating(name, vendor, product, version)
         self.addEvent("EV_KEY")
         self.addEvent("EV_SYN")
-        for keyCode in keyCodes.values():
-            self.addKey(keyCode)
+        for keyName in keyCodes:
+            if keyName.startswith("KEY_"):
+                self.addKey(keyCodes[keyName])
         self.finishCreating()
 
     def press(self, keyCodeOrName):
@@ -860,6 +870,6 @@ if __name__ == "__main__":
             opt_print_devices = remainder
 
     if opt_print_devices:
-        raw_input("Press ENTER to stop printing...\n")
         for deviceFilename in opt_print_devices:
             thread.start_new_thread(printEventsFromFile, (deviceFilename,))
+        raw_input("Press ENTER to stop printing...\n")
