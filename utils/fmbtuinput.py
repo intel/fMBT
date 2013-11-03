@@ -579,7 +579,8 @@ class InputDevice(object):
                                   product, # id.product
                                   version, # id.version
                                   0, # ff_effects_max
-                                  # TODO: why absmin + absmax gives error for touch?
+                                  # TODO: why absmin + absmax gives
+                                  # error for touch?
                                   *(absmax + absmin + absfuzz + absflat)
                               )
 
@@ -729,10 +730,13 @@ class Touch(InputDevice):
         self._maxX = None
         self._maxY = None
         self._maxPressure = None
+        self._absMtTrackingId = 0
+        self._multiTouch = True
 
     def create(self, name="Virtual fMBT Touchdevice",
                vendor=0xf4b7, product=0x70c5, version=1,
-               maxX=0xffff, maxY=0xffff, maxPressure=None):
+               maxX=0xffff, maxY=0xffff, maxPressure=None,
+               multiTouch = True):
         absmin = [0 for _ in xrange(abs_count)]
         absmax = [0 for _ in xrange(abs_count)]
         absmax[absCodes["ABS_X"]] = maxX
@@ -746,23 +750,23 @@ class Touch(InputDevice):
         absmax[absCodes["ABS_MT_POSITION_Y"]] = maxY
         self._maxX = maxX
         self._maxY = maxY
+        self._multiTouch = multiTouch
 
         self.startCreating(name, vendor, product, version,
                            absmin=absmin, absmax=absmax)
         self.addEvent("EV_KEY")
         self.addEvent("EV_ABS")
         self.addEvent("EV_SYN")
-        self.addKey("BTN_LEFT")
-        self.addKey("BTN_RIGHT")
-        self.addKey("BTN_MIDDLE")
+        self.addKey("BTN_TOUCH")
         self.addAbs("ABS_X")
         self.addAbs("ABS_Y")
         if self._maxPressure != None:
             self.addAbs("ABS_PRESSURE")
-        self.addAbs("ABS_MT_SLOT")
-        self.addAbs("ABS_MT_TRACKING_ID")
-        self.addAbs("ABS_MT_POSITION_X")
-        self.addAbs("ABS_MT_POSITION_Y")
+        if self._multiTouch:
+            self.addAbs("ABS_MT_SLOT")
+            self.addAbs("ABS_MT_TRACKING_ID")
+            self.addAbs("ABS_MT_POSITION_X")
+            self.addAbs("ABS_MT_POSITION_Y")
         self.finishCreating()
 
     def move(self, x, y, pressure=None):
@@ -772,19 +776,21 @@ class Touch(InputDevice):
         self.send("EV_ABS", "ABS_Y", y)
         self.sync()
 
-    def tap(self, x, y, button=0, pressure=None):
-        self.move(x, y, pressure)
-        self.press(button)
-        self.release(button)
-
-    def press(self, button):
-        buttonCode = toButtonCode(button)
-        self.send("EV_KEY", buttonCode, 1)
+    def tap(self, x, y, pressure=None):
+        if self._multiTouch:
+            self._absMtTrackingId += 1
+            self.send("EV_ABS", "ABS_MT_TRACKING_ID", self._absMtTrackingId)
+            self.send("EV_ABS", "ABS_MT_POSITION_X", x)
+            self.send("EV_ABS", "ABS_MT_POSITION_Y", y)
+        if pressure != None and self._maxPressure != None:
+            self.send("EV_ABS", "ABS_PRESSURE", pressure)
+        self.send("EV_KEY", "BTN_TOUCH", 1)
+        self.send("EV_ABS", "ABS_X", x)
+        self.send("EV_ABS", "ABS_Y", y)
         self.sync()
-
-    def release(self, button):
-        buttonCode = toButtonCode(button)
-        self.send("EV_KEY", buttonCode, 0)
+        if self._multiTouch:
+            self.send("EV_ABS", "ABS_MT_TRACKING_ID", -1)
+        self.send("EV_KEY", "BTN_TOUCH", 0)
         self.sync()
 
     def pressFinger(self, finger, x, y):
