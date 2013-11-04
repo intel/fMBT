@@ -31,9 +31,11 @@ Usage: python fmbtuinput.py -p <list-of-input-device-files>
 Example: python fmbtuinput.py -p /dev/input/event*
 """
 
+import array
 import fcntl
 import os
 import platform
+import re
 import struct
 import time
 
@@ -450,6 +452,8 @@ absCodes = {
     "ABS_MAX":                 0x3f,
     }
 
+abs_count = absCodes['ABS_MAX'] + 1
+
 event_codetables = {
     eventTypes["EV_SYN"]: {},
     eventTypes["EV_KEY"]: keyCodes,
@@ -474,7 +478,6 @@ struct_input_event = struct_timeval + 'HHi'
 sizeof_input_event = struct.calcsize(struct_input_event)
 
 struct_input_id    = 'HHHH'
-abs_count = absCodes['ABS_MAX'] + 1
 struct_uinput_user_dev = ('80s' +
                           struct_input_id +
                           'i' +
@@ -510,6 +513,8 @@ def IOR(type_, nr, size):
     return IOC(IOC_READ, type_, nr, struct.calcsize(size))
 def IOW(type_, nr, size):
     return IOC(IOC_WRITE, type_, nr, struct.calcsize(size))
+def EVIOCGABS(abs):
+    return IOR(ord('E'), 0x40 + (abs), struct_input_absinfo)
 
 UINPUT_IOCTL_BASE = ord('U')
 UI_DEV_CREATE = IO(UINPUT_IOCTL_BASE, 1)
@@ -549,6 +554,14 @@ def toButtonCode(buttonCodeOrName):
     else:
         buttonCode = buttonCodeOrName
     return buttonCode
+
+_g_devices = file("/proc/bus/input/devices").read().split("\n\n")
+def toEventFilename(deviceName):
+    n = deviceName.lower()
+    return "/dev/input/" + re.findall(
+        '[ =](event[0-9]+)\s',
+        [l for l in _g_devices if n in l.lower()][0]
+    )[0]
 
 class InputDevice(object):
     def __init__(self):
@@ -609,6 +622,8 @@ class InputDevice(object):
     def open(self, filename):
         if self._fd > 0:
             raise InputDeviceError("InputDevice is already open")
+        if not filename.startswith("/dev/input"):
+            filename = toEventFilename(filename)
         self._fd = os.open(filename, os.O_WRONLY | os.O_NONBLOCK)
         self._created = False
 
@@ -768,6 +783,16 @@ class Touch(InputDevice):
             self.addAbs("ABS_MT_POSITION_X")
             self.addAbs("ABS_MT_POSITION_Y")
         self.finishCreating()
+
+    def open(self, filename):
+        InputDevice.open(self, filename)
+        # detect touch device capabilities and max values
+        # nfo is struct input_absinfo
+        nfo = array.array('i', range(6))
+        fcntl.ioctl(self._fd, EVIOCGABS(absCodes["ABS_X"]), nfo, 1)
+        self._maxX = nfo[2]
+        fcntl.ioctl(self._fd, EVIOCGABS(absCodes["ABS_Y"]), nfo, 1)
+        self._maxY = nfo[2]
 
     def move(self, x, y, pressure=None):
         if pressure != None and self._maxPressure != None:
