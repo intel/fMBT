@@ -18,15 +18,19 @@ import base64
 import cPickle
 import ctypes
 import fcntl
+import glob
 import os
 import platform
 import re
+import shutil
 import struct
 import subprocess
 import sys
 import time
 import zlib
 import termios
+
+import fmbtuinput
 
 if "--debug" in sys.argv:
     g_debug = True
@@ -45,8 +49,14 @@ try:
     libX11         = ctypes.CDLL("libX11.so.6")
     libXtst        = ctypes.CDLL("libXtst.so.6")
     g_Xavailable = True
+    g_keyb = None # no need for virtual keyboard
 except OSError:
     g_Xavailable = False
+    if iAmRoot:
+        g_keyb = fmbtuinput.Keyboard().create()
+        time.sleep(1)
+    else:
+        g_keyb = None
 
 if g_Xavailable:
     class XImage(ctypes.Structure):
@@ -237,8 +247,8 @@ for _l in devices.splitlines():
         except Exception, e: pass
 
 # Connect to X server, get root window size for screenshots
+display = None
 if g_Xavailable:
-    display = None
     def resetXConnection():
         global display, current_screen, root_window, X_AllPlanes
         if display != None:
@@ -449,7 +459,7 @@ def typeSequence(s):
     if skipped: return False, skipped
     else: return True, skipped
 
-def takeScreenshot():
+def takeScreenshotOnX():
     image_p = libX11.XGetImage(display, root_window,
                                0, 0, root_width, root_height,
                                X_AllPlanes, X_ZPixmap)
@@ -460,9 +470,52 @@ def takeScreenshot():
     rawfmbt_header = "FMBTRAWX11 %d %d %d %d\n" % (
                      image.width, image.height, root_depth.value, image.bits_per_pixel)
     rawfmbt_data = ctypes.string_at(image.data, image.height * image.bytes_per_line)
-    compressed_image = zlib.compress(rawfmbt_header + rawfmbt_data, 3)
+    compressed_image = rawfmbt_header + zlib.compress(rawfmbt_data, 3)
     libX11.XDestroyImage(image_p)
     return True, compressed_image
+
+def westonTakeScreenshotRoot():
+    if westonTakeScreenshotRoot.ssFilename == None:
+        westonTakeScreenshotRoot.ssFilename = findWestonScreenshotFilenameRoot()
+    try:
+        # TODO: make me faster and more reliable!
+        g_keyb.press("KEY_LEFTMETA")
+        g_keyb.tap("s")
+        g_keyb.release("KEY_LEFTMETA")
+        time.sleep(1)
+        shutil.move(westonTakeScreenshotRoot.ssFilename, "/tmp/screenshot.png")
+        os.chmod("/tmp/screenshot.png", 0666)
+    except Exception, e:
+        file("/tmp/delme.log","w").write("takessroot returning %s, %s\n" % (False, e))
+        return False, str(e)
+    file("/tmp/delme.log","w").write("takessroot returning %s, %s\n" % (True, None))
+    return True, None
+westonTakeScreenshotRoot.ssFilename = None
+
+def takeScreenshotOnWeston():
+    rv, status = subAgentCommand("root", "tizen", "ss weston-root")
+    if rv == False:
+        return rv, status
+    return True, file("/tmp/screenshot.png").read()
+
+def findWestonScreenshotFilenameRoot():
+    # find weston cwd
+    for exe in glob.glob("/proc/[1-9][0-9][0-9]*/exe"):
+        try:
+            if os.path.realpath(exe) == "/usr/bin/weston":
+                cwd = os.path.realpath(os.path.dirname(exe) + "/cwd")
+                break
+        except OSError:
+            pass
+    else:
+        return False, "cannot find weston cwd"
+    rv = cwd + "/wayland-screenshot.png"
+    return rv
+
+if g_Xavailable:
+    takeScreenshot = takeScreenshotOnX
+else:
+    takeScreenshot = takeScreenshotOnWeston
 
 def shellSOE(command, asyncStatus, asyncOut, asyncError):
     if (asyncStatus, asyncOut, asyncError) != (None, None, None):
@@ -564,6 +617,7 @@ def subAgentCommand(username, password, cmd):
             _subAgents[username] = process
     p = _subAgents[username]
     p.stdin.write(cmd + "\r")
+    p.stdin.flush()
     answer = p.stdout.readline().rstrip()
     if answer.startswith("FMBTAGENT OK "):
         return True, cPickle.loads(base64.b64decode(answer[len("FMBTAGENT OK "):]))
@@ -575,8 +629,13 @@ def closeSubAgents():
         subAgentCommand(username, None, "quit")
 
 if __name__ == "__main__":
-    origTermAttrs = termios.tcgetattr(sys.stdin.fileno())
-    if not "--keep-echo" in sys.argv and not "--debug" in sys.argv:
+    try:
+        origTermAttrs = termios.tcgetattr(sys.stdin.fileno())
+        hasTerminal = True
+    except termios.error:
+        origTermAttrs = None
+        hasTerminal = False
+    if hasTerminal and not "--keep-echo" in sys.argv and not "--debug" in sys.argv:
         # Disable terminal echo
         newTermAttrs = origTermAttrs
         newTermAttrs[3] = origTermAttrs[3] &  ~termios.ECHO
@@ -656,17 +715,18 @@ if __name__ == "__main__":
             write_response(rv, skippedSymbols)
         elif cmd.startswith("ml "): # send multitouch linear gesture
             if iAmRoot:
-                file("/tmp/debug-root","w").write(cmd[3:]+"\n")
                 rv, _ = mtLinearGesture(*cPickle.loads(base64.b64decode(cmd[3:])))
             else:
-                file("/tmp/debug-user","w").write(cmd)
                 rv, _ = subAgentCommand("root", "tizen", cmd)
             write_response(rv, _)
         elif cmd.startswith("ss"): # save screenshot
-            if "R" in cmd:
+            if "R" in cmd.split() and g_Xavailable:
                 resetXConnection()
-            rv, compressedImage = takeScreenshot()
-            write_response(rv, compressedImage)
+            if "weston-root" in cmd.split(): # do Weston root part only
+                write_response(*westonTakeScreenshotRoot())
+            else:
+                rv, compressedImage = takeScreenshot()
+                write_response(rv, compressedImage)
         elif cmd.startswith("es "): # execute shell
             shellCmd, username, password, asyncStatus, asyncOut, asyncError = cPickle.loads(base64.b64decode(cmd[3:]))
             if username == "":
@@ -684,6 +744,8 @@ if __name__ == "__main__":
 
     closeSubAgents()
 
-    libX11.XCloseDisplay(display)
+    if g_Xavailable:
+        libX11.XCloseDisplay(display)
 
-    termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, origTermAttrs)
+    if hasTerminal:
+        termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, origTermAttrs)
