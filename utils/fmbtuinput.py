@@ -626,6 +626,7 @@ class InputDevice(object):
             filename = toEventFilename(filename)
         self._fd = os.open(filename, os.O_WRONLY | os.O_NONBLOCK)
         self._created = False
+        return self
 
     def close(self):
         if self._fd > 0:
@@ -699,6 +700,7 @@ class Mouse(InputDevice):
         self.addKey("BTN_RIGHT")
         self.addKey("BTN_MIDDLE")
         self.finishCreating()
+        return self
 
     def move(self, x, y):
         deltaX = x - self._x
@@ -783,6 +785,7 @@ class Touch(InputDevice):
             self.addAbs("ABS_MT_POSITION_X")
             self.addAbs("ABS_MT_POSITION_Y")
         self.finishCreating()
+        return self
 
     def open(self, filename):
         InputDevice.open(self, filename)
@@ -793,6 +796,7 @@ class Touch(InputDevice):
         self._maxX = nfo[2]
         fcntl.ioctl(self._fd, EVIOCGABS(absCodes["ABS_Y"]), nfo, 1)
         self._maxY = nfo[2]
+        return self
 
     def move(self, x, y, pressure=None):
         if pressure != None and self._maxPressure != None:
@@ -847,6 +851,7 @@ class Keyboard(InputDevice):
             if keyName.startswith("KEY_"):
                 self.addKey(keyCodes[keyName])
         self.finishCreating()
+        return self
 
     def press(self, keyCodeOrName):
         self.send("EV_KEY", toKeyCode(keyCodeOrName), 1)
