@@ -487,6 +487,8 @@ struct_uinput_user_dev = ('80s' +
                           str(abs_count) + 'i')
 sizeof_uinput_user_dev = struct.calcsize(struct_uinput_user_dev)
 
+struct_input_absinfo = 'iiii'
+
 # asm-generic/ioctl.h:
 IOC_NRBITS = 8
 IOC_TYPEBITS = 8
@@ -750,7 +752,7 @@ class Touch(InputDevice):
         self._absMtTrackingId = 0
         self._multiTouch = True
 
-    def create(self, name="Virtual fMBT Touchdevice",
+    def create(self, name="Virtual fMBT Touch",
                vendor=0xf4b7, product=0x70c5, version=1,
                maxX=0xffff, maxY=0xffff, maxPressure=None,
                multiTouch = True):
@@ -805,12 +807,21 @@ class Touch(InputDevice):
         self.send("EV_ABS", "ABS_Y", y)
         self.sync()
 
+    def _startTracking(self):
+        self._absMtTrackingId += 1
+        self._tracking = True
+        self.send("EV_ABS", "ABS_MT_TRACKING_ID", self._absMtTrackingId)
+        self.send("EV_ABS", "ABS_MT_POSITION_X", x)
+        self.send("EV_ABS", "ABS_MT_POSITION_Y", y)
+        return self._absMtTrackingId
+
+    def _stopTracking(self):
+        self.send("EV_ABS", "ABS_MT_TRACKING_ID", -1)
+        self._tracking = False
+
     def tap(self, x, y, pressure=None):
         if self._multiTouch:
-            self._absMtTrackingId += 1
-            self.send("EV_ABS", "ABS_MT_TRACKING_ID", self._absMtTrackingId)
-            self.send("EV_ABS", "ABS_MT_POSITION_X", x)
-            self.send("EV_ABS", "ABS_MT_POSITION_Y", y)
+            self._startTracking(x, y)
         if pressure != None and self._maxPressure != None:
             self.send("EV_ABS", "ABS_PRESSURE", pressure)
         self.send("EV_KEY", "BTN_TOUCH", 1)
@@ -818,7 +829,7 @@ class Touch(InputDevice):
         self.send("EV_ABS", "ABS_Y", y)
         self.sync()
         if self._multiTouch:
-            self.send("EV_ABS", "ABS_MT_TRACKING_ID", -1)
+            self._stopTracking()
         self.send("EV_KEY", "BTN_TOUCH", 0)
         self.sync()
 

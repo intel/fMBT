@@ -43,6 +43,7 @@ def debug(msg):
         sys.stdout.flush()
 
 iAmRoot = (os.getuid() == 0)
+virtualInputDeviceAdded = False
 
 try:
     libc           = ctypes.CDLL("libc.so.6")
@@ -52,11 +53,6 @@ try:
     g_keyb = None # no need for virtual keyboard
 except OSError:
     g_Xavailable = False
-    if iAmRoot:
-        g_keyb = fmbtuinput.Keyboard().create()
-        time.sleep(1)
-    else:
-        g_keyb = None
 
 if g_Xavailable:
     class XImage(ctypes.Structure):
@@ -142,8 +138,14 @@ _BTN_MOUSE          = 0x110
 # for pressing hardware keys.
 try: cpuinfo = file("/proc/cpuinfo").read()
 except: cpuinfo = ""
-try: devices = file("/proc/bus/input/devices").read()
-except: devices = ""
+
+def readDeviceInfo():
+    global devices
+    try:
+        devices = file("/proc/bus/input/devices").read()
+    except:
+        devices = ""
+readDeviceInfo()
 
 if 'TRATS' in cpuinfo:
     # Running on Lunchbox
@@ -155,7 +157,8 @@ if 'TRATS' in cpuinfo:
         }
     _inputKeyNameToCode["HOME"] = 139
     if iAmRoot:
-        mtInputDevFd = os.open("/dev/input/event2", os.O_WRONLY | os.O_NONBLOCK)
+        touch_device = fmbtuinput.Touch().open("/dev/input/event2")
+        mtInputDevFd = touch_device._fd
 elif 'QEMU Virtual CPU' in cpuinfo:
     # Running on Tizen emulator
     hwKeyDevice = {
@@ -166,7 +169,8 @@ elif 'QEMU Virtual CPU' in cpuinfo:
         }
     _inputKeyNameToCode["HOME"] = 139
     if iAmRoot:
-        mtInputDevFd = os.open("/dev/input/event2", os.O_WRONLY | os.O_NONBLOCK)
+        touch_device = fmbtuinput.Touch().open("/dev/input/event2")
+        mtInputDevFd = touch_device._fd
 elif 'Synaptics_RMI4_touchkey' in devices:
     # Running on Geek
     hwKeyDevice = {
@@ -176,7 +180,8 @@ elif 'Synaptics_RMI4_touchkey' in devices:
         "HOME": "Synaptics_RMI4_touchkey"
         }
     if iAmRoot:
-        mtInputDevFd = os.open("/dev/input/event1", os.O_WRONLY | os.O_NONBLOCK)
+        touch_device = fmbtuinput.Touch().open("/dev/input/event1")
+        mtInputDevFd = touch_device._fd
 elif 'mxt224_key_0' in devices:
     # Running on Blackbay
     hwKeyDevice = {
@@ -186,34 +191,56 @@ elif 'mxt224_key_0' in devices:
         "HOME": "mxt224_key_0"
         }
     if iAmRoot:
-        mtInputDevFd = os.open("/dev/input/event0", os.O_WRONLY | os.O_NONBLOCK)
-else:
-    # Unknown platform, guessing best possible defaults
+        touch_device = fmbtuinput.Touch().open("/dev/input/event0")
+        mtInputDevFd = touch_device._fd
+elif iAmRoot:
+    # Unknown platform, guessing best possible defaults for devices
     _d = devices.split("\n\n")
     try:
         power_devname = re.findall('Name=\"([^"]*)\"', [i for i in _d if "power" in i.lower()][0])[0]
     except IndexError:
         power_devname = "gpio-keys"
 
+    touch_device = None
     try:
-        touch_device = "/dev/input/" + re.findall('[ =](event[0-9]+)\s',  [i for i in _d if "touch" in i.lower()][0])[0]
+        touch_device_f = "/dev/input/" + re.findall('[ =](event[0-9]+)\s',  [i for i in _d if "touch" in i.lower()][0])[0]
     except IndexError:
         try:
-            touch_device = "/dev/input/" + re.findall('[ =](event[0-9]+)\s',  [i for i in _d if "mouse0" in i.lower()][0])[0]
+            touch_device_f = "/dev/input/" + re.findall('[ =](event[0-9]+)\s',  [i for i in _d if "mouse0" in i.lower()][0])[0]
             # TODO: check which mouse is capable of emitting button events
             # if none, then create my own mouse input device
         except IndexError:
             # TODO: create my own mouse for both move and button press events
-            touch_device = "/dev/input/event0"
+            touch_device = fmbtuinput.Touch().create(maxX=1024, maxY=768)
+            virtualInputDeviceAdded = True
+            readDeviceInfo()
+            _d = devices.split("\n\n")
+            touch_device_f = "/dev/input/" + re.findall('[ =](event[0-9]+)\s',  [i for i in _d if "virtual fmbt touch" in i.lower()][0])[0]
+    if touch_device == None:
+        touch_device = fmbtuinput.Touch().open(touch_device_f)
+    mtInputDevFd = touch_device._fd
 
     try:
-        mouse_button_device = "/dev/input/" + re.findall('[ =](event[0-9]+)\s', [i for i in _d if "Mouse" in i][0])[0]
+        mouse_button_device = fmbtuinput.Mouse().open(
+            "/dev/input/" + re.findall(
+                '[ =](event[0-9]+)\s',
+                [i for i in _d if "Mouse" in i][0])[0])
     except IndexError:
-        mouse_button_device = None
+        mouse_button_device = fmbtuinput.Mouse().create()
+        virtualInputDeviceAdded = True
+
     try:
-        keyboard_device = "/dev/input/" + re.findall('[ =](event[0-9]+)\s', [i for i in _d if "sysrq" in i.lower()][0])[0]
+        keyboard_device = fmbtuinput.Keyboard().open(
+            "/dev/input/" + re.findall(
+                '[ =](event[0-9]+)\s',
+                [i for i in _d if "sysrq" in i.lower()][0])[0])
     except IndexError:
-        keyboard_device = None
+        if iAmRoot:
+            keyboard_device = fmbtuinput.Keyboard().create()
+            virtualInputDeviceAdded = True
+        else:
+            keyboard_device = None
+
     # TODO: find keyboard input device for the usual keys (sysrq, etc.)
     # If nothing suitable seems to be present, create my own keyboard.
     hwKeyDevice = {
@@ -222,20 +249,23 @@ else:
         "VOLUMEDOWN": "gpio-keys",
         "HOME": "gpio-keys"
         }
-    if iAmRoot:
-        if g_debug:
-            debug("touch device: %s" % (touch_device,))
-            debug("mouse device: %s" % (mouse_button_device,))
-            debug("keyb device:  %s" % (keyboard_device,))
-        mtInputDevFd = os.open(touch_device, os.O_WRONLY | os.O_NONBLOCK)
-        if mouse_button_device:
-            mbInputDevFd = os.open(mouse_button_device, os.O_WRONLY | os.O_NONBLOCK)
-        else:
-            mbInputDevFd = mtInputDevFd
-        if keyboard_device:
-            kbInputDevFd = os.open(keyboard_device, os.O_WRONLY | os.O_NONBLOCK)
-        else:
-            kbInputDevFd = None
+
+    if g_debug:
+        debug("touch device: %s" % (touch_device,))
+        debug("mouse device: %s" % (mouse_button_device,))
+        debug("keyb device:  %s" % (keyboard_device,))
+    mtInputDevFd = touch_device._fd
+
+    if keyboard_device:
+        kbInputDevFd = keyboard_device._fd
+    else:
+        kbInputDevFd = None
+
+    if virtualInputDeviceAdded:
+        time.sleep(1)
+        mouse_button_device.move(-4096, -4096)
+        mouse_button_device.setXY(0, 0)
+
     del _d
 
 # Read input devices
@@ -297,20 +327,15 @@ def write_response(ok, value):
 
 def sendHwTap(x, y, button):
     try:
-        mtEventSend(_EV_ABS, _ABS_X, x)
-        mtEventSend(_EV_ABS, _ABS_Y, y)
-        mtEventSend(0, 0, 0) # SYNC
-        mbEventSend(_EV_KEY, _BTN_MOUSE + button, 1)
-        mbEventSend(0, 0, 0) # SYNC
-        mbEventSend(_EV_KEY, _BTN_MOUSE + button, 0)
-        mbEventSend(0, 0, 0) # SYNC
+        # TODO: it should be possible to do this with touch device, too
+        mouse_button_device.tap(x, y, button)
         return True, None
     except Exception, e:
         return False, str(e)
 
 def sendHwKey(keyName, delayBeforePress, delayBeforeRelease):
     try: inputDevice = deviceToEventFile[hwKeyDevice[keyName]]
-    except: inputDevice = keyboard_device
+    except: inputDevice = keyboard_device._fd
     try: keyCode = _inputKeyNameToCode[keyName]
     except: return False, 'No keycode for key "%s"' % (keyName,)
     try: fd = os.open(inputDevice, os.O_WRONLY | os.O_NONBLOCK)
@@ -346,10 +371,6 @@ def inputEventSend(inputDevFd, eventType, event, param):
     tusec = int(1000000*(t-tsec))
     os.write(inputDevFd, struct.pack(_input_event,
         tsec, tusec, eventType, event, param))
-
-def mbEventSend(eventType, event, param):
-    """mousebutton device event"""
-    return inputEventSend(mbInputDevFd, eventType, event, param)
 
 def mtEventSend(eventType, event, param):
     """multitouch device event"""
@@ -479,9 +500,9 @@ def westonTakeScreenshotRoot():
         westonTakeScreenshotRoot.ssFilename = findWestonScreenshotFilenameRoot()
     try:
         # TODO: make me faster and more reliable!
-        g_keyb.press("KEY_LEFTMETA")
-        g_keyb.tap("s")
-        g_keyb.release("KEY_LEFTMETA")
+        keyboard_device.press("KEY_LEFTMETA")
+        keyboard_device.tap("s")
+        keyboard_device.release("KEY_LEFTMETA")
         time.sleep(1)
         shutil.move(westonTakeScreenshotRoot.ssFilename, "/tmp/screenshot.png")
         os.chmod("/tmp/screenshot.png", 0666)
