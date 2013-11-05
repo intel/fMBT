@@ -749,8 +749,9 @@ class Touch(InputDevice):
         self._maxX = None
         self._maxY = None
         self._maxPressure = None
-        self._absMtTrackingId = 0
         self._multiTouch = True
+        self._mtTrackingId = 0
+        self._mtTracking = {}
 
     def create(self, name="Virtual fMBT Touch",
                vendor=0xf4b7, product=0x70c5, version=1,
@@ -763,8 +764,8 @@ class Touch(InputDevice):
         if maxPressure != None:
             self._maxPressure = maxPressure
             absmax[absCodes["ABS_PRESSURE"]] = self._maxPressure
-        absmax[absCodes["ABS_MT_SLOT"]] = 5
-        absmax[absCodes["ABS_MT_TRACKING_ID"]] = 5
+        absmax[absCodes["ABS_MT_SLOT"]] = 16
+        absmax[absCodes["ABS_MT_TRACKING_ID"]] = 0x0fffffff
         absmax[absCodes["ABS_MT_POSITION_X"]] = maxX
         absmax[absCodes["ABS_MT_POSITION_Y"]] = maxY
         self._maxX = maxX
@@ -800,54 +801,77 @@ class Touch(InputDevice):
         self._maxY = nfo[2]
         return self
 
-    def move(self, x, y, pressure=None):
-        if pressure != None and self._maxPressure != None:
-            self.send("EV_ABS", "ABS_PRESSURE", pressure)
-        self.send("EV_ABS", "ABS_X", x)
-        self.send("EV_ABS", "ABS_Y", y)
-        self.sync()
-
-    def _startTracking(self):
-        self._absMtTrackingId += 1
-        self._tracking = True
-        self.send("EV_ABS", "ABS_MT_TRACKING_ID", self._absMtTrackingId)
+    def _startTracking(self, finger, x, y):
+        self._mtTrackingId += 1
+        usedSlots = set([self._mtTracking[fngr][0]
+                         for fngr in self._mtTracking])
+        for freeSlot in xrange(16):
+            if not freeSlot in usedSlots:
+                break
+        else:
+            raise ValueError("No free slots for multitouch")
+        self._mtTracking[finger] = [freeSlot, self._mtTrackingId, x, y]
+        self._sendSlot(finger)
+        self.send("EV_ABS", "ABS_MT_TRACKING_ID", self._mtTrackingId)
         self.send("EV_ABS", "ABS_MT_POSITION_X", x)
         self.send("EV_ABS", "ABS_MT_POSITION_Y", y)
-        return self._absMtTrackingId
+        return self._mtTrackingId
 
-    def _stopTracking(self):
+    def _stopTracking(self, finger):
+        self._sendSlot(finger)
         self.send("EV_ABS", "ABS_MT_TRACKING_ID", -1)
-        self._tracking = False
+        del self._mtTracking[finger]
+
+    def _sendSlot(self, finger):
+        slot = self._mtTracking[finger][0]
+        self.send("EV_ABS", "ABS_MT_SLOT", slot)
 
     def tap(self, x, y, pressure=None):
-        if self._multiTouch:
-            self._startTracking(x, y)
+        self.pressFinger(-1, x, y, pressure)
+        self.releaseFinger(-1)
+
+    def pressFinger(self, finger, x, y, pressure=None):
+        """Add a finger to current multitouch gesture. If multitouch gesture
+        is not started, it starts automatically.
+        """
+        if self._multiTouch and not finger in self._mtTracking:
+            self._startTracking(finger, x, y)
         if pressure != None and self._maxPressure != None:
             self.send("EV_ABS", "ABS_PRESSURE", pressure)
         self.send("EV_KEY", "BTN_TOUCH", 1)
         self.send("EV_ABS", "ABS_X", x)
         self.send("EV_ABS", "ABS_Y", y)
         self.sync()
-        if self._multiTouch:
-            self._stopTracking()
-        self.send("EV_KEY", "BTN_TOUCH", 0)
-        self.sync()
-
-    def pressFinger(self, finger, x, y):
-        """Add a finger to current multitouch gesture. If multitouch gesture
-        is not started, it starts automatically.
-        """
-        raise NotImplementedError
 
     def releaseFinger(self, finger):
         """Remove a finger from current multitouch gesture. When last finger
         is raised from the screen, multitouch gesture ends."""
-        raise NotImplementedError
+        if self._multiTouch:
+            self._stopTracking(finger)
+        self.send("EV_KEY", "BTN_TOUCH", 0)
+        for fngr in self._mtTracking:
+            # still some finger pressed, non-multitouch reader gets
+            # coordinates from one of those
+            self.send("EV_ABS", "ABS_X", self._mtTracking[fngr][2])
+            self.send("EV_ABS", "ABS_Y", self._mtTracking[fngr][3])
+            break # only one coordinates will be sent.
+        self.sync()
 
     def moveFinger(self, finger, x, y):
         """Move a finger in current multitouch gesture"""
-        raise NotImplementedError
-
+        lastX, lastY = self._mtTracking[finger][2:4]
+        self._sendSlot(finger)
+        if lastX != x:
+            if self._multiTouch:
+                self.send("EV_ABS", "ABS_MT_POSITION_X", x)
+            self.send("EV_ABS", "ABS_X", x)
+            self._mtTracking[finger][2] = x
+        if lastY != y:
+            if self._multiTouch:
+                self.send("EV_ABS", "ABS_MT_POSITION_Y", y)
+            self.send("EV_ABS", "ABS_Y", y)
+            self._mtTracking[finger][3] = y
+        self.sync()
 
 class Keyboard(InputDevice):
     def __init__(self):
