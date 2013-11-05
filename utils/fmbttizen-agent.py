@@ -28,6 +28,16 @@ import time
 import zlib
 import termios
 
+if "--debug" in sys.argv:
+    g_debug = True
+else:
+    g_debug = False
+
+def debug(msg):
+    if g_debug:
+        sys.stdout.write("debug: %s\n" % (msg,))
+        sys.stdout.flush()
+
 iAmRoot = (os.getuid() == 0)
 
 try:
@@ -116,6 +126,8 @@ _ABS_MT_POSITION_X  = 0x35
 _ABS_MT_POSITION_Y  = 0x36
 _ABS_MT_TRACKING_ID = 0x39
 
+_BTN_MOUSE          = 0x110
+
 # Set input device names (in /proc/bus/input/devices)
 # for pressing hardware keys.
 try: cpuinfo = file("/proc/cpuinfo").read()
@@ -172,13 +184,28 @@ else:
         power_devname = re.findall('Name=\"([^"]*)\"', [i for i in _d if "power" in i.lower()][0])[0]
     except IndexError:
         power_devname = "gpio-keys"
+
     try:
         touch_device = "/dev/input/" + re.findall('[ =](event[0-9]+)\s',  [i for i in _d if "touch" in i.lower()][0])[0]
     except IndexError:
         try:
             touch_device = "/dev/input/" + re.findall('[ =](event[0-9]+)\s',  [i for i in _d if "mouse0" in i.lower()][0])[0]
+            # TODO: check which mouse is capable of emitting button events
+            # if none, then create my own mouse input device
         except IndexError:
+            # TODO: create my own mouse for both move and button press events
             touch_device = "/dev/input/event0"
+
+    try:
+        mouse_button_device = "/dev/input/" + re.findall('[ =](event[0-9]+)\s', [i for i in _d if "Mouse" in i][0])[0]
+    except IndexError:
+        mouse_button_device = None
+    try:
+        keyboard_device = "/dev/input/" + re.findall('[ =](event[0-9]+)\s', [i for i in _d if "sysrq" in i.lower()][0])[0]
+    except IndexError:
+        keyboard_device = None
+    # TODO: find keyboard input device for the usual keys (sysrq, etc.)
+    # If nothing suitable seems to be present, create my own keyboard.
     hwKeyDevice = {
         "POWER": power_devname,
         "VOLUMEUP": "gpio-keys",
@@ -186,7 +213,19 @@ else:
         "HOME": "gpio-keys"
         }
     if iAmRoot:
+        if g_debug:
+            debug("touch device: %s" % (touch_device,))
+            debug("mouse device: %s" % (mouse_button_device,))
+            debug("keyb device:  %s" % (keyboard_device,))
         mtInputDevFd = os.open(touch_device, os.O_WRONLY | os.O_NONBLOCK)
+        if mouse_button_device:
+            mbInputDevFd = os.open(mouse_button_device, os.O_WRONLY | os.O_NONBLOCK)
+        else:
+            mbInputDevFd = mtInputDevFd
+        if keyboard_device:
+            kbInputDevFd = os.open(keyboard_device, os.O_WRONLY | os.O_NONBLOCK)
+        else:
+            kbInputDevFd = None
     del _d
 
 # Read input devices
@@ -239,13 +278,29 @@ def read_cmd():
 def write_response(ok, value):
     if ok: p = "FMBTAGENT OK "
     else: p = "FMBTAGENT ERROR "
-    response = "%s%s\n" % (p, base64.b64encode(cPickle.dumps(value)))
+    if not g_debug:
+        response = "%s%s\n" % (p, base64.b64encode(cPickle.dumps(value)))
+    else:
+        response = "%s%s\n" % (p, value)
     sys.stdout.write(response)
     sys.stdout.flush()
 
+def sendHwTap(x, y, button):
+    try:
+        mtEventSend(_EV_ABS, _ABS_X, x)
+        mtEventSend(_EV_ABS, _ABS_Y, y)
+        mtEventSend(0, 0, 0) # SYNC
+        mbEventSend(_EV_KEY, _BTN_MOUSE + button, 1)
+        mbEventSend(0, 0, 0) # SYNC
+        mbEventSend(_EV_KEY, _BTN_MOUSE + button, 0)
+        mbEventSend(0, 0, 0) # SYNC
+        return True, None
+    except Exception, e:
+        return False, str(e)
+
 def sendHwKey(keyName, delayBeforePress, delayBeforeRelease):
     try: inputDevice = deviceToEventFile[hwKeyDevice[keyName]]
-    except: return False, 'No input device for key "%s"' % (keyName,)
+    except: inputDevice = keyboard_device
     try: keyCode = _inputKeyNameToCode[keyName]
     except: return False, 'No keycode for key "%s"' % (keyName,)
     try: fd = os.open(inputDevice, os.O_WRONLY | os.O_NONBLOCK)
@@ -275,12 +330,20 @@ def specialCharToXString(c):
 
 mtEvents = {} # slot -> (tracking_id, x, y)
 
-def mtEventSend(eventType, event, param):
+def inputEventSend(inputDevFd, eventType, event, param):
     t = time.time()
     tsec = int(t)
     tusec = int(1000000*(t-tsec))
-    os.write(mtInputDevFd, struct.pack(_input_event,
+    os.write(inputDevFd, struct.pack(_input_event,
         tsec, tusec, eventType, event, param))
+
+def mbEventSend(eventType, event, param):
+    """mousebutton device event"""
+    return inputEventSend(mbInputDevFd, eventType, event, param)
+
+def mtEventSend(eventType, event, param):
+    """multitouch device event"""
+    return inputEventSend(mtInputDevFd, eventType, event, param)
 
 def mtGestureStart(x, y):
     mtGestureStart.trackingId += 1
@@ -512,12 +575,16 @@ def closeSubAgents():
         subAgentCommand(username, None, "quit")
 
 if __name__ == "__main__":
-    if not "--keep-echo" in sys.argv:
+    origTermAttrs = termios.tcgetattr(sys.stdin.fileno())
+    if not "--keep-echo" in sys.argv and not "--debug" in sys.argv:
         # Disable terminal echo
-        origTermAttrs = termios.tcgetattr(sys.stdin.fileno())
         newTermAttrs = origTermAttrs
         newTermAttrs[3] = origTermAttrs[3] &  ~termios.ECHO
         termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, newTermAttrs)
+
+    if "--no-x" in sys.argv:
+        debug("X disabled")
+        g_Xavailable = False
 
     # Send version number, enter main loop
     write_response(True, "0.0")
@@ -546,13 +613,17 @@ if __name__ == "__main__":
             libX11.XFlush(display)
             write_response(True, None)
         elif cmd.startswith("tt "): # touch tap(x, y, button)
-            xs, ys, button = cmd[3:].strip().split()
-            button = int(button)
-            libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
-            libXtst.XTestFakeButtonEvent(display, button, X_True, X_CurrentTime)
-            libXtst.XTestFakeButtonEvent(display, button, X_False, X_CurrentTime)
-            libX11.XFlush(display)
-            write_response(True, None)
+            x, y, button = [int(i) for i in cmd[3:].strip().split()]
+            if g_Xavailable:
+                libXtst.XTestFakeMotionEvent(display, current_screen, x, y, X_CurrentTime)
+                libXtst.XTestFakeButtonEvent(display, button, X_True, X_CurrentTime)
+                libXtst.XTestFakeButtonEvent(display, button, X_False, X_CurrentTime)
+                libX11.XFlush(display)
+                rv, msg = True, None
+            else:
+                if iAmRoot: rv, msg = sendHwTap(x, y, button)
+                else: rv, msg = subAgentCommand("root", "tizen", cmd)
+            write_response(rv, msg)
         elif cmd.startswith("td "): # touch down(x, y, button)
             xs, ys, button = cmd[3:].strip().split()
             button = int(button)
