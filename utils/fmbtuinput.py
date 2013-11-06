@@ -682,10 +682,20 @@ class InputDeviceError(Exception):
     pass
 
 class Mouse(InputDevice):
-    def __init__(self):
+    def __init__(self, absoluteMove=False):
+        """
+        Parameters:
+
+          absoluteMove (boolean, optional)
+                  force move(x,y) to send absolute coordinates instead
+                  of standard relative movement. This helps avoiding
+                  mouse pointer drift in some occasions. The default
+                  is False.
+        """
         InputDevice.__init__(self)
         self._x = 0
         self._y = 0
+        self._sendAbs = absoluteMove
 
     def create(self, name="Virtual fMBT Mouse",
                vendor=0xf4b7, product=0x4053, version=1):
@@ -693,6 +703,8 @@ class Mouse(InputDevice):
         self.startCreating(name, vendor, product, version)
         self.addEvent("EV_KEY")
         self.addEvent("EV_REL")
+        if self._sendAbs:
+            self.addEvent("EV_ABS")
         self.addEvent("EV_SYN")
         self.addRel("REL_X")
         self.addRel("REL_Y")
@@ -701,14 +713,29 @@ class Mouse(InputDevice):
         self.addKey("BTN_LEFT")
         self.addKey("BTN_RIGHT")
         self.addKey("BTN_MIDDLE")
+        self.addKey("BTN_SIDE")
+        self.addKey("BTN_EXTRA")
+        self.addKey("BTN_FORWARD")
+        self.addKey("BTN_BACK")
+        self.addKey("BTN_TASK")
+        if self._sendAbs:
+            self.addAbs("ABS_X")
+            self.addAbs("ABS_Y")
         self.finishCreating()
         return self
 
     def move(self, x, y):
-        deltaX = x - self._x
-        deltaY = y - self._y
-        self.send("EV_REL", "REL_X", deltaX)
-        self.send("EV_REL", "REL_Y", deltaY)
+        """
+        Move mouse cursor to coordinates x, y.
+        """
+        if self._sendAbs:
+            self.send("EV_ABS", "ABS_X", x)
+            self.send("EV_ABS", "ABS_Y", y)
+        else:
+            deltaX = x - self._x
+            deltaY = y - self._y
+            self.send("EV_REL", "REL_X", deltaX)
+            self.send("EV_REL", "REL_Y", deltaY)
         self.sync()
         self.setXY(x, y)
 
@@ -729,6 +756,16 @@ class Mouse(InputDevice):
         self.sync()
 
     def setXY(self, x, y):
+        """
+        Resets relative mouse position to (x, y), does not synthesize
+        event. Example: disable possible mouse pointer drift:
+
+        mouse.moveRel(-4096, -4096) # move to the top-left corner
+        mouse.setXY(0, 0) # set current pointer coordinates to 0, 0
+
+        After this, mouse.move(x, y) will synthesize relative mouse
+        move event which will drive cursor to coordinates x, y.
+        """
         self._x = x
         self._y = y
 
