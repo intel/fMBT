@@ -372,14 +372,32 @@ def specialCharToXString(c):
            '_': "underscore"}
     return c2s.get(c, c)
 
-def specialCharToUsbString(c):
-    # todo: more complete keyboard layout
+def specialCharToUsKeys(c):
     # character -> ([modifier, [modifier...]] keycode)
     c2s = {'\n': ("KEY_ENTER",),
            ' ': ("KEY_SPACE",),
+           '`': ("KEY_GRAVE",),      '~': ("KEY_LEFTSHIFT", "KEY_GRAVE"),
            '!': ("KEY_LEFTSHIFT", "KEY_1"),
            '@': ("KEY_LEFTSHIFT", "KEY_2"),
+           '#': ("KEY_LEFTSHIFT", "KEY_3"),
            '$': ("KEY_LEFTSHIFT", "KEY_4"),
+           '%': ("KEY_LEFTSHIFT", "KEY_5"),
+           '^': ("KEY_LEFTSHIFT", "KEY_6"),
+           '&': ("KEY_LEFTSHIFT", "KEY_7"),
+           '*': ("KEY_LEFTSHIFT", "KEY_8"),
+           '(': ("KEY_LEFTSHIFT", "KEY_9"),
+           ')': ("KEY_LEFTSHIFT", "KEY_0"),
+           '-': ("KEY_MINUS",),      '_': ("KEY_LEFTSHIFT", "KEY_MINUS"),
+           '=': ("KEY_EQUAL",),      '+': ("KEY_LEFTSHIFT", "KEY_EQUAL"),
+           '\t': ("KEY_TAB",),
+           '[': ("KEY_LEFTBRACE",),  '{': ("KEY_LEFTSHIFT", "KEY_LEFTBRACE"),
+           ']': ("KEY_RIGHTBRACE",), '}': ("KEY_LEFTSHIFT", "KEY_RIGHTBRACE"),
+           ';': ("KEY_SEMICOLON",),  ':': ("KEY_LEFTSHIFT", "KEY_SEMICOLON"),
+           "'": ("KEY_APOSTROPHE",), '"': ("KEY_LEFTSHIFT", "KEY_APOSTROPHE"),
+           '\\': ("KEY_BACKSLASH",), '|': ("KEY_LEFTSHIFT", "KEY_BACKSLASH"),
+           ',': ("KEY_COMMA",),      '<': ("KEY_LEFTSHIFT", "KEY_COMMA"),
+           '.': ("KEY_DOT",),        '>': ("KEY_LEFTSHIFT", "KEY_DOT"),
+           '/': ("KEY_SLASH",),      '?': ("KEY_LEFTSHIFT", "KEY_SLASH"),
     }
     return c2s.get(c, c)
 
@@ -496,7 +514,7 @@ def typeCharHw(origChar):
     for c in origChar:
         modifiers = []
         keyCode = None
-        c = specialCharToUsbString(c)
+        c = specialCharToUsKeys(c)
         if isinstance(c, tuple):
             modifiers = c[:-1]
             keyCode = c[-1]
@@ -521,11 +539,13 @@ if g_Xavailable:
 else:
     typeChar = typeCharHw
 
-def typeSequence(s):
+def typeSequence(s, delayBetweenChars=0):
     skipped = []
     for c in s:
         if not typeChar(c):
             skipped.append(c)
+        if delayBetweenChars != 0:
+            time.sleep(delayBetweenChars)
     if skipped: return False, skipped
     else: return True, skipped
 
@@ -784,7 +804,8 @@ if __name__ == "__main__":
                 rv, skippedSymbols = typeSequence(cPickle.loads(base64.b64decode(cmd[3:])))
                 libX11.XFlush(display)
             elif iAmRoot:
-                rv, skippedSymbols = typeSequence(cPickle.loads(base64.b64decode(cmd[3:])))
+                rv, skippedSymbols = typeSequence(cPickle.loads(base64.b64decode(cmd[3:])),
+                                                  delayBetweenChars=0.05)
             else:
                 rv, skippedSymbols = subAgentCommand("root", "tizen", cmd)
             write_response(rv, skippedSymbols)
