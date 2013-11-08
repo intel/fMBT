@@ -91,6 +91,7 @@ import inspect
 import math
 import os
 import shutil
+import subprocess
 import sys
 import time
 import traceback
@@ -1102,7 +1103,7 @@ class _Paths(object):
 
 
 class GUITestInterface(object):
-    def __init__(self, ocrEngine=None, oirEngine=None):
+    def __init__(self, ocrEngine=None, oirEngine=None, rotateScreenshot=None):
         self._paths = _Paths("", "")
         self._conn = None
         self._lastScreenshot = None
@@ -1110,6 +1111,7 @@ class GUITestInterface(object):
         self._longTapHoldTime = 2.0
         self._ocrEngine = None
         self._oirEngine = None
+        self._rotateScreenshot = rotateScreenshot
 
         if ocrEngine == None:
             self.setOcrEngine(_defaultOcrEngine())
@@ -1306,9 +1308,8 @@ class GUITestInterface(object):
             return True
         return self._conn.sendPress(keyName)
 
-    def refreshScreenshot(self, forcedScreenshot=None):
-        """
-        Takes new screenshot and updates the latest screenshot object.
+    def refreshScreenshot(self, forcedScreenshot=None, rotate=None):
+        """Takes new screenshot and updates the latest screenshot object.
 
         Parameters:
 
@@ -1316,7 +1317,14 @@ class GUITestInterface(object):
                   use given screenshot object or image file, do not
                   take new screenshot.
 
-        Returns new latest Screenshot object.
+          rotate (integer, optional):
+                  rotate screenshot by given number of degrees. This
+                  overrides constructor rotateScreenshot parameter
+                  value. The default is None (no override).
+
+        Returns Screenshot object, and makes the same object "the
+        latest screenshot" that is used by all *Bitmap and *OcrText
+        methods.
         """
         if forcedScreenshot != None:
             if type(forcedScreenshot) == str:
@@ -1332,6 +1340,11 @@ class GUITestInterface(object):
                 self.setScreenshotDir(self._screenshotDirDefault)
             screenshotFile = self.screenshotDir() + os.sep + _filenameTimestamp() + "-" + self._conn.target() + '.png'
             if self._conn.recvScreenshot(screenshotFile):
+                # New screenshot successfully received from device
+                if rotate == None:
+                    rotate = self._rotateScreenshot
+                if rotate != None and rotate != 0:
+                    subprocess.call(["convert", screenshotFile, "-rotate", str(rotate), screenshotFile])
                 self._lastScreenshot = Screenshot(
                     screenshotFile=screenshotFile,
                     paths = self._paths,

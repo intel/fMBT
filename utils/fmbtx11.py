@@ -28,8 +28,21 @@ fmbtgti._OCRPREPROCESS = [
 import ctypes
 
 class Screen(fmbtgti.GUITestInterface):
-    def __init__(self, display=""):
-        fmbtgti.GUITestInterface.__init__(self)
+    def __init__(self, display="", **kwargs):
+        """Parameters:
+
+          display (string, optional)
+                  X display to connect to.
+                  Example: display=":0". The default is "", that is,
+                  the default X display in the DISPLAY environment
+                  variable will be used.
+
+          rotateScreenshot (integer, optional)
+                  rotate new screenshots by rotateScreenshot degrees.
+                  Example: rotateScreenshot=-90. The default is 0 (no
+                  rotation).
+        """
+        fmbtgti.GUITestInterface.__init__(self, **kwargs)
         self.setConnection(X11Connection(display))
 
 class X11Connection(fmbtgti.GUITestConnection):

@@ -246,7 +246,7 @@ class Device(fmbtgti.GUITestInterface):
       bitmaps can be searched from this.
     """
     _PARSE_VIEW_RETRY_LIMIT = 10
-    def __init__(self, deviceName=None, iniFile=None, connect=True):
+    def __init__(self, deviceName=None, iniFile=None, connect=True, **kwargs):
         """
         Connect to given device, or the first not-connected Android
         device in the "adb devices" list, if nothing is defined.
@@ -274,11 +274,16 @@ class Device(fmbtgti.GUITestInterface):
                   ini. Connect to the device with a serial number
                   given in this file. The default is None.
 
+          rotateScreenshot (integer, optional)
+                  rotate new screenshots by rotateScreenshot degrees.
+                  Example: rotateScreenshot=-90. The default is 0 (no
+                  rotation).
+
         To create an ini file for a device, use dumpIni. Example:
 
         file("/tmp/test.ini", "w").write(fmbtandroid.Device().dumpIni())
         """
-        fmbtgti.GUITestInterface.__init__(self)
+        fmbtgti.GUITestInterface.__init__(self, **kwargs)
 
         self._fmbtAndroidHomeDir = os.getenv("FMBTANDROIDHOME", os.getcwd())
 

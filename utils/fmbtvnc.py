@@ -57,9 +57,13 @@ class Screen(fmbtgti.GUITestInterface):
                   works better with some VNC servers that may
                   otherwise send old graphics.
 
+          rotateScreenshot (integer, optional)
+                  rotate new screenshots by rotateScreenshot degrees.
+                  Example: rotateScreenshot=-90. The default is 0 (no
+                  rotation).
         """
         autoUpdate = kwargs.get("autoUpdate", True)
-        fmbtgti.GUITestInterface.__init__(self)
+        fmbtgti.GUITestInterface.__init__(self, **kwargs)
         self.setConnection(VNCConnection(hostspec, port, password, autoUpdate))
 
     def init(self):

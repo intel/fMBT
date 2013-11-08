@@ -121,7 +121,7 @@ def _fileToQueue(f, outQueue):
     f.close()
 
 class Device(fmbtgti.GUITestInterface):
-    def __init__(self, serialNumber=None, loginCommand=None, debugAgentFile=None):
+    def __init__(self, serialNumber=None, loginCommand=None, debugAgentFile=None, **kwargs):
         """Parameters:
 
           serialNumber (string, optional)
@@ -142,8 +142,12 @@ class Device(fmbtgti.GUITestInterface):
                   given file. The default is None: communication is
                   not recorded.
 
+          rotateScreenshot (integer, optional)
+                  rotate new screenshots by rotateScreenshot degrees.
+                  Example: rotateScreenshot=-90. The default is 0 (no
+                  rotation).
         """
-        fmbtgti.GUITestInterface.__init__(self)
+        fmbtgti.GUITestInterface.__init__(self, **kwargs)
         self.setConnection(
             TizenDeviceConnection(serialNumber=serialNumber,
                                   loginCommand=loginCommand,
