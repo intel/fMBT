@@ -23,6 +23,7 @@ import os
 import platform
 import re
 import shutil
+import string
 import struct
 import subprocess
 import sys
@@ -334,11 +335,18 @@ def sendHwTap(x, y, button):
         return False, str(e)
 
 def sendHwKey(keyName, delayBeforePress, delayBeforeRelease):
+    fd = None
+    closeFd = False
     try: inputDevice = deviceToEventFile[hwKeyDevice[keyName]]
-    except: inputDevice = keyboard_device._fd
+    except: fd = keyboard_device._fd
     try: keyCode = _inputKeyNameToCode[keyName]
-    except: return False, 'No keycode for key "%s"' % (keyName,)
-    try: fd = os.open(inputDevice, os.O_WRONLY | os.O_NONBLOCK)
+    except KeyError:
+        try: keyCode = fmbtuinput.toKeyCode(keyName)
+        except ValueError: return False, 'No keycode for key "%s"' % (keyName,)
+    try:
+        if not fd:
+            fd = os.open(inputDevice, os.O_WRONLY | os.O_NONBLOCK)
+            closeFd = True
     except: return False, 'Unable to open input device "%s" for writing' % (inputDevice,)
     if delayBeforePress > 0: time.sleep(delayBeforePress)
     if delayBeforePress >= 0:
@@ -348,7 +356,8 @@ def sendHwKey(keyName, delayBeforePress, delayBeforeRelease):
     if delayBeforeRelease >= 0:
         if os.write(fd, struct.pack(_input_event, int(time.time()), 0, _EV_KEY, keyCode, 0)) > 0:
             os.write(fd, struct.pack(_input_event, 0, 0, 0, 0, 0))
-    os.close(fd)
+    if closeFd:
+        os.close(fd)
     return True, None
 
 def specialCharToXString(c):
@@ -361,6 +370,17 @@ def specialCharToXString(c):
            ':': "colon", ';': "semicolon", '<': "less", '=': "equal",
            '>': "greater", '?': "question", '@': "at",
            '_': "underscore"}
+    return c2s.get(c, c)
+
+def specialCharToUsbString(c):
+    # todo: more complete keyboard layout
+    # character -> ([modifier, [modifier...]] keycode)
+    c2s = {'\n': ("KEY_ENTER",),
+           ' ': ("KEY_SPACE",),
+           '!': ("KEY_LEFTSHIFT", "KEY_1"),
+           '@': ("KEY_LEFTSHIFT", "KEY_2"),
+           '$': ("KEY_LEFTSHIFT", "KEY_4"),
+    }
     return c2s.get(c, c)
 
 mtEvents = {} # slot -> (tracking_id, x, y)
@@ -447,7 +467,7 @@ def mtLinearGesture(listOfStartEndPoints, duration, movePoints, sleepBeforeMove=
         mtGestureEnd(finger)
     return True, None
 
-def typeChar(origChar):
+def typeCharX(origChar):
     modifiers = []
     c         = specialCharToXString(origChar)
     keysym    = libX11.XStringToKeysym(c)
@@ -471,6 +491,35 @@ def typeChar(origChar):
     for m in modifiers[::-1]:
         libXtst.XTestFakeKeyEvent(display, m, X_False, X_CurrentTime)
     return True
+
+def typeCharHw(origChar):
+    for c in origChar:
+        modifiers = []
+        keyCode = None
+        c = specialCharToUsbString(c)
+        if isinstance(c, tuple):
+            modifiers = c[:-1]
+            keyCode = c[-1]
+        elif c in string.uppercase:
+            modifiers = ["KEY_LEFTSHIFT"]
+            keyCode = "KEY_" + c
+        elif c in string.lowercase or c in string.digits:
+            keyCode = "KEY_" + c.upper()
+        else:
+            # do not know how to type the character
+            pass
+        if keyCode:
+            for m in modifiers:
+                keyboard_device.press(m)
+            keyboard_device.tap(keyCode)
+            for m in modifiers[::-1]:
+                keyboard_device.release(m)
+    return True
+
+if g_Xavailable:
+    typeChar = typeCharX
+else:
+    typeChar = typeCharHw
 
 def typeSequence(s):
     skipped = []
@@ -503,7 +552,7 @@ def westonTakeScreenshotRoot():
         keyboard_device.press("KEY_LEFTMETA")
         keyboard_device.tap("s")
         keyboard_device.release("KEY_LEFTMETA")
-        time.sleep(1)
+        time.sleep(5)
         shutil.move(westonTakeScreenshotRoot.ssFilename, "/tmp/screenshot.png")
         os.chmod("/tmp/screenshot.png", 0666)
     except Exception, e:
@@ -731,8 +780,13 @@ if __name__ == "__main__":
             else: rv, msg = subAgentCommand("root", "tizen", cmd)
             write_response(rv, msg)
         elif cmd.startswith("kt "): # send x events
-            rv, skippedSymbols = typeSequence(cPickle.loads(base64.b64decode(cmd[3:])))
-            libX11.XFlush(display)
+            if g_Xavailable:
+                rv, skippedSymbols = typeSequence(cPickle.loads(base64.b64decode(cmd[3:])))
+                libX11.XFlush(display)
+            elif iAmRoot:
+                rv, skippedSymbols = typeSequence(cPickle.loads(base64.b64decode(cmd[3:])))
+            else:
+                rv, skippedSymbols = subAgentCommand("root", "tizen", cmd)
             write_response(rv, skippedSymbols)
         elif cmd.startswith("ml "): # send multitouch linear gesture
             if iAmRoot:
