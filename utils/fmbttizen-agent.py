@@ -568,11 +568,16 @@ def westonTakeScreenshotRoot():
     if westonTakeScreenshotRoot.ssFilename == None:
         westonTakeScreenshotRoot.ssFilename = findWestonScreenshotFilenameRoot()
     try:
-        # TODO: make me faster and more reliable!
         keyboard_device.press("KEY_LEFTMETA")
         keyboard_device.tap("s")
         keyboard_device.release("KEY_LEFTMETA")
-        time.sleep(5)
+        time.sleep(0.5)
+        # wait for the screenshot writer to finish
+        writerPid = fuser(westonTakeScreenshotRoot.ssFilename)
+        if writerPid != None:
+            time.sleep(0.25)
+            while fuser(westonTakeScreenshotRoot.ssFilename, [writerPid]) != None:
+                time.sleep(0.25)
         shutil.move(westonTakeScreenshotRoot.ssFilename, "/tmp/screenshot.png")
         os.chmod("/tmp/screenshot.png", 0666)
     except Exception, e:
@@ -587,6 +592,24 @@ def takeScreenshotOnWeston():
     if rv == False:
         return rv, status
     return True, file("/tmp/screenshot.png").read()
+
+def fuser(filename, usualSuspects=None):
+    """Returns the pid of a user of given file, or None"""
+    filepath = os.path.realpath(filename)
+    if not os.access(filepath, os.R_OK):
+        raise ValueError('No such file: "%s"' % (filename,))
+    if usualSuspects == None:
+        procFds = glob.glob("/proc/[1-9][0-9][0-9]*/fd/*")
+    else:
+        procFds = []
+        for pid in usualSuspects:
+            procFds.extend(glob.glob("/proc/%s/fd/*" % (pid,)))
+    for symlink in procFds:
+        try:
+            if os.path.realpath(symlink) == filepath:
+                return int(symlink.split('/')[2])
+        except OSError:
+            pass
 
 def findWestonScreenshotFilenameRoot():
     # find weston cwd
