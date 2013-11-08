@@ -234,6 +234,7 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %{python_sitelib}/fmbt.py*
 %{python_sitelib}/fmbtgti.py*
 %{python_sitelib}/fmbtlogger.py*
+%{python_sitelib}/fmbtuinput.py*
 %{python_sitelib}/%{name}/lsts.py*
 %{python_sitelib}/%{name}/aalmodel.py*
 %{python_sitelib}/%{name}/%{name}parsers.py*
