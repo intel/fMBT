@@ -1,12 +1,114 @@
 #!/usr/bin/env python
 
+# fMBT, free Model Based Testing tool
+# Copyright (c) 2013, Intel Corporation.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU Lesser General Public License,
+# version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for
+# more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+#
+# This is a small tool for converting UI events into fmbtgti interface
+# method calls.
+
 from PySide import QtCore
 from PySide import QtGui
 
 import getopt
+import fmbtgti
 import math
 import sys
 import time
+
+def error(msg, exitStatus=1):
+    sys.stderr.write("screen2gti: %s\n" % (msg,))
+    sys.exit(1)
+
+def debug(msg, debugLevel=1):
+    if opt_debug >= debugLevel:
+        sys.stderr.write("screen2gti debug: %s\n" % (msg,))
+
+
+def quantify(item, quantum):
+    if not isinstance(item, tuple) and not isinstance(item, list):
+        return int(item * (1/quantum)) * quantum
+    else:
+        return tuple([int(i * (1/quantum)) * quantum for i in item])
+
+def gestureToGti(gestureEventList):
+    timeQuantum = 0.1 # seconds
+    locQuantum = 0.025 # 1.0 = full display height/width
+    distQuantum = 0.1  # 1.0 = full dist from point to edge
+
+    quantL = lambda v: quantify(v, locQuantum)
+    quantT = lambda v: quantify(v, timeQuantum)
+
+    el = gestureEventList
+
+    firstEvent = el[0].event
+    lastEvent = el[-1].event
+    duration = el[-1].time - el[0].time
+    distance = 0
+    xDistance = 0
+    yDistance = 0
+    lastX, lastY = el[0].pos
+    for e in el[1:]:
+        xDistance += abs(lastX - e.pos[0])
+        yDistance += abs(lastY - e.pos[1])
+        distance += math.sqrt((lastX - e.pos[0])**2 +
+                              (lastY - e.pos[1])**2)
+        lastX, lastY = e.pos
+
+    if firstEvent == "mousedown" and lastEvent == "mouseup":
+        between_events = set([e.event for e in el[1:-1]])
+        if between_events in (set(), set(["mousemove"])):
+            # event sequence: mousedown, mousemove..., mouseup
+            if duration < 3 * timeQuantum:
+                # very quick event, make it single tap
+                return ".tap((%s, %s))" % quantL(el[0].pos)
+            elif distance < 3 * locQuantum:
+                # neglible move, make it long tap
+                return ".tap((%s, %s), hold=%s)" % (
+                    quantL(el[0].pos) + quantT([duration]))
+            elif xDistance < 3 * locQuantum:
+                if el[-1].pos[1] < el[0].pos[1]:
+                    direction = "north"
+                    sdist = yDistance + (1-el[0].pos[1])
+                else:
+                    direction = "south"
+                    sdist = yDistance + el[0].pos[1]
+                # only y axis changed, we've got a swipe
+                return '.swipe((%s, %s), "%s", distance=%s)' % (
+                    quantL(el[0].pos) + (direction,) +
+                    quantL([sdist]))
+            elif yDistance < 3 * locQuantum:
+                if el[-1].pos[0] < el[0].pos[0]:
+                    direction = "west"
+                    sdist = xDistance + (1-el[0].pos[0])
+                else:
+                    direction = "east"
+                    sdist = xDistance + el[0].pos[0]
+                # only y axis changed, we've got a swipe
+                return '.swipe((%s, %s), "%s", distance=%s)' % (
+                    quantL(el[0].pos) + (direction,) +
+                    quantL([sdist]))
+            else:
+                return ".drag(%s, %s)" % (quantL(el[0].pos), quantL(el[-1].pos))
+        else:
+            return "unknown between events"
+    else:
+        return "unknown gesture"
+
+########################################################################
+# GUI
 
 class GestureEvent(object):
     __slots__ = ["time", "event", "key", "pos"]
@@ -59,19 +161,18 @@ class MyScaleEvents(QtCore.QObject):
                 self.mainwindow.gestureStarted = False
                 self.mainwindow.gestureEvents.append(
                     GestureEvent("mouseup", 0, posToRel(event.pos)))
-
                 s = gestureToGti(self.mainwindow.gestureEvents)
-                cmd = "gti" + s
-                if True: # if interact...
-                    print s
-                    eval(cmd)
+                cmd = "sut" + s
                 self.mainwindow.gestureEvents = []
-                QtCore.QTimer.singleShot(1000, self.mainwindow.updateScreenshot)
-
-        elif event.type() == QtCore.QEvent.KeyPress:
-            if event.key() == QtCore.Qt.Key_Q:
-                self.mainwindow.close()
-        if event.type() == QtCore.QEvent.ToolTip:
+                if self.mainwindow.screenshotButtonInteract.isChecked():
+                    debug("sending command %s" % (cmd,))
+                    eval(cmd)
+                    QtCore.QTimer.singleShot(1000, self.mainwindow.updateScreenshot)
+                else:
+                    debug("dropping command %s" % (cmd,))
+                if self.mainwindow.editorButtonRec.isChecked():
+                    self.mainwindow.editor.insertPlainText(cmd + "\n")
+        elif event.type() == QtCore.QEvent.ToolTip:
             if not hasattr(self.attrowner, 'cursorForPosition'):
                 return False
             cursor = self.attrowner.cursorForPosition(event.pos())
@@ -109,72 +210,23 @@ class MyScaleEvents(QtCore.QObject):
         return False
 
 
-def quantify(item, quantum):
-    if not isinstance(item, tuple) and not isinstance(item, list):
-        return int(item * (1/quantum)) * quantum
-    else:
-        return tuple([int(i * (1/quantum)) * quantum for i in item])
-
-def gestureToGti(gestureEventList):
-    timeQuantum = 0.2 # seconds
-    locQuantum = 0.025 # 1.0 = full display height/width
-    distQuantum = 0.1  # 1.0 = full dist from point to edge
-
-    quantL = lambda v: quantify(v, locQuantum)
-    quantT = lambda v: quantify(v, timeQuantum)
-
-    el = gestureEventList
-
-    firstEvent = el[0].event
-    lastEvent = el[-1].event
-    duration = el[-1].time - el[0].time
-    distance = 0
-    xDistance = 0
-    yDistance = 0
-    lastX, lastY = el[0].pos
-    for e in el[1:]:
-        xDistance += abs(lastX - e.pos[0])
-        yDistance += abs(lastY - e.pos[1])
-        distance += math.sqrt((lastX - e.pos[0])**2 +
-                              (lastY - e.pos[1])**2)
-        lastX, lastY = e.pos
-
-    if firstEvent == "mousedown" and lastEvent == "mouseup":
-        between_events = set([e.event for e in el[1:-1]])
-        if between_events in (set(), set(["mousemove"])):
-            # event sequence: mousedown, mousemove..., mouseup
-            if duration < timeQuantum:
-                # very quick event, make it single tap
-                return ".tap((%s, %s))" % quantL(el[0].pos)
-            elif distance < locQuantum:
-                # neglible move, make it long tap
-                return ".tap((%s, %s), hold=%s)" % (
-                    quantL(el[0].pos) + quantT([duration]))
-            elif xDistance < locQuantum:
-                if el[-1].pos[1] < el[0].pos[1]:
-                    direction = "north"
-                else:
-                    direction = "south"
-                # only y axis changed, we've got a swipe
-                return '.swipe((%s, %s), "%s", distance=%s)' % (
-                    quantL(el[0].pos) + (direction,) +
-                    quantL([yDistance]))
-            elif yDistance < locQuantum:
-                if el[-1].pos[0] < el[0].pos[0]:
-                    direction = "west"
-                else:
-                    direction = "east"
-                # only y axis changed, we've got a swipe
-                return '.swipe((%s, %s), "%s", distance=%s)' % (
-                    quantL(el[0].pos) + (direction,) +
-                    quantL([xDistance]))
-            else:
-                return "TODO: drag..."
-        else:
-            return "unknown between events"
-    else:
-        return "unknown gesture"
-
+class fmbtdummy(object):
+    class Device(object):
+        def __init__(self, screenshotList=[]):
+            self.scl = screenshotList
+        def refreshScreenshot(self):
+            s = fmbtgti.Screenshot(screenshotFile=self.scl[0])
+            self.scl.append(self.scl.pop(0)) # rotate screenshots
+            return s
+        def __getattr__(self, name):
+            def argPrinter(*args, **kwargs):
+                a = []
+                for arg in args:
+                    a.append(repr(arg))
+                for k, v in kwargs.iteritems():
+                    a.append('%s=%s' % (k, repr(v)))
+                print "dummy.%s(%s)" % (name, ", ".join(a))
+            return argPrinter
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
@@ -184,22 +236,25 @@ class MainWindow(QtGui.QMainWindow):
         self.layout = QtGui.QVBoxLayout()
         self.mainwidget.setLayout(self.layout)
 
-        self.screenshotButtons = QtGui.QWidget(self.mainwidget)
+        self.splitter = QtGui.QSplitter(self.mainwidget)
+        self.layout.addWidget(self.splitter,1)
+
+        ### Screenshot widgets
+        self.screenshotWidgets = QtGui.QWidget(self.mainwidget)
+        self.screenshotWidgetsLayout = QtGui.QVBoxLayout()
+        self.screenshotWidgets.setLayout(self.screenshotWidgetsLayout)
+
+        self.screenshotButtons = QtGui.QWidget(self.screenshotWidgets)
         self.screenshotButtonsL = QtGui.QHBoxLayout()
         self.screenshotButtons.setLayout(self.screenshotButtonsL)
         self.screenshotButtonRefresh = QtGui.QPushButton(self.screenshotButtons,
                                                          text="Refresh")
         self.screenshotButtonsL.addWidget(self.screenshotButtonRefresh)
-        self.screenshotButtonRecord = QtGui.QPushButton(self.screenshotButtons,
-                                                        text="Record",
-                                                        checkable = True)
-        self.screenshotButtonsL.addWidget(self.screenshotButtonRecord)
         self.screenshotButtonInteract = QtGui.QPushButton(self.screenshotButtons,
-                                                        text="Interact",
+                                                        text="Control",
                                                         checkable = True)
         self.screenshotButtonsL.addWidget(self.screenshotButtonInteract)
-        self.layout.addWidget(self.screenshotButtons)
-
+        self.screenshotWidgetsLayout.addWidget(self.screenshotButtons)
 
         def makeScalableImage(parent, qlabel):
             container = QtGui.QWidget(parent)
@@ -222,64 +277,109 @@ class MainWindow(QtGui.QMainWindow):
             container._layout = layout # protect from garbage collector
             return container
 
-        self.screenshotQLabel = QtGui.QLabel(self.mainwidget)
-        self.screenshotContainer = makeScalableImage(self.mainwidget, self.screenshotQLabel)
-        # self.screenshotContainer = QtGui.QLabel(self.mainwidget)
-        self.layout.addWidget(self.screenshotContainer)
+        self.screenshotQLabel = QtGui.QLabel(self.screenshotWidgets)
+        self.screenshotContainer = makeScalableImage(self.screenshotWidgets, self.screenshotQLabel)
+        self.screenshotWidgetsLayout.addWidget(self.screenshotContainer)
         self.screenshotImage = QtGui.QImage()
 
         self.screenshotQLabel.setPixmap(
             QtGui.QPixmap.fromImage(
                 self.screenshotImage))
 
+        self.splitter.addWidget(self.screenshotWidgets)
+
+        ### Editor widgets
+        self.editorWidgets = QtGui.QWidget(self.mainwidget)
+        self.editorWidgetsLayout = QtGui.QVBoxLayout()
+        self.editorWidgets.setLayout(self.editorWidgetsLayout)
+
+        self.editorButtons = QtGui.QWidget(self.editorWidgets)
+        self.editorButtonsLayout = QtGui.QHBoxLayout()
+        self.editorButtons.setLayout(self.editorButtonsLayout)
+
+        self.editorButtonRec = QtGui.QPushButton("Rec", checkable=True)
+        self.editorButtonRunSingle = QtGui.QPushButton("Run line")
+        self.editorButtonRunAll = QtGui.QPushButton("Run all")
+        self.editorButtonsLayout.addWidget(self.editorButtonRec)
+        self.editorButtonsLayout.addWidget(self.editorButtonRunSingle)
+        self.editorButtonsLayout.addWidget(self.editorButtonRunAll)
+        self.editorWidgetsLayout.addWidget(self.editorButtons)
+
+        self.editor = QtGui.QTextEdit()
+        self.editorWidgetsLayout.addWidget(self.editor)
+        self.splitter.addWidget(self.editorWidgets)
+
         self.setCentralWidget(self.mainwidget)
+
+        ### Menus
+        fileMenu = QtGui.QMenu("&File", self)
+        self.menuBar().addMenu(fileMenu)
+        fileMenu.addAction("E&xit", QtGui.qApp.quit, "Ctrl+Q")
 
         self.gestureEvents = []
         self.gestureStarted = False
 
     def updateScreenshot(self):
-        gti.refreshScreenshot().save("screen2gti.png")
+        sut.refreshScreenshot().save("screen2gti.png")
         self.screenshotImage = QtGui.QImage()
         self.screenshotImage.load("screen2gti.png")
         self.screenshotQLabel.setPixmap(
             QtGui.QPixmap.fromImage(
                 self.screenshotImage))
-        self.screenshotContainer.update()
-        self.screenshotContainer.repaint()
-        self.screenshotContainer.show()
         self.screenshotContainer.area.setWidget(self.screenshotQLabel)
         self.screenshotContainer.area.wheel_scale_changed()
-        self.show()
-        self.repaint()
 
 if __name__ == "__main__":
 
-    opt_connect = None
+    opt_connect = ""
     opt_gti = None
-    supported_platforms = ['android', 'tizen', 'x11', 'vnc']
+    opt_debug = 0
+    supported_platforms = ['android', 'tizen', 'x11', 'vnc', 'dummy']
 
     opts, remainder = getopt.getopt(
         sys.argv[1:], 'hd:p:',
-        ['help', 'device=', 'platform='])
+        ['help', 'device=', 'platform=', 'debug'])
 
     for opt, arg in opts:
         if opt in ['-h', '--help']:
             print __doc__
             sys.exit(0)
+        elif opt in ['--debug']:
+            opt_debug += 1
         elif opt in ['-d', '--device']:
             opt_connect = arg
         elif opt in ['-p', '--platform']:
             opt_gti = arg
-            if not arg in ['android', 'tizen', 'x11', 'vnc']:
+            if arg in ['android', 'tizen', 'dummy']:
+                opt_gticlass = "Device"
+            elif arg in ['x11', 'vnc']:
+                opt_gticlass = "Screen"
+            else:
                 error('unknown platform: "%s". Use one of "%s"' % (
                     arg, '", "'.join(supported_platforms)))
 
-    l = __import__("fmbt" + opt_gti)
-    gti = l.Device(opt_connect)
+    if opt_gti == None:
+        error("no platform specified (-p)")
+
+    if opt_gti != "dummy":
+        initSequence = ("import fmbt%s\n"
+                        "sut = fmbt%s.%s('%s')\n") % (
+            opt_gti, opt_gti, opt_gticlass, opt_connect)
+        exec initSequence
+        """
+        l = __import__("fmbt" + opt_gti)
+        cmd = "l.%s('%s')" % (opt_gticlass, opt_connect)
+        print cmd
+        gti = eval(cmd)
+        """
+    else:
+        initSequence = "# sut = fmbtdummy.Device(...)\n"
+        sut = fmbtdummy.Device(screenshotList = opt_connect.split(","))
 
     _app = QtGui.QApplication(sys.argv)
     _win = MainWindow()
     _win.resize(640, 480)
     _win.updateScreenshot()
+    _win.editor.append(initSequence)
     _win.show()
     _app.exec_()
