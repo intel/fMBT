@@ -48,6 +48,7 @@ class Screen(fmbtgti.GUITestInterface):
 class X11Connection(fmbtgti.GUITestConnection):
     def __init__(self, display):
         fmbtgti.GUITestConnection.__init__(self)
+        self._displayName = display
         self.libX11 = ctypes.CDLL("libX11.so.6")
         self.libXtst = ctypes.CDLL("libXtst.so.6")
 
@@ -186,7 +187,7 @@ class X11Connection(fmbtgti.GUITestConnection):
         # This is a hack to get this stack quickly testable,
         # let's replace this with Xlib/libMagick functions, too...
         import commands
-        commands.getstatusoutput("xwd -root -out '%s.xwd'" % (filename,))
+        commands.getstatusoutput("xwd -root -display '%s' -out '%s.xwd'" % (self._displayName, filename))
         commands.getstatusoutput("convert '%s.xwd' '%s'" % (filename, filename))
         return True
 
