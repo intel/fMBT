@@ -334,6 +334,24 @@ def sendHwTap(x, y, button):
     except Exception, e:
         return False, str(e)
 
+def sendHwFingerDown(x, y, button):
+    try:
+        # TODO: it should be possible to do this with touch device, too
+        mouse_button_device.move(x, y)
+        mouse_button_device.press(button)
+        return True, None
+    except Exception, e:
+        return False, str(e)
+
+def sendHwFingerUp(x, y, button):
+    try:
+        # TODO: it should be possible to do this with touch device, too
+        mouse_button_device.move(x, y)
+        mouse_button_device.release(button)
+        return True, None
+    except Exception, e:
+        return False, str(e)
+
 def sendHwKey(keyName, delayBeforePress, delayBeforeRelease):
     fd = None
     closeFd = False
@@ -799,16 +817,24 @@ if __name__ == "__main__":
         elif cmd.startswith("td "): # touch down(x, y, button)
             xs, ys, button = cmd[3:].strip().split()
             button = int(button)
-            libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
-            libXtst.XTestFakeButtonEvent(display, button, X_True, X_CurrentTime)
-            libX11.XFlush(display)
+            if g_Xavailable:
+                libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
+                libXtst.XTestFakeButtonEvent(display, button, X_True, X_CurrentTime)
+                libX11.XFlush(display)
+            else:
+                if iAmRoot: rv, msg = sendHwFingerDown(int(xs), int(ys), button)
+                else: rv, msg = subAgentCommand("root", "tizen", cmd)
             write_response(True, None)
         elif cmd.startswith("tu "): # touch up(x, y, button)
             xs, ys, button = cmd[3:].strip().split()
             button = int(button)
-            libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
-            libXtst.XTestFakeButtonEvent(display, button, X_False, X_CurrentTime)
-            libX11.XFlush(display)
+            if g_Xavailable:
+                libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
+                libXtst.XTestFakeButtonEvent(display, button, X_False, X_CurrentTime)
+                libX11.XFlush(display)
+            else:
+                if iAmRoot: rv, msg = sendHwFingerUp(int(xs), int(ys), button)
+                else: rv, msg = subAgentCommand("root", "tizen", cmd)
             write_response(True, None)
         elif cmd.startswith("kd "): # hw key down
             if iAmRoot: rv, msg = sendHwKey(cmd[3:], 0, -1)
