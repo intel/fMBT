@@ -334,6 +334,14 @@ def sendHwTap(x, y, button):
     except Exception, e:
         return False, str(e)
 
+def sendHwMove(x, y):
+    try:
+        # TODO: it should be possible to do this with touch device, too
+        mouse_button_device.move(x, y)
+        return True, None
+    except Exception, e:
+        return False, str(e)
+
 def sendHwFingerDown(x, y, button):
     try:
         # TODO: it should be possible to do this with touch device, too
@@ -799,8 +807,12 @@ if __name__ == "__main__":
             except Exception, e: write_response(False, e)
         elif cmd.startswith("tm "):   # touch move(x, y)
             xs, ys = cmd[3:].strip().split()
-            libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
-            libX11.XFlush(display)
+            if g_Xavailable:
+                libXtst.XTestFakeMotionEvent(display, current_screen, int(xs), int(ys), X_CurrentTime)
+                libX11.XFlush(display)
+            else:
+                if iAmRoot: rv, msg = sendHwMove(int(xs), int(ys))
+                else: rv, msg = subAgentCommand("root", "tizen", cmd)
             write_response(True, None)
         elif cmd.startswith("tt "): # touch tap(x, y, button)
             x, y, button = [int(i) for i in cmd[3:].strip().split()]
