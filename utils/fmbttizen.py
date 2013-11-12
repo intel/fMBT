@@ -148,10 +148,13 @@ class Device(fmbtgti.GUITestInterface):
                   rotation).
         """
         fmbtgti.GUITestInterface.__init__(self, **kwargs)
-        self.setConnection(
-            TizenDeviceConnection(serialNumber=serialNumber,
+        c = TizenDeviceConnection(serialNumber=serialNumber,
                                   loginCommand=loginCommand,
-                                  debugAgentFile=debugAgentFile))
+                                  debugAgentFile=debugAgentFile)
+        self.setConnection(c)
+        if "rotateScreenshot" in kwargs:
+            c.sendScreenshotRotation(kwargs["rotateScreenshot"])
+        c._gti = self
         self._serialNumber = self._conn._serialNumber
 
     def close(self):
@@ -515,6 +518,7 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
         self._useSsh = not self._useSdb
         self._sdbShell = None
         self._debugAgentFile = debugAgentFile
+        self._agentNeedsResolution = True
         self.open()
 
     def __del__(self):
@@ -634,6 +638,14 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
             l = l.strip()
 
     def _agentCmd(self, command, retry=3):
+        if command[:2] in ["tt", "td", "tm", "tu"]:
+            # Operating on coordinates on with a touch devices
+            # may require information on screen resolution.
+            # The agent does not know about possible rotation, so
+            # the resolution needs to be sent from here.
+            if self._agentNeedsResolution:
+                self._agentCmd("sd %s %s" % self._gti.screenSize())
+                self._agentNeedsResolution = False
         if self._sdbShell == None: return False, "disconnected"
         if self._debugAgentFile: self._debugAgentFile.write(">0 %s\n" % (command,))
         if self._useSdb:
@@ -666,6 +678,9 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
 
     def sendMtLinearGesture(self, *args):
         return self._agentCmd("ml %s" % (base64.b64encode(cPickle.dumps(args))))[0]
+
+    def sendScreenshotRotation(self, angle):
+        return self._agentCmd("sa %s" % (angle,))[0]
 
     def sendTap(self, x, y):
         return self._agentCmd("tt %s %s 1" % (x, y))[0]

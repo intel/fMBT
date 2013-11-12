@@ -194,6 +194,13 @@ elif 'mxt224_key_0' in devices:
     if iAmRoot:
         touch_device = fmbtuinput.Touch().open("/dev/input/event0")
         mtInputDevFd = touch_device._fd
+elif 'eGalax Inc. eGalaxTouch EXC7200-7368v1.010          ' in devices:
+    if iAmRoot:
+        touch_device = fmbtuinput.Touch(maxX=0x8000, maxY=0x8000).open(
+            "eGalax Inc. eGalaxTouch EXC7200-7368v1.010          ")
+        mtInputDevFd = touch_device._fd
+        keyboard_device = fmbtuinput.Keyboard().create()
+
 elif iAmRoot:
     # Unknown platform, guessing best possible defaults for devices
     _d = devices.split("\n\n")
@@ -262,7 +269,7 @@ elif iAmRoot:
     else:
         kbInputDevFd = None
 
-    if virtualInputDeviceAdded:
+    if isinstance(mouse_button_device, fmbtuinput.Mouse):
         time.sleep(1)
         mouse_button_device.move(-4096, -4096)
         mouse_button_device.setXY(0, 0)
@@ -276,6 +283,9 @@ for _l in devices.splitlines():
     elif _l.startswith("H: Handlers=") and "event" in _l:
         try: deviceToEventFile[_device] = "/dev/input/" + re.findall("(event[0-9]+)", _l)[0]
         except Exception, e: pass
+
+screenWidth = None
+screenHeight = None
 
 # Connect to X server, get root window size for screenshots
 display = None
@@ -313,6 +323,9 @@ if g_Xavailable:
                                          ref(cKeysymsPerKeycode))
     shiftModifier = libX11.XKeysymToKeycode(display, libX11.XStringToKeysym("Shift_R"))
 
+    screenWidth = root_width.value
+    screenHeight = root_height.value
+
 def read_cmd():
     return sys.stdin.readline().strip()
 
@@ -328,34 +341,42 @@ def write_response(ok, value):
 
 def sendHwTap(x, y, button):
     try:
-        # TODO: it should be possible to do this with touch device, too
-        mouse_button_device.tap(x, y, button)
+        if touch_device:
+            touch_device.tap(x, y)
+        else:
+            mouse_button_device.tap(x, y, button)
         return True, None
     except Exception, e:
         return False, str(e)
 
 def sendHwMove(x, y):
     try:
-        # TODO: it should be possible to do this with touch device, too
-        mouse_button_device.move(x, y)
+        if touch_device:
+            touch_device.move(x, y)
+        else:
+            mouse_button_device.move(x, y)
         return True, None
     except Exception, e:
         return False, str(e)
 
 def sendHwFingerDown(x, y, button):
     try:
-        # TODO: it should be possible to do this with touch device, too
-        mouse_button_device.move(x, y)
-        mouse_button_device.press(button)
+        if touch_device:
+            touch_device.pressFinger(button, x, y)
+        else:
+            mouse_button_device.move(x, y)
+            mouse_button_device.press(button)
         return True, None
     except Exception, e:
         return False, str(e)
 
 def sendHwFingerUp(x, y, button):
     try:
-        # TODO: it should be possible to do this with touch device, too
-        mouse_button_device.move(x, y)
-        mouse_button_device.release(button)
+        if touch_device:
+            touch_device.releaseFinger(button, x, y)
+        else:
+            mouse_button_device.move(x, y)
+            mouse_button_device.release(button)
         return True, None
     except Exception, e:
         return False, str(e)
@@ -607,9 +628,7 @@ def westonTakeScreenshotRoot():
         shutil.move(westonTakeScreenshotRoot.ssFilename, "/tmp/screenshot.png")
         os.chmod("/tmp/screenshot.png", 0666)
     except Exception, e:
-        file("/tmp/delme.log","w").write("takessroot returning %s, %s\n" % (False, e))
         return False, str(e)
-    file("/tmp/delme.log","w").write("takessroot returning %s, %s\n" % (True, None))
     return True, None
 westonTakeScreenshotRoot.ssFilename = None
 
@@ -884,6 +903,30 @@ if __name__ == "__main__":
             else:
                 rv, compressedImage = takeScreenshot()
                 write_response(rv, compressedImage)
+        elif cmd.startswith("sd "): # set screen dimensions (width and height)
+            _sw, _sh = cmd[3:].split()
+            screenWidth, screenHeight = int(_sw), int(_sh)
+            if iAmRoot:
+                if touch_device:
+                    touch_device.setScreenSize((screenWidth, screenHeight))
+                    rv, msg = True, None
+                else:
+                    rv, msg = True, "no touch device"
+            else:
+                rv, msg = subAgentCommand("root", "tizen", cmd)
+            write_response(rv, msg)
+        elif cmd.startswith("sa "): # set screenshot rotation angle (degrees)
+            if iAmRoot:
+                if touch_device:
+                    _sa = int(cmd[3:])
+                    # compensate it with opposite rotation
+                    touch_device.setScreenAngle(-_sa)
+                    rv, msg = True, None
+                else:
+                    rv, msg = True, "no touch device"
+            else:
+                rv, msg = subAgentCommand("root", "tizen", cmd)
+            write_response(rv, msg)
         elif cmd.startswith("es "): # execute shell
             shellCmd, username, password, asyncStatus, asyncOut, asyncError = cPickle.loads(base64.b64decode(cmd[3:]))
             if username == "":

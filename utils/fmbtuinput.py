@@ -558,12 +558,17 @@ def toButtonCode(buttonCodeOrName):
     return buttonCode
 
 _g_devices = file("/proc/bus/input/devices").read().split("\n\n")
+_g_deviceNames = {}
+for d in _g_devices:
+    if d.strip() == "":
+        continue
+    _name = [line.split('"')[1] for line in d.split('\n')
+             if line.startswith('N: ')][0]
+    _g_deviceNames[_name] = ("/dev/input/" +
+                             re.findall('[ =](event[0-9]+)\s', d)[0])
+
 def toEventFilename(deviceName):
-    n = deviceName.lower()
-    return "/dev/input/" + re.findall(
-        '[ =](event[0-9]+)\s',
-        [l for l in _g_devices if n in l.lower()][0]
-    )[0]
+    return _g_deviceNames[deviceName]
 
 class InputDevice(object):
     def __init__(self):
@@ -781,14 +786,19 @@ class Touch(InputDevice):
     """
     Simulates touchpanel and touchpad
     """
-    def __init__(self):
+    def __init__(self, maxX = None, maxY = None,
+                 screenWidth = None, screenHeight = None, screenAngle = None):
         InputDevice.__init__(self)
-        self._maxX = None
-        self._maxY = None
+        self._maxX = maxX
+        self._maxY = maxY
+        self._screenW = screenWidth
+        self._screenH = screenHeight
+        self._screenA = screenAngle
         self._maxPressure = None
         self._multiTouch = True
         self._mtTrackingId = 0
         self._mtTracking = {}
+        self._hoover = (0, 0)
 
     def create(self, name="Virtual fMBT Touch",
                vendor=0xf4b7, product=0x70c5, version=1,
@@ -838,6 +848,49 @@ class Touch(InputDevice):
         self._maxY = nfo[2]
         return self
 
+    def setScreenSize(self, (width, height)):
+        self._screenW, self._screenH = (width, height)
+
+    def setScreenAngle(self, angle):
+        self._screenA = angle
+
+    def _angleXY(self, x, y):
+        """return x, y in screen without rotation"""
+        angle = self._screenA
+        sw, sh = self._screenW, self._screenH
+        if angle:
+            while angle < 0:
+                angle += 360
+            while angle > 360:
+                angle -= 360
+            if angle == 90:
+                ax = self._screenH - y
+                ay = x
+                sw, sh = self._screenH, self._screenW
+            elif angle == 180:
+                ax = self._screenH - x
+                ay = self._screenW - y
+            elif angle == 270:
+                ax = y
+                ay = self._screenW - x
+                sw, sh = self._screenH, self._screenW
+            else:
+                raise ValueError('Illegal screen rotation angle %s' %
+                                 (self._screenA,))
+        else:
+            ax, ay = x, y
+        return (sw, sh, ax, ay)
+
+    def _tXY(self, x, y):
+        """convert x, y to touch screen coordinates"""
+        if self._screenW and self._maxX and self._screenH and self._maxY:
+            w, h, x, y = self._angleXY(x, y)
+            x = int((self._maxX * x) / w)
+            y = int((self._maxY * y) / h)
+            return (x, y)
+        else:
+            return (x, y)
+
     def _startTracking(self, finger, x, y):
         self._mtTrackingId += 1
         usedSlots = set([self._mtTracking[fngr][0]
@@ -850,8 +903,9 @@ class Touch(InputDevice):
         self._mtTracking[finger] = [freeSlot, self._mtTrackingId, x, y]
         self._sendSlot(finger)
         self.send("EV_ABS", "ABS_MT_TRACKING_ID", self._mtTrackingId)
-        self.send("EV_ABS", "ABS_MT_POSITION_X", x)
-        self.send("EV_ABS", "ABS_MT_POSITION_Y", y)
+        tx, ty = self._tXY(x, y)
+        self.send("EV_ABS", "ABS_MT_POSITION_X", tx)
+        self.send("EV_ABS", "ABS_MT_POSITION_Y", ty)
         return self._mtTrackingId
 
     def _stopTracking(self, finger):
@@ -867,6 +921,23 @@ class Touch(InputDevice):
         self.pressFinger(-1, x, y, pressure)
         self.releaseFinger(-1)
 
+    # Compatibility API to allow using a Touch almost like a Mouse
+    def move(self, x, y):
+        if len(self._mtTracking.keys()) == 0:
+            self._hoover = (x, y)
+        else:
+            return self.moveFinger(
+                self._mtTracking[sorted(self._mtTracking.keys())[0]],
+                x, y)
+
+    def press(self, finger):
+        return self.pressFinger(finger, *self._hoover)
+
+    def release(self, finger):
+        return self.releaseFinger(finger)
+    # end of compatibility API
+
+    # Multi-touch API
     def pressFinger(self, finger, x, y, pressure=None):
         """Add a finger to current multitouch gesture. If multitouch gesture
         is not started, it starts automatically.
@@ -876,8 +947,9 @@ class Touch(InputDevice):
         if pressure != None and self._maxPressure != None:
             self.send("EV_ABS", "ABS_PRESSURE", pressure)
         self.send("EV_KEY", "BTN_TOUCH", 1)
-        self.send("EV_ABS", "ABS_X", x)
-        self.send("EV_ABS", "ABS_Y", y)
+        tx, ty = self._tXY(x, y)
+        self.send("EV_ABS", "ABS_X", tx)
+        self.send("EV_ABS", "ABS_Y", ty)
         self.sync()
 
     def releaseFinger(self, finger):
@@ -889,8 +961,10 @@ class Touch(InputDevice):
         for fngr in self._mtTracking:
             # still some finger pressed, non-multitouch reader gets
             # coordinates from one of those
-            self.send("EV_ABS", "ABS_X", self._mtTracking[fngr][2])
-            self.send("EV_ABS", "ABS_Y", self._mtTracking[fngr][3])
+            tx, ty = self._tXY(self._mtTracking[fngr][2],
+                               self._mtTracking[fngr][3])
+            self.send("EV_ABS", "ABS_X", tx)
+            self.send("EV_ABS", "ABS_Y", ty)
             break # only one coordinates will be sent.
         self.sync()
 
@@ -898,15 +972,16 @@ class Touch(InputDevice):
         """Move a finger in current multitouch gesture"""
         lastX, lastY = self._mtTracking[finger][2:4]
         self._sendSlot(finger)
+        tx, ty = self._tXY(x, y)
         if lastX != x:
             if self._multiTouch:
-                self.send("EV_ABS", "ABS_MT_POSITION_X", x)
-            self.send("EV_ABS", "ABS_X", x)
+                self.send("EV_ABS", "ABS_MT_POSITION_X", tx)
+            self.send("EV_ABS", "ABS_X", tx)
             self._mtTracking[finger][2] = x
         if lastY != y:
             if self._multiTouch:
-                self.send("EV_ABS", "ABS_MT_POSITION_Y", y)
-            self.send("EV_ABS", "ABS_Y", y)
+                self.send("EV_ABS", "ABS_MT_POSITION_Y", ty)
+            self.send("EV_ABS", "ABS_Y", ty)
             self._mtTracking[finger][3] = y
         self.sync()
 
