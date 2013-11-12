@@ -25,6 +25,7 @@ from PySide import QtGui
 import getopt
 import fmbtgti
 import math
+import re
 import sys
 import time
 
@@ -162,7 +163,7 @@ class MyScaleEvents(QtCore.QObject):
                 self.mainwindow.gestureEvents.append(
                     GestureEvent("mouseup", 0, posToRel(event.pos)))
                 s = gestureToGti(self.mainwindow.gestureEvents)
-                cmd = "sut" + s
+                cmd = opt_sut + s
                 self.mainwindow.gestureEvents = []
                 if self.mainwindow.screenshotButtonInteract.isChecked():
                     debug("sending command %s" % (cmd,))
@@ -333,6 +334,7 @@ if __name__ == "__main__":
 
     opt_connect = ""
     opt_gti = None
+    opt_sut = None
     opt_debug = 0
     supported_platforms = ['android', 'tizen', 'x11', 'vnc', 'dummy']
 
@@ -358,20 +360,38 @@ if __name__ == "__main__":
                 error('unknown platform: "%s". Use one of "%s"' % (
                     arg, '", "'.join(supported_platforms)))
 
-    if opt_gti == None:
-        error("no platform specified (-p)")
+    script = ""
+    if remainder:
+        try:
+            script = file(remainder[0]).read()
+        except:
+            error('cannot read file "%s"' % (remainder[0],))
+
+    if script:
+        # script given, try connecting automatically as defined in the script
+        if "import fmbt" in script:
+            for line in script.split('\n'):
+                if re.match("import fmbt(android|tizen|vnc|x11)", line):
+                    opt_gti = line.split()[1].split(",")[0][4:]
+                    exec line
+                    if opt_gti in ['android', 'tizen']:
+                        opt_gticlass = "Device"
+                    else:
+                        opt_gticlass = "Screen"
+                elif re.match("\s*[a-zA-Z_].*=.*" + opt_gti + "\.(Device|Screen).*", line):
+                    opt_sut = line.split("=")[0].strip()
+                    exec line
+                    exec "sut = " + opt_sut
+    elif opt_gti == None:
+        error("no platform (-p) or script, don't know how to connect")
 
     if opt_gti != "dummy":
-        initSequence = ("import fmbt%s\n"
-                        "sut = fmbt%s.%s('%s')\n") % (
-            opt_gti, opt_gti, opt_gticlass, opt_connect)
-        exec initSequence
-        """
-        l = __import__("fmbt" + opt_gti)
-        cmd = "l.%s('%s')" % (opt_gticlass, opt_connect)
-        print cmd
-        gti = eval(cmd)
-        """
+        if opt_sut == None:
+            initSequence = ("import fmbt%s\n"
+                            "sut = fmbt%s.%s('%s')\n") % (
+                                opt_gti, opt_gti, opt_gticlass, opt_connect)
+            exec initSequence
+            opt_sut = "sut"
     else:
         initSequence = "# sut = fmbtdummy.Device(...)\n"
         sut = fmbtdummy.Device(screenshotList = opt_connect.split(","))
@@ -380,6 +400,9 @@ if __name__ == "__main__":
     _win = MainWindow()
     _win.resize(640, 480)
     _win.updateScreenshot()
-    _win.editor.append(initSequence)
+    if script:
+        _win.editor.append(script)
+    else:
+        _win.editor.append(initSequence)
     _win.show()
     _app.exec_()
