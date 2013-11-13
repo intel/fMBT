@@ -143,37 +143,70 @@ class MyScaleEvents(QtCore.QObject):
         self.attrowner  = attrowner
         self.mainwindow = mainwindow
         self.visibleTip = None
+        self.selTop, self.selLeft = None, None
     def changeScale(self, coefficient):
         self.attrowner.wheel_scale *= coefficient
         if self.attrowner.wheel_scale < self.min_scale: self.attrowner.wheel_scale = self.min_scale
         elif self.attrowner.wheel_scale > self.max_scale: self.attrowner.wheel_scale = self.max_scale
         self.attrowner.wheel_scale_changed()
     def eventFilter(self, obj, event):
-        def posToRel(pos):
-            sbY = self.attrowner.verticalScrollBar().value()
-            sbX = self.attrowner.horizontalScrollBar().value()
-            wS = self.attrowner.wheel_scale
-            x = (pos().x() + sbX) / wS / float(self.mainwindow.screenshotImage.width())
-            y = (pos().y() + sbY) / wS / float(self.mainwindow.screenshotImage.height())
-            return (x, y)
+        if self.mainwindow._selectingBitmap:
+            return self.eventToSelect(event)
+        else:
+            return self.eventToAPI(event)
+    def eventToSelect(self, event):
+        w = self.mainwindow
+        print "selecting event..."
+        if event.type() == QtCore.QEvent.MouseButtonPress:
+            print "...start..."
+            self.selLeft, self.selTop = self.posToAbs(event.pos)
+            print "...at...", self.selTop, self.selLeft
+        elif event.type() == QtCore.QEvent.MouseMove:
+            print "...move..."
+            if self.selTop != None:
+                right, bottom = self.posToAbs(event.pos)
+                print "...redraw...", self.selLeft, self.selTop, right, bottom
+                w.drawRect(self.selLeft, self.selTop, right, bottom)
+        elif event.type() == QtCore.QEvent.MouseButtonRelease:
+            print "...stop..."
+            if self.selTop != None:
+                right, bottom = self.posToAbs(event.pos)
+                w.selectBitmapDone(self.selLeft, self.selTop, right, bottom)
+                self.selTop, self.selLeft = None, None
+        return False
+    def posToRel(self, pos):
+        sbY = self.attrowner.verticalScrollBar().value()
+        sbX = self.attrowner.horizontalScrollBar().value()
+        wS = self.attrowner.wheel_scale
+        x = (pos().x() + sbX) / wS / float(self.mainwindow.screenshotImage.width())
+        y = (pos().y() + sbY) / wS / float(self.mainwindow.screenshotImage.height())
+        return (x, y)
+    def posToAbs(self, pos):
+        sbY = self.attrowner.verticalScrollBar().value()
+        sbX = self.attrowner.horizontalScrollBar().value()
+        wS = self.attrowner.wheel_scale
+        x = (pos().x() + sbX) / wS
+        y = (pos().y() + sbY) / wS
+        return (x, y)
+    def eventToAPI(self, event):
         if event.type() == QtCore.QEvent.MouseMove:
             if self.mainwindow.gestureStarted:
                 self.mainwindow.gestureEvents.append(
-                    GestureEvent("mousemove", None, posToRel(event.pos)))
+                    GestureEvent("mousemove", None, self.posToRel(event.pos)))
         elif event.type() == QtCore.QEvent.MouseButtonPress:
             if not self.mainwindow.gestureStarted:
                 self.mainwindow.gestureStarted = True
                 self.mainwindow.gestureEvents = [
-                    GestureEvent("mousedown", 0, posToRel(event.pos))]
+                    GestureEvent("mousedown", 0, self.posToRel(event.pos))]
         elif event.type() == QtCore.QEvent.MouseButtonRelease:
             if self.mainwindow.gestureStarted:
                 self.mainwindow.gestureStarted = False
                 self.mainwindow.gestureEvents.append(
-                    GestureEvent("mouseup", 0, posToRel(event.pos)))
+                    GestureEvent("mouseup", 0, self.posToRel(event.pos)))
                 s = gestureToGti(self.mainwindow.gestureEvents)
                 cmd = opt_sut + s
                 self.mainwindow.gestureEvents = []
-                if self.mainwindow.screenshotButtonInteract.isChecked():
+                if self.mainwindow.screenshotButtonControl.isChecked():
                     debug("sending command %s" % (cmd,))
                     self.mainwindow.runStatement(cmd, autoUpdate=True)
                 else:
@@ -183,30 +216,19 @@ class MyScaleEvents(QtCore.QObject):
         elif event.type() == QtCore.QEvent.ToolTip:
             if not hasattr(self.attrowner, 'cursorForPosition'):
                 return False
-            cursor = self.attrowner.cursorForPosition(event.pos())
-            pos = cursor.positionInBlock()
-            lineno = cursor.blockNumber()
-            cursor.select(QtGui.QTextCursor.LineUnderCursor)
-            l = cursor.selectedText()
-            start = l.rfind('"', 0, pos)
-            end = l.find('"', pos)
-            if -1 < start < end:
-                quotedString = l[start+1:end]
-                if self.visibleTip == (lineno, quotedString):
-                    return True
+            filename = self.mainwindow.bitmapStringAt(event.pos())
+            if filename == None:
                 QtGui.QToolTip.hideText()
-                if quotedString.lower().rsplit(".")[-1] in ["png", "jpg"]:
-                    # tooltip for an image file
-                    filename = quotedString
-                    try:
-                        filepath = sut.screenshot()._paths.abspath(filename)
-                    except ValueError:
-                        QtGui.QToolTip.showText(event.globalPos(), '%s<br>not in bitmapPath' % (filename,))
-                    QtGui.QToolTip.showText(event.globalPos(), '%s<br><img src="%s">' % (filepath, filepath))
-                    self.visibleTip = (lineno, quotedString)
-            else:
                 self.visibleTip = None
-                QtGui.QToolTip.hideText()
+            else:
+                filepath = self.mainwindow.bitmapFilepath(filename)
+                if filepath:
+                    if self.visibleTip != filepath:
+                        QtGui.QToolTip.hideText()
+                        QtGui.QToolTip.showText(event.globalPos(), '%s<br><img src="%s">' % (filepath, filepath))
+                else:
+                    QtGui.QToolTip.showText(event.globalPos(), '%s<br>not in bitmapPath' % (filename,))
+                self.visibleTip = filepath
             return True
 
         if event.type() == QtCore.QEvent.Wheel and event.modifiers() == QtCore.Qt.ControlModifier:
@@ -246,6 +268,9 @@ class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
 
+        self._bitmapSaveDir = os.getcwd()
+        self._selectingBitmap = None
+
         self.mainwidget = QtGui.QWidget()
         self.layout = QtGui.QVBoxLayout()
         self.mainwidget.setLayout(self.layout)
@@ -266,10 +291,16 @@ class MainWindow(QtGui.QMainWindow):
                                                          checkable = True)
         self.screenshotButtonRefresh.clicked.connect(self.updateScreenshot)
         self.screenshotButtonsL.addWidget(self.screenshotButtonRefresh)
-        self.screenshotButtonInteract = QtGui.QPushButton(self.screenshotButtons,
+        self.screenshotButtonControl = QtGui.QPushButton(self.screenshotButtons,
                                                         text="Control",
                                                         checkable = True)
-        self.screenshotButtonsL.addWidget(self.screenshotButtonInteract)
+        self.screenshotButtonControl.clicked.connect(self.controlDevice)
+        self.screenshotButtonsL.addWidget(self.screenshotButtonControl)
+        self.screenshotButtonSelect = QtGui.QPushButton(self.screenshotButtons,
+                                                         text="Select",
+                                                         checkable = True)
+        self.screenshotButtonSelect.clicked.connect(self.selectBitmap)
+        self.screenshotButtonsL.addWidget(self.screenshotButtonSelect)
         self.screenshotWidgetsLayout.addWidget(self.screenshotButtons)
 
         def makeScalableImage(parent, qlabel):
@@ -294,6 +325,8 @@ class MainWindow(QtGui.QMainWindow):
             return container
 
         self.screenshotQLabel = QtGui.QLabel(self.screenshotWidgets)
+        self.screenshotQLabel.setMargin(0)
+        self.screenshotQLabel.setIndent(0)
         self.screenshotContainer = makeScalableImage(self.screenshotWidgets, self.screenshotQLabel)
         self.screenshotWidgetsLayout.addWidget(self.screenshotContainer)
         self.screenshotImage = QtGui.QImage()
@@ -356,8 +389,38 @@ class MainWindow(QtGui.QMainWindow):
         viewMenu.addAction("Zoom in screenshot", self.zoomInScreenshot, "Ctrl+.")
         viewMenu.addAction("Zoom out screenshot", self.zoomOutScreenshot, "Ctrl+,")
 
+        bitmapMenu = QtGui.QMenu("&Bitmap", self)
+        self.menuBar().addMenu(bitmapMenu)
+        bitmapMenu.addAction("Select", self.selectBitmap, "Ctrl+B, Ctrl+S")
+        bitmapMenu.addAction("Verify", self.verifyBitmap, "Ctrl+B, Ctrl+V")
+
         self.gestureEvents = []
         self.gestureStarted = False
+
+    def bitmapStringAt(self, pos=None):
+        filename = None
+        if pos != None:
+            cursor = self.editor.cursorForPosition(pos)
+        else:
+            cursor = self.editor.textCursor()
+        pos = cursor.positionInBlock()
+        lineno = cursor.blockNumber()
+        cursor.select(QtGui.QTextCursor.LineUnderCursor)
+        l = cursor.selectedText()
+        start = l.rfind('"', 0, pos)
+        end = l.find('"', pos)
+        if -1 < start < end:
+            quotedString = l[start+1:end]
+            if quotedString.lower().rsplit(".")[-1] in ["png", "jpg"]:
+                filename = quotedString
+        return filename
+
+    def bitmapFilepath(self, filename):
+        try:
+            filepath = sut.screenshot()._paths.abspath(filename)
+            return filepath
+        except ValueError:
+            return None
 
     def invalidateScreenshot(self):
         self.screenshotButtonRefresh.setChecked(True)
@@ -400,12 +463,100 @@ class MainWindow(QtGui.QMainWindow):
         sut.refreshScreenshot().save("screen2gti.png")
         self.screenshotImage = QtGui.QImage()
         self.screenshotImage.load("screen2gti.png")
+        self.updateScreenshotView()
+
+    def updateScreenshotView(self):
         self.screenshotQLabel.setPixmap(
             QtGui.QPixmap.fromImage(
                 self.screenshotImage))
         self.screenshotContainer.area.setWidget(self.screenshotQLabel)
         self.screenshotContainer.area.wheel_scale_changed()
         self.screenshotButtonRefresh.setChecked(False)
+
+    def verifyBitmap(self, filepath=None):
+        if filepath == None:
+            filename = self.bitmapStringAt()
+            if filename:
+                filepath = self.bitmapFilepath(filename)
+                if filepath == None:
+                    log('bitmap "%s" not in bitmapPath' % (filename,))
+            else:
+                log("no bitmap to verify")
+        if filepath != None:
+            log('TODO: verify: "%s"' % (filepath,))
+
+    def controlDevice(self):
+        if self.screenshotButtonControl.isChecked():
+            if self._selectingBitmap:
+                self.selectBitmapStop()
+                self.screenshotButtonControl.setChecked(True)
+
+    def selectBitmapStop(self):
+        # already selecting, toggle
+        if self._selectingBitmap != None:
+            log('selecting bitmap "%s" canceled' % (self._selectingBitmap,))
+            self._selectingBitmap = None
+        self.screenshotButtonSelect.setChecked(False)
+        self.screenshotButtonControl.setChecked(
+            self._selectingToggledInteract)
+
+    def selectBitmapDone(self, top, left, right, bottom):
+        log('saving bitmap "%s"' % (self._selectingBitmap,))
+        self.drawRect(top, left, right, bottom, True)
+        time.sleep(1)
+        self.drawRect(top, left, right, bottom, False)
+        time.sleep(1)
+        self.drawRect(top, left, right, bottom, True)
+        self._selectingBitmap = None
+        self.selectBitmapStop()
+
+    def selectBitmap(self, filepath=None):
+        if self._selectingBitmap:
+            self.selectBitmapStop()
+            return None
+
+        if filepath == None:
+            filename = self.bitmapStringAt()
+            if filename:
+                filepath = self.bitmapFilepath(filename)
+                if filepath:
+                    log('select replacement for "%s"' % (filepath,))
+                else:
+                    filepath = os.path.join(sut._paths.bitmapPath.split(":")[0],
+                                            filename)
+                    log('select new bitmap "%s"' % (filepath,))
+                self._selectingBitmap = filepath
+        elif filepath != None:
+            log('select bitmap "%s"' % (filepath,))
+            self._selectingBitmap = filepath
+
+        if self._selectingBitmap:
+            self.screenshotButtonSelect.setChecked(True)
+            self._selectingToggledInteract = self.screenshotButtonControl.isChecked()
+            self.screenshotButtonControl.setChecked(False)
+        else:
+            self.screenshotButtonSelect.setChecked(False)
+
+    def drawRect(self, left, top, right, bottom, clear=False):
+        if getattr(self, "_screenshotImageOrig", None) == None:
+            self._screenshotImageOrig = self.screenshotImage.copy()
+        else:
+            self.screenshotImage = self._screenshotImageOrig.copy()
+        if not clear:
+            x1, y1, x2, y2 = left, top, right, bottom
+            #y1 = top * self.screenshotImage.height()
+            #x1 = left * self.screenshotImage.width()
+            #y2 = bottom * self.screenshotImage.height()
+            #x2 = right * self.screenshotImage.width()
+            painter = QtGui.QPainter(self.screenshotImage)
+            bgPen = QtGui.QPen(QtGui.QColor(0, 0, 32), 1)
+            fgPen = QtGui.QPen(QtGui.QColor(64, 255, 128), 1)
+            painter.setPen(bgPen)
+            painter.drawRect(x1-2, y1-2, (x2-x1)+4, (y2-y1)+4)
+            painter.drawRect(x1-1, y1-1, (x2-x1)+2, (y2-y1)+2)
+            painter.setPen(fgPen)
+            painter.drawRect(x1, y1, (x2-x1), (y2-y1))
+        self.updateScreenshotView()
 
     def zoomInEditor(self):
         self.editor._scaleevents.changeScale(1.1)
