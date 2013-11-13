@@ -46,7 +46,7 @@ def quantify(item, quantum):
 
 def gestureToGti(gestureEventList):
     timeQuantum = 0.1 # seconds
-    locQuantum = 0.025 # 1.0 = full display height/width
+    locQuantum = 0.01 # 1.0 = full display height/width
     distQuantum = 0.1  # 1.0 = full dist from point to edge
 
     quantL = lambda v: quantify(v, locQuantum)
@@ -249,7 +249,9 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotButtonsL = QtGui.QHBoxLayout()
         self.screenshotButtons.setLayout(self.screenshotButtonsL)
         self.screenshotButtonRefresh = QtGui.QPushButton(self.screenshotButtons,
-                                                         text="Refresh")
+                                                         text="Refresh",
+                                                         checkable = True)
+        self.screenshotButtonRefresh.clicked.connect(self.updateScreenshot)
         self.screenshotButtonsL.addWidget(self.screenshotButtonRefresh)
         self.screenshotButtonInteract = QtGui.QPushButton(self.screenshotButtons,
                                                         text="Control",
@@ -300,6 +302,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.editorButtonRec = QtGui.QPushButton("Rec", checkable=True)
         self.editorButtonRunSingle = QtGui.QPushButton("Run line")
+        self.editorButtonRunSingle.clicked.connect(self.runSingleLine)
         self.editorButtonRunAll = QtGui.QPushButton("Run all")
         self.editorButtonsLayout.addWidget(self.editorButtonRec)
         self.editorButtonsLayout.addWidget(self.editorButtonRunSingle)
@@ -315,12 +318,36 @@ class MainWindow(QtGui.QMainWindow):
         ### Menus
         fileMenu = QtGui.QMenu("&File", self)
         self.menuBar().addMenu(fileMenu)
+        fileMenu.addAction("&Save", self.save, "Ctrl+S")
         fileMenu.addAction("E&xit", QtGui.qApp.quit, "Ctrl+Q")
 
         self.gestureEvents = []
         self.gestureStarted = False
 
+    def runSingleLine(self, lineNumber=None):
+        if lineNumber == None:
+            line = self.editor.textCursor().block().text().strip()
+            print line
+            try:
+                exec line
+                print "ok"
+                self.editor.moveCursor(QtGui.QTextCursor.Down, QtGui.QTextCursor.MoveAnchor)
+            except Exception, e:
+                print e
+        else:
+            raise NotImplementedError
+
+    def setFilename(self, filename):
+        self._scriptFilename = filename
+
+    def save(self):
+        if self._scriptFilename:
+            file(self._scriptFilename, "w").write(self.editor.toPlainText())
+
     def updateScreenshot(self):
+        self.screenshotButtonRefresh.setChecked(True)
+        _app.processEvents()
+
         sut.refreshScreenshot().save("screen2gti.png")
         self.screenshotImage = QtGui.QImage()
         self.screenshotImage.load("screen2gti.png")
@@ -329,6 +356,7 @@ class MainWindow(QtGui.QMainWindow):
                 self.screenshotImage))
         self.screenshotContainer.area.setWidget(self.screenshotQLabel)
         self.screenshotContainer.area.wheel_scale_changed()
+        self.screenshotButtonRefresh.setChecked(False)
 
 if __name__ == "__main__":
 
@@ -362,10 +390,13 @@ if __name__ == "__main__":
 
     script = ""
     if remainder:
+        scriptFilename = remainder[0]
         try:
-            script = file(remainder[0]).read()
+            script = file(scriptFilename).read()
         except:
             error('cannot read file "%s"' % (remainder[0],))
+    else:
+        scriptFilename = None
 
     if script:
         # script given, try connecting automatically as defined in the script
@@ -378,10 +409,12 @@ if __name__ == "__main__":
                         opt_gticlass = "Device"
                     else:
                         opt_gticlass = "Screen"
+                    print line
                 elif re.match("\s*[a-zA-Z_].*=.*" + opt_gti + "\.(Device|Screen).*", line):
                     opt_sut = line.split("=")[0].strip()
                     exec line
                     exec "sut = " + opt_sut
+                    print line
     elif opt_gti == None:
         error("no platform (-p) or script, don't know how to connect")
 
@@ -402,6 +435,7 @@ if __name__ == "__main__":
     _win.updateScreenshot()
     if script:
         _win.editor.append(script)
+        _win.setFilename(scriptFilename)
     else:
         _win.editor.append(initSequence)
     _win.show()
