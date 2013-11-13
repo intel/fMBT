@@ -218,15 +218,7 @@ elif iAmRoot:
             # TODO: check which mouse is capable of emitting button events
             # if none, then create my own mouse input device
         except IndexError:
-            # TODO: create my own mouse for both move and button press events
-            touch_device = fmbtuinput.Touch().create(maxX=1024, maxY=768)
-            virtualInputDeviceAdded = True
-            readDeviceInfo()
-            _d = devices.split("\n\n")
-            touch_device_f = "/dev/input/" + re.findall('[ =](event[0-9]+)\s',  [i for i in _d if "virtual fmbt touch" in i.lower()][0])[0]
-    if touch_device == None:
-        touch_device = fmbtuinput.Touch().open(touch_device_f)
-    mtInputDevFd = touch_device._fd
+            touch_device = None
 
     try:
         mouse_button_device = fmbtuinput.Mouse().open(
@@ -262,7 +254,8 @@ elif iAmRoot:
         debug("touch device: %s" % (touch_device,))
         debug("mouse device: %s" % (mouse_button_device,))
         debug("keyb device:  %s" % (keyboard_device,))
-    mtInputDevFd = touch_device._fd
+    if touch_device:
+        mtInputDevFd = touch_device._fd
 
     if keyboard_device:
         kbInputDevFd = keyboard_device._fd
@@ -842,7 +835,7 @@ if __name__ == "__main__":
                 libX11.XFlush(display)
                 rv, msg = True, None
             else:
-                if iAmRoot: rv, msg = sendHwTap(x, y, button)
+                if iAmRoot: rv, msg = sendHwTap(x, y, button-1)
                 else: rv, msg = subAgentCommand("root", "tizen", cmd)
             write_response(rv, msg)
         elif cmd.startswith("td "): # touch down(x, y, button)
@@ -853,7 +846,7 @@ if __name__ == "__main__":
                 libXtst.XTestFakeButtonEvent(display, button, X_True, X_CurrentTime)
                 libX11.XFlush(display)
             else:
-                if iAmRoot: rv, msg = sendHwFingerDown(int(xs), int(ys), button)
+                if iAmRoot: rv, msg = sendHwFingerDown(int(xs), int(ys), button-1)
                 else: rv, msg = subAgentCommand("root", "tizen", cmd)
             write_response(True, None)
         elif cmd.startswith("tu "): # touch up(x, y, button)
@@ -864,7 +857,7 @@ if __name__ == "__main__":
                 libXtst.XTestFakeButtonEvent(display, button, X_False, X_CurrentTime)
                 libX11.XFlush(display)
             else:
-                if iAmRoot: rv, msg = sendHwFingerUp(int(xs), int(ys), button)
+                if iAmRoot: rv, msg = sendHwFingerUp(int(xs), int(ys), button-1)
                 else: rv, msg = subAgentCommand("root", "tizen", cmd)
             write_response(True, None)
         elif cmd.startswith("kd "): # hw key down

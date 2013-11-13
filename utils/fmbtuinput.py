@@ -926,9 +926,8 @@ class Touch(InputDevice):
         if len(self._mtTracking.keys()) == 0:
             self._hoover = (x, y)
         else:
-            return self.moveFinger(
-                self._mtTracking[sorted(self._mtTracking.keys())[0]],
-                x, y)
+            finger = sorted(self._mtTracking.keys())[0]
+            return self.moveFinger(finger, x, y)
 
     def press(self, finger):
         return self.pressFinger(finger, *self._hoover)
