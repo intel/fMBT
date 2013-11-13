@@ -25,9 +25,11 @@ from PySide import QtGui
 import getopt
 import fmbtgti
 import math
+import os
 import re
 import sys
 import time
+import traceback
 
 def error(msg, exitStatus=1):
     sys.stderr.write("screen2gti: %s\n" % (msg,))
@@ -37,6 +39,23 @@ def debug(msg, debugLevel=1):
     if opt_debug >= debugLevel:
         sys.stderr.write("screen2gti debug: %s\n" % (msg,))
 
+def log(msg):
+    sys.stdout.write("%s\n" % (msg,))
+    sys.stdout.flush()
+
+########################################################################
+# Convert events to fmbtgti API calls
+
+class GestureEvent(object):
+    __slots__ = ["time", "event", "key", "pos"]
+    def __init__(self, event, key, pos):
+        self.time = time.time()
+        self.event = event
+        self.key = key
+        self.pos = pos
+    def __str__(self):
+        return 'GestureEvent(time=%s, event="%s", key=%s, pos=%s)' % (
+            self.time, self.event, self.key, self.pos)
 
 def quantify(item, quantum):
     if not isinstance(item, tuple) and not isinstance(item, list):
@@ -111,17 +130,6 @@ def gestureToGti(gestureEventList):
 ########################################################################
 # GUI
 
-class GestureEvent(object):
-    __slots__ = ["time", "event", "key", "pos"]
-    def __init__(self, event, key, pos):
-        self.time = time.time()
-        self.event = event
-        self.key = key
-        self.pos = pos
-    def __str__(self):
-        return 'GestureEvent(time=%s, event="%s", key=%s, pos=%s)' % (
-            self.time, self.event, self.key, self.pos)
-
 class MyScaleEvents(QtCore.QObject):
     """
     Catch scaling events: Ctrl++, Ctrl+-, Ctrl+wheel. Change
@@ -167,8 +175,7 @@ class MyScaleEvents(QtCore.QObject):
                 self.mainwindow.gestureEvents = []
                 if self.mainwindow.screenshotButtonInteract.isChecked():
                     debug("sending command %s" % (cmd,))
-                    eval(cmd)
-                    QtCore.QTimer.singleShot(1000, self.mainwindow.updateScreenshot)
+                    self.mainwindow.runStatement(cmd, autoUpdate=True)
                 else:
                     debug("dropping command %s" % (cmd,))
                 if self.mainwindow.editorButtonRec.isChecked():
@@ -191,14 +198,11 @@ class MyScaleEvents(QtCore.QObject):
                 if quotedString.lower().rsplit(".")[-1] in ["png", "jpg"]:
                     # tooltip for an image file
                     filename = quotedString
-                    path = ':'.join([s.strip() for s in GT_IMAGEPATHRE.findall(self.mainwindow._modelSources())])
-                    for d in path.split(':'):
-                        filepath = os.path.join(d, filename)
-                        if os.access(filepath, os.R_OK):
-                            QtGui.QToolTip.showText(event.globalPos(), '%s<br><img src="%s">' % (filepath, filepath))
-                            break
-                    else:
-                        QtGui.QToolTip.showText(event.globalPos(), '%s<br>not in found in<br># preview-image-path:...' % (filename,))
+                    try:
+                        filepath = sut.screenshot()._paths.abspath(filename)
+                    except ValueError:
+                        QtGui.QToolTip.showText(event.globalPos(), '%s<br>not in bitmapPath' % (filename,))
+                    QtGui.QToolTip.showText(event.globalPos(), '%s<br><img src="%s">' % (filepath, filepath))
                     self.visibleTip = (lineno, quotedString)
             else:
                 self.visibleTip = None
@@ -210,13 +214,18 @@ class MyScaleEvents(QtCore.QObject):
             self.changeScale(coefficient)
         return False
 
-
 class fmbtdummy(object):
     class Device(object):
         def __init__(self, screenshotList=[]):
             self.scl = screenshotList
+            self._paths = fmbtgti._Paths(
+                os.getenv("FMBT_BITMAPPATH",""),
+                os.getenv("FMBT_BITMAPPATH_RELROOT", ""))
         def refreshScreenshot(self):
+            time.sleep(1)
             s = fmbtgti.Screenshot(screenshotFile=self.scl[0])
+            s._paths = self._paths
+            self._lastScreenshot = s
             self.scl.append(self.scl.pop(0)) # rotate screenshots
             return s
         def __getattr__(self, name):
@@ -226,7 +235,11 @@ class fmbtdummy(object):
                     a.append(repr(arg))
                 for k, v in kwargs.iteritems():
                     a.append('%s=%s' % (k, repr(v)))
-                print "dummy.%s(%s)" % (name, ", ".join(a))
+                log("called: dummy.%s(%s)" % (name, ", ".join(a)))
+                if name == "screenshot":
+                    return self._lastScreenshot
+                else:
+                    return True
             return argPrinter
 
 class MainWindow(QtGui.QMainWindow):
@@ -309,7 +322,21 @@ class MainWindow(QtGui.QMainWindow):
         self.editorButtonsLayout.addWidget(self.editorButtonRunAll)
         self.editorWidgetsLayout.addWidget(self.editorButtons)
 
-        self.editor = QtGui.QTextEdit()
+        def makeScalableEditor(parent, font, EditorClass = QtGui.QTextEdit):
+            editor = EditorClass()
+            editor.setUndoRedoEnabled(True)
+            editor.setLineWrapMode(editor.NoWrap)
+            editor.setFont(font)
+            editor._scaleevents = MyScaleEvents(self, editor, 0.1, 2.0)
+            editor.wheel_scale = 1.0
+            editor.wheel_scale_changed = lambda: (font.setPointSize(editor.wheel_scale * 12.0), editor.setFont(font))
+            editor.installEventFilter(editor._scaleevents)
+            return editor
+
+        self.editorFont = QtGui.QFont()
+        self.editorFont.setFamily('Courier')
+        self.editorFont.setFixedPitch(True)
+        self.editor = makeScalableEditor(self.mainwidget, self.editorFont)
         self.editorWidgetsLayout.addWidget(self.editor)
         self.splitter.addWidget(self.editorWidgets)
 
@@ -321,21 +348,44 @@ class MainWindow(QtGui.QMainWindow):
         fileMenu.addAction("&Save", self.save, "Ctrl+S")
         fileMenu.addAction("E&xit", QtGui.qApp.quit, "Ctrl+Q")
 
+        viewMenu = QtGui.QMenu("&View", self)
+        self.menuBar().addMenu(viewMenu)
+        viewMenu.addAction("Refresh screenshot", self.updateScreenshot, "Ctrl+R")
+        viewMenu.addAction("Zoom in editor", self.zoomInEditor, "Ctrl++")
+        viewMenu.addAction("Zoom out editor", self.zoomOutEditor, "Ctrl+-")
+        viewMenu.addAction("Zoom in screenshot", self.zoomInScreenshot, "Ctrl+.")
+        viewMenu.addAction("Zoom out screenshot", self.zoomOutScreenshot, "Ctrl+,")
+
         self.gestureEvents = []
         self.gestureStarted = False
+
+    def invalidateScreenshot(self):
+        self.screenshotButtonRefresh.setChecked(True)
+        self.screenshotButtonRefresh.repaint()
+        _app.processEvents()
 
     def runSingleLine(self, lineNumber=None):
         if lineNumber == None:
             line = self.editor.textCursor().block().text().strip()
-            print line
-            try:
-                exec line
-                print "ok"
+            if self.runStatement(line):
                 self.editor.moveCursor(QtGui.QTextCursor.Down, QtGui.QTextCursor.MoveAnchor)
-            except Exception, e:
-                print e
         else:
             raise NotImplementedError
+
+    def runStatement(self, statement, autoUpdate=False):
+        if autoUpdate:
+            self.invalidateScreenshot()
+        log("running: %s" % (statement,))
+        try:
+            exec statement
+            log("ok")
+            rv = True
+        except Exception, e:
+            log("error:\n%s" % (traceback.format_exc(),))
+            rv = False
+        if autoUpdate:
+            QtCore.QTimer.singleShot(1000, self.updateScreenshot)
+        return rv
 
     def setFilename(self, filename):
         self._scriptFilename = filename
@@ -345,8 +395,7 @@ class MainWindow(QtGui.QMainWindow):
             file(self._scriptFilename, "w").write(self.editor.toPlainText())
 
     def updateScreenshot(self):
-        self.screenshotButtonRefresh.setChecked(True)
-        _app.processEvents()
+        self.invalidateScreenshot()
 
         sut.refreshScreenshot().save("screen2gti.png")
         self.screenshotImage = QtGui.QImage()
@@ -357,6 +406,19 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotContainer.area.setWidget(self.screenshotQLabel)
         self.screenshotContainer.area.wheel_scale_changed()
         self.screenshotButtonRefresh.setChecked(False)
+
+    def zoomInEditor(self):
+        self.editor._scaleevents.changeScale(1.1)
+
+    def zoomOutEditor(self):
+        self.editor._scaleevents.changeScale(0.9)
+
+    def zoomInScreenshot(self):
+        self.screenshotQLabel._scaleevents.changeScale(1.1)
+
+    def zoomOutScreenshot(self):
+        self.screenshotQLabel._scaleevents.changeScale(0.9)
+
 
 if __name__ == "__main__":
 
@@ -404,17 +466,17 @@ if __name__ == "__main__":
             for line in script.split('\n'):
                 if re.match("import fmbt(android|tizen|vnc|x11)", line):
                     opt_gti = line.split()[1].split(",")[0][4:]
+                    log("executing: %s" % (line,))
                     exec line
                     if opt_gti in ['android', 'tizen']:
                         opt_gticlass = "Device"
                     else:
                         opt_gticlass = "Screen"
-                    print line
                 elif re.match("\s*[a-zA-Z_].*=.*" + opt_gti + "\.(Device|Screen).*", line):
                     opt_sut = line.split("=")[0].strip()
+                    log("executing: %s" % (line,))
                     exec line
                     exec "sut = " + opt_sut
-                    print line
     elif opt_gti == None:
         error("no platform (-p) or script, don't know how to connect")
 
@@ -428,6 +490,7 @@ if __name__ == "__main__":
     else:
         initSequence = "# sut = fmbtdummy.Device(...)\n"
         sut = fmbtdummy.Device(screenshotList = opt_connect.split(","))
+        opt_sut = "sut"
 
     _app = QtGui.QApplication(sys.argv)
     _win = MainWindow()
