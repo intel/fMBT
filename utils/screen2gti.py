@@ -27,6 +27,7 @@ import fmbtgti
 import math
 import os
 import re
+import shutil
 import sys
 import time
 import traceback
@@ -156,19 +157,13 @@ class MyScaleEvents(QtCore.QObject):
             return self.eventToAPI(event)
     def eventToSelect(self, event):
         w = self.mainwindow
-        print "selecting event..."
         if event.type() == QtCore.QEvent.MouseButtonPress:
-            print "...start..."
             self.selLeft, self.selTop = self.posToAbs(event.pos)
-            print "...at...", self.selTop, self.selLeft
         elif event.type() == QtCore.QEvent.MouseMove:
-            print "...move..."
             if self.selTop != None:
                 right, bottom = self.posToAbs(event.pos)
-                print "...redraw...", self.selLeft, self.selTop, right, bottom
                 w.drawRect(self.selLeft, self.selTop, right, bottom)
         elif event.type() == QtCore.QEvent.MouseButtonRelease:
-            print "...stop..."
             if self.selTop != None:
                 right, bottom = self.posToAbs(event.pos)
                 w.selectBitmapDone(self.selLeft, self.selTop, right, bottom)
@@ -237,32 +232,31 @@ class MyScaleEvents(QtCore.QObject):
         return False
 
 class fmbtdummy(object):
-    class Device(object):
+    class Device(fmbtgti.GUITestInterface):
         def __init__(self, screenshotList=[]):
-            self.scl = screenshotList
+            fmbtgti.GUITestInterface.__init__(self)
             self._paths = fmbtgti._Paths(
                 os.getenv("FMBT_BITMAPPATH",""),
                 os.getenv("FMBT_BITMAPPATH_RELROOT", ""))
-        def refreshScreenshot(self):
-            time.sleep(1)
-            s = fmbtgti.Screenshot(screenshotFile=self.scl[0])
-            s._paths = self._paths
-            self._lastScreenshot = s
-            self.scl.append(self.scl.pop(0)) # rotate screenshots
-            return s
-        def __getattr__(self, name):
-            def argPrinter(*args, **kwargs):
-                a = []
-                for arg in args:
-                    a.append(repr(arg))
-                for k, v in kwargs.iteritems():
-                    a.append('%s=%s' % (k, repr(v)))
-                log("called: dummy.%s(%s)" % (name, ", ".join(a)))
-                if name == "screenshot":
-                    return self._lastScreenshot
-                else:
-                    return True
-            return argPrinter
+            self.setConnection(
+                fmbtdummy.Connection(screenshotList))
+    class Connection(fmbtgti.GUITestConnection):
+        def __init__(self, screenshotList):
+            fmbtgti.GUITestConnection.__init__(self)
+            self.scl = screenshotList
+        def recvScreenshot(self, filename):
+            scr = self.scl[0]
+            self.scl.append(self.scl.pop(0))
+            shutil.copyfile(scr, filename)
+            return True
+        def sendTap(self, x, y):
+            return True
+        def sendTouchDown(self, x, y):
+            return True
+        def sendTouchMove(self, x, y):
+            return True
+        def sendTouchUp(self, x, y):
+            return True
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
@@ -483,7 +477,12 @@ class MainWindow(QtGui.QMainWindow):
             else:
                 log("no bitmap to verify")
         if filepath != None:
-            log('TODO: verify: "%s"' % (filepath,))
+            log('verifying bitmap "%s"' % (filepath,))
+            items = sut.screenshot().findItemsByBitmap(filename)
+            if items:
+                log('bitmap "%s" == %s' % (filename, items[0]))
+            else:
+                log('bitmap "%s" not found' % (filename,))
 
     def controlDevice(self):
         if self.screenshotButtonControl.isChecked():
@@ -496,17 +495,27 @@ class MainWindow(QtGui.QMainWindow):
         if self._selectingBitmap != None:
             log('selecting bitmap "%s" canceled' % (self._selectingBitmap,))
             self._selectingBitmap = None
+        self.drawRect(0, 0, 0, 0, True)
         self.screenshotButtonSelect.setChecked(False)
         self.screenshotButtonControl.setChecked(
             self._selectingToggledInteract)
 
-    def selectBitmapDone(self, top, left, right, bottom):
-        log('saving bitmap "%s"' % (self._selectingBitmap,))
-        self.drawRect(top, left, right, bottom, True)
-        time.sleep(1)
-        self.drawRect(top, left, right, bottom, False)
-        time.sleep(1)
-        self.drawRect(top, left, right, bottom, True)
+    def selectBitmapDone(self, left, top, right, bottom):
+        if left > right:
+            left, right = right, left
+        if top > bottom:
+            top, bottom = bottom, top
+        if not (-1 < top < bottom < self.screenshotImage.height() and
+                 -1 < left < bottom < self.screenshotImage.width()):
+            log('illegal selection')
+            self.selectBitmapStop()
+            return None
+        self.drawRect(left, top, right, bottom, True)
+        selectedImage = self.screenshotImage.copy(left, top, (right-left), (bottom-top))
+        if selectedImage.save(self._selectingBitmap):
+            log('saved bitmap "%s"' % (self._selectingBitmap,))
+        else:
+            log('saving bitmap "%s" failed.' % (self._selectingBitmap,))
         self._selectingBitmap = None
         self.selectBitmapStop()
 
@@ -526,6 +535,8 @@ class MainWindow(QtGui.QMainWindow):
                                             filename)
                     log('select new bitmap "%s"' % (filepath,))
                 self._selectingBitmap = filepath
+            else:
+                log('use this when the cursor is on bitmap name like "apps.png"')
         elif filepath != None:
             log('select bitmap "%s"' % (filepath,))
             self._selectingBitmap = filepath
