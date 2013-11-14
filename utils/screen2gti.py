@@ -264,6 +264,8 @@ class MainWindow(QtGui.QMainWindow):
 
         self._bitmapSaveDir = os.getcwd()
         self._selectingBitmap = None
+        self._scriptFilename = None
+        self._scriptFileFormats = ["Python scripts (*.py)", "All files (*.*)"]
 
         self.mainwidget = QtGui.QWidget()
         self.layout = QtGui.QVBoxLayout()
@@ -363,6 +365,7 @@ class MainWindow(QtGui.QMainWindow):
         self.editorFont = QtGui.QFont()
         self.editorFont.setFamily('Courier')
         self.editorFont.setFixedPitch(True)
+        self.editorFont.setPointSize(12)
         self.editor = makeScalableEditor(self.mainwidget, self.editorFont)
         self.editorWidgetsLayout.addWidget(self.editor)
         self.splitter.addWidget(self.editorWidgets)
@@ -372,7 +375,15 @@ class MainWindow(QtGui.QMainWindow):
         ### Menus
         fileMenu = QtGui.QMenu("&File", self)
         self.menuBar().addMenu(fileMenu)
+        fileMenu.addAction("New An&droid", self.newAndroid)
+        fileMenu.addAction("New &Tizen", self.newTizen)
+        fileMenu.addAction("New &VNC", self.newVNC)
+        fileMenu.addAction("New &X11", self.newX11)
+        fileMenu.addAction("&Open", self.open, "Ctrl+O")
+        fileMenu.addSeparator()
         fileMenu.addAction("&Save", self.save, "Ctrl+S")
+        fileMenu.addAction("Save &As", self.saveAs, "Shift+Ctrl+S")
+        fileMenu.addSeparator()
         fileMenu.addAction("E&xit", QtGui.qApp.quit, "Ctrl+Q")
 
         viewMenu = QtGui.QMenu("&View", self)
@@ -450,6 +461,56 @@ class MainWindow(QtGui.QMainWindow):
     def save(self):
         if self._scriptFilename:
             file(self._scriptFilename, "w").write(self.editor.toPlainText())
+        else:
+            return self.saveAs()
+
+    def newAndroid(self):
+        self._newScript("import fmbtandroid\n"
+                        "sut = fmbtandroid.Device()")
+
+    def newTizen(self):
+        self._newScript("import fmbttizen\n"
+                        "sut = fmbttizen.Device()")
+
+    def newX11(self):
+        self._newScript("import fmbtx11\n"
+                        "sut = fmbtx11.Screen()")
+
+    def newVNC(self):
+        self._newScript("import fmbtvnc\n"
+                        "sut = fmbtvnc.Screen()")
+
+    def _newScript(self, script):
+        self.editor.setPlainText(script)
+        _app.processEvents()
+        for _ in xrange(script.index("(")+1):
+            self.editor.moveCursor(QtGui.QTextCursor.Right, QtGui.QTextCursor.MoveAnchor)
+        self.editor.setFocus()
+
+    def saveAs(self):
+        path = QtGui.QFileDialog.getSaveFileName(
+            self, "Save script", '', ";;".join(self._scriptFileFormats))
+
+        newName = path[0]
+
+        if str(newName) == "":
+            return False
+        else:
+            self._scriptFilename = newName
+
+        return self.save()
+
+    def open(self):
+        dialog = QtGui.QFileDialog()
+        dialog.setDirectory(os.getcwd())
+        dialog.setWindowTitle("Open script")
+        dialog.setNameFilters(self._scriptFileFormats)
+        dialog.exec_()
+        if not dialog.result():
+            return
+        filepath = str(dialog.selectedFiles()[0])
+        self._scriptFilename = str(dialog.selectedFiles()[0])
+        self.editor.setPlainText(file(self._scriptFilename).read())
 
     def updateScreenshot(self):
         self.invalidateScreenshot()
@@ -491,7 +552,6 @@ class MainWindow(QtGui.QMainWindow):
                 self.screenshotButtonControl.setChecked(True)
 
     def selectBitmapStop(self):
-        # already selecting, toggle
         if self._selectingBitmap != None:
             log('selecting bitmap "%s" canceled' % (self._selectingBitmap,))
             self._selectingBitmap = None
@@ -514,6 +574,9 @@ class MainWindow(QtGui.QMainWindow):
         selectedImage = self.screenshotImage.copy(left, top, (right-left), (bottom-top))
         if selectedImage.save(self._selectingBitmap):
             log('saved bitmap "%s"' % (self._selectingBitmap,))
+            fullscreenFilename = self._selectingBitmap + ".fullscreen.png"
+            if not self.screenshotImage.save(fullscreenFilename):
+                log('failed saving fullscreen version "%s"' % (fullscreenFilename,))
         else:
             log('saving bitmap "%s" failed.' % (self._selectingBitmap,))
         self._selectingBitmap = None
