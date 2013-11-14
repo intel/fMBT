@@ -44,6 +44,9 @@ def log(msg):
     sys.stdout.write("%s\n" % (msg,))
     sys.stdout.flush()
 
+_g_importFmbtRE = re.compile("\s*import fmbt(android|tizen|vnc|x11)")
+_g_gtiInstantiateRE = re.compile("(([a-zA-Z_][a-zA-Z_0-9]*)\s*=\s*fmbt(android|tizen|vnc|x11)\.(Device|Screen)\s*\(.*\))")
+
 ########################################################################
 # Convert events to fmbtgti API calls
 
@@ -199,7 +202,7 @@ class MyScaleEvents(QtCore.QObject):
                 self.mainwindow.gestureEvents.append(
                     GestureEvent("mouseup", 0, self.posToRel(event.pos)))
                 s = gestureToGti(self.mainwindow.gestureEvents)
-                cmd = opt_sut + s
+                cmd = self.mainwindow._sut + s
                 self.mainwindow.gestureEvents = []
                 if self.mainwindow.screenshotButtonControl.isChecked():
                     debug("sending command %s" % (cmd,))
@@ -262,17 +265,21 @@ class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
 
+        self._autoConnectGti = None
+        self._autoConnectModules = None
         self._bitmapSaveDir = os.getcwd()
-        self._selectingBitmap = None
-        self._scriptFilename = None
+        self._fmbtEnv = {}
         self._scriptFileFormats = ["Python scripts (*.py)", "All files (*.*)"]
+        self._scriptFilename = None
+        self._selectingBitmap = None
+        self._sut = None
 
         self.mainwidget = QtGui.QWidget()
-        self.layout = QtGui.QVBoxLayout()
+        self.layout = QtGui.QHBoxLayout()
         self.mainwidget.setLayout(self.layout)
 
         self.splitter = QtGui.QSplitter(self.mainwidget)
-        self.layout.addWidget(self.splitter,1)
+        self.layout.addWidget(self.splitter, 1)
 
         ### Screenshot widgets
         self.screenshotWidgets = QtGui.QWidget(self.mainwidget)
@@ -412,8 +419,8 @@ class MainWindow(QtGui.QMainWindow):
         lineno = cursor.blockNumber()
         cursor.select(QtGui.QTextCursor.LineUnderCursor)
         l = cursor.selectedText()
-        start = l.rfind('"', 0, pos)
-        end = l.find('"', pos)
+        start = l.rfind('"', 0, pos-1)
+        end = l.find('"', pos-1)
         if -1 < start < end:
             quotedString = l[start+1:end]
             if quotedString.lower().rsplit(".")[-1] in ["png", "jpg"]:
@@ -422,7 +429,8 @@ class MainWindow(QtGui.QMainWindow):
 
     def bitmapFilepath(self, filename):
         try:
-            filepath = sut.screenshot()._paths.abspath(filename)
+            filepath, exc = self._fmbtEval(
+                '%s._paths.abspath("%s")' % (self._sut, filename))
             return filepath
         except ValueError:
             return None
@@ -443,17 +451,10 @@ class MainWindow(QtGui.QMainWindow):
     def runStatement(self, statement, autoUpdate=False):
         if autoUpdate:
             self.invalidateScreenshot()
-        log("running: %s" % (statement,))
-        try:
-            exec statement
-            log("ok")
-            rv = True
-        except Exception, e:
-            log("error:\n%s" % (traceback.format_exc(),))
-            rv = False
+        _, exc = self._fmbtExec(statement)
         if autoUpdate:
             QtCore.QTimer.singleShot(1000, self.updateScreenshot)
-        return rv
+        return exc == None
 
     def setFilename(self, filename):
         self._scriptFilename = filename
@@ -463,6 +464,7 @@ class MainWindow(QtGui.QMainWindow):
             file(self._scriptFilename, "w").write(self.editor.toPlainText())
         else:
             return self.saveAs()
+        self.autoConnect()
 
     def newAndroid(self):
         self._newScript("import fmbtandroid\n"
@@ -486,18 +488,40 @@ class MainWindow(QtGui.QMainWindow):
         for _ in xrange(script.index("(")+1):
             self.editor.moveCursor(QtGui.QTextCursor.Right, QtGui.QTextCursor.MoveAnchor)
         self.editor.setFocus()
+        self.autoConnect()
+
+    def autoConnect(self):
+        # recognize fmbt imports and GTI instantiation
+        oldMod = self._autoConnectModules
+        oldGti = self._autoConnectGti
+        script = self.editor.toPlainText()
+        self._autoConnectModules = _g_importFmbtRE.findall(script)
+        self._autoConnectGti = _g_gtiInstantiateRE.findall(script)
+        if oldGti != self._autoConnectGti:
+            if oldMod != self._autoConnectModules:
+                for m in self._autoConnectModules:
+                    self._fmbtExec("import fmbt" + m)
+            if self._autoConnectGti:
+                self._fmbtExec(self._autoConnectGti[0][0])
+                self._sut = self._autoConnectGti[0][1]
+            else:
+                self._sut = None
+        # execute import(s)
+        # execute connect
+        # set sut to connect?
+        #opt_sut = line.split("=")[0].strip()
+        #            log("executing: %s" % (line,))
+        #            exec line
+        #            exec "sut = " + opt_sut
 
     def saveAs(self):
         path = QtGui.QFileDialog.getSaveFileName(
             self, "Save script", '', ";;".join(self._scriptFileFormats))
-
         newName = path[0]
-
         if str(newName) == "":
             return False
         else:
             self._scriptFilename = newName
-
         return self.save()
 
     def open(self):
@@ -512,12 +536,40 @@ class MainWindow(QtGui.QMainWindow):
         self._scriptFilename = str(dialog.selectedFiles()[0])
         self.editor.setPlainText(file(self._scriptFilename).read())
 
+    def _fmbtExec(self, statement, silent=False):
+        if not silent or opt_debug:
+            log("executing: %s" % (statement,))
+        try:
+            exec statement in self._fmbtEnv
+        except Exception, e:
+            if not silent or opt_debug:
+                log("exception: %s\n    %s" %
+                    (e, "    ".join(traceback.format_exc().splitlines())))
+            return None, e
+        return None, None
+
+    def _fmbtEval(self, expression, silent=False):
+        if not silent or opt_debug:
+            log("evaluating: %s" % (expression,))
+        try:
+            rv = eval(expression, self._fmbtEnv, self._fmbtEnv)
+            if opt_debug:
+                log("returned %s: %s" % (type(rv), rv))
+        except Exception, e:
+            if not silent or opt_debug:
+                log("exception: %s" % (e,))
+            return None, e
+        return rv, None
+
     def updateScreenshot(self):
         self.invalidateScreenshot()
-
-        sut.refreshScreenshot().save("screen2gti.png")
-        self.screenshotImage = QtGui.QImage()
-        self.screenshotImage.load("screen2gti.png")
+        if self._sut == None:
+            self.autoConnect()
+        if self._sut != None:
+            rv, exc = self._fmbtExec('%s.refreshScreenshot().save("screen2gti.png")' % (self._sut))
+            if exc == None:
+                self.screenshotImage = QtGui.QImage()
+                self.screenshotImage.load("screen2gti.png")
         self.updateScreenshotView()
 
     def updateScreenshotView(self):
@@ -539,9 +591,12 @@ class MainWindow(QtGui.QMainWindow):
                 log("no bitmap to verify")
         if filepath != None:
             log('verifying bitmap "%s"' % (filepath,))
-            items = sut.screenshot().findItemsByBitmap(filename)
+            items, exc = self._fmbtEval(
+                '%s.screenshot().findItemsByBitmap("%s")' % (
+                self._sut, filename))
             if items:
-                log('bitmap "%s" == %s' % (filename, items[0]))
+                log('bitmap "%s" found at %s' % (filename, items[0].bbox()))
+                self.drawRect(*items[0].bbox())
             else:
                 log('bitmap "%s" not found' % (filename,))
 
@@ -559,6 +614,7 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotButtonSelect.setChecked(False)
         self.screenshotButtonControl.setChecked(
             self._selectingToggledInteract)
+        self._screenshotImageOrig = None
 
     def selectBitmapDone(self, left, top, right, bottom):
         if left > right:
@@ -566,7 +622,7 @@ class MainWindow(QtGui.QMainWindow):
         if top > bottom:
             top, bottom = bottom, top
         if not (-1 < top < bottom < self.screenshotImage.height() and
-                 -1 < left < bottom < self.screenshotImage.width()):
+                 -1 < left < right < self.screenshotImage.width()):
             log('illegal selection')
             self.selectBitmapStop()
             return None
@@ -594,8 +650,9 @@ class MainWindow(QtGui.QMainWindow):
                 if filepath:
                     log('select replacement for "%s"' % (filepath,))
                 else:
-                    filepath = os.path.join(sut._paths.bitmapPath.split(":")[0],
-                                            filename)
+                    filepath = os.path.join(
+                        self._fmbtEval('%s._paths.bitmapPath.split(":")[0]' % (self._sut))[0],
+                        filename)
                     log('select new bitmap "%s"' % (filepath,))
                 self._selectingBitmap = filepath
             else:
@@ -618,18 +675,15 @@ class MainWindow(QtGui.QMainWindow):
             self.screenshotImage = self._screenshotImageOrig.copy()
         if not clear:
             x1, y1, x2, y2 = left, top, right, bottom
-            #y1 = top * self.screenshotImage.height()
-            #x1 = left * self.screenshotImage.width()
-            #y2 = bottom * self.screenshotImage.height()
-            #x2 = right * self.screenshotImage.width()
+            w, h = (right-left), (bottom-top)
             painter = QtGui.QPainter(self.screenshotImage)
-            bgPen = QtGui.QPen(QtGui.QColor(0, 0, 32), 1)
-            fgPen = QtGui.QPen(QtGui.QColor(64, 255, 128), 1)
+            bgPen = QtGui.QPen(QtGui.QColor(0, 0, 0), 1)
+            fgPen = QtGui.QPen(QtGui.QColor(128, 255, 128), 1)
             painter.setPen(bgPen)
-            painter.drawRect(x1-2, y1-2, (x2-x1)+4, (y2-y1)+4)
-            painter.drawRect(x1-1, y1-1, (x2-x1)+2, (y2-y1)+2)
+            painter.drawRect(x1-2, y1-2, w+4, h+4)
+            painter.drawRect(x1, y1, w, h)
             painter.setPen(fgPen)
-            painter.drawRect(x1, y1, (x2-x1), (y2-y1))
+            painter.drawRect(x1-1, y1-1, w+2, h+2)
         self.updateScreenshotView()
 
     def zoomInEditor(self):
@@ -685,46 +739,23 @@ if __name__ == "__main__":
     else:
         scriptFilename = None
 
-    if script:
-        # script given, try connecting automatically as defined in the script
-        if "import fmbt" in script:
-            for line in script.split('\n'):
-                if re.match("import fmbt(android|tizen|vnc|x11)", line):
-                    opt_gti = line.split()[1].split(",")[0][4:]
-                    log("executing: %s" % (line,))
-                    exec line
-                    if opt_gti in ['android', 'tizen']:
-                        opt_gticlass = "Device"
-                    else:
-                        opt_gticlass = "Screen"
-                elif re.match("\s*[a-zA-Z_].*=.*" + opt_gti + "\.(Device|Screen).*", line):
-                    opt_sut = line.split("=")[0].strip()
-                    log("executing: %s" % (line,))
-                    exec line
-                    exec "sut = " + opt_sut
-    elif opt_gti == None:
-        error("no platform (-p) or script, don't know how to connect")
-
-    if opt_gti != "dummy":
-        if opt_sut == None:
-            initSequence = ("import fmbt%s\n"
-                            "sut = fmbt%s.%s('%s')\n") % (
-                                opt_gti, opt_gti, opt_gticlass, opt_connect)
-            exec initSequence
-            opt_sut = "sut"
-    else:
-        initSequence = "# sut = fmbtdummy.Device(...)\n"
-        sut = fmbtdummy.Device(screenshotList = opt_connect.split(","))
-        opt_sut = "sut"
-
     _app = QtGui.QApplication(sys.argv)
     _win = MainWindow()
     _win.resize(640, 480)
-    _win.updateScreenshot()
+
+    if opt_gti == "dummy":
+        initSequence = "# sut = fmbtdummy.Device(...)\n"
+        sut = fmbtdummy.Device(screenshotList = opt_connect.split(","))
+        opt_sut = "sut"
+    else:
+        initSequence = ""
+
+    _win.updateScreenshot() # timer! DELME
     if script:
         _win.editor.append(script)
         _win.setFilename(scriptFilename)
     else:
         _win.editor.append(initSequence)
+    _win.autoConnect()
     _win.show()
     _app.exec_()
