@@ -223,7 +223,14 @@ class MyScaleEvents(QtCore.QObject):
                 if filepath:
                     if self.visibleTip != filepath:
                         QtGui.QToolTip.hideText()
-                        QtGui.QToolTip.showText(event.globalPos(), '%s<br><img src="%s">' % (filepath, filepath))
+                        txt = '%s<br><img src="%s">' % (filepath, filepath)
+                        fsfilepath = filepath + ".fullscreen.png"
+                        if os.access(fsfilepath, os.R_OK):
+                            txt += '<br><img width="240" src="%s">' % (fsfilepath,)
+                        else:
+                            print "no access to"
+                            print fsfilepath
+                        QtGui.QToolTip.showText(event.globalPos(), txt)
                 else:
                     QtGui.QToolTip.showText(event.globalPos(), '%s<br>not in bitmapPath' % (filename,))
                 self.visibleTip = filepath
@@ -269,6 +276,7 @@ class MainWindow(QtGui.QMainWindow):
         self._autoConnectModules = None
         self._bitmapSaveDir = os.getcwd()
         self._fmbtEnv = {}
+        self._bitmapFileFormats = ["Portable network graphics (*.png)", "All files (*.*)"]
         self._scriptFileFormats = ["Python scripts (*.py)", "All files (*.*)"]
         self._scriptFilename = None
         self._selectingBitmap = None
@@ -276,6 +284,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.mainwidget = QtGui.QWidget()
         self.layout = QtGui.QHBoxLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)
         self.mainwidget.setLayout(self.layout)
 
         self.splitter = QtGui.QSplitter(self.mainwidget)
@@ -283,6 +292,7 @@ class MainWindow(QtGui.QMainWindow):
 
         ### Screenshot widgets
         self.screenshotWidgets = QtGui.QWidget(self.mainwidget)
+        self.screenshotWidgets.setContentsMargins(0, 0, 0, 0)
         self.screenshotWidgetsLayout = QtGui.QVBoxLayout()
         self.screenshotWidgets.setLayout(self.screenshotWidgetsLayout)
 
@@ -308,15 +318,16 @@ class MainWindow(QtGui.QMainWindow):
 
         def makeScalableImage(parent, qlabel):
             container = QtGui.QWidget(parent)
+            container.setContentsMargins(0, -8, 0, -8)
             layout = QtGui.QHBoxLayout()
             container.setLayout(layout)
-            container.setStyleSheet("background-color:white;")
 
             qlabel.setSizePolicy(QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.Ignored)
             qlabel.setScaledContents(True)
             qlabel.resize(QtCore.QSize(0,0))
 
             area = QtGui.QScrollArea(container)
+            area.setContentsMargins(0, 0, 0, 0)
             area.setWidget(qlabel)
             qlabel._scaleevents = MyScaleEvents(self, area, 0.1, 1.0)
             area.wheel_scale = 1.0
@@ -328,8 +339,7 @@ class MainWindow(QtGui.QMainWindow):
             return container
 
         self.screenshotQLabel = QtGui.QLabel(self.screenshotWidgets)
-        self.screenshotQLabel.setMargin(0)
-        self.screenshotQLabel.setIndent(0)
+        self.screenshotQLabel.setContentsMargins(0, 0, 0, 0)
         self.screenshotContainer = makeScalableImage(self.screenshotWidgets, self.screenshotQLabel)
         self.screenshotWidgetsLayout.addWidget(self.screenshotContainer)
         self.screenshotImage = QtGui.QImage()
@@ -342,20 +352,24 @@ class MainWindow(QtGui.QMainWindow):
 
         ### Editor widgets
         self.editorWidgets = QtGui.QWidget(self.mainwidget)
+        self.editorWidgets.setContentsMargins(0, 0, 0, 0)
         self.editorWidgetsLayout = QtGui.QVBoxLayout()
         self.editorWidgets.setLayout(self.editorWidgetsLayout)
 
         self.editorButtons = QtGui.QWidget(self.editorWidgets)
+        self.editorButtons.setContentsMargins(-5, 0, -5, 0)
         self.editorButtonsLayout = QtGui.QHBoxLayout()
         self.editorButtons.setLayout(self.editorButtonsLayout)
 
         self.editorButtonRec = QtGui.QPushButton("Rec", checkable=True)
-        self.editorButtonRunSingle = QtGui.QPushButton("Run line")
+        self.editorButtonRunSingle = QtGui.QPushButton("Run &line")
         self.editorButtonRunSingle.clicked.connect(self.runSingleLine)
+        self.editorButtonRunSingleUpdate = QtGui.QPushButton("Run line + &update")
+        self.editorButtonRunSingleUpdate.clicked.connect(lambda: self.runSingleLine(autoUpdate=True))
         self.editorButtonRunAll = QtGui.QPushButton("Run all")
         self.editorButtonsLayout.addWidget(self.editorButtonRec)
         self.editorButtonsLayout.addWidget(self.editorButtonRunSingle)
-        self.editorButtonsLayout.addWidget(self.editorButtonRunAll)
+        self.editorButtonsLayout.addWidget(self.editorButtonRunSingleUpdate)
         self.editorWidgetsLayout.addWidget(self.editorButtons)
 
         def makeScalableEditor(parent, font, EditorClass = QtGui.QTextEdit):
@@ -404,6 +418,7 @@ class MainWindow(QtGui.QMainWindow):
         bitmapMenu = QtGui.QMenu("&Bitmap", self)
         self.menuBar().addMenu(bitmapMenu)
         bitmapMenu.addAction("Select", self.selectBitmap, "Ctrl+B, Ctrl+S")
+        bitmapMenu.addAction("Tap", self.tapBitmap, "Ctrl+B, Ctrl+T")
         bitmapMenu.addAction("Verify", self.verifyBitmap, "Ctrl+B, Ctrl+V")
 
         self.gestureEvents = []
@@ -440,11 +455,15 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotButtonRefresh.repaint()
         _app.processEvents()
 
-    def runSingleLine(self, lineNumber=None):
+    def scheduleUpdateScreenshot(self, seconds):
+        QtCore.QTimer.singleShot(int(seconds * 1000), self.updateScreenshot)
+
+    def runSingleLine(self, lineNumber=None, autoUpdate=False):
         if lineNumber == None:
             line = self.editor.textCursor().block().text().strip()
             if self.runStatement(line):
                 self.editor.moveCursor(QtGui.QTextCursor.Down, QtGui.QTextCursor.MoveAnchor)
+                self.updateScreenshot()
         else:
             raise NotImplementedError
 
@@ -453,7 +472,7 @@ class MainWindow(QtGui.QMainWindow):
             self.invalidateScreenshot()
         _, exc = self._fmbtExec(statement)
         if autoUpdate:
-            QtCore.QTimer.singleShot(1000, self.updateScreenshot)
+            self.scheduleUpdateScreenshot(1.0)
         return exc == None
 
     def setFilename(self, filename):
@@ -488,7 +507,8 @@ class MainWindow(QtGui.QMainWindow):
         for _ in xrange(script.index("(")+1):
             self.editor.moveCursor(QtGui.QTextCursor.Right, QtGui.QTextCursor.MoveAnchor)
         self.editor.setFocus()
-        self.autoConnect()
+        if self.autoConnect():
+            self.scheduleUpdateScreenshot(1.0)
 
     def autoConnect(self):
         # recognize fmbt imports and GTI instantiation
@@ -502,17 +522,13 @@ class MainWindow(QtGui.QMainWindow):
                 for m in self._autoConnectModules:
                     self._fmbtExec("import fmbt" + m)
             if self._autoConnectGti:
-                self._fmbtExec(self._autoConnectGti[0][0])
-                self._sut = self._autoConnectGti[0][1]
+                rv, exc = self._fmbtExec(self._autoConnectGti[0][0])
+                if exc == None:
+                    # connected successfully
+                    self._sut = self._autoConnectGti[0][1]
             else:
                 self._sut = None
-        # execute import(s)
-        # execute connect
-        # set sut to connect?
-        #opt_sut = line.split("=")[0].strip()
-        #            log("executing: %s" % (line,))
-        #            exec line
-        #            exec "sut = " + opt_sut
+        return self._sut != None # return True if connected
 
     def saveAs(self):
         path = QtGui.QFileDialog.getSaveFileName(
@@ -523,6 +539,23 @@ class MainWindow(QtGui.QMainWindow):
         else:
             self._scriptFilename = newName
         return self.save()
+
+    def askBitmapFilename(self, suggestion):
+        path = QtGui.QFileDialog.getSaveFileName(
+            self, "Save bitmap", '', ";;".join(self._bitmapFileFormats))
+        newName = path[0]
+        if str(newName) == "":
+            return None
+        else:
+            return newName
+
+    def renameBitmap(self, origName, newName):
+        cursor = self.editor.textCursor()
+        cursor.select(QtGui.QTextCursor.LineUnderCursor)
+        l = cursor.selectedText()
+        if '"%s"' % (origName,) in l:
+            l = l.replace('"%s"' % (origName,), '"%s"' % (newName,))
+            cursor.insertText(l)
 
     def open(self):
         dialog = QtGui.QFileDialog()
@@ -543,8 +576,8 @@ class MainWindow(QtGui.QMainWindow):
             exec statement in self._fmbtEnv
         except Exception, e:
             if not silent or opt_debug:
-                log("exception: %s\n    %s" %
-                    (e, "    ".join(traceback.format_exc().splitlines())))
+                log("exception: %s\n  %s" %
+                    (e, "    \n".join(traceback.format_exc().splitlines())))
             return None, e
         return None, None
 
@@ -580,7 +613,25 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotContainer.area.wheel_scale_changed()
         self.screenshotButtonRefresh.setChecked(False)
 
+    def addAPICall(self, call, cursorOffset=0):
+        cursor = self.editor.textCursor()
+        txt = self.editor.toPlainText()
+        lineBeforeCursor = txt[cursor.block().position():cursor.position()]
+        if lineBeforeCursor.strip() == "":
+            cursor.beginEditBlock()
+            cursor.insertText(self._sut + "." + call)
+            cursor.endEditBlock()
+            if cursorOffset < 0:
+                for _ in xrange(abs(cursorOffset)):
+                    self.editor.moveCursor(QtGui.QTextCursor.Left, QtGui.QTextCursor.MoveAnchor)
+            else:
+                for _ in xrange(abs(cursorOffset)):
+                    self.editor.moveCursor(QtGui.QTextCursor.Right, QtGui.QTextCursor.MoveAnchor)
+
     def verifyBitmap(self, filepath=None):
+        if self.editorButtonRec.isChecked():
+            self.addAPICall('verifyBitmap("noname.png")', -1)
+            self.selectBitmap()
         if filepath == None:
             filename = self.bitmapStringAt()
             if filename:
@@ -596,6 +647,28 @@ class MainWindow(QtGui.QMainWindow):
                 self._sut, filename))
             if items:
                 log('bitmap "%s" found at %s' % (filename, items[0].bbox()))
+                self.drawRect(*items[0].bbox())
+            else:
+                log('bitmap "%s" not found' % (filename,))
+
+    def tapBitmap(self, filepath=None):
+        if self.editorButtonRec.isChecked():
+            self.addAPICall('tapBitmap("noname.png")', -1)
+            self.selectBitmap()
+        if filepath == None:
+            filename = self.bitmapStringAt()
+            if filename:
+                filepath = self.bitmapFilepath(filename)
+                if filepath == None:
+                    log('bitmap "%s" not in bitmapPath' % (filename,))
+            else:
+                log("no bitmap to tap")
+        if filepath != None:
+            log('tapping bitmap "%s"' % (filepath,))
+            rv, exc = self._fmbtEval('%s.tapBitmap("%s")' % (
+                self._sut, filename))
+            if rv:
+                log('bitmap "%s" tapped' % (filename, items[0].bbox()))
                 self.drawRect(*items[0].bbox())
             else:
                 log('bitmap "%s" not found' % (filename,))
@@ -628,6 +701,16 @@ class MainWindow(QtGui.QMainWindow):
             return None
         self.drawRect(left, top, right, bottom, True)
         selectedImage = self.screenshotImage.copy(left, top, (right-left), (bottom-top))
+
+        if self._selectingBitmap == "noname.png":
+            newName = self.askBitmapFilename(self._selectingBitmap)
+            if not newName:
+                self.selectBitmapStop()
+            if newName !=  self._selectingBitmap:
+                newName = os.path.basename(newName)
+                self.renameBitmap(self._selectingBitmap, newName)
+                self._selectingBitmap = newName
+
         if selectedImage.save(self._selectingBitmap):
             log('saved bitmap "%s"' % (self._selectingBitmap,))
             fullscreenFilename = self._selectingBitmap + ".fullscreen.png"
@@ -750,12 +833,12 @@ if __name__ == "__main__":
     else:
         initSequence = ""
 
-    _win.updateScreenshot() # timer! DELME
     if script:
         _win.editor.append(script)
         _win.setFilename(scriptFilename)
     else:
         _win.editor.append(initSequence)
-    _win.autoConnect()
+    if _win.autoConnect():
+        _win.scheduleUpdateScreenshot(1.0)
     _win.show()
     _app.exec_()
