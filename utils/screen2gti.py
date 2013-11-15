@@ -658,7 +658,7 @@ class MainWindow(QtGui.QMainWindow):
                 '%s.screenshot().findItemsByBitmap("%s")' % (
                 self._sut, filename))
             if items:
-                log('bitmap "%s" found at %s' % (filename, items[0].bbox()))
+                log('bitmap "%s" found at %s bbox: %s' % (filename, items[0].coords(), items[0].bbox()))
                 self.drawRect(*items[0].bbox())
             else:
                 log('bitmap "%s" not found' % (filename,))
