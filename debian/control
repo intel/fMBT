@@ -41,6 +41,8 @@ Description: fMBT editor
    - editing test configurations
    - previewing tests (even if you'd use your favourite editor)
    - visualizing models and test coverage.
+ fmbt-scripter for
+   - recording Python UI test scripts
 
 Package: fmbt-python
 Architecture: any

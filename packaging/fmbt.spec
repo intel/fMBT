@@ -75,7 +75,7 @@ Requires: %{name}-utils
 Requires: python-pyside
 
 %description editor
-fMBT editor
+fMBT editor and scripter
 
 %package python
 Summary: fMBT python bindings
@@ -224,8 +224,10 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %files editor
 %defattr(-, root, root, -)
 %{_bindir}/%{name}-editor
+%{_bindir}/%{name}-scripter
 %{_bindir}/%{name}-gteditor
 %{python_sitelib}/%{name}/%{name}-editor
+%{python_sitelib}/%{name}/%{name}-scripter
 %{python_sitelib}/%{name}/%{name}-gteditor
 
 %files python
