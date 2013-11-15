@@ -300,12 +300,12 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotButtonsL = QtGui.QHBoxLayout()
         self.screenshotButtons.setLayout(self.screenshotButtonsL)
         self.screenshotButtonRefresh = QtGui.QPushButton(self.screenshotButtons,
-                                                         text="Refresh",
+                                                         text="&Refresh",
                                                          checkable = True)
         self.screenshotButtonRefresh.clicked.connect(self.updateScreenshot)
         self.screenshotButtonsL.addWidget(self.screenshotButtonRefresh)
         self.screenshotButtonControl = QtGui.QPushButton(self.screenshotButtons,
-                                                        text="Control",
+                                                        text="C&ontrol",
                                                         checkable = True)
         self.screenshotButtonControl.clicked.connect(self.controlDevice)
         self.screenshotButtonsL.addWidget(self.screenshotButtonControl)
@@ -361,12 +361,12 @@ class MainWindow(QtGui.QMainWindow):
         self.editorButtonsLayout = QtGui.QHBoxLayout()
         self.editorButtons.setLayout(self.editorButtonsLayout)
 
-        self.editorButtonRec = QtGui.QPushButton("Rec", checkable=True)
+        self.editorButtonRec = QtGui.QPushButton("Re&c", checkable=True)
+        self.editorButtonRec.clicked.connect(self.rec)
         self.editorButtonRunSingle = QtGui.QPushButton("Run &line")
         self.editorButtonRunSingle.clicked.connect(self.runSingleLine)
-        self.editorButtonRunSingleUpdate = QtGui.QPushButton("Run line + &update")
+        self.editorButtonRunSingleUpdate = QtGui.QPushButton("Run + &update")
         self.editorButtonRunSingleUpdate.clicked.connect(lambda: self.runSingleLine(autoUpdate=True))
-        self.editorButtonRunAll = QtGui.QPushButton("Run all")
         self.editorButtonsLayout.addWidget(self.editorButtonRec)
         self.editorButtonsLayout.addWidget(self.editorButtonRunSingle)
         self.editorButtonsLayout.addWidget(self.editorButtonRunSingleUpdate)
@@ -389,6 +389,8 @@ class MainWindow(QtGui.QMainWindow):
         self.editorFont.setPointSize(12)
         self.editor = makeScalableEditor(self.mainwidget, self.editorFont)
         self.editorWidgetsLayout.addWidget(self.editor)
+        self.editor.cursorPositionChanged.connect(self.editorCursorPositionChanged)
+
         self.splitter.addWidget(self.editorWidgets)
 
         self.setCentralWidget(self.mainwidget)
@@ -417,9 +419,11 @@ class MainWindow(QtGui.QMainWindow):
 
         bitmapMenu = QtGui.QMenu("&Bitmap", self)
         self.menuBar().addMenu(bitmapMenu)
-        bitmapMenu.addAction("Select", self.selectBitmap, "Ctrl+B, Ctrl+S")
-        bitmapMenu.addAction("Tap", self.tapBitmap, "Ctrl+B, Ctrl+T")
-        bitmapMenu.addAction("Verify", self.verifyBitmap, "Ctrl+B, Ctrl+V")
+        bitmapMenu.addAction("Se&lect", self.selectBitmap, "Ctrl+B, Ctrl+L")
+        bitmapMenu.addSeparator()
+        bitmapMenu.addAction("&Swipe", self.swipeBitmap, "Ctrl+B, Ctrl+S")
+        bitmapMenu.addAction("&Tap", self.tapBitmap, "Ctrl+B, Ctrl+T")
+        bitmapMenu.addAction("&Verify", self.verifyBitmap, "Ctrl+B, Ctrl+V")
 
         self.gestureEvents = []
         self.gestureStarted = False
@@ -458,12 +462,18 @@ class MainWindow(QtGui.QMainWindow):
     def scheduleUpdateScreenshot(self, seconds):
         QtCore.QTimer.singleShot(int(seconds * 1000), self.updateScreenshot)
 
+    def rec(self):
+        self.editor.setFocus()
+
     def runSingleLine(self, lineNumber=None, autoUpdate=False):
         if lineNumber == None:
             line = self.editor.textCursor().block().text().strip()
-            if self.runStatement(line):
+            if line == "" or line.startswith("#"):
                 self.editor.moveCursor(QtGui.QTextCursor.Down, QtGui.QTextCursor.MoveAnchor)
-                self.updateScreenshot()
+            elif self.runStatement(line):
+                self.editor.moveCursor(QtGui.QTextCursor.Down, QtGui.QTextCursor.MoveAnchor)
+                self.scheduleUpdateScreenshot(1.0)
+            self.editor.setFocus()
         else:
             raise NotImplementedError
 
@@ -508,7 +518,7 @@ class MainWindow(QtGui.QMainWindow):
             self.editor.moveCursor(QtGui.QTextCursor.Right, QtGui.QTextCursor.MoveAnchor)
         self.editor.setFocus()
         if self.autoConnect():
-            self.scheduleUpdateScreenshot(1.0)
+            self.scheduleUpdateScreenshot(0.1)
 
     def autoConnect(self):
         # recognize fmbt imports and GTI instantiation
@@ -604,6 +614,7 @@ class MainWindow(QtGui.QMainWindow):
                 self.screenshotImage = QtGui.QImage()
                 self.screenshotImage.load("screen2gti.png")
         self.updateScreenshotView()
+        self.editor.setFocus()
 
     def updateScreenshotView(self):
         self.screenshotQLabel.setPixmap(
@@ -632,6 +643,7 @@ class MainWindow(QtGui.QMainWindow):
         if self.editorButtonRec.isChecked():
             self.addAPICall('verifyBitmap("noname.png")', -1)
             self.selectBitmap()
+            return
         if filepath == None:
             filename = self.bitmapStringAt()
             if filename:
@@ -655,6 +667,7 @@ class MainWindow(QtGui.QMainWindow):
         if self.editorButtonRec.isChecked():
             self.addAPICall('tapBitmap("noname.png")', -1)
             self.selectBitmap()
+            return
         if filepath == None:
             filename = self.bitmapStringAt()
             if filename:
@@ -673,6 +686,21 @@ class MainWindow(QtGui.QMainWindow):
             else:
                 log('bitmap "%s" not found' % (filename,))
 
+    def swipeBitmap(self, filepath=None):
+        if self.editorButtonRec.isChecked():
+            self.addAPICall('swipeBitmap("noname.png", "east")', -9)
+            self.selectBitmap()
+            return
+
+    def editorCursorPositionChanged(self):
+        bmFilename = self.bitmapStringAt()
+        if bmFilename:
+            self.screenshotButtonSelect.setText("Select %s" % (os.path.basename(bmFilename)))
+            self.screenshotButtonSelect.setEnabled(True)
+        else:
+            self.screenshotButtonSelect.setText("Select")
+            self.screenshotButtonSelect.setEnabled(False)
+
     def controlDevice(self):
         if self.screenshotButtonControl.isChecked():
             if self._selectingBitmap:
@@ -688,6 +716,7 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotButtonControl.setChecked(
             self._selectingToggledInteract)
         self._screenshotImageOrig = None
+        self.editor.setFocus()
 
     def selectBitmapDone(self, left, top, right, bottom):
         if left > right:
