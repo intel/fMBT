@@ -268,6 +268,33 @@ class fmbtdummy(object):
         def sendTouchUp(self, x, y):
             return True
 
+class SettingsDialog(QtGui.QDialog):
+    def __init__(self):
+        QtGui.QDialog.__init__(self)
+        self.mainWidget = QtGui.QTabWidget(self)
+
+        self.pathsTab = QtGui.QWidget(self.mainWidget)
+        self.pathsBitmapLabel = QtGui.QLabel("Bitmap path", self.pathsTab)
+        self.pathsBitmapPath = QtGui.QLineEdit(self.pathsTab)
+
+        self.pathsTabLayout = QtGui.QFormLayout()
+        self.pathsTabLayout.addRow(self.pathsBitmapLabel, self.pathsBitmapPath)
+        self.pathsTab.setLayout(self.pathsTabLayout)
+
+        self.mainWidget.addTab(self.pathsTab, "Paths")
+
+        self.buttonBox = QtGui.QDialogButtonBox(
+            QtGui.QDialogButtonBox.Ok |
+            QtGui.QDialogButtonBox.Cancel)
+
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+
+        self.mainLayout = QtGui.QVBoxLayout()
+        self.mainLayout.addWidget(self.mainWidget)
+        self.mainLayout.addWidget(self.buttonBox)
+        self.setLayout(self.mainLayout)
+
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
@@ -280,6 +307,7 @@ class MainWindow(QtGui.QMainWindow):
         self._scriptFileFormats = ["Python scripts (*.py)", "All files (*.*)"]
         self._scriptFilename = None
         self._selectingBitmap = None
+        self._settingsDialog = None
         self._sut = None
 
         self.mainwidget = QtGui.QWidget()
@@ -408,6 +436,10 @@ class MainWindow(QtGui.QMainWindow):
         fileMenu.addAction("Save &As", self.saveAs, "Shift+Ctrl+S")
         fileMenu.addSeparator()
         fileMenu.addAction("E&xit", QtGui.qApp.quit, "Ctrl+Q")
+
+        editMenu = QtGui.QMenu("&Edit", self)
+        self.menuBar().addMenu(editMenu)
+        editMenu.addAction("&Settings", self.showSettingsDialog)
 
         viewMenu = QtGui.QMenu("&View", self)
         self.menuBar().addMenu(viewMenu)
@@ -797,6 +829,12 @@ class MainWindow(QtGui.QMainWindow):
             painter.setPen(fgPen)
             painter.drawRect(x1-1, y1-1, w+2, h+2)
         self.updateScreenshotView()
+
+    def showSettingsDialog(self):
+        if self._settingsDialog == None:
+            self._settingsDialog = SettingsDialog()
+        self._settingsDialog.show()
+        self._settingsDialog.exec_()
 
     def zoomInEditor(self):
         self.editor._scaleevents.changeScale(1.1)
