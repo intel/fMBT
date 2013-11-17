@@ -274,14 +274,35 @@ class SettingsDialog(QtGui.QDialog):
         self.mainWidget = QtGui.QTabWidget(self)
 
         self.pathsTab = QtGui.QWidget(self.mainWidget)
-        self.pathsBitmapLabel = QtGui.QLabel("Bitmap path", self.pathsTab)
+        self.pathsBitmapPathLabel = QtGui.QLabel("Bitmap path", self.pathsTab)
         self.pathsBitmapPath = QtGui.QLineEdit(self.pathsTab)
+        self.pathsBitmapPath.setToolTip("Colon-separated list of directories. Use setBitmapPath() in scripts.")
+
+        self.pathsBitmapDirLabel = QtGui.QLabel("Bitmap save directory", self.pathsTab)
+        self.pathsBitmapDir = QtGui.QLineEdit(self.pathsTab)
+        self.pathsBitmapDir.setToolTip("If empty, new bitmaps are saved to the first directory in the bitmap path")
+
+        self.pathsScreenshotDirLabel = QtGui.QLabel("Screenshot save directory", self.pathsTab)
+        self.pathsScreenshotDir = QtGui.QLineEdit(self.pathsTab)
 
         self.pathsTabLayout = QtGui.QFormLayout()
-        self.pathsTabLayout.addRow(self.pathsBitmapLabel, self.pathsBitmapPath)
+        self.pathsTabLayout.addRow(self.pathsBitmapPathLabel, self.pathsBitmapPath)
+        self.pathsTabLayout.addRow(self.pathsBitmapDirLabel, self.pathsBitmapDir)
+        self.pathsTabLayout.addRow(self.pathsScreenshotDirLabel, self.pathsScreenshotDir)
         self.pathsTab.setLayout(self.pathsTabLayout)
+        self.mainWidget.addTab(self.pathsTab, "Paths and directories")
 
-        self.mainWidget.addTab(self.pathsTab, "Paths")
+        self.connTab = QtGui.QWidget(self.mainWidget)
+        self.connImportsLabel = QtGui.QLabel("Python code for required imports", self.connTab)
+        self.connImports = QtGui.QTextEdit(self.connTab)
+        self.connEstablishLabel = QtGui.QLabel("Python code instantiating a Screen or Device", self.connTab)
+        self.connEstablish = QtGui.QTextEdit(self.connTab)
+
+        self.connTabLayout = QtGui.QFormLayout()
+        self.connTabLayout.addRow(self.connImportsLabel, self.connImports)
+        self.connTabLayout.addRow(self.connEstablishLabel, self.connEstablish)
+        self.connTab.setLayout(self.connTabLayout)
+        self.mainWidget.addTab(self.connTab, "Connections")
 
         self.buttonBox = QtGui.QDialogButtonBox(
             QtGui.QDialogButtonBox.Ok |
