@@ -1456,7 +1456,7 @@ class _AndroidDeviceConnection:
             stderr = self._cat(remotename + ".err")
             try: exitstatus = int(self._cat(remotename + ".status"))
             except: exitstatus = None
-            self._runAdb(["shell", "rm -f "+remotename])
+            self._runAdb(["shell", "rm -f "+remotename+"*"])
         return exitstatus, stdout, stderr
 
     def recvViewData(self, retry=3):
