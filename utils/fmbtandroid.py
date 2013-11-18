@@ -366,7 +366,7 @@ class Device(fmbtgti.GUITestInterface):
         if self._conn: hw = self._conn.recvVariable("build.device")
         else: hw = "nohardware"
         self.hardware        = self._conf.value("general", "hardware", hw)
-        self.setBitmapPath(self._conf.value("paths", "bitmapPath", self._fmbtAndroidHomeDir + os.sep + "bitmaps" + os.sep + self.hardware + "-" + self.platformVersion() + ":."), self._fmbtAndroidHomeDir)
+        self.setBitmapPath(self._conf.value("paths", "bitmapPath", ".:" + self._fmbtAndroidHomeDir + os.sep + "bitmaps" + os.sep + self.hardware + "-" + self.platformVersion()), self._fmbtAndroidHomeDir)
         self.setScreenshotDir(self._conf.value("paths", "screenshotDir", self._fmbtAndroidHomeDir + os.sep + "screenshots"))
 
     def callContact(self, contact):
