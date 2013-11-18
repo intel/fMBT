@@ -415,6 +415,7 @@ class MainWindow(QtGui.QMainWindow):
         def hwButton(platform, name, layout):
             button = QtGui.QPushButton(getattr(self, "sutButtons" + platform),
                                        text = name)
+            button.setStyleSheet("padding: 4px")
             button.pressed.connect(lambda: self.buttonPressed(platform, name))
             button.released.connect(lambda: self.buttonReleased(platform, name))
             layout.addWidget(button)
@@ -458,12 +459,16 @@ class MainWindow(QtGui.QMainWindow):
         self.editorButtonRec = QtGui.QPushButton("Re&c", checkable=True)
         self.editorButtonRec.clicked.connect(self.rec)
         self.editorButtonRunSingle = QtGui.QPushButton("Run &line")
-        self.editorButtonRunSingle.clicked.connect(self.runSingleLine)
-        self.editorButtonRunSingleUpdate = QtGui.QPushButton("Run + &update")
-        self.editorButtonRunSingleUpdate.clicked.connect(lambda: self.runSingleLine(autoUpdate=True))
+        self.editorButtonRunSingle.clicked.connect(lambda: self.runLines(1))
+        self.editorButtonRunSelection = QtGui.QPushButton("Run selectio&n")
+        self.editorButtonRunSelection.clicked.connect(lambda: self.runLines("selection"))
+        self.editorButtonRunAutoUpdate = QtGui.QPushButton("&Auto refresh",
+                                                           checkable=True)
+        self.editorButtonRunAutoUpdate.clicked.connect(lambda: self.editor.setFocus())
         self.editorButtonsLayout.addWidget(self.editorButtonRec)
         self.editorButtonsLayout.addWidget(self.editorButtonRunSingle)
-        self.editorButtonsLayout.addWidget(self.editorButtonRunSingleUpdate)
+        self.editorButtonsLayout.addWidget(self.editorButtonRunSelection)
+        self.editorButtonsLayout.addWidget(self.editorButtonRunAutoUpdate)
         self.editorWidgetsLayout.addWidget(self.editorButtons)
 
         def makeScalableEditor(parent, font, EditorClass = QtGui.QTextEdit):
@@ -559,24 +564,31 @@ class MainWindow(QtGui.QMainWindow):
         _app.processEvents()
 
     def scheduleUpdateScreenshot(self, seconds):
-        QtCore.QTimer.singleShot(int(seconds * 1000), self.updateScreenshot)
+        QtCore.QTimer.singleShot(int(seconds * 1000), lambda: self.updateScreenshot(False))
 
     def rec(self):
         self.editor.setFocus()
 
-    def runSingleLine(self, lineNumber=None, autoUpdate=False):
-        if lineNumber == None:
+    def runLines(self, lineCount=None, autoUpdate=None):
+        if autoUpdate == None:
+            autoUpdate = self.editorButtonRunAutoUpdate.isChecked()
+        line = ""
+        if lineCount == None or lineCount == 1:
             line = self.editor.textCursor().block().text().strip()
-            if line == "" or line.startswith("#"):
-                self.editor.moveCursor(QtGui.QTextCursor.Down, QtGui.QTextCursor.MoveAnchor)
-            elif self.runStatement(line):
-                self.editor.moveCursor(QtGui.QTextCursor.Down, QtGui.QTextCursor.MoveAnchor)
-                self.scheduleUpdateScreenshot(1.0)
-            self.editor.setFocus()
+        elif lineCount == "selection":
+            line = self.editor.textCursor().selectedText()
+            line = line.replace(unichr(0x2029), "\n")
         else:
             raise NotImplementedError
 
-    def runStatement(self, statement, autoUpdate=False):
+        if not (line == "" or line.startswith("#")):
+            self.runStatement(line, autoUpdate=autoUpdate)
+        self.editor.moveCursor(QtGui.QTextCursor.Down, QtGui.QTextCursor.MoveAnchor)
+        self.editor.setFocus()
+
+    def runStatement(self, statement, autoUpdate=None):
+        if autoUpdate == None:
+            autoUpdate = self.editorButtonRunAutoUpdate.isChecked()
         if autoUpdate:
             self.invalidateScreenshot()
         _, exc = self._fmbtExec(statement)
@@ -623,13 +635,13 @@ class MainWindow(QtGui.QMainWindow):
             s, o, e = fmbtandroid._run(["sdb", "devices"], expectedExitStatus=0)
         except:
             log("cannot list Tizen devices with sdb")
+        serialNumber = ""
         if o:
             outputLines = [l.strip() for l in o.splitlines() if l.strip() != ""]
             try:
                 deviceLines = outputLines[outputLines.index("List of devices attached")+1:]
             except:
                 deviceLines = []
-            serialNumber = ""
             if len(deviceLines) > 1:
                 choice, ok = QtGui.QInputDialog.getItem(
                     self,
@@ -639,7 +651,7 @@ class MainWindow(QtGui.QMainWindow):
                 if ok:
                     serialNumber = '"%s"' % (choice.split('\t')[0].strip(),)
         self._newScript("import fmbttizen\n"
-                        "sut = fmbttizen.Device()")
+                        "sut = fmbttizen.Device(%s)" % (serialNumber,))
 
     def newX11(self):
         self._newScript("import fmbtx11\n"
@@ -660,6 +672,7 @@ class MainWindow(QtGui.QMainWindow):
             self.addAPICall(call + "\n")
         if self.screenshotButtonControl.isChecked():
             self.doAPICall(call)
+        self.editor.setFocus()
 
     def _newScript(self, script):
         self.editor.setPlainText(script)
@@ -754,11 +767,13 @@ class MainWindow(QtGui.QMainWindow):
             return None, e
         return rv, None
 
-    def updateScreenshot(self):
+    def updateScreenshot(self, recordable=True):
         self.invalidateScreenshot()
         if self._sut == None:
             self.autoConnect()
         if self._sut != None:
+            if recordable and self.editorButtonRec.isChecked():
+                self.addAPICall("refreshScreenshot()\n")
             rv, exc = self._fmbtExec('%s.refreshScreenshot().save("screen2gti.png")' % (self._sut))
             if exc == None:
                 self.screenshotImage = QtGui.QImage()
@@ -806,7 +821,7 @@ class MainWindow(QtGui.QMainWindow):
     def doAPICall(self, call, silent=False):
         if not call.startswith("."):
             call = "." + call
-        return self.runStatement("%s%s" % (self._sut, call), autoUpdate=True)
+        return self.runStatement("%s%s" % (self._sut, call))
 
     def verifyBitmap(self, filepath=None):
         if self.editorButtonRec.isChecked():
