@@ -595,10 +595,49 @@ class MainWindow(QtGui.QMainWindow):
         self.autoConnect()
 
     def newAndroid(self):
+        try:
+            s, o, e = fmbtandroid._run(["adb", "devices"], expectedExitStatus=0)
+        except:
+            log("cannot connect to Android devices: adb not available")
+            return
+        outputLines = [l.strip() for l in o.splitlines() if l.strip() != ""]
+        try:
+            deviceLines = outputLines[outputLines.index("List of devices attached")+1:]
+        except:
+            deviceLines = []
+        serialNumber = ""
+        if len(deviceLines) > 1:
+            choice, ok = QtGui.QInputDialog.getItem(
+                self,
+                "Android device selection",
+                "Choose device to connect to" + " " * 30,
+                deviceLines, current=0, editable=False)
+            if ok:
+                serialNumber = '"%s"' % (choice.split('\t')[0].strip(),)
         self._newScript("import fmbtandroid\n"
-                        "sut = fmbtandroid.Device()")
+                        "sut = fmbtandroid.Device(%s)" % (serialNumber,))
 
     def newTizen(self):
+        o = None
+        try:
+            s, o, e = fmbtandroid._run(["sdb", "devices"], expectedExitStatus=0)
+        except:
+            log("cannot list Tizen devices with sdb")
+        if o:
+            outputLines = [l.strip() for l in o.splitlines() if l.strip() != ""]
+            try:
+                deviceLines = outputLines[outputLines.index("List of devices attached")+1:]
+            except:
+                deviceLines = []
+            serialNumber = ""
+            if len(deviceLines) > 1:
+                choice, ok = QtGui.QInputDialog.getItem(
+                    self,
+                    "Tizen device selection",
+                    "Choose device to connect to" + " " * 30,
+                    deviceLines, current=0, editable=False)
+                if ok:
+                    serialNumber = '"%s"' % (choice.split('\t')[0].strip(),)
         self._newScript("import fmbttizen\n"
                         "sut = fmbttizen.Device()")
 
