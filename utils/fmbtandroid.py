@@ -510,6 +510,14 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self.pressKey("KEYCODE_POWER", **pressKeyKwArgs)
 
+    def pressSearch(self, **pressKeyKwArgs):
+        """
+        Press the search button.
+
+        Optional parameters are the same as for pressKey.
+        """
+        return self.pressKey("KEYCODE_SEARCH", **pressKeyKwArgs)
+
     def pressVolumeUp(self, **pressKeyKwArgs):
         """
         Press the volume up button.

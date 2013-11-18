@@ -23,7 +23,6 @@ from PySide import QtCore
 from PySide import QtGui
 
 import getopt
-import fmbtgti
 import math
 import os
 import re
@@ -31,6 +30,12 @@ import shutil
 import sys
 import time
 import traceback
+
+import fmbtgti
+import fmbtandroid
+import fmbttizen
+import fmbtvnc
+import fmbtx11
 
 def error(msg, exitStatus=1):
     sys.stderr.write("screen2gti: %s\n" % (msg,))
@@ -83,13 +88,14 @@ def gestureToGti(gestureEventList):
     distance = 0
     xDistance = 0
     yDistance = 0
-    lastX, lastY = el[0].pos
-    for e in el[1:]:
-        xDistance += abs(lastX - e.pos[0])
-        yDistance += abs(lastY - e.pos[1])
-        distance += math.sqrt((lastX - e.pos[0])**2 +
-                              (lastY - e.pos[1])**2)
-        lastX, lastY = e.pos
+    if el[0].pos != None:
+        lastX, lastY = el[0].pos
+        for e in el[1:]:
+            xDistance += abs(lastX - e.pos[0])
+            yDistance += abs(lastY - e.pos[1])
+            distance += math.sqrt((lastX - e.pos[0])**2 +
+                                  (lastY - e.pos[1])**2)
+            lastX, lastY = e.pos
 
     if firstEvent == "mousedown" and lastEvent == "mouseup":
         between_events = set([e.event for e in el[1:-1]])
@@ -128,7 +134,13 @@ def gestureToGti(gestureEventList):
                 return ".drag(%s, %s)" % (quantL(el[0].pos), quantL(el[-1].pos))
         else:
             return "unknown between events"
-    else:
+    elif firstEvent == "keydown" and lastEvent == "keyup":
+        if duration < 3 * timeQuantum:
+            return ".press%s()" % (el[0].key,)
+        else:
+            return ".press%s(hold=%s)" % (
+                el[0].key,
+                quantT(duration))
         return "unknown gesture"
 
 ########################################################################
@@ -228,8 +240,7 @@ class MyScaleEvents(QtCore.QObject):
                         if os.access(fsfilepath, os.R_OK):
                             txt += '<br><img width="240" src="%s">' % (fsfilepath,)
                         else:
-                            print "no access to"
-                            print fsfilepath
+                            log("no access to %s" % (fsfilepath,))
                         QtGui.QToolTip.showText(event.globalPos(), txt)
                 else:
                     QtGui.QToolTip.showText(event.globalPos(), '%s<br>not in bitmapPath' % (filename,))
@@ -397,6 +408,39 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotQLabel.setPixmap(
             QtGui.QPixmap.fromImage(
                 self.screenshotImage))
+
+        # Input buttons below the screenshot.
+        # Correct buttons are chosen by screenshot viewer
+        self.hwButtonList = []
+        def hwButton(platform, name, layout):
+            button = QtGui.QPushButton(getattr(self, "sutButtons" + platform),
+                                       text = name)
+            button.pressed.connect(lambda: self.buttonPressed(platform, name))
+            button.released.connect(lambda: self.buttonReleased(platform, name))
+            layout.addWidget(button)
+            self.hwButtonList.append(button)
+
+        self.sutButtonsAndroid = QtGui.QWidget(self.screenshotWidgets)
+        self.sutButtonsAndroid.setContentsMargins(0, 0, 0, 0)
+        self.sutButtonsAndroid.setVisible(False)
+        self.sutButtonsAndroidLayout = QtGui.QHBoxLayout()
+        self.sutButtonsAndroid.setLayout(self.sutButtonsAndroidLayout)
+        hwButton("Android", "Home", self.sutButtonsAndroidLayout)
+        hwButton("Android", "Back", self.sutButtonsAndroidLayout)
+        hwButton("Android", "Menu", self.sutButtonsAndroidLayout)
+        hwButton("Android", "Search", self.sutButtonsAndroidLayout)
+        hwButton("Android", "Power", self.sutButtonsAndroidLayout)
+
+        self.sutButtonsTizen = QtGui.QWidget(self.screenshotWidgets)
+        self.sutButtonsTizen.setContentsMargins(0, 0, 0, 0)
+        self.sutButtonsTizen.setVisible(False)
+        self.sutButtonsTizenLayout = QtGui.QHBoxLayout()
+        self.sutButtonsTizen.setLayout(self.sutButtonsTizenLayout)
+        hwButton("Tizen", "Home", self.sutButtonsTizenLayout)
+        hwButton("Tizen", "Power", self.sutButtonsTizenLayout)
+
+        self.screenshotWidgetsLayout.addWidget(self.sutButtonsAndroid)
+        self.screenshotWidgetsLayout.addWidget(self.sutButtonsTizen)
 
         self.splitter.addWidget(self.screenshotWidgets)
 
@@ -566,6 +610,18 @@ class MainWindow(QtGui.QMainWindow):
         self._newScript("import fmbtvnc\n"
                         "sut = fmbtvnc.Screen()")
 
+    def buttonPressed(self, platform, name):
+        self._hwButtonEvents = []
+        self._hwButtonEvents.append(GestureEvent("keydown", name, None))
+
+    def buttonReleased(self, platform, name):
+        self._hwButtonEvents.append(GestureEvent("keyup", name, None))
+        call = gestureToGti(self._hwButtonEvents)
+        if self.editorButtonRec.isChecked():
+            self.addAPICall(call + "\n")
+        if self.screenshotButtonControl.isChecked():
+            self.doAPICall(call)
+
     def _newScript(self, script):
         self.editor.setPlainText(script)
         _app.processEvents()
@@ -679,13 +735,27 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotContainer.area.wheel_scale_changed()
         self.screenshotButtonRefresh.setChecked(False)
 
+        sutObj = self._fmbtEval(self._sut, silent=True)[0]
+
+        if isinstance(sutObj, fmbtandroid.Device):
+            self.sutButtonsAndroid.setVisible(True)
+            self.sutButtonsTizen.setVisible(False)
+        elif isinstance(sutObj, fmbttizen.Device):
+            self.sutButtonsAndroid.setVisible(False)
+            self.sutButtonsTizen.setVisible(True)
+        else:
+            self.sutButtonsAndroid.setVisible(False)
+            self.sutButtonsTizen.setVisible(False)
+
     def addAPICall(self, call, cursorOffset=0):
+        if not call.startswith("."):
+            call = "." + call
         cursor = self.editor.textCursor()
         txt = self.editor.toPlainText()
         lineBeforeCursor = txt[cursor.block().position():cursor.position()]
         if lineBeforeCursor.strip() == "":
             cursor.beginEditBlock()
-            cursor.insertText(self._sut + "." + call)
+            cursor.insertText("%s%s" % (self._sut, call))
             cursor.endEditBlock()
             if cursorOffset < 0:
                 for _ in xrange(abs(cursorOffset)):
@@ -693,6 +763,11 @@ class MainWindow(QtGui.QMainWindow):
             else:
                 for _ in xrange(abs(cursorOffset)):
                     self.editor.moveCursor(QtGui.QTextCursor.Right, QtGui.QTextCursor.MoveAnchor)
+
+    def doAPICall(self, call, silent=False):
+        if not call.startswith("."):
+            call = "." + call
+        return self.runStatement("%s%s" % (self._sut, call), autoUpdate=True)
 
     def verifyBitmap(self, filepath=None):
         if self.editorButtonRec.isChecked():
