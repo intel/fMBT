@@ -218,7 +218,7 @@ class MyScaleEvents(QtCore.QObject):
                 self.mainwindow.gestureEvents = []
                 if self.mainwindow.screenshotButtonControl.isChecked():
                     debug("sending command %s" % (cmd,))
-                    self.mainwindow.runStatement(cmd, autoUpdate=True)
+                    self.mainwindow.runStatement(cmd)
                 else:
                     debug("dropping command %s" % (cmd,))
                 if self.mainwindow.editorButtonRec.isChecked():
