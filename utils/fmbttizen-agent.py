@@ -366,7 +366,7 @@ def sendHwFingerDown(x, y, button):
 def sendHwFingerUp(x, y, button):
     try:
         if touch_device:
-            touch_device.releaseFinger(button, x, y)
+            touch_device.releaseFinger(button)
         else:
             mouse_button_device.move(x, y)
             mouse_button_device.release(button)
