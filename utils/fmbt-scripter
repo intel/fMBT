@@ -34,8 +34,6 @@ import traceback
 import fmbtgti
 import fmbtandroid
 import fmbttizen
-import fmbtvnc
-import fmbtx11
 
 def error(msg, exitStatus=1):
     sys.stderr.write("screen2gti: %s\n" % (msg,))
