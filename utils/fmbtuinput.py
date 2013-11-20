@@ -969,19 +969,15 @@ class Touch(InputDevice):
 
     def moveFinger(self, finger, x, y):
         """Move a finger in current multitouch gesture"""
-        lastX, lastY = self._mtTracking[finger][2:4]
         self._sendSlot(finger)
         tx, ty = self._tXY(x, y)
-        if lastX != x:
-            if self._multiTouch:
-                self.send("EV_ABS", "ABS_MT_POSITION_X", tx)
-            self.send("EV_ABS", "ABS_X", tx)
-            self._mtTracking[finger][2] = x
-        if lastY != y:
-            if self._multiTouch:
-                self.send("EV_ABS", "ABS_MT_POSITION_Y", ty)
-            self.send("EV_ABS", "ABS_Y", ty)
-            self._mtTracking[finger][3] = y
+        if self._multiTouch:
+            self.send("EV_ABS", "ABS_MT_POSITION_X", tx)
+            self.send("EV_ABS", "ABS_MT_POSITION_Y", ty)
+        self.send("EV_ABS", "ABS_X", tx)
+        self.send("EV_ABS", "ABS_Y", ty)
+        self._mtTracking[finger][2] = x # last X
+        self._mtTracking[finger][3] = y # last Y
         self.sync()
 
 class Keyboard(InputDevice):
