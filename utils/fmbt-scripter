@@ -58,6 +58,10 @@ _g_importFmbtRE = re.compile("\s*import fmbt(android|tizen|vnc|x11)")
 _g_gtiInstantiateRE = re.compile(
     "(([a-zA-Z_][a-zA-Z_0-9]*)\s*=\s*fmbt(android|tizen|vnc|x11)"
     "\.(Device|Screen)\s*\(.*\))")
+_g_scripterConnectRE = re.compile(
+    "[ \t]*#\s*scripter-connect:\s*(.*)\n")
+_g_scripterSutVarRE = re.compile(
+    "[ \t]*#\s*scripter-sut:\s*(.*)\n")
 
 ########################################################################
 # Convert events to fmbtgti API calls
@@ -325,16 +329,17 @@ class SettingsDialog(QtGui.QDialog):
         self.mainWidget.addTab(self.pathsTab, "Paths and directories")
 
         self.connTab = QtGui.QWidget(self.mainWidget)
-        self.connImportsLabel = QtGui.QLabel("Python code for required imports",
-                                             self.connTab)
-        self.connImports = QtGui.QTextEdit(self.connTab)
-        self.connEstablishLabel = QtGui.QLabel("Python code instantiating a "
+        self.connConnectLabel = QtGui.QLabel("Python code instantiating a "
                                                "Screen or Device", self.connTab)
-        self.connEstablish = QtGui.QTextEdit(self.connTab)
+        self.connConnect = QtGui.QTextEdit(self.connTab)
+        self.connSutVarLabel = QtGui.QLabel("GUI (Screen or Device) accessed "
+                                            "through variable", self.connTab)
+        self.connSutVar = QtGui.QLineEdit(self.connTab)
+
 
         self.connTabLayout = QtGui.QFormLayout()
-        self.connTabLayout.addRow(self.connImportsLabel, self.connImports)
-        self.connTabLayout.addRow(self.connEstablishLabel, self.connEstablish)
+        self.connTabLayout.addRow(self.connConnectLabel, self.connConnect)
+        self.connTabLayout.addRow(self.connSutVarLabel, self.connSutVar)
         self.connTab.setLayout(self.connTabLayout)
         self.mainWidget.addTab(self.connTab, "Connections")
 
@@ -746,23 +751,43 @@ class MainWindow(QtGui.QMainWindow):
             self.scheduleUpdateScreenshot(0.1)
 
     def autoConnect(self):
-        # recognize fmbt imports and GTI instantiation
         oldMod = self._autoConnectModules
         oldGti = self._autoConnectGti
-        script = self.editor.toPlainText()
-        self._autoConnectModules = _g_importFmbtRE.findall(script)
-        self._autoConnectGti = _g_gtiInstantiateRE.findall(script)
-        if oldGti != self._autoConnectGti:
-            if oldMod != self._autoConnectModules:
-                for m in self._autoConnectModules:
-                    self._fmbtExec("import fmbt" + m)
-            if self._autoConnectGti:
-                rv, exc = self._fmbtExec(self._autoConnectGti[0][0])
-                if exc == None:
-                    # connected successfully
-                    self._sut = self._autoConnectGti[0][1]
+
+        # use forced method for connection, if available.
+        connectCode = self.scripterConnectCode()
+        if connectCode:
+            if connectCode != self._autoConnectModules:
+                log("Executing scripter-connect code")
+                self._fmbtExec(connectCode)
+                self._autoConnectModules = connectCode
+            sutVar = self.scripterSutVar()
+            if sutVar:
+                if sutVar != self._autoConnectGti:
+                    self._sut = sutVar
+                    self._autoConnectGti = sutVar
             else:
-                self._sut = None
+                # try to recognize sut from connectCode
+                self._autoConnectGti = _g_gtiInstantiateRE.findall(connectCode)
+                if self._autoConnectGti:
+                    self._sut = self._autoConnectGti[0][1]
+        else: # no connectCode
+            # recognize fmbt imports and GTI instantiation
+            # from test script
+            script = self.editor.toPlainText()
+            self._autoConnectModules = _g_importFmbtRE.findall(script)
+            self._autoConnectGti = _g_gtiInstantiateRE.findall(script)
+            if oldGti != self._autoConnectGti:
+                if oldMod != self._autoConnectModules:
+                    for m in self._autoConnectModules:
+                        self._fmbtExec("import fmbt" + m)
+                if self._autoConnectGti:
+                    rv, exc = self._fmbtExec(self._autoConnectGti[0][0])
+                    if exc == None:
+                        # connected successfully
+                        self._sut = self._autoConnectGti[0][1]
+                else:
+                    self._sut = None
         return self._sut != None # return True if connected
 
     def saveAs(self):
@@ -1068,11 +1093,65 @@ class MainWindow(QtGui.QMainWindow):
             painter.drawRect(x1-1, y1-1, w+2, h+2)
         self.updateScreenshotView()
 
+    def setScripterConnectCode(self, code):
+        cursor = self.editor.textCursor()
+        cursor.movePosition(QtGui.QTextCursor.Start)
+        c = self.editor.toPlainText()
+        connMatch = _g_scripterConnectRE.search(c)
+        if connMatch:
+            cursor.movePosition(QtGui.QTextCursor.Right, n=connMatch.start())
+            cursor.movePosition(QtGui.QTextCursor.Right,
+                                QtGui.QTextCursor.KeepAnchor,
+                                n = connMatch.end() - connMatch.start())
+        codelines = ["# scripter-connect: %s\n" % (l,) for l in code.splitlines()]
+        cursor.insertText("".join(codelines))
+        if connMatch:
+            c = c[connMatch.end():]
+            connMatch = _g_scripterConnectRE.search(c)
+            while connMatch:
+                cursor.movePosition(QtGui.QTextCursor.Right, n=connMatch.start())
+                cursor.movePosition(QtGui.QTextCursor.Right,
+                                    QtGui.QTextCursor.KeepAnchor,
+                                    n = connMatch.end() - connMatch.start())
+                cursor.insertText("")
+                c = c[connMatch.end():]
+                connMatch = _g_scripterConnectRE.search(c)
+
+    def scripterConnectCode(self):
+        c = self.editor.toPlainText()
+        connectCode = _g_scripterConnectRE.findall(c)
+        return "\n".join(connectCode)
+
+    def setScripterSutVar(self, sutVar):
+        cursor = self.editor.textCursor()
+        cursor.movePosition(QtGui.QTextCursor.Start)
+        c = self.editor.toPlainText()
+        sutVarMatch = _g_scripterSutVarRE.search(c)
+        if sutVarMatch:
+            cursor.movePosition(QtGui.QTextCursor.Right, n=sutVarMatch.start())
+            cursor.movePosition(QtGui.QTextCursor.Right,
+                                QtGui.QTextCursor.KeepAnchor,
+                                n = sutVarMatch.end() - sutVarMatch.start())
+        cursor.insertText("# scripter-sut: %s\n" % (sutVar,))
+
+    def scripterSutVar(self):
+        c = self.editor.toPlainText()
+        sutVar = "".join(_g_scripterSutVarRE.findall(c))
+        return sutVar
+
     def showSettingsDialog(self):
         if self._settingsDialog == None:
             self._settingsDialog = SettingsDialog()
+        self._settingsDialog.connConnect.setPlainText(
+            self.scripterConnectCode())
+        self._settingsDialog.connSutVar.setText(self._sut)
         self._settingsDialog.show()
-        self._settingsDialog.exec_()
+        if self._settingsDialog.exec_():
+            self.setScripterConnectCode(
+                self._settingsDialog.connConnect.toPlainText())
+            if self._settingsDialog.connSutVar.text() != self._sut:
+                self._sut = self._settingsDialog.connSutVar.text()
+                self.setScripterSutVar(self._sut)
 
     def zoomInEditor(self):
         self.editor._scaleevents.changeScale(1.1)
