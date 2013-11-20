@@ -456,10 +456,14 @@ class MainWindow(QtGui.QMainWindow):
 
         self.editorButtonRec = QtGui.QPushButton("Re&c", checkable=True)
         self.editorButtonRec.clicked.connect(self.rec)
-        self.editorButtonRunSingle = QtGui.QPushButton("Run &line")
-        self.editorButtonRunSingle.clicked.connect(lambda: self.runLines(1))
-        self.editorButtonRunSelection = QtGui.QPushButton("Run selectio&n")
-        self.editorButtonRunSelection.clicked.connect(lambda: self.runLines("selection"))
+        self.editorButtonRunSingle = QtGui.QPushButton("Run &line",
+                                                       checkable=True)
+        self.editorButtonRunSingle.clicked.connect(
+            lambda: self.runLines(1, self.editorButtonRunSingle))
+        self.editorButtonRunSelection = QtGui.QPushButton("Run selectio&n",
+                                                          checkable=True)
+        self.editorButtonRunSelection.clicked.connect(
+            lambda: self.runLines("selection", self.editorButtonRunSelection))
         self.editorButtonRunAutoUpdate = QtGui.QPushButton("&Auto refresh",
                                                            checkable=True)
         self.editorButtonRunAutoUpdate.clicked.connect(lambda: self.editor.setFocus())
@@ -567,7 +571,9 @@ class MainWindow(QtGui.QMainWindow):
     def rec(self):
         self.editor.setFocus()
 
-    def runLines(self, lineCount=None, autoUpdate=None):
+    def runLines(self, lineCount=None, runButton=None, autoUpdate=None):
+        if runButton != None:
+            runButton.setChecked(True)
         if autoUpdate == None:
             autoUpdate = self.editorButtonRunAutoUpdate.isChecked()
         line = ""
@@ -583,6 +589,8 @@ class MainWindow(QtGui.QMainWindow):
             self.runStatement(line, autoUpdate=autoUpdate)
         self.editor.moveCursor(QtGui.QTextCursor.Down, QtGui.QTextCursor.MoveAnchor)
         self.editor.setFocus()
+        if runButton != None:
+            runButton.setChecked(False)
 
     def runStatement(self, statement, autoUpdate=None):
         if autoUpdate == None:
