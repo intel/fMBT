@@ -604,6 +604,9 @@ class MainWindow(QtGui.QMainWindow):
         self.menuBar().addMenu(bitmapMenu)
         bitmapMenu.addAction("Se&lect", self.selectBitmap, "Ctrl+B, Ctrl+L")
         bitmapMenu.addSeparator()
+        bitmapMenu.addAction("Goto &next", self.findNextBitmap)
+        bitmapMenu.addAction("Goto &previous", self.findPrevBitmap)
+        bitmapMenu.addSeparator()
         bitmapMenu.addAction("&Swipe", self.swipeBitmap, "Ctrl+B, Ctrl+S")
         bitmapMenu.addAction("&Tap", self.tapBitmap, "Ctrl+B, Ctrl+T")
         bitmapMenu.addAction("&Verify", self.verifyBitmap, "Ctrl+B, Ctrl+V")
@@ -839,6 +842,26 @@ class MainWindow(QtGui.QMainWindow):
             l = l.replace('"%s"' % (origName,), '"%s"' % (newName,))
             cursor.insertText(l)
 
+    def findNextBitmap(self):
+        cursor = self.editor.textCursor()
+        c = self.editor.toPlainText()[cursor.position():]
+        searchMatch = re.search('"[^"]*\.png"', c)
+        if searchMatch:
+            cursor.movePosition(QtGui.QTextCursor.Right,
+                                QtGui.QTextCursor.MoveAnchor,
+                                searchMatch.end())
+            self.editor.setTextCursor(cursor)
+
+    def findPrevBitmap(self):
+        cursor = self.editor.textCursor()
+        c = self.editor.toPlainText()[cursor.position()-2::-1]
+        searchMatch = re.search('"gnp\.[^"]*"', c)
+        if searchMatch:
+            cursor.movePosition(QtGui.QTextCursor.Left,
+                                QtGui.QTextCursor.MoveAnchor,
+                                searchMatch.start()+1)
+            self.editor.setTextCursor(cursor)
+
     def open(self):
         dialog = QtGui.QFileDialog()
         dialog.setDirectory(os.getcwd())
@@ -890,6 +913,7 @@ class MainWindow(QtGui.QMainWindow):
             self.screenshotButtonPrev.setEnabled(False)
         else:
             self.screenshotButtonPrev.setEnabled(True)
+        log('showing screenshot "%s"' % (self._screenshotFilenames[index],))
         self.screenshotImageIndex = index
         self.updateScreenshotView()
         return True
