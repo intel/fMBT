@@ -359,6 +359,7 @@ class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
 
+        self._screenshotFilenames = []
         self._autoConnectGti = None
         self._autoConnectModules = None
         self._bitmapSaveDir = os.getcwd()
@@ -372,6 +373,8 @@ class MainWindow(QtGui.QMainWindow):
         self._selectingBitmapSaveDir = None
         self._settingsDialog = None
         self._sut = None
+
+        self.screenshotImageIndex = None
 
         self.mainwidget = QtGui.QWidget()
         self.layout = QtGui.QHBoxLayout()
@@ -390,11 +393,30 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotButtons = QtGui.QWidget(self.screenshotWidgets)
         self.screenshotButtonsL = QtGui.QHBoxLayout()
         self.screenshotButtons.setLayout(self.screenshotButtonsL)
-        self.screenshotButtonRefresh = QtGui.QPushButton(self.screenshotButtons,
-                                                         text="&Refresh",
-                                                         checkable = True)
+
+        self.screenshotButtonPrev = QtGui.QPushButton(
+            self.screenshotButtons,
+            icon = _app.style().standardIcon(QtGui.QStyle.SP_ArrowLeft))
+        self.screenshotButtonsL.addWidget(self.screenshotButtonPrev)
+        self.screenshotButtonPrev.clicked.connect(
+            lambda: self.screenshotSet(self.screenshotImageIndex-1))
+
+        self.screenshotButtonRefresh = QtGui.QPushButton(
+            self.screenshotButtons,
+            icon = _app.style().standardIcon(QtGui.QStyle.SP_BrowserReload),
+            #text="&Refresh",
+            checkable = True)
         self.screenshotButtonRefresh.clicked.connect(self.updateScreenshot)
         self.screenshotButtonsL.addWidget(self.screenshotButtonRefresh)
+
+        self.screenshotButtonNext = QtGui.QPushButton(
+            self.screenshotButtons,
+            icon = _app.style().standardIcon(QtGui.QStyle.SP_ArrowRight))
+        self.screenshotButtonNext.clicked.connect(
+            lambda: self.screenshotSet(self.screenshotImageIndex+1))
+
+        self.screenshotButtonsL.addWidget(self.screenshotButtonNext)
+
         self.screenshotButtonControl = QtGui.QPushButton(self.screenshotButtons,
                                                         text="C&ontrol",
                                                         checkable = True)
@@ -854,6 +876,24 @@ class MainWindow(QtGui.QMainWindow):
             return None, e
         return rv, None
 
+    def screenshotSet(self, index):
+        if (index >= len(self._screenshotFilenames) or
+            index < 0):
+            return False
+        self.screenshotImage = QtGui.QImage()
+        self.screenshotImage.load(self._screenshotFilenames[index])
+        if index == len(self._screenshotFilenames) - 1:
+            self.screenshotButtonNext.setEnabled(False)
+        else:
+            self.screenshotButtonNext.setEnabled(True)
+        if index == 0:
+            self.screenshotButtonPrev.setEnabled(False)
+        else:
+            self.screenshotButtonPrev.setEnabled(True)
+        self.screenshotImageIndex = index
+        self.updateScreenshotView()
+        return True
+
     def updateScreenshot(self, recordable=True):
         self.invalidateScreenshot()
         if self._sut == None:
@@ -862,12 +902,13 @@ class MainWindow(QtGui.QMainWindow):
             if recordable and self.editorButtonRec.isChecked():
                 self.addAPICall("refreshScreenshot()\n")
             rv, exc = self._fmbtExec(
-                '%s.refreshScreenshot().save("screen2gti.png")' %
+                '%s.refreshScreenshot()' %
                 (self._sut,))
             if exc == None:
-                self.screenshotImage = QtGui.QImage()
-                self.screenshotImage.load("screen2gti.png")
-        self.updateScreenshotView()
+                self._screenshotFilenames.append(
+                    self._fmbtEval("%s.screenshot().filename()" % (self._sut,),
+                                   silent=True)[0])
+                self.screenshotSet(len(self._screenshotFilenames)-1)
         self.editor.setFocus()
 
     def updateScreenshotView(self):
@@ -889,6 +930,7 @@ class MainWindow(QtGui.QMainWindow):
         else:
             self.sutButtonsAndroid.setVisible(False)
             self.sutButtonsTizen.setVisible(False)
+        self.editor.setFocus()
 
     def addAPICall(self, call, cursorOffset=0):
         if not call.startswith("."):
@@ -986,6 +1028,7 @@ class MainWindow(QtGui.QMainWindow):
             if self._selectingBitmap:
                 self.selectBitmapStop()
                 self.screenshotButtonControl.setChecked(True)
+        self.editor.setFocus()
 
     def selectBitmapStop(self):
         if self._selectingBitmap != None:
