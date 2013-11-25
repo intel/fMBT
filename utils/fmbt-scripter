@@ -307,7 +307,12 @@ class SettingsDialog(QtGui.QDialog):
         self.pathsBitmapPath = QtGui.QLineEdit(self.pathsTab)
         self.pathsBitmapPath.setToolTip("Colon-separated list of directories. "
                                         "Use setBitmapPath() in scripts.")
-        self.pathsBitmapPath.setEnabled(False) # not implemented yet
+        self.pathsBitmapPathAdd = QtGui.QPushButton("Add", self.pathsTab)
+        self.pathsBitmapPathAdd.clicked.connect(
+            self.addBitmapPath)
+        self.pathsBitmapPathLayout = QtGui.QHBoxLayout()
+        self.pathsBitmapPathLayout.addWidget(self.pathsBitmapPath)
+        self.pathsBitmapPathLayout.addWidget(self.pathsBitmapPathAdd)
 
         self.pathsBitmapDirLabel = QtGui.QLabel("Bitmap save directory",
                                                 self.pathsTab)
@@ -333,7 +338,7 @@ class SettingsDialog(QtGui.QDialog):
 
         self.pathsTabLayout = QtGui.QFormLayout()
         self.pathsTabLayout.addRow(self.pathsBitmapPathLabel,
-                                   self.pathsBitmapPath)
+                                   self.pathsBitmapPathLayout)
         self.pathsTabLayout.addRow(self.pathsBitmapDirLabel,
                                    self.pathsBitmapDirLayout)
         self.pathsTabLayout.addRow(self.pathsScreenshotDirLabel,
@@ -348,7 +353,6 @@ class SettingsDialog(QtGui.QDialog):
         self.connSutVarLabel = QtGui.QLabel("GUI (Screen or Device) accessed "
                                             "through variable", self.connTab)
         self.connSutVar = QtGui.QLineEdit(self.connTab)
-
 
         self.connTabLayout = QtGui.QFormLayout()
         self.connTabLayout.addRow(self.connConnectLabel, self.connConnect)
@@ -372,6 +376,13 @@ class SettingsDialog(QtGui.QDialog):
         d = QtGui.QFileDialog.getExistingDirectory()
         if d:
             lineEdit.setText(d)
+
+    def addBitmapPath(self):
+        d = QtGui.QFileDialog.getExistingDirectory()
+        if d:
+            self.pathsBitmapPath.setText(
+                str(self.pathsBitmapPath.text()).strip() +
+                ":" + os.path.relpath(str(d), os.getcwd()))
 
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
@@ -1245,6 +1256,20 @@ class MainWindow(QtGui.QMainWindow):
         self._settingsDialog.connConnect.setPlainText(
             self.scripterConnectCode())
         self._settingsDialog.connSutVar.setText(self._sut)
+        if self._sut:
+            bitmapPath, exc = self._fmbtEval("%s.bitmapPath()" %
+                                             (self._sut,),
+                                             silent=True)
+            if not exc:
+                self._settingsDialog.pathsBitmapPath.setText(
+                    bitmapPath)
+            screenshotDir, exc = self._fmbtEval("%s.screenshotDir()" %
+                                                (self._sut,),
+                                                silent=True)
+            if not exc:
+                self._settingsDialog.pathsScreenshotDir.setText(
+                    screenshotDir)
+
         self._settingsDialog.show()
         if self._settingsDialog.exec_():
             self.setScripterConnectCode(
@@ -1252,6 +1277,14 @@ class MainWindow(QtGui.QMainWindow):
             if self._settingsDialog.connSutVar.text() != self._sut:
                 self._sut = self._settingsDialog.connSutVar.text()
                 self.setScripterSutVar(self._sut)
+            bitmapPath = self._settingsDialog.pathsBitmapPath.text()
+            if bitmapPath:
+                oldBitmapPath, exc = self._fmbtEval("%s.bitmapPath()" %
+                                                    (self._sut,),
+                                                    silent=True)
+                if not exc and bitmapPath != oldBitmapPath:
+                    self.doAPICall('.setBitmapPath("%s")' %
+                                   (bitmapPath.replace('"', '\\"'),))
             bitmapDir = self._settingsDialog.pathsBitmapDir.text()
             if bitmapDir:
                 self._bitmapSaveDir = bitmapDir
