@@ -1240,7 +1240,7 @@ class _AndroidDeviceConnection:
         failureCountSinceKill = 0
         endTime = time.time() + timeout
         while time.time() < endTime:
-            if not self._runSetupCmd(["shell", "monkey", "--port", "1080"], None):
+            if not self._runSetupCmd(["shell", "su", "root", "monkey", "--port", "1080"], None):
                 time.sleep(pollDelay)
                 failureCountSinceKill += 1
                 continue
