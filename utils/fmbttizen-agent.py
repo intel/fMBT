@@ -626,7 +626,10 @@ def westonTakeScreenshotRoot():
 westonTakeScreenshotRoot.ssFilename = None
 
 def takeScreenshotOnWeston():
-    rv, status = subAgentCommand("root", "tizen", "ss weston-root")
+    if iAmRoot:
+        rv, status = westonTakeScreenshotRoot()
+    else:
+        rv, status = subAgentCommand("root", "tizen", "ss weston-root")
     if rv == False:
         return rv, status
     return True, file("/tmp/screenshot.png").read()
