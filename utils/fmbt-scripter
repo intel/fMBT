@@ -307,24 +307,37 @@ class SettingsDialog(QtGui.QDialog):
         self.pathsBitmapPath = QtGui.QLineEdit(self.pathsTab)
         self.pathsBitmapPath.setToolTip("Colon-separated list of directories. "
                                         "Use setBitmapPath() in scripts.")
+        self.pathsBitmapPath.setEnabled(False) # not implemented yet
 
         self.pathsBitmapDirLabel = QtGui.QLabel("Bitmap save directory",
                                                 self.pathsTab)
         self.pathsBitmapDir = QtGui.QLineEdit(self.pathsTab)
         self.pathsBitmapDir.setToolTip("If empty, new bitmaps are saved to "
-                                       "the first directory in the bitmap path")
+                                       "the first directory in the bitmap path.")
+        self.pathsBitmapDirBrowse = QtGui.QPushButton("Browse", self.pathsTab)
+        self.pathsBitmapDirBrowse.clicked.connect(
+            lambda: self.browseDir(self.pathsBitmapDir))
+        self.pathsBitmapDirLayout = QtGui.QHBoxLayout()
+        self.pathsBitmapDirLayout.addWidget(self.pathsBitmapDir)
+        self.pathsBitmapDirLayout.addWidget(self.pathsBitmapDirBrowse)
 
         self.pathsScreenshotDirLabel = QtGui.QLabel(
             "Screenshot save directory", self.pathsTab)
         self.pathsScreenshotDir = QtGui.QLineEdit(self.pathsTab)
+        self.pathsScreenshotDirBrowse = QtGui.QPushButton("Browse", self.pathsTab)
+        self.pathsScreenshotDirBrowse.clicked.connect(
+            lambda: self.browseDir(self.pathsScreenshotDir))
+        self.pathsScreenshotDirLayout = QtGui.QHBoxLayout()
+        self.pathsScreenshotDirLayout.addWidget(self.pathsScreenshotDir)
+        self.pathsScreenshotDirLayout.addWidget(self.pathsScreenshotDirBrowse)
 
         self.pathsTabLayout = QtGui.QFormLayout()
         self.pathsTabLayout.addRow(self.pathsBitmapPathLabel,
                                    self.pathsBitmapPath)
         self.pathsTabLayout.addRow(self.pathsBitmapDirLabel,
-                                   self.pathsBitmapDir)
+                                   self.pathsBitmapDirLayout)
         self.pathsTabLayout.addRow(self.pathsScreenshotDirLabel,
-                                   self.pathsScreenshotDir)
+                                   self.pathsScreenshotDirLayout)
         self.pathsTab.setLayout(self.pathsTabLayout)
         self.mainWidget.addTab(self.pathsTab, "Paths and directories")
 
@@ -355,6 +368,11 @@ class SettingsDialog(QtGui.QDialog):
         self.mainLayout.addWidget(self.buttonBox)
         self.setLayout(self.mainLayout)
 
+    def browseDir(self, lineEdit):
+        d = QtGui.QFileDialog.getExistingDirectory()
+        if d:
+            lineEdit.setText(d)
+
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
@@ -363,6 +381,7 @@ class MainWindow(QtGui.QMainWindow):
         self._autoConnectGti = None
         self._autoConnectModules = None
         self._bitmapSaveDir = os.getcwd()
+        self._screenshotSaveDir = ""
         self._fmbtEnv = {}
         self._bitmapFileFormats = ["Portable network graphics (*.png)",
                                    "All files (*.*)"]
@@ -813,6 +832,8 @@ class MainWindow(QtGui.QMainWindow):
                         self._sut = self._autoConnectGti[0][1]
                 else:
                     self._sut = None
+        if (self._screenshotSaveDir and self._sut):
+            self.setScreenshotSaveDir(self._screenshotSaveDir)
         return self._sut != None # return True if connected
 
     def saveAs(self):
@@ -919,20 +940,24 @@ class MainWindow(QtGui.QMainWindow):
         return True
 
     def updateScreenshot(self, recordable=True):
-        self.invalidateScreenshot()
-        if self._sut == None:
-            self.autoConnect()
-        if self._sut != None:
-            if recordable and self.editorButtonRec.isChecked():
-                self.addAPICall("refreshScreenshot()\n")
-            rv, exc = self._fmbtExec(
-                '%s.refreshScreenshot()' %
-                (self._sut,))
-            if exc == None:
-                self._screenshotFilenames.append(
-                    self._fmbtEval("%s.screenshot().filename()" % (self._sut,),
-                                   silent=True)[0])
-                self.screenshotSet(len(self._screenshotFilenames)-1)
+        if not self._sut:
+            log("cannot update screenshot, no connection")
+            self.screenshotButtonRefresh.setChecked(False)
+        else:
+            self.invalidateScreenshot()
+            if self._sut == None:
+                self.autoConnect()
+            if self._sut != None:
+                if recordable and self.editorButtonRec.isChecked():
+                    self.addAPICall("refreshScreenshot()\n")
+                rv, exc = self._fmbtExec(
+                    '%s.refreshScreenshot()' %
+                    (self._sut,))
+                if exc == None:
+                    self._screenshotFilenames.append(
+                        self._fmbtEval("%s.screenshot().filename()" % (self._sut,),
+                                       silent=True)[0])
+                    self.screenshotSet(len(self._screenshotFilenames)-1)
         self.editor.setFocus()
 
     def updateScreenshotView(self):
@@ -1120,10 +1145,18 @@ class MainWindow(QtGui.QMainWindow):
                 if filepath:
                     log('select replacement for "%s"' % (filepath,))
                 else:
-                    filepath = os.path.join(
-                        self._fmbtEval('%s._paths.bitmapPath.split(":")[0]' %
-                                       (self._sut,), silent=True)[0],
-                        filename)
+                    if self._bitmapSaveDir:
+                        filepath = os.path.join(
+                            self._bitmapSaveDir,
+                            filename)
+                    else:
+                        rv, exc = self._fmbtEval(
+                            '%s._paths.bitmapPath.split(":")[0]' %
+                            (self._sut,), silent=True)
+                        if exc == None:
+                            filepath = os.path.join(rv, filename)
+                        else:
+                            filepath = os.path.join(os.getcwd(), filename)
                     log('select new bitmap "%s"' % (filepath,))
                 self._selectingBitmap = filename
                 self._selectingBitmapSaveDir = os.path.dirname(filepath)
@@ -1219,6 +1252,28 @@ class MainWindow(QtGui.QMainWindow):
             if self._settingsDialog.connSutVar.text() != self._sut:
                 self._sut = self._settingsDialog.connSutVar.text()
                 self.setScripterSutVar(self._sut)
+            bitmapDir = self._settingsDialog.pathsBitmapDir.text()
+            if bitmapDir:
+                self._bitmapSaveDir = bitmapDir
+            screenshotDir = self._settingsDialog.pathsScreenshotDir.text()
+            if screenshotDir:
+                self.setScreenshotSaveDir(screenshotDir)
+
+    def setScreenshotSaveDir(self, directory):
+        try:
+            if os.access(directory, os.W_OK):
+                self._screenshotSaveDir = directory
+                if self._sut:
+                    oldDir, exc = self._fmbtEval("%s.screenshotDir()" %
+                                            (self._sut,), silent=True)
+                    if exc: raise Exception(exc)
+                    if not oldDir or os.path.abspath(oldDir) != os.path.abspath(directory):
+                        self.doAPICall('.setScreenshotDir("%s")' %
+                                       (directory.replace('"', '\\"'),))
+        except Exception, e:
+            log('error in setting screenshot save directory "%s":' %
+                (directory,))
+            log("    %s" % (e,))
 
     def zoomInEditor(self):
         self.editor._scaleevents.changeScale(1.1)
