@@ -1177,6 +1177,7 @@ class GUITestInterface(object):
 
         delayBeforeMoves (float, optional):
                 seconds to wait after touching and before dragging.
+                If negative, starting touch event is not sent.
 
         delayBetweenMoves (float, optional):
                 seconds to wait when moving between points when
@@ -1185,6 +1186,7 @@ class GUITestInterface(object):
         delayAfterMoves (float, optional):
                 seconds to wait after dragging, before raising
                 fingertip.
+                If negative, fingertip is not raised.
 
         movePoints (integer, optional):
                 the number of intermediate move points between end
@@ -1194,7 +1196,9 @@ class GUITestInterface(object):
         """
         x1, y1 = self.intCoords((x1, y1))
         x2, y2 = self.intCoords((x2, y2))
-        if not self._conn.sendTouchDown(x1, y1): return False
+        if delayBeforeMoves >= 0:
+            if not self._conn.sendTouchDown(x1, y1):
+                return False
         if delayBeforeMoves > 0:
             time.sleep(delayBeforeMoves)
         else:
@@ -1207,8 +1211,13 @@ class GUITestInterface(object):
         if delayAfterMoves > 0:
             self._conn.sendTouchMove(x2, y2)
             time.sleep(delayAfterMoves)
-        if self._conn.sendTouchUp(x2, y2): return True
-        return False
+        if delayAfterMoves >= 0:
+            if self._conn.sendTouchUp(x2, y2):
+                return True
+            else:
+                return False
+        else:
+            return True
 
     def enableVisualLog(self, filenameOrObj,
                         screenshotWidth="240", thumbnailWidth="",
