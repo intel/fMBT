@@ -1365,9 +1365,11 @@ class MainWindow(QtGui.QMainWindow):
 
     def zoomInEditor(self):
         self.editor._scaleevents.changeScale(1.1)
+        self.console._scaleevents.changeScale(1.1)
 
     def zoomOutEditor(self):
         self.editor._scaleevents.changeScale(0.9)
+        self.console._scaleevents.changeScale(0.9)
 
     def zoomInScreenshot(self):
         self.screenshotQLabel._scaleevents.changeScale(1.1)
