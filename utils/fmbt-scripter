@@ -242,8 +242,18 @@ class MyScaleEvents(QtCore.QObject):
                 return False
             filename = self.mainwindow.bitmapStringAt(event.pos())
             if filename == None:
-                QtGui.QToolTip.hideText()
-                self.visibleTip = None
+                varname = self.mainwindow.variableNameAt(event.pos())
+                if varname == None:
+                    QtGui.QToolTip.hideText()
+                    self.visibleTip = None
+                else:
+                    if self.visibleTip != varname:
+                        QtGui.QToolTip.hideText()
+                        txt = "%s == %s" % (
+                            varname,
+                            str(self.mainwindow._fmbtEnv[varname])[:72])
+                        QtGui.QToolTip.showText(event.globalPos(), txt)
+                        self.visibleTip = varname
             else:
                 filepath = self.mainwindow.bitmapFilepath(filename)
                 if filepath:
@@ -662,6 +672,18 @@ class MainWindow(QtGui.QMainWindow):
             if quotedString.lower().rsplit(".")[-1] in ["png", "jpg"]:
                 filename = quotedString
         return filename
+
+    def variableNameAt(self, pos=None):
+        if pos != None:
+            cursor = self.editor.cursorForPosition(pos)
+        else:
+            cursor = self.editor.textCursor()
+        cursor.select(QtGui.QTextCursor.WordUnderCursor)
+        word = cursor.selectedText()
+        for var in self._fmbtEnv:
+            if word == var:
+                return var
+        return None
 
     def bitmapFilepath(self, filename):
         try:
