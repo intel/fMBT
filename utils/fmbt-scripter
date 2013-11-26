@@ -724,7 +724,6 @@ class MainWindow(QtGui.QMainWindow):
             file(self._scriptFilename, "w").write(self.editor.toPlainText())
         else:
             return self.saveAs()
-        self.autoConnect()
 
     def newAndroid(self):
         try:
@@ -965,23 +964,30 @@ class MainWindow(QtGui.QMainWindow):
 
     def updateScreenshot(self, recordable=True):
         if not self._sut:
-            log("cannot update screenshot, no connection")
-            self.screenshotButtonRefresh.setChecked(False)
-        else:
-            self.invalidateScreenshot()
-            if self._sut == None:
-                self.autoConnect()
-            if self._sut != None:
-                if recordable and self.editorButtonRec.isChecked():
-                    self.addAPICall("refreshScreenshot()\n")
-                rv, exc = self._fmbtExec(
-                    '%s.refreshScreenshot()' %
-                    (self._sut,))
-                if exc == None:
-                    self._screenshotFilenames.append(
-                        self._fmbtEval("%s.screenshot().filename()" % (self._sut,),
-                                       silent=True)[0])
-                    self.screenshotSet(len(self._screenshotFilenames)-1)
+            for key, value in self._fmbtEnv.iteritems():
+                if isinstance(value, fmbtgti.GUITestInterface):
+                    self._sut = key
+                    break
+            else:
+                log("cannot update screenshot, no connection")
+                self.screenshotButtonRefresh.setChecked(False)
+                self.editor.setFocus()
+                return
+
+        self.invalidateScreenshot()
+        if self._sut == None:
+            self.autoConnect()
+        if self._sut != None:
+            if recordable and self.editorButtonRec.isChecked():
+                self.addAPICall("refreshScreenshot()\n")
+            rv, exc = self._fmbtExec(
+                '%s.refreshScreenshot()' %
+                (self._sut,))
+            if exc == None:
+                self._screenshotFilenames.append(
+                    self._fmbtEval("%s.screenshot().filename()" % (self._sut,),
+                                   silent=True)[0])
+                self.screenshotSet(len(self._screenshotFilenames)-1)
         self.editor.setFocus()
 
     def updateScreenshotView(self):
