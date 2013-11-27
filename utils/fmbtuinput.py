@@ -33,11 +33,14 @@ Example: python fmbtuinput.py -p /dev/input/event*
 
 import array
 import fcntl
+import glob
 import os
 import platform
 import re
 import struct
+import thread
 import time
+import Queue
 
 # See /usr/include/linux/input.h
 eventTypes = {
@@ -1040,6 +1043,67 @@ def eventToString(inputEvent):
         return "%8s.%s type: %4s (%5s), code: %5s (%15s) value: %8s" % \
             (tim, str(tus).zfill(6), typ, styp, cod, scod, val)
 
+def queueEventsFromFile(filename, queue, lock):
+    fd = os.open(filename, os.O_RDONLY)
+    try:
+        while 1:
+            eventData = os.read(fd, sizeof_input_event)
+            if not lock.locked():
+                return
+            if not eventData:
+                break
+            queue.put(eventData)
+    finally:
+        os.close(fd)
+
+eventQueuesAndLocks = {}
+def queueEventsFromFiles(listOfFilenames):
+    global eventQueuesAndLocks
+    for filename in listOfFilenames:
+        q = Queue.Queue()
+        l = thread.allocate_lock()
+        l.acquire()
+        if filename in eventQueuesAndLocks:
+            # previous reader thread should quit
+            eventQueuesAndLocks[filename][1].release()
+        thread.start_new_thread(
+            queueEventsFromFile, (filename, q, l))
+        eventQueuesAndLocks[filename] = (q, l)
+
+def startQueueingEvents(filterOpts):
+    if len(eventQueuesAndLocks) > 0:
+        # already queueing, restart
+        stopQueueingEvents()
+    queueEventsFromFiles(glob.glob("/dev/input/event[0-9]*"))
+
+def stopQueueingEvents():
+    global eventQueuesAndLocks
+    for filename in eventQueuesAndLocks:
+        # once the lock is released, no events are queued anymore
+        eventQueuesAndLocks[filename][1].release()
+    events = fetchQueuedEvents()
+    eventQueuesAndLocks = {}
+    return events
+
+def fetchQueuedEvents():
+    events = []
+    for filename in eventQueuesAndLocks:
+        events.extend(fetchQueuedEventsFromFile(filename))
+    return events
+
+def fetchQueuedEventsFromFile(filename):
+    events = []
+    q = eventQueuesAndLocks[filename][0]
+    while 1:
+        try:
+            ts, tus, typ, cod, val = struct.unpack(struct_input_event,
+                                                   q.get_nowait())
+            events.append(
+                (filename, ts + tus/1000000.0, typ, cod, val))
+        except Queue.Empty:
+            break
+    return events
+
 def printEventsFromFile(filename):
     fd = os.open(filename, os.O_RDONLY)
 
@@ -1047,7 +1111,7 @@ def printEventsFromFile(filename):
 
     try:
         while 1:
-            inputEvent = os.read(fd, struct.calcsize(struct_input_event))
+            inputEvent = os.read(fd, sizeof_input_event)
             if not inputEvent:
                 break
             print sdev, eventToString(inputEvent)
@@ -1057,7 +1121,6 @@ def printEventsFromFile(filename):
 if __name__ == "__main__":
     import getopt
     import sys
-    import thread
 
     opt_print_devices = []
 

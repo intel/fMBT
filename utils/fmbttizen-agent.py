@@ -812,6 +812,20 @@ if __name__ == "__main__":
                 except Exception, e: write_response(False, e)
             else:
                 write_response(*subAgentCommand("root", "tizen", cmd))
+        elif cmd.startswith("er "): # event recorder
+            if iAmRoot:
+                cmd, arg = cmd.split()
+                if arg == "start":
+                    fmbtuinput.startQueueingEvents(None)
+                    write_response(True, None)
+                elif arg == "stop":
+                    events = fmbtuinput.stopQueueingEvents()
+                    write_response(True, events)
+                elif arg == "fetch":
+                    events = fmbtuinput.fetchQueuedEvents()
+                    write_response(True, events)
+            else:
+                write_response(*subAgentCommand("root", "tizen", cmd))
         elif cmd.startswith("gd"):   # get display status
             try:
                 p = subprocess.Popen(['/usr/bin/xset', 'q'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
