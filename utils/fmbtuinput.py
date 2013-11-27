@@ -1043,7 +1043,16 @@ def eventToString(inputEvent):
         return "%8s.%s type: %4s (%5s), code: %5s (%15s) value: %8s" % \
             (tim, str(tus).zfill(6), typ, styp, cod, scod, val)
 
-def queueEventsFromFile(filename, queue, lock):
+def queueEventsFromFile(filename, queue, lock, filterOpts):
+    if isinstance(filterOpts, dict):
+        allowedTypes = set()
+        for t in filterOpts["type"]:
+            if isinstance(t, str):
+                allowedTypes.add(eventTypes[t])
+            else:
+                allowedTypes.add(t)
+    else:
+        allowedTypes = set(eventTypes.values())
     fd = os.open(filename, os.O_RDONLY)
     try:
         while 1:
@@ -1052,54 +1061,66 @@ def queueEventsFromFile(filename, queue, lock):
                 return
             if not eventData:
                 break
-            queue.put(eventData)
+            ts_tus_typ_cod_val = struct.unpack(struct_input_event, eventData)
+            if ts_tus_typ_cod_val[2] in allowedTypes:
+                queue.put(ts_tus_typ_cod_val)
     finally:
         os.close(fd)
 
-eventQueuesAndLocks = {}
-def queueEventsFromFiles(listOfFilenames):
-    global eventQueuesAndLocks
+# _g_recQL dictionary contains events being actively recorded
+# - key: filename, like "/dev/input/event0"
+# - value: (eventQueue, lock)
+# A thread is filling eventQueue with events from filename.
+# Once the lock is released, the thread will quit without writing
+# anything to the eventQueue anymore.
+_g_recQL = {}
+_g_unfetchedEvents = []
+def queueEventsFromFiles(listOfFilenames, filterOpts):
+    global _g_recQL
     for filename in listOfFilenames:
         q = Queue.Queue()
         l = thread.allocate_lock()
         l.acquire()
-        if filename in eventQueuesAndLocks:
+        if filename in _g_recQL:
             # previous reader thread should quit
-            eventQueuesAndLocks[filename][1].release()
+            _g_recQL[filename][1].release()
         thread.start_new_thread(
-            queueEventsFromFile, (filename, q, l))
-        eventQueuesAndLocks[filename] = (q, l)
+            queueEventsFromFile, (filename, q, l, filterOpts))
+        _g_recQL[filename] = (q, l)
 
 def startQueueingEvents(filterOpts):
-    if len(eventQueuesAndLocks) > 0:
+    if len(_g_recQL) > 0:
         # already queueing, restart
         stopQueueingEvents()
-    queueEventsFromFiles(glob.glob("/dev/input/event[0-9]*"))
+    queueEventsFromFiles(glob.glob("/dev/input/event[0-9]*"), filterOpts)
 
 def stopQueueingEvents():
-    global eventQueuesAndLocks
-    for filename in eventQueuesAndLocks:
-        # once the lock is released, no events are queued anymore
-        eventQueuesAndLocks[filename][1].release()
-    events = fetchQueuedEvents()
-    eventQueuesAndLocks = {}
-    return events
+    global _g_recQL
+    global _g_unfetchedEvents
+    for filename in _g_recQL:
+        _g_recQL[filename][1].release()
+    _g_unfetchedEvents = fetchQueuedEvents()
+    _g_recQL = {}
 
 def fetchQueuedEvents():
-    events = []
-    for filename in eventQueuesAndLocks:
-        events.extend(fetchQueuedEventsFromFile(filename))
-    return events
+    global _g_unfetchedEvents
+    if len(_g_recQL) == 0: # no active recording
+        rv = _g_unfetchedEvents
+        _g_unfetchedEvents = []
+        return rv
+    else: # events are being recorded
+        events = []
+        for filename in _g_recQL:
+            events.extend(fetchQueuedEventsFromFile(filename))
+        return events
 
 def fetchQueuedEventsFromFile(filename):
     events = []
-    q = eventQueuesAndLocks[filename][0]
+    q = _g_recQL[filename][0]
     while 1:
         try:
-            ts, tus, typ, cod, val = struct.unpack(struct_input_event,
-                                                   q.get_nowait())
-            events.append(
-                (filename, ts + tus/1000000.0, typ, cod, val))
+            ts, tus, typ, cod, val = q.get_nowait()
+            events.append((filename, ts + tus/1000000.0, typ, cod, val))
         except Queue.Empty:
             break
     return events
