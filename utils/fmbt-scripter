@@ -934,7 +934,7 @@ class MainWindow(QtGui.QMainWindow):
             self.editor.setTextCursor(cursor)
 
     def setImportDir(self, scriptFilename):
-        sys.path[0] = os.path.dirname(scriptFilename)
+        sys.path[1] = os.path.dirname(scriptFilename)
 
     def open(self, filename=None):
         if filename == None:
@@ -1402,6 +1402,7 @@ class MainWindow(QtGui.QMainWindow):
 
 
 if __name__ == "__main__":
+    sys.path.insert(0, os.getcwd())
 
     opt_connect = ""
     opt_gti = None
