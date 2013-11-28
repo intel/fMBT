@@ -560,21 +560,32 @@ def toButtonCode(buttonCodeOrName):
         buttonCode = buttonCodeOrName
     return buttonCode
 
-_g_devices = file("/proc/bus/input/devices").read().split("\n\n")
-_g_deviceNames = {}
-for d in _g_devices:
-    if d.strip() == "":
-        continue
-    _name = [line.split('"')[1] for line in d.split('\n')
-             if line.startswith('N: ')][0]
-    _g_deviceNames[_name] = ("/dev/input/" +
-                             re.findall('[ =](event[0-9]+)\s', d)[0])
+def refreshDeviceInfo():
+    global _g_devices
+    global _g_deviceNames
+    global _g_filenames
+    _g_devices = file("/proc/bus/input/devices").read().split("\n\n")
+    _g_deviceNames = {}
+    _g_filenames = {}
+    for d in _g_devices:
+        if d.strip() == "":
+            continue
+        _name = [line.split('"')[1] for line in d.split('\n')
+                 if line.startswith('N: ')][0]
+        _g_deviceNames[_name] = ("/dev/input/" +
+                                 re.findall('[ =](event[0-9]+)\s', d)[0])
+        _g_filenames[_g_deviceNames[_name]] = _name
 
 def toEventFilename(deviceName):
     return _g_deviceNames[deviceName]
 
+def toEventDeviceName(filename):
+    return _g_filenames[filename]
+
 class InputDevice(object):
     def __init__(self):
+        if not "_g_devices" in globals():
+            refreshDeviceInfo()
         self._fd = -1
         self._uidev = None
         self._created = False
@@ -1089,6 +1100,7 @@ def queueEventsFromFiles(listOfFilenames, filterOpts):
         _g_recQL[filename] = (q, l)
 
 def startQueueingEvents(filterOpts):
+    refreshDeviceInfo()
     if len(_g_recQL) > 0:
         # already queueing, restart
         stopQueueingEvents()
@@ -1125,10 +1137,11 @@ def fetchQueuedEvents():
 def fetchQueuedEventsFromFile(filename):
     events = []
     q = _g_recQL[filename][0]
+    deviceName = toEventDeviceName(filename)
     while 1:
         try:
             ts, tus, typ, cod, val = q.get_nowait()
-            events.append((filename, ts + tus/1000000.0, typ, cod, val))
+            events.append((deviceName, ts + tus/1000000.0, typ, cod, val))
         except Queue.Empty:
             break
     return events

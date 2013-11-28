@@ -38,6 +38,7 @@ import traceback
 import fmbtgti
 import fmbtandroid
 import fmbttizen
+import fmbtuinput
 
 def error(msg, exitStatus=1):
     sys.stderr.write("screen2gti: %s\n" % (msg,))
@@ -87,8 +88,11 @@ def _notPython(code):
 
 class GestureEvent(object):
     __slots__ = ["time", "event", "key", "pos"]
-    def __init__(self, event, key, pos):
-        self.time = time.time()
+    def __init__(self, event, key, pos, timestamp=None):
+        if timestamp == None:
+            self.time = time.time()
+        else:
+            self.time = timestamp
         self.event = event
         self.key = key
         self.pos = pos
@@ -765,6 +769,7 @@ class MainWindow(QtGui.QMainWindow):
                 self._recordingHwEvents = True
                 self._fmbtEval('%s.connection().sendRecStart(%s)' %
                                (self._sut, repr(self._hwRecFilter["devices"])))
+                self._recordedTouchEvents = []
                 QtCore.QTimer.singleShot(250, self.recReadHwEvents)
             else:
                 self._recordingHwEvents = False
@@ -776,11 +781,58 @@ class MainWindow(QtGui.QMainWindow):
                                      (self._sut,), silent=True)
         if self._recordingHwEvents and exc == None:
             if events:
+                self.handleHwEventSequence(events)
                 log(str(events))
             QtCore.QTimer.singleShot(250, self.recReadHwEvents)
         elif exc:
             log('error when reading events: "%s"'% (exc,))
             log("hardware recording stopped.")
+
+    def handleHwEventSequence(self, events):
+        synEvent = fmbtuinput.eventTypes["EV_SYN"]
+        absEvent = fmbtuinput.eventTypes["EV_ABS"]
+        absX = fmbtuinput.absCodes["ABS_MT_POSITION_X"]
+        absY = fmbtuinput.absCodes["ABS_MT_POSITION_Y"]
+        absMtTrackingId = fmbtuinput.absCodes["ABS_MT_TRACKING_ID"]
+
+        screenWidth = float(self.screenshotImage.width())
+        screenHeight = float(self.screenshotImage.height())
+        x = None
+        y = None
+        for ev in self._recordedTouchEvents:
+            x, y = ev.pos
+        t = None
+        ev = "mousemove"
+        for e in events:
+            device, ts, typ, cod, val = e
+            if typ == absEvent:
+                if t == None:
+                    t = ts
+                if cod == absX:
+                    x = val/screenWidth
+                elif cod == absY:
+                    y = val/screenHeight
+                elif cod == absMtTrackingId:
+                    if val == -1:
+                        ev = "mouseup"
+                    else:
+                        ev = "mousedown"
+            elif typ == synEvent:
+                if t:
+                    if ev == "mousemove":
+                        gEv = GestureEvent(ev, None, (x, y), t)
+                    elif ev == "mousedown":
+                        gEv = GestureEvent(ev, 0, (x, y), t)
+                    elif ev == "mouseup":
+                        gEv = GestureEvent(ev, 0, (x, y), t)
+                    self._recordedTouchEvents.append(gEv)
+                    if ev == "mouseup":
+                        self.editor.append(
+                            self._sut + gestureToGti(self._recordedTouchEvents))
+                        self._recordedTouchEvents = []
+                    log(str(gEv))
+                    t = None
+                    ev = "mousemove"
 
     def runLines(self, lineCount=None, runButton=None, autoUpdate=None):
         if runButton != None:

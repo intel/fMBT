@@ -32,6 +32,7 @@ import zlib
 import termios
 
 import fmbtuinput
+fmbtuinput.refreshDeviceInfo()
 
 if "--debug" in sys.argv:
     g_debug = True
