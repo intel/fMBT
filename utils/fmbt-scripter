@@ -63,6 +63,17 @@ _g_scripterConnectRE = re.compile(
 _g_scripterSutVarRE = re.compile(
     "[ \t]*#\s*scripter-sut:\s*(.*)\n")
 
+def _unifyIndentation(code):
+    try:
+        firstNonemptyLine = [l for l in code.splitlines() if l.strip()][0]
+    except IndexError:
+        return ""
+    indentation = len(firstNonemptyLine) - len(firstNonemptyLine.lstrip())
+    newLines = []
+    for oldLine in code.splitlines():
+        newLines.append(oldLine[indentation:])
+    return "\n".join(newLines)
+
 ########################################################################
 # Convert events to fmbtgti API calls
 
@@ -409,11 +420,12 @@ class MainWindow(QtGui.QMainWindow):
                                    "All files (*.*)"]
         self._scriptFileFormats = ["Python scripts (*.py)",
                                    "All files (*.*)"]
-        self._scriptFilename = None
         self._selectingBitmap = None
         self._selectingBitmapSaveDir = None
         self._settingsDialog = None
         self._sut = None
+
+        self.setScriptFilename(None)
 
         self.screenshotImageIndex = None
 
@@ -704,6 +716,7 @@ class MainWindow(QtGui.QMainWindow):
                                  lambda: self.updateScreenshot(False))
 
     def rec(self):
+        # switch on/off recording in device, if supported
         self.editor.setFocus()
 
     def runLines(self, lineCount=None, runButton=None, autoUpdate=None):
@@ -714,13 +727,16 @@ class MainWindow(QtGui.QMainWindow):
         line = ""
         if lineCount == None or lineCount == 1:
             line = self.editor.textCursor().block().text().strip()
+            if line.startswith("#"): # skip comment lines
+                line = ""
         elif lineCount == "selection":
-            line = self.editor.textCursor().selectedText()
+            line = "\n" + self.editor.textCursor().selectedText()
             line = line.replace(unichr(0x2029), "\n")
+            line = _unifyIndentation(line)
         else:
             raise NotImplementedError
 
-        if not (line == "" or line.startswith("#")):
+        if not line == "":
             self.runStatement(line, autoUpdate=autoUpdate)
         self.editor.moveCursor(QtGui.QTextCursor.Down,
                                QtGui.QTextCursor.MoveAnchor)
@@ -737,9 +753,6 @@ class MainWindow(QtGui.QMainWindow):
         if autoUpdate:
             self.scheduleUpdateScreenshot(1.0)
         return exc == None
-
-    def setFilename(self, filename):
-        self._scriptFilename = filename
 
     def save(self):
         if self._scriptFilename:
@@ -869,6 +882,10 @@ class MainWindow(QtGui.QMainWindow):
             self.setScreenshotSaveDir(self._screenshotSaveDir)
         return self._sut != None # return True if connected
 
+    def setScriptFilename(self, newName):
+        self._scriptFilename = newName
+        self.setImportDir(str(self._scriptFilename))
+
     def saveAs(self):
         path = QtGui.QFileDialog.getSaveFileName(
             self, "Save script", '', ";;".join(self._scriptFileFormats))
@@ -876,7 +893,7 @@ class MainWindow(QtGui.QMainWindow):
         if str(newName) == "":
             return False
         else:
-            self._scriptFilename = newName
+            self.setScriptFilename(newName)
         return self.save()
 
     def askBitmapFilename(self, suggestion):
@@ -916,16 +933,22 @@ class MainWindow(QtGui.QMainWindow):
                                 searchMatch.start()+1)
             self.editor.setTextCursor(cursor)
 
-    def open(self):
-        dialog = QtGui.QFileDialog()
-        dialog.setDirectory(os.getcwd())
-        dialog.setWindowTitle("Open script")
-        dialog.setNameFilters(self._scriptFileFormats)
-        dialog.exec_()
-        if not dialog.result():
-            return
-        filepath = str(dialog.selectedFiles()[0])
-        self._scriptFilename = str(dialog.selectedFiles()[0])
+    def setImportDir(self, scriptFilename):
+        sys.path[0] = os.path.dirname(scriptFilename)
+
+    def open(self, filename=None):
+        if filename == None:
+            dialog = QtGui.QFileDialog()
+            dialog.setDirectory(os.getcwd())
+            dialog.setWindowTitle("Open script")
+            dialog.setNameFilters(self._scriptFileFormats)
+            dialog.exec_()
+            if not dialog.result():
+                return
+            filepath = str(dialog.selectedFiles()[0])
+        else:
+            filepath = os.path.abspath(filename)
+        self.setScriptFilename(filepath)
         self.editor.setPlainText(file(self._scriptFilename).read())
 
     def _fmbtExec(self, statement, silent=False):
@@ -1430,8 +1453,7 @@ if __name__ == "__main__":
         initSequence = ""
 
     if script:
-        _win.editor.append(script)
-        _win.setFilename(scriptFilename)
+        _win.open(scriptFilename)
     else:
         _win.editor.append(initSequence)
     if _win.autoConnect():
