@@ -594,11 +594,11 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
         if self._useSdb:
             self._sdbShell.stdin.write("\r")
             try:
-                ok, version = self._agentCmd("python %s; exit" % (agentRemoteFilename,))
+                ok, self._platformInfo = self._agentCmd("python %s; exit" % (agentRemoteFilename,))
             except IOError:
                 raise TizenConnectionError('Connecting to a Tizen device/emulator with "sdb -s %s shell" failed.' % (self._serialNumber,))
         else: # using SSH
-            ok, version = self._agentCmd("")
+            ok, self._platformInfo = self._agentCmd("")
             pass # agent already started by remoteShellCmd
         return ok
 
@@ -709,11 +709,13 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
     def sendDisplayBacklightTime(self, timeout):
         return self._agentCmd("bl %s" % (timeout,))[0]
 
-    def sendRecStart(self):
+    def sendRecStart(self, devices=[]):
         """Start recording events"""
         filterOpts = {
             "type": ["EV_SYN", "EV_KEY", "EV_REL", "EV_ABS"]
             }
+        if devices:
+            filterOpts["device"] = devices
         return self._agentCmd("er start %s" % (_encode(filterOpts,)))[0]
 
     def sendRecStop(self):
@@ -768,6 +770,9 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
     def recvSerialNumber(self):
         s, o = commands.getstatusoutput("sdb get-serialno")
         return o.splitlines()[-1]
+
+    def recvInputDevices(self):
+        return self._platformInfo["input devices"]
 
     def shellSOE(self, shellCommand, username, password, asyncStatus, asyncOut, asyncError):
         _, (s, o, e) = self._agentCmd(

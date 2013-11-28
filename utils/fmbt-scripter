@@ -375,6 +375,7 @@ class SettingsDialog(QtGui.QDialog):
         self.pathsTab.setLayout(self.pathsTabLayout)
         self.mainWidget.addTab(self.pathsTab, "Paths and directories")
 
+        # How to connect to a device
         self.connTab = QtGui.QWidget(self.mainWidget)
         self.connConnectLabel = QtGui.QLabel("Python code instantiating a "
                                                "Screen or Device", self.connTab)
@@ -389,6 +390,12 @@ class SettingsDialog(QtGui.QDialog):
         self.connTab.setLayout(self.connTabLayout)
         self.mainWidget.addTab(self.connTab, "Connections")
 
+        # Input device list for hardware event recording
+        self.hwRecordTab = QtGui.QWidget(self.mainWidget)
+        self.hwRecordTabLayout = QtGui.QFormLayout()
+        self.hwRecordTab.setLayout(self.hwRecordTabLayout)
+        self.mainWidget.addTab(self.hwRecordTab, "Input devices")
+
         self.buttonBox = QtGui.QDialogButtonBox(
             QtGui.QDialogButtonBox.Ok |
             QtGui.QDialogButtonBox.Cancel)
@@ -400,6 +407,32 @@ class SettingsDialog(QtGui.QDialog):
         self.mainLayout.addWidget(self.mainWidget)
         self.mainLayout.addWidget(self.buttonBox)
         self.setLayout(self.mainLayout)
+
+    def setInputDevices(self, deviceNames, recorded):
+        self._inputDeviceButtons = []
+        self._deviceNames = deviceNames
+        index = self.mainWidget.currentIndex()
+        self.mainWidget.removeTab(2)
+        self.hwRecordTab = QtGui.QWidget(self.mainWidget)
+        self.hwRecordTabLayout = QtGui.QFormLayout()
+        self.hwRecordTab.setLayout(self.hwRecordTabLayout)
+        self.mainWidget.addTab(self.hwRecordTab, "Input devices")
+        self.mainWidget.setCurrentIndex(index)
+
+        for n in deviceNames:
+            b = QtGui.QPushButton("Rec", self.hwRecordTab, checkable=True)
+            l = QtGui.QLabel(n, self.hwRecordTab)
+            if n in recorded:
+                b.setChecked(True)
+            self.hwRecordTabLayout.addRow(b, l)
+            self._inputDeviceButtons.append(b)
+
+    def getRecDevices(self):
+        rv = set()
+        for i, n in enumerate(self._deviceNames):
+            if self._inputDeviceButtons[i].isChecked():
+                rv.add(n)
+        return rv
 
     def browseDir(self, lineEdit):
         d = QtGui.QFileDialog.getExistingDirectory()
@@ -422,6 +455,7 @@ class MainWindow(QtGui.QMainWindow):
         self._autoConnectModules = None
         self._bitmapSaveDir = os.getcwd()
         self._highlightingBitmap = None
+        self._hwRecFilter = {"devices": None}
         self._screenshotSaveDir = ""
         self._fmbtEnv = {}
         self._bitmapFileFormats = ["Portable network graphics (*.png)",
@@ -725,7 +759,28 @@ class MainWindow(QtGui.QMainWindow):
 
     def rec(self):
         # switch on/off recording in device, if supported
+        if self._fmbtEval('hasattr(%s.connection(), "sendRecStart")'
+                          % (self._sut,), silent=True)[0]:
+            if self.editorButtonRec.isChecked():
+                self._recordingHwEvents = True
+                self._fmbtEval('%s.connection().sendRecStart(%s)' %
+                               (self._sut, repr(self._hwRecFilter["devices"])))
+                QtCore.QTimer.singleShot(250, self.recReadHwEvents)
+            else:
+                self._recordingHwEvents = False
+                self._fmbtEval('%s.connection().sendRecStop()' % (self._sut,))
         self.editor.setFocus()
+
+    def recReadHwEvents(self):
+        events, exc = self._fmbtEval('%s.connection().recvRec()' %
+                                     (self._sut,), silent=True)
+        if self._recordingHwEvents and exc == None:
+            if events:
+                log(str(events))
+            QtCore.QTimer.singleShot(250, self.recReadHwEvents)
+        elif exc:
+            log('error when reading events: "%s"'% (exc,))
+            log("hardware recording stopped.")
 
     def runLines(self, lineCount=None, runButton=None, autoUpdate=None):
         if runButton != None:
@@ -1365,6 +1420,18 @@ class MainWindow(QtGui.QMainWindow):
                 self._settingsDialog.pathsScreenshotDir.setText(
                     screenshotDir)
 
+            inputDev, exc = self._fmbtEval("%s.connection().recvInputDevices()"
+                                           % (self._sut,))
+            if not exc:
+                if self._hwRecFilter["devices"] == None:
+                    self._hwRecFilter["devices"] = set()
+                    for d in inputDev:
+                        self._hwRecFilter["devices"].add(d)
+                self._settingsDialog.setInputDevices(
+                    inputDev, self._hwRecFilter["devices"])
+            else:
+                self._settingsDialog.setInputDevices([], set())
+
         self._settingsDialog.show()
         if self._settingsDialog.exec_():
             self.setScripterConnectCode(
@@ -1386,6 +1453,7 @@ class MainWindow(QtGui.QMainWindow):
             screenshotDir = self._settingsDialog.pathsScreenshotDir.text()
             if screenshotDir:
                 self.setScreenshotSaveDir(screenshotDir)
+            self._hwRecFilter["devices"] = self._settingsDialog.getRecDevices()
 
     def setScreenshotSaveDir(self, directory):
         try:

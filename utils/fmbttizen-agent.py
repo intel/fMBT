@@ -805,8 +805,11 @@ if __name__ == "__main__":
         debug("X disabled")
         g_Xavailable = False
 
+    platformInfo = {}
+    platformInfo["input devices"] = fmbtuinput._g_deviceNames.keys()
+
     # Send version number, enter main loop
-    write_response(True, "0.0")
+    write_response(True, platformInfo)
     cmd = read_cmd()
     while cmd:
         if cmd.startswith("bl "): # set display backlight time

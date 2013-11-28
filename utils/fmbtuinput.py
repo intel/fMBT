@@ -1092,7 +1092,15 @@ def startQueueingEvents(filterOpts):
     if len(_g_recQL) > 0:
         # already queueing, restart
         stopQueueingEvents()
-    queueEventsFromFiles(glob.glob("/dev/input/event[0-9]*"), filterOpts)
+    if "device" in filterOpts:
+        deviceFiles = []
+        for n in filterOpts["device"]:
+            if n in _g_deviceNames:
+                deviceFiles.append(_g_deviceNames[n])
+        del filterOpts["device"]
+    else:
+        deviceFiles = glob.glob("/dev/input/event[0-9]*")
+    queueEventsFromFiles(deviceFiles, filterOpts)
 
 def stopQueueingEvents():
     global _g_recQL
