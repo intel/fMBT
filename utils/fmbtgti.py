@@ -543,11 +543,6 @@ class _EyenfingerOcrEngine(OcrEngine):
                     index += 1
             except (IndexError, eyenfinger.BadMatch):
                 pass
-            # All found
-            # except IndexError:
-            #    break
-            #except eyenfinger.BadMatch:
-            #    continue
         return words
 
     def _dumpOcr(self, screenshot, match=None, preprocess=None, area=None, pagesegmodes=None, wholeBbox=False):
