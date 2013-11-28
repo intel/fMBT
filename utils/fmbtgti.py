@@ -1275,6 +1275,11 @@ class GUITestInterface(object):
         self._visualLog = _VisualLog(self, outFileObj, screenshotWidth, thumbnailWidth, timeFormat, delayedDrawing,
                                      copyBitmapsToScreenshotDir)
 
+    def visualLog(self, msg):
+        """Writes msg to the visual log, given that visual logging is enabled.
+        """
+        pass
+
     def intCoords(self, (x, y)):
         """
         Convert floating point coordinate values in range [0.0, 1.0] to
@@ -2099,6 +2104,7 @@ class _VisualLog:
         device.refreshScreenshot = self.refreshScreenshotLogger(device.refreshScreenshot)
         device.tap = self.tapLogger(device.tap)
         device.drag = self.dragLogger(device.drag)
+        device.visualLog = self.callOnlyLogger(device.visualLog)
         attrs = ['callContact', 'callNumber', 'close',
                  'loadConfig', 'platformVersion',
                  'pressAppSwitch', 'pressBack', 'pressHome',
@@ -2111,7 +2117,7 @@ class _VisualLog:
                  'tapBitmap', 'tapId', 'tapItem', 'tapOcrText',
                  'tapText', 'topApp', 'topWindow', 'type',
                  'verifyOcrText', 'verifyText', 'verifyBitmap',
-                  'waitAnyBitmap', 'waitBitmap', 'waitOcrText', 'waitText']
+                 'waitAnyBitmap', 'waitBitmap', 'waitOcrText', 'waitText']
         for a in attrs:
             if hasattr(device, a):
                 m = getattr(device, a)
@@ -2167,7 +2173,11 @@ class _VisualLog:
     def logCall(self, img=None, width="", imgTip=""):
         callee = inspect.currentframe().f_back.f_code.co_name[:-4] # cut "WRAP"
         argv = inspect.getargvalues(inspect.currentframe().f_back)
-        calleeArgs = str(argv.locals['args']) + " " + str(argv.locals['kwargs'])
+        # calleeArgs = str(argv.locals['args']) + " " + str(argv.locals['kwargs'])
+        args = [repr(a) for a in argv.locals['args']]
+        for key, value in argv.locals['kwargs'].iteritems():
+            args.append("%s=%s" % (key, repr(value)))
+        calleeArgs = "(%s)" % (", ".join(args),)
         callerFrame = inspect.currentframe().f_back.f_back
         callerFilename = callerFrame.f_code.co_filename
         callerLineno = callerFrame.f_lineno
@@ -2239,6 +2249,14 @@ class _VisualLog:
             loggerSelf.logCall()
             retval = loggerSelf.doCallLogException(origMethod, args, kwargs)
             loggerSelf.logReturn(retval, tip=origMethod.func_name)
+            return retval
+        loggerSelf.changeCodeName(origMethodWRAP, origMethod.func_code.co_name + "WRAP")
+        return origMethodWRAP
+
+    def callOnlyLogger(loggerSelf, origMethod):
+        def origMethodWRAP(*args, **kwargs):
+            loggerSelf.logCall()
+            retval = loggerSelf.doCallLogException(origMethod, args, kwargs)
             return retval
         loggerSelf.changeCodeName(origMethodWRAP, origMethod.func_code.co_name + "WRAP")
         return origMethodWRAP
