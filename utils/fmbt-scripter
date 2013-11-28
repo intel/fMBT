@@ -28,6 +28,7 @@ from PySide import QtGui
 import getopt
 import math
 import os
+import parser
 import re
 import shutil
 import sys
@@ -73,6 +74,13 @@ def _unifyIndentation(code):
     for oldLine in code.splitlines():
         newLines.append(oldLine[indentation:])
     return "\n".join(newLines)
+
+def _notPython(code):
+    try:
+        s = parser.suite(code)
+    except SyntaxError, e:
+        return True
+    return False
 
 ########################################################################
 # Convert events to fmbtgti API calls
@@ -726,9 +734,18 @@ class MainWindow(QtGui.QMainWindow):
             autoUpdate = self.editorButtonRunAutoUpdate.isChecked()
         line = ""
         if lineCount == None or lineCount == 1:
-            line = self.editor.textCursor().block().text().strip()
             if line.startswith("#"): # skip comment lines
                 line = ""
+            else: # if needed, take also next lines
+                cursor = self.editor.textCursor()
+                line = cursor.block().text().rstrip()
+                indentation = len(line) - len(line.lstrip())
+                while (_notPython(line) and
+                       cursor.movePosition(QtGui.QTextCursor.Down)):
+                    line = line + "\n" + cursor.block().text()[indentation:]
+                if _notPython(line):
+                    log("this line is not valid Python code")
+                    line = ""
         elif lineCount == "selection":
             line = "\n" + self.editor.textCursor().selectedText()
             line = line.replace(unichr(0x2029), "\n")
