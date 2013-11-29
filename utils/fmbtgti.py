@@ -1275,8 +1275,9 @@ class GUITestInterface(object):
         self._visualLog = _VisualLog(self, outFileObj, screenshotWidth, thumbnailWidth, timeFormat, delayedDrawing,
                                      copyBitmapsToScreenshotDir)
 
-    def visualLog(self, msg):
-        """Writes msg to the visual log, given that visual logging is enabled.
+    def visualLog(self, *args):
+        """Writes parameters to the visual log, given that visual logging is
+        enabled.
         """
         pass
 
@@ -2104,7 +2105,7 @@ class _VisualLog:
         device.refreshScreenshot = self.refreshScreenshotLogger(device.refreshScreenshot)
         device.tap = self.tapLogger(device.tap)
         device.drag = self.dragLogger(device.drag)
-        device.visualLog = self.callOnlyLogger(device.visualLog)
+        device.visualLog = self.messageLogger(device.visualLog)
         attrs = ['callContact', 'callNumber', 'close',
                  'loadConfig', 'platformVersion',
                  'pressAppSwitch', 'pressBack', 'pressHome',
@@ -2217,6 +2218,18 @@ class _VisualLog:
              </table></tr>\n''' % (self.htmlTimestamp(), cgi.escape(traceback.format_exception(*einfo)[-2].replace('"','').strip()), cgi.escape(str(traceback.format_exception_only(einfo[0], einfo[1])[0])))
         self.write(excHtml)
 
+    def logMessage(self, msg):
+        callerFrame = inspect.currentframe().f_back.f_back
+        callerFilename = callerFrame.f_code.co_filename
+        callerLineno = callerFrame.f_lineno
+        self.logBlock()
+        t = datetime.datetime.now()
+        msgHtml = '''
+            <tr><td></td><td><table>
+                <tr><td>%s</td><td><a title="%s:%s"><div class="message">%s</div></a></td></tr>
+            </table></td></tr>\n''' % (self.htmlTimestamp(t), cgi.escape(callerFilename), callerLineno, cgi.escape(msg))
+        self.write(msgHtml)
+
     def logHeader(self):
         self.write('''
             <!DOCTYPE html><html>
@@ -2253,11 +2266,10 @@ class _VisualLog:
         loggerSelf.changeCodeName(origMethodWRAP, origMethod.func_code.co_name + "WRAP")
         return origMethodWRAP
 
-    def callOnlyLogger(loggerSelf, origMethod):
+    def messageLogger(loggerSelf, origMethod):
         def origMethodWRAP(*args, **kwargs):
-            loggerSelf.logCall()
-            retval = loggerSelf.doCallLogException(origMethod, args, kwargs)
-            return retval
+            loggerSelf.logMessage(" ".join([str(a) for a in args]))
+            return True
         loggerSelf.changeCodeName(origMethodWRAP, origMethod.func_code.co_name + "WRAP")
         return origMethodWRAP
 
