@@ -463,7 +463,7 @@ class MainWindow(QtGui.QMainWindow):
         self._autoConnectGti = None
         self._autoConnectModules = None
         self._autoBitmapPrefix = ""
-        self._autoBitmapSize = 64
+        self._autoBitmapSize = 48
         self._bitmapSaveDir = os.getcwd()
         self._highlightingBitmap = None
         self._hwRecFilter = {"devices": None}
