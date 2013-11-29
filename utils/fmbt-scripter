@@ -259,7 +259,7 @@ class MyScaleEvents(QtCore.QObject):
                 else:
                     debug("dropping command %s" % (cmd,))
                 if self.mainwindow.editorButtonRec.isChecked():
-                    self.mainwindow.editor.insertPlainText(cmd + "\n")
+                    self.mainwindow.insertRecordedCommand(cmd)
         elif event.type() == QtCore.QEvent.ToolTip:
             if not hasattr(self.attrowner, 'cursorForPosition'):
                 return False
@@ -369,15 +369,20 @@ class SettingsDialog(QtGui.QDialog):
         self.pathsScreenshotDirLayout.addWidget(self.pathsScreenshotDir)
         self.pathsScreenshotDirLayout.addWidget(self.pathsScreenshotDirBrowse)
 
+        self.pathsBitmapAutoSelectSize = QtGui.QLineEdit(self.pathsTab)
+
         self.pathsTabLayout = QtGui.QFormLayout()
         self.pathsTabLayout.addRow(self.pathsBitmapPathLabel,
                                    self.pathsBitmapPathLayout)
         self.pathsTabLayout.addRow(self.pathsBitmapDirLabel,
                                    self.pathsBitmapDirLayout)
+        self.pathsTabLayout.addRow("Auto-select bitmap size (pixels)",
+                                   self.pathsBitmapAutoSelectSize)
         self.pathsTabLayout.addRow(self.pathsScreenshotDirLabel,
                                    self.pathsScreenshotDirLayout)
+
         self.pathsTab.setLayout(self.pathsTabLayout)
-        self.mainWidget.addTab(self.pathsTab, "Paths and directories")
+        self.mainWidget.addTab(self.pathsTab, "Bitmaps and screenshots")
 
         # How to connect to a device
         self.connTab = QtGui.QWidget(self.mainWidget)
@@ -457,6 +462,8 @@ class MainWindow(QtGui.QMainWindow):
         self._screenshotFilenames = []
         self._autoConnectGti = None
         self._autoConnectModules = None
+        self._autoBitmapPrefix = ""
+        self._autoBitmapSize = 64
         self._bitmapSaveDir = os.getcwd()
         self._highlightingBitmap = None
         self._hwRecFilter = {"devices": None}
@@ -701,7 +708,13 @@ class MainWindow(QtGui.QMainWindow):
 
         bitmapMenu = QtGui.QMenu("&Bitmap", self)
         self.menuBar().addMenu(bitmapMenu)
+        self.bitmapAutoSelect = QtGui.QAction("&Auto-select when recording",
+                                              bitmapMenu,
+                                              checkable=True)
+        self.bitmapAutoSelect.changed.connect(self.autoSelectBitmap)
+        self.bitmapAutoSelect.setShortcut("Ctrl+B, Ctrl+A")
         bitmapMenu.addAction("Se&lect", self.selectBitmap, "Ctrl+B, Ctrl+L")
+        bitmapMenu.addAction(self.bitmapAutoSelect)
         bitmapMenu.addSeparator()
         bitmapMenu.addAction("Goto &next", self.findNextBitmap)
         bitmapMenu.addAction("Goto &previous", self.findPrevBitmap)
@@ -774,6 +787,8 @@ class MainWindow(QtGui.QMainWindow):
             else:
                 self._recordingHwEvents = False
                 self._fmbtEval('%s.connection().sendRecStop()' % (self._sut,))
+        if self.bitmapAutoSelect.isChecked():
+            self.editorButtonRunAutoUpdate.setChecked(True)
         self.editor.setFocus()
 
     def recReadHwEvents(self):
@@ -827,7 +842,7 @@ class MainWindow(QtGui.QMainWindow):
                         gEv = GestureEvent(ev, 0, (x, y), t)
                     self._recordedTouchEvents.append(gEv)
                     if ev == "mouseup":
-                        self.editor.append(
+                        self.insertRecordedCommand(
                             self._sut + gestureToGti(self._recordedTouchEvents))
                         self._recordedTouchEvents = []
                     log(str(gEv))
@@ -1036,6 +1051,75 @@ class MainWindow(QtGui.QMainWindow):
         if '"%s"' % (origName,) in l:
             l = l.replace('"%s"' % (origName,), '"%s"' % (newName,))
             cursor.insertText(l)
+
+    def autoBitmapBoundingBox(self, (x, y)):
+        screenWidth = self.screenshotImage.width()
+        screenHeight = self.screenshotImage.height()
+        boxWidth = self._autoBitmapSize
+        boxHeight = self._autoBitmapSize
+        left = max(0, int(x * screenWidth - boxWidth / 2))
+        top = max(0, int(y * screenHeight - boxHeight / 2))
+        right = left + boxWidth
+        bottom = top + boxHeight
+        return left, top, right, bottom
+
+    def autoBitmapFilename(self):
+        for i in xrange(10000):
+            candidate = os.path.join(
+                self._bitmapSaveDir,
+                self._autoBitmapPrefix + str(i).zfill(4) + ".png")
+            if not os.access(candidate, os.R_OK):
+                return candidate, self._bitmapSaveDir
+        return "noname.png", ""
+
+    def insertRecordedCommand(self, cmd):
+        if self.bitmapAutoSelect.isChecked():
+            x, y = (None, None)
+            if ".tap((" in cmd:
+                try:
+                    x, y = [float(c) for c in
+                            re.findall("tap\(\(([.0-9]*), ([.0-9]*)\)", cmd)[0]]
+                except:
+                    pass
+            elif ".swipe((" in cmd:
+                try:
+                    x, y = [float(c) for c in
+                            re.findall("swipe\(\(([.0-9]*), ([.0-9]*)\)", cmd)[0]]
+                except:
+                    pass
+            if x != None and y != None:
+                left, top, right, bottom = self.autoBitmapBoundingBox((x,y))
+                self._selectingBitmap, self._selectingBitmapSaveDir = \
+                    self.autoBitmapFilename()
+                bitmapFilename = os.path.relpath(
+                    self._selectingBitmap,
+                    self._selectingBitmapSaveDir)
+                self._selectingToggledInteract = (
+                    self.screenshotButtonControl.isChecked())
+                log('auto-selecting bitmap "%s" (%s, %s, %s, %s)' %
+                    (self._selectingBitmap, left, top, right, bottom))
+                self.selectBitmapDone(left, top, right, bottom)
+                cmd = re.sub("\.(tap|swipe)\(\([.0-9]*, [.0-9]*\)",
+                             '.\\1Bitmap("%s"' % (bitmapFilename,),
+                             cmd)
+
+        self.editor.insertPlainText(cmd + "\n")
+        if self.bitmapAutoSelect.isChecked():
+            self.editor.insertPlainText(self._sut + ".refreshScreenshot()\n")
+            self.scheduleUpdateScreenshot(1.0)
+
+    def autoSelectBitmap(self):
+        if self.bitmapAutoSelect.isChecked():
+            log("selecting bitmaps automatically when recording")
+            choice, ok = QtGui.QInputDialog.getText(
+                self, "Bitmap auto-selection", "Auto-selected bitmap filename prefix",
+                text=self._autoBitmapPrefix)
+            if ok:
+                self._autoBitmapPrefix = choice
+            if self.editorButtonRec.isChecked():
+                self.editorButtonRunAutoUpdate.setChecked(True)
+        else:
+            log("not selecting bitmaps automatically when recording")
 
     def findNextBitmap(self):
         cursor = self.editor.textCursor()
@@ -1458,6 +1542,8 @@ class MainWindow(QtGui.QMainWindow):
         self._settingsDialog.connConnect.setPlainText(
             self.scripterConnectCode())
         self._settingsDialog.connSutVar.setText(self._sut)
+        self._settingsDialog.pathsBitmapAutoSelectSize.setText(
+            str(self._autoBitmapSize))
         if self._sut:
             bitmapPath, exc = self._fmbtEval("%s.bitmapPath()" %
                                              (self._sut,),
@@ -1506,6 +1592,8 @@ class MainWindow(QtGui.QMainWindow):
             if screenshotDir:
                 self.setScreenshotSaveDir(screenshotDir)
             self._hwRecFilter["devices"] = self._settingsDialog.getRecDevices()
+            self._autoBitmapSize = int(
+                self._settingsDialog.pathsBitmapAutoSelectSize.text())
 
     def setScreenshotSaveDir(self, directory):
         try:
