@@ -827,6 +827,8 @@ if __name__ == "__main__":
                 cmd, arg = cmd.split(" ", 1)
                 if arg.startswith("start "):
                     filterOpts = _decode(arg.split()[1])
+                    if touch_device:
+                        filterOpts["touchScreen"] = touch_device
                     fmbtuinput.startQueueingEvents(filterOpts)
                     write_response(True, None)
                 elif arg == "stop":

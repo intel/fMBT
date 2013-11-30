@@ -587,6 +587,7 @@ class InputDevice(object):
         if not "_g_devices" in globals():
             refreshDeviceInfo()
         self._fd = -1
+        self._filename = None
         self._uidev = None
         self._created = False
         self._opened = False
@@ -646,6 +647,7 @@ class InputDevice(object):
         if not filename.startswith("/dev/input"):
             filename = toEventFilename(filename)
         self._fd = os.open(filename, os.O_WRONLY | os.O_NONBLOCK)
+        self._filename = filename
         self._created = False
         return self
 
@@ -653,6 +655,9 @@ class InputDevice(object):
         if self._fd > 0:
             os.close(self._fd)
             self._fd = -1
+
+    def filename(self):
+        return self._filename
 
     def addCap(self, capBit, capCodeOrName, capCode2Name):
         if self._fd < 1:
@@ -868,9 +873,10 @@ class Touch(InputDevice):
     def setScreenAngle(self, angle):
         self._screenA = angle
 
-    def _angleXY(self, x, y):
+    def _angleXY(self, x, y, angle=None):
         """return x, y in screen without rotation"""
-        angle = self._screenA
+        if angle == None:
+            angle = self._screenA
         sw, sh = self._screenW, self._screenH
         if angle:
             while angle < 0:
@@ -904,6 +910,16 @@ class Touch(InputDevice):
             return (x, y)
         else:
             return (x, y)
+
+    def absToScreenXY(self, absX, absY):
+        if self._screenW and self._maxX and self._screenH and self._maxY:
+            x = int(self._screenW * absX / self._maxX)
+            y = int(self._screenH * absY / self._maxY)
+            if self._screenA:
+                _, _, x, y = self._angleXY(x, y, -self._screenA)
+            return (x, y)
+        else:
+            return (absX, absY)
 
     def _startTracking(self, finger, x, y):
         self._mtTrackingId += 1
@@ -1055,7 +1071,7 @@ def eventToString(inputEvent):
             (tim, str(tus).zfill(6), typ, styp, cod, scod, val)
 
 def queueEventsFromFile(filename, queue, lock, filterOpts):
-    if isinstance(filterOpts, dict):
+    if isinstance(filterOpts, dict) and "type" in filterOpts:
         allowedTypes = set()
         for t in filterOpts["type"]:
             if isinstance(t, str):
@@ -1064,6 +1080,14 @@ def queueEventsFromFile(filename, queue, lock, filterOpts):
                 allowedTypes.add(t)
     else:
         allowedTypes = set(eventTypes.values())
+    if ("touchScreen" in filterOpts and
+        filename == filterOpts["touchScreen"].filename()):
+        touchScreen = filterOpts["touchScreen"]
+        absXCodes = set([absCodes["ABS_X"], absCodes["ABS_MT_POSITION_X"]])
+        absYCodes = set([absCodes["ABS_Y"], absCodes["ABS_MT_POSITION_Y"]])
+        absType = eventTypes["EV_ABS"]
+    else:
+        touchScreen = None
     fd = os.open(filename, os.O_RDONLY)
     try:
         while 1:
@@ -1072,9 +1096,14 @@ def queueEventsFromFile(filename, queue, lock, filterOpts):
                 return
             if not eventData:
                 break
-            ts_tus_typ_cod_val = struct.unpack(struct_input_event, eventData)
-            if ts_tus_typ_cod_val[2] in allowedTypes:
-                queue.put(ts_tus_typ_cod_val)
+            (ts, tus, typ, cod, val) = struct.unpack(struct_input_event, eventData)
+            if touchScreen and typ == absType:
+                if cod in absXCodes:
+                    val, _ = touchScreen.absToScreenXY(val, 0)
+                elif cod in absYCodes:
+                    _, val = touchScreen.absToScreenXY(0, val)
+            if typ in allowedTypes:
+                queue.put((ts, tus, typ, cod, val))
     finally:
         os.close(fd)
 
@@ -1109,6 +1138,8 @@ def startQueueingEvents(filterOpts):
         for n in filterOpts["device"]:
             if n in _g_deviceNames:
                 deviceFiles.append(_g_deviceNames[n])
+            elif os.access(n, os.R_OK):
+                deviceFiles.append(n)
         del filterOpts["device"]
     else:
         deviceFiles = glob.glob("/dev/input/event[0-9]*")
