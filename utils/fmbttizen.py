@@ -647,7 +647,7 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
             l = l.strip()
 
     def _agentCmd(self, command, retry=3):
-        if command[:2] in ["tt", "td", "tm", "tu"]:
+        if command[:2] in ["tt", "td", "tm", "tu", "er"]:
             # Operating on coordinates on with a touch devices
             # may require information on screen resolution.
             # The agent does not know about possible rotation, so

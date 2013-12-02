@@ -76,6 +76,9 @@ def _unifyIndentation(code):
         newLines.append(oldLine[indentation:])
     return "\n".join(newLines)
 
+def _bitmapScreenshotFilename(bitmapFilename):
+    return bitmapFilename + ".fullscreen.png"
+
 def _notPython(code):
     try:
         s = parser.suite(code)
@@ -283,7 +286,7 @@ class MyScaleEvents(QtCore.QObject):
                     if self.visibleTip != filepath:
                         QtGui.QToolTip.hideText()
                         txt = '%s<br><img src="%s">' % (filepath, filepath)
-                        fsfilepath = filepath + ".fullscreen.png"
+                        fsfilepath = _bitmapScreenshotFilename(filepath)
                         if os.access(fsfilepath, os.R_OK):
                             txt += '<br><img width="240" src="%s">' % (
                                 fsfilepath,)
@@ -467,6 +470,7 @@ class MainWindow(QtGui.QMainWindow):
         self._bitmapSaveDir = os.getcwd()
         self._highlightingBitmap = None
         self._hwRecFilter = {"devices": None}
+        self._recordedHandledAbsXY = (None, None)
         self._screenshotSaveDir = ""
         self._fmbtEnv = {}
         self._bitmapFileFormats = ["Portable network graphics (*.png)",
@@ -713,7 +717,13 @@ class MainWindow(QtGui.QMainWindow):
                                               checkable=True)
         self.bitmapAutoSelect.changed.connect(self.autoSelectBitmap)
         self.bitmapAutoSelect.setShortcut("Ctrl+B, Ctrl+A")
-        bitmapMenu.addAction("Se&lect", self.selectBitmap, "Ctrl+B, Ctrl+L")
+        bitmapMenu.addAction(
+            "Se&lect from current screenshot",
+            self.selectBitmap, "Ctrl+B, Ctrl+L")
+        bitmapMenu.addAction(
+            "&Re-select from original screenshot",
+            lambda: (self.showBitmapsScreenshot() and self.selectBitmap()),
+            "Ctrl+B, Ctrl+R")
         bitmapMenu.addAction(self.bitmapAutoSelect)
         bitmapMenu.addSeparator()
         bitmapMenu.addAction("Goto &next", self.findNextBitmap)
@@ -797,7 +807,6 @@ class MainWindow(QtGui.QMainWindow):
         if self._recordingHwEvents and exc == None:
             if events:
                 self.handleHwEventSequence(events)
-                log(str(events))
             QtCore.QTimer.singleShot(250, self.recReadHwEvents)
         elif exc:
             log('error when reading events: "%s"'% (exc,))
@@ -812,8 +821,7 @@ class MainWindow(QtGui.QMainWindow):
 
         screenWidth = float(self.screenshotImage.width())
         screenHeight = float(self.screenshotImage.height())
-        x = None
-        y = None
+        x, y = self._recordedHandledAbsXY
         for ev in self._recordedTouchEvents:
             x, y = ev.pos
         t = None
@@ -821,13 +829,14 @@ class MainWindow(QtGui.QMainWindow):
         for e in events:
             device, ts, typ, cod, val = e
             if typ == absEvent:
-                if t == None:
-                    t = ts
                 if cod == absX:
+                    t = ts
                     x = val/screenWidth
                 elif cod == absY:
+                    t = ts
                     y = val/screenHeight
                 elif cod == absMtTrackingId:
+                    t = ts
                     if val == -1:
                         ev = "mouseup"
                     else:
@@ -842,8 +851,15 @@ class MainWindow(QtGui.QMainWindow):
                         gEv = GestureEvent(ev, 0, (x, y), t)
                     self._recordedTouchEvents.append(gEv)
                     if ev == "mouseup":
-                        self.insertRecordedCommand(
-                            self._sut + gestureToGti(self._recordedTouchEvents))
+                        apiCall = gestureToGti(self._recordedTouchEvents)
+                        if apiCall != None:
+                            self.insertRecordedCommand(self._sut + apiCall)
+                        else:
+                            log("unrecognized event sequence:\n    " +
+                                "    \n".join(
+                                    [str(e) for e in self._recordedTouchEvents])
+                            )
+                        self._recordedHandledAbsXY = (x, y)
                         self._recordedTouchEvents = []
                     log(str(gEv))
                     t = None
@@ -1188,6 +1204,7 @@ class MainWindow(QtGui.QMainWindow):
         if (index >= len(self._screenshotFilenames) or
             index < 0):
             return False
+        self._highlightingBitmap = None
         self.screenshotImage = QtGui.QImage()
         self.screenshotImage.load(self._screenshotFilenames[index])
         if index == len(self._screenshotFilenames) - 1:
@@ -1213,6 +1230,32 @@ class MainWindow(QtGui.QMainWindow):
                                (self._sut,
                                 self._screenshotFilenames[index]))
 
+        self.highlightActiveBitmap()
+        return True
+
+    def showBitmapsScreenshot(self, filename=None):
+        if filename == None:
+            filename = self.bitmapStringAt()
+            if filename:
+                filepath = self.bitmapFilepath(filename)
+            else:
+                log("text cursor is not on bitmap filename")
+                return False
+        else:
+            filepath = self.bitmapFilepath(filename)
+        if filepath == None:
+            log('bitmap "%s" not found in bitmapPath' % (filename,))
+            return False
+
+        screenshotFilename = os.path.join(
+            os.path.dirname(filename),
+            _bitmapScreenshotFilename(filename))
+        if not os.access(screenshotFilename, os.R_OK):
+            log('cannot read original screenshot "%s"' % (screenshotFilename,))
+            return False
+
+        self._screenshotFilenames.append(screenshotFilename)
+        self.screenshotSet(len(self._screenshotFilenames)-1)
         return True
 
     def updateScreenshot(self, recordable=True):
@@ -1317,7 +1360,7 @@ class MainWindow(QtGui.QMainWindow):
                     filename, items[0].coords(), items[0].bbox()))
                 self.drawRect(*items[0].bbox())
             else:
-                log('bitmap "%s" not found' % (filename,))
+                log('bitmap "%s" not found on screenshot' % (filename,))
 
     def tapBitmap(self, filepath=None):
         if self.editorButtonRec.isChecked():
@@ -1351,7 +1394,8 @@ class MainWindow(QtGui.QMainWindow):
             self.selectBitmap()
             return
 
-    def editorCursorPositionChanged(self):
+
+    def highlightActiveBitmap(self):
         bmFilename = self.bitmapStringAt()
         if bmFilename:
             self.screenshotButtonSelect.setText(
@@ -1368,6 +1412,9 @@ class MainWindow(QtGui.QMainWindow):
             if self._highlightingBitmap:
                 self.drawRect(0, 0, 0, 0, True)
                 self._highlightingBitmap = None
+
+    def editorCursorPositionChanged(self):
+        self.highlightActiveBitmap()
 
     def controlDevice(self):
         if self.screenshotButtonControl.isChecked():
@@ -1420,7 +1467,7 @@ class MainWindow(QtGui.QMainWindow):
             os.path.basename(self._selectingBitmap))
         if selectedImage.save(bitmapFilepath):
             log('saved bitmap "%s"' % (bitmapFilepath,))
-            fullscreenFilename = bitmapFilepath + ".fullscreen.png"
+            fullscreenFilename = _bitmapScreenshotFilename(bitmapFilepath)
             if not self.screenshotImage.save(fullscreenFilename):
                 log('saving fullscreen version "%s" failed' %
                     (fullscreenFilename,))
@@ -1458,7 +1505,7 @@ class MainWindow(QtGui.QMainWindow):
                 self._selectingBitmap = filename
                 self._selectingBitmapSaveDir = os.path.dirname(filepath)
             else:
-                log('Text cursor is not on bitmap filename')
+                log('text cursor is not on bitmap filename')
         elif filepath != None:
             log('select bitmap "%s"' % (filepath,))
             self._selectingBitmap = filepath
