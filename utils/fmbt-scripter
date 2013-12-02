@@ -723,11 +723,14 @@ class MainWindow(QtGui.QMainWindow):
         bitmapMenu.addAction(
             "&Re-select from original screenshot",
             lambda: (self.showBitmapsScreenshot() and self.selectBitmap()),
-            "Ctrl+B, Ctrl+R")
+            "Ctrl+B, Ctrl+B")
+        bitmapMenu.addAction(
+            "Rename", self.queryRenameBitmap, "Ctrl+B, Ctrl+R")
+        bitmapMenu.addSeparator()
         bitmapMenu.addAction(self.bitmapAutoSelect)
         bitmapMenu.addSeparator()
-        bitmapMenu.addAction("Goto &next", self.findNextBitmap)
-        bitmapMenu.addAction("Goto &previous", self.findPrevBitmap)
+        bitmapMenu.addAction("Goto &next", self.findNextBitmap, "Ctrl+B, Ctrl+N")
+        bitmapMenu.addAction("Goto &previous", self.findPrevBitmap, "Ctrl+B, Ctrl+P")
         bitmapMenu.addSeparator()
         bitmapMenu.addAction("&Swipe", self.swipeBitmap, "Ctrl+B, Ctrl+S")
         bitmapMenu.addAction("&Tap", self.tapBitmap, "Ctrl+B, Ctrl+T")
@@ -1060,6 +1063,15 @@ class MainWindow(QtGui.QMainWindow):
         else:
             return newName
 
+    def queryRenameBitmap(self, origFilename=None):
+        if origFilename == None:
+            origFilename = self.bitmapStringAt()
+        choice, ok = QtGui.QInputDialog.getText(
+            self, "Rename bitmap", "New filename",
+            text=origFilename)
+        if ok and choice:
+            self.renameBitmap(origFilename, choice)
+
     def renameBitmap(self, origName, newName):
         cursor = self.editor.textCursor()
         cursor.select(QtGui.QTextCursor.LineUnderCursor)
@@ -1067,6 +1079,25 @@ class MainWindow(QtGui.QMainWindow):
         if '"%s"' % (origName,) in l:
             l = l.replace('"%s"' % (origName,), '"%s"' % (newName,))
             cursor.insertText(l)
+        origFilepath = self.bitmapFilepath(origName)
+        if origFilepath:
+            newFilepath = os.path.relpath(
+                newName,
+                os.getcwd())
+            if not os.access(os.path.dirname(newFilepath), os.W_OK):
+                try:
+                    os.makedirs(os.path.dirname(newFilepath))
+                except OSError:
+                    log('cannot write to directory "%s"' % (newFilepath,))
+                    return False
+            log('rename "%s" to "%s"' % (origFilepath, newFilepath))
+            os.rename(origFilepath, newFilepath)
+            if os.access(_bitmapScreenshotFilename(origFilepath), os.R_OK):
+                os.rename(_bitmapScreenshotFilename(origFilepath),
+                          _bitmapScreenshotFilename(newFilepath))
+            return True
+        elif origName != "noname.png":
+            log('cannot find bitmap file "%s"' % (origName,))
 
     def autoBitmapBoundingBox(self, (x, y)):
         screenWidth = self.screenshotImage.width()
@@ -1248,8 +1279,8 @@ class MainWindow(QtGui.QMainWindow):
             return False
 
         screenshotFilename = os.path.join(
-            os.path.dirname(filename),
-            _bitmapScreenshotFilename(filename))
+            os.path.dirname(filepath),
+            _bitmapScreenshotFilename(os.path.basename(filepath)))
         if not os.access(screenshotFilename, os.R_OK):
             log('cannot read original screenshot "%s"' % (screenshotFilename,))
             return False
