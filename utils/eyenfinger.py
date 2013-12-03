@@ -634,6 +634,46 @@ def iVerifyWord(word, match=0.33, appearance=1, capture=None):
                             (word, matching_word, score, match))
     return ((score, matching_word), _g_words[matching_word][appearance-1][2])
 
+def iVerifyText(text, match=0.33, capture=None):
+    """
+    Verify that text can be found from previously iRead() image.
+
+    Parameters:
+        text         multiple words that should be checked
+
+        match        minimum matching score
+
+        capture      save image with verified text highlighted
+                     to this file. Default: None (nothing is saved).
+
+    Returns pair:
+        ((score, matchingText), (left, top, right, bottom)), where
+
+        score        score of found match (1.0 for perfect match)
+
+        matchingText corresponding text detected by OCR
+
+        (left, top, right, bottom)
+                     bounding box of the text in read image
+
+    Throws BadMatch error if text is not found.
+
+    Throws NoOCRResults error if there are OCR results available
+    on the current screen.
+    """
+    if _g_words == None:
+        raise NoOCRResults('iRead has not been called with ocr=True')
+
+    score_text_bbox_list = findText(text, match)
+    if len(score_text_bbox_list) == 0:
+        raise BadMatch('No match >= %s for text "%s"' % (score, text))
+
+    score, text, bbox = score_text_box_list[0]
+
+    if capture:
+        drawBbox(_g_origImage, capture, bbox, "%.2f %s" % (score, text))
+
+    return ((score, matching_text), bbox)
 
 def iVerifyIcon(iconFilename, match=None, colorMatch=None, opacityLimit=None, capture=None, area=(0.0, 0.0, 1.0, 1.0), _origin="iVerifyIcon"):
     """
@@ -1334,6 +1374,44 @@ def findWord(word, detected_words = None, appearance=1):
 
     return scored_words[-1]
 
+def findText(text, detected_words = None, match=-1):
+    def biggerBox(bbox_list):
+        left, top, right, bottom = bbox_list[0]
+        for l, t, r, b in bbox_list[1:]:
+            left = min(left, l)
+            top = min(top, t)
+            right = max(right, r)
+            bottom = max(bottom, b)
+        return (left, top, right, bottom)
+    words = text.split()
+    word_count = len(words)
+    detected_texts = [] # strings of <word_count> words
+
+    if detected_words == None:
+        detected_words = _g_words
+        if _g_words == None:
+            raise NoOCRResults()
+
+    # sort by numeric word id
+    words_by_id = []
+    for word in detected_words:
+        for wid, middle, bbox in detected_words[word]:
+            words_by_id.append(
+                (int(wid.split("_")[1]), word, bbox))
+    words_by_id.sort()
+
+    for i in xrange(len(words_by_id)-word_count):
+        detected_texts.append(
+            (" ".join([w[1] for w in words_by_id[i:i+word_count]]),
+             biggerBox([w[2] for w in words_by_id[i:i+word_count]])))
+
+    norm_text = " ".join(words) # normalize whitespace
+    scored_texts = []
+    for t in detected_texts:
+        scored_texts.append((_score(t[0], norm_text), t[0], t[1]))
+    scored_texts.sort()
+    return [st for st in scored_texts if st[0] >= match]
+
 def _score(w1, w2):
     closeMatch = {
         '1l': 0.1,
@@ -1446,6 +1524,23 @@ def iActiveWindow(windowId = None):
         windowId = output.strip()
 
     return windowId
+
+def drawBbox(inputfilename, outputfilename, bbox, caption):
+    """
+    Draw bounding box
+    """
+    if inputfilename == None:
+        return
+
+    draw_commands = ""
+
+    left, top, right, bottom = bbox
+    color = "green"
+    draw_commands += """ -stroke %s -fill blue -draw "fill-opacity 0.2 rectangle %s,%s %s,%s" """ % (
+        color, left, top, right, bottom)
+    draw_commands += """ -stroke none -fill %s -draw "text %s,%s '%s'" """ % (
+        color, left, top, _safeForShell(caption))
+    _runDrawCmd(inputfilename, draw_commands, outputfilename)
 
 def drawWords(inputfilename, outputfilename, words, detected_words):
     """

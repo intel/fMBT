@@ -535,14 +535,18 @@ class _EyenfingerOcrEngine(OcrEngine):
 
         for ppfilter in self._ss[ssId].words.keys():
             try:
-                eyenfinger._g_words = self._ss[ssId].words[ppfilter]
-                (score, word), bbox = eyenfinger.iVerifyWord(text, match=match)
+                score_text_bbox_list = eyenfinger.findText(
+                    text, self._ss[ssId].words[ppfilter], match=match)
                 break
             except eyenfinger.BadMatch:
                 continue
         else:
             return []
-        return [GUIItem("OCR word", bbox, self._ss[ssId].filename, ocrFind=text, ocrFound=word)]
+        retval = [GUIItem("OCR text (match %.2f)" % (score,),
+                          bbox, self._ss[ssId].filename,
+                          ocrFind=text, ocrFound=matching_text)
+                  for score, matching_text, bbox in score_text_bbox_list]
+        return retval
 
     def _dumpOcr(self, screenshot, match=None, preprocess=None, area=None, pagesegmodes=None):
         ssId = id(screenshot)
@@ -1736,7 +1740,7 @@ class GUITestInterface(object):
             tapCoords = viewItem.coords()
         return self.tap(tapCoords, **tapArgs)
 
-    def tapOcrText(self, text, **tapAndOcrArgs):
+    def tapOcrText(self, text, appearance=0, **tapAndOcrArgs):
         """
         Find text from the latest screenshot using OCR, and tap it.
 
@@ -1757,8 +1761,9 @@ class GUITestInterface(object):
         tapArgs, rest = _takeTapArgs(tapAndOcrArgs)
         ocrArgs, _ = _takeOcrArgs(self._lastScreenshot, rest, thatsAll=True)
         items = self._lastScreenshot.findItemsByOcr(text, **ocrArgs)
-        if len(items) == 0: return False
-        return self.tapItem(items[0], **tapArgs)
+        if len(items) <= appearance:
+            return False
+        return self.tapItem(items[appearance], **tapArgs)
 
     def type(self, text):
         """
@@ -2380,6 +2385,8 @@ class _VisualLog:
                 screenshotFilename = screenshotObj.filename()
                 highlightFilename = loggerSelf.highlightFilename(screenshotFilename)
                 eyenfinger.drawIcon(screenshotFilename, highlightFilename, args[0], foundItem.bbox())
+                for appearance, foundItem in enumerate(retval[1:42]):
+                    eyenfinger.drawIcon(highlightFilename, highlightFilename, str(appearance+1) + ": " + args[0], foundItem.bbox())
                 loggerSelf.logReturn([str(retval[0])], img=highlightFilename, width=loggerSelf._screenshotWidth, tip=origMethod.func_name, imgTip=screenshotObj._logCallReturnValue)
             return retval
         return findItemsByOcrWRAP
