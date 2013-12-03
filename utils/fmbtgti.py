@@ -124,7 +124,7 @@ def _takeDragArgs(d):
                       "delayAfterMoves", "movePoints"), d)
 
 def _takeTapArgs(d):
-    return _takeArgs(("tapPos", "long", "hold",), d)
+    return _takeArgs(("tapPos", "long", "hold", "count", "delayBetweenTaps"), d)
 
 def _takeWaitArgs(d):
     return _takeArgs(("waitTime", "pollDelay"), d)
@@ -1631,7 +1631,7 @@ class GUITestInterface(object):
             return False
         return self.swipeItem(items[0], direction, distance, **dragArgs)
 
-    def tap(self, (x, y), long=False, hold=0.0):
+    def tap(self, (x, y), long=False, hold=0.0, count=1, delayBetweenTaps=0.175):
         """
         Tap screen on coordinates (x, y).
 
@@ -1642,6 +1642,13 @@ class GUITestInterface(object):
                   scaled to full screen width and height, others are
                   handled as absolute coordinate values.
 
+          count (integer, optional):
+                  number of taps to the coordinates. The default is 1.
+
+          delayBetweenTaps (float, optional):
+                  time (seconds) between taps when count > 1.
+                  The default is 0.175 (175 ms).
+
           long (boolean, optional):
                   if True, touch the screen for a long time.
 
@@ -1651,18 +1658,24 @@ class GUITestInterface(object):
         Returns True if successful, otherwise False.
         """
         x, y = self.intCoords((x, y))
+        count = int(count)
         if long and hold == 0.0:
             hold = self._longTapHoldTime
-        if hold > 0.0:
-            try:
-                assert self._conn.sendTouchDown(x, y)
-                time.sleep(hold)
-                assert self._conn.sendTouchUp(x, y)
-            except AssertionError:
-                return False
+        if count == 0:
+            self._conn.sendTouchMove(x, y)
             return True
-        else:
-            return self._conn.sendTap(x, y)
+        while count > 0:
+            if hold > 0.0:
+                try:
+                    assert self._conn.sendTouchDown(x, y)
+                    time.sleep(hold)
+                    assert self._conn.sendTouchUp(x, y)
+                except AssertionError:
+                    return False
+            else:
+                if not self._conn.sendTap(x, y):
+                    return False
+            count = int(count) - 1
 
     def tapBitmap(self, bitmap, **tapAndOirArgs):
         """
@@ -1679,7 +1692,7 @@ class GUITestInterface(object):
           tapPos (pair of floats (x,y)):
                   refer to tapItem documentation.
 
-          long, hold (optional):
+          long, hold, count, delayBetweenTaps (optional):
                   refer to tap documentation.
 
         Returns True if successful, otherwise False.
@@ -1710,7 +1723,7 @@ class GUITestInterface(object):
                   (1.0, 1.0) is the lower-right corner.
                   Values < 0 and > 1 tap coordinates outside the item.
 
-          long, hold (optional):
+          long, hold, count, delayBetweenTaps (optional):
                   refer to tap documentation.
         """
         if "tapPos" in tapArgs:
@@ -1732,7 +1745,7 @@ class GUITestInterface(object):
           text (string):
                   the text to be tapped.
 
-          long, hold (optional):
+          long, hold, count, delayBetweenTaps (optional):
                   refer to tap documentation.
 
           OCR engine specific arguments

@@ -714,7 +714,7 @@ class Device(fmbtgti.GUITestInterface):
           tapPos (pair of floats (x, y)):
                   refer to tapItem documentation.
 
-          long, hold (optional):
+          long, hold, count, delayBetweenTaps (optional):
                   refer to tap documentation.
 
         Returns True if successful, otherwise False.
