@@ -191,7 +191,9 @@ double AlgBDFS::path_to_best_evaluation(Model& model, std::vector<int>& path, in
       return 0.0;
     }
 
-    if (best_score > current_score) {
+    if (best_score > current_score || (
+            best_score == current_score &&
+            path.size() < hinted_path.size())) {
         // The real algorithm constructs the best path in the opposite
         // direction to the path vector, this wrapper reverses it.
         std::reverse(path.begin(), path.end());
@@ -206,7 +208,7 @@ double AlgBDFS::path_to_best_evaluation(Model& model, std::vector<int>& path, in
 bool AlgBDFS::grows_first(std::vector<int>& first_path, int first_path_start,
                           std::vector<int>& second_path, int second_path_start)
 {
-    if (first_path.size() != second_path.size()) { 
+    if (first_path.size() != second_path.size()) {
       errormsg="first_path.size() != second_path.size()";
       status=false;
       return false;
@@ -231,9 +233,9 @@ bool AlgBDFS::grows_first(std::vector<int>& first_path, int first_path_start,
             break;
         }
     }
-    if (first_difference == (int)first_path.size()) { 
+    if (first_difference == (int)first_path.size()) {
       errormsg = "first_difference == (int)first_path.size() "+to_string(first_difference);
-      status=false; return false; 
+      status=false; return false;
     }
 
     for (int j = first_path.size() - 1; j >= first_difference; j--) undoExecute();

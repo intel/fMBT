@@ -263,12 +263,17 @@ Available types & parameters:
                 is made according to the weights, in which case
                 actions with 0 and below weights cannot be chosen.
 
-                Example of a weightfile:
+                For example, weightfile "actions.w":
+
                     "iUseCash":   35
                     "iUseCredit": 60
                     "paying a car",   "iUseBank":    200
                     "paying a house", "iUseBank":    1000
                     "paying a house", "iUseCredit": -1000
+
+                is loaded by configuration:
+
+                    heuristic = weight(actions.w)
 
 Examples:
 

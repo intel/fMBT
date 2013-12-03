@@ -91,6 +91,7 @@ import inspect
 import math
 import os
 import shutil
+import subprocess
 import sys
 import time
 import traceback
@@ -806,7 +807,7 @@ class _Eye4GraphicsOirEngine(OirEngine):
 
 
     If unsure about parameters, but you have a bitmap that should be
-    detected in a screenshot, try obj.ocrEngine().adjustParameters().
+    detected in a screenshot, try obj.oirEngine().adjustParameters().
 
     Example:
 
@@ -1107,7 +1108,7 @@ class _Paths(object):
 
 
 class GUITestInterface(object):
-    def __init__(self, ocrEngine=None, oirEngine=None):
+    def __init__(self, ocrEngine=None, oirEngine=None, rotateScreenshot=None):
         self._paths = _Paths("", "")
         self._conn = None
         self._lastScreenshot = None
@@ -1115,6 +1116,7 @@ class GUITestInterface(object):
         self._longTapHoldTime = 2.0
         self._ocrEngine = None
         self._oirEngine = None
+        self._rotateScreenshot = rotateScreenshot
 
         if ocrEngine == None:
             self.setOcrEngine(_defaultOcrEngine())
@@ -1180,6 +1182,7 @@ class GUITestInterface(object):
 
         delayBeforeMoves (float, optional):
                 seconds to wait after touching and before dragging.
+                If negative, starting touch event is not sent.
 
         delayBetweenMoves (float, optional):
                 seconds to wait when moving between points when
@@ -1188,6 +1191,7 @@ class GUITestInterface(object):
         delayAfterMoves (float, optional):
                 seconds to wait after dragging, before raising
                 fingertip.
+                If negative, fingertip is not raised.
 
         movePoints (integer, optional):
                 the number of intermediate move points between end
@@ -1197,7 +1201,9 @@ class GUITestInterface(object):
         """
         x1, y1 = self.intCoords((x1, y1))
         x2, y2 = self.intCoords((x2, y2))
-        if not self._conn.sendTouchDown(x1, y1): return False
+        if delayBeforeMoves >= 0:
+            if not self._conn.sendTouchDown(x1, y1):
+                return False
         if delayBeforeMoves > 0:
             time.sleep(delayBeforeMoves)
         else:
@@ -1210,12 +1216,18 @@ class GUITestInterface(object):
         if delayAfterMoves > 0:
             self._conn.sendTouchMove(x2, y2)
             time.sleep(delayAfterMoves)
-        if self._conn.sendTouchUp(x2, y2): return True
-        return False
+        if delayAfterMoves >= 0:
+            if self._conn.sendTouchUp(x2, y2):
+                return True
+            else:
+                return False
+        else:
+            return True
 
     def enableVisualLog(self, filenameOrObj,
                         screenshotWidth="240", thumbnailWidth="",
-                        timeFormat="%s.%f", delayedDrawing=False):
+                        timeFormat="%s.%f", delayedDrawing=False,
+                        copyBitmapsToScreenshotDir=False):
         """
         Start writing visual HTML log on this device object.
 
@@ -1243,6 +1255,11 @@ class GUITestInterface(object):
                   later execution. The value True can significantly
                   save test execution time and disk space. The default
                   is False.
+
+          copyBitmapsToScreenshotDir (boolean, optional)
+                  If True, every logged bitmap file will be copied to
+                  bitmaps directory in screenshotDir. The default is
+                  False.
         """
         if type(filenameOrObj) == str:
             try:
@@ -1260,7 +1277,14 @@ class GUITestInterface(object):
                 raise ValueError('Visual logging on file "%s" is already enabled' % (outFileObj.name,))
             else:
                 self._visualLogFilenames.add(outFileObj.name)
-        self._visualLog = _VisualLog(self, outFileObj, screenshotWidth, thumbnailWidth, timeFormat, delayedDrawing)
+        self._visualLog = _VisualLog(self, outFileObj, screenshotWidth, thumbnailWidth, timeFormat, delayedDrawing,
+                                     copyBitmapsToScreenshotDir)
+
+    def visualLog(self, *args):
+        """Writes parameters to the visual log, given that visual logging is
+        enabled.
+        """
+        pass
 
     def intCoords(self, (x, y)):
         """
@@ -1311,9 +1335,8 @@ class GUITestInterface(object):
             return True
         return self._conn.sendPress(keyName)
 
-    def refreshScreenshot(self, forcedScreenshot=None):
-        """
-        Takes new screenshot and updates the latest screenshot object.
+    def refreshScreenshot(self, forcedScreenshot=None, rotate=None):
+        """Takes new screenshot and updates the latest screenshot object.
 
         Parameters:
 
@@ -1321,7 +1344,14 @@ class GUITestInterface(object):
                   use given screenshot object or image file, do not
                   take new screenshot.
 
-        Returns new latest Screenshot object.
+          rotate (integer, optional):
+                  rotate screenshot by given number of degrees. This
+                  overrides constructor rotateScreenshot parameter
+                  value. The default is None (no override).
+
+        Returns Screenshot object, and makes the same object "the
+        latest screenshot" that is used by all *Bitmap and *OcrText
+        methods.
         """
         if forcedScreenshot != None:
             if type(forcedScreenshot) == str:
@@ -1335,8 +1365,15 @@ class GUITestInterface(object):
         else:
             if self.screenshotDir() == None:
                 self.setScreenshotDir(self._screenshotDirDefault)
-            screenshotFile = self.screenshotDir() + os.sep + _filenameTimestamp() + "-" + self._conn.target() + '.png'
+            screenshotFile = os.path.join(
+                self.screenshotDir(),
+                _filenameTimestamp() + "-" + self._conn.target() + '.png')
             if self._conn.recvScreenshot(screenshotFile):
+                # New screenshot successfully received from device
+                if rotate == None:
+                    rotate = self._rotateScreenshot
+                if rotate != None and rotate != 0:
+                    subprocess.call(["convert", screenshotFile, "-rotate", str(rotate), screenshotFile])
                 self._lastScreenshot = Screenshot(
                     screenshotFile=screenshotFile,
                     paths = self._paths,
@@ -2054,7 +2091,8 @@ class GUIItem(object):
 class _VisualLog:
     def __init__(self, device, outFileObj,
                  screenshotWidth, thumbnailWidth,
-                 timeFormat, delayedDrawing):
+                 timeFormat, delayedDrawing,
+                 copyBitmapsToScreenshotDir):
         self._device = device
         self._outFileObj = outFileObj
         self._testStep = -1
@@ -2064,6 +2102,7 @@ class _VisualLog:
         self._screenshotWidth = screenshotWidth
         self._thumbnailWidth = thumbnailWidth
         self._timeFormat = timeFormat
+        self._copyBitmapsToScreenshotDir = copyBitmapsToScreenshotDir
         self._userFrameId = 0
         self._userFunction = ""
         self._userCallCount = 0
@@ -2071,6 +2110,7 @@ class _VisualLog:
         device.refreshScreenshot = self.refreshScreenshotLogger(device.refreshScreenshot)
         device.tap = self.tapLogger(device.tap)
         device.drag = self.dragLogger(device.drag)
+        device.visualLog = self.messageLogger(device.visualLog)
         attrs = ['callContact', 'callNumber', 'close',
                  'loadConfig', 'platformVersion',
                  'pressAppSwitch', 'pressBack', 'pressHome',
@@ -2083,7 +2123,7 @@ class _VisualLog:
                  'tapBitmap', 'tapId', 'tapItem', 'tapOcrText',
                  'tapText', 'topApp', 'topWindow', 'type',
                  'verifyOcrText', 'verifyText', 'verifyBitmap',
-                  'waitAnyBitmap', 'waitBitmap', 'waitOcrText', 'waitText']
+                 'waitAnyBitmap', 'waitBitmap', 'waitOcrText', 'waitText']
         for a in attrs:
             if hasattr(device, a):
                 m = getattr(device, a)
@@ -2139,7 +2179,11 @@ class _VisualLog:
     def logCall(self, img=None, width="", imgTip=""):
         callee = inspect.currentframe().f_back.f_code.co_name[:-4] # cut "WRAP"
         argv = inspect.getargvalues(inspect.currentframe().f_back)
-        calleeArgs = str(argv.locals['args']) + " " + str(argv.locals['kwargs'])
+        # calleeArgs = str(argv.locals['args']) + " " + str(argv.locals['kwargs'])
+        args = [repr(a) for a in argv.locals['args']]
+        for key, value in argv.locals['kwargs'].iteritems():
+            args.append("%s=%s" % (key, repr(value)))
+        calleeArgs = "(%s)" % (", ".join(args),)
         callerFrame = inspect.currentframe().f_back.f_back
         callerFilename = callerFrame.f_code.co_filename
         callerLineno = callerFrame.f_lineno
@@ -2179,6 +2223,18 @@ class _VisualLog:
              </table></tr>\n''' % (self.htmlTimestamp(), cgi.escape(traceback.format_exception(*einfo)[-2].replace('"','').strip()), cgi.escape(str(traceback.format_exception_only(einfo[0], einfo[1])[0])))
         self.write(excHtml)
 
+    def logMessage(self, msg):
+        callerFrame = inspect.currentframe().f_back.f_back
+        callerFilename = callerFrame.f_code.co_filename
+        callerLineno = callerFrame.f_lineno
+        self.logBlock()
+        t = datetime.datetime.now()
+        msgHtml = '''
+            <tr><td></td><td><table>
+                <tr><td>%s</td><td><a title="%s:%s"><div class="message">%s</div></a></td></tr>
+            </table></td></tr>\n''' % (self.htmlTimestamp(t), cgi.escape(callerFilename), callerLineno, cgi.escape(msg))
+        self.write(msgHtml)
+
     def logHeader(self):
         self.write('''
             <!DOCTYPE html><html>
@@ -2212,6 +2268,13 @@ class _VisualLog:
             retval = loggerSelf.doCallLogException(origMethod, args, kwargs)
             loggerSelf.logReturn(retval, tip=origMethod.func_name)
             return retval
+        loggerSelf.changeCodeName(origMethodWRAP, origMethod.func_code.co_name + "WRAP")
+        return origMethodWRAP
+
+    def messageLogger(loggerSelf, origMethod):
+        def origMethodWRAP(*args, **kwargs):
+            loggerSelf.logMessage(" ".join([str(a) for a in args]))
+            return True
         loggerSelf.changeCodeName(origMethodWRAP, origMethod.func_code.co_name + "WRAP")
         return origMethodWRAP
 
@@ -2261,7 +2324,30 @@ class _VisualLog:
     def findItemsByBitmapLogger(loggerSelf, origMethod, screenshotObj):
         def findItemsByBitmapWRAP(*args, **kwargs):
             bitmap = args[0]
-            loggerSelf.logCall(img=screenshotObj._paths.abspath(bitmap))
+            absPathBitmap = screenshotObj._paths.abspath(bitmap)
+            if loggerSelf._copyBitmapsToScreenshotDir:
+                screenshotDirBitmap = os.path.join(
+                    os.path.dirname(screenshotObj.filename()),
+                    "bitmaps",
+                    bitmap.lstrip(os.sep))
+                if not os.access(screenshotDirBitmap, os.R_OK):
+                    # bitmap is not yet copied under screenshotDir
+                    destDir = os.path.dirname(screenshotDirBitmap)
+                    if not os.access(destDir, os.W_OK):
+                        try:
+                            os.makedirs(destDir)
+                        except IOError:
+                            pass # cannot make dir / dir not writable
+                    try:
+                        shutil.copy(absPathBitmap, destDir)
+                        absPathBitmap = screenshotDirBitmap
+                    except IOError:
+                        pass # cannot copy bitmap
+
+                else:
+                    absPathBitmap = screenshotDirBitmap
+
+            loggerSelf.logCall(img=absPathBitmap)
             retval = loggerSelf.doCallLogException(origMethod, args, kwargs)
             if len(retval) == 0:
                 loggerSelf.logReturn("not found in", img=screenshotObj, tip=origMethod.func_name)

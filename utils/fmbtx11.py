@@ -28,13 +28,27 @@ fmbtgti._OCRPREPROCESS = [
 import ctypes
 
 class Screen(fmbtgti.GUITestInterface):
-    def __init__(self, display=""):
-        fmbtgti.GUITestInterface.__init__(self)
+    def __init__(self, display="", **kwargs):
+        """Parameters:
+
+          display (string, optional)
+                  X display to connect to.
+                  Example: display=":0". The default is "", that is,
+                  the default X display in the DISPLAY environment
+                  variable will be used.
+
+          rotateScreenshot (integer, optional)
+                  rotate new screenshots by rotateScreenshot degrees.
+                  Example: rotateScreenshot=-90. The default is 0 (no
+                  rotation).
+        """
+        fmbtgti.GUITestInterface.__init__(self, **kwargs)
         self.setConnection(X11Connection(display))
 
 class X11Connection(fmbtgti.GUITestConnection):
     def __init__(self, display):
         fmbtgti.GUITestConnection.__init__(self)
+        self._displayName = display
         self.libX11 = ctypes.CDLL("libX11.so.6")
         self.libXtst = ctypes.CDLL("libXtst.so.6")
 
@@ -75,7 +89,7 @@ class X11Connection(fmbtgti.GUITestConnection):
             '\n': "Return", '\\': "backslash",
             ' ': "space", '_': "underscore", '!': "exclam", '"': "quotedbl",
             '#': "numbersign", '$': "dollar", '%': "percent",
-            '&': "ambersand", "'": "apostrophe",
+            '&': "ampersand", "'": "apostrophe",
             '(': "parenleft", ')': "parenright",
             '[': "bracketleft", ']': "bracketright",
             '{': "braceleft", '}': "braceright",
@@ -173,7 +187,7 @@ class X11Connection(fmbtgti.GUITestConnection):
         # This is a hack to get this stack quickly testable,
         # let's replace this with Xlib/libMagick functions, too...
         import commands
-        commands.getstatusoutput("xwd -root -out '%s.xwd'" % (filename,))
+        commands.getstatusoutput("xwd -root -display '%s' -out '%s.xwd'" % (self._displayName, filename))
         commands.getstatusoutput("convert '%s.xwd' '%s'" % (filename, filename))
         return True
 

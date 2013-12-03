@@ -41,6 +41,8 @@ Description: fMBT editor
    - editing test configurations
    - previewing tests (even if you'd use your favourite editor)
    - visualizing models and test coverage.
+ fmbt-scripter for
+   - recording Python UI test scripts
 
 Package: fmbt-python
 Architecture: any
@@ -57,28 +59,28 @@ Description: fMBT remote adapters
 
 Package: fmbt-adapter-android
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, fmbt-adapter-eyenfinger (= ${binary:Version})
+Depends: ${shlibs:Depends}, ${misc:Depends}, fmbt-adapter-eyenfinger (= ${binary:Version}), fmbt-python (= ${binary:Version})
 Description: fMBT adapter for Android GUI testing through USB
  Provides fmbtandroid.py, a Python library for Android GUI testing.
  The library needs Android Debug Bridge (adb).
 
 Package: fmbt-adapter-tizen
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, fmbt-adapter-eyenfinger (= ${binary:Version})
+Depends: ${shlibs:Depends}, ${misc:Depends}, fmbt-adapter-eyenfinger (= ${binary:Version}), fmbt-python (= ${binary:Version})
 Description: fMBT adapter for Tizen GUI testing through USB
  Provides fmbttizen.py, a Python library for Tizen GUI testing.
  The library needs Smart Development Bridge (sdb) from Tizen SDK.
 
 Package: fmbt-adapter-vnc
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, fmbt-adapter-eyenfinger (= ${binary:Version})
+Depends: ${shlibs:Depends}, ${misc:Depends}, fmbt-adapter-eyenfinger (= ${binary:Version}), fmbt-python (= ${binary:Version})
 Description: fMBT adapter for Tizen GUI testing through USB
  Provides fmbttizen.py, a Python library for Tizen GUI testing.
  The library needs Smart Development Bridge (sdb) from Tizen SDK.
 
 Package: fmbt-adapter-x11
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, fmbt-adapter-eyenfinger (= ${binary:Version})
+Depends: ${shlibs:Depends}, ${misc:Depends}, fmbt-adapter-eyenfinger (= ${binary:Version}), fmbt-python (= ${binary:Version})
 Description: fMBT adapter for X11 GUI testing
  Provides fmbtx11.py, a Python library for X11 GUI testing.
 

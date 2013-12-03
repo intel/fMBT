@@ -1,0 +1,1766 @@
+#!/usr/bin/env python
+
+# fMBT, free Model Based Testing tool
+# Copyright (c) 2013, Intel Corporation.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU Lesser General Public License,
+# version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
+# License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA
+# 02110-1301 USA.
+
+# This is a small tool for converting UI events into fmbtgti interface
+# method calls.
+
+# pylint: disable = C0103, C0111, R0913
+
+from PySide import QtCore
+from PySide import QtGui
+
+import getopt
+import math
+import os
+import parser
+import re
+import shutil
+import sys
+import time
+import traceback
+
+import fmbtgti
+import fmbtandroid
+import fmbttizen
+import fmbtuinput
+
+def error(msg, exitStatus=1):
+    sys.stderr.write("screen2gti: %s\n" % (msg,))
+    sys.exit(exitStatus)
+
+def debug(msg, debugLevel=1):
+    if opt_debug >= debugLevel:
+        sys.stderr.write("screen2gti debug: %s\n" % (msg,))
+
+def log(msg):
+    sys.stdout.write("%s\n" % (msg,))
+    sys.stdout.flush()
+
+def _setGlobalLog(logFunc):
+    global log
+    log = logFunc
+
+_g_importFmbtRE = re.compile("\s*import fmbt(android|tizen|vnc|x11)")
+_g_gtiInstantiateRE = re.compile(
+    "(([a-zA-Z_][a-zA-Z_0-9]*)\s*=\s*fmbt(android|tizen|vnc|x11)"
+    "\.(Device|Screen)\s*\(.*\))")
+_g_scripterConnectRE = re.compile(
+    "[ \t]*#\s*scripter-connect:\s*(.*)\n")
+_g_scripterSutVarRE = re.compile(
+    "[ \t]*#\s*scripter-sut:\s*(.*)\n")
+
+def _unifyIndentation(code):
+    try:
+        firstNonemptyLine = [l for l in code.splitlines() if l.strip()][0]
+    except IndexError:
+        return ""
+    indentation = len(firstNonemptyLine) - len(firstNonemptyLine.lstrip())
+    newLines = []
+    for oldLine in code.splitlines():
+        newLines.append(oldLine[indentation:])
+    return "\n".join(newLines)
+
+def _bitmapScreenshotFilename(bitmapFilename):
+    return bitmapFilename + ".fullscreen.png"
+
+def _notPython(code):
+    try:
+        s = parser.suite(code)
+    except SyntaxError, e:
+        return True
+    return False
+
+########################################################################
+# Convert events to fmbtgti API calls
+
+class GestureEvent(object):
+    __slots__ = ["time", "event", "key", "pos"]
+    def __init__(self, event, key, pos, timestamp=None):
+        if timestamp == None:
+            self.time = time.time()
+        else:
+            self.time = timestamp
+        self.event = event
+        self.key = key
+        self.pos = pos
+    def __str__(self):
+        return 'GestureEvent(time=%s, event="%s", key=%s, pos=%s)' % (
+            self.time, self.event, self.key, self.pos)
+
+def quantify(item, quantum):
+    if not isinstance(item, tuple) and not isinstance(item, list):
+        return int(item * (1/quantum)) * quantum
+    else:
+        return tuple([int(i * (1/quantum)) * quantum for i in item])
+
+def gestureToGti(gestureEventList):
+    timeQuantum = 0.1 # seconds
+    locQuantum = 0.01 # 1.0 = full display height/width
+
+    quantL = lambda v: quantify(v, locQuantum)
+    quantT = lambda v: quantify(v, timeQuantum)
+
+    el = gestureEventList
+
+    firstEvent = el[0].event
+    lastEvent = el[-1].event
+    duration = el[-1].time - el[0].time
+    distance = 0
+    xDistance = 0
+    yDistance = 0
+    if el[0].pos != None:
+        lastX, lastY = el[0].pos
+        for e in el[1:]:
+            xDistance += abs(lastX - e.pos[0])
+            yDistance += abs(lastY - e.pos[1])
+            distance += math.sqrt((lastX - e.pos[0])**2 +
+                                  (lastY - e.pos[1])**2)
+            lastX, lastY = e.pos
+
+    if firstEvent == "mousedown" and lastEvent == "mouseup":
+        between_events = set([e.event for e in el[1:-1]])
+        if between_events in (set(), set(["mousemove"])):
+            # event sequence: mousedown, mousemove..., mouseup
+            if duration < 3 * timeQuantum:
+                # very quick event, make it single tap
+                return ".tap((%s, %s))" % quantL(el[0].pos)
+            elif distance < 3 * locQuantum:
+                # neglible move, make it long tap
+                return ".tap((%s, %s), hold=%s)" % (
+                    quantL(el[0].pos) + quantT([duration]))
+            elif xDistance < 3 * locQuantum:
+                if el[-1].pos[1] < el[0].pos[1]:
+                    direction = "north"
+                    sdist = yDistance + (1-el[0].pos[1])
+                else:
+                    direction = "south"
+                    sdist = yDistance + el[0].pos[1]
+                # only y axis changed, we've got a swipe
+                return '.swipe((%s, %s), "%s", distance=%s)' % (
+                    quantL(el[0].pos) + (direction,) +
+                    quantL([sdist]))
+            elif yDistance < 3 * locQuantum:
+                if el[-1].pos[0] < el[0].pos[0]:
+                    direction = "west"
+                    sdist = xDistance + (1-el[0].pos[0])
+                else:
+                    direction = "east"
+                    sdist = xDistance + el[0].pos[0]
+                # only y axis changed, we've got a swipe
+                return '.swipe((%s, %s), "%s", distance=%s)' % (
+                    quantL(el[0].pos) + (direction,) +
+                    quantL([sdist]))
+            else:
+                return ".drag(%s, %s)" % (quantL(el[0].pos), quantL(el[-1].pos))
+        else:
+            return "unknown between events"
+    elif firstEvent == "keydown" and lastEvent == "keyup":
+        if duration < 3 * timeQuantum:
+            return ".press%s()" % (el[0].key,)
+        else:
+            return ".press%s(hold=%s)" % (
+                el[0].key,
+                quantT(duration))
+        return "unknown gesture"
+
+########################################################################
+# GUI
+
+class MyScaleEvents(QtCore.QObject):
+    """
+    Catch scaling events: Ctrl++, Ctrl+-, Ctrl+wheel. Change
+    attrowner's attribute "wheel_scale" accordingly. Finally call
+    attrowner's wheel_scale_changed().
+    """
+    def __init__(self, mainwindow, attrowner, min_scale, max_scale):
+        QtCore.QObject.__init__(self, mainwindow)
+        self.min_scale  = min_scale
+        self.max_scale  = max_scale
+        self.attrowner  = attrowner
+        self.mainwindow = mainwindow
+        self.visibleTip = None
+        self.selTop, self.selLeft = None, None
+    def changeScale(self, coefficient):
+        self.attrowner.wheel_scale *= coefficient
+        if self.attrowner.wheel_scale < self.min_scale:
+            self.attrowner.wheel_scale = self.min_scale
+        elif self.attrowner.wheel_scale > self.max_scale:
+            self.attrowner.wheel_scale = self.max_scale
+        self.attrowner.wheel_scale_changed()
+    def eventFilter(self, obj, event):
+        if self.mainwindow._selectingBitmap:
+            return self.eventToSelect(event)
+        else:
+            return self.eventToAPI(event)
+    def eventToSelect(self, event):
+        w = self.mainwindow
+        if event.type() == QtCore.QEvent.MouseButtonPress:
+            self.selLeft, self.selTop = self.posToAbs(event.pos)
+        elif event.type() == QtCore.QEvent.MouseMove:
+            if self.selTop != None:
+                right, bottom = self.posToAbs(event.pos)
+                w.drawRect(self.selLeft, self.selTop, right, bottom)
+        elif event.type() == QtCore.QEvent.MouseButtonRelease:
+            if self.selTop != None:
+                right, bottom = self.posToAbs(event.pos)
+                w.selectBitmapDone(self.selLeft, self.selTop, right, bottom)
+                self.selTop, self.selLeft = None, None
+        return False
+    def posToRel(self, pos):
+        sbY = self.attrowner.verticalScrollBar().value()
+        sbX = self.attrowner.horizontalScrollBar().value()
+        wS = self.attrowner.wheel_scale
+        screenWidth = self.mainwindow.screenshotImage.width()
+        screenHeight = self.mainwindow.screenshotImage.height()
+        x = (pos().x() + sbX) / wS / float(screenWidth)
+        y = (pos().y() + sbY) / wS / float(screenHeight)
+        return (x, y)
+    def posToAbs(self, pos):
+        sbY = self.attrowner.verticalScrollBar().value()
+        sbX = self.attrowner.horizontalScrollBar().value()
+        wS = self.attrowner.wheel_scale
+        x = (pos().x() + sbX) / wS
+        y = (pos().y() + sbY) / wS
+        return (x, y)
+    def eventToAPI(self, event):
+        if event.type() == QtCore.QEvent.MouseMove:
+            if self.mainwindow.gestureStarted:
+                self.mainwindow.gestureEvents.append(
+                    GestureEvent("mousemove", None, self.posToRel(event.pos)))
+        elif event.type() == QtCore.QEvent.MouseButtonPress:
+            if not self.mainwindow.gestureStarted:
+                self.mainwindow.gestureStarted = True
+                self.mainwindow.gestureEvents = [
+                    GestureEvent("mousedown", 0, self.posToRel(event.pos))]
+        elif event.type() == QtCore.QEvent.MouseButtonRelease:
+            if self.mainwindow.gestureStarted:
+                self.mainwindow.gestureStarted = False
+                self.mainwindow.gestureEvents.append(
+                    GestureEvent("mouseup", 0, self.posToRel(event.pos)))
+                s = gestureToGti(self.mainwindow.gestureEvents)
+                cmd = self.mainwindow._sut + s
+                self.mainwindow.gestureEvents = []
+                if self.mainwindow.screenshotButtonControl.isChecked():
+                    debug("sending command %s" % (cmd,))
+                    self.mainwindow.runStatement(cmd)
+                else:
+                    debug("dropping command %s" % (cmd,))
+                if self.mainwindow.editorButtonRec.isChecked():
+                    self.mainwindow.insertRecordedCommand(cmd)
+        elif event.type() == QtCore.QEvent.ToolTip:
+            if not hasattr(self.attrowner, 'cursorForPosition'):
+                return False
+            filename = self.mainwindow.bitmapStringAt(event.pos())
+            if filename == None:
+                varname = self.mainwindow.variableNameAt(event.pos())
+                if varname == None:
+                    QtGui.QToolTip.hideText()
+                    self.visibleTip = None
+                else:
+                    if self.visibleTip != varname:
+                        QtGui.QToolTip.hideText()
+                        txt = "%s == %s" % (
+                            varname,
+                            str(self.mainwindow._fmbtEnv[varname])[:72])
+                        QtGui.QToolTip.showText(event.globalPos(), txt)
+                        self.visibleTip = varname
+            else:
+                filepath = self.mainwindow.bitmapFilepath(filename)
+                if filepath:
+                    if self.visibleTip != filepath:
+                        QtGui.QToolTip.hideText()
+                        txt = '%s<br><img src="%s">' % (filepath, filepath)
+                        fsfilepath = _bitmapScreenshotFilename(filepath)
+                        if os.access(fsfilepath, os.R_OK):
+                            txt += '<br><img width="240" src="%s">' % (
+                                fsfilepath,)
+                        else:
+                            log("no access to %s" % (fsfilepath,))
+                        QtGui.QToolTip.showText(event.globalPos(), txt)
+                else:
+                    QtGui.QToolTip.showText(event.globalPos(),
+                                            '%s<br>not in bitmapPath' % (
+                                                filename,))
+                self.visibleTip = filepath
+            return True
+
+        if (event.type() == QtCore.QEvent.Wheel
+            and event.modifiers() == QtCore.Qt.ControlModifier):
+            coefficient = 1.0 + event.delta() / 1440.0
+            self.changeScale(coefficient)
+        return False
+
+class fmbtdummy(object):
+    class Device(fmbtgti.GUITestInterface):
+        def __init__(self, screenshotList=()):
+            fmbtgti.GUITestInterface.__init__(self)
+            self._paths = fmbtgti._Paths(
+                os.getenv("FMBT_BITMAPPATH",""),
+                os.getenv("FMBT_BITMAPPATH_RELROOT", ""))
+            self.setConnection(
+                fmbtdummy.Connection(list(screenshotList)))
+    class Connection(fmbtgti.GUITestConnection):
+        def __init__(self, screenshotList):
+            fmbtgti.GUITestConnection.__init__(self)
+            self.scl = screenshotList
+        def recvScreenshot(self, filename):
+            scr = self.scl[0]
+            self.scl.append(self.scl.pop(0))
+            shutil.copyfile(scr, filename)
+            return True
+        def sendTap(self, x, y):
+            return True
+        def sendTouchDown(self, x, y):
+            return True
+        def sendTouchMove(self, x, y):
+            return True
+        def sendTouchUp(self, x, y):
+            return True
+
+class SettingsDialog(QtGui.QDialog):
+    def __init__(self):
+        QtGui.QDialog.__init__(self)
+        self.mainWidget = QtGui.QTabWidget(self)
+
+        self.pathsTab = QtGui.QWidget(self.mainWidget)
+        self.pathsBitmapPathLabel = QtGui.QLabel("Bitmap path", self.pathsTab)
+        self.pathsBitmapPath = QtGui.QLineEdit(self.pathsTab)
+        self.pathsBitmapPath.setToolTip("Colon-separated list of directories. "
+                                        "Use setBitmapPath() in scripts.")
+        self.pathsBitmapPathAdd = QtGui.QPushButton("Add", self.pathsTab)
+        self.pathsBitmapPathAdd.clicked.connect(
+            self.addBitmapPath)
+        self.pathsBitmapPathLayout = QtGui.QHBoxLayout()
+        self.pathsBitmapPathLayout.addWidget(self.pathsBitmapPath)
+        self.pathsBitmapPathLayout.addWidget(self.pathsBitmapPathAdd)
+
+        self.pathsBitmapDirLabel = QtGui.QLabel("Bitmap save directory",
+                                                self.pathsTab)
+        self.pathsBitmapDir = QtGui.QLineEdit(self.pathsTab)
+        self.pathsBitmapDir.setToolTip("If empty, new bitmaps are saved to "
+                                       "the first directory in the bitmap path.")
+        self.pathsBitmapDirBrowse = QtGui.QPushButton("Browse", self.pathsTab)
+        self.pathsBitmapDirBrowse.clicked.connect(
+            lambda: self.browseDir(self.pathsBitmapDir))
+        self.pathsBitmapDirLayout = QtGui.QHBoxLayout()
+        self.pathsBitmapDirLayout.addWidget(self.pathsBitmapDir)
+        self.pathsBitmapDirLayout.addWidget(self.pathsBitmapDirBrowse)
+
+        self.pathsScreenshotDirLabel = QtGui.QLabel(
+            "Screenshot save directory", self.pathsTab)
+        self.pathsScreenshotDir = QtGui.QLineEdit(self.pathsTab)
+        self.pathsScreenshotDirBrowse = QtGui.QPushButton("Browse", self.pathsTab)
+        self.pathsScreenshotDirBrowse.clicked.connect(
+            lambda: self.browseDir(self.pathsScreenshotDir))
+        self.pathsScreenshotDirLayout = QtGui.QHBoxLayout()
+        self.pathsScreenshotDirLayout.addWidget(self.pathsScreenshotDir)
+        self.pathsScreenshotDirLayout.addWidget(self.pathsScreenshotDirBrowse)
+
+        self.pathsBitmapAutoSelectSize = QtGui.QLineEdit(self.pathsTab)
+
+        self.pathsTabLayout = QtGui.QFormLayout()
+        self.pathsTabLayout.addRow(self.pathsBitmapPathLabel,
+                                   self.pathsBitmapPathLayout)
+        self.pathsTabLayout.addRow(self.pathsBitmapDirLabel,
+                                   self.pathsBitmapDirLayout)
+        self.pathsTabLayout.addRow("Auto-select bitmap size (pixels)",
+                                   self.pathsBitmapAutoSelectSize)
+        self.pathsTabLayout.addRow(self.pathsScreenshotDirLabel,
+                                   self.pathsScreenshotDirLayout)
+
+        self.pathsTab.setLayout(self.pathsTabLayout)
+        self.mainWidget.addTab(self.pathsTab, "Bitmaps and screenshots")
+
+        # How to connect to a device
+        self.connTab = QtGui.QWidget(self.mainWidget)
+        self.connConnectLabel = QtGui.QLabel("Python code instantiating a "
+                                               "Screen or Device", self.connTab)
+        self.connConnect = QtGui.QTextEdit(self.connTab)
+        self.connSutVarLabel = QtGui.QLabel("GUI (Screen or Device) accessed "
+                                            "through variable", self.connTab)
+        self.connSutVar = QtGui.QLineEdit(self.connTab)
+
+        self.connTabLayout = QtGui.QFormLayout()
+        self.connTabLayout.addRow(self.connConnectLabel, self.connConnect)
+        self.connTabLayout.addRow(self.connSutVarLabel, self.connSutVar)
+        self.connTab.setLayout(self.connTabLayout)
+        self.mainWidget.addTab(self.connTab, "Connections")
+
+        # Input device list for hardware event recording
+        self.hwRecordTab = QtGui.QWidget(self.mainWidget)
+        self.hwRecordTabLayout = QtGui.QFormLayout()
+        self.hwRecordTab.setLayout(self.hwRecordTabLayout)
+        self.mainWidget.addTab(self.hwRecordTab, "Input devices")
+
+        self.buttonBox = QtGui.QDialogButtonBox(
+            QtGui.QDialogButtonBox.Ok |
+            QtGui.QDialogButtonBox.Cancel)
+
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+
+        self.mainLayout = QtGui.QVBoxLayout()
+        self.mainLayout.addWidget(self.mainWidget)
+        self.mainLayout.addWidget(self.buttonBox)
+        self.setLayout(self.mainLayout)
+
+    def setInputDevices(self, deviceNames, recorded):
+        self._inputDeviceButtons = []
+        self._deviceNames = deviceNames
+        index = self.mainWidget.currentIndex()
+        self.mainWidget.removeTab(2)
+        self.hwRecordTab = QtGui.QWidget(self.mainWidget)
+        self.hwRecordTabLayout = QtGui.QFormLayout()
+        self.hwRecordTab.setLayout(self.hwRecordTabLayout)
+        self.mainWidget.addTab(self.hwRecordTab, "Input devices")
+        self.mainWidget.setCurrentIndex(index)
+
+        for n in deviceNames:
+            b = QtGui.QPushButton("Rec", self.hwRecordTab, checkable=True)
+            l = QtGui.QLabel(n, self.hwRecordTab)
+            if n in recorded:
+                b.setChecked(True)
+            self.hwRecordTabLayout.addRow(b, l)
+            self._inputDeviceButtons.append(b)
+
+    def getRecDevices(self):
+        rv = set()
+        for i, n in enumerate(self._deviceNames):
+            if self._inputDeviceButtons[i].isChecked():
+                rv.add(n)
+        return rv
+
+    def browseDir(self, lineEdit):
+        d = QtGui.QFileDialog.getExistingDirectory()
+        if d:
+            lineEdit.setText(d)
+
+    def addBitmapPath(self):
+        d = QtGui.QFileDialog.getExistingDirectory()
+        if d:
+            self.pathsBitmapPath.setText(
+                str(self.pathsBitmapPath.text()).strip() +
+                ":" + os.path.relpath(str(d), os.getcwd()))
+
+class MainWindow(QtGui.QMainWindow):
+    def __init__(self, parent=None):
+        super(MainWindow, self).__init__(parent)
+
+        self._screenshotFilenames = []
+        self._autoConnectGti = None
+        self._autoConnectModules = None
+        self._autoBitmapPrefix = ""
+        self._autoBitmapSize = 48
+        self._bitmapSaveDir = os.getcwd()
+        self._highlightingBitmap = None
+        self._hwRecFilter = {"devices": None}
+        self._recordedHandledAbsXY = (None, None)
+        self._screenshotSaveDir = ""
+        self._fmbtEnv = {}
+        self._bitmapFileFormats = ["Portable network graphics (*.png)",
+                                   "All files (*.*)"]
+        self._scriptFileFormats = ["Python scripts (*.py)",
+                                   "All files (*.*)"]
+        self._selectingBitmap = None
+        self._selectingBitmapSaveDir = None
+        self._settingsDialog = None
+        self._sut = None
+
+        self.setScriptFilename(None)
+
+        self.screenshotImageIndex = None
+
+        self.mainwidget = QtGui.QWidget()
+        self.layout = QtGui.QHBoxLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.mainwidget.setLayout(self.layout)
+
+        self.splitter = QtGui.QSplitter(self.mainwidget)
+        self.layout.addWidget(self.splitter, 1)
+
+        ### Screenshot widgets
+        self.screenshotWidgets = QtGui.QWidget(self.mainwidget)
+        self.screenshotWidgets.setContentsMargins(0, 0, 0, 0)
+        self.screenshotWidgetsLayout = QtGui.QVBoxLayout()
+        self.screenshotWidgets.setLayout(self.screenshotWidgetsLayout)
+
+        self.screenshotButtons = QtGui.QWidget(self.screenshotWidgets)
+        self.screenshotButtonsL = QtGui.QHBoxLayout()
+        self.screenshotButtons.setLayout(self.screenshotButtonsL)
+
+        self.screenshotButtonPrev = QtGui.QPushButton(
+            self.screenshotButtons,
+            icon = _app.style().standardIcon(QtGui.QStyle.SP_ArrowLeft))
+        self.screenshotButtonsL.addWidget(self.screenshotButtonPrev)
+        self.screenshotButtonPrev.clicked.connect(
+            lambda: self.screenshotSet(self.screenshotImageIndex-1))
+
+        self.screenshotButtonRefresh = QtGui.QPushButton(
+            self.screenshotButtons,
+            icon = _app.style().standardIcon(QtGui.QStyle.SP_BrowserReload),
+            #text="&Refresh",
+            checkable = True)
+        self.screenshotButtonRefresh.clicked.connect(self.updateScreenshot)
+        self.screenshotButtonsL.addWidget(self.screenshotButtonRefresh)
+
+        self.screenshotButtonNext = QtGui.QPushButton(
+            self.screenshotButtons,
+            icon = _app.style().standardIcon(QtGui.QStyle.SP_ArrowRight))
+        self.screenshotButtonNext.clicked.connect(
+            lambda: self.screenshotSet(self.screenshotImageIndex+1))
+
+        self.screenshotButtonsL.addWidget(self.screenshotButtonNext)
+
+        self.screenshotButtonControl = QtGui.QPushButton(self.screenshotButtons,
+                                                        text="C&ontrol",
+                                                        checkable = True)
+        self.screenshotButtonControl.clicked.connect(self.controlDevice)
+        self.screenshotButtonsL.addWidget(self.screenshotButtonControl)
+        self.screenshotButtonSelect = QtGui.QPushButton(self.screenshotButtons,
+                                                         text="Select",
+                                                         checkable = True)
+        self.screenshotButtonSelect.clicked.connect(self.selectBitmap)
+        self.screenshotButtonsL.addWidget(self.screenshotButtonSelect)
+        self.screenshotWidgetsLayout.addWidget(self.screenshotButtons)
+
+        def makeScalableImage(parent, qlabel):
+            container = QtGui.QWidget(parent)
+            container.setContentsMargins(0, -8, 0, -8)
+            layout = QtGui.QHBoxLayout()
+            container.setLayout(layout)
+
+            qlabel.setSizePolicy(QtGui.QSizePolicy.Ignored,
+                                 QtGui.QSizePolicy.Ignored)
+            qlabel.setScaledContents(True)
+            qlabel.resize(QtCore.QSize(0,0))
+
+            area = QtGui.QScrollArea(container)
+            area.setContentsMargins(0, 0, 0, 0)
+            area.setWidget(qlabel)
+            qlabel._scaleevents = MyScaleEvents(self, area, 0.1, 1.0)
+            area.wheel_scale = 1.0
+            area.wheel_scale_changed = lambda: (
+                qlabel.resize(area.wheel_scale * qlabel.pixmap().size()))
+            area.installEventFilter(qlabel._scaleevents)
+            layout.addWidget(area)
+            container.area = area
+            container._layout = layout # protect from garbage collector
+            return container
+
+        self.screenshotQLabel = QtGui.QLabel(self.screenshotWidgets)
+        self.screenshotQLabel.setContentsMargins(0, 0, 0, 0)
+        self.screenshotContainer = makeScalableImage(self.screenshotWidgets,
+                                                     self.screenshotQLabel)
+        self.screenshotWidgetsLayout.addWidget(self.screenshotContainer)
+        self.screenshotImage = QtGui.QImage()
+
+        self.screenshotQLabel.setPixmap(
+            QtGui.QPixmap.fromImage(
+                self.screenshotImage))
+
+        # Input buttons below the screenshot.
+        # Correct buttons are chosen by screenshot viewer
+        self.hwButtonList = []
+        def hwButton(platform, name, layout):
+            button = QtGui.QPushButton(getattr(self, "sutButtons" + platform),
+                                       text = name)
+            button.setStyleSheet("padding: 4px")
+            button.pressed.connect(lambda: self.buttonPressed(platform, name))
+            button.released.connect(lambda: self.buttonReleased(platform, name))
+            layout.addWidget(button)
+            self.hwButtonList.append(button)
+
+        self.sutButtonsAndroid = QtGui.QWidget(self.screenshotWidgets)
+        self.sutButtonsAndroid.setContentsMargins(0, 0, 0, 0)
+        self.sutButtonsAndroid.setVisible(False)
+        self.sutButtonsAndroidLayout = QtGui.QHBoxLayout()
+        self.sutButtonsAndroid.setLayout(self.sutButtonsAndroidLayout)
+        hwButton("Android", "Home", self.sutButtonsAndroidLayout)
+        hwButton("Android", "Back", self.sutButtonsAndroidLayout)
+        hwButton("Android", "Menu", self.sutButtonsAndroidLayout)
+        hwButton("Android", "Search", self.sutButtonsAndroidLayout)
+        hwButton("Android", "Power", self.sutButtonsAndroidLayout)
+
+        self.sutButtonsTizen = QtGui.QWidget(self.screenshotWidgets)
+        self.sutButtonsTizen.setContentsMargins(0, 0, 0, 0)
+        self.sutButtonsTizen.setVisible(False)
+        self.sutButtonsTizenLayout = QtGui.QHBoxLayout()
+        self.sutButtonsTizen.setLayout(self.sutButtonsTizenLayout)
+        hwButton("Tizen", "Home", self.sutButtonsTizenLayout)
+        hwButton("Tizen", "Power", self.sutButtonsTizenLayout)
+
+        self.screenshotWidgetsLayout.addWidget(self.sutButtonsAndroid)
+        self.screenshotWidgetsLayout.addWidget(self.sutButtonsTizen)
+
+        self.splitter.addWidget(self.screenshotWidgets)
+
+        ### Editor widgets
+        self.editorWidgets = QtGui.QWidget(self.mainwidget)
+        self.editorWidgets.setContentsMargins(0, 0, 0, 0)
+        self.editorWidgetsLayout = QtGui.QVBoxLayout()
+        #self.editorWidgets = QtGui.QSplitter(QtCore.Qt.Vertical, self.mainwidget)
+        self.editorWidgets.setLayout(self.editorWidgetsLayout)
+
+        self.editorButtons = QtGui.QWidget(self.editorWidgets)
+        self.editorButtons.setContentsMargins(-5, 0, -5, 0)
+        self.editorButtonsLayout = QtGui.QHBoxLayout()
+        self.editorButtons.setLayout(self.editorButtonsLayout)
+
+        self.editorButtonRec = QtGui.QPushButton("Re&c", checkable=True)
+        self.editorButtonRec.clicked.connect(self.rec)
+        self.editorButtonRunSingle = QtGui.QPushButton("Run &line",
+                                                       checkable=True)
+        self.editorButtonRunSingle.clicked.connect(
+            lambda: self.runLines(1, self.editorButtonRunSingle))
+        self.editorButtonRunSelection = QtGui.QPushButton("Run selectio&n",
+                                                          checkable=True)
+        self.editorButtonRunSelection.clicked.connect(
+            lambda: self.runLines("selection", self.editorButtonRunSelection))
+        self.editorButtonRunAutoUpdate = QtGui.QPushButton("&Auto refresh",
+                                                           checkable=True)
+        self.editorButtonRunAutoUpdate.clicked.connect(
+            lambda: self.editor.setFocus())
+        self.editorButtonsLayout.addWidget(self.editorButtonRec)
+        self.editorButtonsLayout.addWidget(self.editorButtonRunSingle)
+        self.editorButtonsLayout.addWidget(self.editorButtonRunSelection)
+        self.editorButtonsLayout.addWidget(self.editorButtonRunAutoUpdate)
+        self.editorWidgetsLayout.addWidget(self.editorButtons)
+
+        def makeScalableEditor(parent, font, EditorClass = QtGui.QTextEdit):
+            editor = EditorClass()
+            editor.setUndoRedoEnabled(True)
+            editor.setLineWrapMode(editor.NoWrap)
+            editor.setFont(font)
+            editor._scaleevents = MyScaleEvents(self, editor, 0.1, 2.0)
+            editor.wheel_scale = 1.0
+            editor.wheel_scale_changed = lambda: (
+                font.setPointSize(editor.wheel_scale * 12.0),
+                editor.setFont(font))
+            editor.installEventFilter(editor._scaleevents)
+            return editor
+
+        self.editorCombo = QtGui.QSplitter(QtCore.Qt.Vertical, self.editorWidgets)
+
+        self.editorFont = QtGui.QFont()
+        self.editorFont.setFamily('Courier')
+        self.editorFont.setFixedPitch(True)
+        self.editorFont.setPointSize(12)
+        self.editor = makeScalableEditor(self.mainwidget, self.editorFont)
+        self.editorCombo.addWidget(self.editor)
+        self.editor.cursorPositionChanged.connect(
+            self.editorCursorPositionChanged)
+
+        self.console = makeScalableEditor(self.mainwidget, self.editorFont)
+        self.editorCombo.addWidget(self.console)
+        self.editorCombo.setStretchFactor(0, 9)
+        self.editorCombo.setStretchFactor(1, 1)
+
+        _setGlobalLog(lambda msg: self.console.append(msg))
+
+        self.editorWidgetsLayout.addWidget(self.editorCombo)
+
+        self.splitter.addWidget(self.editorWidgets)
+
+        self.setCentralWidget(self.mainwidget)
+
+        ### Menus
+        fileMenu = QtGui.QMenu("&File", self)
+        self.menuBar().addMenu(fileMenu)
+        fileMenu.addAction("New An&droid", self.newAndroid)
+        fileMenu.addAction("New &Tizen", self.newTizen)
+        fileMenu.addAction("New &VNC", self.newVNC)
+        fileMenu.addAction("New &X11", self.newX11)
+        fileMenu.addAction("&Open", self.open, "Ctrl+O")
+        fileMenu.addSeparator()
+        fileMenu.addAction("&Save", self.save, "Ctrl+S")
+        fileMenu.addAction("Save &As", self.saveAs, "Shift+Ctrl+S")
+        fileMenu.addSeparator()
+        fileMenu.addAction("E&xit", QtGui.qApp.quit, "Ctrl+Q")
+
+        editMenu = QtGui.QMenu("&Edit", self)
+        self.menuBar().addMenu(editMenu)
+        editMenu.addAction("&Settings", self.showSettingsDialog)
+
+        viewMenu = QtGui.QMenu("&View", self)
+        self.menuBar().addMenu(viewMenu)
+        viewMenu.addAction("Refresh screenshot", self.updateScreenshot,
+                           "Ctrl+R")
+        viewMenu.addAction("Zoom in editor", self.zoomInEditor,
+                           "Ctrl++")
+        viewMenu.addAction("Zoom out editor", self.zoomOutEditor,
+                           "Ctrl+-")
+        viewMenu.addAction("Zoom in screenshot", self.zoomInScreenshot,
+                           "Ctrl+.")
+        viewMenu.addAction("Zoom out screenshot", self.zoomOutScreenshot,
+                           "Ctrl+,")
+
+        bitmapMenu = QtGui.QMenu("&Bitmap", self)
+        self.menuBar().addMenu(bitmapMenu)
+        self.bitmapAutoSelect = QtGui.QAction("&Auto-select when recording",
+                                              bitmapMenu,
+                                              checkable=True)
+        self.bitmapAutoSelect.changed.connect(self.autoSelectBitmap)
+        self.bitmapAutoSelect.setShortcut("Ctrl+B, Ctrl+A")
+        bitmapMenu.addAction(
+            "Se&lect from current screenshot",
+            self.selectBitmap, "Ctrl+B, Ctrl+L")
+        bitmapMenu.addAction(
+            "&Re-select from original screenshot",
+            lambda: (self.showBitmapsScreenshot() and self.selectBitmap()),
+            "Ctrl+B, Ctrl+B")
+        bitmapMenu.addAction(
+            "Rename", self.queryRenameBitmap, "Ctrl+B, Ctrl+R")
+        bitmapMenu.addSeparator()
+        bitmapMenu.addAction(self.bitmapAutoSelect)
+        bitmapMenu.addSeparator()
+        bitmapMenu.addAction("Goto &next", self.findNextBitmap, "Ctrl+B, Ctrl+N")
+        bitmapMenu.addAction("Goto &previous", self.findPrevBitmap, "Ctrl+B, Ctrl+P")
+        bitmapMenu.addSeparator()
+        bitmapMenu.addAction("&Swipe", self.swipeBitmap, "Ctrl+B, Ctrl+S")
+        bitmapMenu.addAction("&Tap", self.tapBitmap, "Ctrl+B, Ctrl+T")
+        bitmapMenu.addAction("&Verify", self.verifyBitmap, "Ctrl+B, Ctrl+V")
+
+        self.gestureEvents = []
+        self.gestureStarted = False
+
+    def bitmapStringAt(self, pos=None):
+        filename = None
+        if pos != None:
+            cursor = self.editor.cursorForPosition(pos)
+        else:
+            cursor = self.editor.textCursor()
+        pos = cursor.positionInBlock()
+        lineno = cursor.blockNumber()
+        cursor.select(QtGui.QTextCursor.LineUnderCursor)
+        l = cursor.selectedText()
+        start = l.rfind('"', 0, pos-1)
+        end = l.find('"', pos-1)
+        if -1 < start < end:
+            quotedString = l[start+1:end]
+            if quotedString.lower().rsplit(".")[-1] in ["png", "jpg"]:
+                filename = quotedString
+        return filename
+
+    def variableNameAt(self, pos=None):
+        if pos != None:
+            cursor = self.editor.cursorForPosition(pos)
+        else:
+            cursor = self.editor.textCursor()
+        cursor.select(QtGui.QTextCursor.WordUnderCursor)
+        word = cursor.selectedText()
+        for var in self._fmbtEnv:
+            if word == var:
+                return var
+        return None
+
+    def bitmapFilepath(self, filename):
+        try:
+            filepath, exc = self._fmbtEval(
+                '%s._paths.abspath("%s")' % (self._sut, filename),
+                silent=True)
+            return filepath
+        except ValueError:
+            return None
+
+    def invalidateScreenshot(self):
+        self.screenshotButtonRefresh.setChecked(True)
+        self.screenshotButtonRefresh.repaint()
+        _app.processEvents()
+
+    def scheduleUpdateScreenshot(self, seconds):
+        QtCore.QTimer.singleShot(int(seconds * 1000),
+                                 lambda: self.updateScreenshot(False))
+
+    def rec(self):
+        # switch on/off recording in device, if supported
+        if self._fmbtEval('hasattr(%s.connection(), "sendRecStart")'
+                          % (self._sut,), silent=True)[0]:
+            if self.editorButtonRec.isChecked():
+                self._recordingHwEvents = True
+                self._fmbtEval('%s.connection().sendRecStart(%s)' %
+                               (self._sut, repr(self._hwRecFilter["devices"])))
+                self._recordedTouchEvents = []
+                QtCore.QTimer.singleShot(250, self.recReadHwEvents)
+            else:
+                self._recordingHwEvents = False
+                self._fmbtEval('%s.connection().sendRecStop()' % (self._sut,))
+        if self.bitmapAutoSelect.isChecked():
+            self.editorButtonRunAutoUpdate.setChecked(True)
+        self.editor.setFocus()
+
+    def recReadHwEvents(self):
+        events, exc = self._fmbtEval('%s.connection().recvRec()' %
+                                     (self._sut,), silent=True)
+        if self._recordingHwEvents and exc == None:
+            if events:
+                self.handleHwEventSequence(events)
+            QtCore.QTimer.singleShot(250, self.recReadHwEvents)
+        elif exc:
+            log('error when reading events: "%s"'% (exc,))
+            log("hardware recording stopped.")
+
+    def handleHwEventSequence(self, events):
+        synEvent = fmbtuinput.eventTypes["EV_SYN"]
+        absEvent = fmbtuinput.eventTypes["EV_ABS"]
+        absX = fmbtuinput.absCodes["ABS_MT_POSITION_X"]
+        absY = fmbtuinput.absCodes["ABS_MT_POSITION_Y"]
+        absMtTrackingId = fmbtuinput.absCodes["ABS_MT_TRACKING_ID"]
+
+        screenWidth = float(self.screenshotImage.width())
+        screenHeight = float(self.screenshotImage.height())
+        x, y = self._recordedHandledAbsXY
+        for ev in self._recordedTouchEvents:
+            x, y = ev.pos
+        t = None
+        ev = "mousemove"
+        for e in events:
+            device, ts, typ, cod, val = e
+            if typ == absEvent:
+                if cod == absX:
+                    t = ts
+                    x = val/screenWidth
+                elif cod == absY:
+                    t = ts
+                    y = val/screenHeight
+                elif cod == absMtTrackingId:
+                    t = ts
+                    if val == -1:
+                        ev = "mouseup"
+                    else:
+                        ev = "mousedown"
+            elif typ == synEvent:
+                if t:
+                    if ev == "mousemove":
+                        gEv = GestureEvent(ev, None, (x, y), t)
+                    elif ev == "mousedown":
+                        gEv = GestureEvent(ev, 0, (x, y), t)
+                    elif ev == "mouseup":
+                        gEv = GestureEvent(ev, 0, (x, y), t)
+                    self._recordedTouchEvents.append(gEv)
+                    if ev == "mouseup":
+                        apiCall = gestureToGti(self._recordedTouchEvents)
+                        if apiCall != None:
+                            self.insertRecordedCommand(self._sut + apiCall)
+                        else:
+                            log("unrecognized event sequence:\n    " +
+                                "    \n".join(
+                                    [str(e) for e in self._recordedTouchEvents])
+                            )
+                        self._recordedHandledAbsXY = (x, y)
+                        self._recordedTouchEvents = []
+                    log(str(gEv))
+                    t = None
+                    ev = "mousemove"
+
+    def runLines(self, lineCount=None, runButton=None, autoUpdate=None):
+        if runButton != None:
+            runButton.setChecked(True)
+        if autoUpdate == None:
+            autoUpdate = self.editorButtonRunAutoUpdate.isChecked()
+        line = ""
+        if lineCount == None or lineCount == 1:
+            if line.startswith("#"): # skip comment lines
+                line = ""
+            else: # if needed, take also next lines
+                cursor = self.editor.textCursor()
+                line = cursor.block().text().rstrip()
+                indentation = len(line) - len(line.lstrip())
+                while (_notPython(line) and
+                       cursor.movePosition(QtGui.QTextCursor.Down)):
+                    line = line + "\n" + cursor.block().text()[indentation:]
+                if _notPython(line):
+                    log("this line is not valid Python code")
+                    line = ""
+        elif lineCount == "selection":
+            line = "\n" + self.editor.textCursor().selectedText()
+            line = line.replace(unichr(0x2029), "\n")
+            line = _unifyIndentation(line)
+        else:
+            raise NotImplementedError
+
+        if not line == "":
+            self.runStatement(line, autoUpdate=autoUpdate)
+        self.editor.moveCursor(QtGui.QTextCursor.Down,
+                               QtGui.QTextCursor.MoveAnchor)
+        self.editor.setFocus()
+        if runButton != None:
+            runButton.setChecked(False)
+
+    def runStatement(self, statement, silent=False, autoUpdate=None):
+        if autoUpdate == None:
+            autoUpdate = self.editorButtonRunAutoUpdate.isChecked()
+        if autoUpdate:
+            self.invalidateScreenshot()
+        _, exc = self._fmbtExec(statement, silent=silent)
+        if autoUpdate:
+            self.scheduleUpdateScreenshot(1.0)
+        return exc == None
+
+    def save(self):
+        if self._scriptFilename:
+            file(self._scriptFilename, "w").write(self.editor.toPlainText())
+        else:
+            return self.saveAs()
+
+    def newAndroid(self):
+        try:
+            s, o, e = fmbtandroid._run(["adb", "devices"], expectedExitStatus=0)
+        except:
+            log("cannot connect to Android devices: adb not available")
+            return
+        outputLines = [l.strip() for l in o.splitlines() if l.strip() != ""]
+        try:
+            deviceLines = outputLines[
+                outputLines.index("List of devices attached")+1:]
+        except:
+            deviceLines = []
+        serialNumber = ""
+        if len(deviceLines) > 1:
+            choice, ok = QtGui.QInputDialog.getItem(
+                self,
+                "Android device selection",
+                "Choose device to connect to" + " " * 30,
+                deviceLines, current=0, editable=False)
+            if ok:
+                serialNumber = '"%s"' % (choice.split('\t')[0].strip(),)
+        self._newScript("import fmbtandroid\n"
+                        "sut = fmbtandroid.Device(%s)" % (serialNumber,))
+
+    def newTizen(self):
+        o = None
+        try:
+            s, o, e = fmbtandroid._run(["sdb", "devices"], expectedExitStatus=0)
+        except:
+            log("cannot list Tizen devices with sdb")
+        serialNumber = ""
+        if o:
+            outputLines = [l.strip() for l in o.splitlines() if l.strip() != ""]
+            try:
+                deviceLines = outputLines[
+                    outputLines.index("List of devices attached")+1:]
+            except:
+                deviceLines = []
+            if len(deviceLines) > 1:
+                choice, ok = QtGui.QInputDialog.getItem(
+                    self,
+                    "Tizen device selection",
+                    "Choose device to connect to" + " " * 30,
+                    deviceLines, current=0, editable=False)
+                if ok:
+                    serialNumber = '"%s"' % (choice.split('\t')[0].strip(),)
+        self._newScript("import fmbttizen\n"
+                        "sut = fmbttizen.Device(%s)" % (serialNumber,))
+
+    def newX11(self):
+        self._newScript("import fmbtx11\n"
+                        "sut = fmbtx11.Screen()")
+
+    def newVNC(self):
+        self._newScript("import fmbtvnc\n"
+                        "sut = fmbtvnc.Screen()")
+
+    def buttonPressed(self, platform, name):
+        self._hwButtonEvents = []
+        self._hwButtonEvents.append(GestureEvent("keydown", name, None))
+
+    def buttonReleased(self, platform, name):
+        self._hwButtonEvents.append(GestureEvent("keyup", name, None))
+        call = gestureToGti(self._hwButtonEvents)
+        if self.editorButtonRec.isChecked():
+            self.addAPICall(call + "\n")
+        if self.screenshotButtonControl.isChecked():
+            self.doAPICall(call)
+        self.editor.setFocus()
+
+    def _newScript(self, script):
+        self.editor.setPlainText(script)
+        _app.processEvents()
+        for _ in xrange(script.index("(")+1):
+            self.editor.moveCursor(QtGui.QTextCursor.Right,
+                                   QtGui.QTextCursor.MoveAnchor)
+        self.editor.setFocus()
+        if self.autoConnect():
+            self.scheduleUpdateScreenshot(0.1)
+
+    def autoConnect(self):
+        oldMod = self._autoConnectModules
+        oldGti = self._autoConnectGti
+
+        # use forced method for connection, if available.
+        connectCode = self.scripterConnectCode()
+        if connectCode:
+            if connectCode != self._autoConnectModules:
+                log("Executing scripter-connect code")
+                self._fmbtExec(connectCode)
+                self._autoConnectModules = connectCode
+            sutVar = self.scripterSutVar()
+            if sutVar:
+                if sutVar != self._autoConnectGti:
+                    self._sut = sutVar
+                    self._autoConnectGti = sutVar
+            else:
+                # try to recognize sut from connectCode
+                self._autoConnectGti = _g_gtiInstantiateRE.findall(connectCode)
+                if self._autoConnectGti:
+                    self._sut = self._autoConnectGti[0][1]
+        else: # no connectCode
+            # recognize fmbt imports and GTI instantiation
+            # from test script
+            script = self.editor.toPlainText()
+            self._autoConnectModules = _g_importFmbtRE.findall(script)
+            self._autoConnectGti = _g_gtiInstantiateRE.findall(script)
+            if oldGti != self._autoConnectGti:
+                if oldMod != self._autoConnectModules:
+                    for m in self._autoConnectModules:
+                        self._fmbtExec("import fmbt" + m)
+                if self._autoConnectGti:
+                    rv, exc = self._fmbtExec(self._autoConnectGti[0][0])
+                    if exc == None:
+                        # connected successfully
+                        self._sut = self._autoConnectGti[0][1]
+                else:
+                    self._sut = None
+        if (self._screenshotSaveDir and self._sut):
+            self.setScreenshotSaveDir(self._screenshotSaveDir)
+        return self._sut != None # return True if connected
+
+    def setScriptFilename(self, newName):
+        self._scriptFilename = newName
+        self.setImportDir(str(self._scriptFilename))
+
+    def saveAs(self):
+        path = QtGui.QFileDialog.getSaveFileName(
+            self, "Save script", '', ";;".join(self._scriptFileFormats))
+        newName = path[0]
+        if str(newName) == "":
+            return False
+        else:
+            self.setScriptFilename(newName)
+        return self.save()
+
+    def askBitmapFilename(self, suggestion):
+        path = QtGui.QFileDialog.getSaveFileName(
+            self, "Save bitmap", '', ";;".join(self._bitmapFileFormats))
+        newName = path[0]
+        if str(newName) == "":
+            return None
+        else:
+            return newName
+
+    def queryRenameBitmap(self, origFilename=None):
+        if origFilename == None:
+            origFilename = self.bitmapStringAt()
+        choice, ok = QtGui.QInputDialog.getText(
+            self, "Rename bitmap", "New filename",
+            text=origFilename)
+        if ok and choice:
+            self.renameBitmap(origFilename, choice)
+
+    def renameBitmap(self, origName, newName):
+        cursor = self.editor.textCursor()
+        cursor.select(QtGui.QTextCursor.LineUnderCursor)
+        l = cursor.selectedText()
+        if '"%s"' % (origName,) in l:
+            l = l.replace('"%s"' % (origName,), '"%s"' % (newName,))
+            cursor.insertText(l)
+        origFilepath = self.bitmapFilepath(origName)
+        if origFilepath:
+            newFilepath = os.path.relpath(
+                newName,
+                os.getcwd())
+            if not os.access(os.path.dirname(newFilepath), os.W_OK):
+                try:
+                    os.makedirs(os.path.dirname(newFilepath))
+                except OSError:
+                    log('cannot write to directory "%s"' % (newFilepath,))
+                    return False
+            log('rename "%s" to "%s"' % (origFilepath, newFilepath))
+            os.rename(origFilepath, newFilepath)
+            if os.access(_bitmapScreenshotFilename(origFilepath), os.R_OK):
+                os.rename(_bitmapScreenshotFilename(origFilepath),
+                          _bitmapScreenshotFilename(newFilepath))
+            return True
+        elif origName != "noname.png":
+            log('cannot find bitmap file "%s"' % (origName,))
+
+    def autoBitmapBoundingBox(self, (x, y)):
+        screenWidth = self.screenshotImage.width()
+        screenHeight = self.screenshotImage.height()
+        boxWidth = self._autoBitmapSize
+        boxHeight = self._autoBitmapSize
+        left = max(0, int(x * screenWidth - boxWidth / 2))
+        top = max(0, int(y * screenHeight - boxHeight / 2))
+        right = left + boxWidth
+        bottom = top + boxHeight
+        return left, top, right, bottom
+
+    def autoBitmapFilename(self):
+        for i in xrange(10000):
+            candidate = os.path.join(
+                self._bitmapSaveDir,
+                self._autoBitmapPrefix + str(i).zfill(4) + ".png")
+            if not os.access(candidate, os.R_OK):
+                return candidate, self._bitmapSaveDir
+        return "noname.png", ""
+
+    def insertRecordedCommand(self, cmd):
+        if self.bitmapAutoSelect.isChecked():
+            x, y = (None, None)
+            if ".tap((" in cmd:
+                try:
+                    x, y = [float(c) for c in
+                            re.findall("tap\(\(([.0-9]*), ([.0-9]*)\)", cmd)[0]]
+                except:
+                    pass
+            elif ".swipe((" in cmd:
+                try:
+                    x, y = [float(c) for c in
+                            re.findall("swipe\(\(([.0-9]*), ([.0-9]*)\)", cmd)[0]]
+                except:
+                    pass
+            if x != None and y != None:
+                left, top, right, bottom = self.autoBitmapBoundingBox((x,y))
+                self._selectingBitmap, self._selectingBitmapSaveDir = \
+                    self.autoBitmapFilename()
+                bitmapFilename = os.path.relpath(
+                    self._selectingBitmap,
+                    self._selectingBitmapSaveDir)
+                self._selectingToggledInteract = (
+                    self.screenshotButtonControl.isChecked())
+                log('auto-selecting bitmap "%s" (%s, %s, %s, %s)' %
+                    (self._selectingBitmap, left, top, right, bottom))
+                self.selectBitmapDone(left, top, right, bottom)
+                cmd = re.sub("\.(tap|swipe)\(\([.0-9]*, [.0-9]*\)",
+                             '.\\1Bitmap("%s"' % (bitmapFilename,),
+                             cmd)
+
+        self.editor.insertPlainText(cmd + "\n")
+        if self.bitmapAutoSelect.isChecked():
+            self.editor.insertPlainText(self._sut + ".refreshScreenshot()\n")
+            self.scheduleUpdateScreenshot(1.0)
+
+    def autoSelectBitmap(self):
+        if self.bitmapAutoSelect.isChecked():
+            log("selecting bitmaps automatically when recording")
+            choice, ok = QtGui.QInputDialog.getText(
+                self, "Bitmap auto-selection", "Auto-selected bitmap filename prefix",
+                text=self._autoBitmapPrefix)
+            if ok:
+                self._autoBitmapPrefix = choice
+            if self.editorButtonRec.isChecked():
+                self.editorButtonRunAutoUpdate.setChecked(True)
+        else:
+            log("not selecting bitmaps automatically when recording")
+
+    def findNextBitmap(self):
+        cursor = self.editor.textCursor()
+        c = self.editor.toPlainText()[cursor.position():]
+        searchMatch = re.search('"[^"]*\.png"', c)
+        if searchMatch:
+            cursor.movePosition(QtGui.QTextCursor.Right,
+                                QtGui.QTextCursor.MoveAnchor,
+                                searchMatch.end())
+            self.editor.setTextCursor(cursor)
+
+    def findPrevBitmap(self):
+        cursor = self.editor.textCursor()
+        c = self.editor.toPlainText()[cursor.position()-2::-1]
+        searchMatch = re.search('"gnp\.[^"]*"', c)
+        if searchMatch:
+            cursor.movePosition(QtGui.QTextCursor.Left,
+                                QtGui.QTextCursor.MoveAnchor,
+                                searchMatch.start()+1)
+            self.editor.setTextCursor(cursor)
+
+    def setImportDir(self, scriptFilename):
+        sys.path[1] = os.path.dirname(scriptFilename)
+
+    def open(self, filename=None):
+        if filename == None:
+            dialog = QtGui.QFileDialog()
+            dialog.setDirectory(os.getcwd())
+            dialog.setWindowTitle("Open script")
+            dialog.setNameFilters(self._scriptFileFormats)
+            dialog.exec_()
+            if not dialog.result():
+                return
+            filepath = str(dialog.selectedFiles()[0])
+        else:
+            filepath = os.path.abspath(filename)
+        self.setScriptFilename(filepath)
+        self.editor.setPlainText(file(self._scriptFilename).read())
+
+    def _fmbtExec(self, statement, silent=False):
+        if not silent or opt_debug:
+            log("executing: %s" % (statement,))
+        try:
+            exec statement in self._fmbtEnv
+        except Exception, e:
+            if not silent or opt_debug:
+                log("exception: %s\n  %s" %
+                    (e, "    \n".join(traceback.format_exc().splitlines())))
+            return None, e
+        return None, None
+
+    def _fmbtEval(self, expression, silent=False):
+        if not silent or opt_debug:
+            log("evaluating: %s" % (expression,))
+        try:
+            rv = eval(expression, self._fmbtEnv, self._fmbtEnv)
+            if opt_debug:
+                log("returned %s: %s" % (type(rv), rv))
+        except Exception, e:
+            if not silent or opt_debug:
+                log("exception: %s" % (e,))
+            return None, e
+        return rv, None
+
+    def screenshotSet(self, index):
+        if (index >= len(self._screenshotFilenames) or
+            index < 0):
+            return False
+        self._highlightingBitmap = None
+        self.screenshotImage = QtGui.QImage()
+        self.screenshotImage.load(self._screenshotFilenames[index])
+        if index == len(self._screenshotFilenames) - 1:
+            self.screenshotButtonNext.setEnabled(False)
+        else:
+            self.screenshotButtonNext.setEnabled(True)
+        if index == 0:
+            self.screenshotButtonPrev.setEnabled(False)
+        else:
+            self.screenshotButtonPrev.setEnabled(True)
+        log('showing screenshot "%s"' % (self._screenshotFilenames[index],))
+        self.screenshotImageIndex = index
+        self.updateScreenshotView()
+
+        if getattr(self, "_screenshotImageOrig", None) != None:
+            self._screenshotImageOrig = None
+
+        if self._sut:
+            oldName, exc = self._fmbtEval("%s.screenshot().filename()" %
+                                          (self._sut,), silent=True)
+            if exc == None:
+                self._fmbtExec('%s.refreshScreenshot("%s")' %
+                               (self._sut,
+                                self._screenshotFilenames[index]))
+
+        self.highlightActiveBitmap()
+        return True
+
+    def showBitmapsScreenshot(self, filename=None):
+        if filename == None:
+            filename = self.bitmapStringAt()
+            if filename:
+                filepath = self.bitmapFilepath(filename)
+            else:
+                log("text cursor is not on bitmap filename")
+                return False
+        else:
+            filepath = self.bitmapFilepath(filename)
+        if filepath == None:
+            log('bitmap "%s" not found in bitmapPath' % (filename,))
+            return False
+
+        screenshotFilename = os.path.join(
+            os.path.dirname(filepath),
+            _bitmapScreenshotFilename(os.path.basename(filepath)))
+        if not os.access(screenshotFilename, os.R_OK):
+            log('cannot read original screenshot "%s"' % (screenshotFilename,))
+            return False
+
+        self._screenshotFilenames.append(screenshotFilename)
+        self.screenshotSet(len(self._screenshotFilenames)-1)
+        return True
+
+    def updateScreenshot(self, recordable=True):
+        if not self._sut:
+            for key, value in self._fmbtEnv.iteritems():
+                if isinstance(value, fmbtgti.GUITestInterface):
+                    self._sut = key
+                    break
+            else:
+                log("cannot update screenshot, no connection")
+                self.screenshotButtonRefresh.setChecked(False)
+                self.editor.setFocus()
+                return
+
+        self.invalidateScreenshot()
+        if self._sut == None:
+            self.autoConnect()
+        if self._sut != None:
+            if recordable and self.editorButtonRec.isChecked():
+                self.addAPICall("refreshScreenshot()\n")
+            rv, exc = self._fmbtExec(
+                '%s.refreshScreenshot()' %
+                (self._sut,))
+            if exc == None:
+                self._screenshotFilenames.append(
+                    self._fmbtEval("%s.screenshot().filename()" % (self._sut,),
+                                   silent=True)[0])
+                self.screenshotSet(len(self._screenshotFilenames)-1)
+        self.editor.setFocus()
+
+    def updateScreenshotView(self):
+        self.screenshotQLabel.setPixmap(
+            QtGui.QPixmap.fromImage(
+                self.screenshotImage))
+        self.screenshotContainer.area.setWidget(self.screenshotQLabel)
+        self.screenshotContainer.area.wheel_scale_changed()
+        self.screenshotButtonRefresh.setChecked(False)
+
+        sutObj = self._fmbtEval(self._sut, silent=True)[0]
+
+        if isinstance(sutObj, fmbtandroid.Device):
+            self.sutButtonsAndroid.setVisible(True)
+            self.sutButtonsTizen.setVisible(False)
+        elif isinstance(sutObj, fmbttizen.Device):
+            self.sutButtonsAndroid.setVisible(False)
+            self.sutButtonsTizen.setVisible(True)
+        else:
+            self.sutButtonsAndroid.setVisible(False)
+            self.sutButtonsTizen.setVisible(False)
+
+        self.editor.setFocus()
+
+    def addAPICall(self, call, cursorOffset=0):
+        if not call.startswith("."):
+            call = "." + call
+        cursor = self.editor.textCursor()
+        txt = self.editor.toPlainText()
+        lineBeforeCursor = txt[cursor.block().position():cursor.position()]
+        if lineBeforeCursor.strip() == "":
+            cursor.beginEditBlock()
+            cursor.insertText("%s%s" % (self._sut, call))
+            cursor.endEditBlock()
+            if cursorOffset < 0:
+                for _ in xrange(abs(cursorOffset)):
+                    self.editor.moveCursor(QtGui.QTextCursor.Left,
+                                           QtGui.QTextCursor.MoveAnchor)
+            else:
+                for _ in xrange(abs(cursorOffset)):
+                    self.editor.moveCursor(QtGui.QTextCursor.Right,
+                                           QtGui.QTextCursor.MoveAnchor)
+
+    def doAPICall(self, call, silent=False):
+        if not call.startswith("."):
+            call = "." + call
+        return self.runStatement("%s%s" % (self._sut, call), silent=silent)
+
+    def verifyBitmap(self, filepath=None):
+        if self.editorButtonRec.isChecked():
+            self.addAPICall('verifyBitmap("noname.png")', -1)
+            self.selectBitmap()
+        else:
+            self.doVerifyBitmap(filepath)
+
+    def doVerifyBitmap(self, filepath=None):
+        if filepath == None:
+            filename = self.bitmapStringAt()
+            if filename:
+                filepath = self.bitmapFilepath(filename)
+                if filepath == None:
+                    log('bitmap "%s" not in bitmapPath' % (filename,))
+            else:
+                log("no bitmap to verify")
+        else:
+            filename = filepath
+        if filepath != None:
+            log('verifying bitmap "%s"' % (filepath,))
+            items, exc = self._fmbtEval(
+                '%s.screenshot().findItemsByBitmap("%s")' % (
+                self._sut, filename))
+            if items:
+                log('bitmap "%s" found at %s bbox: %s' % (
+                    filename, items[0].coords(), items[0].bbox()))
+                self.drawRect(*items[0].bbox())
+            else:
+                log('bitmap "%s" not found on screenshot' % (filename,))
+
+    def tapBitmap(self, filepath=None):
+        if self.editorButtonRec.isChecked():
+            self.addAPICall('tapBitmap("noname.png")', -1)
+            self.selectBitmap()
+            return
+        if filepath == None:
+            filename = self.bitmapStringAt()
+            if filename:
+                filepath = self.bitmapFilepath(filename)
+                if filepath == None:
+                    log('bitmap "%s" not in bitmapPath' % (filename,))
+            else:
+                log("no bitmap to tap")
+        if filepath != None:
+            log('tapping bitmap "%s"' % (filepath,))
+            rv, exc = self._fmbtEval('%s.tapBitmap("%s")' % (
+                self._sut, filename))
+            if rv:
+                items, exc = self._fmbtEval(
+                    '%s.screenshot().findItemsByBitmap("%s")' % (
+                        self._sut, filename))
+                log('bitmap "%s" %s tapped' % (filename, items[0].bbox()))
+                self.drawRect(*items[0].bbox())
+            else:
+                log('bitmap "%s" not found' % (filename,))
+
+    def swipeBitmap(self, filepath=None):
+        if self.editorButtonRec.isChecked():
+            self.addAPICall('swipeBitmap("noname.png", "east")', -9)
+            self.selectBitmap()
+            return
+
+
+    def highlightActiveBitmap(self):
+        bmFilename = self.bitmapStringAt()
+        if bmFilename:
+            self.screenshotButtonSelect.setText(
+                "Select %s" % (os.path.basename(bmFilename),))
+            self.screenshotButtonSelect.setEnabled(True)
+            if self._highlightingBitmap != bmFilename:
+                if self._highlightingBitmap != None:
+                    self.drawRect(0, 0, 0, 0, True)
+                self.doVerifyBitmap(bmFilename)
+                self._highlightingBitmap = bmFilename
+        else:
+            self.screenshotButtonSelect.setText("Select")
+            self.screenshotButtonSelect.setEnabled(False)
+            if self._highlightingBitmap:
+                self.drawRect(0, 0, 0, 0, True)
+                self._highlightingBitmap = None
+
+    def editorCursorPositionChanged(self):
+        self.highlightActiveBitmap()
+
+    def controlDevice(self):
+        if self.screenshotButtonControl.isChecked():
+            if self._selectingBitmap:
+                self.selectBitmapStop()
+                self.screenshotButtonControl.setChecked(True)
+        self.editor.setFocus()
+
+    def selectBitmapStop(self):
+        if self._selectingBitmap != None:
+            log('selecting bitmap "%s" canceled' % (self._selectingBitmap,))
+            self._selectingBitmap = None
+            self._selectingBitmapSaveDir = None
+        self.drawRect(0, 0, 0, 0, True)
+        self.screenshotButtonSelect.setChecked(False)
+        self.screenshotButtonControl.setChecked(
+            self._selectingToggledInteract)
+        self._screenshotImageOrig = None
+        self.editor.setFocus()
+
+    def selectBitmapDone(self, left, top, right, bottom):
+        if left > right:
+            left, right = right, left
+        if top > bottom:
+            top, bottom = bottom, top
+        if not (-1 < top < bottom < self.screenshotImage.height() and
+                 -1 < left < right < self.screenshotImage.width()):
+            log('illegal selection')
+            self.selectBitmapStop()
+            return None
+        self.drawRect(left, top, right, bottom, True)
+        selectedImage = self.screenshotImage.copy(left, top,
+                                                  (right-left), (bottom-top))
+
+        if os.path.basename(self._selectingBitmap) == "noname.png":
+            newName = self.askBitmapFilename(self._selectingBitmap)
+            if not newName:
+                self.selectBitmapStop()
+            if newName !=  self._selectingBitmap:
+                newName = os.path.relpath(
+                    os.path.abspath(newName),
+                    os.path.abspath(self._selectingBitmapSaveDir))
+                self.renameBitmap(self._selectingBitmap, newName)
+                self._selectingBitmap = newName
+                self._selectingBitmapSaveDir = os.path.dirname(
+                    os.path.abspath(self._selectingBitmap))
+
+        bitmapFilepath = os.path.join(
+            self._selectingBitmapSaveDir,
+            os.path.basename(self._selectingBitmap))
+        if selectedImage.save(bitmapFilepath):
+            log('saved bitmap "%s"' % (bitmapFilepath,))
+            fullscreenFilename = _bitmapScreenshotFilename(bitmapFilepath)
+            if not self.screenshotImage.save(fullscreenFilename):
+                log('saving fullscreen version "%s" failed' %
+                    (fullscreenFilename,))
+        else:
+            log('saving bitmap "%s" failed' % (self._selectingBitmap,))
+        self._selectingBitmap = None
+        self._selectingBitmapSaveDir = None
+        self.selectBitmapStop()
+
+    def selectBitmap(self, filepath=None):
+        if self._selectingBitmap:
+            self.selectBitmapStop()
+            return None
+
+        if filepath == None:
+            filename = self.bitmapStringAt()
+            if filename:
+                filepath = self.bitmapFilepath(filename)
+                if filepath:
+                    log('select replacement for "%s"' % (filepath,))
+                else:
+                    if self._bitmapSaveDir:
+                        filepath = os.path.join(
+                            self._bitmapSaveDir,
+                            filename)
+                    else:
+                        rv, exc = self._fmbtEval(
+                            '%s._paths.bitmapPath.split(":")[0]' %
+                            (self._sut,), silent=True)
+                        if exc == None:
+                            filepath = os.path.join(rv, filename)
+                        else:
+                            filepath = os.path.join(os.getcwd(), filename)
+                    log('select new bitmap "%s"' % (filepath,))
+                self._selectingBitmap = filename
+                self._selectingBitmapSaveDir = os.path.dirname(filepath)
+            else:
+                log('text cursor is not on bitmap filename')
+        elif filepath != None:
+            log('select bitmap "%s"' % (filepath,))
+            self._selectingBitmap = filepath
+            self._selectingBitmapSaveDir = os.path.dirname(filepath)
+
+        if self._selectingBitmap:
+            self.screenshotButtonSelect.setChecked(True)
+            self._selectingToggledInteract = (
+                self.screenshotButtonControl.isChecked())
+            self.screenshotButtonControl.setChecked(False)
+        else:
+            self.screenshotButtonSelect.setChecked(False)
+
+    def drawRect(self, left, top, right, bottom, clear=False):
+        if getattr(self, "_screenshotImageOrig", None) == None:
+            self._screenshotImageOrig = self.screenshotImage.copy()
+        else:
+            self.screenshotImage = self._screenshotImageOrig.copy()
+        if not clear:
+            x1, y1, x2, y2 = left, top, right, bottom
+            w, h = (right-left), (bottom-top)
+            painter = QtGui.QPainter(self.screenshotImage)
+            bgPen = QtGui.QPen(QtGui.QColor(0, 0, 0), 1)
+            fgPen = QtGui.QPen(QtGui.QColor(128, 255, 128), 1)
+            painter.setPen(bgPen)
+            painter.drawRect(x1-2, y1-2, w+4, h+4)
+            painter.drawRect(x1, y1, w, h)
+            painter.setPen(fgPen)
+            painter.drawRect(x1-1, y1-1, w+2, h+2)
+        self.updateScreenshotView()
+
+    def setScripterConnectCode(self, code):
+        cursor = self.editor.textCursor()
+        cursor.movePosition(QtGui.QTextCursor.Start)
+        c = self.editor.toPlainText()
+        connMatch = _g_scripterConnectRE.search(c)
+        if connMatch:
+            cursor.movePosition(QtGui.QTextCursor.Right, n=connMatch.start())
+            cursor.movePosition(QtGui.QTextCursor.Right,
+                                QtGui.QTextCursor.KeepAnchor,
+                                n = connMatch.end() - connMatch.start())
+        codelines = ["# scripter-connect: %s\n" % (l,) for l in code.splitlines()]
+        cursor.insertText("".join(codelines))
+        if connMatch:
+            c = c[connMatch.end():]
+            connMatch = _g_scripterConnectRE.search(c)
+            while connMatch:
+                cursor.movePosition(QtGui.QTextCursor.Right, n=connMatch.start())
+                cursor.movePosition(QtGui.QTextCursor.Right,
+                                    QtGui.QTextCursor.KeepAnchor,
+                                    n = connMatch.end() - connMatch.start())
+                cursor.insertText("")
+                c = c[connMatch.end():]
+                connMatch = _g_scripterConnectRE.search(c)
+
+    def scripterConnectCode(self):
+        c = self.editor.toPlainText()
+        connectCode = _g_scripterConnectRE.findall(c)
+        return "\n".join(connectCode)
+
+    def setScripterSutVar(self, sutVar):
+        cursor = self.editor.textCursor()
+        cursor.movePosition(QtGui.QTextCursor.Start)
+        c = self.editor.toPlainText()
+        sutVarMatch = _g_scripterSutVarRE.search(c)
+        if sutVarMatch:
+            cursor.movePosition(QtGui.QTextCursor.Right, n=sutVarMatch.start())
+            cursor.movePosition(QtGui.QTextCursor.Right,
+                                QtGui.QTextCursor.KeepAnchor,
+                                n = sutVarMatch.end() - sutVarMatch.start())
+        cursor.insertText("# scripter-sut: %s\n" % (sutVar,))
+
+    def scripterSutVar(self):
+        c = self.editor.toPlainText()
+        sutVar = "".join(_g_scripterSutVarRE.findall(c))
+        return sutVar
+
+    def showSettingsDialog(self):
+        if self._settingsDialog == None:
+            self._settingsDialog = SettingsDialog()
+        self._settingsDialog.connConnect.setPlainText(
+            self.scripterConnectCode())
+        self._settingsDialog.connSutVar.setText(self._sut)
+        self._settingsDialog.pathsBitmapAutoSelectSize.setText(
+            str(self._autoBitmapSize))
+        if self._sut:
+            bitmapPath, exc = self._fmbtEval("%s.bitmapPath()" %
+                                             (self._sut,),
+                                             silent=True)
+            if not exc:
+                self._settingsDialog.pathsBitmapPath.setText(
+                    bitmapPath)
+            screenshotDir, exc = self._fmbtEval("%s.screenshotDir()" %
+                                                (self._sut,),
+                                                silent=True)
+            if not exc:
+                self._settingsDialog.pathsScreenshotDir.setText(
+                    screenshotDir)
+
+            inputDev, exc = self._fmbtEval("%s.connection().recvInputDevices()"
+                                           % (self._sut,))
+            if not exc:
+                if self._hwRecFilter["devices"] == None:
+                    self._hwRecFilter["devices"] = set()
+                    for d in inputDev:
+                        self._hwRecFilter["devices"].add(d)
+                self._settingsDialog.setInputDevices(
+                    inputDev, self._hwRecFilter["devices"])
+            else:
+                self._settingsDialog.setInputDevices([], set())
+
+        self._settingsDialog.show()
+        if self._settingsDialog.exec_():
+            self.setScripterConnectCode(
+                self._settingsDialog.connConnect.toPlainText())
+            if self._settingsDialog.connSutVar.text() != self._sut:
+                self._sut = self._settingsDialog.connSutVar.text()
+                self.setScripterSutVar(self._sut)
+            bitmapPath = self._settingsDialog.pathsBitmapPath.text()
+            if bitmapPath:
+                oldBitmapPath, exc = self._fmbtEval("%s.bitmapPath()" %
+                                                    (self._sut,),
+                                                    silent=True)
+                if not exc and bitmapPath != oldBitmapPath:
+                    self.doAPICall('.setBitmapPath("%s")' %
+                                   (bitmapPath.replace('"', '\\"'),))
+            bitmapDir = self._settingsDialog.pathsBitmapDir.text()
+            if bitmapDir:
+                self._bitmapSaveDir = bitmapDir
+            screenshotDir = self._settingsDialog.pathsScreenshotDir.text()
+            if screenshotDir:
+                self.setScreenshotSaveDir(screenshotDir)
+            self._hwRecFilter["devices"] = self._settingsDialog.getRecDevices()
+            self._autoBitmapSize = int(
+                self._settingsDialog.pathsBitmapAutoSelectSize.text())
+
+    def setScreenshotSaveDir(self, directory):
+        try:
+            if os.access(directory, os.W_OK):
+                self._screenshotSaveDir = directory
+                if self._sut:
+                    oldDir, exc = self._fmbtEval("%s.screenshotDir()" %
+                                            (self._sut,), silent=True)
+                    if exc: raise Exception(exc)
+                    if not oldDir or os.path.abspath(oldDir) != os.path.abspath(directory):
+                        self.doAPICall('.setScreenshotDir("%s")' %
+                                       (directory.replace('"', '\\"'),))
+        except Exception, e:
+            log('error in setting screenshot save directory "%s":' %
+                (directory,))
+            log("    %s" % (e,))
+
+    def zoomInEditor(self):
+        self.editor._scaleevents.changeScale(1.1)
+        self.console._scaleevents.changeScale(1.1)
+
+    def zoomOutEditor(self):
+        self.editor._scaleevents.changeScale(0.9)
+        self.console._scaleevents.changeScale(0.9)
+
+    def zoomInScreenshot(self):
+        self.screenshotQLabel._scaleevents.changeScale(1.1)
+
+    def zoomOutScreenshot(self):
+        self.screenshotQLabel._scaleevents.changeScale(0.9)
+
+
+if __name__ == "__main__":
+    sys.path.insert(0, os.getcwd())
+
+    opt_connect = ""
+    opt_gti = None
+    opt_sut = None
+    opt_debug = 0
+    supported_platforms = ['android', 'tizen', 'x11', 'vnc', 'dummy']
+
+    opts, remainder = getopt.getopt(
+        sys.argv[1:], 'hd:p:',
+        ['help', 'device=', 'platform=', 'debug'])
+
+    for opt, arg in opts:
+        if opt in ['-h', '--help']:
+            print __doc__
+            sys.exit(0)
+        elif opt in ['--debug']:
+            opt_debug += 1
+        elif opt in ['-d', '--device']:
+            opt_connect = arg
+        elif opt in ['-p', '--platform']:
+            opt_gti = arg
+            if arg in ['android', 'tizen', 'dummy']:
+                opt_gticlass = "Device"
+            elif arg in ['x11', 'vnc']:
+                opt_gticlass = "Screen"
+            else:
+                error('unknown platform: "%s". Use one of "%s"' % (
+                    arg, '", "'.join(supported_platforms)))
+
+    script = ""
+    if remainder:
+        scriptFilename = remainder[0]
+        try:
+            script = file(scriptFilename).read()
+        except:
+            error('cannot read file "%s"' % (remainder[0],))
+    else:
+        scriptFilename = None
+
+    _app = QtGui.QApplication(sys.argv)
+    _win = MainWindow()
+    _win.resize(800, 600)
+
+    if opt_gti == "dummy":
+        initSequence = "# sut = fmbtdummy.Device(...)\n"
+        sut = fmbtdummy.Device(screenshotList = opt_connect.split(","))
+        opt_sut = "sut"
+    else:
+        initSequence = ""
+
+    if script:
+        _win.open(scriptFilename)
+    else:
+        _win.editor.append(initSequence)
+    if _win.autoConnect():
+        _win.scheduleUpdateScreenshot(1.0)
+    _win.show()
+    _app.exec_()

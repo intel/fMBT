@@ -246,7 +246,7 @@ class Device(fmbtgti.GUITestInterface):
       bitmaps can be searched from this.
     """
     _PARSE_VIEW_RETRY_LIMIT = 10
-    def __init__(self, deviceName=None, iniFile=None, connect=True):
+    def __init__(self, deviceName=None, iniFile=None, connect=True, **kwargs):
         """
         Connect to given device, or the first not-connected Android
         device in the "adb devices" list, if nothing is defined.
@@ -274,11 +274,16 @@ class Device(fmbtgti.GUITestInterface):
                   ini. Connect to the device with a serial number
                   given in this file. The default is None.
 
+          rotateScreenshot (integer, optional)
+                  rotate new screenshots by rotateScreenshot degrees.
+                  Example: rotateScreenshot=-90. The default is 0 (no
+                  rotation).
+
         To create an ini file for a device, use dumpIni. Example:
 
         file("/tmp/test.ini", "w").write(fmbtandroid.Device().dumpIni())
         """
-        fmbtgti.GUITestInterface.__init__(self)
+        fmbtgti.GUITestInterface.__init__(self, **kwargs)
 
         self._fmbtAndroidHomeDir = os.getenv("FMBTANDROIDHOME", os.getcwd())
 
@@ -361,7 +366,7 @@ class Device(fmbtgti.GUITestInterface):
         if self._conn: hw = self._conn.recvVariable("build.device")
         else: hw = "nohardware"
         self.hardware        = self._conf.value("general", "hardware", hw)
-        self.setBitmapPath(self._conf.value("paths", "bitmapPath", self._fmbtAndroidHomeDir + os.sep + "bitmaps" + os.sep + self.hardware + "-" + self.platformVersion() + ":."), self._fmbtAndroidHomeDir)
+        self.setBitmapPath(self._conf.value("paths", "bitmapPath", ".:" + self._fmbtAndroidHomeDir + os.sep + "bitmaps" + os.sep + self.hardware + "-" + self.platformVersion()), self._fmbtAndroidHomeDir)
         self.setScreenshotDir(self._conf.value("paths", "screenshotDir", self._fmbtAndroidHomeDir + os.sep + "screenshots"))
 
     def callContact(self, contact):
@@ -504,6 +509,14 @@ class Device(fmbtgti.GUITestInterface):
         Optional parameters are the same as for pressKey.
         """
         return self.pressKey("KEYCODE_POWER", **pressKeyKwArgs)
+
+    def pressSearch(self, **pressKeyKwArgs):
+        """
+        Press the search button.
+
+        Optional parameters are the same as for pressKey.
+        """
+        return self.pressKey("KEYCODE_SEARCH", **pressKeyKwArgs)
 
     def pressVolumeUp(self, **pressKeyKwArgs):
         """
@@ -1164,16 +1177,12 @@ class _AndroidDeviceConnection:
         self._serialNumber = serialNumber
         self._stopOnError = stopOnError
         self._shellSupportsTar = False
+
+        self._detectFeatures()
         try:
             self._resetMonkey()
             self._resetWindow()
 
-            # check supported features
-            outputLines = self._runAdb(["shell", "tar"])[1].splitlines()
-            if len(outputLines) == 1 and "bin" in outputLines[0]:
-                self._shellSupportsTar = False
-            else:
-                self._shellSupportsTar = True
         finally:
             # Next _AndroidDeviceConnection instance will use different ports
             self._w_port = _AndroidDeviceConnection._w_port
@@ -1216,6 +1225,26 @@ class _AndroidDeviceConnection:
             return False
         return True
 
+    def _detectFeatures(self):
+        # check supported features
+        outputLines = self._runAdb(["shell", "id"])[1].splitlines()
+        if len(outputLines) == 1 and "uid=0" in outputLines[0]:
+            self._shellUid0 = True
+        else:
+            self._shellUid0 = False
+
+        outputLines = self._runAdb(["shell", "su", "root", "id"])[1].splitlines()
+        if len(outputLines) == 1 and "uid=0" in outputLines[0]:
+            self._shellSupportsSu = True
+        else:
+            self._shellSupportsSu = False
+
+        outputLines = self._runAdb(["shell", "tar"])[1].splitlines()
+        if len(outputLines) == 1 and "bin" in outputLines[0]:
+            self._shellSupportsTar = False
+        else:
+            self._shellSupportsTar = True
+
     def _resetWindow(self):
         setupCommands = [["shell", "service" , "call", "window", "1", "i32", "4939"],
                          ["forward", "tcp:"+str(self._w_port), "tcp:4939"]]
@@ -1226,8 +1255,14 @@ class _AndroidDeviceConnection:
         tryKillingMonkeyOnFailure = 1
         failureCountSinceKill = 0
         endTime = time.time() + timeout
+        if self._shellUid0:
+            monkeyLaunch = ["monkey"]
+        elif self._shellSupportsSu:
+            monkeyLaunch = ["su", "root", "monkey"]
+        else:
+            monkeyLaunch = ["monkey"]
         while time.time() < endTime:
-            if not self._runSetupCmd(["shell", "monkey", "--port", "1080"], None):
+            if not self._runSetupCmd(["shell"] + monkeyLaunch + ["--port", "1080"], None):
                 time.sleep(pollDelay)
                 failureCountSinceKill += 1
                 continue
@@ -1249,7 +1284,10 @@ class _AndroidDeviceConnection:
                 failureCountSinceKill += 1
             time.sleep(pollDelay)
             if failureCountSinceKill > 2 and tryKillingMonkeyOnFailure > 0:
-                self._runSetupCmd(["shell", "pkill", "monkey"])
+                if self._shellSupportsSu:
+                    self._runSetupCmd(["shell", "su", "root", "pkill", "monkey"])
+                else:
+                    self._runSetupCmd(["shell", "pkill", "monkey"])
                 tryKillingMonkeyOnFailure -= 1
                 failureCountSinceKill = 0
                 time.sleep(pollDelay)
@@ -1292,10 +1330,12 @@ class _AndroidDeviceConnection:
         _adapterLog("rebooting " + self._serialNumber)
 
         if reconnect:
+            time.sleep(2)
             endTime = time.time() + timeout
             status, _, _ = self._runAdb("wait-for-device", expectedExitStatus=None, timeout=timeout)
             if status != 0:
                 raise AndroidDeviceNotFound('"timeout %s adb wait-for-device" status %s' % (timeout, status))
+            self._detectFeatures()
             while time.time() < endTime:
                 try:
                     if self._resetMonkey(timeout=1, pollDelay=1):
@@ -1443,7 +1483,7 @@ class _AndroidDeviceConnection:
             stderr = self._cat(remotename + ".err")
             try: exitstatus = int(self._cat(remotename + ".status"))
             except: exitstatus = None
-            self._runAdb(["shell", "rm -f "+remotename])
+            self._runAdb(["shell", "rm -f "+remotename+"*"])
         return exitstatus, stdout, stderr
 
     def recvViewData(self, retry=3):

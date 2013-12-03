@@ -1,6 +1,6 @@
 Name:           fmbt
-Version:        0.11.3
-Release:        1
+Version:        0.11.4
+Release:        0.rc0.<CI_CNT>.<B_CNT>
 Summary:        free Model-Based Testing tool
 
 License:        lgpl
@@ -75,7 +75,7 @@ Requires: %{name}-utils
 Requires: python-pyside
 
 %description editor
-fMBT editor
+fMBT editor and scripter
 
 %package python
 Summary: fMBT python bindings
@@ -130,6 +130,11 @@ Requires: %{name}-python
 Provides fmbttizen.py, a Python library for Tizen GUI testing.
 The library needs Smart Development Bridge (sdb) from Tizen SDK.
 
+%package adapter-vnc
+Summary: fMBT adapter for GUI testing through VNC
+Requires: %{name}-adapter-eyenfinger
+Requires: %{name}-python
+
 %description adapter-vnc
 Provides fmbtvnc.py, a Python library for GUI testing through VNC.
 The library needs vncdotool.
@@ -158,6 +163,7 @@ various fMBT examples
 Summary: Meta package for installing all fMBT packages
 Requires: %{name}-adapter-android
 Requires: %{name}-adapter-tizen
+Requires: %{name}-adapter-vnc
 Requires: %{name}-adapter-x11
 Requires: %{name}-doc
 Requires: %{name}-editor
@@ -218,8 +224,10 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %files editor
 %defattr(-, root, root, -)
 %{_bindir}/%{name}-editor
+%{_bindir}/%{name}-scripter
 %{_bindir}/%{name}-gteditor
 %{python_sitelib}/%{name}/%{name}-editor
+%{python_sitelib}/%{name}/%{name}-scripter
 %{python_sitelib}/%{name}/%{name}-gteditor
 
 %files python
@@ -228,6 +236,7 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %{python_sitelib}/fmbt.py*
 %{python_sitelib}/fmbtgti.py*
 %{python_sitelib}/fmbtlogger.py*
+%{python_sitelib}/fmbtuinput.py*
 %{python_sitelib}/%{name}/lsts.py*
 %{python_sitelib}/%{name}/aalmodel.py*
 %{python_sitelib}/%{name}/%{name}parsers.py*
