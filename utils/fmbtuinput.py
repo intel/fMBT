@@ -551,6 +551,12 @@ def toKeyCode(keyCodeOrName):
     else:
         raise ValueError('Invalid keycode "%s"' % (keyCodeOrName,))
 
+def toKeyName(keyCode):
+    if keyCode in keyCodesInv:
+        return keyCodesInv[keyCode]
+    else:
+        raise ValueError('Invalid keycode "%s"' % (keyCode,))
+
 def toButtonCode(buttonCodeOrName):
     if isinstance(buttonCodeOrName, str):
         buttonCode = toKeyCode(buttonCodeOrName)

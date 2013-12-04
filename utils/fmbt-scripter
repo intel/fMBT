@@ -107,7 +107,7 @@ def quantify(item, quantum):
     if not isinstance(item, tuple) and not isinstance(item, list):
         return int(item * (1/quantum)) * quantum
     else:
-        return tuple([int(i * (1/quantum)) * quantum for i in item])
+        return tuple([quantify(i, quantum) for i in item])
 
 def gestureToGti(gestureEventList):
     timeQuantum = 0.1 # seconds
@@ -139,10 +139,10 @@ def gestureToGti(gestureEventList):
             # event sequence: mousedown, mousemove..., mouseup
             if duration < 3 * timeQuantum:
                 # very quick event, make it single tap
-                return ".tap((%s, %s))" % quantL(el[0].pos)
+                return ".tap((%.2f, %.2f))" % quantL(el[0].pos)
             elif distance < 3 * locQuantum:
                 # neglible move, make it long tap
-                return ".tap((%s, %s), hold=%s)" % (
+                return ".tap((%.2f, %.2f), hold=%.1f)" % (
                     quantL(el[0].pos) + quantT([duration]))
             elif xDistance < 3 * locQuantum:
                 if el[-1].pos[1] < el[0].pos[1]:
@@ -152,7 +152,7 @@ def gestureToGti(gestureEventList):
                     direction = "south"
                     sdist = yDistance + el[0].pos[1]
                 # only y axis changed, we've got a swipe
-                return '.swipe((%s, %s), "%s", distance=%s)' % (
+                return '.swipe((%.2f, %.2f), "%s", distance=%.2f)' % (
                     quantL(el[0].pos) + (direction,) +
                     quantL([sdist]))
             elif yDistance < 3 * locQuantum:
@@ -163,20 +163,26 @@ def gestureToGti(gestureEventList):
                     direction = "east"
                     sdist = xDistance + el[0].pos[0]
                 # only y axis changed, we've got a swipe
-                return '.swipe((%s, %s), "%s", distance=%s)' % (
+                return '.swipe((%.2f, %.2f), "%s", distance=%.2f)' % (
                     quantL(el[0].pos) + (direction,) +
                     quantL([sdist]))
             else:
-                return ".drag(%s, %s)" % (quantL(el[0].pos), quantL(el[-1].pos))
+                return ".drag((%.2f, %.2f), (%.2f, %.2f))" % (
+                    quantL(el[0].pos) + quantL(el[-1].pos))
         else:
             return "unknown between events"
     elif firstEvent == "keydown" and lastEvent == "keyup":
-        if duration < 3 * timeQuantum:
-            return ".press%s()" % (el[0].key,)
+        if el[0].key.startswith("KEY_"):
+            func = "Key"
+            args = ['"%s"' % (el[0].key,)]
         else:
-            return ".press%s(hold=%s)" % (
-                el[0].key,
-                quantT(duration))
+            func = el[0].key
+            args = []
+        if duration >= 3 * timeQuantum:
+            args.append("hold=%.1f" % (quantT(duration),))
+        call = '.press%s(%s)' % (func, ", ".join(args))
+        return call
+    else:
         return "unknown gesture"
 
 ########################################################################
@@ -817,6 +823,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def handleHwEventSequence(self, events):
         synEvent = fmbtuinput.eventTypes["EV_SYN"]
+        keyEvent = fmbtuinput.eventTypes["EV_KEY"]
         absEvent = fmbtuinput.eventTypes["EV_ABS"]
         absX = fmbtuinput.absCodes["ABS_MT_POSITION_X"]
         absY = fmbtuinput.absCodes["ABS_MT_POSITION_Y"]
@@ -826,7 +833,10 @@ class MainWindow(QtGui.QMainWindow):
         screenHeight = float(self.screenshotImage.height())
         x, y = self._recordedHandledAbsXY
         for ev in self._recordedTouchEvents:
-            x, y = ev.pos
+            try:
+                x, y = ev.pos
+            except:
+                pass
         t = None
         ev = "mousemove"
         for e in events:
@@ -844,16 +854,27 @@ class MainWindow(QtGui.QMainWindow):
                         ev = "mouseup"
                     else:
                         ev = "mousedown"
+            elif typ == keyEvent:
+                keyName = fmbtuinput.toKeyName(cod)
+                t = ts
+                if val == 0:
+                    ev = "keyup"
+                elif val == 1:
+                    ev = "keydown"
+                else:
+                    ev = None
             elif typ == synEvent:
                 if t:
                     if ev == "mousemove":
                         gEv = GestureEvent(ev, None, (x, y), t)
-                    elif ev == "mousedown":
+                    elif ev in ["mousedown", "mouseup"]:
                         gEv = GestureEvent(ev, 0, (x, y), t)
-                    elif ev == "mouseup":
-                        gEv = GestureEvent(ev, 0, (x, y), t)
+                    elif ev in ["keyup", "keydown"]:
+                        if self._sutPressMethod(keyName):
+                            keyName = self._sutPressMethod(keyName).lstrip("press")
+                        gEv = GestureEvent(ev, keyName, None, t)
                     self._recordedTouchEvents.append(gEv)
-                    if ev == "mouseup":
+                    if ev in ["keyup", "mouseup"]:
                         apiCall = gestureToGti(self._recordedTouchEvents)
                         if apiCall != None:
                             self.insertRecordedCommand(self._sut + apiCall)
@@ -867,6 +888,20 @@ class MainWindow(QtGui.QMainWindow):
                     log(str(gEv))
                     t = None
                     ev = "mousemove"
+
+    def _sutPressMethod(self, keyName):
+        if keyName.startswith("KEY_"):
+            lowerMethodName = "press" + keyName.lstrip("KEY_").lower()
+        else:
+             lowerMethodName = "press" + keyName.lower()
+        attrs, exc = self._fmbtEval("dir(%s)" % (self._sut,))
+        if exc:
+            return None
+        pressMethods = [a for a in attrs if a.startswith("press")]
+        for pm in pressMethods:
+            if pm.lower() == lowerMethodName:
+                return pm
+        return None
 
     def runLines(self, lineCount=None, runButton=None, autoUpdate=None):
         if runButton != None:
