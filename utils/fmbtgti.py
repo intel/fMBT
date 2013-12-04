@@ -537,7 +537,10 @@ class _EyenfingerOcrEngine(OcrEngine):
             try:
                 score_text_bbox_list = eyenfinger.findText(
                     text, self._ss[ssId].words[ppfilter], match=match)
-                break
+                if not score_text_bbox_list:
+                    continue
+                else:
+                    break
             except eyenfinger.BadMatch:
                 continue
         else:
