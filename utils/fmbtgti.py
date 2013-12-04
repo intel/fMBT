@@ -410,9 +410,12 @@ class OcrEngine(OrEngine):
                   engine default.
         """
         if screenshot == None:
-            self._findTextDefaults = defaults
+            self._findTextDefaults.update(defaults)
         else:
-            self._ssFindTextDefaults[id(screenshot)] = defaults
+            ssid = id(screenshot)
+            if not ssid in self._ssFindTextDefaults:
+                self._ssFindTextDefaults[ssid] = self._findTextDefaults.copy()
+            self._ssFindTextDefaults[ssid].update(defaults)
 
     def findTextDefaults(self, screenshot=None):
         if screenshot == None:
