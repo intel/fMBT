@@ -1667,7 +1667,6 @@ class GUITestInterface(object):
             hold = self._longTapHoldTime
         if count == 0:
             self._conn.sendTouchMove(x, y)
-            return True
         while count > 0:
             if hold > 0.0:
                 try:
@@ -1680,6 +1679,7 @@ class GUITestInterface(object):
                 if not self._conn.sendTap(x, y):
                     return False
             count = int(count) - 1
+        return True
 
     def tapBitmap(self, bitmap, **tapAndOirArgs):
         """
