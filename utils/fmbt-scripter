@@ -1091,7 +1091,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def askBitmapFilename(self, suggestion):
         path = QtGui.QFileDialog.getSaveFileName(
-            self, "Save bitmap", '', ";;".join(self._bitmapFileFormats))
+            self, "Save bitmap", suggestion, ";;".join(self._bitmapFileFormats))
         newName = path[0]
         if str(newName) == "":
             return None
@@ -1146,12 +1146,13 @@ class MainWindow(QtGui.QMainWindow):
         return left, top, right, bottom
 
     def autoBitmapFilename(self):
-        for i in xrange(10000):
-            candidate = os.path.join(
-                self._bitmapSaveDir,
-                self._autoBitmapPrefix + str(i).zfill(4) + ".png")
-            if not os.access(candidate, os.R_OK):
-                return candidate, self._bitmapSaveDir
+        if self.bitmapAutoSelect.isChecked():
+            for i in xrange(10000):
+                candidate = os.path.join(
+                    self._bitmapSaveDir,
+                    self._autoBitmapPrefix + str(i).zfill(4) + ".png")
+                if not os.access(candidate, os.R_OK):
+                    return candidate, self._bitmapSaveDir
         return "noname.png", ""
 
     def insertRecordedCommand(self, cmd):
@@ -1516,7 +1517,7 @@ class MainWindow(QtGui.QMainWindow):
                                                   (right-left), (bottom-top))
 
         if os.path.basename(self._selectingBitmap) == "noname.png":
-            newName = self.askBitmapFilename(self._selectingBitmap)
+            newName = self.askBitmapFilename(self.autoBitmapFilename()[0])
             if not newName:
                 self.selectBitmapStop()
             if newName !=  self._selectingBitmap:
