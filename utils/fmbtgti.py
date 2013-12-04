@@ -693,9 +693,12 @@ class OirEngine(OrEngine):
                   engine default.
         """
         if screenshot == None:
-            self._findBitmapDefaults = defaults
+            self._findBitmapDefaults.update(defaults)
         else:
-            self._ssFindBitmapDefaults[id(screenshot)] = defaults
+            ssid = id(screenshot)
+            if not ssid in self._ssFindBitmapDefaults:
+                self._ssFindBitmapDefaults[ssid] = self._findBitmapDefaults.copy()
+            self._ssFindBitmapDefaults[ssid].update(defaults)
 
     def findBitmapDefaults(self, screenshot=None):
         if screenshot == None:
