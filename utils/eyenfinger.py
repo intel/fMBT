@@ -1400,7 +1400,7 @@ def findText(text, detected_words = None, match=-1):
                 (int(wid.split("_")[1]), word, bbox))
     words_by_id.sort()
 
-    for i in xrange(len(words_by_id)-word_count):
+    for i in xrange(len(words_by_id)-word_count+1):
         detected_texts.append(
             (" ".join([w[1] for w in words_by_id[i:i+word_count]]),
              biggerBox([w[2] for w in words_by_id[i:i+word_count]])))
