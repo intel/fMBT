@@ -86,9 +86,10 @@ Description: fMBT adapter for X11 GUI testing
 
 Package: fmbt-adapter-eyenfinger
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, x11-apps, imagemagick, tesseract-ocr, xautomation
+Depends: ${shlibs:Depends}, ${misc:Depends}, x11-apps, imagemagick, tesseract-ocr
 Description: fMBT adapter for GUI testing
  Proof-of-concept adapter for X11 GUI testing with OCR and icon matching.
+ Eyenfinger test API is deprecated, use fmbtx11 instead.
 
 Package: fmbt-doc
 Architecture: all

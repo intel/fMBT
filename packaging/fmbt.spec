@@ -3,7 +3,7 @@ Version:        0.11.4
 Release:        0.rc0.<CI_CNT>.<B_CNT>
 Summary:        free Model-Based Testing tool
 
-License:        lgpl
+License:        LGPL
 URL:            https://github.com/01org/fMBT
 Source:		%{name}_%{version}.tar.gz
 
@@ -97,20 +97,20 @@ Requires: dbus-python
 Generic remote adapters for running shell script, Python expressions and Javascript
 
 %package adapter-eyenfinger
-Summary: fMBT adapter for GUI testing
+Summary: Deprecated fMBT adapter for GUI testing, use fmbtx11 instead.
 
 %if 0%{?suse_version}
-Requires: libMagick++5
+# implicit Magick++[56]
 %else
 Requires: ImageMagick-c++
 %endif
 Requires: ImageMagick
 Requires: /usr/bin/xwd
 Requires: tesseract
-Requires: xautomation
 
 %description adapter-eyenfinger
 Proof-of-concept adapter for X11 GUI testing with OCR and icon matching.
+This test API is deprecated, use fmbtx11 instead.
 
 %package adapter-android
 Summary: fMBT adapter for Android GUI testing through USB
