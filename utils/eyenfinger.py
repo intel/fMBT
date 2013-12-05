@@ -80,6 +80,11 @@ import shutil
 import ctypes
 import platform
 import struct
+import warnings
+
+def _DEPRECATED():
+    warnings.warn("eyenfinger.py API is deprecated, use fmbtx11 instead.",
+                  DeprecationWarning, stacklevel=2)
 
 _g_preprocess = "-sharpen 5 -filter Mitchell -resize 1920x1600 -level 40%%,70%%,5.0 -sharpen 5"
 
@@ -457,6 +462,8 @@ def imageSize(imageFilename):
 
 def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=None, ocrArea=(0, 0, 1.0, 1.0), ocrPageSegModes=(3,)):
     """
+    DEPRECATED - use fmbtx11.Screen.refreshScreenshot instead.
+
     Read the contents of the given window or other source. If neither
     of windowId or source is given, reads the contents of active
     window. iClickWord and iVerifyWord can be used after reading with
@@ -594,6 +601,8 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
 
 def iVerifyWord(word, match=0.33, appearance=1, capture=None):
     """
+    DEPRECATED - use fmbtx11.Screen.verifyOcrText instead.
+
     Verify that word can be found from previously iRead() image.
 
     Parameters:
@@ -636,6 +645,8 @@ def iVerifyWord(word, match=0.33, appearance=1, capture=None):
 
 def iVerifyText(text, match=0.33, capture=None):
     """
+    DEPRECATED - use fmbtx11.Screen.verifyOcrText instead.
+
     Verify that text can be found from previously iRead() image.
 
     Parameters:
@@ -677,6 +688,8 @@ def iVerifyText(text, match=0.33, capture=None):
 
 def iVerifyIcon(iconFilename, match=None, colorMatch=None, opacityLimit=None, capture=None, area=(0.0, 0.0, 1.0, 1.0), _origin="iVerifyIcon"):
     """
+    DEPRECATED - use fmbtx11.Screen.verifyBitmap instead.
+
     Verify that icon can be found from previously iRead() image.
 
     Parameters:
@@ -781,6 +794,8 @@ def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=None,
                colorMatch=None, opacityLimit=None,
                mouseButton=1, mouseEvent=MOUSEEVENT_CLICK, dryRun=None, capture=None):
     """
+    DEPRECATED - use fmbtx11.Screen.tapBitmap instead.
+
     Click coordinates relative to the given icon in previously iRead() image.
 
     Parameters:
@@ -831,6 +846,7 @@ def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=None,
 
     Throws BadMatch error if could not find a matching word.
     """
+    _DEPRECATED()
     score, bbox = iVerifyIcon(iconFilename, match=match,
                               colorMatch=colorMatch, opacityLimit=opacityLimit,
                               capture=capture, _origin="iClickIcon")
@@ -844,6 +860,8 @@ def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=None,
 def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33,
                mouseButton=1, mouseEvent=1, dryRun=None, capture=None):
     """
+    DEPRECATED - use fmbtx11.Screen.tapOcrText instead.
+
     Click coordinates relative to the given word in previously iRead() image.
 
     Parameters:
@@ -880,6 +898,7 @@ def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33,
     Throws NoOCRResults error if there are OCR results available
     on the current screen.
     """
+    _DEPRECATED()
     (score, matching_word), bbox = iVerifyWord(word, appearance=appearance, match=match, capture=False)
 
     clickedX, clickedY = iClickBox(bbox, clickPos, mouseButton, mouseEvent, dryRun, capture=False)
@@ -902,6 +921,8 @@ def iClickBox((left, top, right, bottom), clickPos=(0.5, 0.5),
               mouseButton=1, mouseEvent=1, dryRun=None,
               capture=None, _captureText=None):
     """
+    DEPRECATED - use fmbtx11.Screen.tapItem instead.
+
     Click coordinates relative to the given bounding box, default is
     in the middle of the box.
 
@@ -956,6 +977,8 @@ def iClickBox((left, top, right, bottom), clickPos=(0.5, 0.5),
 
 def iClickWindow((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, capture=None):
     """
+    DEPRECATED - use fmbtx11.Screen.tap instead.
+
     Click given coordinates in the window.
 
     Parameters:
@@ -1005,6 +1028,8 @@ def iClickWindow((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, cap
 
 def iClickScreen((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, capture=None):
     """
+    DEPRECATED - use fmbtx11.Screen.tap instead.
+
     Click given absolute coordinates on the screen.
 
     Parameters:
@@ -1031,6 +1056,7 @@ def iClickScreen((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, cap
                      clicked point highlighted is saved. The default
                      is None (nothing is saved).
     """
+    _DEPRECATED()
     if mouseEvent == MOUSEEVENT_CLICK:
         params = "'mouseclick %s'" % (mouseButton,)
     elif mouseEvent == MOUSEEVENT_DOWN:
@@ -1054,6 +1080,8 @@ def iClickScreen((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, cap
 
 def iGestureScreen(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdAfterGesture=0.0, intermediatePoints=0, capture=None, dryRun=None):
     """
+    DEPRECATED - use fmbtx11.Screen.drag instead.
+
     Synthesizes a gesture on the screen.
 
     Parameters:
@@ -1091,6 +1119,7 @@ def iGestureScreen(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdA
                      illustrates the coordinates through which the cursor
                      goes.
     """
+    _DEPRECATED()
     # The params list to be fed to xte
     params = []
 
@@ -1146,6 +1175,8 @@ def iGestureScreen(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdA
 
 def iGestureWindow(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdAfterGesture=0.0, intermediatePoints=0, capture=None, dryRun=None):
     """
+    DEPRECATED - use fmbtx11.Screen.drag instead.
+
     Synthesizes a gesture on the window.
 
     Parameters:
@@ -1188,6 +1219,8 @@ def iGestureWindow(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdA
 
 def iType(word, delay=0.0):
     """
+    DEPRECATED - use fmbtx11.Screen.type instead.
+
     Send keypress events.
 
     Parameters:
@@ -1214,6 +1247,7 @@ def iType(word, delay=0.0):
         iType([('Shift_L', 'press'), 'h', 'e', ('Shift_L', 'release'), 'l', 'l', 'o'])
         iType([('Control_L', 'Alt_L', 'Delete')])
     """
+    _DEPRECATED()
     args = []
     for char in word:
         if type(char) == tuple:
@@ -1236,6 +1270,8 @@ def iType(word, delay=0.0):
 
 def iInputKey(*args, **kwargs):
     """
+    DEPRECATED - use fmbtx11.Screen.pressKey instead.
+
     Send keypresses using Linux evdev interface
     (/dev/input/eventXX).
 
@@ -1274,6 +1310,7 @@ def iInputKey(*args, **kwargs):
                      instance, "/dev/input/event0" or a name of a
                      device in /proc/bus/input/devices.
     """
+    _DEPRECATED()
     hold = kwargs.get("hold", 0.1)
     delay = kwargs.get("delay", 0.1)
     device = kwargs.get("device", _g_defaultInputKeyDevice)
