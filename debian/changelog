@@ -1,8 +1,29 @@
-fmbt (0.11.4-0.rc0) unstable; urgency=low
+fmbt (0.12-1) unstable; urgency=low
 
-  * Development version.
+  * fmbt-scripter - new GUI tool for
+    - selecting and updating bitmaps with fmbtandroid/tizen/vnc/x11
+    - executing Python test code line-by-line or in blocks
+    - creating parts of test scripts by recording events.
+  * fmbtandroid/tizen/vnc/x11:
+    - screenshot rotation support
+    - visual log option for archiving bitmaps in test runs
+    - visualLog method for writing comments to visual logs
+    - tap* methods have optional count parameter, enables
+      double and triple taps and hoovering without tap (count=0)
+  * fmbttizen:
+    - support for Tizen IVI testing:
+      - both sdb and ssh connections supported
+      - input sent through virtual mouse, touch screen and keyboard
+      - Weston screenshots
+    - hardware event recording for generating test code directly
+      from a Tizen device for fmbt-scripter.
+  * eyenfinger testing API deprecated, use fmbtx11 instead.
+  * Many bug fixes and updates, including
+    - *OcrText methods find multiword texts
+    - fmbtandroid supports latest Android releases
+    - fixed test generation returning unoptimal paths in some cases.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Thu, 24 Oct 2013 12:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Thu, 5 Dec 2013 15:42:00 +0300
 
 fmbt (0.11.3-1) unstable; urgency=low
 
