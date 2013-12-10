@@ -30,6 +30,11 @@ Options:
     -D flag
         pass -D flag to AAL compiler and preprocessor, used in ifdef's.
 
+    -I include-dir
+        Pass -I include-dir to AAL compiler and preprocessor. If AAL
+        contains ^include "filename"'s, filename will be looked for in
+        include-dir.
+
     -l, -L, --log-file= filename
         Write log to the given file. By default no log is written.
         -l , --log-file overwrites the file, -L appends.

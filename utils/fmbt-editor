@@ -197,8 +197,29 @@ except Exception, e:
 def _deleteTrailingWhitespace(multilineString):
     return '\n'.join([line.rstrip() for line in str(multilineString).split('\n')])
 
-def _parseIncludedFiles(string):
-    return PP_INCLUDEFILE.findall(string)
+def _parseIncludedFiles(string, includePath=(), alreadyFound=()):
+    found = []
+    not_found = []
+    already_found = set([os.path.basename(f) for f in alreadyFound])
+    for filename in PP_INCLUDEFILE.findall(string):
+        if os.path.basename(filename) in already_found:
+            continue
+        elif os.access(filename, os.R_OK):
+            found.append(filename)
+            already_found.add(os.path.basename(filename))
+        else:
+            for d in includePath:
+                candidate = os.path.join(d, filename)
+                if os.access(candidate, os.R_OK):
+                    found.append(candidate)
+                    already_found.add(filename)
+                    if os.path.basename(candidate) in not_found:
+                        not_found.remove(os.path.basename(candidate))
+                    break
+            else:
+                # cannot find included file
+                not_found.append(filename)
+    return found + not_found
 
 class MyScaleEvents(QtCore.QObject):
     """
@@ -708,12 +729,15 @@ Keyboard shortcuts:<br>
             self.edit.setCurrentIndex(EDITTAB_CONF)
             self.conf_editor.setFocus()
 
-    def _remote_pyaalCmdlineArgs(self,conf_lines):
+    def _remote_pyaalCmdlineArgs(self, conf_lines=None):
+        if conf_lines == None:
+            conf_lines = str(self.conf_editor.toPlainText()).split('\n')
         aal_ppflags = []
         aal_modelflags = ""
         for l in conf_lines:
             if "model" in l and not l.strip().startswith("#"):
                 aal_ppflags.extend(["-D%s" % f for f in re.findall('-D ?([^ ]*)', l)])
+                aal_ppflags.extend(["-I%s" % f for f in re.findall('-I ?([^ ]*)', l)])
                 try:
                     _cmd_line = l.split('(',1)[1].rsplit(')')[0]
                     aal_modelflags = shlex.split(_cmd_line)
@@ -740,8 +764,7 @@ Keyboard shortcuts:<br>
             self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
 
             # Pick up preprocessor arguments from remote_pyaal command line
-            conf_lines = str(self.conf_editor.toPlainText()).split('\n')
-            aal_ppflags, aal_modelflags = self._remote_pyaalCmdlineArgs(conf_lines)
+            aal_ppflags, aal_modelflags = self._remote_pyaalCmdlineArgs()
             aal2py_cmd = self._aal2pyCmdline(aal_ppflags)
 
             executed_program = "fmbt-aalc"
@@ -1661,9 +1684,11 @@ on_inconc = exit(2)
             self.preview_error.setFocus()
 
     def _relatedModelFiles(self):
-        includedFiles = _parseIncludedFiles(self.editor.toPlainText())
+        ppargs, _ = self._remote_pyaalCmdlineArgs()
+        includePath = [iDir.lstrip("-I") for iDir in ppargs if iDir.startswith("-I")]
+        includedFiles = _parseIncludedFiles(self.editor.toPlainText(), includePath)
         if self._modelFileName != self._modelEditorActiveFile:
-            includedFiles.extend(_parseIncludedFiles(self._modelSource()))
+            includedFiles.extend(_parseIncludedFiles(self._modelSource(), includePath, set(includedFiles)))
         includedFiles.append(self._modelEditorActiveFile)
         includedFiles.append(self._modelFileName)
         return set(includedFiles)
