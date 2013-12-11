@@ -210,7 +210,12 @@ class MyScaleEvents(QtCore.QObject):
             self.attrowner.wheel_scale = self.max_scale
         self.attrowner.wheel_scale_changed()
     def eventFilter(self, obj, event):
-        if self.mainwindow._selectingBitmap:
+        if (event.type() == QtCore.QEvent.KeyPress and
+              event.key() == QtCore.Qt.Key_Tab and
+              self.mainwindow.editor.hasFocus()):
+            self.mainwindow.editorIndentLine()
+            return True
+        elif self.mainwindow._selectingBitmap:
             return self.eventToSelect(event)
         else:
             return self.eventToAPI(event)
@@ -474,6 +479,9 @@ class MainWindow(QtGui.QMainWindow):
         self._autoBitmapPrefix = ""
         self._autoBitmapSize = 48
         self._bitmapSaveDir = os.getcwd()
+        self._editorIgnoreNextCursorPositionChange = False
+        self._editorIndentLineCalls = None
+        self._editorIndentation = 4
         self._highlightingBitmap = None
         self._hwRecFilter = {"devices": None}
         self._recordedHandledAbsXY = (None, None)
@@ -1187,8 +1195,10 @@ class MainWindow(QtGui.QMainWindow):
                              '.\\1Bitmap("%s"' % (bitmapFilename,),
                              cmd)
 
+        self.editorIndentLine(first=True)
         self.editor.insertPlainText(cmd + "\n")
         if self.bitmapAutoSelect.isChecked():
+            self.editorIndentLine(first=True)
             self.editor.insertPlainText(self._sut + ".refreshScreenshot()\n")
             self.scheduleUpdateScreenshot(1.0)
 
@@ -1386,6 +1396,7 @@ class MainWindow(QtGui.QMainWindow):
             cursor.beginEditBlock()
             cursor.insertText("%s%s" % (self._sut, call))
             cursor.endEditBlock()
+            self.editorIndentLine(first=True)
             if cursorOffset < 0:
                 for _ in xrange(abs(cursorOffset)):
                     self.editor.moveCursor(QtGui.QTextCursor.Left,
@@ -1481,8 +1492,66 @@ class MainWindow(QtGui.QMainWindow):
                 self.drawRect(0, 0, 0, 0, True)
                 self._highlightingBitmap = None
 
+    def editorIndentLine(self, lineNumber=None, first=False):
+        def indentNextLineDeeper(string):
+            line = string.rstrip()
+            if line.endswith(":"):
+                return True
+            for open, close in ["()", "{}", "[]"]:
+                if line.count(open) > line.count(close):
+                    return True
+            return False
+        def indentNextLineShallower(string):
+            line = string.lstrip()
+            for w in ["return", "raise", "pass"]:
+                if line.startswith(w):
+                    return True
+            for open, close in ["()", "{}", "[]"]:
+                if line.count(close) > line.count(open):
+                    return True
+            return False
+
+        if lineNumber == None:
+            lineNumber = self.editor.textCursor().blockNumber() + 1
+        if first:
+            self._editorIndentLineCalls = None
+        if self._editorIndentLineCalls == None:
+            self._editorIndentLineCalls = -1
+            # find previous non-empty line
+            cursor = self.editor.textCursor()
+            while cursor.blockNumber() > 0:
+                cursor.movePosition(QtGui.QTextCursor.Up)
+                cursor.select(QtGui.QTextCursor.LineUnderCursor)
+                prevLine = str(cursor.selectedText())
+                if prevLine.strip():
+                    break # non-empty line found
+            else:
+                prevLine, defaultIndent = "", 0
+            defaultIndent = len(prevLine) - len(prevLine.lstrip())
+            if indentNextLineDeeper(prevLine):
+                defaultIndent += self._editorIndentation
+            if indentNextLineShallower(prevLine):
+                defaultIndent -= self._editorIndentation
+            self._editorIndentSugg = [
+                i * self._editorIndentation for i in
+                range(1 + defaultIndent/self._editorIndentation)[::-1]]
+        self._editorIndentLineCalls += 1
+        if len(self._editorIndentSugg) == 0:
+            return
+        suggest = self._editorIndentSugg[self._editorIndentLineCalls %
+                                         len(self._editorIndentSugg)]
+        cursor = self.editor.textCursor()
+        cursor.select(QtGui.QTextCursor.LineUnderCursor)
+        currentLine = str(cursor.selectedText()).lstrip()
+        newLine = (" " * suggest) + currentLine
+        self._editorIgnoreNextCursorPositionChange = True
+        cursor.insertText(newLine)
+
     def editorCursorPositionChanged(self):
-        self.highlightActiveBitmap()
+        if not self._editorIgnoreNextCursorPositionChange:
+            self._editorIndentLineCalls = None
+            self.highlightActiveBitmap()
+        self._editorIgnoreNextCursorPositionChange = False
 
     def controlDevice(self):
         if self.screenshotButtonControl.isChecked():
@@ -1774,7 +1843,7 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
 
         singleLineCommentFormat = QtGui.QTextCharFormat()
         singleLineCommentFormat.setForeground(QtCore.Qt.darkMagenta)
-        self.highlightingRules.append((QtCore.QRegExp("^#[^\n]*"),
+        self.highlightingRules.append((QtCore.QRegExp("\s*#[^\n]*"),
                                        singleLineCommentFormat))
 
         self._black = QtGui.QColor().black()
