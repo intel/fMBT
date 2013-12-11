@@ -671,6 +671,7 @@ class MainWindow(QtGui.QMainWindow):
         self.editorCombo.addWidget(self.editor)
         self.editor.cursorPositionChanged.connect(
             self.editorCursorPositionChanged)
+        self.editorHighlighter = PythonHighlighter(self.editor.document())
 
         self.console = makeScalableEditor(self.mainwidget, self.editorFont)
         self.editorCombo.addWidget(self.console)
@@ -1739,6 +1740,61 @@ class MainWindow(QtGui.QMainWindow):
     def zoomOutScreenshot(self):
         self.screenshotQLabel._scaleevents.changeScale(0.9)
 
+class PythonHighlighter(QtGui.QSyntaxHighlighter):
+    def __init__(self, parent=None):
+        super(PythonHighlighter, self).__init__(parent)
+        keywordFormat = QtGui.QTextCharFormat()
+        keywordFormat.setForeground(QtCore.Qt.darkBlue)
+        keywordFormat.setFontWeight(QtGui.QFont.Bold)
+
+        keywordPatterns = [
+            "\\band\\b", "\\bdel\\b", "\\bfor\\b", "\\bis\\b", "\\braise\\b",
+            "\\bassert\\b", "\\belif\\b", "\\bfrom\\b", "\\blambda\\b",
+            "\\breturn\\b", "\\bbreak\\b", "\\belse\\b", "\\bglobal\\b",
+            "\\bnot\\b", "\\btry\\b", "\\bclass\\b", "\\bexcept\\b",
+            "\\bif\\b", "\\bor\\b", "\\bwhile\\b", "\\bcontinue\\b",
+            "\\bexec\\b", "\\bimport\\b", "\\bpass\\b", "\\byield\\b",
+            "\\bdef\\b", "\\bfinally\\b", "\\bin\\b", "\\bprint\\b"]
+
+        self.highlightingRules = [(QtCore.QRegExp(pattern), keywordFormat)
+                for pattern in keywordPatterns]
+
+        quotationFormat = QtGui.QTextCharFormat()
+        self._quotationFormat = quotationFormat
+        quotationFormat.setForeground(QtCore.Qt.darkGreen)
+        self.highlightingRules.append((QtCore.QRegExp("\"[^\"]*\""),
+                                       quotationFormat))
+
+        bitmapFilenameFormat = QtGui.QTextCharFormat()
+        self._bitmapFilenameFormat = bitmapFilenameFormat
+        bitmapFilenameFormat.setForeground(QtCore.Qt.darkGreen)
+        bitmapFilenameFormat.setFontWeight(QtGui.QFont.Bold)
+        self.highlightingRules.append((QtCore.QRegExp("\"[^\"]*\.[pP][nN][gG]\""),
+                                       bitmapFilenameFormat))
+
+        singleLineCommentFormat = QtGui.QTextCharFormat()
+        singleLineCommentFormat.setForeground(QtCore.Qt.darkMagenta)
+        self.highlightingRules.append((QtCore.QRegExp("^#[^\n]*"),
+                                       singleLineCommentFormat))
+
+        self._black = QtGui.QColor().black()
+
+    def highlightBlock(self, text):
+        highlightedSomething = False
+        for pattern, format in self.highlightingRules:
+            expression = QtCore.QRegExp(pattern)
+            index = expression.indexIn(text)
+
+            while index >= 0:
+                length = expression.matchedLength()
+                self.setFormat(index, length, format)
+                index = expression.indexIn(text, index + length)
+                highlightedSomething = True
+        # workaround QSyntaxHighlighter + QTextEditor problem that
+        # hides some (random) lines: when no formatting is present,
+        # format always something
+        if not highlightedSomething:
+            self.setFormat(0, len(str(text)), self._black)
 
 if __name__ == "__main__":
     sys.path.insert(0, os.getcwd())
