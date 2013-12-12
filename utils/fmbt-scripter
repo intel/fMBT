@@ -680,6 +680,10 @@ class MainWindow(QtGui.QMainWindow):
         self.editor.cursorPositionChanged.connect(
             self.editorCursorPositionChanged)
         self.editorHighlighter = PythonHighlighter(self.editor.document())
+        self.editorButtonRunSingle.pressed.connect(
+            self.selectPythonStatement)
+        self.editorButtonRunSingle.released.connect(
+            self.editorClearBackground)
 
         self.console = makeScalableEditor(self.mainwidget, self.editorFont)
         self.editorCombo.addWidget(self.console)
@@ -912,6 +916,41 @@ class MainWindow(QtGui.QMainWindow):
                 return pm
         return None
 
+    def selectPythonStatement(self, highlight=True):
+        cursor = self.editor.textCursor()
+        cursor.movePosition(QtGui.QTextCursor.StartOfLine)
+        cursor.movePosition(QtGui.QTextCursor.EndOfLine,
+                            QtGui.QTextCursor.KeepAnchor)
+        line = cursor.block().text().rstrip()
+        indentation = len(line) - len(line.lstrip())
+        line = line[indentation:]
+        if _notPython(line):
+            while cursor.movePosition(QtGui.QTextCursor.Down,
+                                      QtGui.QTextCursor.KeepAnchor):
+                cursor.movePosition(QtGui.QTextCursor.EndOfLine,
+                                    QtGui.QTextCursor.KeepAnchor)
+                nextLine = cursor.block().text()
+                nextIndentation = len(nextLine) - len(nextLine.lstrip())
+                if nextIndentation <= indentation:
+                    cursor.movePosition(QtGui.QTextCursor.Up,
+                                        QtGui.QTextCursor.KeepAnchor)
+                    cursor.movePosition(QtGui.QTextCursor.EndOfLine,
+                                        QtGui.QTextCursor.KeepAnchor)
+                    break
+                line = line + "\n" + nextLine[indentation:]
+        if not _notPython(line) and highlight:
+            cf = cursor.charFormat()
+            cf.setBackground(QtCore.Qt.yellow)
+            cursor.setCharFormat(cf)
+        return line
+
+    def editorClearBackground(self):
+        cursor = self.editor.textCursor()
+        cursor.select(QtGui.QTextCursor.Document)
+        cf = cursor.charFormat()
+        cf.setBackground(QtCore.Qt.white)
+        cursor.setCharFormat(cf)
+
     def runLines(self, lineCount=None, runButton=None, autoUpdate=None):
         if runButton != None:
             runButton.setChecked(True)
@@ -919,19 +958,17 @@ class MainWindow(QtGui.QMainWindow):
             autoUpdate = self.editorButtonRunAutoUpdate.isChecked()
         line = ""
         if lineCount == None or lineCount == 1:
+            autoSelected = True
             if line.startswith("#"): # skip comment lines
                 line = ""
             else: # if needed, take also next lines
-                cursor = self.editor.textCursor()
-                line = cursor.block().text().rstrip()
-                indentation = len(line) - len(line.lstrip())
-                while (_notPython(line) and
-                       cursor.movePosition(QtGui.QTextCursor.Down)):
-                    line = line + "\n" + cursor.block().text()[indentation:]
+                line = self.selectPythonStatement(highlight=False)
                 if _notPython(line):
-                    log("this line is not valid Python code")
+                    log("this block is not valid Python code:")
+                    log(">>>" + line + "<<<")
                     line = ""
         elif lineCount == "selection":
+            autoSelected = False
             line = "\n" + self.editor.textCursor().selectedText()
             line = line.replace(unichr(0x2029), "\n")
             line = _unifyIndentation(line)
@@ -940,8 +977,13 @@ class MainWindow(QtGui.QMainWindow):
 
         if not line == "":
             self.runStatement(line, autoUpdate=autoUpdate)
-        self.editor.moveCursor(QtGui.QTextCursor.Down,
-                               QtGui.QTextCursor.MoveAnchor)
+            if autoSelected:
+                for _ in xrange(len(line.splitlines())):
+                    self.editor.moveCursor(QtGui.QTextCursor.Down,
+                                           QtGui.QTextCursor.MoveAnchor)
+        else:
+            self.editor.moveCursor(QtGui.QTextCursor.Down,
+                                   QtGui.QTextCursor.MoveAnchor)
         self.editor.setFocus()
         if runButton != None:
             runButton.setChecked(False)
@@ -1255,7 +1297,10 @@ class MainWindow(QtGui.QMainWindow):
 
     def _fmbtExec(self, statement, silent=False):
         if not silent or opt_debug:
-            log("executing: %s" % (statement,))
+            if len(statement.splitlines()) > 1:
+                log("executing block:\n%s" % (statement,))
+            else:
+                log("executing line: %s" % (statement,))
         try:
             exec statement in self._fmbtEnv
         except Exception, e:
@@ -1846,10 +1891,12 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
         self.highlightingRules.append((QtCore.QRegExp("\s*#[^\n]*"),
                                        singleLineCommentFormat))
 
-        self._black = QtGui.QColor().black()
+        self.normalFormat = QtGui.QTextCharFormat()
+        self.normalFormat.setForeground(QtCore.Qt.black)
 
     def highlightBlock(self, text):
         highlightedSomething = False
+        highlightedRegions = []
         for pattern, format in self.highlightingRules:
             expression = QtCore.QRegExp(pattern)
             index = expression.indexIn(text)
@@ -1857,13 +1904,14 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
             while index >= 0:
                 length = expression.matchedLength()
                 self.setFormat(index, length, format)
+                highlightedRegions.append((index, index+length))
                 index = expression.indexIn(text, index + length)
                 highlightedSomething = True
         # workaround QSyntaxHighlighter + QTextEditor problem that
         # hides some (random) lines: when no formatting is present,
         # format always something
-        if not highlightedSomething:
-            self.setFormat(0, len(str(text)), self._black)
+        if not highlightedRegions:
+            self.setFormat(0, len(text), self.normalFormat)
 
 if __name__ == "__main__":
     sys.path.insert(0, os.getcwd())
