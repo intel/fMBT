@@ -528,8 +528,8 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotButtonRefresh = QtGui.QPushButton(
             self.screenshotButtons,
             icon = _app.style().standardIcon(QtGui.QStyle.SP_BrowserReload),
-            #text="&Refresh",
             checkable = True)
+
         self.screenshotButtonRefresh.clicked.connect(self.updateScreenshot)
         self.screenshotButtonsL.addWidget(self.screenshotButtonRefresh)
 
@@ -646,14 +646,9 @@ class MainWindow(QtGui.QMainWindow):
                                                           checkable=True)
         self.editorButtonRunSelection.clicked.connect(
             lambda: self.runLines("selection", self.editorButtonRunSelection))
-        self.editorButtonRunAutoUpdate = QtGui.QPushButton("&Auto refresh",
-                                                           checkable=True)
-        self.editorButtonRunAutoUpdate.clicked.connect(
-            lambda: self.editor.setFocus())
         self.editorButtonsLayout.addWidget(self.editorButtonRec)
         self.editorButtonsLayout.addWidget(self.editorButtonRunSingle)
         self.editorButtonsLayout.addWidget(self.editorButtonRunSelection)
-        self.editorButtonsLayout.addWidget(self.editorButtonRunAutoUpdate)
         self.editorWidgetsLayout.addWidget(self.editorButtons)
 
         def makeScalableEditor(parent, font, EditorClass = QtGui.QTextEdit):
@@ -718,8 +713,6 @@ class MainWindow(QtGui.QMainWindow):
 
         viewMenu = QtGui.QMenu("&View", self)
         self.menuBar().addMenu(viewMenu)
-        viewMenu.addAction("Refresh screenshot", self.updateScreenshot,
-                           "Ctrl+R")
         viewMenu.addAction("Zoom in editor", self.zoomInEditor,
                            "Ctrl++")
         viewMenu.addAction("Zoom out editor", self.zoomOutEditor,
@@ -754,6 +747,16 @@ class MainWindow(QtGui.QMainWindow):
         bitmapMenu.addAction("&Swipe", self.swipeBitmap, "Ctrl+B, Ctrl+S")
         bitmapMenu.addAction("&Tap", self.tapBitmap, "Ctrl+B, Ctrl+T")
         bitmapMenu.addAction("&Verify", self.verifyBitmap, "Ctrl+B, Ctrl+V")
+
+        screenshotMenu = QtGui.QMenu("&Screenshot", self)
+        self.menuBar().addMenu(screenshotMenu)
+        screenshotMenu.addAction("&Refresh now", self.updateScreenshot,
+                                 "Ctrl+R")
+        self.screenshotAutoRefresh = QtGui.QAction("&Auto-refresh",
+                                                   screenshotMenu,
+                                                   checkable=True)
+        screenshotMenu.addAction(self.screenshotAutoRefresh)
+        self.screenshotAutoRefresh.changed.connect(self.autoRefreshScreenshot)
 
         self.gestureEvents = []
         self.gestureStarted = False
@@ -820,7 +823,7 @@ class MainWindow(QtGui.QMainWindow):
                 self._recordingHwEvents = False
                 self._fmbtEval('%s.connection().sendRecStop()' % (self._sut,))
         if self.bitmapAutoSelect.isChecked():
-            self.editorButtonRunAutoUpdate.setChecked(True)
+            self.screenshotAutoRefresh.setChecked(True)
         self.editor.setFocus()
 
     def recReadHwEvents(self):
@@ -955,7 +958,7 @@ class MainWindow(QtGui.QMainWindow):
         if runButton != None:
             runButton.setChecked(True)
         if autoUpdate == None:
-            autoUpdate = self.editorButtonRunAutoUpdate.isChecked()
+            autoUpdate = self.screenshotAutoRefresh.isChecked()
         line = ""
         if lineCount == None or lineCount == 1:
             autoSelected = True
@@ -990,7 +993,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def runStatement(self, statement, silent=False, autoUpdate=None):
         if autoUpdate == None:
-            autoUpdate = self.editorButtonRunAutoUpdate.isChecked()
+            autoUpdate = self.screenshotAutoRefresh.isChecked()
         if autoUpdate:
             self.invalidateScreenshot()
         _, exc = self._fmbtExec(statement, silent=silent)
@@ -1253,9 +1256,15 @@ class MainWindow(QtGui.QMainWindow):
             if ok:
                 self._autoBitmapPrefix = choice
             if self.editorButtonRec.isChecked():
-                self.editorButtonRunAutoUpdate.setChecked(True)
+                self.screenshotAutoRefresh.setChecked(True)
         else:
             log("not selecting bitmaps automatically when recording")
+
+    def autoRefreshScreenshot(self):
+        if self.screenshotAutoRefresh.isChecked():
+            self.screenshotButtonRefresh.setText("(auto)")
+        else:
+            self.screenshotButtonRefresh.setText("")
 
     def findNextBitmap(self):
         cursor = self.editor.textCursor()
