@@ -934,7 +934,7 @@ class MainWindow(QtGui.QMainWindow):
                                     QtGui.QTextCursor.KeepAnchor)
                 nextLine = cursor.block().text()
                 nextIndentation = len(nextLine) - len(nextLine.lstrip())
-                if nextIndentation <= indentation:
+                if nextIndentation <= indentation and nextLine.strip():
                     cursor.movePosition(QtGui.QTextCursor.Up,
                                         QtGui.QTextCursor.KeepAnchor)
                     cursor.movePosition(QtGui.QTextCursor.EndOfLine,
