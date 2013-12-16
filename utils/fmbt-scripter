@@ -959,29 +959,29 @@ class MainWindow(QtGui.QMainWindow):
             runButton.setChecked(True)
         if autoUpdate == None:
             autoUpdate = self.screenshotAutoRefresh.isChecked()
-        line = ""
+        code = ""
         if lineCount == None or lineCount == 1:
             autoSelected = True
-            if line.startswith("#"): # skip comment lines
-                line = ""
+            if code.startswith("#"): # skip comment lines
+                code = ""
             else: # if needed, take also next lines
-                line = self.selectPythonStatement(highlight=False)
-                if _notPython(line):
+                code = self.selectPythonStatement(highlight=False)
+                if _notPython(code):
                     log("this block is not valid Python code:")
-                    log(">>>" + line + "<<<")
-                    line = ""
+                    log(">>>" + code + "<<<")
+                    code = ""
         elif lineCount == "selection":
             autoSelected = False
-            line = "\n" + self.editor.textCursor().selectedText()
-            line = line.replace(unichr(0x2029), "\n")
-            line = _unifyIndentation(line)
+            code = "\n" + self.editor.textCursor().selectedText()
+            code = code.replace(unichr(0x2029), "\n")
+            code = _unifyIndentation(code)
         else:
             raise NotImplementedError
 
-        if not line == "":
-            self.runStatement(line, autoUpdate=autoUpdate)
+        if not code == "":
+            self.runStatement(code, autoUpdate=autoUpdate)
             if autoSelected:
-                for _ in xrange(len(line.splitlines())):
+                for _ in xrange(len(code.splitlines())):
                     self.editor.moveCursor(QtGui.QTextCursor.Down,
                                            QtGui.QTextCursor.MoveAnchor)
         else:
@@ -997,6 +997,7 @@ class MainWindow(QtGui.QMainWindow):
         if autoUpdate:
             self.invalidateScreenshot()
         _, exc = self._fmbtExec(statement, silent=silent)
+        self.screenshotShowLatest()
         if autoUpdate:
             self.scheduleUpdateScreenshot(1.0)
         return exc == None
@@ -1364,6 +1365,12 @@ class MainWindow(QtGui.QMainWindow):
 
         self.highlightActiveBitmap()
         return True
+
+    def screenshotShowLatest(self):
+        latest = self._fmbtEval("%s.screenshot().filename()" % (self._sut,))[0]
+        if (self._screenshotFilenames[self.screenshotImageIndex] != latest):
+            self._screenshotFilenames.append(latest)
+            self.screenshotSet(len(self._screenshotFilenames)-1)
 
     def showBitmapsScreenshot(self, filename=None):
         if filename == None:
