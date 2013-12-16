@@ -47,6 +47,11 @@ Options:
           Output from following successful python-code evaluations
           will be written to filename. The default is standard output.
 
+  -f, --format=format
+          Evaluation return values will be converted to string with
+          given formatter. Valid options are str, repr, pickle and
+          raw.
+
 Options when connected:
   -c, --code=python-code
           Execute python-code in ns.
@@ -68,6 +73,7 @@ Example:
 """
 
 import pythonshare
+import cPickle
 import getopt
 import sys
 
@@ -81,18 +87,24 @@ def output(data):
     opt_output_file.write(data)
     opt_output_file.flush()
 
+formatter_str    = lambda o: str(o)
+formatter_repr   = lambda o: repr(o)
+formatter_raw    = lambda o: o
+formatter_pickle = lambda o: cPickle.dumps(o)
+
 if __name__ == "__main__":
     opts, remainder = getopt.gnu_getopt(
-        sys.argv[1:], "C:DAhSs:Pp:n:c:e:r:o:",
+        sys.argv[1:], "C:DAhSs:Pp:n:c:e:r:o:f:",
         ["connect=", "disconnect",
          "async", "sync", "poll",
          "help", "server=", "port=",
          "namespace=", "code=", "eval=", "read=",
-         "output="])
+         "output=", "format="])
     opt_server = "localhost"
     opt_port = pythonshare.default_port
     opt_namespace = "pythonshare-client.default"
     opt_async = False
+    opt_formatter = formatter_str
 
     conn = None
 
@@ -133,7 +145,8 @@ if __name__ == "__main__":
                 conn = pythonshare.connection("socket://%s:%s" %
                                               (opt_server, opt_port))
             try:
-                output(conn.eval_in(opt_namespace, arg, async=opt_async))
+                output(opt_formatter(
+                    conn.eval_in(opt_namespace, arg, async=opt_async)))
             except pythonshare.PythonShareError, e:
                 print type(e)
                 print e
@@ -158,3 +171,8 @@ if __name__ == "__main__":
             print "\n".join([str(arv) for arv in async_rvs])
         elif opt in ["-o", "--output"]:
             opt_output_file = file(arg, "w")
+        elif opt in ["-f", "--format"]:
+            try:
+                opt_formatter = globals()["formatter_%s" % (arg,)]
+            except KeyError:
+                error('invalid formatter "%s", see --help' % (arg,))
