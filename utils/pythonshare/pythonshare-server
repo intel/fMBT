@@ -1,0 +1,143 @@
+#!/usr/bin/env python
+# fMBT, free Model Based Testing tool
+# Copyright (c) 2013, Intel Corporation.
+#
+# Author: antti.kervinen@intel.com
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU Lesser General Public License,
+# version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for
+# more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+# This executable launches pythonshare servers.
+
+"""Pythonshare server - shared persistent distributed namespaces
+
+Usage: pythonshare-server [options]
+
+General options:
+  -d, --debug
+          Start server in debug mode. Does not fork daemon, writes
+          log to standard output.
+
+  -h, --help
+          Print help.
+
+  -l, --log=filename
+          Write log to filename.
+
+  -p, --port=number
+          Listen to TCP/IP port number. Only local connections to this
+          port are allowed by default.
+
+  --interface=all
+          Listen to TCP/IP connections from all network interfaces.
+          The default is to listen to only local connections.
+
+Options for namespaces:
+  -n, --namespace=ns
+          Following export, import and init will be done on namespace
+          ns.
+
+  -E, --export-to=hostspec
+          Connect to pythonshare-server via hostspec, export local
+          namespace ns to that server.
+
+  -I, --import-from=hostspec
+          Connect to pythonshare-server via hostspec, import namespace
+          ns available on that server to this server.
+
+  -i, --init=python-code
+          Execute python-code in namespace ns.
+"""
+
+import pythonshare
+import getopt
+import sys
+import tempfile
+import os
+
+opt_bind_host = "127.0.0.1" # allow only local connections by default
+opt_bind_port = pythonshare.default_port
+opt_debug = False
+opt_log_fd = None
+opt_log_filename = None
+opt_namespace = None
+
+# ("import|export|init", namespace, host-port|code)
+opt_init_import_export = []
+
+def error(msg, exit_status=1):
+    sys.stderr.write("pythonshare-server: %s\n" % (msg,))
+    sys.exit(1)
+
+if __name__ == "__main__":
+    try:
+        opts, remainder = getopt.gnu_getopt(
+            sys.argv[1:], "dhp:n:E:I:i:l:",
+            ["debug", "help", "port=", "log=",
+             "namespace=", "init=", "export-to=", "import-from=",
+             "interface="])
+    except getopt.GetoptError, e:
+        error(e)
+
+    if len(remainder) > 0:
+        error('unknown arguments: "%s"' % ('", "'.join(remainder)))
+
+    for opt, arg in opts:
+        if opt in ["-d", "--debug"]:
+            opt_debug = True
+            opt_log_fd, opt_log_filename = tempfile.mkstemp(
+                prefix="pythonshare.server.%s." % (os.getpid(),), text=True)
+        elif opt in ["-h", "--help"]:
+            print __doc__
+            sys.exit(0)
+        elif opt in ["-n", "--namespace"]:
+            opt_namespace = arg
+        elif opt in ["-E", "--export-to"]:
+            if opt_namespace == None:
+                error('undefined namespace for exporting to %s, '
+                      'give --namespace first' % (arg))
+            opt_init_import_export.append(["export", opt_namespace, arg])
+        elif opt in ["-I", "--import-from"]:
+            if opt_namespace == None:
+                error('undefined namespace for import from %s, '
+                      'give --namespace first' % (arg))
+            opt_init_import_export.append(["import", opt_namespace, arg])
+        elif opt in ["-i", "--init"]:
+            if opt_namespace == None:
+                error('undefined namespace for init, give --namespace first')
+            opt_init_import_export.append(["init", opt_namespace, arg])
+        elif opt in ["-l", "--log"]:
+            try:
+                log_file = file(arg, "w")
+            except IOError, e:
+                error('cannot open log file "%s" for writing. (%s)' % (arg, e))
+            opt_log_fd = log_file.fileno()
+        elif opt in ["-p", "--port"]:
+            try:
+                opt_bind_port = int(arg)
+            except ValueError:
+                error('invalid port "%s", integer expected.' % (arg,))
+        elif opt in ["--interface"]:
+            if arg == "all":
+                opt_bind_host = ""
+            else:
+                opt_bind_host=arg
+        else:
+            error('no behaviour specified for: "%s"' % (opt,))
+
+    pythonshare.server.start_daemon(
+        host = opt_bind_host,
+        port = opt_bind_port,
+        debug = opt_debug,
+        log_fd = opt_log_fd,
+        ns_init_import_export = opt_init_import_export)
