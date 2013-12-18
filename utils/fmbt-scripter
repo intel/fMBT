@@ -216,10 +216,6 @@ class MyScaleEvents(QtCore.QObject):
             if event.key() == QtCore.Qt.Key_Tab:
                 self.mainwindow.editorIndentLine()
                 return True
-            elif (event.key() == QtCore.Qt.Key_F and
-                  event.modifiers() == QtCore.Qt.ControlModifier):
-                self.mainwindow.showFindDialog()
-                return True
         if self.mainwindow._selectingBitmap:
             return self.eventToSelect(event)
         else:
@@ -717,6 +713,7 @@ class MainWindow(QtGui.QMainWindow):
 
         editMenu = QtGui.QMenu("&Edit", self)
         self.menuBar().addMenu(editMenu)
+        editMenu.addAction("&Find", self.showFindDialog, "Ctrl+F")
         editMenu.addAction("&Settings", self.showSettingsDialog)
 
         viewMenu = QtGui.QMenu("&View", self)
@@ -958,7 +955,13 @@ class MainWindow(QtGui.QMainWindow):
         return line
 
     def editorClearBackground(self):
-        cursor = self.editor.textCursor()
+        self.clearBackground(self.editor)
+
+    def consoleClearBackground(self):
+        self.clearBackground(self.console)
+
+    def clearBackground(self, textEdit):
+        cursor = textEdit.textCursor()
         cursor.select(QtGui.QTextCursor.Document)
         cf = cursor.charFormat()
         cf.setBackground(QtCore.Qt.white)
@@ -1860,9 +1863,16 @@ class MainWindow(QtGui.QMainWindow):
     def showFindDialog(self):
         if self._findDialog == None:
             self._findDialog = FindDialog(self, QtCore.Qt.WindowType.Dialog)
-        self._findDialog.show(self.editor)
-        rv = self._findDialog.exec_()
-        self.editorClearBackground()
+        if self._findDialog.isVisible():
+            self._findDialog.findNext()
+        else:
+            if self.console.hasFocus():
+                self._findDialog.show(self.console)
+            else:
+                self._findDialog.show(self.editor)
+            self._findDialog.exec_()
+            self.editorClearBackground()
+            self.consoleClearBackground()
 
     def setScreenshotSaveDir(self, directory):
         try:
