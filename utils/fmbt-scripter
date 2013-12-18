@@ -1949,7 +1949,7 @@ class FindDialog(QtGui.QDialog):
         self.foundItemWidget = QtGui.QLabel("0 / 0", self)
         self.textWidget = QtGui.QLineEdit(self)
         self.textWidget.textChanged.connect(self.textChanged)
-        self.textWidget.returnPressed.connect(self.findAndQuit)
+        self.textWidget.returnPressed.connect(self.moveCursorAndQuit)
         self.searchedText = {}
         self.currentCursor = None
         self.highlighted = None
@@ -1963,73 +1963,75 @@ class FindDialog(QtGui.QDialog):
         if event.type() == QtCore.QEvent.Type.KeyPress:
             if (event.key() == QtCore.Qt.Key_F and
                 event.modifiers() == QtCore.Qt.ControlModifier):
-                self.findNext(moveCursor = True)
+                self.findNext()
                 return True
             elif (event.key() == QtCore.Qt.Key_R and
                 event.modifiers() == QtCore.Qt.ControlModifier):
-                self.findPrev(moveCursor = True)
+                self.findPrev()
                 return True
         return QtGui.QDialog.event(self, event)
 
     def show(self, editor):
         self.editor = editor
         self.plainText = editor.toPlainText()
+        self.currentCursor = editor.textCursor()
         self.textWidget.setText(self.searchedText.get(id(self.editor), ""))
         QtGui.QDialog.show(self)
         self.textWidget.setFocus()
+        self.textChanged(self.textWidget.text())
 
     def textChanged(self, text):
+        self.clearBackground()
+        self.highlighted = None
         self.searchedText[id(self.editor)] = text
         if text == "":
             self.foundItemWidget.setText("0 / 0")
         else:
             self.find(text)
-            self.findNext(moveCursor = False)
 
-    def findNext(self, moveCursor = False):
+    def findNext(self):
+        if self.currentCursor == None:
+            self.currentCursor = self.editor.textCursor()
         if self.highlighted:
-            self.setBackground(self.highlighted[0], self.highlighted[1], QtCore.Qt.yellow)
-        self.currentCursor = self.editor.textCursor()
-        p = self.currentCursor.position()
+            p = self.highlighted[1]
+        else:
+            p = self.currentCursor.position()
         nextHits = [f for f in self.found if f[0] > p]
         if nextHits:
-            self.highlighted = nextHits[0]
+            self.changeHighlighted(nextHits[0],
+                                   len(self.found) - len(nextHits) + 1,
+                                   len(self.found))
             self.currentCursor.setPosition(nextHits[0][1])
-            if moveCursor:
-                self.editor.setTextCursor(self.currentCursor)
-            self.foundItemWidget.setText(
-                "%s / %s" % (len(self.found) - len(nextHits) + 1,
-                             len(self.found)))
-        else:
-            self.foundItemWidget.setText("? / %s" % (len(self.found),))
-        if self.highlighted:
-            self.setBackground(self.highlighted[0], self.highlighted[1], QtCore.Qt.green)
 
-    def findPrev(self, moveCursor = False):
+    def findPrev(self):
+        if self.currentCursor == None:
+            self.currentCursor = self.editor.textCursor()
         if self.highlighted:
-            self.setBackground(self.highlighted[0], self.highlighted[1], QtCore.Qt.yellow)
-        self.currentCursor = self.editor.textCursor()
-        p = self.currentCursor.position()
+            p = self.highlighted[1]
+        else:
+            p = self.currentCursor.position()
         prevHits = [f for f in self.found if not f[1] >= p]
         if prevHits:
-            self.highlighted = prevHits[-1]
+            self.changeHighlighted(prevHits[-1],
+                                   len(prevHits),
+                                   len(self.found))
             self.currentCursor.setPosition(prevHits[-1][1])
-            if moveCursor:
-                self.editor.setTextCursor(self.currentCursor)
-            self.foundItemWidget.setText(
-                "%s / %s" % (len(prevHits),
-                             len(self.found)))
-        else:
-            self.foundItemWidget.setText("? / %s" % (len(self.found),))
+
+    def changeHighlighted(self, newHighlighted, item, count):
         if self.highlighted:
-            self.setBackground(self.highlighted[0], self.highlighted[1], QtCore.Qt.green)
-    def findAndQuit(self):
+            self.setBackground(self.highlighted, QtCore.Qt.yellow)
+        self.highlighted = newHighlighted
+        if self.highlighted:
+            self.setBackground(self.highlighted, QtCore.Qt.green)
+        self.foundItemWidget.setText("%s / %s" % (item, count))
+
+    def moveCursorAndQuit(self):
         if self.currentCursor and self.highlighted:
             self.currentCursor.setPosition(self.highlighted[1])
             self.editor.setTextCursor(self.currentCursor)
         self.close()
 
-    def setBackground(self, startPos, endPos, color):
+    def setBackground(self, (startPos, endPos), color):
         cursor = self.editor.textCursor()
         cursor.movePosition(QtGui.QTextCursor.Start)
         cursor.movePosition(QtGui.QTextCursor.Right,
@@ -2042,39 +2044,42 @@ class FindDialog(QtGui.QDialog):
         cf.setBackground(color)
         cursor.setCharFormat(cf)
 
-    def find(self, text):
-        self.foundItemWidget.setText("0 / 0")
-
-        # clear background coloring
+    def clearBackground(self):
         cursor = self.editor.textCursor()
         cursor.select(QtGui.QTextCursor.Document)
         cf = cursor.charFormat()
         cf.setBackground(QtCore.Qt.white)
         cursor.setCharFormat(cf)
 
+    def find(self, text):
+        self.foundItemWidget.setText("0 / 0")
+        self.clearBackground()
         self.found = []
-
         if len(text) == 0:
             return
-
+        if self.currentCursor:
+            currentPos = self.currentCursor.position()
+        else:
+            currentPos = self.editor.textCursor.position()
+        cursor = self.editor.textCursor()
         # color all text instances with yellow
         searchPos = 0
         foundPos = self.plainText.find(text, searchPos)
         cursor = self.editor.textCursor()
         cursor.movePosition(QtGui.QTextCursor.Start)
         while foundPos >= 0:
-            self.found.append((foundPos, foundPos + len(text)))
-            cursor.movePosition(QtGui.QTextCursor.Right,
-                                QtGui.QTextCursor.MoveAnchor,
-                                foundPos - searchPos)
-            cursor.movePosition(QtGui.QTextCursor.Right,
-                                QtGui.QTextCursor.KeepAnchor,
-                                len(text))
-            cf = cursor.charFormat()
-            cf.setBackground(QtCore.Qt.yellow)
-            cursor.setCharFormat(cf)
+            wordLoc = (foundPos, foundPos + len(text))
+            self.found.append(wordLoc)
+            self.setBackground(wordLoc, QtCore.Qt.yellow)
             searchPos = foundPos + len(text)
             foundPos = self.plainText.find(text, searchPos)
+        nextHits = [p for p in self.found if p[1] >= currentPos]
+        if nextHits:
+            self.changeHighlighted(
+                nextHits[0], len(self.found) - len(nextHits) + 1,
+                len(self.found))
+        else:
+            self.changeHighlighted(None, "?", len(self.found))
 
 if __name__ == "__main__":
     sys.path.insert(0, os.getcwd())
