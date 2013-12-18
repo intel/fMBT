@@ -21,6 +21,7 @@
 import datetime
 import getopt
 import os
+import platform
 import socket
 import sys
 import tempfile
@@ -33,18 +34,26 @@ import pythonshare
 messages = pythonshare.messages
 client = pythonshare.client
 
+on_windows = (platform.system() == "Windows")
+
 opt_log_fd = None
 opt_allow_new_namespaces = True
 
 def timestamp():
-    # TODO: do something different on windows!
-    return datetime.datetime.now().strftime("%s.%f")
+    if on_windows:
+        rv = "%.6f" % (
+            (datetime.datetime.now() -
+             datetime.datetime(1970,1,1)).total_seconds(),)
+    else:
+        rv = datetime.datetime.now().strftime("%s.%f")
+    return rv
 
 def daemon_log(msg):
     formatted_msg = "%s %s\n" % (timestamp(), msg)
     if opt_log_fd != None:
         os.write(opt_log_fd, formatted_msg)
-        os.fdatasync(opt_log_fd)
+        if not on_windows:
+            os.fdatasync(opt_log_fd)
     if opt_debug:
         sys.stdout.write(formatted_msg)
         sys.stdout.flush()
@@ -302,7 +311,7 @@ def start_daemon(host="localhost", port=8089, debug=False,
     global opt_log_fd, opt_debug
     opt_log_fd = log_fd
     opt_debug = debug
-    if opt_debug == False:
+    if opt_debug == False and not on_windows:
         # The usual fork magic, cleaning up all connections to the parent process
         if os.fork() > 0:
             return

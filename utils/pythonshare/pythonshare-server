@@ -36,11 +36,12 @@ General options:
 
   -p, --port=number
           Listen to TCP/IP port number. Only local connections to this
-          port are allowed by default.
+          port are allowed by default. The default port is 8089.
 
   --interface=all
           Listen to TCP/IP connections from all network interfaces.
           The default is to listen to only local connections.
+          WARNING: allows remote code execution on the host!
 
 Options for namespaces:
   -n, --namespace=ns
