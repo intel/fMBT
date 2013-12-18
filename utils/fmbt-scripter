@@ -81,8 +81,8 @@ def _bitmapScreenshotFilename(bitmapFilename):
 
 def _notPython(code):
     try:
-        s = parser.suite(code)
-    except SyntaxError, e:
+        parser.suite(code)
+    except SyntaxError:
         return True
     return False
 
@@ -369,8 +369,9 @@ class SettingsDialog(QtGui.QDialog):
         self.pathsBitmapDirLabel = QtGui.QLabel("Bitmap save directory",
                                                 self.pathsTab)
         self.pathsBitmapDir = QtGui.QLineEdit(self.pathsTab)
-        self.pathsBitmapDir.setToolTip("If empty, new bitmaps are saved to "
-                                       "the first directory in the bitmap path.")
+        self.pathsBitmapDir.setToolTip(
+            "If empty, new bitmaps are saved to "
+            "the first directory in the bitmap path.")
         self.pathsBitmapDirBrowse = QtGui.QPushButton("Browse", self.pathsTab)
         self.pathsBitmapDirBrowse.clicked.connect(
             lambda: self.browseDir(self.pathsBitmapDir))
@@ -381,7 +382,8 @@ class SettingsDialog(QtGui.QDialog):
         self.pathsScreenshotDirLabel = QtGui.QLabel(
             "Screenshot save directory", self.pathsTab)
         self.pathsScreenshotDir = QtGui.QLineEdit(self.pathsTab)
-        self.pathsScreenshotDirBrowse = QtGui.QPushButton("Browse", self.pathsTab)
+        self.pathsScreenshotDirBrowse = QtGui.QPushButton("Browse",
+                                                          self.pathsTab)
         self.pathsScreenshotDirBrowse.clicked.connect(
             lambda: self.browseDir(self.pathsScreenshotDir))
         self.pathsScreenshotDirLayout = QtGui.QHBoxLayout()
@@ -568,7 +570,7 @@ class MainWindow(QtGui.QMainWindow):
             qlabel.setSizePolicy(QtGui.QSizePolicy.Ignored,
                                  QtGui.QSizePolicy.Ignored)
             qlabel.setScaledContents(True)
-            qlabel.resize(QtCore.QSize(0,0))
+            qlabel.resize(QtCore.QSize(0, 0))
 
             area = QtGui.QScrollArea(container)
             area.setContentsMargins(0, 0, 0, 0)
@@ -634,7 +636,6 @@ class MainWindow(QtGui.QMainWindow):
         self.editorWidgets = QtGui.QWidget(self.mainwidget)
         self.editorWidgets.setContentsMargins(0, 0, 0, 0)
         self.editorWidgetsLayout = QtGui.QVBoxLayout()
-        #self.editorWidgets = QtGui.QSplitter(QtCore.Qt.Vertical, self.mainwidget)
         self.editorWidgets.setLayout(self.editorWidgetsLayout)
 
         self.editorButtons = QtGui.QWidget(self.editorWidgets)
@@ -658,7 +659,7 @@ class MainWindow(QtGui.QMainWindow):
         self.editorWidgetsLayout.addWidget(self.editorButtons)
 
         def makeScalableEditor(parent, font, EditorClass = QtGui.QTextEdit):
-            editor = EditorClass()
+            editor = EditorClass(parent)
             editor.setUndoRedoEnabled(True)
             editor.setLineWrapMode(editor.NoWrap)
             editor.setFont(font)
@@ -670,7 +671,8 @@ class MainWindow(QtGui.QMainWindow):
             editor.installEventFilter(editor._scaleevents)
             return editor
 
-        self.editorCombo = QtGui.QSplitter(QtCore.Qt.Vertical, self.editorWidgets)
+        self.editorCombo = QtGui.QSplitter(QtCore.Qt.Vertical,
+                                           self.editorWidgets)
 
         self.editorFont = QtGui.QFont()
         self.editorFont.setFamily('Courier')
@@ -747,8 +749,10 @@ class MainWindow(QtGui.QMainWindow):
         bitmapMenu.addSeparator()
         bitmapMenu.addAction(self.bitmapAutoSelect)
         bitmapMenu.addSeparator()
-        bitmapMenu.addAction("Goto &next", self.findNextBitmap, "Ctrl+B, Ctrl+N")
-        bitmapMenu.addAction("Goto &previous", self.findPrevBitmap, "Ctrl+B, Ctrl+P")
+        bitmapMenu.addAction("Goto &next", self.findNextBitmap,
+                             "Ctrl+B, Ctrl+N")
+        bitmapMenu.addAction("Goto &previous", self.findPrevBitmap,
+                             "Ctrl+B, Ctrl+P")
         bitmapMenu.addSeparator()
         bitmapMenu.addAction("&Swipe", self.swipeBitmap, "Ctrl+B, Ctrl+S")
         bitmapMenu.addAction("&Tap", self.tapBitmap, "Ctrl+B, Ctrl+T")
@@ -774,7 +778,6 @@ class MainWindow(QtGui.QMainWindow):
         else:
             cursor = self.editor.textCursor()
         pos = cursor.positionInBlock()
-        lineno = cursor.blockNumber()
         cursor.select(QtGui.QTextCursor.LineUnderCursor)
         l = cursor.selectedText()
         start = l.rfind('"', 0, pos-1)
@@ -799,7 +802,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def bitmapFilepath(self, filename):
         try:
-            filepath, exc = self._fmbtEval(
+            filepath, _ = self._fmbtEval(
                 '%s._paths.abspath("%s")' % (self._sut, filename),
                 silent=True)
             return filepath
@@ -893,7 +896,8 @@ class MainWindow(QtGui.QMainWindow):
                         gEv = GestureEvent(ev, 0, (x, y), t)
                     elif ev in ["keyup", "keydown"]:
                         if self._sutPressMethod(keyName):
-                            keyName = self._sutPressMethod(keyName).lstrip("press")
+                            keyName = self._sutPressMethod(keyName).lstrip(
+                                "press")
                         gEv = GestureEvent(ev, keyName, None, t)
                     self._recordedTouchEvents.append(gEv)
                     if ev in ["keyup", "mouseup"]:
@@ -915,7 +919,7 @@ class MainWindow(QtGui.QMainWindow):
         if keyName.startswith("KEY_"):
             lowerMethodName = "press" + keyName.lstrip("KEY_").lower()
         else:
-             lowerMethodName = "press" + keyName.lower()
+            lowerMethodName = "press" + keyName.lower()
         attrs, exc = self._fmbtEval("dir(%s)" % (self._sut,))
         if exc:
             return None
@@ -1016,7 +1020,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def newAndroid(self):
         try:
-            s, o, e = fmbtandroid._run(["adb", "devices"], expectedExitStatus=0)
+            _, o, _ = fmbtandroid._run(["adb", "devices"], expectedExitStatus=0)
         except:
             log("cannot connect to Android devices: adb not available")
             return
@@ -1232,7 +1236,7 @@ class MainWindow(QtGui.QMainWindow):
                 except:
                     pass
             if x != None and y != None:
-                left, top, right, bottom = self.autoBitmapBoundingBox((x,y))
+                left, top, right, bottom = self.autoBitmapBoundingBox((x, y))
                 self._selectingBitmap, self._selectingBitmapSaveDir = \
                     self.autoBitmapFilename()
                 bitmapFilename = os.path.relpath(
@@ -1258,7 +1262,8 @@ class MainWindow(QtGui.QMainWindow):
         if self.bitmapAutoSelect.isChecked():
             log("selecting bitmaps automatically when recording")
             choice, ok = QtGui.QInputDialog.getText(
-                self, "Bitmap auto-selection", "Auto-selected bitmap filename prefix",
+                self, "Bitmap auto-selection",
+                "Auto-selected bitmap filename prefix",
                 text=self._autoBitmapPrefix)
             if ok:
                 self._autoBitmapPrefix = choice
@@ -1362,7 +1367,7 @@ class MainWindow(QtGui.QMainWindow):
             self._screenshotImageOrig = None
 
         if self._sut:
-            oldName, exc = self._fmbtEval("%s.screenshot().filename()" %
+            _, exc = self._fmbtEval("%s.screenshot().filename()" %
                                           (self._sut,), silent=True)
             if exc == None:
                 self._fmbtExec('%s.refreshScreenshot("%s")' %
@@ -1421,7 +1426,7 @@ class MainWindow(QtGui.QMainWindow):
         if self._sut != None:
             if recordable and self.editorButtonRec.isChecked():
                 self.addAPICall("refreshScreenshot()\n")
-            rv, exc = self._fmbtExec(
+            _, exc = self._fmbtExec(
                 '%s.refreshScreenshot()' %
                 (self._sut,))
             if exc == None:
@@ -1501,12 +1506,15 @@ class MainWindow(QtGui.QMainWindow):
             items, exc = self._fmbtEval(
                 '%s.screenshot().findItemsByBitmap("%s")' % (
                 self._sut, filename))
-            if items:
-                log('bitmap "%s" found at %s bbox: %s' % (
-                    filename, items[0].coords(), items[0].bbox()))
-                self.drawRect(*items[0].bbox())
+            if exc == None:
+                if items:
+                    log('bitmap "%s" found at %s bbox: %s' % (
+                        filename, items[0].coords(), items[0].bbox()))
+                    self.drawRect(*items[0].bbox())
+                else:
+                    log('bitmap "%s" not found on screenshot' % (filename,))
             else:
-                log('bitmap "%s" not found on screenshot' % (filename,))
+                log('finding bitmap "%s" failed: %s' % (filename, exc))
 
     def tapBitmap(self, filepath=None):
         if self.editorButtonRec.isChecked():
@@ -1564,10 +1572,11 @@ class MainWindow(QtGui.QMainWindow):
             line = string.rstrip()
             if line.endswith(":"):
                 return True
-            for open, close in ["()", "{}", "[]"]:
-                if line.count(open) > line.count(close):
+            for parenOpen, parenClose in ["()", "{}", "[]"]:
+                if line.count(parenOpen) > line.count(parenClose):
                     return True
             return False
+
         def indentNextLineShallower(string):
             line = string.lstrip()
             for w in ["return", "raise", "pass"]:
@@ -1729,16 +1738,16 @@ class MainWindow(QtGui.QMainWindow):
         else:
             self.screenshotImage = self._screenshotImageOrig.copy()
         if not clear:
-            x1, y1, x2, y2 = left, top, right, bottom
+            x, y = left, top
             w, h = (right-left), (bottom-top)
             painter = QtGui.QPainter(self.screenshotImage)
             bgPen = QtGui.QPen(QtGui.QColor(0, 0, 0), 1)
             fgPen = QtGui.QPen(QtGui.QColor(128, 255, 128), 1)
             painter.setPen(bgPen)
-            painter.drawRect(x1-2, y1-2, w+4, h+4)
-            painter.drawRect(x1, y1, w, h)
+            painter.drawRect(x-2, y-2, w+4, h+4)
+            painter.drawRect(x, y, w, h)
             painter.setPen(fgPen)
-            painter.drawRect(x1-1, y1-1, w+2, h+2)
+            painter.drawRect(x-1, y-1, w+2, h+2)
         self.updateScreenshotView()
 
     def setScripterConnectCode(self, code):
@@ -1751,13 +1760,15 @@ class MainWindow(QtGui.QMainWindow):
             cursor.movePosition(QtGui.QTextCursor.Right,
                                 QtGui.QTextCursor.KeepAnchor,
                                 n = connMatch.end() - connMatch.start())
-        codelines = ["# scripter-connect: %s\n" % (l,) for l in code.splitlines()]
+        codelines = ["# scripter-connect: %s\n" % (l,)
+                     for l in code.splitlines()]
         cursor.insertText("".join(codelines))
         if connMatch:
             c = c[connMatch.end():]
             connMatch = _g_scripterConnectRE.search(c)
             while connMatch:
-                cursor.movePosition(QtGui.QTextCursor.Right, n=connMatch.start())
+                cursor.movePosition(QtGui.QTextCursor.Right,
+                                    n=connMatch.start())
                 cursor.movePosition(QtGui.QTextCursor.Right,
                                     QtGui.QTextCursor.KeepAnchor,
                                     n = connMatch.end() - connMatch.start())
@@ -1861,7 +1872,8 @@ class MainWindow(QtGui.QMainWindow):
                     oldDir, exc = self._fmbtEval("%s.screenshotDir()" %
                                             (self._sut,), silent=True)
                     if exc: raise Exception(exc)
-                    if not oldDir or os.path.abspath(oldDir) != os.path.abspath(directory):
+                    if (not oldDir or
+                        os.path.abspath(oldDir) != os.path.abspath(directory)):
                         self.doAPICall('.setScreenshotDir("%s")' %
                                        (directory.replace('"', '\\"'),))
         except Exception, e:
@@ -1912,8 +1924,9 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
         self._bitmapFilenameFormat = bitmapFilenameFormat
         bitmapFilenameFormat.setForeground(QtCore.Qt.darkGreen)
         bitmapFilenameFormat.setFontWeight(QtGui.QFont.Bold)
-        self.highlightingRules.append((QtCore.QRegExp("\"[^\"]*\.[pP][nN][gG]\""),
-                                       bitmapFilenameFormat))
+        self.highlightingRules.append(
+            (QtCore.QRegExp("\"[^\"]*\.[pP][nN][gG]\""),
+             bitmapFilenameFormat))
 
         singleLineCommentFormat = QtGui.QTextCharFormat()
         singleLineCommentFormat.setForeground(QtCore.Qt.darkMagenta)
@@ -1951,13 +1964,14 @@ class FindDialog(QtGui.QDialog):
         self.textWidget.textChanged.connect(self.textChanged)
         self.textWidget.returnPressed.connect(self.moveCursorAndQuit)
         self.searchedText = {}
-        self.currentCursor = None
+        self.findCursor = None
         self.highlighted = None
 
         self.layout.addWidget(QtGui.QLabel("Find", self), 0, 0)
         self.layout.addWidget(self.textWidget, 0, 1)
         self.layout.addWidget(self.foundItemWidget, 0, 2)
-        self.layout.addWidget(QtGui.QLabel("Ctrl+F: forward, Ctrl+R: reverse"), 1, 1)
+        self.layout.addWidget(QtGui.QLabel("Ctrl+F: forward, Ctrl+R: reverse"),
+                              1, 1)
 
     def event(self, event):
         if event.type() == QtCore.QEvent.Type.KeyPress:
@@ -1969,12 +1983,16 @@ class FindDialog(QtGui.QDialog):
                 event.modifiers() == QtCore.Qt.ControlModifier):
                 self.findPrev()
                 return True
+        elif event.type() == QtCore.QEvent.Type.Hide:
+            if self.origCursor and self.editor:
+                self.editor.setTextCursor(self.origCursor)
         return QtGui.QDialog.event(self, event)
 
     def show(self, editor):
         self.editor = editor
         self.plainText = editor.toPlainText()
-        self.currentCursor = editor.textCursor()
+        self.findCursor = editor.textCursor()
+        self.origCursor = editor.textCursor()
         self.textWidget.setText(self.searchedText.get(id(self.editor), ""))
         QtGui.QDialog.show(self)
         self.textWidget.setFocus()
@@ -1989,33 +2007,49 @@ class FindDialog(QtGui.QDialog):
         else:
             self.find(text)
 
-    def findNext(self):
-        if self.currentCursor == None:
-            self.currentCursor = self.editor.textCursor()
-        if self.highlighted:
-            p = self.highlighted[1]
+    def find(self, text):
+        self.foundItemWidget.setText("0 / 0")
+        self.clearBackground()
+        self.found = []
+        if len(text) == 0:
+            return
+        findPos = self.findCursor.position()
+        # color all text instances with yellow
+        searchPos = 0
+        foundPos = self.plainText.find(text, searchPos)
+        while foundPos >= 0:
+            wordLoc = (foundPos, foundPos + len(text))
+            self.found.append(wordLoc)
+            # Note: setBackground gets slow if there are thousands
+            # of matches. Consider putting it in a background thread.
+            self.setBackground(wordLoc, QtCore.Qt.yellow)
+            searchPos = foundPos + len(text)
+            foundPos = self.plainText.find(text, searchPos)
+        nextHits = [p for p in self.found if p[1] >= findPos]
+        if nextHits:
+            self.changeHighlighted(
+                nextHits[0], len(self.found) - len(nextHits) + 1,
+                len(self.found))
         else:
-            p = self.currentCursor.position()
+            self.changeHighlighted(None, "?", len(self.found))
+
+    def findNext(self):
+        p = self.findCursor.position()
         nextHits = [f for f in self.found if f[0] > p]
         if nextHits:
             self.changeHighlighted(nextHits[0],
                                    len(self.found) - len(nextHits) + 1,
                                    len(self.found))
-            self.currentCursor.setPosition(nextHits[0][1])
+            self.findCursor.setPosition(nextHits[0][1])
 
     def findPrev(self):
-        if self.currentCursor == None:
-            self.currentCursor = self.editor.textCursor()
-        if self.highlighted:
-            p = self.highlighted[1]
-        else:
-            p = self.currentCursor.position()
+        p = self.findCursor.position()
         prevHits = [f for f in self.found if not f[1] >= p]
         if prevHits:
             self.changeHighlighted(prevHits[-1],
                                    len(prevHits),
                                    len(self.found))
-            self.currentCursor.setPosition(prevHits[-1][1])
+            self.findCursor.setPosition(prevHits[-1][1])
 
     def changeHighlighted(self, newHighlighted, item, count):
         if self.highlighted:
@@ -2023,20 +2057,21 @@ class FindDialog(QtGui.QDialog):
         self.highlighted = newHighlighted
         if self.highlighted:
             self.setBackground(self.highlighted, QtCore.Qt.green)
+            cursor = self.editor.textCursor()
+            cursor.setPosition(self.highlighted[1])
+            self.editor.setTextCursor(cursor)
+            self.editor.ensureCursorVisible()
         self.foundItemWidget.setText("%s / %s" % (item, count))
 
     def moveCursorAndQuit(self):
-        if self.currentCursor and self.highlighted:
-            self.currentCursor.setPosition(self.highlighted[1])
-            self.editor.setTextCursor(self.currentCursor)
+        if self.findCursor and self.highlighted:
+            self.findCursor.setPosition(self.highlighted[1])
+            self.origCursor = self.findCursor
         self.close()
 
     def setBackground(self, (startPos, endPos), color):
         cursor = self.editor.textCursor()
-        cursor.movePosition(QtGui.QTextCursor.Start)
-        cursor.movePosition(QtGui.QTextCursor.Right,
-                            QtGui.QTextCursor.MoveAnchor,
-                            startPos)
+        cursor.setPosition(startPos)
         cursor.movePosition(QtGui.QTextCursor.Right,
                             QtGui.QTextCursor.KeepAnchor,
                             endPos - startPos)
@@ -2051,35 +2086,6 @@ class FindDialog(QtGui.QDialog):
         cf.setBackground(QtCore.Qt.white)
         cursor.setCharFormat(cf)
 
-    def find(self, text):
-        self.foundItemWidget.setText("0 / 0")
-        self.clearBackground()
-        self.found = []
-        if len(text) == 0:
-            return
-        if self.currentCursor:
-            currentPos = self.currentCursor.position()
-        else:
-            currentPos = self.editor.textCursor.position()
-        cursor = self.editor.textCursor()
-        # color all text instances with yellow
-        searchPos = 0
-        foundPos = self.plainText.find(text, searchPos)
-        cursor = self.editor.textCursor()
-        cursor.movePosition(QtGui.QTextCursor.Start)
-        while foundPos >= 0:
-            wordLoc = (foundPos, foundPos + len(text))
-            self.found.append(wordLoc)
-            self.setBackground(wordLoc, QtCore.Qt.yellow)
-            searchPos = foundPos + len(text)
-            foundPos = self.plainText.find(text, searchPos)
-        nextHits = [p for p in self.found if p[1] >= currentPos]
-        if nextHits:
-            self.changeHighlighted(
-                nextHits[0], len(self.found) - len(nextHits) + 1,
-                len(self.found))
-        else:
-            self.changeHighlighted(None, "?", len(self.found))
 
 if __name__ == "__main__":
     sys.path.insert(0, os.getcwd())
