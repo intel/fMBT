@@ -242,6 +242,8 @@ class MyScaleEvents(QtCore.QObject):
         wS = self.attrowner.wheel_scale
         screenWidth = self.mainwindow.screenshotImage.width()
         screenHeight = self.mainwindow.screenshotImage.height()
+        if screenWidth == 0 or screenHeight == 0:
+            return (None, None)
         x = (pos().x() + sbX) / wS / float(screenWidth)
         y = (pos().y() + sbY) / wS / float(screenHeight)
         return (x, y)
@@ -253,6 +255,13 @@ class MyScaleEvents(QtCore.QObject):
         y = (pos().y() + sbY) / wS
         return (x, y)
     def eventToAPI(self, event):
+        if (event.type() == QtCore.QEvent.Wheel
+            and event.modifiers() == QtCore.Qt.ControlModifier):
+            coefficient = 1.0 + event.delta() / 1440.0
+            self.changeScale(coefficient)
+            return False
+        elif self.mainwindow.screenshotImageIndex == None:
+            return False
         if event.type() == QtCore.QEvent.MouseMove:
             if self.mainwindow.gestureStarted:
                 self.mainwindow.gestureEvents.append(
@@ -313,11 +322,6 @@ class MyScaleEvents(QtCore.QObject):
                                                 filename,))
                 self.visibleTip = filepath
             return True
-
-        if (event.type() == QtCore.QEvent.Wheel
-            and event.modifiers() == QtCore.Qt.ControlModifier):
-            coefficient = 1.0 + event.delta() / 1440.0
-            self.changeScale(coefficient)
         return False
 
 class fmbtdummy(object):
@@ -1403,6 +1407,8 @@ class MainWindow(QtGui.QMainWindow):
         return True
 
     def screenshotShowLatest(self):
+        if not self._sut:
+            return
         latest = self._fmbtEval("%s.screenshot().filename()" % (self._sut,))[0]
         if (self._screenshotFilenames[self.screenshotImageIndex] != latest):
             self._screenshotFilenames.append(latest)
