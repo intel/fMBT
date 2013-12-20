@@ -528,6 +528,8 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotWidgets.setLayout(self.screenshotWidgetsLayout)
 
         self.screenshotButtons = QtGui.QWidget(self.screenshotWidgets)
+        self.screenshotButtons.setSizePolicy(QtGui.QSizePolicy.Policy.Expanding,
+                                             QtGui.QSizePolicy.Policy.Fixed)
         self.screenshotButtonsL = QtGui.QHBoxLayout()
         self.screenshotButtons.setLayout(self.screenshotButtonsL)
 
@@ -645,6 +647,9 @@ class MainWindow(QtGui.QMainWindow):
 
         self.editorButtons = QtGui.QWidget(self.editorWidgets)
         self.editorButtons.setContentsMargins(-5, 0, -5, 0)
+        self.editorButtons.setSizePolicy(QtGui.QSizePolicy.Policy.Expanding,
+                                         QtGui.QSizePolicy.Policy.Fixed)
+
         self.editorButtonsLayout = QtGui.QHBoxLayout()
         self.editorButtons.setLayout(self.editorButtonsLayout)
 
@@ -737,6 +742,8 @@ class MainWindow(QtGui.QMainWindow):
                            "Ctrl+.")
         viewMenu.addAction("Zoom out screenshot", self.zoomOutScreenshot,
                            "Ctrl+,")
+        viewMenu.addSeparator()
+        viewMenu.addAction("Change console location", self.showConsole)
 
         bitmapMenu = QtGui.QMenu("&Bitmap", self)
         self.menuBar().addMenu(bitmapMenu)
@@ -1932,6 +1939,14 @@ class MainWindow(QtGui.QMainWindow):
             log(helpText.rstrip())
         else:
             log('no help on "%s"' % (word,))
+
+    def showConsole(self):
+        s = self.editorCombo.size()
+        if (self.editorCombo.orientation() ==
+            QtCore.Qt.Orientation.Horizontal):
+            self.editorCombo.setOrientation(QtCore.Qt.Vertical)
+        else:
+            self.editorCombo.setOrientation(QtCore.Qt.Horizontal)
 
     def gotoLine(self, lineNumber):
         cursor = self.editor.textCursor()
