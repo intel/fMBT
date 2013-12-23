@@ -1125,6 +1125,7 @@ class GUITestInterface(object):
         self._ocrEngine = None
         self._oirEngine = None
         self._rotateScreenshot = rotateScreenshot
+        self._screenshotRefCount = {} # filename -> Screenshot object ref count
 
         if ocrEngine == None:
             self.setOcrEngine(_defaultOcrEngine())
@@ -1235,7 +1236,8 @@ class GUITestInterface(object):
     def enableVisualLog(self, filenameOrObj,
                         screenshotWidth="240", thumbnailWidth="",
                         timeFormat="%s.%f", delayedDrawing=False,
-                        copyBitmapsToScreenshotDir=False):
+                        copyBitmapsToScreenshotDir=False,
+                        screenshotLimit=-1):
         """
         Start writing visual HTML log on this device object.
 
@@ -1268,6 +1270,13 @@ class GUITestInterface(object):
                   If True, every logged bitmap file will be copied to
                   bitmaps directory in screenshotDir. The default is
                   False.
+
+          screenshotLimit (integer, optional)
+                  Keep at most given number of latest screenshots,
+                  remove older screenshot files from the disk. This
+                  may result in broken img links in visual log HTML,
+                  but it may save a lot of disk space. The default is
+                  -1 (no limit).
         """
         if type(filenameOrObj) == str:
             try:
@@ -1285,8 +1294,10 @@ class GUITestInterface(object):
                 raise ValueError('Visual logging on file "%s" is already enabled' % (outFileObj.name,))
             else:
                 self._visualLogFilenames.add(outFileObj.name)
-        self._visualLog = _VisualLog(self, outFileObj, screenshotWidth, thumbnailWidth, timeFormat, delayedDrawing,
-                                     copyBitmapsToScreenshotDir)
+        self._visualLog = _VisualLog(self, outFileObj, screenshotWidth,
+                                     thumbnailWidth, timeFormat, delayedDrawing,
+                                     copyBitmapsToScreenshotDir,
+                                     screenshotLimit, self._screenshotRefCount)
 
     def visualLog(self, *args):
         """Writes parameters to the visual log, given that visual logging is
@@ -1367,7 +1378,8 @@ class GUITestInterface(object):
                     screenshotFile=forcedScreenshot,
                     paths = self._paths,
                     ocrEngine=self._ocrEngine,
-                    oirEngine=self._oirEngine)
+                    oirEngine=self._oirEngine,
+                    screenshotRefCount=self._screenshotRefCount)
             else:
                 self._lastScreenshot = forcedScreenshot
         else:
@@ -1386,7 +1398,8 @@ class GUITestInterface(object):
                     screenshotFile=screenshotFile,
                     paths = self._paths,
                     ocrEngine=self._ocrEngine,
-                    oirEngine=self._oirEngine)
+                    oirEngine=self._oirEngine,
+                    screenshotRefCount=self._screenshotRefCount)
             else:
                 self._lastScreenshot = None
         # Make sure unreachable Screenshot instances are released from
@@ -1978,12 +1991,17 @@ class Screenshot(object):
     Screenshot class takes and holds a screenshot (bitmap) of device
     display, or a forced bitmap file if device connection is not given.
     """
-    def __init__(self, screenshotFile=None, paths=None, ocrEngine=None, oirEngine=None):
+    def __init__(self, screenshotFile=None, paths=None,
+                 ocrEngine=None, oirEngine=None, screenshotRefCount=None):
         self._filename = screenshotFile
         self._ocrEngine = ocrEngine
         self._ocrEngineNotified = False
         self._oirEngine = oirEngine
         self._oirEngineNotified = False
+        self._screenshotRefCount = screenshotRefCount
+        if (type(self._screenshotRefCount) == dict and self._filename):
+            self._screenshotRefCount[self._filename] = (1 +
+                self._screenshotRefCount.get(self._filename, 0))
         self._screenSize = None
         self._paths = paths
 
@@ -1994,6 +2012,8 @@ class Screenshot(object):
             if (self._ocrEngineNotified == False or
                 id(self._oirEngine) != id(self._ocrEngine)):
                 self._oirEngine.removeScreenshot(self)
+        if (type(self._screenshotRefCount) == dict and self._filename):
+            self._screenshotRefCount[self._filename] -= 1
 
     def setSize(self, screenSize):
         self._screenSize = screenSize
@@ -2114,7 +2134,8 @@ class _VisualLog:
     def __init__(self, device, outFileObj,
                  screenshotWidth, thumbnailWidth,
                  timeFormat, delayedDrawing,
-                 copyBitmapsToScreenshotDir):
+                 copyBitmapsToScreenshotDir, screenshotLimit,
+                 screenshotRefCount):
         self._device = device
         self._outFileObj = outFileObj
         self._testStep = -1
@@ -2125,6 +2146,8 @@ class _VisualLog:
         self._thumbnailWidth = thumbnailWidth
         self._timeFormat = timeFormat
         self._copyBitmapsToScreenshotDir = copyBitmapsToScreenshotDir
+        self._screenshotLimit = screenshotLimit
+        self._screenshotRefCount = screenshotRefCount
         self._userFrameId = 0
         self._userFunction = ""
         self._userCallCount = 0
@@ -2163,6 +2186,22 @@ class _VisualLog:
             self.write('\n'.join(html))
             # File instance should be closed by the opener
             self._outFileObj = None
+
+    def removeOldScreenshots(self):
+        freeScreenshots = [filename
+                           for (filename, refCount) in self._screenshotRefCount.iteritems()
+                           if refCount == 0]
+        removeCount = len(freeScreenshots) - self._screenshotLimit
+        if removeCount > 0:
+            freeScreenshots.sort(reverse=True) # remove oldest
+            while removeCount > 0:
+                toBeRemoved = freeScreenshots.pop()
+                try:
+                    os.remove(toBeRemoved)
+                except IOError:
+                    pass
+                del self._screenshotRefCount[toBeRemoved]
+                removeCount -= 1
 
     def write(self, s):
         if self._outFileObj != None:
@@ -2326,6 +2365,8 @@ class _VisualLog:
             loggerSelf.logReturn(retval, img=retval, tip=origMethod.func_name)
             retval.findItemsByBitmap = loggerSelf.findItemsByBitmapLogger(retval.findItemsByBitmap, retval)
             retval.findItemsByOcr = loggerSelf.findItemsByOcrLogger(retval.findItemsByOcr, retval)
+            if loggerSelf._screenshotLimit >= 0:
+                loggerSelf.removeOldScreenshots()
             return retval
         return refreshScreenshotWRAP
 
