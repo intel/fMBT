@@ -1409,7 +1409,8 @@ class MainWindow(QtGui.QMainWindow):
     def screenshotShowLatest(self):
         if not self._sut:
             return
-        latest = self._fmbtEval("%s.screenshot().filename()" % (self._sut,))[0]
+        latest = self._fmbtEval("%s.screenshot().filename()" % (self._sut,),
+                                silent=True)[0]
         if (self._screenshotFilenames[self.screenshotImageIndex] != latest):
             self._screenshotFilenames.append(latest)
             self.screenshotSet(len(self._screenshotFilenames)-1)
