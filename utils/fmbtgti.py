@@ -116,8 +116,10 @@ _g_oirEngines = []
 def _fmbtLog(msg):
     fmbt.fmbtlog("fmbtgti: %s" % (msg,))
 
-def _filenameTimestamp():
-    return datetime.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+def _filenameTimestamp(t=None):
+    if t == None:
+        t = datetime.datetime.now()
+    return t.strftime("%Y%m%d-%H%M%S-%f")
 
 def _takeDragArgs(d):
     return _takeArgs(("startPos", "delayBeforeMoves", "delayBetweenMoves",
@@ -1145,6 +1147,8 @@ class GUITestInterface(object):
 
         self._screenshotDir = None
         self._screenshotDirDefault = "screenshots"
+        self._screenshotSubdir = None
+        self._screenshotSubdirDefault = ""
         self._screenSize = None
         self._visualLog = None
         self._visualLogFileObj = None
@@ -1354,8 +1358,30 @@ class GUITestInterface(object):
             return True
         return self._conn.sendPress(keyName)
 
+    def _newScreenshotFilepath(self):
+        """
+        Returns path and filename for next screenshot file.
+        Makes sure the file can be written (necessary directory
+        structure exists).
+        """
+        t = datetime.datetime.now()
+        filename = _filenameTimestamp(t) + "-" + self._conn.target() + ".png"
+        filepath = os.path.join(self.screenshotDir(),
+                                t.strftime(self.screenshotSubdir()),
+                                filename)
+        necessaryDirs = os.path.dirname(filepath)
+        if necessaryDirs and not os.path.isdir(necessaryDirs):
+            try:
+                os.makedirs(necessaryDirs)
+            except Exception, e:
+                _fmbtLog('creating directory "%s" for screenshots failed: %s' %
+                         (necessaryDirs, e))
+                raise
+        return filepath
+
     def refreshScreenshot(self, forcedScreenshot=None, rotate=None):
-        """Takes new screenshot and updates the latest screenshot object.
+        """
+        Takes new screenshot and updates the latest screenshot object.
 
         Parameters:
 
@@ -1385,9 +1411,9 @@ class GUITestInterface(object):
         else:
             if self.screenshotDir() == None:
                 self.setScreenshotDir(self._screenshotDirDefault)
-            screenshotFile = os.path.join(
-                self.screenshotDir(),
-                _filenameTimestamp() + "-" + self._conn.target() + '.png')
+            if self.screenshotSubdir() == None:
+                self.setScreenshotSubdir(self._screenshotSubdirDefault)
+            screenshotFile = self._newScreenshotFilepath()
             if self._conn.recvScreenshot(screenshotFile):
                 # New screenshot successfully received from device
                 if rotate == None:
@@ -1428,6 +1454,12 @@ class GUITestInterface(object):
 
     def screenshotDir(self):
         return self._screenshotDir
+
+    def screenshotSubdir(self):
+        """
+        Returns raw screenshotSubdir string, or None if unset.
+        """
+        return self._screenshotSubdir
 
     def screenSize(self):
         """
@@ -1509,6 +1541,28 @@ class GUITestInterface(object):
             except Exception, e:
                 _fmbtLog('creating directory "%s" for screenshots failed: %s' % (self.screenshotDir(), e))
                 raise
+
+    def setScreenshotSubdir(self, screenshotSubdir):
+        """
+        Define a subdirectory under screenshotDir() for screenshot files.
+
+        Parameters:
+
+          screenshotSubdir (string)
+                  Name of a subdirectory. The name should contain
+                  conversion specifiers supported by strftime.
+
+        Example:
+
+          sut.setScreenshotSubdir("%m-%d-%H")
+                  A screenshot taken on June 20th at 4.30pm will
+                  be stored to screenshotDir/01-20-16. That is,
+                  screenshots taken on different hours will be
+                  stored to different subdirectories.
+
+        By default, all screenshots are stored directly to screenshotDir().
+        """
+        self._screenshotSubdir = screenshotSubdir
 
     def swipe(self, (x, y), direction, distance=1.0, **dragArgs):
         """
