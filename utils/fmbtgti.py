@@ -1129,7 +1129,7 @@ class GUITestInterface(object):
         self._rotateScreenshot = rotateScreenshot
         self._screenshotLimit = None
         self._screenshotRefCount = {} # filename -> Screenshot object ref count
-        self._screenshotArchiveMethod = "remove"
+        self._screenshotArchiveMethod = "resize"
 
         if ocrEngine == None:
             self.setOcrEngine(_defaultOcrEngine())
@@ -1590,7 +1590,7 @@ class GUITestInterface(object):
                   Supported methods are "resize [WxH]" and "remove"
                   where W and H are integers that define maximum width and
                   height for an archived screenshot.
-                  The default method is "remove".
+                  The default method is "resize".
         """
         if screenshotArchiveMethod == "remove":
             pass
