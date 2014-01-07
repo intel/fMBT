@@ -602,13 +602,21 @@ class Device(fmbtgti.GUITestInterface):
         retryCount = 0
         while True:
             dump = self._conn.recvViewData()
-            if dump == None: # dump unreadable
-                return None
-            view = View(self.screenshotDir(), self.serialNumber, dump)
-            if len(view.errors()) > 0 and retryCount < self._PARSE_VIEW_RETRY_LIMIT:
-                _adapterLog(formatErrors(view.errors()))
-                retryCount += 1
-                time.sleep(0.2) # sleep before retry
+            if dump != None:
+                view = View(self.screenshotDir(), self.serialNumber, dump)
+            else:
+                _adapterLog("refreshView window dump reading failed")
+                view = None
+                # fail quickly if there is no answer
+                retryCount += self._PARSE_VIEW_RETRY_LIMIT / 2
+            if dump == None or len(view.errors()) > 0:
+                if view:
+                    _adapterLog(formatErrors(view.errors()))
+                if retryCount < self._PARSE_VIEW_RETRY_LIMIT:
+                    retryCount += 1
+                    time.sleep(0.2) # sleep before retry
+                else:
+                    raise AndroidConnectionError("Cannot read window dump")
             else:
                 # successfully parsed or parsed with errors but no more retries
                 self._lastView = view
@@ -1491,18 +1499,22 @@ class _AndroidDeviceConnection:
         try:
             self._windowSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._windowSocket.connect( (self._w_host, self._w_port) )
+            self._windowSocket.settimeout(60)
 
             # DUMP -1: get foreground window info
             if self._windowSocket.sendall("DUMP -1\n") == 0:
                 # LOG: readGUI cannot write to window socket
                 raise AndroidConnectionError("writing socket failed")
 
-            # Read until a "DONE" line
+            # Read until a "DONE" line or timeout
             data = ""
             while True:
-                try: newData = self._windowSocket.recv(_dataBufferLen)
+                newData = ''
+                try:
+                    newData = self._windowSocket.recv(_dataBufferLen)
                 except socket.timeout:
-                    continue
+                    data = None
+                    break
                 data += newData
                 if data.splitlines()[-1] == "DONE" or newData == '':
                     break
@@ -1510,6 +1522,8 @@ class _AndroidDeviceConnection:
         except Exception, msg:
             _adapterLog("recvViewData: window socket error: %s" % (msg,))
             if retry > 0:
+                try: self._windowSocket.close()
+                except: pass
                 self._resetWindow()
                 time.sleep(0.5)
                 return self.recvViewData(retry=retry-1)
