@@ -23,11 +23,11 @@ Usage: fmbt-log [options] [logfile...]
 
 Options:
   -o, --output=<file>
-          output will be written to given file. Default: the standard
-          output.
+          output will be written to given file.
+          The default is standard output.
 
   -f, --format=<fmt>
-          fmt defines output format. Default format is '$ax'.
+          fmt defines output format. The default is '$tv$ax'.
           Available fields:
           $ab - action's adapter block execution begin timestamp
           $ae - action's adapter block execution end timestamp
@@ -37,6 +37,7 @@ Options:
           $as - action suggested to top-level adapter
           $at - action's adapter block execution time
           $ax - action actually executed in top-level adapter
+          $cf - test configuration filename
           $mc - mapper adapter configuration
           $mn - mapper adapter number
           $ms - suggested action after renaming in mapper adapter
@@ -49,6 +50,12 @@ Options:
           $tr - reason for the verdict
           $tt - total test runtime [s]
 
+          Optional "!" after a field will print the line only if the
+          field content is non-empty.
+
+          Predefined formats:
+          xunit - use xunit XML output format
+
   -s, --separator=<string>
           separator between values of multivalue fields,
           for instance $tg and $al. The default is '; '.
@@ -58,33 +65,38 @@ Options:
           strftime manual for details. %f gives microseconds.
 
   -r, --raw
-          do not decode actions
+          do not decode escaped strings in the log.
 
 If logfile is not given, log is read from standard input.
+
 """
 
-import sys
+import StringIO
+import cgi
+import datetime
+import fmbt_config
 import getopt
 import re
+import sys
 import urllib2
-import fmbt_config
-import datetime
 
 VALUE_SEPARATOR = '; '
+
+XUNIT_HEADER = '<?xml version="1.0" encoding="UTF-8" ?>\n'
 
 def identity_formatter(s):
     return s
 
-def already_done_formatter_s(s):
-    already_done_formatter_s.saved = s
-    already_done_formatter_e.saved = s
-    return None
-already_done_formatter_s.saved = "undefined"
-
-def already_done_formatter_e(s):
-    already_done_formatter_e.saved = s
-    return None
-already_done_formatter_e.saved = "undefined"
+def memorise_formatter_gen(name, formatter_func=identity_formatter):
+    def memorise_formatter(s):
+        memorise_formatter_gen.latest[name] = formatter_func(s)
+        return None
+    return memorise_formatter
+memorise_formatter_gen.latest = {
+    "$cf": "undefined",
+    "$eb": "undefined",
+    "$sb": "undefined"
+}
 
 def TAU_formatter(s):
    if s == "TAU": return "[unidentified action]"
@@ -129,12 +141,13 @@ fields = {
     '$al' : ['<remote msg=', '"', 1, identity_formatter],
     '$aL' : ['<remote msg=', '"', 1, remove_preceding_timestamp_formatter],
     '$at' : ['<action type=', '"', 5, duration_formatter],
+    '$cf' : ['<conf_file name=', '"', 1, memorise_formatter_gen("$cf")],
     '$ms' : ['<redirect id=', '"', 5, identity_formatter],
     '$mc' : ['<redirect id=', '"', 3, identity_formatter],
     '$mn' : ['<redirect id=', '"', 1, identity_formatter],
-    '$sb' : ['<status steps=', '"', 3, already_done_formatter_s],
+    '$sb' : ['<status steps=', '"', 3, memorise_formatter_gen("$sb")],
     '$sc' : ['<status steps=', '"', 3, identity_formatter],
-    '$eb' : ['<status steps=', '"', 5, already_done_formatter_e],
+    '$eb' : ['<status steps=', '"', 5, memorise_formatter_gen("$eb")],
     '$ec' : ['<status steps=', '"', 5, identity_formatter],
     '$sn' : ['<status steps=', '"', 1, identity_formatter],
     '$st' : ['<current_time time=', '"', 1, time_formatter],
@@ -144,7 +157,7 @@ fields = {
     '$tt' : ['<elapsed_time', '"', 1, identity_formatter]
 }
 
-def extract(input_file_obj, output_file_obj, output_format, raw):
+def extract(input_file_obj, output_file_obj, output_format, raw=0, must_be_nonempty=set()):
     # FIXME: this is just a quick to get input action names
     # printed. What this really should do is:
     # 1. parse everything that is done during a single test step
@@ -168,8 +181,8 @@ def extract(input_file_obj, output_file_obj, output_format, raw):
 
     def clean_data():
         d = dict([(field, []) for field in fields])
-        d['$sb'] = [already_done_formatter_s.saved]
-        d['$eb'] = [already_done_formatter_e.saved]
+        for memorised in ["$cf", "$eb", "$sb"]:
+            d[memorised] = [memorise_formatter_gen.latest[memorised]]
         return d
 
     empty_row = output_format % dict([(field, '') for field in fields])
@@ -194,6 +207,11 @@ def extract(input_file_obj, output_file_obj, output_format, raw):
                 elif parsed_data[field]: printable_data[field] = parsed_data[field][0]
             if not '<status steps="0"' in line:
                 ppoutput = output_format % printable_data
+
+            for field in must_be_nonempty:
+                if not field in parsed_data or not parsed_data[field]:
+                    ppoutput = "" # print nothing, not all required fields present
+                    break
             parsed_data = clean_data()
         elif ((parsed_data['$al'] != [] and '%($al)' in output_format) or
               (parsed_data['$aL'] != [] and '%($aL)' in output_format) or
@@ -209,13 +227,43 @@ def extract(input_file_obj, output_file_obj, output_format, raw):
             parsed_data['$al'] = []
             parsed_data['$aL'] = []
             parsed_data['$am'] = []
-        if ppoutput != empty_row: output_file_obj.write(ppoutput)
+        if ppoutput != empty_row:
+            output_file_obj.write(ppoutput)
+
+def extract_xunit(input_file_obj, output_file_obj):
+    def extract_as_string(input_file_obj, output_format, must_be_nonempty=[]):
+        input_file_obj.seek(0)
+        temp_out = StringIO.StringIO()
+        extract(input_file_obj, temp_out, output_format, must_be_nonempty=must_be_nonempty)
+        temp_out.seek(0)
+        return temp_out.read()
+    s = extract_as_string(input_file_obj, "%($cf)s\x00%($tt)s\n", ["$tt"])
+    try:
+        conf_filename, total_time = s.strip().split('\x00')
+    except ValueError, e:
+        return False
+    s = extract_as_string(input_file_obj, "%($tv)s\x00%($tr)s\n")
+    try:
+        verdict, reason = s.strip().split('\x00')
+    except ValueError:
+        verdict = "unknown"
+        reason = "test verdict not available in the log"
+    if verdict != "pass":
+        failure = '<failure type="%s">%s</failure>' % (verdict, cgi.escape(reason))
+    else:
+        failure = ""
+    system_err = extract_as_string(input_file_obj, "%($al)s")
+    output_file_obj.write('''<testcase name="%s" time="%s">
+%s
+<system-err>%s</system-err>
+</testcase>\n''' % (conf_filename, total_time, failure, cgi.escape(system_err)))
 
 if __name__ == '__main__':
     input_file_obj = sys.stdin
     output_file_obj = sys.stdout
     output_format = '$tv$ax'
     option_raw = 0
+    xunit_header_written = False
 
     opts, remainder = getopt.getopt(
         sys.argv[1:], 'hrf:o:s:t:v',
@@ -240,28 +288,34 @@ if __name__ == '__main__':
             output_file_obj = file(arg, 'w')
 
     output_format = output_format.replace('\\n', '\n').replace('\\t', '\t')
+    must_be_nonempty = set()
     for field in fields:
+        if field + "!" in output_format:
+            must_be_nonempty.add(field)
+            output_format = output_format.replace(field + "!", field)
         output_format = output_format.replace(field,
                                               '%(' + field + ')s')
     output_format += '\n'
 
     if not remainder:
-        extract(input_file_obj, output_file_obj, output_format, option_raw)
+        remainder = ["-"]
+
+    for logfilename in remainder:
+        if logfilename != "-":
+            input_file_obj = file(logfilename, "r")
+        else:
+            input_file_obj = sys.stdin
+
+        if output_format.strip() == "xunit":
+            if not xunit_header_written:
+                output_file_obj.write(XUNIT_HEADER)
+                xunit_header_written = True
+            extract_xunit(input_file_obj, output_file_obj)
+        else:
+            extract(input_file_obj, output_file_obj, output_format, option_raw, must_be_nonempty)
 
         try: input_file_obj.close()
         except: pass
-
-    else:
-        for logfilename in remainder:
-            if logfilename != "-":
-                input_file_obj = file(logfilename, "r")
-            else:
-                input_file_obj = sys.stdin
-
-            extract(input_file_obj, output_file_obj, output_format, option_raw)
-
-            try: input_file_obj.close()
-            except: pass
 
     try: output_file_obj.close()
     except: pass
