@@ -73,10 +73,10 @@ Conf::Conf(Log& l, bool debug_enabled)
   log.ref();
   log.push("fmbt_log");
   log.set_debug(debug_enabled);
-  
+
   End_condition *ec = new End_status_error(this,Verdict::W_ERROR,"");
   add_end_condition(ec);
-  
+
   set_on_error("exit(4)");
   set_on_fail("interactive");
   set_on_pass("exit(0)");
@@ -91,6 +91,11 @@ void Conf::load(std::string& name,std::string& content)
 
   Conf* tmp=conf_obj;
   log.push("conf_load");
+  {
+      std::string escaped_fname = name;
+      escape_string(escaped_fname);
+      log.print("<conf_file name=\"%s\"/>\n", escaped_fname.c_str());
+  }
   log.debug("Conf::load %s",name.c_str());
   conf_obj=this;
 
@@ -120,7 +125,7 @@ void Conf::load(std::string& name,std::string& content)
 
   if (ss=="")
     RETURN_ERROR_VOID(-1,"Empty configuration");
-  
+
   bool ret=dparse(p,(char*)ss.c_str(),std::strlen(ss.c_str()));
 
   ret=p->syntax_errors==0 && ret;
@@ -204,7 +209,7 @@ void Conf::load(std::string& name,std::string& content)
 
   // Handle post set_model calls.
 
-  
+
 
   // Parse adapter-tags filter (if any)
   for(unsigned i=0;i<disable_tags.size();i++) {
@@ -324,7 +329,7 @@ Verdict::Verdict Conf::execute(bool interactive) {
 	((End_condition_tagverify*) e)
 	  ->evaluate_filter(model->getSPNames());
       }
-      if ((e->verdict==Verdict::PASS) && 
+      if ((e->verdict==Verdict::PASS) &&
 	  (e->counter == End_condition::COVERAGE)) {
         end_by_coverage = true;
       }
