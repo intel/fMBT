@@ -212,6 +212,10 @@ class MyScaleEvents(QtCore.QObject):
             self.attrowner.wheel_scale = self.max_scale
         self.attrowner.wheel_scale_changed()
     def eventFilter(self, obj, event):
+        if event.type() in (QtCore.QEvent.Type.DynamicPropertyChange,
+                            QtCore.QEvent.Type.Hide,
+                            QtCore.QEvent.Type.Destroy):
+            return False
         if (hasattr(self.mainwindow, "editor") and
             self.mainwindow.editor.hasFocus() and
             event.type() == QtCore.QEvent.KeyPress):
@@ -350,6 +354,19 @@ class fmbtdummy(object):
             return True
         def sendTouchUp(self, x, y):
             return True
+
+def _makeScalableEditor(mainwindow, parent, font, EditorClass = QtGui.QTextEdit):
+    editor = EditorClass(parent)
+    editor.setUndoRedoEnabled(True)
+    editor.setLineWrapMode(editor.NoWrap)
+    editor.setFont(font)
+    editor._scaleevents = MyScaleEvents(mainwindow, editor, 0.1, 2.0)
+    editor.wheel_scale = 1.0
+    editor.wheel_scale_changed = lambda: (
+        font.setPointSize(editor.wheel_scale * 12.0),
+        editor.setFont(font))
+    editor.installEventFilter(editor._scaleevents)
+    return editor
 
 class SettingsDialog(QtGui.QDialog):
     def __init__(self):
@@ -492,6 +509,7 @@ class MainWindow(QtGui.QMainWindow):
         self._editorIndentLineCalls = None
         self._editorIndentation = 4
         self._findDialog = None
+        self._helpDialog = None
         self._highlightingBitmap = None
         self._hwRecFilter = {"devices": None}
         self._recordedHandledAbsXY = (None, None)
@@ -672,19 +690,6 @@ class MainWindow(QtGui.QMainWindow):
         self.editorButtonsLayout.addWidget(self.editorButtonRunSelection)
         self.editorWidgetsLayout.addWidget(self.editorButtons)
 
-        def makeScalableEditor(parent, font, EditorClass = QtGui.QTextEdit):
-            editor = EditorClass(parent)
-            editor.setUndoRedoEnabled(True)
-            editor.setLineWrapMode(editor.NoWrap)
-            editor.setFont(font)
-            editor._scaleevents = MyScaleEvents(self, editor, 0.1, 2.0)
-            editor.wheel_scale = 1.0
-            editor.wheel_scale_changed = lambda: (
-                font.setPointSize(editor.wheel_scale * 12.0),
-                editor.setFont(font))
-            editor.installEventFilter(editor._scaleevents)
-            return editor
-
         self.editorCombo = QtGui.QSplitter(QtCore.Qt.Vertical,
                                            self.editorWidgets)
 
@@ -692,7 +697,7 @@ class MainWindow(QtGui.QMainWindow):
         self.editorFont.setFamily('Courier')
         self.editorFont.setFixedPitch(True)
         self.editorFont.setPointSize(12)
-        self.editor = makeScalableEditor(self.mainwidget, self.editorFont)
+        self.editor = _makeScalableEditor(self, self.mainwidget, self.editorFont)
         self.editorCombo.addWidget(self.editor)
         self.editor.cursorPositionChanged.connect(
             self.editorCursorPositionChanged)
@@ -702,7 +707,7 @@ class MainWindow(QtGui.QMainWindow):
         self.editorButtonRunSingle.released.connect(
             self.editorClearBackground)
 
-        self.console = makeScalableEditor(self.mainwidget, self.editorFont)
+        self.console = _makeScalableEditor(self, self.mainwidget, self.editorFont)
         self.editorCombo.addWidget(self.console)
         self.editorCombo.setStretchFactor(0, 9)
         self.editorCombo.setStretchFactor(1, 1)
@@ -1926,6 +1931,9 @@ class MainWindow(QtGui.QMainWindow):
         if not self.editor.hasFocus():
             log("text cursor is not on object in the editor")
             return
+        if self._helpDialog == None:
+            self._helpDialog = HelpDialog(self, QtCore.Qt.WindowType.Dialog, self.editorFont)
+
         okChars = set(string.ascii_letters + string.digits + "._")
         cursor = self.editor.textCursor()
         pos = cursor.positionInBlock()
@@ -1944,6 +1952,8 @@ class MainWindow(QtGui.QMainWindow):
         helpText, exc = self._fmbtEval("pydoc.plain(pydoc.render_doc(%s))" % (word,), silent=True)
         if exc == None:
             log(helpText.rstrip())
+            self._helpDialog.setText(helpText)
+            self._helpDialog.show()
         else:
             log('no help on "%s"' % (word,))
 
@@ -2185,6 +2195,21 @@ class FindDialog(QtGui.QDialog):
         cf = cursor.charFormat()
         cf.setBackground(QtCore.Qt.white)
         cursor.setCharFormat(cf)
+
+class HelpDialog(QtGui.QDialog):
+    def __init__(self, parent, dialogType, font):
+        QtGui.QDialog.__init__(self, parent, dialogType)
+        self.font = font
+        self.layout = QtGui.QGridLayout(self)
+        self._texts = []
+        self.text = _makeScalableEditor(parent, self, self.font)
+        fm = self.text.fontMetrics()
+        self.text.setMinimumWidth(84 * fm.width('w'))
+        self.layout.addWidget(self.text, 0, 0)
+
+    def setText(self, text):
+        self._texts.append(text)
+        self.text.setPlainText(self._texts[-1])
 
 
 if __name__ == "__main__":
