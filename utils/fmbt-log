@@ -45,7 +45,8 @@ Options:
           $sb - coverage before the test step
           $sc - coverage after the test step
           $st - time stamp of test step
-          $tg - tags at state
+          $tb - tags before executing the test step
+          $tg - tags after executing the test step
           $tv - test verdict: pass or fail
           $tr - reason for the verdict
           $tt - total test runtime [s]
@@ -92,11 +93,10 @@ def memorise_formatter_gen(name, formatter_func=identity_formatter):
         memorise_formatter_gen.latest[name] = formatter_func(s)
         return None
     return memorise_formatter
-memorise_formatter_gen.latest = {
-    "$cf": "undefined",
-    "$eb": "undefined",
-    "$sb": "undefined"
-}
+memorise_formatter_gen.latest = {}
+memorised_fields = ["$cf", "$eb", "$sb", "$tb"]
+for _f in memorised_fields:
+    memorise_formatter_gen.latest[_f] = "undefined"
 
 def TAU_formatter(s):
    if s == "TAU": return "[unidentified action]"
@@ -151,6 +151,7 @@ fields = {
     '$ec' : ['<status steps=', '"', 5, identity_formatter],
     '$sn' : ['<status steps=', '"', 1, identity_formatter],
     '$st' : ['<current_time time=', '"', 1, time_formatter],
+    '$tb' : ['<tags enabled=', '"', 1, memorise_formatter_gen("$tb")],
     '$tg' : ['<tags enabled=', '"', 1, identity_formatter],
     '$tv' : ['<stop verdict=', '"', 1, identity_formatter],
     '$tr' : ['<stop verdict=', '"', 3, identity_formatter],
@@ -181,7 +182,7 @@ def extract(input_file_obj, output_file_obj, output_format, raw=0, must_be_nonem
 
     def clean_data():
         d = dict([(field, []) for field in fields])
-        for memorised in ["$cf", "$eb", "$sb"]:
+        for memorised in memorised_fields:
             d[memorised] = [memorise_formatter_gen.latest[memorised]]
         return d
 

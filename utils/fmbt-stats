@@ -177,8 +177,12 @@ def read_from_log_possible_executed(testlog_fileobj):
     if possible_actions == []: error('no output from fmbt-log')
     return possible_actions, executed_actions
 
-def read_from_log_possible_executed_tags(testlog_fileobj):
-    cmd = ["fmbt-log", "-s", "|FMBT-STATS|", "-f", "p:$am\\nx:$ax\\nt:$tb\\nT:$tg"]
+def read_from_log_possible_executed_tags(testlog_fileobj, to_or_from):
+    if to_or_from.lower() == "from":
+        tag_format = "$tb"
+    else:
+        tag_format = "$tg"
+    cmd = ["fmbt-log", "-s", "|FMBT-STATS|", "-f", "p:$am\\nx:$ax\\nt:" + tag_format]
     p = subprocess.Popen(cmd, shell=False, stdin=testlog_fileobj.fileno(), stdout=subprocess.PIPE)
 
     possible_actions = []
@@ -191,7 +195,7 @@ def read_from_log_possible_executed_tags(testlog_fileobj):
                 executed_actions.append(line[2:-1])
             elif line[0]=='p' and len(line) > 3:
                 possible_actions.append(line[2:-1])
-            elif line[0]=='T' and len(line) > 3:
+            elif line[0]=='t' and len(line) > 3:
                 tags.append(line[2:-1].split('|FMBT-STATS|'))
             line = p.stdout.readline()
     except Exception, e:
@@ -638,7 +642,7 @@ plot '%(plot_datafilename)s' using 1:xtic(%(actioncol)s), for[i=2:%(lastdatacol)
 
 
 def stats_tagdist(arg, testlog_fileobj, output_fileobj, plot_filename):
-    possible_actions, executed_actions, tags = read_from_log_possible_executed_tags(testlog_fileobj)
+    possible_actions, executed_actions, tags = None, None, None
 
     def format_data(out_format, data_dict):
         # Uses title from stats_dist
@@ -677,6 +681,8 @@ def stats_tagdist(arg, testlog_fileobj, output_fileobj, plot_filename):
     opt_next = (arg_list[0] == 'from')
     opt_prev = (arg_list[0] == 'to')
     if not (opt_next or opt_prev): opt_next = True
+    possible_actions, executed_actions, tags = read_from_log_possible_executed_tags(
+        testlog_fileobj, "from" if opt_next else "to")
     if len(arg_list)>1:
         if arg_list[1].startswith('tags='):
             regex = arg_list[1].split('=',1)[1]
@@ -707,20 +713,13 @@ def stats_tagdist(arg, testlog_fileobj, output_fileobj, plot_filename):
     for act in set(executed_actions):
         data[act] = {}
     if executed_actions:
-        if opt_next:
+        if opt_next or opt_prev:
             for index, state_tags in enumerate(tags):
                 for tag in state_tags:
                     if not tag in all_tags: continue
                     if index > len(executed_actions) - 1: break
                     next_action = executed_actions[index]
                     data[next_action][tag] = data[next_action].get(tag, 0) + 1
-        elif opt_prev:
-            for index, state_tags in enumerate(tags):
-                for tag in state_tags:
-                    if not tag in all_tags: continue
-                    if index == 0: continue
-                    prev_action = executed_actions[index-1]
-                    data[prev_action][tag] = data[prev_action].get(tag, 0) + 1
         else:
             error('unknown dist argument "%s".' % (arg,))
 
