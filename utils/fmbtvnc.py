@@ -113,23 +113,23 @@ class VNCConnection(fmbtgti.GUITestConnection):
         self.client.keyUp(key)
         return True
 
-    def sendTouchDown(self, x, y):
-        self.client.mouseMove(x,y)
-        self.client.mouseDown(1)
+    def sendTouchDown(self, x, y, button=1):
+        self.client.mouseMove(x, y)
+        self.client.mouseDown(button)
         return True
 
-    def sendTouchUp(self, x, y):
-        self.client.mouseMove(x,y)
-        self.client.mouseUp(1)
+    def sendTouchUp(self, x, y, button=1):
+        self.client.mouseMove(x, y)
+        self.client.mouseUp(button)
         return True
 
-    def sendTap(self,x,y):
-        self.client.mouseMove(x,y)
-        self.client.mousePress(1)
+    def sendTap(self, x, y, button=1):
+        self.client.mouseMove(x, y)
+        self.client.mousePress(button)
         return True
 
     def sendTouchMove(self, x, y):
-        self.client.mouseMove(x,y)
+        self.client.mouseMove(x, y)
         return True
 
     def sendType(self, text):
