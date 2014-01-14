@@ -126,7 +126,7 @@ def _takeDragArgs(d):
                       "delayAfterMoves", "movePoints"), d)
 
 def _takeTapArgs(d):
-    return _takeArgs(("tapPos", "long", "hold", "count", "delayBetweenTaps"), d)
+    return _takeArgs(("tapPos", "long", "hold", "count", "delayBetweenTaps", "button"), d)
 
 def _takeWaitArgs(d):
     return _takeArgs(("waitTime", "pollDelay"), d)
@@ -1805,7 +1805,7 @@ class GUITestInterface(object):
             return False
         return self.swipeItem(items[0], direction, distance, **dragArgs)
 
-    def tap(self, (x, y), long=False, hold=0.0, count=1, delayBetweenTaps=0.175):
+    def tap(self, (x, y), long=False, hold=0.0, count=1, delayBetweenTaps=0.175, button=None):
         """
         Tap screen on coordinates (x, y).
 
@@ -1829,24 +1829,35 @@ class GUITestInterface(object):
           hold (float, optional):
                   time in seconds to touch the screen.
 
+          button (integer, optional):
+                  send tap using given mouse button. The default is
+                  None: button parameter is not passed to the
+                  underlying connection layer (sendTouchDown etc.),
+                  the default in the underlying layer will be used.
+                  Note that all connection layers may not support
+                  this parameter.
+
         Returns True if successful, otherwise False.
         """
         x, y = self.intCoords((x, y))
         count = int(count)
         if long and hold == 0.0:
             hold = self._longTapHoldTime
+        extraParams = {}
+        if button != None:
+            extraParams['button'] = button
         if count == 0:
             self._conn.sendTouchMove(x, y)
         while count > 0:
             if hold > 0.0:
                 try:
-                    assert self._conn.sendTouchDown(x, y)
+                    assert self._conn.sendTouchDown(x, y, **extraParams)
                     time.sleep(hold)
-                    assert self._conn.sendTouchUp(x, y)
+                    assert self._conn.sendTouchUp(x, y, **extraParams)
                 except AssertionError:
                     return False
             else:
-                if not self._conn.sendTap(x, y):
+                if not self._conn.sendTap(x, y, **extraParams):
                     return False
             count = int(count) - 1
         return True
@@ -1866,7 +1877,7 @@ class GUITestInterface(object):
           tapPos (pair of floats (x,y)):
                   refer to tapItem documentation.
 
-          long, hold, count, delayBetweenTaps (optional):
+          long, hold, count, delayBetweenTaps, button (optional):
                   refer to tap documentation.
 
         Returns True if successful, otherwise False.
@@ -1897,7 +1908,7 @@ class GUITestInterface(object):
                   (1.0, 1.0) is the lower-right corner.
                   Values < 0 and > 1 tap coordinates outside the item.
 
-          long, hold, count, delayBetweenTaps (optional):
+          long, hold, count, delayBetweenTaps, button (optional):
                   refer to tap documentation.
         """
         if "tapPos" in tapArgs:
@@ -1919,7 +1930,7 @@ class GUITestInterface(object):
           text (string):
                   the text to be tapped.
 
-          long, hold, count, delayBetweenTaps (optional):
+          long, hold, count, delayBetweenTaps, button (optional):
                   refer to tap documentation.
 
           OCR engine specific arguments
