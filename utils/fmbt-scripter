@@ -64,6 +64,10 @@ _g_gtiInstantiateRE = re.compile(
     "\.(Device|Screen)\s*\(.*\))")
 _g_scripterConnectRE = re.compile(
     "[ \t]*#\s*scripter-connect:\s*(.*)\n")
+
+_g_scripterRecordTimingRE = re.compile(
+    "[ \t]*#\s*scripter-rectiming:\s*(.*)\n")
+
 _g_scripterSutVarRE = re.compile(
     "[ \t]*#\s*scripter-sut:\s*(.*)\n")
 
@@ -439,11 +443,27 @@ class SettingsDialog(QtGui.QDialog):
         self.connTab.setLayout(self.connTabLayout)
         self.mainWidget.addTab(self.connTab, "Connections")
 
+        # Recording options (how to record timing)
+        self.recordTab = QtGui.QWidget(self.mainWidget)
+        self.recordTimingCodeLabel = QtGui.QLabel("Python code template for "
+                                                  "timed recording",
+                                                  self.recordTab)
+        self.recordTimingCode = QtGui.QTextEdit(self.recordTab)
+        self.recordTimingCode.setToolTip(
+            "Uses time.sleep and refreshScreenshot by default,\n"
+            "Example: use a user-defined functions instead:\n"
+            "myutils.delayAndRefresh(%(delay)s, %(sut)s)")
+        self.recordTabLayout = QtGui.QFormLayout()
+        self.recordTabLayout.addRow(self.recordTimingCodeLabel, self.recordTimingCode)
+        self.recordTab.setLayout(self.recordTabLayout)
+        self.mainWidget.addTab(self.recordTab, "Recording")
+
         # Input device list for hardware event recording
         self.hwRecordTab = QtGui.QWidget(self.mainWidget)
         self.hwRecordTabLayout = QtGui.QFormLayout()
         self.hwRecordTab.setLayout(self.hwRecordTabLayout)
         self.mainWidget.addTab(self.hwRecordTab, "Input devices")
+
 
         self.buttonBox = QtGui.QDialogButtonBox(
             QtGui.QDialogButtonBox.Ok |
@@ -461,7 +481,7 @@ class SettingsDialog(QtGui.QDialog):
         self._inputDeviceButtons = []
         self._deviceNames = deviceNames
         index = self.mainWidget.currentIndex()
-        self.mainWidget.removeTab(2)
+        self.mainWidget.removeTab(3)
         self.hwRecordTab = QtGui.QWidget(self.mainWidget)
         self.hwRecordTabLayout = QtGui.QFormLayout()
         self.hwRecordTab.setLayout(self.hwRecordTabLayout)
@@ -478,9 +498,10 @@ class SettingsDialog(QtGui.QDialog):
 
     def getRecDevices(self):
         rv = set()
-        for i, n in enumerate(self._deviceNames):
-            if self._inputDeviceButtons[i].isChecked():
-                rv.add(n)
+        if hasattr(self, "_deviceNames"):
+            for i, n in enumerate(self._deviceNames):
+                if self._inputDeviceButtons[i].isChecked():
+                    rv.add(n)
         return rv
 
     def browseDir(self, lineEdit):
@@ -514,7 +535,10 @@ class MainWindow(QtGui.QMainWindow):
         self._hwRecFilter = {"devices": None}
         self._recordedHandledAbsXY = (None, None)
         self._screenshotSaveDir = ""
-        self._fmbtEnv = {"pydoc": pydoc}
+        self._fmbtEnv = {
+            "pydoc": pydoc,
+            "time": time
+        }
         self._bitmapFileFormats = ["Portable network graphics (*.png)",
                                    "All files (*.*)"]
         self._scriptFileFormats = ["Python scripts (*.py)",
@@ -523,6 +547,8 @@ class MainWindow(QtGui.QMainWindow):
         self._selectingBitmapSaveDir = None
         self._settingsDialog = None
         self._sut = None
+        self._recordTimingCode = "time.sleep(%(delay)s)\n%(sut)s.refreshScreenshot()\n"
+        self._previousRecordTime = None
 
         self.status = QtGui.QLabel("", self)
         self.statusBar().setStyleSheet("""
@@ -861,6 +887,7 @@ class MainWindow(QtGui.QMainWindow):
                 self._fmbtEval('%s.connection().sendRecStop()' % (self._sut,))
         if self.bitmapAutoSelect.isChecked():
             self.screenshotAutoRefresh.setChecked(True)
+        self._previousRecordTime = None
         self.editor.setFocus()
 
     def recReadHwEvents(self):
@@ -1117,7 +1144,7 @@ class MainWindow(QtGui.QMainWindow):
         self._hwButtonEvents.append(GestureEvent("keyup", name, None))
         call = gestureToGti(self._hwButtonEvents)
         if self.editorButtonRec.isChecked():
-            self.addAPICall(call + "\n")
+            self.insertRecordedCommand(self._sut + call + "\n")
         if self.screenshotButtonControl.isChecked():
             self.doAPICall(call)
         self.editor.setFocus()
@@ -1177,6 +1204,7 @@ class MainWindow(QtGui.QMainWindow):
     def setScriptFilename(self, newName):
         self._scriptFilename = newName
         self.setImportDir(str(self._scriptFilename))
+        self.editorCursorPositionChanged()
 
     def saveAs(self):
         path = QtGui.QFileDialog.getSaveFileName(
@@ -1255,6 +1283,8 @@ class MainWindow(QtGui.QMainWindow):
         return "noname.png", ""
 
     def insertRecordedCommand(self, cmd):
+        currentTime = time.time()
+
         if self.bitmapAutoSelect.isChecked():
             x, y = (None, None)
             if ".tap((" in cmd:
@@ -1285,11 +1315,27 @@ class MainWindow(QtGui.QMainWindow):
                              '.\\1Bitmap("%s"' % (bitmapFilename,),
                              cmd)
 
+        if (self._previousRecordTime and
+            currentTime - self._previousRecordTime < 20.0):
+            # So little time from the latest code insertion that this entry
+            # be considered to continue directly previous recording. Therefore
+            # add timed recording data if necessary.
+            timingVariables = {
+                'sut': self._sut,
+                'delay': '%.1f' % (currentTime - self._previousRecordTime)
+            }
+            if self.scripterRecordTimingCode().strip():
+                self._recordTimingCode = self.scripterRecordTimingCode()
+            if self._recordTimingCode:
+                for timingCodeLine in self._recordTimingCode.splitlines():
+                    self.editorIndentLine(first=True)
+                    self.editor.insertPlainText(timingCodeLine % timingVariables + "\n")
+        self._previousRecordTime = currentTime
+
         self.editorIndentLine(first=True)
         self.editor.insertPlainText(cmd + "\n")
         if self.bitmapAutoSelect.isChecked():
             self.editorIndentLine(first=True)
-            self.editor.insertPlainText(self._sut + ".refreshScreenshot()\n")
             self.scheduleUpdateScreenshot(1.0)
 
     def autoSelectBitmap(self):
@@ -1661,6 +1707,8 @@ class MainWindow(QtGui.QMainWindow):
         cursor.insertText(newLine)
 
     def editorCursorPositionChanged(self):
+        if not hasattr(self, "editor"):
+            return
         if not self._editorIgnoreNextCursorPositionChange:
             self._editorIndentLineCalls = None
             self.highlightActiveBitmap()
@@ -1793,22 +1841,22 @@ class MainWindow(QtGui.QMainWindow):
             painter.drawRect(x-1, y-1, w+2, h+2)
         self.updateScreenshotView()
 
-    def setScripterConnectCode(self, code):
+    def setScripterCode(self, codeLineRegex, codeLinePrefix, code):
         cursor = self.editor.textCursor()
         cursor.movePosition(QtGui.QTextCursor.Start)
         c = self.editor.toPlainText()
-        connMatch = _g_scripterConnectRE.search(c)
+        connMatch = codeLineRegex.search(c)
         if connMatch:
             cursor.movePosition(QtGui.QTextCursor.Right, n=connMatch.start())
             cursor.movePosition(QtGui.QTextCursor.Right,
                                 QtGui.QTextCursor.KeepAnchor,
                                 n = connMatch.end() - connMatch.start())
-        codelines = ["# scripter-connect: %s\n" % (l,)
+        codelines = [(codeLinePrefix + "%s\n") % (l,)
                      for l in code.splitlines()]
         cursor.insertText("".join(codelines))
         if connMatch:
             c = c[connMatch.end():]
-            connMatch = _g_scripterConnectRE.search(c)
+            connMatch = codeLineRegex.search(c)
             while connMatch:
                 cursor.movePosition(QtGui.QTextCursor.Right,
                                     n=connMatch.start())
@@ -1819,27 +1867,31 @@ class MainWindow(QtGui.QMainWindow):
                 c = c[connMatch.end():]
                 connMatch = _g_scripterConnectRE.search(c)
 
-    def scripterConnectCode(self):
+    def scripterCode(self, codeLineRegex):
         c = self.editor.toPlainText()
-        connectCode = _g_scripterConnectRE.findall(c)
-        return "\n".join(connectCode)
+        code = codeLineRegex.findall(c)
+        return "\n".join(code)
+
+    def setScripterConnectCode(self, code):
+        self.setScripterCode(_g_scripterConnectRE,
+                             "# scripter-connect: ", code)
+
+    def scripterConnectCode(self):
+        return self.scripterCode(_g_scripterConnectRE)
+
+    def setScripterRecordTimingCode(self, code):
+        self.setScripterCode(_g_scripterRecordTimingRE,
+                             "# scripter-rectiming: ", code)
+
+    def scripterRecordTimingCode(self):
+        return self.scripterCode(_g_scripterRecordTimingRE)
 
     def setScripterSutVar(self, sutVar):
-        cursor = self.editor.textCursor()
-        cursor.movePosition(QtGui.QTextCursor.Start)
-        c = self.editor.toPlainText()
-        sutVarMatch = _g_scripterSutVarRE.search(c)
-        if sutVarMatch:
-            cursor.movePosition(QtGui.QTextCursor.Right, n=sutVarMatch.start())
-            cursor.movePosition(QtGui.QTextCursor.Right,
-                                QtGui.QTextCursor.KeepAnchor,
-                                n = sutVarMatch.end() - sutVarMatch.start())
-        cursor.insertText("# scripter-sut: %s\n" % (sutVar,))
+        self.setScripterCode(_g_scripterSutVarRE,
+                             "# scripter-sut: ", sutVar)
 
     def scripterSutVar(self):
-        c = self.editor.toPlainText()
-        sutVar = "".join(_g_scripterSutVarRE.findall(c))
-        return sutVar
+        return self.scripterCode(_g_scripterSutVarRE)
 
     def showSettingsDialog(self):
         if self._settingsDialog == None:
@@ -1847,6 +1899,10 @@ class MainWindow(QtGui.QMainWindow):
         self._settingsDialog.connConnect.setPlainText(
             self.scripterConnectCode())
         self._settingsDialog.connSutVar.setText(self._sut)
+        if self.scripterRecordTimingCode().strip():
+            self._recordTimingCode = self.scripterRecordTimingCode()
+        self._settingsDialog.recordTimingCode.setPlainText(
+            self._recordTimingCode)
         self._settingsDialog.pathsBitmapAutoSelectSize.setText(
             str(self._autoBitmapSize))
         if self._sut:
@@ -1882,6 +1938,11 @@ class MainWindow(QtGui.QMainWindow):
             if self._settingsDialog.connSutVar.text() != self._sut:
                 self._sut = self._settingsDialog.connSutVar.text()
                 self.setScripterSutVar(self._sut)
+            if (self._settingsDialog.recordTimingCode.toPlainText() !=
+                self._recordTimingCode):
+                self._recordTimingCode = (
+                    self._settingsDialog.recordTimingCode.toPlainText())
+                self.setScripterRecordTimingCode(self._recordTimingCode)
             bitmapPath = self._settingsDialog.pathsBitmapPath.text()
             if bitmapPath:
                 oldBitmapPath, exc = self._fmbtEval("%s.bitmapPath()" %
