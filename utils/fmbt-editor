@@ -2197,6 +2197,23 @@ if __name__ == '__main__':
     window = MainWindow()
     window.resize(640, 512)
 
+    if opt_conffile and not opt_modelfile:
+        # try to find model filename from the configuration file
+        if os.access(opt_conffile, os.R_OK):
+            modelLine = [l.strip() for l in file(opt_conffile).readlines()
+                         if l.strip().startswith("model")]
+            if modelLine:
+                modelFiles = re.findall("([-_.a-zA-Z0-9]*\.(aal|gt|lsts))",
+                                        '\n'.join(modelLine),
+                                        flags=re.IGNORECASE)
+                if len(modelFiles) > 1:
+                    error('ambiguous model filenames in test configuration ("%s")' %
+                          ('", "'.join([n[0] for n in modelFiles]),))
+                if len(modelFiles) == 1:
+                    opt_modelfile = modelFiles[0][0]
+        if not opt_modelfile:
+            error('model filename missing')
+
     if opt_modelfile:
         if not os.access(opt_modelfile, os.F_OK):
             window.newFile(opt_modelfile)
@@ -2208,7 +2225,7 @@ if __name__ == '__main__':
     if opt_conffile:
         if not os.access(opt_conffile, os.F_OK):
             window.newConfFile(opt_conffile)
-        elif os.access(opt_modelfile, os.R_OK):
+        elif os.access(opt_conffile, os.R_OK):
             window.openFile(opt_conffile)
         else:
             error('cannot open file "%s"' % (opt_conffile,))

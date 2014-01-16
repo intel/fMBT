@@ -288,12 +288,17 @@ def _exitHandler():
 atexit.register(_exitHandler)
 
 def _runcmd(cmd):
-    _log("runcmd: " + cmd)
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output = p.stdout.read()
-    _log("stdout: " + output)
-    _log("stderr: " + p.stderr.read())
-    return p.wait(), output
+    exit_status = p.wait()
+    if p.wait() != 0:
+        _log("runcmd: " + cmd)
+        _log("exit status: " + str(exit_status))
+        _log("stdout: " + output)
+        _log("stderr: " + p.stderr.read())
+    else:
+        p.stderr.read()
+    return exit_status, output
 
 def _runDrawCmd(inputfilename, cmd, outputfilename):
     if not _g_defaultDelayedDrawing:
