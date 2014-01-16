@@ -128,6 +128,8 @@ class AALModel:
             self.adapter_exit.im_func(verdict, reason)
 
     def adapter_execute(self, i, adapter_call_arguments = ()):
+        if not 0 < i <= len(self._all_names):
+            raise IndexError('Cannot execute action %s adapter code' % (i,))
         if self._all_types[i-1] == "input":
             try:
                 fmbt._g_actionName = self._all_names[i-1]
@@ -147,11 +149,18 @@ class AALModel:
             return 0
 
     def tag_execute(self, i):
+        if not 0 < i <= len(self._all_tagnames):
+            raise IndexError('Cannot execute tag %s adapter code' % (i,))
         fmbt._g_actionName = "tag: " + self._all_tagnames[i-1]
         rv = self.call(self._all_tagadapters[i-1])
         return rv
 
     def model_execute(self, i):
+        if not 0 < i <= len(self._all_names):
+            # If adapter execute returns 0, that is reports unidentified action,
+            # test engine checks if executing an unidentified action is ok by
+            # calling model_execute(0). In AAL/Python it is never ok.
+            return 0
         fmbt._g_actionName = self._all_names[i-1]
         if i in self._enabled_actions_stack[-1] or self.call(self._all_guards[i-1]):
             self.call(self._all_bodies[i-1])
