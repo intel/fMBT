@@ -91,6 +91,7 @@ import inspect
 import math
 import os
 import shutil
+import subprocess
 import sys
 import time
 import traceback
@@ -115,15 +116,17 @@ _g_oirEngines = []
 def _fmbtLog(msg):
     fmbt.fmbtlog("fmbtgti: %s" % (msg,))
 
-def _filenameTimestamp():
-    return datetime.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+def _filenameTimestamp(t=None):
+    if t == None:
+        t = datetime.datetime.now()
+    return t.strftime("%Y%m%d-%H%M%S-%f")
 
 def _takeDragArgs(d):
     return _takeArgs(("startPos", "delayBeforeMoves", "delayBetweenMoves",
                       "delayAfterMoves", "movePoints"), d)
 
 def _takeTapArgs(d):
-    return _takeArgs(("tapPos", "long", "hold",), d)
+    return _takeArgs(("tapPos", "long", "hold", "count", "delayBetweenTaps", "button"), d)
 
 def _takeWaitArgs(d):
     return _takeArgs(("waitTime", "pollDelay"), d)
@@ -409,9 +412,12 @@ class OcrEngine(OrEngine):
                   engine default.
         """
         if screenshot == None:
-            self._findTextDefaults = defaults
+            self._findTextDefaults.update(defaults)
         else:
-            self._ssFindTextDefaults[id(screenshot)] = defaults
+            ssid = id(screenshot)
+            if not ssid in self._ssFindTextDefaults:
+                self._ssFindTextDefaults[ssid] = self._findTextDefaults.copy()
+            self._ssFindTextDefaults[ssid].update(defaults)
 
     def findTextDefaults(self, screenshot=None):
         if screenshot == None:
@@ -531,19 +537,24 @@ class _EyenfingerOcrEngine(OcrEngine):
     def _findText(self, screenshot, text, match=None, preprocess=None, area=None, pagesegmodes=None):
         ssId = id(screenshot)
         self._assumeOcrResults(screenshot, preprocess, area, pagesegmodes)
-        words = []
         
         for ppfilter in self._ss[ssId].words.keys():
             try:
-                eyenfinger._g_words = self._ss[ssId].words[ppfilter]
-                index = 1
-                while True:
-                    (score, word), bbox = eyenfinger.iVerifyWord(text, match=match, appearance=index)
-                    words.append(GUIItem("OCR word", bbox, self._ss[ssId].filename, ocrFind=text, ocrFound=word))
-                    index += 1
-            except (IndexError, eyenfinger.BadMatch):
-                pass
-        return words
+                score_text_bbox_list = eyenfinger.findText(
+                    text, self._ss[ssId].words[ppfilter], match=match)
+                if not score_text_bbox_list:
+                    continue
+                else:
+                    break
+            except eyenfinger.BadMatch:
+                continue
+        else:
+            return []
+        retval = [GUIItem("OCR text (match %.2f)" % (score,),
+                          bbox, self._ss[ssId].filename,
+                          ocrFind=text, ocrFound=matching_text)
+                  for score, matching_text, bbox in score_text_bbox_list]
+        return retval
 
     def _dumpOcr(self, screenshot, match=None, preprocess=None, area=None, pagesegmodes=None, wholeBbox=False):
         ssId = id(screenshot)
@@ -687,9 +698,12 @@ class OirEngine(OrEngine):
                   engine default.
         """
         if screenshot == None:
-            self._findBitmapDefaults = defaults
+            self._findBitmapDefaults.update(defaults)
         else:
-            self._ssFindBitmapDefaults[id(screenshot)] = defaults
+            ssid = id(screenshot)
+            if not ssid in self._ssFindBitmapDefaults:
+                self._ssFindBitmapDefaults[ssid] = self._findBitmapDefaults.copy()
+            self._ssFindBitmapDefaults[ssid].update(defaults)
 
     def findBitmapDefaults(self, screenshot=None):
         if screenshot == None:
@@ -806,7 +820,7 @@ class _Eye4GraphicsOirEngine(OirEngine):
 
 
     If unsure about parameters, but you have a bitmap that should be
-    detected in a screenshot, try obj.ocrEngine().adjustParameters().
+    detected in a screenshot, try obj.oirEngine().adjustParameters().
 
     Example:
 
@@ -1107,7 +1121,7 @@ class _Paths(object):
 
 
 class GUITestInterface(object):
-    def __init__(self, ocrEngine=None, oirEngine=None):
+    def __init__(self, ocrEngine=None, oirEngine=None, rotateScreenshot=None):
         self._paths = _Paths("", "")
         self._conn = None
         self._lastScreenshot = None
@@ -1115,6 +1129,10 @@ class GUITestInterface(object):
         self._longTapHoldTime = 2.0
         self._ocrEngine = None
         self._oirEngine = None
+        self._rotateScreenshot = rotateScreenshot
+        self._screenshotLimit = None
+        self._screenshotRefCount = {} # filename -> Screenshot object ref count
+        self._screenshotArchiveMethod = "resize"
 
         if ocrEngine == None:
             self.setOcrEngine(_defaultOcrEngine())
@@ -1134,6 +1152,8 @@ class GUITestInterface(object):
 
         self._screenshotDir = None
         self._screenshotDirDefault = "screenshots"
+        self._screenshotSubdir = None
+        self._screenshotSubdirDefault = ""
         self._screenSize = None
         self._visualLog = None
         self._visualLogFileObj = None
@@ -1180,6 +1200,7 @@ class GUITestInterface(object):
 
         delayBeforeMoves (float, optional):
                 seconds to wait after touching and before dragging.
+                If negative, starting touch event is not sent.
 
         delayBetweenMoves (float, optional):
                 seconds to wait when moving between points when
@@ -1188,6 +1209,7 @@ class GUITestInterface(object):
         delayAfterMoves (float, optional):
                 seconds to wait after dragging, before raising
                 fingertip.
+                If negative, fingertip is not raised.
 
         movePoints (integer, optional):
                 the number of intermediate move points between end
@@ -1197,7 +1219,9 @@ class GUITestInterface(object):
         """
         x1, y1 = self.intCoords((x1, y1))
         x2, y2 = self.intCoords((x2, y2))
-        if not self._conn.sendTouchDown(x1, y1): return False
+        if delayBeforeMoves >= 0:
+            if not self._conn.sendTouchDown(x1, y1):
+                return False
         if delayBeforeMoves > 0:
             time.sleep(delayBeforeMoves)
         else:
@@ -1210,12 +1234,18 @@ class GUITestInterface(object):
         if delayAfterMoves > 0:
             self._conn.sendTouchMove(x2, y2)
             time.sleep(delayAfterMoves)
-        if self._conn.sendTouchUp(x2, y2): return True
-        return False
+        if delayAfterMoves >= 0:
+            if self._conn.sendTouchUp(x2, y2):
+                return True
+            else:
+                return False
+        else:
+            return True
 
     def enableVisualLog(self, filenameOrObj,
                         screenshotWidth="240", thumbnailWidth="",
-                        timeFormat="%s.%f", delayedDrawing=False):
+                        timeFormat="%s.%f", delayedDrawing=False,
+                        copyBitmapsToScreenshotDir=False):
         """
         Start writing visual HTML log on this device object.
 
@@ -1243,6 +1273,11 @@ class GUITestInterface(object):
                   later execution. The value True can significantly
                   save test execution time and disk space. The default
                   is False.
+
+          copyBitmapsToScreenshotDir (boolean, optional)
+                  If True, every logged bitmap file will be copied to
+                  bitmaps directory in screenshotDir. The default is
+                  False.
         """
         if type(filenameOrObj) == str:
             try:
@@ -1260,7 +1295,15 @@ class GUITestInterface(object):
                 raise ValueError('Visual logging on file "%s" is already enabled' % (outFileObj.name,))
             else:
                 self._visualLogFilenames.add(outFileObj.name)
-        self._visualLog = _VisualLog(self, outFileObj, screenshotWidth, thumbnailWidth, timeFormat, delayedDrawing)
+        self._visualLog = _VisualLog(self, outFileObj, screenshotWidth,
+                                     thumbnailWidth, timeFormat, delayedDrawing,
+                                     copyBitmapsToScreenshotDir)
+
+    def visualLog(self, *args):
+        """Writes parameters to the visual log, given that visual logging is
+        enabled.
+        """
+        pass
 
     def intCoords(self, (x, y)):
         """
@@ -1311,7 +1354,62 @@ class GUITestInterface(object):
             return True
         return self._conn.sendPress(keyName)
 
-    def refreshScreenshot(self, forcedScreenshot=None):
+    def _newScreenshotFilepath(self):
+        """
+        Returns path and filename for next screenshot file.
+        Makes sure the file can be written (necessary directory
+        structure exists).
+        """
+        t = datetime.datetime.now()
+        filename = _filenameTimestamp(t) + "-" + self._conn.target() + ".png"
+        filepath = os.path.join(self.screenshotDir(),
+                                t.strftime(self.screenshotSubdir()),
+                                filename)
+        necessaryDirs = os.path.dirname(filepath)
+        if necessaryDirs and not os.path.isdir(necessaryDirs):
+            try:
+                os.makedirs(necessaryDirs)
+            except Exception, e:
+                _fmbtLog('creating directory "%s" for screenshots failed: %s' %
+                         (necessaryDirs, e))
+                raise
+        return filepath
+
+    def _archiveScreenshot(self, filepath):
+        if self._screenshotArchiveMethod == "remove":
+            try:
+                os.remove(filepath)
+            except IOError:
+                pass
+        elif self._screenshotArchiveMethod.startswith("resize"):
+            if self._screenshotArchiveMethod == "resize":
+                convertArgs = ["-resize",
+                               "%sx" % (int(self.screenSize()[0]) / 4,)]
+            else:
+                widthHeight = self._screenshotArchiveMethod.split()[1]
+                convertArgs = ["-resize", widthHeight]
+            subprocess.call(["convert", filepath] + convertArgs + [filepath])
+
+    def _archiveScreenshots(self):
+        """
+        Archive screenshot files if screenshotLimit has been exceeded.
+        """
+        freeScreenshots = [filename
+                           for (filename, refCount) in self._screenshotRefCount.iteritems()
+                           if refCount == 0]
+        archiveCount = len(freeScreenshots) - self._screenshotLimit
+        if archiveCount > 0:
+            freeScreenshots.sort(reverse=True) # archive oldest
+            while archiveCount > 0:
+                toBeArchived = freeScreenshots.pop()
+                try:
+                    self._archiveScreenshot(toBeArchived)
+                except IOError:
+                    pass
+                del self._screenshotRefCount[toBeArchived]
+                archiveCount -= 1
+
+    def refreshScreenshot(self, forcedScreenshot=None, rotate=None):
         """
         Takes new screenshot and updates the latest screenshot object.
 
@@ -1321,7 +1419,14 @@ class GUITestInterface(object):
                   use given screenshot object or image file, do not
                   take new screenshot.
 
-        Returns new latest Screenshot object.
+          rotate (integer, optional):
+                  rotate screenshot by given number of degrees. This
+                  overrides constructor rotateScreenshot parameter
+                  value. The default is None (no override).
+
+        Returns Screenshot object, and makes the same object "the
+        latest screenshot" that is used by all *Bitmap and *OcrText
+        methods.
         """
         if forcedScreenshot != None:
             if type(forcedScreenshot) == str:
@@ -1329,19 +1434,28 @@ class GUITestInterface(object):
                     screenshotFile=forcedScreenshot,
                     paths = self._paths,
                     ocrEngine=self._ocrEngine,
-                    oirEngine=self._oirEngine)
+                    oirEngine=self._oirEngine,
+                    screenshotRefCount=self._screenshotRefCount)
             else:
                 self._lastScreenshot = forcedScreenshot
         else:
             if self.screenshotDir() == None:
                 self.setScreenshotDir(self._screenshotDirDefault)
-            screenshotFile = self.screenshotDir() + os.sep + _filenameTimestamp() + "-" + self._conn.target() + '.png'
+            if self.screenshotSubdir() == None:
+                self.setScreenshotSubdir(self._screenshotSubdirDefault)
+            screenshotFile = self._newScreenshotFilepath()
             if self._conn.recvScreenshot(screenshotFile):
+                # New screenshot successfully received from device
+                if rotate == None:
+                    rotate = self._rotateScreenshot
+                if rotate != None and rotate != 0:
+                    subprocess.call(["convert", screenshotFile, "-rotate", str(rotate), screenshotFile])
                 self._lastScreenshot = Screenshot(
                     screenshotFile=screenshotFile,
                     paths = self._paths,
                     ocrEngine=self._ocrEngine,
-                    oirEngine=self._oirEngine)
+                    oirEngine=self._oirEngine,
+                    screenshotRefCount=self._screenshotRefCount)
             else:
                 self._lastScreenshot = None
         # Make sure unreachable Screenshot instances are released from
@@ -1358,6 +1472,11 @@ class GUITestInterface(object):
         del gc.garbage[:]
         gc.collect()
 
+        # If screenshotLimit has been set, archive old screenshot
+        # stored on the disk.
+        if self._screenshotLimit != None and self._screenshotLimit >= 0:
+            self._archiveScreenshots()
+
         return self._lastScreenshot
 
     def screenshot(self):
@@ -1368,8 +1487,30 @@ class GUITestInterface(object):
         """
         return self._lastScreenshot
 
+    def screenshotArchiveMethod(self):
+        """
+        Returns how screenshots exceeding screenshotLimit are archived.
+        """
+        return self._screenshotArchiveMethod
+
     def screenshotDir(self):
+        """
+        Returns the directory under which new screenshots are saved.
+        """
         return self._screenshotDir
+
+    def screenshotLimit(self):
+        """
+        Returns the limit after which unused screenshots are archived.
+        """
+        return self._screenshotLimit
+
+    def screenshotSubdir(self):
+        """
+        Returns the subdirectory in screenshotDir under which new
+        screenshots are stored.
+        """
+        return self._screenshotSubdir
 
     def screenSize(self):
         """
@@ -1443,6 +1584,36 @@ class GUITestInterface(object):
         self._oirEngine = oirEngine
         return prevDefault
 
+    def setScreenshotArchiveMethod(self, screenshotArchiveMethod):
+        """
+        Set method for archiving screenshots when screenshotLimit is exceeded.
+
+        Parameters:
+          screenshotArchiveMethod (string)
+                  Supported methods are "resize [WxH]" and "remove"
+                  where W and H are integers that define maximum width and
+                  height for an archived screenshot.
+                  The default method is "resize".
+        """
+        if screenshotArchiveMethod == "remove":
+            pass
+        elif screenshotArchiveMethod == "resize":
+            pass
+        elif screenshotArchiveMethod.startswith("resize"):
+            try:
+                w, h = screenshotArchiveMethod.split(" ")[1].split("x")
+            except:
+                raise ValueError("Invalid resize syntax")
+            try:
+                w, h = int(w), int(h)
+            except:
+                raise ValueError(
+                    "Invalid resize width or height, integer expected")
+        else:
+            raise ValueError('Unknown archive method "%s"' %
+                             (screenshotArchiveMethod,))
+        self._screenshotArchiveMethod = screenshotArchiveMethod
+
     def setScreenshotDir(self, screenshotDir):
         self._screenshotDir = screenshotDir
         if not os.path.isdir(self.screenshotDir()):
@@ -1451,6 +1622,44 @@ class GUITestInterface(object):
             except Exception, e:
                 _fmbtLog('creating directory "%s" for screenshots failed: %s' % (self.screenshotDir(), e))
                 raise
+
+    def setScreenshotLimit(self, screenshotLimit):
+        """
+        Set maximum number for unarchived screenshots.
+
+        Parameters:
+          screenshotLimit (integer)
+                  Maximum number of unarchived screenshots that are
+                  free for archiving (that is, not referenced by test code).
+                  The default is None, that is, there is no limit and
+                  screenshots are never archived.
+
+        See also:
+          setScreenshotArchiveMethod()
+        """
+        self._screenshotLimit = screenshotLimit
+
+    def setScreenshotSubdir(self, screenshotSubdir):
+        """
+        Define a subdirectory under screenshotDir() for screenshot files.
+
+        Parameters:
+
+          screenshotSubdir (string)
+                  Name of a subdirectory. The name should contain
+                  conversion specifiers supported by strftime.
+
+        Example:
+
+          sut.setScreenshotSubdir("%m-%d-%H")
+                  A screenshot taken on June 20th at 4.30pm will
+                  be stored to screenshotDir/01-20-16. That is,
+                  screenshots taken on different hours will be
+                  stored to different subdirectories.
+
+        By default, all screenshots are stored directly to screenshotDir().
+        """
+        self._screenshotSubdir = screenshotSubdir
 
     def swipe(self, (x, y), direction, distance=1.0, **dragArgs):
         """
@@ -1599,7 +1808,7 @@ class GUITestInterface(object):
             return False
         return self.swipeItem(items[0], direction, distance, **dragArgs)
 
-    def tap(self, (x, y), long=False, hold=0.0):
+    def tap(self, (x, y), long=False, hold=0.0, count=1, delayBetweenTaps=0.175, button=None):
         """
         Tap screen on coordinates (x, y).
 
@@ -1610,27 +1819,51 @@ class GUITestInterface(object):
                   scaled to full screen width and height, others are
                   handled as absolute coordinate values.
 
+          count (integer, optional):
+                  number of taps to the coordinates. The default is 1.
+
+          delayBetweenTaps (float, optional):
+                  time (seconds) between taps when count > 1.
+                  The default is 0.175 (175 ms).
+
           long (boolean, optional):
                   if True, touch the screen for a long time.
 
           hold (float, optional):
                   time in seconds to touch the screen.
 
+          button (integer, optional):
+                  send tap using given mouse button. The default is
+                  None: button parameter is not passed to the
+                  underlying connection layer (sendTouchDown etc.),
+                  the default in the underlying layer will be used.
+                  Note that all connection layers may not support
+                  this parameter.
+
         Returns True if successful, otherwise False.
         """
         x, y = self.intCoords((x, y))
+        count = int(count)
         if long and hold == 0.0:
             hold = self._longTapHoldTime
-        if hold > 0.0:
-            try:
-                assert self._conn.sendTouchDown(x, y)
-                time.sleep(hold)
-                assert self._conn.sendTouchUp(x, y)
-            except AssertionError:
-                return False
-            return True
-        else:
-            return self._conn.sendTap(x, y)
+        extraParams = {}
+        if button != None:
+            extraParams['button'] = button
+        if count == 0:
+            self._conn.sendTouchMove(x, y)
+        while count > 0:
+            if hold > 0.0:
+                try:
+                    assert self._conn.sendTouchDown(x, y, **extraParams)
+                    time.sleep(hold)
+                    assert self._conn.sendTouchUp(x, y, **extraParams)
+                except AssertionError:
+                    return False
+            else:
+                if not self._conn.sendTap(x, y, **extraParams):
+                    return False
+            count = int(count) - 1
+        return True
 
     def tapBitmap(self, bitmap, **tapAndOirArgs):
         """
@@ -1647,7 +1880,7 @@ class GUITestInterface(object):
           tapPos (pair of floats (x,y)):
                   refer to tapItem documentation.
 
-          long, hold (optional):
+          long, hold, count, delayBetweenTaps, button (optional):
                   refer to tap documentation.
 
         Returns True if successful, otherwise False.
@@ -1678,7 +1911,7 @@ class GUITestInterface(object):
                   (1.0, 1.0) is the lower-right corner.
                   Values < 0 and > 1 tap coordinates outside the item.
 
-          long, hold (optional):
+          long, hold, count, delayBetweenTaps, button (optional):
                   refer to tap documentation.
         """
         if "tapPos" in tapArgs:
@@ -1691,7 +1924,7 @@ class GUITestInterface(object):
             tapCoords = viewItem.coords()
         return self.tap(tapCoords, **tapArgs)
 
-    def tapOcrText(self, text, **tapAndOcrArgs):
+    def tapOcrText(self, text, appearance=0, **tapAndOcrArgs):
         """
         Find text from the latest screenshot using OCR, and tap it.
 
@@ -1700,7 +1933,7 @@ class GUITestInterface(object):
           text (string):
                   the text to be tapped.
 
-          long, hold (optional):
+          long, hold, count, delayBetweenTaps, button (optional):
                   refer to tap documentation.
 
           OCR engine specific arguments
@@ -1712,8 +1945,9 @@ class GUITestInterface(object):
         tapArgs, rest = _takeTapArgs(tapAndOcrArgs)
         ocrArgs, _ = _takeOcrArgs(self._lastScreenshot, rest, thatsAll=True)
         items = self._lastScreenshot.findItemsByOcr(text, **ocrArgs)
-        if len(items) == 0: return False
-        return self.tapItem(items[0], **tapArgs)
+        if len(items) <= appearance:
+            return False
+        return self.tapItem(items[appearance], **tapArgs)
 
     def type(self, text):
         """
@@ -1919,12 +2153,17 @@ class Screenshot(object):
     Screenshot class takes and holds a screenshot (bitmap) of device
     display, or a forced bitmap file if device connection is not given.
     """
-    def __init__(self, screenshotFile=None, paths=None, ocrEngine=None, oirEngine=None):
+    def __init__(self, screenshotFile=None, paths=None,
+                 ocrEngine=None, oirEngine=None, screenshotRefCount=None):
         self._filename = screenshotFile
         self._ocrEngine = ocrEngine
         self._ocrEngineNotified = False
         self._oirEngine = oirEngine
         self._oirEngineNotified = False
+        self._screenshotRefCount = screenshotRefCount
+        if (type(self._screenshotRefCount) == dict and self._filename):
+            self._screenshotRefCount[self._filename] = (1 +
+                self._screenshotRefCount.get(self._filename, 0))
         self._screenSize = None
         self._paths = paths
 
@@ -1935,6 +2174,8 @@ class Screenshot(object):
             if (self._ocrEngineNotified == False or
                 id(self._oirEngine) != id(self._ocrEngine)):
                 self._oirEngine.removeScreenshot(self)
+        if (type(self._screenshotRefCount) == dict and self._filename):
+            self._screenshotRefCount[self._filename] -= 1
 
     def setSize(self, screenSize):
         self._screenSize = screenSize
@@ -2054,7 +2295,8 @@ class GUIItem(object):
 class _VisualLog:
     def __init__(self, device, outFileObj,
                  screenshotWidth, thumbnailWidth,
-                 timeFormat, delayedDrawing):
+                 timeFormat, delayedDrawing,
+                 copyBitmapsToScreenshotDir):
         self._device = device
         self._outFileObj = outFileObj
         self._testStep = -1
@@ -2064,6 +2306,7 @@ class _VisualLog:
         self._screenshotWidth = screenshotWidth
         self._thumbnailWidth = thumbnailWidth
         self._timeFormat = timeFormat
+        self._copyBitmapsToScreenshotDir = copyBitmapsToScreenshotDir
         self._userFrameId = 0
         self._userFunction = ""
         self._userCallCount = 0
@@ -2071,6 +2314,7 @@ class _VisualLog:
         device.refreshScreenshot = self.refreshScreenshotLogger(device.refreshScreenshot)
         device.tap = self.tapLogger(device.tap)
         device.drag = self.dragLogger(device.drag)
+        device.visualLog = self.messageLogger(device.visualLog)
         attrs = ['callContact', 'callNumber', 'close',
                  'loadConfig', 'platformVersion',
                  'pressAppSwitch', 'pressBack', 'pressHome',
@@ -2083,7 +2327,7 @@ class _VisualLog:
                  'tapBitmap', 'tapId', 'tapItem', 'tapOcrText',
                  'tapText', 'topApp', 'topWindow', 'type',
                  'verifyOcrText', 'verifyText', 'verifyBitmap',
-                  'waitAnyBitmap', 'waitBitmap', 'waitOcrText', 'waitText']
+                 'waitAnyBitmap', 'waitBitmap', 'waitOcrText', 'waitText']
         for a in attrs:
             if hasattr(device, a):
                 m = getattr(device, a)
@@ -2139,7 +2383,11 @@ class _VisualLog:
     def logCall(self, img=None, width="", imgTip=""):
         callee = inspect.currentframe().f_back.f_code.co_name[:-4] # cut "WRAP"
         argv = inspect.getargvalues(inspect.currentframe().f_back)
-        calleeArgs = str(argv.locals['args']) + " " + str(argv.locals['kwargs'])
+        # calleeArgs = str(argv.locals['args']) + " " + str(argv.locals['kwargs'])
+        args = [repr(a) for a in argv.locals['args']]
+        for key, value in argv.locals['kwargs'].iteritems():
+            args.append("%s=%s" % (key, repr(value)))
+        calleeArgs = "(%s)" % (", ".join(args),)
         callerFrame = inspect.currentframe().f_back.f_back
         callerFilename = callerFrame.f_code.co_filename
         callerLineno = callerFrame.f_lineno
@@ -2179,6 +2427,18 @@ class _VisualLog:
              </table></tr>\n''' % (self.htmlTimestamp(), cgi.escape(traceback.format_exception(*einfo)[-2].replace('"','').strip()), cgi.escape(str(traceback.format_exception_only(einfo[0], einfo[1])[0])))
         self.write(excHtml)
 
+    def logMessage(self, msg):
+        callerFrame = inspect.currentframe().f_back.f_back
+        callerFilename = callerFrame.f_code.co_filename
+        callerLineno = callerFrame.f_lineno
+        self.logBlock()
+        t = datetime.datetime.now()
+        msgHtml = '''
+            <tr><td></td><td><table>
+                <tr><td>%s</td><td><a title="%s:%s"><div class="message">%s</div></a></td></tr>
+            </table></td></tr>\n''' % (self.htmlTimestamp(t), cgi.escape(callerFilename), callerLineno, cgi.escape(msg))
+        self.write(msgHtml)
+
     def logHeader(self):
         self.write('''
             <!DOCTYPE html><html>
@@ -2212,6 +2472,13 @@ class _VisualLog:
             retval = loggerSelf.doCallLogException(origMethod, args, kwargs)
             loggerSelf.logReturn(retval, tip=origMethod.func_name)
             return retval
+        loggerSelf.changeCodeName(origMethodWRAP, origMethod.func_code.co_name + "WRAP")
+        return origMethodWRAP
+
+    def messageLogger(loggerSelf, origMethod):
+        def origMethodWRAP(*args, **kwargs):
+            loggerSelf.logMessage(" ".join([str(a) for a in args]))
+            return True
         loggerSelf.changeCodeName(origMethodWRAP, origMethod.func_code.co_name + "WRAP")
         return origMethodWRAP
 
@@ -2261,7 +2528,30 @@ class _VisualLog:
     def findItemsByBitmapLogger(loggerSelf, origMethod, screenshotObj):
         def findItemsByBitmapWRAP(*args, **kwargs):
             bitmap = args[0]
-            loggerSelf.logCall(img=screenshotObj._paths.abspath(bitmap))
+            absPathBitmap = screenshotObj._paths.abspath(bitmap)
+            if loggerSelf._copyBitmapsToScreenshotDir:
+                screenshotDirBitmap = os.path.join(
+                    os.path.dirname(screenshotObj.filename()),
+                    "bitmaps",
+                    bitmap.lstrip(os.sep))
+                if not os.access(screenshotDirBitmap, os.R_OK):
+                    # bitmap is not yet copied under screenshotDir
+                    destDir = os.path.dirname(screenshotDirBitmap)
+                    if not os.access(destDir, os.W_OK):
+                        try:
+                            os.makedirs(destDir)
+                        except IOError:
+                            pass # cannot make dir / dir not writable
+                    try:
+                        shutil.copy(absPathBitmap, destDir)
+                        absPathBitmap = screenshotDirBitmap
+                    except IOError:
+                        pass # cannot copy bitmap
+
+                else:
+                    absPathBitmap = screenshotDirBitmap
+
+            loggerSelf.logCall(img=absPathBitmap)
             retval = loggerSelf.doCallLogException(origMethod, args, kwargs)
             if len(retval) == 0:
                 loggerSelf.logReturn("not found in", img=screenshotObj, tip=origMethod.func_name)
@@ -2286,6 +2576,8 @@ class _VisualLog:
                 screenshotFilename = screenshotObj.filename()
                 highlightFilename = loggerSelf.highlightFilename(screenshotFilename)
                 eyenfinger.drawIcon(screenshotFilename, highlightFilename, args[0], foundItem.bbox())
+                for appearance, foundItem in enumerate(retval[1:42]):
+                    eyenfinger.drawIcon(highlightFilename, highlightFilename, str(appearance+1) + ": " + args[0], foundItem.bbox())
                 loggerSelf.logReturn([str(retval[0])], img=highlightFilename, width=loggerSelf._screenshotWidth, tip=origMethod.func_name, imgTip=screenshotObj._logCallReturnValue)
             return retval
         return findItemsByOcrWRAP

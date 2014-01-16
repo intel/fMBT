@@ -80,6 +80,11 @@ import shutil
 import ctypes
 import platform
 import struct
+import warnings
+
+def _DEPRECATED():
+    warnings.warn("eyenfinger.py API is deprecated, use fmbtx11 instead.",
+                  DeprecationWarning, stacklevel=2)
 
 _g_preprocess = "-sharpen 5 -filter Mitchell -resize 1920x1600 -level 40%%,70%%,5.0 -sharpen 5"
 
@@ -283,12 +288,17 @@ def _exitHandler():
 atexit.register(_exitHandler)
 
 def _runcmd(cmd):
-    _log("runcmd: " + cmd)
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output = p.stdout.read()
-    _log("stdout: " + output)
-    _log("stderr: " + p.stderr.read())
-    return p.wait(), output
+    exit_status = p.wait()
+    if p.wait() != 0:
+        _log("runcmd: " + cmd)
+        _log("exit status: " + str(exit_status))
+        _log("stdout: " + output)
+        _log("stderr: " + p.stderr.read())
+    else:
+        p.stderr.read()
+    return exit_status, output
 
 def _runDrawCmd(inputfilename, cmd, outputfilename):
     if not _g_defaultDelayedDrawing:
@@ -457,6 +467,8 @@ def imageSize(imageFilename):
 
 def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=None, ocrArea=(0, 0, 1.0, 1.0), ocrPageSegModes=(3,)):
     """
+    DEPRECATED - use fmbtx11.Screen.refreshScreenshot instead.
+
     Read the contents of the given window or other source. If neither
     of windowId or source is given, reads the contents of active
     window. iClickWord and iVerifyWord can be used after reading with
@@ -594,6 +606,8 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
 
 def iVerifyWord(word, match=0.33, appearance=1, capture=None):
     """
+    DEPRECATED - use fmbtx11.Screen.verifyOcrText instead.
+
     Verify that word can be found from previously iRead() image.
 
     Parameters:
@@ -634,9 +648,53 @@ def iVerifyWord(word, match=0.33, appearance=1, capture=None):
                             (word, matching_word, score, match))
     return ((score, matching_word), _g_words[matching_word][appearance-1][2])
 
+def iVerifyText(text, match=0.33, capture=None):
+    """
+    DEPRECATED - use fmbtx11.Screen.verifyOcrText instead.
+
+    Verify that text can be found from previously iRead() image.
+
+    Parameters:
+        text         multiple words that should be checked
+
+        match        minimum matching score
+
+        capture      save image with verified text highlighted
+                     to this file. Default: None (nothing is saved).
+
+    Returns pair:
+        ((score, matchingText), (left, top, right, bottom)), where
+
+        score        score of found match (1.0 for perfect match)
+
+        matchingText corresponding text detected by OCR
+
+        (left, top, right, bottom)
+                     bounding box of the text in read image
+
+    Throws BadMatch error if text is not found.
+
+    Throws NoOCRResults error if there are OCR results available
+    on the current screen.
+    """
+    if _g_words == None:
+        raise NoOCRResults('iRead has not been called with ocr=True')
+
+    score_text_bbox_list = findText(text, match)
+    if len(score_text_bbox_list) == 0:
+        raise BadMatch('No match >= %s for text "%s"' % (score, text))
+
+    score, text, bbox = score_text_box_list[0]
+
+    if capture:
+        drawBbox(_g_origImage, capture, bbox, "%.2f %s" % (score, text))
+
+    return ((score, matching_text), bbox)
 
 def iVerifyIcon(iconFilename, match=None, colorMatch=None, opacityLimit=None, capture=None, area=(0.0, 0.0, 1.0, 1.0), _origin="iVerifyIcon"):
     """
+    DEPRECATED - use fmbtx11.Screen.verifyBitmap instead.
+
     Verify that icon can be found from previously iRead() image.
 
     Parameters:
@@ -741,6 +799,8 @@ def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=None,
                colorMatch=None, opacityLimit=None,
                mouseButton=1, mouseEvent=MOUSEEVENT_CLICK, dryRun=None, capture=None):
     """
+    DEPRECATED - use fmbtx11.Screen.tapBitmap instead.
+
     Click coordinates relative to the given icon in previously iRead() image.
 
     Parameters:
@@ -791,6 +851,7 @@ def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=None,
 
     Throws BadMatch error if could not find a matching word.
     """
+    _DEPRECATED()
     score, bbox = iVerifyIcon(iconFilename, match=match,
                               colorMatch=colorMatch, opacityLimit=opacityLimit,
                               capture=capture, _origin="iClickIcon")
@@ -804,6 +865,8 @@ def iClickIcon(iconFilename, clickPos=(0.5,0.5), match=None,
 def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33,
                mouseButton=1, mouseEvent=1, dryRun=None, capture=None):
     """
+    DEPRECATED - use fmbtx11.Screen.tapOcrText instead.
+
     Click coordinates relative to the given word in previously iRead() image.
 
     Parameters:
@@ -840,6 +903,7 @@ def iClickWord(word, appearance=1, clickPos=(0.5,0.5), match=0.33,
     Throws NoOCRResults error if there are OCR results available
     on the current screen.
     """
+    _DEPRECATED()
     (score, matching_word), bbox = iVerifyWord(word, appearance=appearance, match=match, capture=False)
 
     clickedX, clickedY = iClickBox(bbox, clickPos, mouseButton, mouseEvent, dryRun, capture=False)
@@ -862,6 +926,8 @@ def iClickBox((left, top, right, bottom), clickPos=(0.5, 0.5),
               mouseButton=1, mouseEvent=1, dryRun=None,
               capture=None, _captureText=None):
     """
+    DEPRECATED - use fmbtx11.Screen.tapItem instead.
+
     Click coordinates relative to the given bounding box, default is
     in the middle of the box.
 
@@ -916,6 +982,8 @@ def iClickBox((left, top, right, bottom), clickPos=(0.5, 0.5),
 
 def iClickWindow((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, capture=None):
     """
+    DEPRECATED - use fmbtx11.Screen.tap instead.
+
     Click given coordinates in the window.
 
     Parameters:
@@ -965,6 +1033,8 @@ def iClickWindow((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, cap
 
 def iClickScreen((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, capture=None):
     """
+    DEPRECATED - use fmbtx11.Screen.tap instead.
+
     Click given absolute coordinates on the screen.
 
     Parameters:
@@ -991,6 +1061,7 @@ def iClickScreen((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, cap
                      clicked point highlighted is saved. The default
                      is None (nothing is saved).
     """
+    _DEPRECATED()
     if mouseEvent == MOUSEEVENT_CLICK:
         params = "'mouseclick %s'" % (mouseButton,)
     elif mouseEvent == MOUSEEVENT_DOWN:
@@ -1014,6 +1085,8 @@ def iClickScreen((clickX, clickY), mouseButton=1, mouseEvent=1, dryRun=None, cap
 
 def iGestureScreen(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdAfterGesture=0.0, intermediatePoints=0, capture=None, dryRun=None):
     """
+    DEPRECATED - use fmbtx11.Screen.drag instead.
+
     Synthesizes a gesture on the screen.
 
     Parameters:
@@ -1051,6 +1124,7 @@ def iGestureScreen(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdA
                      illustrates the coordinates through which the cursor
                      goes.
     """
+    _DEPRECATED()
     # The params list to be fed to xte
     params = []
 
@@ -1106,6 +1180,8 @@ def iGestureScreen(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdA
 
 def iGestureWindow(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdAfterGesture=0.0, intermediatePoints=0, capture=None, dryRun=None):
     """
+    DEPRECATED - use fmbtx11.Screen.drag instead.
+
     Synthesizes a gesture on the window.
 
     Parameters:
@@ -1148,6 +1224,8 @@ def iGestureWindow(listOfCoordinates, duration=0.5, holdBeforeGesture=0.0, holdA
 
 def iType(word, delay=0.0):
     """
+    DEPRECATED - use fmbtx11.Screen.type instead.
+
     Send keypress events.
 
     Parameters:
@@ -1174,6 +1252,7 @@ def iType(word, delay=0.0):
         iType([('Shift_L', 'press'), 'h', 'e', ('Shift_L', 'release'), 'l', 'l', 'o'])
         iType([('Control_L', 'Alt_L', 'Delete')])
     """
+    _DEPRECATED()
     args = []
     for char in word:
         if type(char) == tuple:
@@ -1196,6 +1275,8 @@ def iType(word, delay=0.0):
 
 def iInputKey(*args, **kwargs):
     """
+    DEPRECATED - use fmbtx11.Screen.pressKey instead.
+
     Send keypresses using Linux evdev interface
     (/dev/input/eventXX).
 
@@ -1234,6 +1315,7 @@ def iInputKey(*args, **kwargs):
                      instance, "/dev/input/event0" or a name of a
                      device in /proc/bus/input/devices.
     """
+    _DEPRECATED()
     hold = kwargs.get("hold", 0.1)
     delay = kwargs.get("delay", 0.1)
     device = kwargs.get("device", _g_defaultInputKeyDevice)
@@ -1333,6 +1415,44 @@ def findWord(word, detected_words = None, appearance=1):
         raise BadMatch("No words found.")
 
     return scored_words[-1]
+
+def findText(text, detected_words = None, match=-1):
+    def biggerBox(bbox_list):
+        left, top, right, bottom = bbox_list[0]
+        for l, t, r, b in bbox_list[1:]:
+            left = min(left, l)
+            top = min(top, t)
+            right = max(right, r)
+            bottom = max(bottom, b)
+        return (left, top, right, bottom)
+    words = text.split()
+    word_count = len(words)
+    detected_texts = [] # strings of <word_count> words
+
+    if detected_words == None:
+        detected_words = _g_words
+        if _g_words == None:
+            raise NoOCRResults()
+
+    # sort by numeric word id
+    words_by_id = []
+    for word in detected_words:
+        for wid, middle, bbox in detected_words[word]:
+            words_by_id.append(
+                (int(wid.split("_")[1]), word, bbox))
+    words_by_id.sort()
+
+    for i in xrange(len(words_by_id)-word_count+1):
+        detected_texts.append(
+            (" ".join([w[1] for w in words_by_id[i:i+word_count]]),
+             biggerBox([w[2] for w in words_by_id[i:i+word_count]])))
+
+    norm_text = " ".join(words) # normalize whitespace
+    scored_texts = []
+    for t in detected_texts:
+        scored_texts.append((_score(t[0], norm_text), t[0], t[1]))
+    scored_texts.sort()
+    return [st for st in scored_texts if st[0] >= match]
 
 def _score(w1, w2):
     closeMatch = {
@@ -1446,6 +1566,23 @@ def iActiveWindow(windowId = None):
         windowId = output.strip()
 
     return windowId
+
+def drawBbox(inputfilename, outputfilename, bbox, caption):
+    """
+    Draw bounding box
+    """
+    if inputfilename == None:
+        return
+
+    draw_commands = ""
+
+    left, top, right, bottom = bbox
+    color = "green"
+    draw_commands += """ -stroke %s -fill blue -draw "fill-opacity 0.2 rectangle %s,%s %s,%s" """ % (
+        color, left, top, right, bottom)
+    draw_commands += """ -stroke none -fill %s -draw "text %s,%s '%s'" """ % (
+        color, left, top, _safeForShell(caption))
+    _runDrawCmd(inputfilename, draw_commands, outputfilename)
 
 def drawWords(inputfilename, outputfilename, words, detected_words):
     """

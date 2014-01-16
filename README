@@ -21,6 +21,11 @@ Quick start for Fedora users:
 make
 sudo make install
 
+(There is a known issue with Fedora: "make install" may install Python
+libraries to a directory that is not in the default PYTHONPATH. You
+may need to add it to PYTHONPATH, for instance:
+export PYTHONPATH=$PYTHONPATH:/usr/local/lib/python2.7/site-packages)
+
 
 Getting started
 ---------------

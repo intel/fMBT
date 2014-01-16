@@ -1,0 +1,178 @@
+#!/usr/bin/env python
+# fMBT, free Model Based Testing tool
+# Copyright (c) 2013, Intel Corporation.
+#
+# Author: antti.kervinen@intel.com
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU Lesser General Public License,
+# version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for
+# more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+# This executable implements a commandline interface for executing
+# Python code on pythonshare servers.
+
+"""Pythonshare client - connect to shared distributed namespaces
+
+Usage: pythonshare-client [options]
+
+Options:
+  -h, --help
+          Print this help.
+
+  -C, --connect=hostspec
+          Connect to pythonshare-server at hostspec. Options
+          when connected will be executed on this connection.
+
+  -n, --namespace=ns
+          Set namespace to be used in for code/eval.
+
+  -A, --async
+          Following python-code executions and evaluations
+          will be asynchronous.
+
+  -S, --sync
+          Following python-code executions and evaluations
+          will be synchronous. This is the default.
+
+  -o, --output=filename
+          Output from following successful python-code evaluations
+          will be written to filename. The default is standard output.
+
+  -f, --format=format
+          Evaluation return values will be converted to string with
+          given formatter. Valid options are str, repr, pickle and
+          raw.
+
+Options when connected:
+  -c, --code=python-code
+          Execute python-code in ns.
+
+  -e, --eval=python-expression
+          Evaluate python-expression in ns. Print return
+          value to standard output.
+
+  -D, --disconnect
+          Disconnect from the pythonshare-server.
+
+  -P, --poll
+          Poll which asynchronously return values are available for
+          reading.
+
+Example:
+
+  pythonshare-client -C socket://localhost:8089 -n myns -c 'a=41' -e 'a+1'
+"""
+
+import pythonshare
+import cPickle
+import getopt
+import sys
+
+opt_output_file = sys.stdout
+
+def error(msg, exit_status=1):
+    sys.stderr.write("pythonshare-client: %s\n" % (msg,))
+    sys.exit(1)
+
+def output(data):
+    opt_output_file.write(data)
+    opt_output_file.flush()
+
+formatter_str    = lambda o: str(o)
+formatter_repr   = lambda o: repr(o)
+formatter_raw    = lambda o: o
+formatter_pickle = lambda o: cPickle.dumps(o)
+
+if __name__ == "__main__":
+    opts, remainder = getopt.gnu_getopt(
+        sys.argv[1:], "C:DAhSs:Pp:n:c:e:r:o:f:",
+        ["connect=", "disconnect",
+         "async", "sync", "poll",
+         "help", "server=", "port=",
+         "namespace=", "code=", "eval=", "read=",
+         "output=", "format="])
+    opt_server = "localhost"
+    opt_port = pythonshare.default_port
+    opt_namespace = "pythonshare-client.default"
+    opt_async = False
+    opt_formatter = formatter_str
+
+    conn = None
+
+    if len(remainder) > 0:
+        error('unknown parameter(s): "%s"' %
+              '", "'.join(remainder))
+
+    for opt, arg in opts:
+        if opt in ["-h", "--help"]:
+            print __doc__
+            sys.exit(0)
+        elif opt in ["-s", "--server"]:
+            opt_server = arg
+        elif opt in ["-p", "--port"]:
+            try:
+                opt_port = int(arg)
+            except ValueError:
+                error('invalid port "%s", integer expected.' % (arg,))
+        elif opt in ["-C", "--connect"]:
+            hostspec = arg
+            conn = pythonshare.connection(arg)
+        elif opt in ["-D", "--disconnect"]:
+            conn.close()
+            conn = None
+        elif opt in ["-n", "--namespace"]:
+            opt_namespace = arg
+        elif opt in ["-c", "--code"]:
+            if conn == None:
+                conn = pythonshare.connection("socket://%s:%s" %
+                                              (opt_server, opt_port))
+            try:
+                conn.exec_in(opt_namespace, arg, async=opt_async)
+            except pythonshare.PythonShareError, e:
+                print type(e)
+                print e
+        elif opt in ["-e", "--eval"]:
+            if conn == None:
+                conn = pythonshare.connection("socket://%s:%s" %
+                                              (opt_server, opt_port))
+            try:
+                output(opt_formatter(
+                    conn.eval_in(opt_namespace, arg, async=opt_async)))
+            except pythonshare.PythonShareError, e:
+                print type(e)
+                print e
+        elif opt in ["-r", "--read"]:
+            try:
+                try:
+                    index = int(arg)
+                    # arg is an index to the list of poll_rvs
+                    l = conn.poll_rvs(opt_namespace)
+                    print conn.read_rv(l[index])
+                except ValueError: # arg is a Async_rv string
+                    print conn.read_rv(arg)
+            except pythonshare.PythonShareError, e:
+                print type(e)
+                print e
+        elif opt in ["-A", "--async"]:
+            opt_async = True
+        elif opt in ["-S", "--sync"]:
+            opt_async = False
+        elif opt in ["-P", "--poll"]:
+            async_rvs = conn.poll_rvs(opt_namespace)
+            print "\n".join([str(arv) for arv in async_rvs])
+        elif opt in ["-o", "--output"]:
+            opt_output_file = file(arg, "w")
+        elif opt in ["-f", "--format"]:
+            try:
+                opt_formatter = globals()["formatter_%s" % (arg,)]
+            except KeyError:
+                error('invalid formatter "%s", see --help' % (arg,))

@@ -1,0 +1,2 @@
+include pythonshare-client pythonshare-server
+recursive-include pythonshare/*.py
