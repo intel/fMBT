@@ -537,7 +537,7 @@ class _EyenfingerOcrEngine(OcrEngine):
     def _findText(self, screenshot, text, match=None, preprocess=None, area=None, pagesegmodes=None):
         ssId = id(screenshot)
         self._assumeOcrResults(screenshot, preprocess, area, pagesegmodes)
-
+        
         for ppfilter in self._ss[ssId].words.keys():
             try:
                 score_text_bbox_list = eyenfinger.findText(
@@ -556,7 +556,7 @@ class _EyenfingerOcrEngine(OcrEngine):
                   for score, matching_text, bbox in score_text_bbox_list]
         return retval
 
-    def _dumpOcr(self, screenshot, match=None, preprocess=None, area=None, pagesegmodes=None):
+    def _dumpOcr(self, screenshot, match=None, preprocess=None, area=None, pagesegmodes=None, wholeBbox=False):
         ssId = id(screenshot)
         if self._ss[ssId].words == None:
             self._assumeOcrResults(screenshot, preprocess, area, pagesegmodes)
@@ -565,7 +565,10 @@ class _EyenfingerOcrEngine(OcrEngine):
             for word in self._ss[ssId].words[ppfilter]:
                 for appearance, (wid, middle, bbox) in enumerate(self._ss[ssId].words[ppfilter][word]):
                     (x1, y1, x2, y2) = bbox
-                    w.append((word, x1, y1))
+                    if wholeBbox:
+                        w.append((word, x1, y1, x2, y2))
+                    else:
+                        w.append((word, x1, y1))
         return sorted(set(w), key=lambda i:(i[2]/8, i[1]))
 
     def _assumeOcrResults(self, screenshot, preprocess, area, pagesegmodes):
@@ -2214,7 +2217,7 @@ class Screenshot(object):
         """
         Deprecated, use dumpOcr().
         """
-        return self.dumpOcr()
+        return self.dumpOcr(**kwargs)
 
     def filename(self):
         return self._filename
