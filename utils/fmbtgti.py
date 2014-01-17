@@ -565,8 +565,8 @@ class _EyenfingerOcrEngine(OcrEngine):
             for word in self._ss[ssId].words[ppfilter]:
                 for appearance, (wid, middle, bbox) in enumerate(self._ss[ssId].words[ppfilter][word]):
                     (x1, y1, x2, y2) = bbox
-                    w.append((word, x1, y1))
-        return sorted(set(w), key=lambda i:(i[2]/8, i[1]))
+                    w.append((word, (x1, y1, x2, y2)))
+        return sorted(set(w), key=lambda i:(i[1][1]/8, i[1][0]))
 
     def _assumeOcrResults(self, screenshot, preprocess, area, pagesegmodes):
         ssId = id(screenshot)
@@ -2214,7 +2214,7 @@ class Screenshot(object):
         """
         Deprecated, use dumpOcr().
         """
-        return self.dumpOcr()
+        return self.dumpOcr(**kwargs)
 
     def filename(self):
         return self._filename
