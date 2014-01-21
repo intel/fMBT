@@ -98,6 +98,14 @@ class AALModel:
             raise Exception('''Exception handler "%s('%s', %s)" returned unexpected value: %s''' %
                             (handler_name, action_name, exc, rv))
 
+    def call_tagexception_handler(self, handler_name, tag_name, exc):
+        rv = self._variables[handler_name](tag_name, exc)
+        if type(rv) in [bool, types.NoneType]:
+            return rv
+        else:
+            raise Exception('''Exception handler "%s('%s', %s)" returned unexpected value: %s''' %
+                            (handler_name, tag_name, exc, rv))
+
     def reset(self):
         # initialize model
         fmbt._g_actionName = "AAL: initial_state"
@@ -152,7 +160,13 @@ class AALModel:
         if not 0 < i <= len(self._all_tagnames):
             raise IndexError('Cannot execute tag %s adapter code' % (i,))
         fmbt._g_actionName = "tag: " + self._all_tagnames[i-1]
-        rv = self.call(self._all_tagadapters[i-1])
+        try:
+            rv = self.call(self._all_tagadapters[i-1])
+        except Exception, exc:
+            if 'adapter_exception_handler' in self._variables:
+                return self.call_tagexception_handler('adapter_exception_handler', self._all_tagnames[i-1], exc)
+            else:
+                raise
         return rv
 
     def model_execute(self, i):
