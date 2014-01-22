@@ -742,7 +742,16 @@ class Device(fmbtgti.GUITestInterface):
         """
         Returns the name of the top window.
         """
-        return self._conn.recvTopAppWindow()[1]
+        # the top window may be None during transitions, therefore
+        # retry a couple of times if necessary.
+        timeout = 0.5
+        pollDelay = 0.2
+        start = time.time()
+        tw = self._conn.recvTopAppWindow()[1]
+        while tw == None and (time.time() - start < timeout):
+            time.sleep(pollDelay)
+            tw = self._conn.recvTopAppWindow()[1]
+        return tw
 
     def verifyText(self, text, partial=False):
         """
