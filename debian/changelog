@@ -1,8 +1,26 @@
-fmbt (0.12.1-0.rc0) unstable; urgency=low
+fmbt (0.12.1-1) unstable; urgency=low
 
-  * Development version.
+  * fmbt-scripter:
+    - syntax highlighting
+    - indentation with tab, auto indent recorded scripts
+    - highlight lines to be executed with "Run lines"
+    - find (Ctrl+f), goto line (Ctrl+g) and python help (F1)
+    - test script recording with timing
+  * fmbtandroid/tizen/vnc/x11:
+    - screenshot archiving and saving to subdirectories during test run
+      (setScreenshotSubdir(), setScreenshotLimit(),
+      setScreenshotArchiveMethod())
+  * fmbtvnc:
+    - tap* methods accept (mouse) "button" parameter
+  * fmbt-editor:
+    - support launching with "fmbt-editor test.conf"
+  * Bug fixes and robustness improvements, including
+    - fmbtandroid refreshView() returns even if device hangs
+    - fmbtandroid topWindow() does not return None if a window appears
+    - exception from the adapter() of a tag is handled by
+      adapter_exception_handler in AAL/Python.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 10 Dec 2013 13:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 22 Jan 2014 13:42:00 +0300
 
 fmbt (0.12-1) unstable; urgency=low
 
