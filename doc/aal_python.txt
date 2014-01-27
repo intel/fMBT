@@ -525,7 +525,9 @@ adapter_exception_handler(name, exc) - hook adapter exceptions
 
         If this function returns False when handling an exception of a
         tag, adapter reports failed validation of the tag. Returning
-        False when handling an exception of an action is an error.
+        False when handling an exception of an output action means
+        that the action was not observed. Returning False for an input
+        action is an error.
 
         If this function raises an exception, adapter reports
         execution of an unidentified action (test will fail).
