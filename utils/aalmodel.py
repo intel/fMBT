@@ -284,7 +284,15 @@ class AALModel:
             for index, adapter in enumerate(self._all_adapters):
                 if self._all_types[index] != "output": continue
                 fmbt._g_actionName = self._all_names[index]
-                output_action = self.call(adapter)
+                try:
+                    output_action = self.call(adapter)
+                except Exception, exc:
+                    if 'adapter_exception_handler' in self._variables:
+                        output_action = self.call_exception_handler(
+                            'adapter_exception_handler',
+                            self._all_names[index], exc)
+                    else:
+                        raise
                 observed_action = None
                 if type(output_action) == str:
                     observed_action = self._all_names.index(output_action) + 1
