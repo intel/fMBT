@@ -1,0 +1,52 @@
+.\" Process this file with
+.\" groff -man -Tascii fmbt.1
+.TH FMBT 1 "Jan 2014" Linux "User Manuals"
+.SH NAME
+fmbt \- generate and execute tests
+.SH SYNOPSIS
+.SY fmbt
+.OP \-l LOGFILE
+.OP \-i
+.OP \-o OPT=VAL
+.B ...
+\fICONFFILE\fR
+.
+.SY fmbt
+.B \-h
+|
+.B \-\-help
+.SH DESCRIPTION
+Generate and execute test according to CONFFILE.
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+print help, then exit
+.TP
+\fB\-l\fR \fILOGFILE\fR
+write test log to LOGFILE, the default is stdout
+.TP
+.B \-o \fIOPT\fR=\fIVAL\fR
+set/override OPT in the test configuration with VAL
+.TP
+.B \-i
+run in interactive mode
+.SH EXAMPLES
+.nf
+.B fmbt -o adapter=dummy test.conf | fmbt-log -f '$as'
+
+.fi
+Only generate a test by disabling whatever adapter is configured in
+\fBtest.conf\fR. Use \fBfmbt-log\fR to print only the names of test
+steps in the generated sequence.
+.SH AUTHOR
+Written by Antti Kervinen.
+.SH "REPORTING BUGS"
+Report bugs to https://github.com/01org/fMBT/issues
+.SH COPYRIGHT
+Copyright \(co 2014 Intel Corporation.
+.SH "SEE ALSO"
+.BR fmbt-editor (1)
+.BR fmbt-log (1)
+.PP
+\fIhttps://github.com/01org/fMBT/blob/master/doc/configuration.txt\fR
+Detailed documentation on test configuration file.
