@@ -1,0 +1,68 @@
+.TH FMBT-VIEW 1 "Jan 2014" Linux "User Manuals"
+.SH NAME
+fmbt\-view \- visualise finite state machines in LSTS format
+.SH SYNOPSIS
+.SY fmbt\-view
+.OP \-f FORMAT
+.OP \-l LOG
+.OP \-i
+.OP \-o OUTFILE
+.OP \-e PATTERN
+.OP \-E PATTERN
+.OP \-O
+.OP \-s PATTERN
+.OP \-S PATTERN
+.OP \-U
+\fILSTSFILE\fR
+.
+.SY fmbt\-view
+.B \-h
+|
+.B \-\-help
+.SH DESCRIPTION
+Render the finite state machine in LSTSFILE to an image, then either
+show the image (if OUTFILE is not given) or save the image to OUTFILE.
+If LSTSFILE is \-, read LSTS from standard input.
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+print help, then exit
+.TP
+.B \-f \fIFORMAT\fR
+image output format, such as \fBps\fR, \fBsvg\fR, \fBpdf\fR and \fBpng\fR. \fB\-h\fR lists supported formats.
+.TP
+\fB\-l\fR \fILOGFILE\fR
+color states and transitions traversed in \fBfmbt\fR's LOGFILE
+.TP
+.B \-i
+inverse coloring, highlight states and transitions not visited in LOGFILE
+.TP
+.B \-o \fIOUTFILE\fR
+save rendered image to OUTFILE. If OUTFILE is \-, image is written to standard output.
+.TP
+.B \-e \fIPATTERN\fR
+erase transitions matching PATTERN
+.TP
+.B \-E \fIPATTERN\fR
+erase transitions matching PATTERN unless traversed in LOGFILE
+.TP
+.B \-O
+erase orphaned states
+.TP
+.B \-s \fIPATTERN\fR
+show only transitions matching PATTERN
+.TP
+.B \-S \fIPATTERN\fR
+show only transitions matching PATTERN or traversed in LOGFILE
+.TP
+.B \-U
+erase unvisited states
+.SH AUTHOR
+Written by Antti Kervinen.
+.SH "REPORTING BUGS"
+Report bugs to https://github.com/01org/fMBT/issues
+.SH COPYRIGHT
+Copyright \(co 2014 Intel Corporation.
+.SH "SEE ALSO"
+.BR fmbt (1)
+.BR remote_pyaal (1)
