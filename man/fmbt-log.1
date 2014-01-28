@@ -1,0 +1,41 @@
+.\" Process this file with
+.\" groff -man -Tascii fmbt.1
+.TH FMBT-LOG 1 "Jan 2014" Linux "User Manuals"
+.SH NAME
+fmbt-log \- parse and print fMBT test logs
+.SH SYNOPSIS
+.SY fmbt-log
+.OP \-f FORMAT
+.OP \-t TIME-FORMAT
+.OP \-o OUTFILE
+[\fILOGFILE\fR]...
+.
+.SY fmbt-log
+.B \-h
+|
+.B \-\-help
+.SH DESCRIPTION
+Print selected fields from LOGFILEs written by \fBfmbt\fR.
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+print help, then exit
+.TP
+.B \-f \fIFORMAT\fR
+defines how the output is formatted. See \fB\-\-help\fR for available
+fields.
+.TP
+.B \-t \fITIME-FORMAT\fR
+defines format for printing time values. See \fBstrftime\fR(3) for
+valid time formats.
+.TP
+\fB\-o\fR \fIOUTFILE\fR
+write formatted output to OUTFILE, the default is stdout
+.SH AUTHOR
+Written by Antti Kervinen.
+.SH "REPORTING BUGS"
+Report bugs to https://github.com/01org/fMBT/issues
+.SH COPYRIGHT
+Copyright \(co 2014 Intel Corporation.
+.SH "SEE ALSO"
+.BR fmbt (1)
