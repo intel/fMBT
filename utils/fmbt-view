@@ -101,7 +101,7 @@ if __name__ == "__main__":
             DEBUG = True
         elif opt in ["-h", "--help"] or remainder == []:
             try:
-                supported_formats = cmd_output(["dotx", "-Thelp"]).split(':')[-1].strip()
+                supported_formats = cmd_output(["dot", "-Thelp"]).split(':')[-1].strip()
             except:
                 supported_formats = "*** error: graphviz dot not working! ***"
             formatted_formats = ('\n' + 10 * " ").join(textwrap.wrap(supported_formats, 55))
