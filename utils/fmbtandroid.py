@@ -622,6 +622,30 @@ class Device(fmbtgti.GUITestInterface):
                 self._lastView = view
                 return view
 
+    def useDisplaySize(self, (width, height) = (None, None)):
+        """
+        Transform coordinates of synthesized events from screenshot
+        resolution to given resolution. By default events are
+        synthesized directly to screenshot coordinates.
+
+        Parameters:
+
+          (width, height) (pair of integers, optional):
+                  width and height of display in pixels. If not
+                  given, values from Android system properties
+                  "display.width" and "display.height" will be used.
+
+        Returns None.
+        """
+        if width == None:
+            width = int(self.systemProperty("display.width"))
+        if height == None:
+            height = int(self.systemProperty("display.height"))
+        screenWidth, screenHeight = self.screenSize()
+        self._conn.setScreenToDisplayCoords(
+            lambda x, y: (x * width / screenWidth,
+                          y * height / screenHeight))
+
     def shell(self, shellCommand):
         """
         Execute shellCommand in adb shell.
@@ -1194,6 +1218,7 @@ class _AndroidDeviceConnection:
         self._serialNumber = serialNumber
         self._stopOnError = stopOnError
         self._shellSupportsTar = False
+        self.setScreenToDisplayCoords(lambda x, y: (x, y))
 
         self._detectFeatures()
         try:
@@ -1403,6 +1428,7 @@ class _AndroidDeviceConnection:
         return topAppName, topWindowName
 
     def sendTap(self, xCoord, yCoord):
+        xCoord, yCoord = self._screenToDisplay(xCoord, yCoord)
         return self._monkeyCommand("tap " + str(xCoord) + " " + str(yCoord))[0]
 
     def sendKeyUp(self, key):
@@ -1412,15 +1438,19 @@ class _AndroidDeviceConnection:
         return self._monkeyCommand("key down " + key)[0]
 
     def sendTouchUp(self, xCoord, yCoord):
+        xCoord, yCoord = self._screenToDisplay(xCoord, yCoord)
         return self._monkeyCommand("touch up " + str(xCoord) + " " + str(yCoord))[0]
 
     def sendTouchDown(self, xCoord, yCoord):
+        xCoord, yCoord = self._screenToDisplay(xCoord, yCoord)
         return self._monkeyCommand("touch down " + str(xCoord) + " " + str(yCoord))[0]
 
     def sendTouchMove(self, xCoord, yCoord):
+        xCoord, yCoord = self._screenToDisplay(xCoord, yCoord)
         return self._monkeyCommand("touch move " + str(xCoord) + " " + str(yCoord))[0]
 
     def sendTrackBallMove(self, dx, dy):
+        dx, dy = self._screenToDisplay(dx, dy)
         return self._monkeyCommand("trackball " + str(dx) + " " + str(dy))[0]
 
     def sendPress(self, key):
@@ -1467,6 +1497,9 @@ class _AndroidDeviceConnection:
                 raise FMBTAndroidError("Screenshot file size 0")
 
         return True
+
+    def setScreenToDisplayCoords(self, screenToDisplayFunction):
+        self._screenToDisplay = screenToDisplayFunction
 
     def shellSOE(self, shellCommand):
         fd, filename = tempfile.mkstemp(prefix="fmbtandroid-shellcmd-")
