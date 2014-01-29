@@ -1,0 +1,44 @@
+.TH FMBT-EDITOR 1 "Jan 2014" Linux "User Manuals"
+.SH NAME
+fmbt\-editor \- edit and visualise test models and configurations
+.SH SYNOPSIS
+.SY fmbt\-editor
+.OP \-p
+.OP \-P
+[\fIMODELFILE\fR] [\fICONFFILE\fR]
+.
+.SY fmbt\-editor
+.B \-h
+|
+.B \-\-help
+.SH DESCRIPTION
+GUI editor and previewer for fMBT models and test configuration files.
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+print help, then exit
+.TP
+.B \-p
+disable preview, never visualise models or generated tests.
+.TP
+.B \-P
+preview only mode. Visualise models and generated tests whenever
+MODELFILE or CONFFILE change.
+.SH EXAMPLES
+.nf
+.B fmbt\-editor \-P model.aal test.conf &
+.B emacs model.aal test.conf
+
+.fi
+Use \fBemacs\fR for editing \fBmodel.aal\fR and
+\fBtest.conf\fR. Whenever either of files is saved, \fBfmbt\-editor\fR
+refreshes visible preview tab.
+.SH AUTHOR
+Written by Antti Kervinen.
+.SH "REPORTING BUGS"
+Report bugs to https://github.com/01org/fMBT/issues
+.SH COPYRIGHT
+Copyright \(co 2014 Intel Corporation.
+.SH "SEE ALSO"
+.BR fmbt (1)
+.BR fmbt\-scripter (1)

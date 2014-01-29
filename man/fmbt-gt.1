@@ -1,0 +1,56 @@
+.TH FMBT-GT 1 "Jan 2014" Linux "User Manuals"
+.SH NAME
+fmbt\-gt \- create and edit LSTSs with graph transformations
+.SH SYNOPSIS
+.SY fmbt\-gt
+.OP \-i \fIINFILE\fR
+.OP \-o \fIOUTFILE\fR
+.OP \-f \fIRULEFILE\fR
+[\fIRULE\fR]...
+.
+.SY fmbt\-gt
+.B \-h
+|
+.B \-\-help
+.SH DESCRIPTION
+Apply graph transformation RULEs to LSTS read from INFILE, or to new
+LSTS. See \fB\-\-help\fR for RULE syntax.
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+print help, then exit
+.TP
+.B \-i \fIINFILE\fR
+read LSTS to be transformed from INFILE. If INFILE is \-, read the
+LSTS from standard input. If INFILE is "new" or \fB-i\fR is not given,
+transform the default one\-state LSTS. The initial state of
+transformed LSTS is marked with "gt:istate" tag (state proposition).
+.TP
+.B \-o \fIOUTFILE\fR
+write resulting LSTS to OUTFILE. If OUTFILE is \- or \fB-o\fR is not
+given, write the LSTS to standard output.
+.TP
+.B \-f \fIRULEFILE\fR
+apply transformation rules from RULEFILE instead of command line
+.SH EXAMPLES
+.nf
+#!/usr/bin/fmbt\-gt \-f
+P(s0, "gt:istate")
+->
+T(s0, "i:hello", s1)
+T(s1, "i:bye", s0)
+
+.fi
+contents of an executable that prints an LSTS to stdout. Pipe output
+to \fBfmbt-view\fR to visualise the LSTS.
+
+Refer to \fB\-\-help\fR for more examples.
+.SH AUTHOR
+Written by Antti Kervinen.
+.SH "REPORTING BUGS"
+Report bugs to https://github.com/01org/fMBT/issues
+.SH COPYRIGHT
+Copyright \(co 2014 Intel Corporation.
+.SH "SEE ALSO"
+.BR fmbt\-view (1)
+.BR fmbt\-editor (1)
