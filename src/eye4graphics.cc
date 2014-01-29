@@ -601,6 +601,23 @@ int openedImageDimensions(BoundingBox* bbox, const void * image)
     return 0;
 }
 
+int openedImageIsBlank(const void *image)
+{
+    const Image* im = static_cast<const Image*>(image);
+    int xsize = im->columns();
+    int ysize = im->rows();
+
+    const PixelPacket* pp = im->getConstPixels(0, 0, xsize, ysize);
+    for (int i = 0; i < xsize * ysize; ++i) {
+        if (! (pp[i].red == 0 &&
+               pp[i].green == 0 &&
+               pp[i].blue == 0)) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 void* openBlob(const void* blob, const char* pixelorder, int x, int y)
 {
   Image* image = new Image(x,y,pixelorder,CharPixel,blob);

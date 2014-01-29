@@ -119,6 +119,8 @@ extern "C" {
 
     int openedImageDimensions(BoundingBox* bbox, const void * image);
 
+    int openedImageIsBlank(const void *image);
+
     void* openImage(const char* imagefile);
 
     void* openBlob(const void* blob, const char* pixelorder, int x, int y);

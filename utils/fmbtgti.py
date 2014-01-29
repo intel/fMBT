@@ -218,6 +218,12 @@ def _e4gImageDimensions(e4gImage):
     eye4graphics.openedImageDimensions(ctypes.byref(struct_bbox), e4gImage)
     return (struct_bbox.right, struct_bbox.bottom)
 
+def _e4gImageIsBlank(filename):
+    e4gImage = eye4graphics.openImage(filename)
+    rv = (eye4graphics.openedImageIsBlank(e4gImage) == 1)
+    eye4graphics.closeImage(e4gImage)
+    return rv
+
 class GUITestConnection(object):
     """
     Implements GUI testing primitives needed by GUITestInterface.
@@ -2173,6 +2179,12 @@ class Screenshot(object):
                 self._oirEngine.removeScreenshot(self)
         if (type(self._screenshotRefCount) == dict and self._filename):
             self._screenshotRefCount[self._filename] -= 1
+
+    def isBlank(self):
+        """
+        Returns True if screenshot is blank, otherwise False.
+        """
+        return _e4gImageIsBlank(self._filename)
 
     def setSize(self, screenSize):
         self._screenSize = screenSize

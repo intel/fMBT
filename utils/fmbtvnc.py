@@ -21,6 +21,8 @@ This is library implements fMBT GUITestInterface for VNC.
 import fmbt
 import fmbtgti
 
+import time
+
 import twisted.python.log
 from twisted.internet.defer import Deferred
 from twisted.internet import reactor
@@ -73,6 +75,7 @@ class VNCConnection(fmbtgti.GUITestConnection):
     def __init__(self, hostspec, port, password, autoUpdate):
         fmbtgti.GUITestConnection.__init__(self)
         self._updatedImage = None
+        self._firstScreenshot = True
         if ":" in hostspec: # host:vncdisplay
             self._host, display = hostspec.split(":",1)
             try: self._port = 5900 + int(display)
@@ -137,11 +140,18 @@ class VNCConnection(fmbtgti.GUITestConnection):
             self.client.keyPress(key)
         return True
 
-    def recvScreenshot(self, filename):
+    def recvScreenshot(self, filename, retry=3):
         if self._updatedImage:
             self._updatedImage.save(filename)
         else:
             self.client.captureScreen(filename)
+        if self._firstScreenshot and retry > 0:
+            # Retry if the result is blank, workaround "first
+            # screenshot is blank" issue with TightVNC server.
+            if fmbtgti._e4gImageIsBlank(filename):
+                time.sleep(1)
+                return self.recvScreenshot(filename, retry-1)
+        self._firstScreenshot = False
         return True
 
     def target(self):
