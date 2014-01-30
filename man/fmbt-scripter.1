@@ -1,0 +1,29 @@
+.TH FMBT-SCRIPTER 1 "Jan 2014" Linux "User Manuals"
+.SH NAME
+fmbt\-scripter \- grab bitmaps, edit, record and run Python UI tests
+.SH SYNOPSIS
+.SY fmbt\-scripter
+.OP \-h
+.OP \-V
+[\fIFILE\fR]
+.SH DESCRIPTION
+Tool for writing UI test scripts using fMBT's GUI test interfaces,
+that is, fmbtandroid, fmbttizen, fmbtvnc or fmbtx11 Python
+libraries. Selects bitmaps from screenshots, records tests, executes
+test code line-by-line and selected block at a time.
+
+If FILE is given, it will be opened. FILE can be anything that
+contains Python, for instance a Python script or an AAL/Python model.
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+print help, then exit
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+print version, then exit
+.SH AUTHOR
+Written by Antti Kervinen.
+.SH "REPORTING BUGS"
+Report bugs to https://github.com/01org/fMBT/issues
+.SH COPYRIGHT
+Copyright \(co 2014 Intel Corporation.
