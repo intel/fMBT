@@ -589,11 +589,15 @@ class Device(fmbtgti.GUITestInterface):
             return "refreshView parse errors:\n    %s" % (
                 "\n    ".join(["line %s: %s error: %s" % e for e in errors]),)
 
+        if self._conn:
+            displayToScreen = self._conn._displayToScreen
+        else:
+            displayToScreen = None
         if forcedView != None:
             if isinstance(forcedView, View):
                 self._lastView = forcedView
             elif type(forcedView) == str:
-                self._lastView = View(self.screenshotDir(), self.serialNumber, file(forcedView).read())
+                self._lastView = View(self.screenshotDir(), self.serialNumber, file(forcedView).read(), displayToScreen)
                 _adapterLog(formatErrors(self._lastView.errors()))
             else:
                 raise ValueError("forcedView must be a View object or a filename")
@@ -603,7 +607,7 @@ class Device(fmbtgti.GUITestInterface):
         while True:
             dump = self._conn.recvViewData()
             if dump != None:
-                view = View(self.screenshotDir(), self.serialNumber, dump)
+                view = View(self.screenshotDir(), self.serialNumber, dump, displayToScreen)
             else:
                 _adapterLog("refreshView window dump reading failed")
                 view = None
@@ -645,6 +649,9 @@ class Device(fmbtgti.GUITestInterface):
         self._conn.setScreenToDisplayCoords(
             lambda x, y: (x * width / screenWidth,
                           y * height / screenHeight))
+        self._conn.setDisplayToScreenCoords(
+            lambda x, y: (x * screenWidth / width,
+                          y * screenHeight / height))
 
     def shell(self, shellCommand):
         """
@@ -965,7 +972,7 @@ class ViewItem(fmbtgti.GUIItem):
     """
     ViewItem holds the information of a single GUI element.
     """
-    def __init__(self, className, code, indent, properties, parent, rawProps, dumpFilename):
+    def __init__(self, className, code, indent, properties, parent, rawProps, dumpFilename, displayToScreen):
         self._p = properties
         self._parent = parent
         self._className = className
@@ -976,9 +983,9 @@ class ViewItem(fmbtgti.GUIItem):
         if not "scrolling:mScrollX" in self._p:
             self._p["scrolling:mScrollX"] = 0
             self._p["scrolling:mScrollY"] = 0
-        fmbtgti.GUIItem.__init__(self, className, self._calculateBbox(), dumpFilename)
+        fmbtgti.GUIItem.__init__(self, className, self._calculateBbox(displayToScreen), dumpFilename)
     def addChild(self, child): self._children.append(child)
-    def _calculateBbox(self):
+    def _calculateBbox(self, displayToScreen):
         left = int(self._p["layout:mLeft"])
         top = int(self._p["layout:mTop"])
         parent = self._parent
@@ -989,7 +996,9 @@ class ViewItem(fmbtgti.GUIItem):
             parent = parent._parent
         height = int(self._p["layout:getHeight()"])
         width = int(self._p["layout:getWidth()"])
-        return (left, top, left + width, top + height)
+        screenLeft, screenTop = displayToScreen(left, top)
+        screenRight, screenBottom = displayToScreen(left + width, top + height)
+        return (screenLeft, screenTop, screenRight, screenBottom)
     def children(self):   return self._children
     def className(self):  return self._className
     def code(self):       return self._code
@@ -1018,7 +1027,7 @@ class View(object):
     the dump to a hierarchy of ViewItems. find* methods enable searching
     for ViewItems based on their properties.
     """
-    def __init__(self, screenshotDir, serialNumber, dump):
+    def __init__(self, screenshotDir, serialNumber, dump, displayToScreen=None):
         self.screenshotDir = screenshotDir
         self.serialNumber = serialNumber
         self._viewItems = []
@@ -1029,7 +1038,9 @@ class View(object):
         self._dump = dump
         self._rawDumpFilename = self.screenshotDir + os.sep + fmbtgti._filenameTimestamp() + "-" + self.serialNumber + ".view"
         file(self._rawDumpFilename, "w").write(self._dump)
-        try: self._parseDump(dump, self._rawDumpFilename)
+        if displayToScreen == None:
+            displayToScreen = lambda x, y: (x, y)
+        try: self._parseDump(dump, self._rawDumpFilename, displayToScreen)
         except Exception, e:
             self._errors.append((-1, "", "Parser error"))
 
@@ -1120,7 +1131,7 @@ class View(object):
     def save(self, fileOrDirName):
         shutil.copy(self._rawDumpFilename, fileOrDirName)
 
-    def _parseDump(self, dump, rawDumpFilename):
+    def _parseDump(self, dump, rawDumpFilename, displayToScreen):
         """
         Process the raw dump data and create a tree of ViewItems
         """
@@ -1194,7 +1205,7 @@ class View(object):
 
                 index += len(propMatch.group("prop")) + length + 1
 
-            self._viewItems.append(ViewItem(matcher.group("class"), matcher.group("id"), indent, properties, parent, matcher.group("properties"), self._rawDumpFilename))
+            self._viewItems.append(ViewItem(matcher.group("class"), matcher.group("id"), indent, properties, parent, matcher.group("properties"), self._rawDumpFilename, displayToScreen))
 
             if parent:
                 parent.addChild(self._viewItems[-1])
@@ -1219,6 +1230,7 @@ class _AndroidDeviceConnection:
         self._stopOnError = stopOnError
         self._shellSupportsTar = False
         self.setScreenToDisplayCoords(lambda x, y: (x, y))
+        self.setDisplayToScreenCoords(lambda x, y: (x, y))
 
         self._detectFeatures()
         try:
@@ -1500,6 +1512,9 @@ class _AndroidDeviceConnection:
 
     def setScreenToDisplayCoords(self, screenToDisplayFunction):
         self._screenToDisplay = screenToDisplayFunction
+
+    def setDisplayToScreenCoords(self, displayToScreenFunction):
+        self._displayToScreen = displayToScreenFunction
 
     def shellSOE(self, shellCommand):
         fd, filename = tempfile.mkstemp(prefix="fmbtandroid-shellcmd-")
