@@ -22,6 +22,22 @@
 
 # pylint: disable = C0103, C0111, R0913
 
+"""
+fmbt-scripter - bitmap grabber, UI testscript editor and recorder
+
+Usage: fmbt-scripter [options] [scriptfile]
+
+Scriptfile can be a Python script or a language with embedded Python
+blocks, such as AAL/Python.
+
+Options:
+  -h, --help
+        print this help
+
+  -V, --version
+        print version information
+"""
+
 from PySide import QtCore
 from PySide import QtGui
 
@@ -41,6 +57,8 @@ import fmbtgti
 import fmbtandroid
 import fmbttizen
 import fmbtuinput
+
+import fmbt_config
 
 def error(msg, exitStatus=1):
     sys.stderr.write("screen2gti: %s\n" % (msg,))
@@ -2283,12 +2301,15 @@ if __name__ == "__main__":
     supported_platforms = ['android', 'tizen', 'x11', 'vnc', 'dummy']
 
     opts, remainder = getopt.getopt(
-        sys.argv[1:], 'hd:p:',
-        ['help', 'device=', 'platform=', 'debug'])
+        sys.argv[1:], 'hd:p:V',
+        ['help', 'version', 'device=', 'platform=', 'debug'])
 
     for opt, arg in opts:
         if opt in ['-h', '--help']:
             print __doc__
+            sys.exit(0)
+        elif opt in ['-V', '--version']:
+            print "Version " + fmbt_config.fmbt_version + fmbt_config.fmbt_build_info
             sys.exit(0)
         elif opt in ['--debug']:
             opt_debug += 1
