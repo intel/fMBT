@@ -1,0 +1,48 @@
+.TH FMBT-AALC 1 "Jan 2014" Linux "User Manuals"
+.SH NAME
+fmbt-aalc \- compile AAL to embedded language
+.SH SYNOPSIS
+.SY fmbt-aalc
+.OP \-D FLAG
+.OP \-I DIR
+.OP \-l ITEM
+.OP \-o OUTFILE
+\fIAALFILE\fR
+.
+.SY fmbt-aalc
+.B \-h
+|
+.B \-\-help
+.SH DESCRIPTION
+Compile AALFILE written in AAL/<lang> to pure <lang>.
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+print help, then exit
+.TP
+.B \-D \fIFLAG\fR
+define FLAG for AAL preprocessor (\fBfmbt-aalp\fR). AALFILE can
+contain ^ifdef FLAG ... ^endif.
+.TP
+.B \-I \fIDIR\fR
+add DIR to include directories. AALFILE and files imported with
+^include will be searched from these directories.
+.TP
+.B \-l \fIITEM\fR
+only list ITEMs in AALFILE. ITEM must be \fBtag\fR or \fBaction\fR.
+.TP
+\fB\-o\fR \fIOUTFILE\fR
+write result to OUTFILE, the default is stdout
+.SH AUTHOR
+Written by Antti Kervinen.
+.SH "REPORTING BUGS"
+Report bugs to https://github.com/01org/fMBT/issues
+.SH COPYRIGHT
+Copyright \(co 2014 Intel Corporation.
+.SH "SEE ALSO"
+.BR fmbt (1)
+.BR fmbt\-aalp (1)
+.PP
+AAL/Python language reference.
+.br
+\fIdoc/aal_python.txt\fR

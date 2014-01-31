@@ -1,0 +1,46 @@
+.TH FMBT-AALP 1 "Jan 2014" Linux "User Manuals"
+.SH NAME
+fmbt-aalp \- AAL preprocessor
+.SH SYNOPSIS
+.SY fmbt-aalp
+.OP \-D FLAG
+.OP \-I DIR
+[\fIAALFILE\fR]
+.
+.SY fmbt-aalp
+.B \-h
+|
+.B \-\-help
+.SH DESCRIPTION
+Expand preprocessor directives in AALFILE:
+.br
+^ifdef FLAG
+.br
+^ifndef FLAG
+.br
+^include FILENAME
+.br
+^endif
+
+If AALFILE is not given, read standard input. Write result to standard
+output.
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+print help, then exit
+.TP
+.B \-D \fIFLAG\fR
+define FLAG for ^ifdef FLAG and ^ifndef FLAG in AALFILE.
+.TP
+.B \-I \fIDIR\fR
+add DIR to include directories. AALFILE and files imported with
+^include will be searched from these directories.
+.SH AUTHOR
+Written by Antti Kervinen.
+.SH "REPORTING BUGS"
+Report bugs to https://github.com/01org/fMBT/issues
+.SH COPYRIGHT
+Copyright \(co 2014 Intel Corporation.
+.SH "SEE ALSO"
+.BR fmbt (1)
+.BR fmbt\-aalp
