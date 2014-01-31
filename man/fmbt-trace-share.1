@@ -1,0 +1,79 @@
+.TH FMBT-TRACE-SHARE 1 "Jan 2014" Linux "User Manuals"
+.SH NAME
+fmbt\-trace\-share \- share covered traces between fmbt instances
+.SH SYNOPSIS
+.SY fmbt\-trace\-share
+.OP \-k
+.OP \-l \fILOGFILE\fR
+.OP \-s \fISESSION\fR
+.OP \-S
+.
+.SY fmbt\-trace\-share
+.B \-h
+|
+.B \-\-help
+.SH DESCRIPTION
+\fBfmbt\-trace\-share\fR stores every executed action from every
+\fBfmbt\fR that participates the SESSION, and shares the data with
+other \fBfmbt\fR instances in the session. \fBfmbt\fR instances can
+join and exit the SESSION freely, and they can locally use different
+coverage measures.
+
+Every SESSION has a server process that shares the data. If there is
+no server running for a session when the first \fBfmbt\fR instance
+tries to connect to it, the server is automatically launched. Servers
+exit by default when the last \fBfmbt\fR exits the session. This can
+be overriden with \fB\-k\fR.
+
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+print help, then exit
+.TP
+.B \-k
+keep session server alive after the last \fBfmbt\fR disconnects
+.TP
+.B \-l \fILOGFILE\fR
+write session server log to LOGFILE. Servers do not write log by
+default.
+.TP
+.B \-s \fISESSION\fR
+establish or connect to SESSION. SESSION is a natural number, the
+default is 0.
+.TP
+.B \-S
+launch only server for the session, do not act as a client.
+.SH EXAMPLES
+\fBcoverage = shared(ssh user@host "fmbt-trace-share -s 42", perm(2))\fR
+
+.fi
+this fMBT test configuration line makes \fBfmbt\fR share executed
+traces between all instances that have connected to session 42. The
+session is hosted by \fBfmbt\-trace\-share\fR server running on
+\fBhost\fR.
+
+\fBfmbt\-trace\-share -S -k\fR
+.br
+\fBfmbt \-o 'coverage=shared(fmbt\-trace\-share, perm(1, "i:smoke.*"))' test.conf && \\\fR
+.br
+\fBfmbt \-o 'coverage=shared(fmbt\-trace\-share, perm(1))' test.conf\fR
+
+.fi
+Launch trace share session 0. The first \fBfmbt\fR runs a test that
+covers all actions with "i:smoke" prefix (and actions that need to be
+executed to cover those). The second \fBfmbt\fR runs a test that
+covers all actions, but considers all actions covered by the first
+\fBfmbt\fR already covered.
+
+.SH AUTHOR
+Written by Antti Kervinen.
+.SH "REPORTING BUGS"
+Report bugs to https://github.com/01org/fMBT/issues
+.SH COPYRIGHT
+Copyright \(co 2014 Intel Corporation.
+.SH "SEE ALSO"
+.BR fmbt (1)
+.PP
+\fBshared\fR coverage in test configuration
+.br
+\fIdoc/configuration.txt\fR
