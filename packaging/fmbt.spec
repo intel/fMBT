@@ -282,6 +282,7 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %dir %{_datadir}/doc/%{name}
 %doc %{_datadir}/doc/%{name}/README
 %doc %{_datadir}/doc/%{name}/*.txt
+%doc %{_mandir}/man1/*.1*
 
 %files examples
 %defattr(-, root, root, -)

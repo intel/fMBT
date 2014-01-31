@@ -10,5 +10,14 @@ dist_doc_DATA = \
 	doc/configuration.txt   \
 	doc/tutorial.txt
 
+dist_man_MANS =                 \
+        man/fmbt-view.1         \
+        man/fmbt-scripter.1     \
+        man/fmbt.1              \
+        man/fmbt-gt.1           \
+        man/fmbt-log.1          \
+        man/fmbt-editor.1       \
+        man/remote_pyaal.1
+
 src/android/fmbt_droid:
 	$(MAKE) -C src android/fmbt_droid
