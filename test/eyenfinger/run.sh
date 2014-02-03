@@ -58,3 +58,21 @@ else
     cat test.log fmbt.output >>$LOGFILE
     testfailed
 fi
+
+teststep "eye4graphics: bitmap self-comparison"
+( python -c '
+import fmbtgti
+ti=fmbtgti.GUITestInterface()
+ti.refreshScreenshot("screenshot2-icon.png")
+print ti.verifyBitmap("screenshot2-icon.png")' 2>&1 | grep -q True && {
+    testpassed
+} ) || testfailed
+
+teststep "eye4graphics: too small screenshot"
+( python -c '
+import fmbtgti
+ti=fmbtgti.GUITestInterface()
+ti.refreshScreenshot("screenshot2-icon.png")
+print ti.verifyBitmap("screenshot2.png")' 2>&1 | grep -q False && {
+    testpassed
+} ) || testpassed
