@@ -123,18 +123,58 @@ protected:
 
   int push_depth;
   std::stack<std::list<std::pair<struct node*, int> > > push_restore;
-  std::stack<std::map<int,std::pair<struct node*,bool> > > exec_restore;
-  std::stack<long > node_count_restore;
+  std::stack<std::pair<std::vector<std::pair<struct node*,bool> >*, std::vector<std::pair<struct node*,bool> >* > > exec_restore;
+  std::vector<long > node_count_restore;
 
   struct node root_node;
 public:
   long node_count;
   long max_count;
 protected:
+  inline std::vector<std::pair<struct node*,bool> >* new_exec() {
+    std::vector<std::pair<struct node*,bool> >* ret;
+
+    if (exec_save.empty()) {
+      ret = new std::vector<std::pair<struct node*,bool> >(max_depth+1);
+    } else {
+      ret = exec_save.back();
+      exec_save.pop_back();
+    }
+    return ret;
+  }
+
+  inline void delete_exec(std::vector<std::pair<struct node*,bool> >* n) {
+    exec_save.push_back(n);
+    (*n)[0].first=NULL;
+  }
+
+  static inline struct node* new_node(int action) {
+    struct node* ret;
+
+    if (nodes_save.empty()) {
+      ret = new struct node;
+    } else {
+      ret=nodes_save.back();
+      nodes_save.pop_back();
+    }
+
+    ret->action=action;
+    return ret;
+  }
+
+  static inline void delete_node(struct node* n) {
+    nodes_save.push_back(n);
+    n->nodes.clear();
+  }
+  static std::vector<struct node*> nodes_save;
+  std::vector<std::vector<std::pair<struct node*,bool> >*> exec_save;
+
   bool have_filter;
   std::string params;
   std::vector<std::string> subs;
-  std::map<int,std::pair<struct node*,bool> >* exec;
+  std::vector<std::pair<struct node*,bool> >* exec;
+  // To avoid extra copying....
+  std::vector<std::pair<struct node*,bool> >* prev_exec;
 
   std::map<std::pair<int,int>, bool> mask;
   std::vector<int> act_depth;
@@ -142,7 +182,7 @@ protected:
   void print_tree(struct node* node,int depth);
   int actions_at_depth(int depth);
 
-  std::map<int,std::map<int,std::pair<struct node*,bool> >*> instance_map;
+  std::map<int,std::vector<std::pair<struct node*,bool> >*> instance_map;
 
 };
 
