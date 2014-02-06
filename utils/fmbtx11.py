@@ -137,36 +137,36 @@ class X11Connection(fmbtgti.GUITestConnection):
 
         return True
 
-    def sendTap(self, x, y):
-        self.libXtst.XTestFakeMotionEvent(self._display, self._current_screen, int(x), int(y), self._X_CurrentTime)
-        self.libXtst.XTestFakeButtonEvent(self._display, 1, self._X_True, self._X_CurrentTime)
-        self.libXtst.XTestFakeButtonEvent(self._display, 1, self._X_False, self._X_CurrentTime)
-        self.libX11.XFlush(self._display)
-        return True
-
-    def sendPress(self, key):
-	return self._typeChar(key, press=True, release=True)
-
     def sendKeyDown(self, key):
         return self._typeChar(key, press=True, release=False)
 
     def sendKeyUp(self, key):
         return self._typeChar(key, press=False, release=True)
 
+    def sendPress(self, key):
+	return self._typeChar(key, press=True, release=True)
+
+    def sendTap(self, x, y, button=1):
+        self.libXtst.XTestFakeMotionEvent(self._display, self._current_screen, int(x), int(y), self._X_CurrentTime)
+        self.libXtst.XTestFakeButtonEvent(self._display, button, self._X_True, self._X_CurrentTime)
+        self.libXtst.XTestFakeButtonEvent(self._display, button, self._X_False, self._X_CurrentTime)
+        self.libX11.XFlush(self._display)
+        return True
+
     def sendTouchMove(self, x, y):
         self.libXtst.XTestFakeMotionEvent(self._display, self._current_screen, int(x), int(y), self._X_CurrentTime)
         self.libX11.XFlush(self._display)
         return True
 
-    def sendTouchDown(self, x, y):
+    def sendTouchDown(self, x, y, button=1):
         self.libXtst.XTestFakeMotionEvent(self._display, self._current_screen, int(x), int(y), self._X_CurrentTime)
-        self.libXtst.XTestFakeButtonEvent(self._display, 1, self._X_True, self._X_CurrentTime)
+        self.libXtst.XTestFakeButtonEvent(self._display, button, self._X_True, self._X_CurrentTime)
         self.libX11.XFlush(self._display)
         return True
 
-    def sendTouchUp(self, x, y):
+    def sendTouchUp(self, x, y, button=1):
         self.libXtst.XTestFakeMotionEvent(self._display, self._current_screen, int(x), int(y), self._X_CurrentTime)
-        self.libXtst.XTestFakeButtonEvent(self._display, 1, self._X_False, self._X_CurrentTime)
+        self.libXtst.XTestFakeButtonEvent(self._display, button, self._X_False, self._X_CurrentTime)
         self.libX11.XFlush(self._display)
         return True
 
@@ -175,13 +175,6 @@ class X11Connection(fmbtgti.GUITestConnection):
         for character in string:
             success = success and self.sendPress(character)
         return success
-
-    def sendTap(self, x, y):
-        self.libXtst.XTestFakeMotionEvent(self._display, self._current_screen, int(x), int(y), self._X_CurrentTime)
-        self.libXtst.XTestFakeButtonEvent(self._display, 1, self._X_True, self._X_CurrentTime)
-        self.libXtst.XTestFakeButtonEvent(self._display, 1, self._X_False, self._X_CurrentTime)
-        self.libX11.XFlush(self._display)
-        return True
 
     def recvScreenshot(self, filename):
         # This is a hack to get this stack quickly testable,
