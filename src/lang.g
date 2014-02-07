@@ -256,12 +256,12 @@ tstr:   string          {
             obj->set_tagname($2.str);
         } ;
 
-push: 'push' '{' bstr '}' {
-            obj->set_push($2.str,$n2.start_loc.pathname,$n2.start_loc.line,$n2.start_loc.col);
+push: 'push' opt_parentheses '{' bstr '}' {
+            obj->set_push($3.str,$n3.start_loc.pathname,$n3.start_loc.line,$n3.start_loc.col);
         } ;
 
-pop:  'pop' '{' bstr '}' {
-            obj->set_pop ($2.str,$n2.start_loc.pathname,$n2.start_loc.line,$n2.start_loc.col); } ;
+pop:  'pop' opt_parentheses '{' bstr '}' {
+            obj->set_pop ($3.str,$n3.start_loc.pathname,$n3.start_loc.line,$n3.start_loc.col); } ;
 
 language: language_kw cpp    { if (!obj) obj=new aalang_cpp  ; obj->set_parser((Parser*)_parser); } starter ';'? |
           language_kw java   { if (!obj) obj=new aalang_java ; obj->set_parser((Parser*)_parser); } starter ';'? |
@@ -288,23 +288,25 @@ starter: |
 variables: 'variables' '{' bstr '}' {
             obj->set_variables($2.str,$n2.start_loc.pathname,$n2.start_loc.line,$n2.start_loc.col); };
 
-istate: 'initial_state' '{' bstr '}' {
-            obj->set_istate($2.str,$n2.start_loc.pathname,$n2.start_loc.line,$n2.start_loc.col); } ;
+istate: 'initial_state' opt_parentheses '{' bstr '}' {
+            obj->set_istate($3.str,$n3.start_loc.pathname,$n3.start_loc.line,$n3.start_loc.col); } ;
 
-ainit: 'adapter_init' '{' bstr '}' {
-            obj->set_ainit($2.str,$n2.start_loc.pathname,$n2.start_loc.line,$n2.start_loc.col); } ;
+ainit: 'adapter_init' opt_parentheses '{' bstr '}' {
+            obj->set_ainit($3.str,$n3.start_loc.pathname,$n3.start_loc.line,$n3.start_loc.col); } ;
 
-aexit: 'adapter_exit' '{' bstr '}' {
-            obj->set_aexit($2.str,$n2.start_loc.pathname,$n2.start_loc.line,$n2.start_loc.col); } ;
+aexit: 'adapter_exit' opt_parentheses '{' bstr '}' {
+            obj->set_aexit($3.str,$n3.start_loc.pathname,$n3.start_loc.line,$n3.start_loc.col); } ;
 
-guard: 'guard' '()' '{' bstr '}' {
+opt_parentheses: | '(' ')';
+
+guard: 'guard' opt_parentheses '{' bstr '}' {
             if (guard) {
                 raise_error($n0.start_loc,(Parser*)_parser);
             } else {
                 obj->set_guard($3.str,$n3.start_loc.pathname,$n3.start_loc.line,$n3.start_loc.col); guard=true;
             }
         } ;
-body: ('body'|'model') '()' '{' bstr '}' { if (body) {
+body: ('body'|'model') opt_parentheses '{' bstr '}' { if (body) {
                 raise_error($n0.start_loc,(Parser*)_parser);
             } else {
                 obj->set_body($3.str,$n3.start_loc.pathname,$n3.start_loc.line,$n3.start_loc.col);
@@ -312,7 +314,7 @@ body: ('body'|'model') '()' '{' bstr '}' { if (body) {
             }
         } ;
 
-adapter: 'adapter' '()' '{' bstr '}' { if (adapter) {
+adapter: 'adapter' opt_parentheses '{' bstr '}' { if (adapter) {
                 raise_error($n0.start_loc,(Parser*)_parser);
             } else {
                 obj->set_adapter($3.str,$n3.start_loc.pathname,$n3.start_loc.line,$n3.start_loc.col);
