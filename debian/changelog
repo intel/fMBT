@@ -1,8 +1,28 @@
-fmbt (0.12.2-0.rc0) unstable; urgency=low
+fmbt (0.12.3-0.rc0) unstable; urgency=low
 
   * Development version.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 22 Jan 2014 14:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 7 Feb 2014 14:42:00 +0300
+
+fmbt (0.12.2-1) unstable; urgency=low
+
+  * doc:
+    - Man pages written for ten most essential executables.
+  * fmbtandroid/tizen/vnc/x11:
+    - Added Screenshot.isBlank() to identify a blank screen.
+    - Fixed comparing full screenshots, enables using screenshots taken
+      during test run as references for verifyBitmap().
+  * fmbtandroid:
+    - Added Device.useDisplaySize() to solve problems caused by
+      mismatching screenshot and Android display dimensions.
+  * fmbtvnc:
+    - Workaround for a blank screen (TightVNC server on Windows).
+  * AAL/Python
+    - adapter_exception_handler handles exceptions from output actions.
+  * Minor fixes.
+  * Sugar at the bottom for Emacs users, see misc/aal-mode.el.
+
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 7 Feb 2014 11:42:00 +0300
 
 fmbt (0.12.1-1) unstable; urgency=low
 

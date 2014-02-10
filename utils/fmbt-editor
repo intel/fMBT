@@ -103,9 +103,9 @@ AAL_SERIALREI = re.compile('{\s*laires')
 AAL_PARALLELRE  = re.compile('parallel\s*{')
 AAL_PARALLELREI = re.compile('{\s*lellarap')
 
-AAL_GUARDRE   = re.compile('guard()\s*{')
-AAL_BODYRE    = re.compile('body()\s*{')
-AAL_ADAPTERRE = re.compile('adapter()\s*{')
+AAL_GUARDRE   = re.compile('guard(?:\(\))?\s*{')
+AAL_BODYRE    = re.compile('body(?:\(\))?\s*{')
+AAL_ADAPTERRE = re.compile('adapter(?:\(\))?\s*{')
 
 GT_COLLAPSETAGS = re.compile('[ #]preview-collapse-tags:(.*)')
 GT_HIDESHOWRE = re.compile('[ #]preview-(show|hide)-(vars|variables):(.*)')
@@ -456,8 +456,8 @@ Keyboard shortcuts:<br>
                                  '        varname2 = \'hello\' # comment2\n'
                                  '    }\n'
                                  '    input "test step 1" {\n'
-                                 '        guard() { return varname1 == 42 }\n'
-                                 '        body()  { varname2 = \'bye\' }\n'
+                                 '        guard { return varname1 == 42 }\n'
+                                 '        body  { varname2 = \'bye\' }\n'
                                  '    }\n'
                                  '}\n')
         self.editor.moveCursor(QtGui.QTextCursor.NextWord)
@@ -1895,18 +1895,18 @@ on_inconc = exit(2)
             # different blocks.
             # block -> [ ("contents", cursor-up, cursor-left), ... ]
             suggestions = {
-                'aal': [('tag "" {\n    guard() { return }\n}', 2, 3)],
-                'input': [('guard() { return }', 0, 1),
-                          ('adapter() {}', 0, 1),
-                          ('body() {}', 0, 1)],
-                'output': [('adapter() {}', 0, 1),
-                           ('guard() { return }', 0, 1),
-                           ('body() {}', 0, 1)],
-                'action': [('guard() { return }', 0, 1),
-                           ('body() {\n    \n}', 1, 0),
-                           ('adapter() {\n    \n}', 1, 0)],
-                'tag': [('guard() { return }', 0, 1),
-                        ('adapter() {}', 0, 1)],
+                'aal': [('tag "" {\n    guard { return }\n}', 2, 3)],
+                'input': [('guard { return }', 0, 1),
+                          ('adapter {}', 0, 1),
+                          ('body {}', 0, 1)],
+                'output': [('adapter {}', 0, 1),
+                           ('guard { return }', 0, 1),
+                           ('body {}', 0, 1)],
+                'action': [('guard { return }', 0, 1),
+                           ('body {\n    \n}', 1, 0),
+                           ('adapter {\n    \n}', 1, 0)],
+                'tag': [('guard { return }', 0, 1),
+                        ('adapter {}', 0, 1)],
                 'guard': [('return ', 0, 0)]
                 }
             if self._menuOptionTabCompletionOldAction.isChecked():
