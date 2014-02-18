@@ -28,11 +28,41 @@
 # component such as remote_python or remote_pyaal.
 
 import datetime
+import sys
+import urllib
 
 _g_fmbt_adapterlogtimeformat="%s.%f"
 _g_actionName = "undefined"
 _g_testStep = -1
 _g_simulated_actions = []
+
+def _fmbt_call_helper(func,param = ""):
+    if simulated():
+        return ""
+    sys.stdout.write("fmbt_call %s.%s\n" % (func,param))
+    sys.stdout.flush()
+    response = sys.stdin.readline().rstrip()
+    magic,code = response.split(" ")
+    if magic == "fmbt_call":
+        if code[0] == "1":
+            return urllib.unquote(code[1:])
+    return ""
+
+
+def getHeuristic():
+    return _fmbt_call_helper("heuristic.get")
+
+def setHeuristic(heuristic):
+    return _fmbt_call_helper("heuristic.set",heuristic)
+
+def getCoverage():
+    return _fmbt_call_helper("coverage.get")
+
+def setCoverage(coverage):
+    return _fmbt_call_helper("coverage.set",coverage)
+
+def getCoverageValue():
+    return _fmbt_call_helper("coverage.getValue")
 
 def fmbtlog(msg, flush=True):
     try: file("/tmp/fmbt.fmbtlog", "a").write("%s\n" % (msg,))

@@ -22,6 +22,8 @@
 #include "history.hh"
 #include "coverage_of.hh"
 #include <cstring>
+#include "heuristic_proxy.hh"
+#include "coverage_proxy.hh"
 
 #ifndef DROI
 #include <glib.h>
@@ -149,6 +151,9 @@ void Conf::load(std::string& name,std::string& content)
 		      heuristic_name + "\":" +
                       heuristic->errormsg);
 
+  heuristic=new Heuristic_proxy(log,heuristic,heuristic_name);
+  heuristic->lineno = heuristic_lineno;
+
   if ((model=new_model(log, model_name)) == NULL) {
     RETURN_ERROR_VOID(model_lineno,"Creating model \"" +
                       filetype(model_name)
@@ -169,6 +174,9 @@ void Conf::load(std::string& name,std::string& content)
 		      "Error in coverage \"" +
 		      coverage_name + "\": " + coverage->errormsg);
 
+  coverage = new Coverage_proxy(log,coverage,coverage_name);
+  coverage->lineno=coverage_lineno;
+
   if (!model->status || !model->init() || !model->reset())
     RETURN_ERROR_VOID(model->lineno,"Error in model: " + model->stringify());
 
@@ -178,7 +186,9 @@ void Conf::load(std::string& name,std::string& content)
 
   set_model_callbacks[0]=coverage;
 
-  for(std::vector<Coverage*>::iterator i=set_model_callbacks.begin();i!=set_model_callbacks.end();i++) {
+  // Handle post set_model calls.
+
+  for(std::vector<Coverage*>::iterator i=set_model_callbacks.begin();i!=set_model_callbacks.end();++i) {
     (*i)->set_model(model);
     if (!((*i)->status)) {
       RETURN_ERROR_VOID((*i)->lineno,"Coverage error: " + (*i)->stringify());
@@ -206,10 +216,6 @@ void Conf::load(std::string& name,std::string& content)
     errormsg=adapter->errormsg;
     return;
   }
-
-  // Handle post set_model calls.
-
-
 
   // Parse adapter-tags filter (if any)
   for(unsigned i=0;i<disable_tags.size();i++) {

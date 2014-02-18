@@ -132,15 +132,15 @@ ssize_t getline(char **lineptr, size_t *n, GIOChannel *stream);
 ssize_t agetline(char **lineptr, size_t *n, GIOChannel *stream,
 		 char* &read_buf,size_t &read_buf_pos,Log& log);
 
-ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,bool magic);
+ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,GIOChannel* magic);
 
 void block(int fd);
 void nonblock(int fd);
 
 int getint(GIOChannel* out,GIOChannel* in,Log& log,
-	   int min=-42,int max=INT_MAX,Writable* w=NULL,bool magic=false);
+	   int min=-42,int max=INT_MAX,Writable* w=NULL,GIOChannel* magic=NULL);
 int getact(int** act,std::vector<int>& vec,GIOChannel* out,GIOChannel* in,
-	   Log& log,int min=-42,int max=INT_MAX,Writable* w=NULL,bool magic=false);
+	   Log& log,int min=-42,int max=INT_MAX,Writable* w=NULL,GIOChannel* magic=NULL);
 
 void regexpmatch(const std::string& regexp,std::vector<std::string>& f,
 		 std::vector<int>& result,bool clear=true,int a=1,int min=0);

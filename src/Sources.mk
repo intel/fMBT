@@ -2,7 +2,7 @@ LOCAL_ADAPTERS = adapter.cc awrapper.cc adapter_model.cc adapter_mapper.cc adapt
 
 LOCAL_HEURISTICS =  heuristic.cc heuristic_random.cc heuristic_mrandom.cc heuristic_greedy.cc weight.g.d_parser.cc heuristic_weight.cc heuristic_include.cc heuristic_coverage_random.cc coverage_random.cc
 
-LOCAL_COVERAGES = coverage.cc coverage_exec_filter.cc coverage_mapper.cc coverage_tree.cc coverage_prop.cc coverage_uniq.cc filter.g.d_parser.cc set.g.d_parser.cc coverage_set.cc coverage_avoid.cc coverage_trace.cc coverage_min.cc coverage_const.cc coverage_paths.cc coverage_report.cc paths.g.d_parser.cc coverage_include.cc coverage_join.cc coverage_end_condition.cc coverage_if.cc coverage_short.cc covlang.g.d_parser.cc coverage_market.cc coverage_restart.cc coverage_nohistory.cc
+LOCAL_COVERAGES = coverage.cc coverage_exec_filter.cc coverage_mapper.cc coverage_tree.cc coverage_prop.cc coverage_uniq.cc filter.g.d_parser.cc set.g.d_parser.cc coverage_set.cc coverage_avoid.cc coverage_trace.cc coverage_min.cc coverage_const.cc coverage_paths.cc coverage_report.cc paths.g.d_parser.cc coverage_include.cc coverage_join.cc coverage_end_condition.cc coverage_if.cc coverage_short.cc covlang.g.d_parser.cc coverage_market.cc coverage_restart.cc coverage_nohistory.cc coverage_proxy.cc heuristic_proxy.cc
 
 LOCAL_MODELS = model.cc mwrapper.cc lts.cc model_lib.cc model_yes.cc
 

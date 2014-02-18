@@ -50,6 +50,9 @@ char *strndup(const char *s, size_t n)
 #include <unistd.h>
 
 #include "helper.hh"
+#include "proxy.hh"
+Proxy callback_proxy;
+
 #include "log.hh"
 #include "writable.hh"
 
@@ -686,7 +689,7 @@ std::string to_string(Verdict::Verdict verdict)
 }
 
 /* blocking getline, filter out log entries */
-ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,bool magic)
+ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,GIOChannel* magic)
 {
   ssize_t ret;
   int loopc=0;
@@ -694,7 +697,6 @@ ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,bool ma
   bool sensible_line;
 
   g_io_channel_set_line_term(stream,NULL,-1);
-
 
   do {
 
@@ -740,32 +742,53 @@ ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,bool ma
 
 
     if (sensible_line) {
-      if (magic && strncmp(*lineptr,"fmbtmagic",9)!=0) {
-	// We have something to stdout
-	fprintf(stdout,"%s\n",*lineptr);
+      if (magic && strncmp(*lineptr,"fmbt_call ",strlen("fmbt_call "))==0) {
+	// magic for fmbt remote configuration.
+	char* conf_str=*lineptr+strlen("fmbt_call ");
+	std::string ret_str;
+	
+	if (!callback_proxy.call(conf_str,ret_str)) {
+	  // no such call?
+	  log.debug("fmbt_call 0\n");
+	  fprintf(magic,"fmbt_call 0\n");
+	  g_io_channel_flush(magic,NULL);
+	} else {
+	  // Call ok
+	  escape_string(ret_str);
+	  log.debug("fmbt_call 1%s\n",ret_str.c_str());
+	  fprintf(magic,"fmbt_call 1%s\n",ret_str.c_str());
+	  g_io_channel_flush(magic,NULL);
+	}
+	
 	g_free(*lineptr);
 	*lineptr = NULL;
 	log_redirect = true;
       } else {
 	if (magic && strncmp(*lineptr,"fmbtmagic",9)==0) {
-          const int magic_length = 10;
-          if (*(*lineptr + magic_length-1) == 'l' || *(*lineptr + magic_length-1) == 'e') {
-            // remote log messages must be url encoded when sent through
-            // the remote adapter protocol
-            *(*lineptr + ret) = '\0';
-            log.print("<remote msg=\"%s\"/>\n",*lineptr+magic_length);
-            if (*(*lineptr + magic_length-1) == 'e')
-              fprintf(stderr, "%s\n", unescape_string(*lineptr+magic_length));
-            g_free(*lineptr);
-            *lineptr = NULL;
-            log_redirect = true;
-          } else {
-            // Remove magic
-            ret -= magic_length;
-            memmove(*lineptr,*lineptr + magic_length,ret);
-            (*lineptr)[ret] = '\0';
-          }
-        }
+	  const int magic_length = 10;
+	  if (*(*lineptr + magic_length-1) == 'l' || *(*lineptr + magic_length-1) == 'e') {
+	    // remote log messages must be url encoded when sent through
+	    // the remote adapter protocol
+	    *(*lineptr + ret) = '\0';
+	    log.print("<remote msg=\"%s\"/>\n",*lineptr+magic_length);
+	    if (*(*lineptr + magic_length-1) == 'e')
+	      fprintf(stderr, "%s\n", unescape_string(*lineptr+magic_length));
+	    g_free(*lineptr);
+	    *lineptr = NULL;
+	    log_redirect = true;
+	  } else {
+	    // Remove magic
+	    ret -= magic_length;
+	    memmove(*lineptr,*lineptr + magic_length,ret);
+	    (*lineptr)[ret] = '\0';
+	  }
+	} else {
+	  // We have something to stdout
+	  fprintf(stdout,"%s\n",*lineptr);
+	  g_free(*lineptr);
+	  *lineptr = NULL;
+	  log_redirect = true;
+	}
       }
     }
   } while (log_redirect);
@@ -780,7 +803,7 @@ ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,bool ma
 /* blocking getline, filter out log entries */
 
 int getact(int** act,std::vector<int>& vec,GIOChannel* out,GIOChannel* in,
-	   Log& log,int min,int max,Writable* w,bool magic)
+	   Log& log,int min,int max,Writable* w,GIOChannel* magic)
 {
   g_io_channel_flush(out,NULL);
   vec.resize(0);
@@ -983,7 +1006,7 @@ int fprintf(GIOChannel* stream, const char *format, ...)
 }
 
 int getint(GIOChannel* out,GIOChannel* in,Log& log,
-	   int min,int max,Writable* w,bool magic)
+	   int min,int max,Writable* w,GIOChannel* magic)
 {
   if (out) {
     g_io_channel_flush(out,NULL);
