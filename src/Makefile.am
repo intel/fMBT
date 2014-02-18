@@ -109,6 +109,8 @@ set.g.d_parser.cc: set.g d/libdparse.a
 paths.g.d_parser.cc: paths.g d/libdparse.a
 	d/make_dparser -o paths.g.d_parser.cc -i paths ./paths.g
 
+clean-local:
+	(cd d; make clean)
 
 ##########################################
 # Building fmbt_android with Android NDK
