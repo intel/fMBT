@@ -31,7 +31,7 @@ signed long Function_time::val() {
 
 #include "helper.hh"
 
-float Function_time::fval() {
+double Function_time::fval() {
   struct timeval tv;
   gettime(&tv);
   return (1.0*tv.tv_sec) + (1.0*tv.tv_usec)/1000000.0;

@@ -25,9 +25,9 @@ public:
   Function_const(const std::string& param);
   virtual ~Function_const() {}
   virtual signed long val();
-  virtual float fval();
+  virtual double fval();
   signed long stored_val;
-  float stored_fval;
+  double stored_fval;
 };
 
 

@@ -27,7 +27,6 @@ public:
   virtual ~Random_Intel_HW() {}
   virtual unsigned long rand();
   virtual std::string stringify();
-  //virtual double rand48();
 };
 
 class Random_Intel_HWf: public Function {
@@ -40,7 +39,7 @@ public:
   virtual signed long val() {
     return r.rand();
   };
-  virtual float fval() {
+  virtual double fval() {
     return r.drand48();
   };
   Random_Intel_HW r;

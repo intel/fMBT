@@ -29,7 +29,7 @@ Function_const::Function_const(const std::string& param) {
   }
   stored_val=strtol(param.c_str(),&endp,0);
   if (*endp!=0) {
-    stored_fval=strtof(param.c_str(),&endp);
+    stored_fval=strtod(param.c_str(),&endp);
     if (*endp!=0) {
       status=false;
       errormsg="incalid charasters at const ";
@@ -46,7 +46,7 @@ signed long Function_const::val() {
   return stored_val;
 }
 
-float Function_const::fval() {
+double Function_const::fval() {
   return stored_fval;
 }
 

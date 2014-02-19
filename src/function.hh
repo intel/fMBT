@@ -37,7 +37,7 @@ class Function: public Writable {
 public:
   virtual ~Function() { }
   virtual signed long val() = 0;
-  virtual float fval() {
+  virtual double fval() {
     return val();
   }
 };
