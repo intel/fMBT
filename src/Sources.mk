@@ -6,7 +6,7 @@ LOCAL_COVERAGES = coverage.cc coverage_exec_filter.cc coverage_mapper.cc coverag
 
 LOCAL_MODELS = model.cc mwrapper.cc lts.cc model_lib.cc model_yes.cc
 
-COMMON_SOURCES = fmbt.cc test_engine.cc log.cc helper.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc  $(LOCAL_ADAPTERS) $(LOCAL_HEURISTICS) $(LOCAL_COVERAGES) $(LOCAL_MODELS) conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc alg_bdfs.cc history.cc end_condition.cc null.cc aal.cc endhook.cc coverage_of.cc  random.cc random_c.cc function.cc function_pid.cc function_const.cc function_time.cc params.cc
+COMMON_SOURCES = fmbt.cc test_engine.cc log.cc helper.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc  $(LOCAL_ADAPTERS) $(LOCAL_HEURISTICS) $(LOCAL_COVERAGES) $(LOCAL_MODELS) conf.g.d_parser.cc conf.cc mrules.g.d_parser.cc policy.cc alg_bdfs.cc history.cc end_condition.cc null.cc aal.cc endhook.cc coverage_of.cc  random.cc random_c.cc random_devrandom.cc random_supported.cc function.cc function_pid.cc function_const.cc function_time.cc function_ustime.cc params.cc function_supported.cc
 
 if RDRND
 COMMON_SOURCES += random_intel_hw.hh
