@@ -106,7 +106,7 @@ Random* Random::_default_random=NULL;
 
 Random* Random::default_random() {
   if (!_default_random) {
-    std::string rname("C(supported(/dev/random,ustime))");
+    std::string rname("C(supported(/dev/urandom,ustime))");
     _default_random = new_random(rname);
   } else {
     _default_random->ref();

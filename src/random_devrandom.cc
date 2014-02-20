@@ -31,16 +31,16 @@
 #include <unistd.h>
 #include <limits.h>
 
-Random_DevRandom::Random_DevRandom(const std::string& param) {
+Random_Dev::Random_Dev(const std::string& param) {
   max_val = UINT_MAX;
-  fd=open("/dev/random",O_RDONLY);
+  fd=open(param.c_str(),O_RDONLY);
   if (!fd) {
     status=false;
-    errormsg="Can't open /dev/random";
+    errormsg="Can't open "+param;
   }
 }
 
-Random_DevRandom::~Random_DevRandom()
+Random_Dev::~Random_Dev()
 {
   if (fd) {
     close(fd);
@@ -48,7 +48,7 @@ Random_DevRandom::~Random_DevRandom()
 }
 
 
-std::string Random_DevRandom::stringify() {
+std::string Random_Dev::stringify() {
   if (status) {
     return std::string("/dev/random");
   } 
@@ -56,7 +56,7 @@ std::string Random_DevRandom::stringify() {
 }
 
 
-unsigned long Random_DevRandom::rand() {
+unsigned long Random_Dev::rand() {
   unsigned int ret=0;
   ssize_t len;
 
@@ -69,5 +69,6 @@ unsigned long Random_DevRandom::rand() {
 
 FACTORY_DEFAULT_CREATOR(Random, Random_DevRandom, "/dev/random")
 FACTORY_DEFAULT_CREATOR(Function, Random_DevRandomf, "/dev/random")
+FACTORY_DEFAULT_CREATOR(Random, Random_DevuRandom, "/dev/urandom")
 
 #endif /* __MINGW32__ */

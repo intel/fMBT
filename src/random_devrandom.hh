@@ -20,13 +20,25 @@
 #ifndef __RANDOM_DevRandom_HH__
 #include "random.hh"
 
-class Random_DevRandom: public Random {
+class Random_Dev: public Random {
 public:
-  Random_DevRandom(const std::string& param);
-  virtual ~Random_DevRandom();
+  Random_Dev(const std::string& param);
+  virtual ~Random_Dev();
   virtual unsigned long rand();
   virtual std::string stringify();
   int fd;
+};
+
+class Random_DevRandom: public Random_Dev {
+public:
+  Random_DevRandom(const std::string& param):Random_Dev("/dev/random") {}
+  virtual ~Random_DevRandom() {}
+};
+
+class Random_DevuRandom: public Random_Dev {
+public:
+  Random_DevuRandom(const std::string& param):Random_Dev("/dev/urandom") {}
+  virtual ~Random_DevuRandom() {}
 };
 
 class Random_DevRandomf: public Function {
