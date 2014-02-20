@@ -49,19 +49,19 @@ def _fmbt_call_helper(func,param = ""):
     return ""
 
 
-def getHeuristic():
+def heuristic():
     return _fmbt_call_helper("heuristic.get")
 
 def setHeuristic(heuristic):
     return _fmbt_call_helper("heuristic.set",heuristic)
 
-def getCoverage():
+def coverage():
     return _fmbt_call_helper("coverage.get")
 
 def setCoverage(coverage):
     return _fmbt_call_helper("coverage.set",coverage)
 
-def getCoverageValue():
+def coverageValue():
     return _fmbt_call_helper("coverage.getValue")
 
 def fmbtlog(msg, flush=True):
@@ -113,9 +113,23 @@ def formatAdapterLogMessage(msg, fmt="%s %s\n"):
         msg)
 
 def getActionName():
+    """deprecated, use actionName()"""
+    return _g_actionName
+
+def actionName():
+    """
+    Return the name of currently executed action (input or output).
+    """
     return _g_actionName
 
 def getTestStep():
+    """deprecated, use testStep()"""
+    return _g_testStep
+
+def testStep():
+    """
+    Return the number of currently executed test step.
+    """
     return _g_testStep
 
 def simulated():

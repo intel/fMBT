@@ -12,18 +12,18 @@ aal "noname" {
     }
 
     input "heuristic lookahead2random" {
-        guard { return fmbt.getHeuristic()==default_heuristic }
+        guard { return fmbt.heuristic()==default_heuristic }
         adapter { fmbt.setHeuristic("random") }
     }
     input "heuristic random2lookahead" {
-        guard { return fmbt.getHeuristic()=="random" }
+        guard { return fmbt.heuristic()=="random" }
         adapter { fmbt.setHeuristic(default_heuristic) }
     }
 
 #    input "1","2","3","4","5","6","7","8","9","10","11","12","13","14" {
 #    input "1" {
 #    body () {
-#        fmbt.getHeuristic()
+#        fmbt.heuristic()
 #        sys.stdout.write("fmbt_call heuristic.get\n")
 #        sys.stdout.flush()
 #        response = sys.stdin.readline()
