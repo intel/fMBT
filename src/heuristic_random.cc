@@ -32,18 +32,24 @@
 #include "heuristic_random.hh"
 #include <stdlib.h>
 
-Heuristic_random::Heuristic_random(Log& l,const std::string& params) :
+Heuristic_random::Heuristic_random(Log& l,const std::string& _params) :
   Heuristic(l)
 {
+  std::string params(_params);
   if (params == "") {
     r = Random::default_random();
     r->ref();
   } else {
     r = new_random(params);
     if (!r) {
-      status=false;
-      errormsg="Can't create random "+params;
-      return;
+      // Ok. Let's check if it's a function?
+      params=std::string("c(")+params+")";
+      r = new_random(params);
+      if (!r) {
+	status=false;
+	errormsg="Can't create random "+_params;
+	return;
+      }
     }
     r->ref();
     if (!r->status) {
