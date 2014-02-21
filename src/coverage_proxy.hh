@@ -32,7 +32,7 @@ public:
 
   virtual ~Coverage_proxy() {
     delete c;
-    // Removeme...
+    // Remove "old" from factory
     CoverageFactory::add_factory("old",NULL);    
   }
 
@@ -90,7 +90,6 @@ public:
 protected:
 
   bool get(std::string params,std::string& ret_str) {
-    log.debug("Kutsuttiin coverage_proxy:n get-metodia!\n");
     if (c) {
       ret_str=name;
     } else {
@@ -101,7 +100,6 @@ protected:
   
   bool set(std::string params,std::string& ret_str) {
     Coverage* cc=new_coverage(log,params);
-    log.debug("Kutsuttiin coverage_proxy:n set-metodia!\n");
     if (cc) {
       name=params;
       delete c;
