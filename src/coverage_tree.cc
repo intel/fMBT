@@ -180,6 +180,11 @@ Coverage_Tree::~Coverage_Tree()
     abort();
   }
 
+  for(unsigned i=0;i<nodes_save.size();i++) {
+    delete nodes_save[i];
+  }
+  nodes_save.clear();
+
   for(std::map<int,std::vector<std::pair<struct node*,bool> >*>::iterator i=
 	instance_map.begin();i!=instance_map.end();++i) {
     delete i->second;
