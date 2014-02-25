@@ -38,6 +38,15 @@ General options:
           Listen to TCP/IP port number. Only local connections to this
           port are allowed by default. The default port is 8089.
 
+  --password=password
+          Require password from clients. The password can be plain text,
+          or of format <algorithm>:<hexdigest>, for example
+          md5:a1d0c6e83f027327d8461063f4ac58a6.
+
+  --password-file=filename
+          Require password (given in filename) from clients. See
+          --password for supported formats.
+
   --interface=all
           Listen to TCP/IP connections from all network interfaces.
           The default is to listen to only local connections.
@@ -62,6 +71,7 @@ Options for namespaces:
 
 import pythonshare
 import getopt
+import hashlib
 import sys
 import tempfile
 import os
@@ -72,6 +82,7 @@ opt_debug = False
 opt_log_fd = None
 opt_log_filename = None
 opt_namespace = None
+opt_conn_opts = {}
 
 # ("import|export|init", namespace, host-port|code)
 opt_init_import_export = []
@@ -80,13 +91,31 @@ def error(msg, exit_status=1):
     sys.stderr.write("pythonshare-server: %s\n" % (msg,))
     sys.exit(1)
 
+def _parse_password(password_spec):
+    """
+    password_spec ::= plaintext-password
+                    | "md5:" password-md5-hexdigest
+                    | "sha1:" password-sha1-hexdigest
+                    ... (see what is supported by hashlib)
+    Returns pair: algorithm, password.
+    """
+    if ":" in password_spec:
+        algorithm, password = password_spec.split(":", 1)
+        if algorithm != "plaintext" and not hasattr(hashlib, algorithm):
+            error(("invalid password algorithm. Supported formats:"
+                   "<plaintext|%s>:password") %
+                  "|".join(hashlib.algorithms))
+    else:
+        algorithm, password = "plaintext", password_spec
+    return algorithm, password
+
 if __name__ == "__main__":
     try:
         opts, remainder = getopt.gnu_getopt(
             sys.argv[1:], "dhp:n:E:I:i:l:",
             ["debug", "help", "port=", "log=",
              "namespace=", "init=", "export-to=", "import-from=",
-             "interface="])
+             "password=", "password-file=", "interface="])
     except getopt.GetoptError, e:
         error(e)
 
@@ -128,6 +157,15 @@ if __name__ == "__main__":
                 opt_bind_port = int(arg)
             except ValueError:
                 error('invalid port "%s", integer expected.' % (arg,))
+        elif opt in ["--password"]:
+            password_type, password = _parse_password(arg)
+            opt_conn_opts["password." + password_type] = password
+        elif opt in ["--password-file"]:
+            try:
+                password_type, password = _parse_password(file(arg).read().strip())
+            except IOError as err:
+                error('error reading password file "%s": %s' % (arg, err))
+            opt_conn_opts["password." + password_type] = password
         elif opt in ["--interface"]:
             if arg == "all":
                 opt_bind_host = ""
@@ -141,4 +179,5 @@ if __name__ == "__main__":
         port = opt_bind_port,
         debug = opt_debug,
         log_fd = opt_log_fd,
-        ns_init_import_export = opt_init_import_export)
+        ns_init_import_export = opt_init_import_export,
+        conn_opts = opt_conn_opts)

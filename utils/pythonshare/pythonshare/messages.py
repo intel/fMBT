@@ -25,6 +25,13 @@ class Unpicklable(object):
     def __str__(self):
         return 'Unpicklable("%s")' % (self._string,)
 
+class Auth_rv(object):
+    def __init__(self, success):
+        self.success = success
+    def __str__(self):
+        return 'Auth_rv(success=)' % (
+            self.success)
+
 class Exec(object):
     def __init__(self, namespace, code, expr, lock=True, async=False):
         self.namespace = namespace
