@@ -22,14 +22,15 @@ import glob
 import os
 import platform
 import re
+import shlex
 import shutil
 import string
 import struct
 import subprocess
 import sys
+import termios
 import time
 import zlib
-import termios
 
 import fmbtuinput
 fmbtuinput.refreshDeviceInfo()
@@ -683,7 +684,9 @@ if g_Xavailable:
 else:
     takeScreenshot = takeScreenshotOnWeston
 
-def shellSOE(command, asyncStatus, asyncOut, asyncError):
+def shellSOE(command, asyncStatus, asyncOut, asyncError, usePty):
+    if usePty:
+        command = '''python -c "import pty; pty.spawn(%s)" ''' % (repr(shlex.split(command)),),
     if (asyncStatus, asyncOut, asyncError) != (None, None, None):
         # prepare for decoupled asynchronous execution
         if asyncStatus == None: asyncStatus = "/dev/null"
@@ -956,12 +959,12 @@ if __name__ == "__main__":
                 rv, msg = subAgentCommand("root", "tizen", cmd)
             write_response(rv, msg)
         elif cmd.startswith("es "): # execute shell
-            shellCmd, username, password, asyncStatus, asyncOut, asyncError = _decode(cmd[3:])
+            shellCmd, username, password, asyncStatus, asyncOut, asyncError, usePty = _decode(cmd[3:])
             if username == "":
-                rv, soe = shellSOE(shellCmd, asyncStatus, asyncOut, asyncError)
+                rv, soe = shellSOE(shellCmd, asyncStatus, asyncOut, asyncError, usePty)
             else:
                 rv, soe = subAgentCommand(username, password,
-                    "es " + _encode((shellCmd, "", "", asyncStatus, asyncOut, asyncError)))
+                    "es " + _encode((shellCmd, "", "", asyncStatus, asyncOut, asyncError, usePty)))
             write_response(rv, soe)
         elif cmd.startswith("quit"): # quit
             write_response(rv, True)
