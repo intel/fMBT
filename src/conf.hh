@@ -52,29 +52,25 @@ class Conf:public Writable {
   void set_model(Coverage* c);
 
   void set_model(std::string& s,int line) {
-    //split(s, model_name, model_param);
-    //param_cut(s, model_name, model_param);
     model_lineno=line;
     model_name=s;
   }
+
   void set_heuristic(std::string& s,int line) {
     heuristic_name=s;
     heuristic_lineno=line;
-    //split(s, heuristic_name, heuristic_param);
-    //param_cut(s, heuristic_name, heuristic_param);
   }
+
   void set_coverage(std::string& s,int line) {
-    //split(s, coverage_name, coverage_param);
-    //param_cut(s,coverage_name,coverage_param);
     coverage_name=s;
     coverage_lineno=line;
   }
+
   void set_adapter(std::string& s,int line) {
-    //split(s, adapter_name, adapter_param);
-    //param_cut(s, adapter_name, adapter_param);
     adapter_name=s;
     adapter_lineno=line;
   }
+
   void set_on_error(const std::string &s,int line=-1);
   void set_on_fail(const std::string &s,int line=-1);
   void set_on_pass(const std::string &s,int line=-1);

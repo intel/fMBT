@@ -284,7 +284,6 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
     escape_string(tags[i]);
   }
 
-  //if (verify_tags(tags) > 0) return stop_test(Verdict::FAIL, m_verdict_msg.c_str());
   verify_tags(tags);
   log_status(log, step_count, heuristic.getCoverage());
   int act=-1;
@@ -318,7 +317,6 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
         return stop_test(Verdict::FAIL, "unexpected output");
       }
 
-      //if (verify_tags(tags) > 0) return stop_test(Verdict::FAIL, m_verdict_msg.c_str());
       verify_tags(tags);
 
       log_status(log, step_count, heuristic.getCoverage());
@@ -473,7 +471,6 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
 
     }
     }// switch
-    //if (verify_tags(tags) > 0) return stop_test(Verdict::FAIL, m_verdict_msg.c_str());
     verify_tags(tags);
     log_status(log, step_count, heuristic.getCoverage());
     update_coverage(heuristic.getCoverage(), step_count,
