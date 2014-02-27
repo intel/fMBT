@@ -43,6 +43,8 @@ private:
   bool m_burst;
   std::vector<int> m_path;
   Random* r;
+public:
+  bool end_condition;
 };
 
 #endif

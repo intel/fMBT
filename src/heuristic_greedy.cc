@@ -27,9 +27,29 @@
 
 extern int _g_simulation_depth_hint;
 
+static Heuristic_greedy* hg=NULL;
+
+#include "end_condition.hh"
+
+class End_condition_bool: public End_condition_noprogress {
+public:
+  End_condition_bool(Conf* _conf,Verdict::Verdict v, const std::string& p):
+    End_condition_noprogress(_conf,v,p) {
+    
+  }
+  virtual ~End_condition_bool() {}
+  virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags) {
+    if (hg)
+      return hg->end_condition;
+    return false;
+  }
+};
+
 Heuristic_greedy::Heuristic_greedy(Log& l,const std::string& params) :
   Heuristic(l), m_search_depth(0), m_burst(false)
 {
+  hg=this;
+
   m_search_depth = atoi(params.c_str());
   if (strchr(params.c_str(), 'b')) {
     m_burst = true;
@@ -40,11 +60,11 @@ Heuristic_greedy::Heuristic_greedy(Log& l,const std::string& params) :
 
 Heuristic_greedy::~Heuristic_greedy()
 {
+  hg=NULL;
+
   if (r)
     r->unref();
 }
-
-
 
 bool Heuristic_greedy::execute(int action)
 {
@@ -136,7 +156,10 @@ int Heuristic_greedy::getIAction()
       AlgPathToBestCoverage alg(m_search_depth);
       /* Use precalculated path (m_path) as a hint. */
       std::reverse(m_path.begin(), m_path.end());
+      double current_score=my_coverage->getCoverage();
       double score = alg.search(*model, *my_coverage, m_path);
+
+      end_condition=(score<=current_score);
 
       if (!alg.status) {
         status=false;
@@ -180,3 +203,12 @@ done:
 FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "greedy")
 FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "lookahead")
 FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "action_fitness")
+
+#undef FACTORY_CREATE_DEFAULT_PARAMS
+#define FACTORY_CREATE_DEFAULT_PARAMS /* */ 
+
+#undef FACTORY_CREATOR_PARAMS
+#undef FACTORY_CREATOR_PARAMS2
+#define FACTORY_CREATOR_PARAMS Verdict::Verdict v, std::string params,Conf* co
+#define FACTORY_CREATOR_PARAMS2 co, v, params
+FACTORY_DEFAULT_CREATOR(End_condition, End_condition_bool, "lookahead_noprogress");
