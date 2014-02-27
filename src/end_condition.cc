@@ -68,15 +68,15 @@ End_condition* new_end_condition(Verdict::Verdict v,const std::string& s,Conf* c
 End_condition_coverage::End_condition_coverage(Conf* _conf,Verdict::Verdict v, const std::string& p):
   End_condition(_conf,v,p) {
   counter = COVERAGE;
-  if (p.empty()) {
+  if (param.empty()) {
     er="coverage reached";
   } else {
-    er="coverage "+p+" reached";
+    er="coverage "+param+" reached";
   }
   status = true;
   cconst=false;
   l.ref();
-  c = new_coverage(l,p);
+  c = new_coverage(l,param);
   if (c==NULL) {
     status=false;
     errormsg=param+" not valid coverage";
