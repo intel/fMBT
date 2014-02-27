@@ -139,8 +139,10 @@ class Device(fmbtgti.GUITestInterface):
 
           debugAgentFile (file-like object, optional)
                   record communication with the fMBT Tizen agent to
-                  given file. The default is None: communication is
-                  not recorded.
+                  given file. Messages can be decoded with
+                  pickle.loads(base64.decode(msg)).
+                  The default is None: communication is not recorded.
+                  Example: debugAgentFile=sys.stdout.
 
           rotateScreenshot (integer, optional)
                   rotate new screenshots by rotateScreenshot degrees.
@@ -432,7 +434,7 @@ class Device(fmbtgti.GUITestInterface):
         """
         return _run(["sdb", "shell", shellCommand], expectedExitStatus=range(256))[1]
 
-    def shellSOE(self, shellCommand, username="", password="", asyncStatus=None, asyncOut=None, asyncError=None):
+    def shellSOE(self, shellCommand, username="", password="", asyncStatus=None, asyncOut=None, asyncError=None, usePty=False):
         """
         Get status, output and error of executing shellCommand on Tizen device
 
@@ -468,6 +470,10 @@ class Device(fmbtgti.GUITestInterface):
                   asynchronously executed shellCommand will be
                   written. The default is None.
 
+          usePty (optional, boolean)
+                  execute shellCommand in pseudoterminal. The default
+                  is False.
+
         Returns tuple (exitStatus, standardOutput, standardError).
 
         If asyncStatus, asyncOut or asyncError is a string,
@@ -480,9 +486,9 @@ class Device(fmbtgti.GUITestInterface):
         file.
         """
         if username == "root" and password == "":
-            return self._conn.shellSOE(shellCommand, username, "tizen", asyncStatus, asyncOut, asyncError)
+            return self._conn.shellSOE(shellCommand, username, "tizen", asyncStatus, asyncOut, asyncError, usePty)
         else:
-            return self._conn.shellSOE(shellCommand, username, password, asyncStatus, asyncOut, asyncError)
+            return self._conn.shellSOE(shellCommand, username, password, asyncStatus, asyncOut, asyncError, usePty)
 
 _g_sdbProcesses = set()
 def _forceCloseSdbProcesses():
@@ -774,10 +780,10 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
     def recvInputDevices(self):
         return self._platformInfo["input devices"]
 
-    def shellSOE(self, shellCommand, username, password, asyncStatus, asyncOut, asyncError):
+    def shellSOE(self, shellCommand, username, password, asyncStatus, asyncOut, asyncError, usePty):
         _, (s, o, e) = self._agentCmd(
             "es %s" % (_encode((shellCommand, username, password, asyncStatus,
-                                asyncOut, asyncError)),))
+                                asyncOut, asyncError, usePty)),))
         return s, o, e
 
     def target(self):

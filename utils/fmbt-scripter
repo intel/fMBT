@@ -954,6 +954,8 @@ class MainWindow(QtGui.QMainWindow):
                         ev = "mousedown"
             elif typ == keyEvent:
                 keyName = fmbtuinput.toKeyName(cod)
+                if keyName == "BTN_TOUCH" and (ev == "mouseup" or ev == "mousedown"):
+                    continue
                 t = ts
                 if val == 0:
                     ev = "keyup"

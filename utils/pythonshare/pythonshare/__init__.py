@@ -29,6 +29,9 @@ default_port = 8089 # PY
 class PythonShareError(Exception):
     pass
 
+class AuthenticationError(PythonShareError):
+    pass
+
 class RemoteExecError(PythonShareError):
     pass
 
@@ -49,7 +52,7 @@ def _close(*args):
         except (socket.error, IOError):
             pass
 
-def connection(hostspec):
+def connection(hostspec, password=None):
     if not "://" in hostspec:
         hostspec = "socket://" + hostspec
     scheme, netloc, _, _, _ = _urlparse.urlsplit(hostspec)
@@ -58,6 +61,6 @@ def connection(hostspec):
             host, port = netloc.split(":")
         else:
             host, port = netloc, default_port
-        return client.Connection(host, int(port))
+        return client.Connection(host, int(port), password=password)
     else:
         raise ValueError('invalid url "%s"' % (hostspec,))

@@ -27,7 +27,7 @@ import pythonshare
 from pythonshare.messages import Exec, Exec_rv, Async_rv, Register_ns, Request_ns
 
 class Connection(object):
-    def __init__(self, host, port):
+    def __init__(self, host, port, password=None):
         """
         Connect to Python share server running on host:port.
         """
@@ -35,6 +35,18 @@ class Connection(object):
         self._s.connect((host, port))
         self._from_server = self._s.makefile("r")
         self._to_server = self._s.makefile("w")
+
+        if password:
+            # authenticate to server
+            cPickle.dump(password, self._to_server)
+            self._to_server.flush()
+            auth_rv = cPickle.load(self._from_server)
+            try:
+                auth_ok = auth_rv.success
+            except AttributeError:
+                auth_ok = False
+            if not auth_ok:
+                raise pythonshare.AuthenticationError("Permission denied")
 
     def make_local(self, rv):
         if isinstance(rv, Exec_rv):
@@ -79,7 +91,7 @@ class Connection(object):
             return self.make_local(cPickle.load(self._from_server))
         except EOFError:
             raise pythonshare.PythonShareError(
-                'no connection to namespace "%s"' % (namespace,))
+                'No connection to namespace "%s"' % (namespace,))
 
     def eval_in(self, namespace, expr, async=False, lock=True):
         return self.exec_in(namespace, "", expr, async=async, lock=lock)

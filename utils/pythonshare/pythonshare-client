@@ -52,6 +52,14 @@ Options:
           given formatter. Valid options are str, repr, pickle and
           raw.
 
+  --password=password
+          Authenticate to pythonshare server with password. The password
+          must be plain text.
+
+  --password-file=filename
+          Authenticate to pythonshare server with password from
+          filename. The password must be in filename in plain text.
+
 Options when connected:
   -c, --code=python-code
           Execute python-code in ns.
@@ -98,6 +106,7 @@ if __name__ == "__main__":
         ["connect=", "disconnect",
          "async", "sync", "poll",
          "help", "server=", "port=",
+         "password=", "password-file=",
          "namespace=", "code=", "eval=", "read=",
          "output=", "format="])
     opt_server = "localhost"
@@ -105,6 +114,7 @@ if __name__ == "__main__":
     opt_namespace = "pythonshare-client.default"
     opt_async = False
     opt_formatter = formatter_str
+    opt_password = None
 
     conn = None
 
@@ -123,9 +133,16 @@ if __name__ == "__main__":
                 opt_port = int(arg)
             except ValueError:
                 error('invalid port "%s", integer expected.' % (arg,))
+        elif opt in ["--password"]:
+            opt_password = arg
+        elif opt in ["--password-file"]:
+            try:
+                opt_password = file(arg).read().strip()
+            except IOError as err:
+                error('error reading password file "%s": %s' % (arg, err))
         elif opt in ["-C", "--connect"]:
             hostspec = arg
-            conn = pythonshare.connection(arg)
+            conn = pythonshare.connection(arg, password=opt_password)
         elif opt in ["-D", "--disconnect"]:
             conn.close()
             conn = None
@@ -134,7 +151,8 @@ if __name__ == "__main__":
         elif opt in ["-c", "--code"]:
             if conn == None:
                 conn = pythonshare.connection("socket://%s:%s" %
-                                              (opt_server, opt_port))
+                                              (opt_server, opt_port),
+                                              password=opt_password)
             try:
                 conn.exec_in(opt_namespace, arg, async=opt_async)
             except pythonshare.PythonShareError, e:
@@ -143,7 +161,8 @@ if __name__ == "__main__":
         elif opt in ["-e", "--eval"]:
             if conn == None:
                 conn = pythonshare.connection("socket://%s:%s" %
-                                              (opt_server, opt_port))
+                                              (opt_server, opt_port),
+                                              password=opt_password)
             try:
                 output(opt_formatter(
                     conn.eval_in(opt_namespace, arg, async=opt_async)))

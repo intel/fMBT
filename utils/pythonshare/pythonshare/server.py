@@ -20,6 +20,7 @@
 
 import datetime
 import getopt
+import hashlib
 import os
 import platform
 import socket
@@ -133,7 +134,7 @@ def _init_local_namespace(ns, init_code=None, force=False):
             _g_local_namespace_locks[ns] = thread.allocate_lock()
             _g_async_rvs[ns] = {}
         else:
-            raise ValueError('unknown namespace "%s"' % (ns,))
+            raise ValueError('Unknown namespace "%s"' % (ns,))
     if init_code != None:
         try:
             exec init_code in _g_local_namespaces[ns]
@@ -143,7 +144,7 @@ def _init_local_namespace(ns, init_code=None, force=False):
 
 def _init_remote_namespace(ns, conn, to_remote, from_remote):
     if ns in _g_remote_namespaces:
-        raise ValueError('remote namespace "%s" already registered' % (
+        raise ValueError('Remote namespace "%s" already registered' % (
             ns,))
     daemon_log('added remote namespace "%s", origin "%s"' % (
         ns, conn.getpeername()))
@@ -192,7 +193,7 @@ def _remote_execute(ns, exec_msg):
 def _remote_close(ns):
     del _g_remote_namespaces[ns]
 
-def _serve_connection(conn):
+def _serve_connection(conn, conn_opts):
     global _g_async_rv_counter
     if isinstance(conn, client.Connection):
         to_client = conn._to_server
@@ -202,7 +203,35 @@ def _serve_connection(conn):
         from_client = conn.makefile("r")
     if opt_debug:
         daemon_log("connected %s:%s" % conn.getpeername())
-    while 1:
+
+    auth_ok = False
+    passwords = [k for k in conn_opts.keys() if k.startswith("password.")]
+    if passwords:
+        # password authentication is required for this connection
+        received_password = cPickle.load(from_client)
+        for password_type in passwords:
+            algorithm = password_type.split(".")[1]
+            if type(received_password) == str:
+                if (algorithm == "plaintext" and
+                    received_password == conn_opts[password_type]):
+                    auth_ok = True
+                elif (hasattr(hashlib, algorithm) and
+                      getattr(hashlib, algorithm)(received_password).hexdigest() ==
+                      conn_opts[password_type]):
+                    auth_ok = True
+        if auth_ok:
+            cPickle.dump(messages.Auth_rv(True), to_client)
+            if opt_debug:
+                daemon_log("%s:%s authentication ok" % conn.getpeername())
+        else:
+            cPickle.dump(messages.Auth_rv(False), to_client)
+            if opt_debug:
+                daemon_log("%s:%s authentication failed" % conn.getpeername())
+        to_client.flush()
+    else:
+       auth_ok = True # no password required
+
+    while auth_ok:
         try:
             obj = cPickle.load(from_client)
             if opt_debug:
@@ -265,12 +294,16 @@ def _serve_connection(conn):
             to_client.flush()
         else:
             daemon_log("unknown message type: %s in %s" % (type(obj), obj))
+            cPickle.dump(messages.Auth_rv(False), to_client)
+            to_client.flush()
+            auth_ok = False
     if opt_debug:
         daemon_log("disconnected %s:%s" % conn.getpeername())
     pythonshare._close(to_client, from_client, conn)
 
 def start_server(host, port,
-                 ns_init_import_export=[]):
+                 ns_init_import_export=[],
+                 conn_opts={}):
     daemon_log("pid: %s" % (os.getpid(),))
 
     # Initialise, import and export namespaces
@@ -283,14 +316,14 @@ def start_server(host, port,
             c = pythonshare.connection(arg)
             if c.export_ns(ns):
                 _register_exported_namespace(ns, c)
-                thread.start_new_thread(_serve_connection, (c,))
+                thread.start_new_thread(_serve_connection, (c, {}))
             else:
-                raise ValueError('export namespace "%s" to "%s" failed'
+                raise ValueError('Export namespace "%s" to "%s" failed'
                                  % (ns, arg))
         elif task == "import":
             if (ns in _g_local_namespaces or
                 ns in _g_remote_namespaces):
-                raise ValueError('import failed, namespace "%s" already exists'
+                raise ValueError('Import failed, namespace "%s" already exists'
                                  % (ns,))
             c = pythonshare.connection(arg)
             if c.import_ns(ns):
@@ -304,10 +337,10 @@ def start_server(host, port,
     s.listen(4)
     while 1:
         conn, _ = s.accept()
-        thread.start_new_thread(_serve_connection, (conn,))
+        thread.start_new_thread(_serve_connection, (conn, conn_opts))
 
 def start_daemon(host="localhost", port=8089, debug=False,
-                 log_fd=None, ns_init_import_export=[]):
+                 log_fd=None, ns_init_import_export=[], conn_opts={}):
     global opt_log_fd, opt_debug
     opt_log_fd = log_fd
     opt_debug = debug
@@ -347,4 +380,4 @@ def start_daemon(host="localhost", port=8089, debug=False,
                 except OSError:
                     pass
 
-    start_server(host, port, ns_init_import_export)
+    start_server(host, port, ns_init_import_export, conn_opts)
