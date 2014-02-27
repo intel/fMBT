@@ -47,6 +47,11 @@ Heuristic_coverage_random::Heuristic_coverage_random(Log& l,const std::string& p
       errormsg="Can't create random "+subs[2];
       return;
     }
+
+    l.push("Heuristic=coverage_random");
+    l.print("<random init=\"%s\"/>\n",r->stringify().c_str());
+    l.pop();
+
   }
 
   if (subs.size()>1) {

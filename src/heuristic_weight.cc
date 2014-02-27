@@ -50,6 +50,10 @@ Heuristic_weight::Heuristic_weight(Log& l,const std::string& params) :
       if (!r->status) {
 	status=false;
 	errormsg=r->errormsg;
+      } else {
+	l.push("Heuristic=weight");
+	l.print("<random init=\"%s\"/>\n",r->stringify().c_str());
+	l.pop();
       }
     }
     
@@ -63,7 +67,6 @@ Heuristic_weight::Heuristic_weight(Log& l,const std::string& params) :
     status=false;
     errormsg="Illegal amount of parameters ("+to_string((unsigned int)subs.size())+"). Expecting 1 or 2";
   }
-  
 }
 
 Heuristic_weight::~Heuristic_weight()
