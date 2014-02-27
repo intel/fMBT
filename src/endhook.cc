@@ -37,7 +37,6 @@ FACTORY_CREATE(EndHook)
 FACTORY_DEFAULT_CREATOR(EndHook, EndHookExit, "exit")
 FACTORY_DEFAULT_CREATOR(EndHook, EndHookInteractive, "interactive")
 
-FACTORY_ATEXIT(EndHook)
 FACTORY_CREATORS(EndHook)
 FACTORY_ADD_FACTORY(EndHook)
 

@@ -19,7 +19,6 @@
 
 #include "coverage_report_filter.hh"
 
-FACTORY_ATEXIT(Coverage_report_filter)
 FACTORY_CREATORS(Coverage_report_filter)
 FACTORY_ADD_FACTORY(Coverage_report_filter)
 FACTORY_CREATE(Coverage_report_filter)

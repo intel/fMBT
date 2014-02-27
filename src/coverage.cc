@@ -20,7 +20,6 @@
 #include "helper.hh"
 #include <math.h>
 
-FACTORY_ATEXIT(Coverage)
 FACTORY_CREATORS(Coverage)
 FACTORY_ADD_FACTORY(Coverage)
 
@@ -29,17 +28,17 @@ Coverage* CoverageFactory::create(Log& log, std::string name,
 {
   if (!creators) return NULL;
 
-  creator c = (*creators)[name];
+  std::map<std::string, creator>::iterator i = (*creators).find(name);
 
-  if (c) {
-    return c(log, params);
+  if (i!=(*creators).end()) {
+    return (i->second)(log, params);
   } else {
     char* endp;
     float val=strtof(name.c_str(),&endp);
     if (*endp==0 && (val>=0.0 || isnan(val))) {
-      c=(*creators)["const"];
-      if (c) {
-	return c(log,name);
+      i=(*creators).find("const");
+      if (i!=(*creators).end()) {
+	return (i->second)(log,name);
       }
     }
   }
@@ -73,9 +72,11 @@ std::string Coverage::stringify() {
 }
 
 Coverage* new_coverage(Log& l,const std::string& s) {
+  Coverage* ret;
+
   std::string name,option;
   param_cut(s,name,option);
-  Coverage* ret=CoverageFactory::create(l, name, option);
+  ret=CoverageFactory::create(l, name, option);
 
   if (ret) {
     return ret;

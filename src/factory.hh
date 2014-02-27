@@ -78,20 +78,20 @@ namespace MODULETYPE##Factory {                                        \
                                                                        \
     extern void add_factory(std::string name, creator c);              \
                                                                        \
+    extern void remove_factory(std::string name);                      \
+                                                                       \
     extern std::map<std::string, creator>* creators;                   \
                                                                        \
     struct Register {                                                  \
-        Register(std::string name, creator c) {                        \
+        Register(std::string _name, creator c):name(_name) {	       \
             add_factory(name, c);                                      \
         }                                                              \
+        ~Register() {						       \
+	    remove_factory(name);				       \
+        }                                                              \
+	std::string name;                                              \
     };                                                                 \
 }
-#define FACTORY_ATEXIT(MODULETYPE)                                     \
-void MODULETYPE##_ATEXITFUNC() {			               \
-  if (MODULETYPE##Factory::creators) 				       \
-    delete MODULETYPE##Factory::creators ;			       \
-  MODULETYPE##Factory::creators = 0;                                   \
- }
 
 #define FACTORY_CREATORS(MODULETYPE)                                   \
 std::map<std::string, MODULETYPE##Factory::creator>*                   \
@@ -102,10 +102,21 @@ void MODULETYPE##Factory::add_factory(std::string name, creator c)     \
 {                                                                      \
   if (!creators) {                                                     \
     creators = new std::map<std::string, MODULETYPE##Factory::creator>;\
-    atexit(MODULETYPE##_ATEXITFUNC);                                   \
   }                                                                    \
   (*creators)[name] = c;                                               \
+}                                                                      \
+                                                                       \
+void MODULETYPE##Factory::remove_factory(std::string name)             \
+{                                                                      \
+  if (creators) {                                                      \
+    creators->erase(name);                                             \
+    if (creators->empty()) {                                           \
+      delete creators;                                                 \
+      creators = NULL;                                                 \
+    }                                                                  \
+  }                                                                    \
 }
+
 
 #define FACTORY_CREATE(MODULETYPE)                                     \
 MODULETYPE* MODULETYPE##Factory::create(                               \
@@ -113,15 +124,14 @@ MODULETYPE* MODULETYPE##Factory::create(                               \
 {                                                                      \
   if (!creators) return NULL;                                          \
                                                                        \
-  creator c = (*creators)[name];                                       \
+  std::map<std::string, creator>::iterator i = (*creators).find(name); \
                                                                        \
-  if (c) return c(FACTORY_CREATOR_PARAMS2);                            \
+  if (i!=creators->end()) return (i->second)(FACTORY_CREATOR_PARAMS2); \
                                                                        \
   return NULL;                                                         \
 }
 
 #define FACTORY_IMPLEMENTATION(MODULETYPE)                             \
-FACTORY_ATEXIT(MODULETYPE)                                             \
 FACTORY_CREATORS(MODULETYPE)                                           \
 FACTORY_ADD_FACTORY(MODULETYPE)                                        \
 FACTORY_CREATE(MODULETYPE)

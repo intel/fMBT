@@ -32,7 +32,7 @@ public:
 
   virtual ~Heuristic_proxy() {
     delete h;
-    HeuristicFactory::add_factory("old",NULL);
+    HeuristicFactory::remove_factory("old");
   }
 
   virtual bool execute(int action) {

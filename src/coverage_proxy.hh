@@ -31,9 +31,10 @@ public:
   Coverage_proxy(Log& l,Coverage* _c,const std::string& _n);
 
   virtual ~Coverage_proxy() {
+    if (old_coverage && old_coverage!=c) 
+      delete old_coverage;
     delete c;
-    // Remove "old" from factory
-    CoverageFactory::add_factory("old",NULL);    
+    CoverageFactory::remove_factory("old");
   }
 
   virtual void push() {
