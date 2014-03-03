@@ -19,7 +19,7 @@
 #include "function.hh"
 #include "random.hh"
 #undef FACTORY_CREATOR_PARAMS
-#undef FACTORY_CREATOR_PARAMS2 
+#undef FACTORY_CREATOR_PARAMS2
 #undef FACTORY_CREATE_PARAMS
 
 #define FACTORY_CREATOR_PARAMS Log& log,std::string params
@@ -55,12 +55,11 @@ Heuristic_random::Heuristic_random(Log& l,const std::string& _params) :
     if (!r->status) {
       status=false;
       errormsg=r->errormsg;
-    } else {
-      log.push(params.c_str());
-      log.print("<random init==\"%s\"/>\n",r->stringify().c_str());
-      log.pop();
     }
   }
+  log.push("heuristic_random");
+  log.print("<random init=\"%s\"/>\n", r->stringify().c_str());
+  log.pop();
 }
 
 Heuristic_random::~Heuristic_random() {
@@ -72,7 +71,7 @@ float Heuristic_random::getCoverage() {
   if (my_coverage==NULL) {
     return 0.0;
   }
-  return my_coverage->getCoverage();  
+  return my_coverage->getCoverage();
 }
 
 int Heuristic_random::getAction()
@@ -108,7 +107,7 @@ int Heuristic_random::getIAction()
     // Ok.. no output actions
     i=model->getActions(&actions);
     if (i==0) {
-      return Alphabet::DEADLOCK;      
+      return Alphabet::DEADLOCK;
     }
     return Alphabet::OUTPUT_ONLY;
   }

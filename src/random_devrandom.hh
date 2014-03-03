@@ -27,6 +27,7 @@ public:
   virtual unsigned long rand();
   virtual std::string stringify();
   int fd;
+  const std::string _param;
 };
 
 class Random_DevRandom: public Random_Dev {

@@ -31,7 +31,7 @@
 #include <unistd.h>
 #include <limits.h>
 
-Random_Dev::Random_Dev(const std::string& param) {
+Random_Dev::Random_Dev(const std::string& param): _param(param) {
   max_val = UINT_MAX;
   fd=open(param.c_str(),O_RDONLY);
   if (!fd) {
@@ -50,8 +50,8 @@ Random_Dev::~Random_Dev()
 
 std::string Random_Dev::stringify() {
   if (status) {
-    return std::string("/dev/random");
-  } 
+    return _param;
+  }
   return Writable::stringify();
 }
 
