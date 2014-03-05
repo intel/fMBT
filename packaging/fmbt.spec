@@ -308,7 +308,8 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %defattr(-, root, root, -)
 %{_bindir}/pythonshare-server
 %{_bindir}/pythonshare-client
-%dir %{python_sitelib}/pythonshare
+%{python_sitelib}/pythonshare*egg*
+%{python_sitelib}/pythonshare/*.py*
 %{_mandir}/man1/pythonshare-*.1*
 
 %files doc
@@ -316,7 +317,7 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %dir %{_datadir}/doc/%{name}
 %doc %{_datadir}/doc/%{name}/README
 %doc %{_datadir}/doc/%{name}/*.txt
-%{_mandir}/man1/fmbt-*.1*
+%{_mandir}/man1/fmbt*.1*
 %{_mandir}/man1/remote_pyaal*.1*
 
 %files examples
