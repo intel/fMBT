@@ -56,12 +56,12 @@ teststep "heuristic weight: fifty fifty"
 fmbt test-fiftyfifty.conf -l weight.log >>$LOGFILE 2>&1 || {
     testfailed
 }
-if (( "$(fmbt-log weight.log | grep iFoo | wc -l)" < 40 )); then
+if (( "$(fmbt-log weight.log | grep iFoo | wc -l)" < 10 )); then
     echo "too few iFoos in the log" >> $LOGFILE
     testfailed
 fi
 
-if (( "$(fmbt-log weight.log | grep iBar | wc -l)" < 40 )); then
+if (( "$(fmbt-log weight.log | grep iBar | wc -l)" < 10 )); then
     echo "too few iBars in the log" >> $LOGFILE
     testfailed
 fi
