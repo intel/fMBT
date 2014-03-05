@@ -186,7 +186,7 @@ Requires: %{name}-adapter-android
 Requires: %{name}-adapter-tizen
 Requires: %{name}-adapter-vnc
 Requires: %{name}-adapter-x11
-Requires: %{name}-pythonshare
+Requires: %{name}-adapter-windows
 Requires: %{name}-doc
 Requires: %{name}-editor
 Requires: %{name}-examples
@@ -317,7 +317,7 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %doc %{_datadir}/doc/%{name}/README
 %doc %{_datadir}/doc/%{name}/*.txt
 %{_mandir}/man1/fmbt-*.1*
-%{_mandir}/man1/remote_pyaal-*.1*
+%{_mandir}/man1/remote_pyaal*.1*
 
 %files examples
 %defattr(-, root, root, -)
