@@ -4,6 +4,8 @@ PKG_VERSION := $(shell awk '/^Version: /{print $$2}' < $(SPECFILE))
 
 TARBALL := $(PKG_NAME)_$(PKG_VERSION).tar.gz
 
+dsc: $(PKG_NAME).dsc
+
 $(PKG_NAME).dsc: $(TARBALL) $(PKG_NAME).dsc.in
 	$(eval MD5=$(shell md5sum $(TARBALL) | sed "s/  / $(shell stat -c '%s' $(TARBALL)) /"))
 	@sed  -e 's/TEMPLATE-VERSION/$(PKG_VERSION)/' \
