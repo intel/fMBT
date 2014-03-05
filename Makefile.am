@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = utils src test examples
+SUBDIRS = utils src pythonshare test examples
 
 dist_doc_DATA = \
 	README			\

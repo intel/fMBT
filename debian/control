@@ -71,6 +71,13 @@ Description: fMBT adapter for Tizen GUI testing through USB
  Provides fmbttizen.py, a Python library for Tizen GUI testing.
  The library needs Smart Development Bridge (sdb) from Tizen SDK.
 
+Package: fmbt-adapter-windows
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, fmbt-adapter-eyenfinger (= ${binary:Version}), fmbt-pythonshare (= ${binary:Version})
+Description: fMBT adapter for Windows GUI testing
+ Provides fmbtwindows.py, a Python library for Windows GUI testing.
+ The library connects to pythonshare server running on Windows.
+
 Package: fmbt-adapter-vnc
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, fmbt-adapter-eyenfinger (= ${binary:Version}), fmbt-python (= ${binary:Version})
@@ -90,6 +97,18 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, x11-apps, imagemagick, tesseract-oc
 Description: fMBT adapter for GUI testing
  Proof-of-concept adapter for X11 GUI testing with OCR and icon matching.
  Eyenfinger test API is deprecated, use fmbtx11 instead.
+
+Package: fmbt-pythonshare
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, python
+Description: Python RPC client and server with code mobility
+ Pythonshare enables executing Python code and evaluating
+ Python expressions in namespaces at pythonshare-server processes.
+ Includes
+ - pythonshare-server (daemon, both host and proxy namespaces)
+ - pythonshare-client (commandline utility for using namespaces
+   on pythonshare-servers)
+ - Python API for using pythonshare namespaces.
 
 Package: fmbt-doc
 Architecture: all

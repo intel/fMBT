@@ -1330,7 +1330,7 @@ class GUITestInterface(object):
         """
         return self._oirEngine
 
-    def pressKey(self, keyName, long=False, hold=0.0):
+    def pressKey(self, keyName, long=False, hold=0.0, modifiers=None):
         """
         Press a key.
 
@@ -1344,18 +1344,25 @@ class GUITestInterface(object):
 
           hold (float, optional):
                   time in seconds to hold the key down.
+
+          modifiers (list of strings, optional)
+                  modifier key(s) to be pressed at the same time
         """
+
+        extraParams = {}
+        if modifiers != None:
+            extraParams['modifiers'] = modifiers
         if long and hold == 0.0:
             hold = self._longPressHoldTime
         if hold > 0.0:
             try:
-                assert self._conn.sendKeyDown(keyName)
+                assert self._conn.sendKeyDown(keyName, **extraParams)
                 time.sleep(hold)
-                assert self._conn.sendKeyUp(keyName)
+                assert self._conn.sendKeyUp(keyName, **extraParams)
             except AssertionError:
                 return False
             return True
-        return self._conn.sendPress(keyName)
+        return self._conn.sendPress(keyName, **extraParams)
 
     def _newScreenshotFilepath(self):
         """

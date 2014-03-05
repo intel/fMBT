@@ -1,0 +1,3 @@
+usr/lib/python*/*packages/pythonshare/*
+usr/bin/pythonshare-*
+usr/share/man/man1/pythonshare-*.1*

@@ -85,6 +85,7 @@ AC_CONFIG_FILES([
         Makefile
         src/Makefile
         utils/Makefile
+        pythonshare/Makefile
         test/Makefile
         examples/Makefile
         fMBT.spec

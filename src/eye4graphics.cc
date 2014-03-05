@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <vector>
 #include <climits>
+#include <string.h>
 
 #include <Magick++.h>
 using namespace Magick;
@@ -661,6 +662,30 @@ int bgrx2rgb(char* data, int width, int height)
         data[3*i + 1] = data[4*i + 1];
         data[3*i + 2] = tmp;
     }
+    return has_nonblack_pixels;
+}
+
+int wbgr2rgb(char* data, const int width, const int height)
+{
+    int has_nonblack_pixels = 0;
+    char lower_scanline[width * 3];
+    char upper_scanline[width * 3];
+    for (int y = 0; y < height/2; ++y) {
+        const int lower_y = height - y - 1;
+        const int lower_line_start = (height - y - 1) * width * 3;
+        const int upper_line_start = y * width * 3;
+        for (int x = 0; x < width; ++x) {
+            upper_scanline[x * 3]     = data[upper_line_start + x * 3 + 2];
+            upper_scanline[x * 3 + 1] = data[upper_line_start + x * 3 + 1];
+            upper_scanline[x * 3 + 2] = data[upper_line_start + x * 3];
+            lower_scanline[x * 3]     = data[lower_line_start + x * 3 + 2];
+            lower_scanline[x * 3 + 1] = data[lower_line_start + x * 3 + 1];
+            lower_scanline[x * 3 + 2] = data[lower_line_start + x * 3];
+        }
+        memcpy(data + y * width * 3, lower_scanline, width * 3);
+        memcpy(data + lower_y * width * 3, upper_scanline, width * 3);
+    }
+    has_nonblack_pixels = 1; // no detection for now
     return has_nonblack_pixels;
 }
 

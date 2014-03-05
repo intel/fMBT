@@ -1,0 +1,62 @@
+.TH PYTHONSHARE-SERVER 1 "Mar 2014" Linux "User Manuals"
+.SH NAME
+pythonshare\-server \- Code mobility server for Python
+.SH SYNOPSIS
+.SY pythonshare\-server
+.OP \-d
+.OP \-l LOGFILE
+.OP \-p PORT
+.OP \-\-password ALG:HASH
+.OP \-\-password-file FILE
+.OP \-\-interface interface
+.OP \-n NS
+.OP \-E HOSTSPEC
+.OP \-I HOSTSPEC
+.OP \-i CODE
+.SY pythonshare\-server
+.B \-h
+|
+.B \-\-help
+.SH DESCRIPTION
+\fBpythonshare\-server\fR launches a Python process that enables
+executing arbitrary Python code in local namespaces (\fINS\fR) or in
+connected \fBpythonshare-server\fR processes, if their namespaces have
+been imported or exported (\fB\-E\fR, \fB\-I\fR) to this process.
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+print help, then exit.
+.SH EXAMPLES
+\fBpythonshare-server \-\-password=md5:06c219e5bc8378f3a8a3f83b4b7e4649 \\
+        \-n mylocal \\
+        \-i "from mylibrary import *" \\
+        -d\fR
+
+.fi
+launches the server in debug mode: does not fork a daemon, logs to
+standard output. Clients connecting to this server must authenticate
+with password "mysecret".  The server has one namespace:
+"mylocal". Code block "from mylibrary import *" will be executed in
+this namespace before executing any client code in the namespace can
+be run. The server process listens to only the local network
+interface, because \fB--interface all\fR has not been given.
+
+\fBpythonshare-client \-\-password\-file=mypwd.txt \-C localhost \\
+        \-n mylocal \\
+        \-c "a=41" \\
+        \-e "a+1"\fR
+
+.fi
+connects to the server, authenticates with the password in mypwd.txt,
+executes code block "a=41" in the \fBmylocal\fR namespace, and finally
+evaluates expression "a+1" in the same
+namespace. \fBpythonshare-client\fR prints return values of evaluated
+expressions to standard output.
+.SH AUTHOR
+Written by Antti Kervinen.
+.SH "REPORTING BUGS"
+Report bugs to https://github.com/01org/fMBT/issues
+.SH COPYRIGHT
+Copyright \(co 2014 Intel Corporation.
+.SH "SEE ALSO"
+.BR pythonshare\-client (1)

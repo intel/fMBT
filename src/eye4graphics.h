@@ -136,4 +136,8 @@ extern "C" {
      */
     int bgrx2rgb(char* data, int width, int height);
 
+    /*
+     * wbgr2rgb - convert Windows GetDIBits (BGR, mirrored Y) image to RGB.
+     */
+    int wbgr2rgb(char* data, int width, int height);
 }

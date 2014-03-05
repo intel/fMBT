@@ -12,4 +12,5 @@ setup(name         = 'pythonshare',
       package_data = {'pythonshare': ['__init__.py',
                                       'client.py',
                                       'messages.py',
-                                      'server.py']})
+                                      'server.py']}
+)

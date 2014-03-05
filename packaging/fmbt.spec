@@ -130,6 +130,14 @@ Requires: %{name}-python
 Provides fmbttizen.py, a Python library for Tizen GUI testing.
 The library needs Smart Development Bridge (sdb) from Tizen SDK.
 
+%package adapter-windows
+Summary: fMBT adapter for Windows GUI testing
+Requires: %{name}-pythonshare
+
+%description adapter-windows
+Provides fmbtwindws.py, a Python library for Windows GUI testing.
+The library connects to pythonshare server running on Windows.
+
 %package adapter-vnc
 Summary: fMBT adapter for GUI testing through VNC
 Requires: %{name}-adapter-eyenfinger
@@ -146,6 +154,19 @@ Requires: %{name}-python
 
 %description adapter-x11
 Provides fmbtx11.py, a Python library for X11 GUI testing.
+
+%package pythonshare
+Summary: Python RPC client and server with code mobility
+Requires: python
+
+%description pythonshare
+Pythonshare enables executing Python code and evaluating
+Python expressions in namespaces at pythonshare-server processes.
+Includes
+- pythonshare-server (daemon, both host and proxy namespaces)
+- pythonshare-client (commandline utility for using namespaces
+  on pythonshare-servers)
+- Python API for using pythonshare namespaces.
 
 %package doc
 Summary: fMBT documentation
@@ -165,6 +186,7 @@ Requires: %{name}-adapter-android
 Requires: %{name}-adapter-tizen
 Requires: %{name}-adapter-vnc
 Requires: %{name}-adapter-x11
+Requires: %{name}-pythonshare
 Requires: %{name}-doc
 Requires: %{name}-editor
 Requires: %{name}-examples
@@ -174,7 +196,6 @@ Meta package for installing all fMBT packages
 
 %prep
 %setup -q
-./autogen.sh
 
 %build
 %configure
@@ -269,6 +290,11 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %{python_sitelib}/fmbttizen.py*
 %{python_sitelib}/fmbttizen-agent.py*
 
+%files adapter-windows
+%defattr(-, root, root, -)
+%{python_sitelib}/fmbtwindows.py*
+%{python_sitelib}/fmbtwindows_agent.py*
+
 %files adapter-vnc
 %defattr(-, root, root, -)
 %{python_sitelib}/fmbtvnc.py*
@@ -277,12 +303,20 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %defattr(-, root, root, -)
 %{python_sitelib}/fmbtx11.py*
 
+%files pythonshare
+%defattr(-, root, root, -)
+%{_bindir}/pythonshare-server
+%{_bindir}/pythonshare-client
+%dir %{python_sitelib}/pythonshare
+%{_mandir}/man1/pythonshare-*.1*
+
 %files doc
 %defattr(-, root, root, -)
 %dir %{_datadir}/doc/%{name}
 %doc %{_datadir}/doc/%{name}/README
 %doc %{_datadir}/doc/%{name}/*.txt
-%doc %{_mandir}/man1/*.1*
+%{_mandir}/man1/fmbt-*.1*
+%{_mandir}/man1/remote_pyaal-*.1*
 
 %files examples
 %defattr(-, root, root, -)
