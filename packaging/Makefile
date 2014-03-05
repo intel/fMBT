@@ -13,8 +13,9 @@ $(PKG_NAME).dsc: $(TARBALL) $(PKG_NAME).dsc.in
               < $(PKG_NAME).dsc.in > $(PKG_NAME).dsc
 
 $(TARBALL):
-	( cd ..; ./autogen.sh && ./configure && make dist distdir=$(PKG_NAME)-$(PKG_VERSION))
-	mv $(CURDIR)/../$(PKG_NAME)-$(PKG_VERSION).tar.gz $(CURDIR)/$(TARBALL)
+	cd "$$(git rev-parse --show-toplevel)" \
+	    && git archive --prefix $(PKG_NAME)-$(PKG_VERSION)/ HEAD \
+	    | gzip > "$(CURDIR)/$(TARBALL)"
 
 rpm: $(PKG_NAME).dsc $(TARBALL)
 	mkdir -p ~/rpmbuild/SOURCES/

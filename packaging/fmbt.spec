@@ -196,6 +196,7 @@ Meta package for installing all fMBT packages
 
 %prep
 %setup -q
+./autogen.sh
 
 %build
 %configure
