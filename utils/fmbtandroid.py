@@ -626,21 +626,22 @@ class Device(fmbtgti.GUITestInterface):
                 self._lastView = view
                 return view
 
-    def useDisplaySize(self, (width, height) = (None, None)):
+    def setDisplaySize(self, size=(None, None)):
         """
         Transform coordinates of synthesized events from screenshot
-        resolution to given resolution. By default events are
+        resolution to given input area size. By default events are
         synthesized directly to screenshot coordinates.
 
         Parameters:
 
-          (width, height) (pair of integers, optional):
+          size (pair of integers (width, height), optional):
                   width and height of display in pixels. If not
                   given, values from Android system properties
                   "display.width" and "display.height" will be used.
 
         Returns None.
         """
+        width, height = size
         if width == None:
             width = int(self.systemProperty("display.width"))
         if height == None:
