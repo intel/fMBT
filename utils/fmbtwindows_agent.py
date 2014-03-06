@@ -422,9 +422,9 @@ def touchUp(x, y, fingerRadius=5):
     #if (ctypes.windll.user32.InitializeTouchInjection(1, 1) != 0):
     #    print "Initialized Touch Injection"
 
-    # First update touch position to given coordinates. 
+    # First update touch position to given coordinates.
     # This is need for swiping to get touch up from correct place
-    
+
     touchInfo.pointerInfo.pointerFlags = (POINTER_FLAG_UPDATE|
                                         POINTER_FLAG_INRANGE|
                                         POINTER_FLAG_INCONTACT)
@@ -703,7 +703,34 @@ def sendMouseMove(x, y, button=1):
     return sendInput(event)
 
 def shell(command):
-    return subprocess.call(command)
+    if isinstance(command, list):
+        useShell = False
+    else:
+        useShell = True
+    try:
+        output = subprocess.check_output(command, shell=useShell)
+    except subprocess.CalledProcessError, e:
+        if hasattr(e, "output"):
+            output = e.output
+        else:
+            output = None
+    return output
+
+def shellSOE(command):
+    if isinstance(command, list):
+        useShell = False
+    else:
+        useShell = True
+    try:
+        p = subprocess.Popen(command, shell=useShell,
+                             stdin = subprocess.PIPE,
+                             stdout = subprocess.PIPE,
+                             stderr = subprocess.PIPE)
+        out, err = p.communicate()
+        status = p.returncode
+    except OSError:
+        status, out, err = None, None, None
+    return status, out, err
 
 def launchHTTPD():
     global _HTTPServerProcess

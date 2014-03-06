@@ -165,7 +165,43 @@ class Device(fmbtgti.GUITestInterface):
         self._conn.setScreenshotSize(size)
 
     def shell(self, command):
-        return self._conn.evalPython('shell("%s")' % (command,))
+        """
+        Execute command in Windows.
+
+        Parameters:
+
+          command (string or list of strings):
+                  command to be executed. Will be forwarded directly
+                  to subprocess.check_output.  If command is a string,
+                  then it will be executed in subshell, otherwise without
+                  shell.
+
+        Returns what is printed by the command.
+
+        If you wish to receive exitstatus or standard output and error
+        separated from command, refer to shellSOE().
+
+        """
+        return self._conn.evalPython('shell(%s)' % (repr(command),))
+
+    def shellSOE(self, command):
+        """
+        Execute command in Windows.
+
+        Parameters:
+
+          command (string or list of strings):
+                  command to be executed. Will be forwarded directly
+                  to subprocess.check_output.  If command is a string,
+                  then it will be executed in subshell, otherwise without
+                  shell.
+
+        Returns triplet: exit status, standard output and standard error
+        from the command.
+
+        If executing command fails, returns None, None, None.
+        """
+        return self._conn.evalPython('shellSOE(%s)' % (repr(command),))
 
     def launchHTTPD(self):
         """
