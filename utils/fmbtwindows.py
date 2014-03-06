@@ -17,7 +17,25 @@
 """
 This is library implements fMBT GUITestInterface for Windows
 
-Windows host must have pythonshare-server running.
+How to setup Windows device under test
+
+1. Install Python 2.X. (For example 2.7.)
+
+2. Add Python to PATH, so that command "python" starts the interpreter.
+
+3. Copy fMBT's pythonshare directory to Windows.
+
+4. In the pythonshare directory, run "python setup.py install"
+
+5. Run:
+   cd \\python27\\scripts
+   python pythonshare-server --interface=all --password=xxxxxxxx
+
+
+How to connect to the device
+
+import fmbtwindows
+d = fmbtwindows.Device("IP-ADDRESS-OF-THE-DEVICE", password="xxxxxxxx")
 """
 
 import fmbt
@@ -112,18 +130,17 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self._conn.recvFile(remoteFilename, localFilename)
 
-    def setDisplaySize(self, (width, height)):
+    def setDisplaySize(self, size):
         """
-        Transform coordinates of synthesized events from screenshot
-        resolution to given resolution. By default events are
-        synthesized directly to screenshot coordinates.
+        Transform coordinates of synthesized events (like a tap) from
+        screenshot resolution to display input area size. By default
+        events are synthesized directly to screenshot coordinates.
 
         Parameters:
 
-          (width, height) (pair of integers):
-                  width and height of display in pixels. If not
-                  given, values from Android system properties
-                  "display.width" and "display.height" will be used.
+          size (pair of integers: (width, height)):
+                  width and height of display in pixels. If not given,
+                  values from EnumDisplayMonitors are used.
 
         Returns None.
         """
@@ -135,20 +152,31 @@ class Device(fmbtgti.GUITestInterface):
             lambda x, y: (x * screenWidth / width,
                           y * screenHeight / height))
 
-    def setScreenshotSize(self, (width, height)):
+    def setScreenshotSize(self, size):
         """
         Force screenshots from device to use given resolution.
         Overrides detected monitor resolution on device.
+
+        Parameters:
+
+          size (pair of integers: (width, height)):
+                  width and height of screenshot.
         """
-        self._conn.setScreenshotSize((width, height))
+        self._conn.setScreenshotSize(size)
 
     def shell(self, command):
         return self._conn.evalPython('shell("%s")' % (command,))
 
     def launchHTTPD(self):
+        """
+        DEPRECATED, will be removed, do not use!
+        """
         return self._conn.evalPython("launchHTTPD()")
 
     def stopHTTPD(self):
+        """
+        DEPRECATED, will be removed, do not use!
+        """
         return self._conn.evalPython("stopHTTPD()")
 
 class WindowsConnection(fmbtgti.GUITestConnection):
@@ -275,6 +303,5 @@ class WindowsConnection(fmbtgti.GUITestConnection):
 
     def setDisplayToScreenCoords(self, displayToScreenFunction):
         self._displayToScreen = displayToScreenFunction
-
 
 class FMBTWindowsError(Exception): pass
