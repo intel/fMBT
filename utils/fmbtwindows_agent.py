@@ -365,7 +365,7 @@ touchInfo = POINTER_TOUCH_INFO(pointerInfo=pointerInfo,
                              orientation=90,
                              pressure=32000)
 
-def touchDown(x, y, fingerRadius=5):
+def setTouchCoords(touchInfo, x, y, fingerRadius=5):
     touchInfo.pointerInfo.ptPixelLocation.x = x
     touchInfo.pointerInfo.ptPixelLocation.y = y
 
@@ -374,10 +374,12 @@ def touchDown(x, y, fingerRadius=5):
     touchInfo.rcContact.top = y - fingerRadius
     touchInfo.rcContact.bottom = y + fingerRadius
 
+def touchDown(x, y, fingerRadius=5):
+    setTouchCoords(touchInfo, x, y, fingerRadius)
     #Press Down
     touchInfo.pointerInfo.pointerFlags = (POINTER_FLAG_DOWN|
-                                        POINTER_FLAG_INRANGE|
-                                        POINTER_FLAG_INCONTACT)
+                                          POINTER_FLAG_INRANGE|
+                                          POINTER_FLAG_INCONTACT)
 
     if (ctypes.windll.user32.InjectTouchInput(1, ctypes.byref(touchInfo)) == 0):
         print "Touch down failed with error: " + ctypes.FormatError()
@@ -388,18 +390,11 @@ def touchDown(x, y, fingerRadius=5):
         return True
 
 def touchMove(x, y, fingerRadius=5):
-    touchInfo.pointerInfo.ptPixelLocation.x = x
-    touchInfo.pointerInfo.ptPixelLocation.y = y
-
-    touchInfo.rcContact.left = x - fingerRadius
-    touchInfo.rcContact.right = x + fingerRadius
-    touchInfo.rcContact.top = y - fingerRadius
-    touchInfo.rcContact.bottom = y + fingerRadius
-
+    setTouchCoords(touchInfo, x, y, fingerRadius)
     # send update event
     touchInfo.pointerInfo.pointerFlags = (POINTER_FLAG_UPDATE|
-                                        POINTER_FLAG_INRANGE|
-                                        POINTER_FLAG_INCONTACT)
+                                          POINTER_FLAG_INRANGE|
+                                          POINTER_FLAG_INCONTACT)
 
     if (ctypes.windll.user32.InjectTouchInput(1, ctypes.byref(touchInfo)) == 0):
         print "Touch Move failed with error: " + ctypes.FormatError()
@@ -410,29 +405,14 @@ def touchMove(x, y, fingerRadius=5):
         return True
 
 def touchUp(x, y, fingerRadius=5):
-    touchInfo.pointerInfo.ptPixelLocation.x = x
-    touchInfo.pointerInfo.ptPixelLocation.y = y
-
-    touchInfo.rcContact.left = x - fingerRadius
-    touchInfo.rcContact.right = x + fingerRadius
-    touchInfo.rcContact.top = y - fingerRadius
-    touchInfo.rcContact.bottom = y + fingerRadius
-
-    #Initialize Touch Injection
-    #if (ctypes.windll.user32.InitializeTouchInjection(1, 1) != 0):
-    #    print "Initialized Touch Injection"
-
-    # First update touch position to given coordinates.
-    # This is need for swiping to get touch up from correct place
-
-    touchInfo.pointerInfo.pointerFlags = (POINTER_FLAG_UPDATE|
-                                        POINTER_FLAG_INRANGE|
-                                        POINTER_FLAG_INCONTACT)
+    setTouchCoords(touchInfo, x, y, fingerRadius)
+    touchInfo.pointerInfo.pointerFlags = (POINTER_FLAG_INRANGE|
+                                          POINTER_FLAG_UP)
 
     if (ctypes.windll.user32.InjectTouchInput(1, ctypes.byref(touchInfo)) == 0):
         print "Touch up failed with error: " + ctypes.FormatError()
         return False
-    touchInfo.pointerInfo.pointerFlags = (POINTER_FLAG_UP)
+    touchInfo.pointerInfo.pointerFlags = (POINTER_FLAG_UPDATE)
 
     if (ctypes.windll.user32.InjectTouchInput(1, ctypes.byref(touchInfo)) == 0):
         print "Touch up failed with error: " + ctypes.FormatError()
@@ -568,7 +548,7 @@ def screenshotZYBGR(screenshotSize=(None, None)):
     # top = monitor['top']
     SRCCOPY = 0xCC0020
     DIB_RGB_COLORS = 0
-    srcdc = ctypes.windll.user32.GetWindowDC(0)
+    srcdc = ctypes.windll.user32.GetDC(0)
     memdc = ctypes.windll.gdi32.CreateCompatibleDC(srcdc)
     bmp = ctypes.windll.gdi32.CreateCompatibleBitmap(srcdc, width, height)
     ctypes.windll.gdi32.SelectObject(memdc, bmp)
@@ -580,7 +560,7 @@ def screenshotZYBGR(screenshotSize=(None, None)):
                                 c_bits, c_bmp_header, DIB_RGB_COLORS)
     ctypes.windll.gdi32.DeleteObject(bmp)
     ctypes.windll.gdi32.DeleteObject(memdc)
-    ctypes.windll.gdi32.DeleteObject(srcdc)
+    ctypes.windll.user32.ReleaseDC(0, srcdc)
     return zlib.compress(c_bits.raw)
 
 def sendType(text):
@@ -765,10 +745,15 @@ def enum_display_monitors():
     return results
 
 if not "_g_monitors" in globals():
-    _g_monitors = enum_display_monitors()
-    _mouse_input_area = (
-        _g_monitors[0]['right'] - _g_monitors[0]['left'],
-        _g_monitors[0]['bottom'] - _g_monitors[0]['top'])
+    #_g_monitors = enum_display_monitors()
+    left = ctypes.windll.user32.GetSystemMetrics(SM_XVIRTUALSCREEN)
+    right =ctypes.windll.user32.GetSystemMetrics(SM_CXVIRTUALSCREEN)
+    top = ctypes.windll.user32.GetSystemMetrics(SM_YVIRTUALSCREEN)
+    bottom = ctypes.windll.user32.GetSystemMetrics(SM_CYVIRTUALSCREEN)
+    width = right - left
+    height = bottom - top
+    _mouse_input_area = (width, height)
+
 
 if not "_g_touchInjenctionInitialized" in globals():
     if (ctypes.windll.user32.InitializeTouchInjection(1, 1) != 0):

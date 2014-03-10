@@ -230,6 +230,12 @@ class WindowsConnection(fmbtgti.GUITestConnection):
 
     def setScreenshotSize(self, screenshotSize):
         self._screenshotSize = screenshotSize
+        screenW, screenH = self._screenshotSize
+        inputW, inputH = self._agent.eval_in(self._agent_ns, "_mouse_input_area")
+        self.setScreenToDisplayCoords(
+            lambda x, y: (x * inputW / screenW, y * inputH / screenH))
+        self.setDisplayToScreenCoords(
+            lambda x, y: (x * screenW / inputW, y * screenH / inputH))
 
     def evalPython(self, code):
         return self._agent.eval_in(self._agent_ns, code)
