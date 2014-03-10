@@ -257,11 +257,15 @@ class MyScaleEvents(QtCore.QObject):
             if self.selTop != None:
                 right, bottom = self.posToAbs(event.pos)
                 w.drawRect(self.selLeft, self.selTop, right, bottom)
+            self.showScreenshotTooltip(event)
         elif event.type() == QtCore.QEvent.MouseButtonRelease:
             if self.selTop != None:
                 right, bottom = self.posToAbs(event.pos)
                 w.selectBitmapDone(self.selLeft, self.selTop, right, bottom)
                 self.selTop, self.selLeft = None, None
+            self.showScreenshotTooltip(event)
+        elif event.type() == QtCore.QEvent.ToolTip:
+            self.showScreenshotTooltip(event)
         return False
     def posToRel(self, pos):
         sbY = self.attrowner.verticalScrollBar().value()
@@ -315,6 +319,7 @@ class MyScaleEvents(QtCore.QObject):
                     self.mainwindow.insertRecordedCommand(cmd)
         elif event.type() == QtCore.QEvent.ToolTip:
             if not hasattr(self.attrowner, 'cursorForPosition'):
+                self.showScreenshotTooltip(event)
                 return False
             filename = self.mainwindow.bitmapStringAt(event.pos())
             if filename == None:
@@ -350,6 +355,12 @@ class MyScaleEvents(QtCore.QObject):
                 self.visibleTip = filepath
             return True
         return False
+    def showScreenshotTooltip(self, event):
+        # tooltip on screenshot view
+        x, y = self.posToAbs(event.pos)
+        self.mainwindow._screenshotCursorX = int(x)
+        self.mainwindow._screenshotCursorY = int(y)
+        self.mainwindow.editorCursorPositionChanged()
 
 class fmbtdummy(object):
     class Device(fmbtgti.GUITestInterface):
@@ -554,6 +565,8 @@ class MainWindow(QtGui.QMainWindow):
         self._hwRecFilter = {"devices": None}
         self._recordedHandledAbsXY = (None, None)
         self._screenshotSaveDir = ""
+        self._screenshotCursorX = -1
+        self._screenshotCursorY = -1
         self._fmbtEnv = {
             "pydoc": pydoc,
             "time": time
@@ -1740,10 +1753,13 @@ class MainWindow(QtGui.QMainWindow):
             self.highlightActiveBitmap()
         self._editorIgnoreNextCursorPositionChange = False
         cursor = self.editor.textCursor()
-        cursorPosString = "%s, line: %s col: %s" % (
+        cursorPosString = "%s, line: %s col: %s; screen: (%s, %s)" % (
             self._scriptFilename,
             cursor.blockNumber() + 1,
-            cursor.positionInBlock() + 1)
+            cursor.positionInBlock() + 1,
+            int(self._screenshotCursorX),
+            int(self._screenshotCursorY),
+        )
         self.status.setText(cursorPosString)
 
     def controlDevice(self):
