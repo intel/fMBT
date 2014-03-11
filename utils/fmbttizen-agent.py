@@ -150,7 +150,29 @@ def readDeviceInfo():
         devices = ""
 readDeviceInfo()
 
-if 'TRATS' in cpuinfo:
+if 'max77803-muic' in devices:
+    hwKeyDevice = {
+        "POWER": "gpio-keys",
+        "VOLUMEUP": "gpio-keys",
+        "VOLUMEDOWN": "gpio-keys",
+        "HOME": "gpio-keys"
+        }
+    _inputKeyNameToCode["HOME"] = 139
+    if iAmRoot:
+        touch_device = fmbtuinput.Touch().open("sec_touchscreen")
+        mtInputDevFd = touch_device._fd
+elif 'max77693-muic' in devices:
+    hwKeyDevice = {
+        "POWER": "gpio-keys",
+        "VOLUMEUP": "gpio-keys",
+        "VOLUMEDOWN": "gpio-keys",
+        "HOME": "gpio-keys"
+        }
+    _inputKeyNameToCode["HOME"] = 139
+    if iAmRoot:
+        touch_device = fmbtuinput.Touch().open("sec_touchscreen")
+        mtInputDevFd = touch_device._fd
+elif 'TRATS' in cpuinfo:
     # Running on Lunchbox
     hwKeyDevice = {
         "POWER": "gpio-keys",
