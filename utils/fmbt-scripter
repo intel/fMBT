@@ -115,8 +115,8 @@ def _notPython(code):
 # Convert events to fmbtgti API calls
 
 class GestureEvent(object):
-    __slots__ = ["time", "event", "key", "pos"]
-    def __init__(self, event, key, pos, timestamp=None):
+    __slots__ = ["time", "event", "key", "pos", "device"]
+    def __init__(self, event, key, pos, timestamp=None, device=""):
         if timestamp == None:
             self.time = time.time()
         else:
@@ -124,9 +124,10 @@ class GestureEvent(object):
         self.event = event
         self.key = key
         self.pos = pos
+        self.device = device
     def __str__(self):
-        return 'GestureEvent(time=%s, event="%s", key=%s, pos=%s)' % (
-            self.time, self.event, self.key, self.pos)
+        return 'GestureEvent(time=%s, event="%s", key=%s, pos=%s, device=%s)' % (
+            self.time, self.event, self.key, self.pos, repr(self.device))
 
 def quantify(item, quantum):
     if not isinstance(item, tuple) and not isinstance(item, list):
@@ -981,14 +982,14 @@ class MainWindow(QtGui.QMainWindow):
             elif typ == synEvent:
                 if t:
                     if ev == "mousemove":
-                        gEv = GestureEvent(ev, None, (x, y), t)
+                        gEv = GestureEvent(ev, None, (x, y), t, device=device)
                     elif ev in ["mousedown", "mouseup"]:
-                        gEv = GestureEvent(ev, 0, (x, y), t)
+                        gEv = GestureEvent(ev, 0, (x, y), t, device=device)
                     elif ev in ["keyup", "keydown"]:
                         if self._sutPressMethod(keyName):
                             keyName = self._sutPressMethod(keyName).lstrip(
                                 "press")
-                        gEv = GestureEvent(ev, keyName, None, t)
+                        gEv = GestureEvent(ev, keyName, None, t, device=device)
                     self._recordedTouchEvents.append(gEv)
                     if ev in ["keyup", "mouseup"]:
                         apiCall = gestureToGti(self._recordedTouchEvents)
@@ -1010,7 +1011,7 @@ class MainWindow(QtGui.QMainWindow):
             lowerMethodName = "press" + keyName.lstrip("KEY_").lower()
         else:
             lowerMethodName = "press" + keyName.lower()
-        attrs, exc = self._fmbtEval("dir(%s)" % (self._sut,))
+        attrs, exc = self._fmbtEval("dir(%s)" % (self._sut,), silent=True)
         if exc:
             return None
         pressMethods = [a for a in attrs if a.startswith("press")]
