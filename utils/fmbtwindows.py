@@ -144,6 +144,7 @@ class Device(fmbtgti.GUITestInterface):
 
         Returns None.
         """
+        width, height = size
         screenWidth, screenHeight = self.screenSize()
         self._conn.setScreenToDisplayCoords(
             lambda x, y: (x * width / screenWidth,
