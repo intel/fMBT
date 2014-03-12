@@ -306,6 +306,7 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 
 %files pythonshare
 %defattr(-, root, root, -)
+%dir %{python_sitelib}/pythonshare
 %{_bindir}/pythonshare-server
 %{_bindir}/pythonshare-client
 %{python_sitelib}/pythonshare*egg*
