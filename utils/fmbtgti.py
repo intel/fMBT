@@ -1663,7 +1663,7 @@ class GUITestInterface(object):
 
           sut.setScreenshotSubdir("%m-%d-%H")
                   A screenshot taken on June 20th at 4.30pm will
-                  be stored to screenshotDir/01-20-16. That is,
+                  be stored to screenshotDir/06-20-16. That is,
                   screenshots taken on different hours will be
                   stored to different subdirectories.
 
