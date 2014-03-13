@@ -329,7 +329,12 @@ def start_server(host, port,
             if c.import_ns(ns):
                 _init_remote_namespace(ns, c, c._to_server, c._from_server)
 
-    daemon_log("listen: %s:%s" % (host, port))
+    try:
+        addrinfos = socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM)
+        for addrinfo in addrinfos:
+            daemon_log("listen: %s:%s" % (addrinfo[4][0], addrinfo[4][1]))
+    except socket.error:
+        daemon_log("listen: %s:%s" % (host, port))
 
     # Start listening to the port
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
