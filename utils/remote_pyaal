@@ -42,6 +42,9 @@ Options:
     -t, --timeout s
         Event observation timeout in seconds.
 
+    --verbose-fmbt-log
+        Write variable values and enabled actions to fMBT log.
+
     -o, --output filename
         Convert AAL/Python model to LSTS and write output to given
         file. If filename is "-", output is written to the standard
@@ -255,6 +258,15 @@ class RemoteAALBridge:
             elif cmd[:2] == "ap":
                 adapter_call_arguments.append(cmd[2:])
             elif cmd[0] == "a":
+                if opt_verbose_fmbt_log:
+                    # write enabled actions to fmbt log
+                    try:
+                        fmbtlog("AAL enabled: " + " ".join(
+                            [str(s) for s in self._aal._enabled_actions_stack[-1]]))
+                    except IndexError:
+                        pass
+                    # write variable values to fmbt log
+                    fmbtlog("AAL state: " + self._aal.state())
                 action_number = int(cmd[1:])
                 try:
                     rv = self._aal.adapter_execute(action_number,
@@ -444,6 +456,7 @@ if __name__ == "__main__":
     opt_timeout = 1.0
     opt_ppflags = []
     opt_output_fileobj = None
+    opt_verbose_fmbt_log = 0
     opt_lsts_depth = 5
     opt_lsts_hide_vars = []
     opt_lsts_show_vars = []
@@ -454,6 +467,7 @@ if __name__ == "__main__":
     opts, remainder = getopt.gnu_getopt(
         sys.argv[1:], 'c:dhl:L:t:o:D:H:S:VT:I:',
         ["debug", "help", "log-file=", "timeout=", "output=",
+         "verbose-fmbt-log",
          "lsts-depth=", "lsts-hide-var=", "lsts-show-var=", "version"])
 
     for opt, arg in opts:
@@ -483,6 +497,8 @@ if __name__ == "__main__":
         elif opt in ["-t", "--timeout"]:
             opt_timeout = float(arg)
             _log("observe timeout: %2.6f" % (opt_timeout,))
+        elif opt in ["--verbose-fmbt-log"]:
+            opt_verbose_fmbt_log += 1
         elif opt in ["-o", "--output"]:
             if arg == "-":
                 opt_output_fileobj = sys.stdout
