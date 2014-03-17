@@ -152,10 +152,11 @@ readDeviceInfo()
 
 if 'max77803-muic' in devices:
     hwKeyDevice = {
-        "POWER": "gpio-keys",
+        "POWER": "qpnp_pon",
         "VOLUMEUP": "gpio-keys",
         "VOLUMEDOWN": "gpio-keys",
-        "HOME": "gpio-keys"
+        "HOME": "gpio-keys",
+        "MENU": "gpio-keys"
         }
     _inputKeyNameToCode["HOME"] = 139
     if iAmRoot:
@@ -166,7 +167,8 @@ elif 'max77693-muic' in devices:
         "POWER": "gpio-keys",
         "VOLUMEUP": "gpio-keys",
         "VOLUMEDOWN": "gpio-keys",
-        "HOME": "gpio-keys"
+        "HOME": "gpio-keys",
+        "MENU": "gpio-keys"
         }
     _inputKeyNameToCode["HOME"] = 139
     if iAmRoot:
