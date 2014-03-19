@@ -246,6 +246,17 @@ class RemoteAALBridge:
                             error(str(e))
                 put_list(failing_tags)
             elif cmd[0] == "m":
+                if opt_verbose_fmbt_log and not fmbt.simulated():
+                    # write variable values to fmbt log
+                    state_str = self._aal.state()
+                    log_str = "AAL state: %s\n%s" % (state_str.count("\n") + 1, state_str)
+                    # write enabled actions to fmbt log
+                    try:
+                        log_str += "\nAAL enabled: " + " ".join(
+                            [str(s) for s in self._aal._enabled_actions_stack[-1]])
+                    except IndexError:
+                        pass
+                    fmbtlog(log_str)
                 action_number = int(cmd[1:])
                 try:
                     rv = self._aal.model_execute(action_number)
@@ -258,15 +269,6 @@ class RemoteAALBridge:
             elif cmd[:2] == "ap":
                 adapter_call_arguments.append(cmd[2:])
             elif cmd[0] == "a":
-                if opt_verbose_fmbt_log:
-                    # write enabled actions to fmbt log
-                    try:
-                        fmbtlog("AAL enabled: " + " ".join(
-                            [str(s) for s in self._aal._enabled_actions_stack[-1]]))
-                    except IndexError:
-                        pass
-                    # write variable values to fmbt log
-                    fmbtlog("AAL state: " + self._aal.state())
                 action_number = int(cmd[1:])
                 try:
                     rv = self._aal.adapter_execute(action_number,
