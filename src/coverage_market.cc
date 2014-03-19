@@ -43,11 +43,18 @@ void Coverage_Market::history(int action,
 bool Coverage_Market::execute(int action)
 {
   /* Dummy */
-
+  
+  int* p;
+  int j=model->getprops(&p);
+  next.assign(p,p+j);
+  
+  
   for(size_t i=0;i<Units.size();i++) {
-    Units[i]->execute(action);
+    Units[i]->execute(prev,action,next);
   }
-
+  
+  prev.swap(next);
+  
   return true;
 }
 
@@ -89,7 +96,7 @@ int Coverage_Market::fitness(int* action,int n,float* fitness)
       b.first+=tmp.first;
       b.second+=tmp.second;
       Units[j]->push();
-      Units[j]->execute(action[i]);
+      Units[j]->execute(prev,action[i],next);
       Units[j]->update();
       tmp=Units[j]->get_value();
       e.first+=tmp.first;
@@ -133,7 +140,32 @@ void Coverage_Market::add_requirement(std::string& req)
   free_D_Parser(p);
 }
 
-Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const std::string &action) {
+Coverage_Market::unit_tag* Coverage_Market::req_rx_tag(const std::string &tag) {
+  if (!status) {
+    return NULL;
+  }
+
+  std::vector<int> tags;
+  regexpmatch(tag, model->getSPNames(),tags  , false,1,1);  
+  
+  if (tags.empty()) {
+    errormsg = "No actions matching \"" + tag + "\"";
+    status = false;
+    return NULL;
+  }
+
+  //if (tags.size()==1) {
+    return new Coverage_Market::unit_tagleaf(tags[0]);
+    //  }
+  
+  errormsg = "Regexp matched to more than one tag which is not supported!";
+  status=false;
+  return NULL;
+}
+
+Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const std::string &action,
+						      unit_tag* prev_tag,
+						      unit_tag* next_tag) {
   /* m(ode) == a|e
      a(ll): cover all matching actions
      e(xists): cover any of matching actions
@@ -145,7 +177,7 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const std::st
 
   if (m) {
     std::vector<int> actions;
-    regexpmatch(action, model->getActionNames(), actions, false,1,1);
+    regexpmatch(action, model->getActionNames(), actions  , false,1,1);
 
     if (actions.empty()) {
       errormsg = "No actions matching \"" + action + "\"";
@@ -153,9 +185,26 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const std::st
       return NULL;
     }
 
+    if (next_tag) {
+      next_tag->set_left(false);
+    }
+
+    if (prev_tag||next_tag) {
+      if (!prev_tag) {
+	prev_tag=new unit_tag();
+	prev_tag->value.first=0;
+	prev_tag->value.second=0;
+      }
+      if (!next_tag) {
+	next_tag=new unit_tag();
+	next_tag->value.first=0;
+	next_tag->value.second=0;
+      }
+    }
+
     if (actions.size()==1) {
-      u=new Coverage_Market::unit_leaf(actions[0]);
-    } /*else {
+      u=new Coverage_Market::unit_leaf(actions[0]); 
+   } /*else {
       if (actions.size()==2) {
 	Coverage_Market::unit *l,*r;
 	l=new Coverage_Market::unit_leaf(actions[0]);
@@ -194,6 +243,10 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const std::st
   if (u==NULL) {
     errormsg=std::string("parse error");
     status=false;
+  }
+
+  if (u && status && prev_tag) {
+    u=new Coverage_Market::unit_tagunit(prev_tag,u,next_tag);
   }
 
   return u;

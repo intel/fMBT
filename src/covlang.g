@@ -25,6 +25,7 @@ typedef struct _node {
   char type;
   std::string* str;
   Coverage_Market::unit* u;
+  Coverage_Market::unit_tag* tag;
   int i;
 } cnode;
 #define D_ParseNode_User cnode
@@ -34,6 +35,26 @@ Coverage_Market* cobj;
 #include "helper.hh"
 
 extern D_ParserTables parser_tables_covlang;
+
+Coverage_Market::unit* tagspec_helper(Coverage_Market::unit_tag* l,Coverage_Market::unit* c,
+                                      Coverage_Market::unit_tag* r) {
+    if (l || r) {
+        if (!l) {
+            l=new Coverage_Market::unit_tag();
+            l->value.first=0;
+            l->value.second=0;
+        }
+
+        if (!r) {
+            r=new Coverage_Market::unit_tag();
+            r->value.first=0;
+            r->value.second=0;
+        }
+        return new Coverage_Market::unit_tagunit(l,c,r);
+    }
+    return c;
+}
+
 
 Coverage_Market::unit* inthelper(Coverage_Market::unit* u,
                                  int count) {
@@ -65,10 +86,10 @@ expr: node             { $$.u = $0.u; }
     | node "or" expr   { $$.u = new Coverage_Market::unit_or  ($0.u,$2.u); }
     | node "then" expr { $$.u = new Coverage_Market::unit_then_($0.u,$2.u); } ;
 
-node: actionname       { $$.type='e'; $$.u = cobj->req_rx_action($$.type,*$0.str); delete $0.str; $0.str=NULL; }
+node: tag_spec actionname tag_spec  { $$.type='e'; $$.u = cobj->req_rx_action($$.type,*$1.str,$0.tag,$2.tag); delete $1.str; $1.str=NULL; }
     | ('a' | 'A' | 'all' ) actionname   { $$.type='a'; $$.u = cobj->req_rx_action($$.type,*$1.str); delete $1.str; $1.str=NULL; }
     | ('e' | 'E' | 'any' ) actionname   { $$.type='e'; $$.u = cobj->req_rx_action($$.type,*$1.str); delete $1.str; $1.str=NULL; }
-    | '(' expr ')'     { $$.u = $1.u; }
+    | tag_spec '(' expr ')'  tag_spec   { $$.u = tagspec_helper($0.tag,$2.u,$4.tag); }
     | "not" node       { $$.u = new Coverage_Market::unit_not($1.u); } 
     | uint '*' node    { $$.u = inthelper($2.u,$0.i); }
     | node '*' uint    { $$.u = inthelper($0.u,$2.i); }
@@ -101,7 +122,31 @@ node: actionname       { $$.type='e'; $$.u = cobj->req_rx_action($$.type,*$0.str
         ]
     ;
 
+tagname: name { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); } ;
+
 actionname: name { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); } ;
+
+tag_spec: '[' tag_expr ']' { 
+            $$.tag = $1.tag;
+            //$$.str = new std::string($n1.start_loc.s+1,$n1.end-$n1.start_loc.s-2);
+        } |
+        {
+            $$.tag = NULL;
+            //$$.str = new std::string("");
+        }
+    ;
+
+tag_node: tagname      { $$.tag = cobj->req_rx_tag(*$0.str); delete $0.str; }
+    | '(' tag_expr ')' { $$.tag = $1.tag; }
+    | "not" tag_node   { $$.tag = new Coverage_Market::unit_tagnot($1.tag); }
+    ;
+
+tag_expr: tag_node { $$.tag = $0.tag; }
+          | tag_node 'and' tag_expr { $$.tag=new Coverage_Market::unit_tagand($0.tag,$2.tag); }
+          | tag_node 'or'  tag_expr { $$.tag=new Coverage_Market::unit_tagor ($0.tag,$2.tag); }
+          ;
+
+
 
 name: "\"([^\"\\]|\\[^])*\"" |  "\'([^\'\\]|\\[^])*\'";
 
