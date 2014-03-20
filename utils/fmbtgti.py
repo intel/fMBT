@@ -1255,7 +1255,11 @@ class GUITestInterface(object):
         Parameters:
 
           filenameOrObj (string or a file object)
-                  The file to which the log is written.
+                  The file to which the log is written. Log can be
+                  split into multiple html files by using strftime
+                  conversion specifications in filenameOrObj. For
+                  instance, "%a-%H.html" will log to "Thu-16.html" on
+                  Thurday from 4 pm to 5 pm.
 
           screenshotWidth (string, optional)
                   Width of screenshot images in HTML.
@@ -2315,6 +2319,12 @@ class _VisualLog:
                  copyBitmapsToScreenshotDir):
         self._device = device
         self._outFileObj = outFileObj
+        if hasattr(self._outFileObj, "name"):
+            self._outFilename = self._outFileObj.name
+        else:
+            self._outFilename = ""
+        self._formattedOutFilename = self._outFilename
+        self._bytesToFile = 0
         self._testStep = -1
         self._actionName = None
         self._callStack = []
@@ -2348,21 +2358,38 @@ class _VisualLog:
             if hasattr(device, a):
                 m = getattr(device, a)
                 setattr(device, m.func_name, self.genericLogger(m))
-        self.logHeader()
+        if not self.logFileSplit():
+            self.logHeader()
         self._blockId = 0
 
     def close(self):
         if self._outFileObj != None:
             html = []
-            for c in xrange(len(self._callStack)):
-                html.append('</table></tr>') # end call
-            html.append('</table></div></td></tr></table></ul>') # end step
-            html.append('</body></html>') # end html
-            self.write('\n'.join(html))
+            if self._bytesToFile > 0:
+                for c in xrange(len(self._callStack)):
+                    html.append('</table></tr>') # end call
+                html.append('</table></div></td></tr></table></ul>') # end step
+                html.append('</body></html>') # end html
+                self.write('\n'.join(html))
+            if (self._formattedOutFilename and
+                "%" in self._outFilename):
+                # Files with strftime-formatted names are opened and
+                # closed by this class. Other file-like objects are
+                # own by someone else.
+                if hasattr(self._outFileObj, "close"):
+                    self._outFileObj.close()
+                if os.stat(self._formattedOutFilename).st_size == 0:
+                    os.remove(self._formattedOutFilename)
             # File instance should be closed by the opener
             self._outFileObj = None
 
+    def open(self, newFormattedFilename):
+        self._bytesToFile = 0
+        self._formattedOutFilename = newFormattedFilename
+        self._outFileObj = file(self._formattedOutFilename, "w")
+
     def write(self, s):
+        self._bytesToFile += len(s)
         if self._outFileObj != None:
             self._outFileObj.write(s)
             self._outFileObj.flush()
@@ -2381,6 +2408,20 @@ class _VisualLog:
             self.epochTimestamp(t), self.epochTimestamp(t), self.timestamp(t))
         return retval
 
+    def logFileSplit(self):
+        """Returns True if old log file was closed and new initialised"""
+        if "%" in self._outFilename:
+            # log filename is strftime formatted
+            t = datetime.datetime.now()
+            newOutFilename = t.strftime(self._outFilename)
+            if newOutFilename != self._formattedOutFilename:
+                self.close()
+                # prepare new log file
+                self.open(newOutFilename)
+                self.logHeader()
+                return True
+        return False
+
     def logBlock(self):
         ts = fmbt.getTestStep()
         an = fmbt.getActionName()
@@ -2388,7 +2429,12 @@ class _VisualLog:
             an = self._userFunction
             ts = self._userCallCount
         if self._testStep != ts or self._actionName != an:
-            if self._blockId != 0: self.write('</table></div></td></tr></table></ul>')
+            if self._blockId != 0:
+                # new top level log entry
+                self.write('</table></div></td></tr></table></ul>')
+                # if log splitting is in use, this is a good place to
+                # start logging into next file
+                self.logFileSplit()
             actionHtml = '''\n\n<ul><li><table><tr><td>%s</td><td><div class="step"><a id="blockId%s" href="javascript:showHide('S%s')">%s. %s</a></div><div class="funccalls" id="S%s"><table>\n''' % (
                 self.htmlTimestamp(), self._blockId, self._blockId, ts, cgi.escape(an), self._blockId)
             self.write(actionHtml)
