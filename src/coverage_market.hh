@@ -1086,6 +1086,8 @@ public:
   class unit_tagdual : public unit_tag {
   public:
     unit_tagdual(unit_tag*l,unit_tag*r): left(l),right(r) {
+      if (left)
+	left->set_left(true);	
     }
 
     virtual void set_instance(int instance,int current_instance, bool force=false) {
