@@ -128,10 +128,17 @@ public:
 
   class unit {
   public:
+    unit() {value.first=0;value.second=0;}
     val& get_value() {
       return value;
     }
     virtual ~unit() {value.first=0;value.second=0;}
+
+    // No need to define copy-constructor. Default is just fine
+
+    // Derived class needs to define clone so that we'll have nice derived-deep-copy
+    virtual unit* clone()=0;
+
     virtual void execute(const std::vector<int>& prev,int action,const std::vector<int>& next)=0;
     virtual void update()=0;
     virtual void push()=0;
@@ -158,6 +165,8 @@ public:
     virtual void execute(eunit& un) {
       execute(un.prev,un.action,un.next);
     }
+  protected:
+    unit(const unit &obj):value(obj.value) {}
 
   };
 
@@ -224,6 +233,13 @@ public:
     std::stack<Coverage_Tree*> child_save;
     Coverage_Market* m;
     std::string p;
+
+    virtual unit* clone() {
+      return new unit_perm(*this);
+    }
+  protected:
+    //I'll think that the default works.
+    //unit_perm(const unit_perm &obj);
   };
 
   class unit_walk: public unit {
@@ -367,7 +383,19 @@ public:
       }
       tcount_save.resize(push_depth);
     }
+
+    virtual unit* clone() {
+      return new unit_walk(*this);
+    }
   protected:
+    unit_walk(const unit_walk& o) {
+      // Let's hope this triggers call to the copy constructor
+      child = & (* o.child);
+      minimi = o.minimi;
+      push_depth=0;
+      count=0;
+    }
+  
     unsigned push_depth;
     unit* child;
     unsigned count;
@@ -423,6 +451,9 @@ public:
       }
     }
     std::vector<unit*> units;
+
+  protected:
+    unit_many(const unit_many &obj);
   };
 
   class unit_manyleaf: public unit {
@@ -478,6 +509,8 @@ public:
     std::stack<std::vector<int> > st;
     std::stack<val> st2;
     std::map<int,std::vector<int> > manyleaf_instance_map;
+  protected:
+    //unit_manyleaf(const unit_manyleaf &obj);
   };
 
   class unit_manyleafand: public unit_manyleaf {
@@ -508,7 +541,9 @@ public:
       }
     }
     */
-
+    virtual unit* clone() {
+      return new unit_manyleafand(*this);
+    }
   };
 
   class unit_manyleafor: public unit_manyleaf {
@@ -542,6 +577,9 @@ public:
       unit::value.first=0;
     }
     */
+    virtual unit* clone() {
+      return new unit_manyleafor(*this);
+    }
   };
 
   class unit_manyand: public unit_many {
@@ -563,7 +601,11 @@ public:
 	value.first +=vr.first;
 	value.second+=vr.second;
       }
-    }   
+    }
+    virtual unit* clone() {
+      return new unit_manyand(*this);
+    }
+    unit_manyand(const unit_manyand&obj):unit_many(obj) {}
   };
 
   class unit_manyor: public unit_many {
@@ -588,6 +630,9 @@ public:
 	value.second+=vr.second;
       }
     }   
+    virtual unit* clone() {
+      return new unit_manyor(*this);
+    }
   };
 
   class unit_dual: public unit {
@@ -624,8 +669,13 @@ public:
       left->execute(prev,action,next);
       right->execute(prev,action,next);
     }
-
+    /*
+    virtual unit* clone() {
+      return new unit_dual(*this);
+    }
+    */
   protected:
+    unit_dual(const unit_dual &obj);
     unit* left,*right;
 
   };
@@ -642,7 +692,9 @@ public:
       value.first = vl.first+vr.first;
       value.second=vl.second+vr.second;
     }
-  protected:
+    virtual unit* clone() {
+      return new unit_and(*this);
+    }
   };
 
   class unit_or: public unit_dual {
@@ -660,8 +712,9 @@ public:
             vr.first/vr.second)*(vl.second+vr.second);
       value.second=vl.second+vr.second;
     }
-  protected:
-
+    virtual unit* clone() {
+      return new unit_or(*this);
+    }
   };
 
   class unit_not: public unit {
@@ -697,7 +750,11 @@ public:
       value.first=v.second-v.first;
       value.second=v.second;
     }
+    virtual unit* clone() {
+      return new unit_not(*this);
+    }
   protected:
+    unit_not(const unit_not &obj);
     unit* child;
   };
 
@@ -768,7 +825,9 @@ public:
 	value.second+=v.second;
       }
     }
-    
+    virtual unit* clone() {
+      return new unit_then(*this);
+    }
   };
 
   class unit_then_: public unit_dual {
@@ -802,13 +861,14 @@ public:
       value.first=vl.first+vr.first;
       value.second=vl.second+vr.second;
     }
-  protected:
-
+    virtual unit* clone() {
+      return new unit_then_(*this);
+    }
   };
 
   class unit_tag : public unit {
   public:
-    unit_tag() {
+    unit_tag():unit(),left_side(false) {
     }
 
     virtual ~unit_tag() { }
@@ -822,9 +882,51 @@ public:
     virtual void pop() {}
     virtual void set_instance(int, int, bool) {}
 
+    virtual unit* clone() {
+      return new unit_tag(*this);
+    }
   protected:
+    unit_tag(const unit_tag&obj):unit(obj),left_side(obj.left_side) {
+    }
     bool left_side;
     
+  };
+
+  class unit_tagelist: public unit_tag {
+  public:
+    unit_tagelist(char _op,unit_tag* l, unit_tag* r): op(_op),left(l),right(r) {
+    }
+
+    virtual ~unit_tagelist() {
+
+    }
+
+    /*
+    virtual unit* expand(unit* u) {
+      // So... We should expand to something
+      // [ <tag_expr1> & <tag_expr2> ] expr
+      //  -> ( [ <tag_expr1> ] expr ) and ( [ <tag_expr2> ] expr )
+      // So. Let's expand left and right and put correct operator between.
+      unit* ul = left->expand(u);
+      unit* ur = right->expand(u);
+      if (op=='&') {
+	return new Coverage_Market::unit_and(ul,ur);
+      }
+      return new Coverage_Market::unit_or(ul,ur);
+    }
+    */
+    virtual void set_left(bool l) {
+      left_side=l;
+      left->set_left(l);
+      right->set_left(l);      
+    }
+    char op;
+    unit_tag *left,*right;
+    virtual unit* clone() {
+      return new unit_tagelist(*this);
+    }
+  protected:
+    unit_tagelist(const unit_tagelist &obj);
   };
 
   class unit_tagnot: public unit_tag {
@@ -872,7 +974,11 @@ public:
     }
 
     unit_tag* child;
-
+    virtual unit* clone() {
+      return new unit_tagnot(*this);
+    }
+  protected:
+    unit_tagnot(const unit_tagnot &obj);
   };
 
   class unit_tagleaf: public unit_tag {
@@ -906,15 +1012,29 @@ public:
     }
     
     virtual void execute(const std::vector<int>& prev,int action,const std::vector<int>& next){
-
-      if (value.first<value.second &&
-	  ((left_side  && std::find(prev.begin(), prev.end(), my_tag)!=prev.end()) ||
-	   (!left_side && std::find(next.begin(), next.end(), my_tag)!=next.end()))) {
-	value.first++;
+      if (value.first<value.second) {
+	if (left_side) {
+	  if (std::find(prev.begin(), prev.end(), my_tag)!=prev.end()) {
+	    value.first++;	    
+	  }
+	} else {
+	  if (std::find(next.begin(), next.end(), my_tag)!=next.end()) {
+	    value.first++;	    
+	  }	  
+	}
+	/*
+	if (((left_side  && std::find(prev.begin(), prev.end(), my_tag)!=prev.end()) ||
+	     (!left_side && std::find(next.begin(), next.end(), my_tag)!=next.end()))) {
+	  value.first++;
+	}
+	*/
       }
     }
-    
+    virtual unit* clone() {
+      return new unit_tagleaf(*this);
+    }
   protected:
+    unit_tagleaf(const unit_tagleaf &obj):unit_tag(obj),my_tag(obj.my_tag) { }
     int my_tag;
     std::stack<val> st;
     std::map<int,int> leaf_instance_map;
@@ -954,7 +1074,9 @@ public:
 
     virtual void update() {
     }
-
+    virtual unit* clone() {
+      return new unit_leaf(*this);
+    }
   protected:
     int my_action;
     std::stack<val> st;
@@ -1020,13 +1142,18 @@ public:
 
     unit_tag* left;
     unit_tag* right;
+    virtual unit* clone() {
+      return new unit_tagdual(*this);
+    }
+  protected:
+    unit_tagdual(const unit_tagdual &obj);
   };
 
   class unit_tagunit: public unit_tagdual {
   public:
     unit_tagunit(unit_tag* l, unit* _child,unit_tag* r): unit_tagdual(l,r),child(_child) {
       value.first=0;
-      value.second=l->value.second+right->value.second+child->value.second;      
+      value.second=l->value.second+right->value.second+child->value.second;
     }
 
     virtual ~unit_tagunit() {
@@ -1144,6 +1271,11 @@ public:
     }
     
     unit* child;
+    virtual unit* clone() {
+      return new unit_tagunit(*this);
+    }
+  protected:
+    unit_tagunit(const unit_tagunit &obj);
   };
 
   class unit_tagand : public unit_tagdual {
@@ -1161,6 +1293,9 @@ public:
     virtual void update() {
       unit_tagdual::update();
       value.first=left->value.first+right->value.first;
+    }
+    virtual unit* clone() {
+      return new unit_tagand(*this);
     }
   };
 
@@ -1184,6 +1319,9 @@ public:
       } else {
 	value.first=left->value.first+right->value.first;
       } 
+    }
+    virtual unit* clone() {
+      return new unit_tagor(*this);
     }
   };
 
@@ -1240,7 +1378,11 @@ public:
     }
     
     int max;
+    virtual unit* clone() {
+      return new unit_mult(*this);
+    }
   protected:
+    unit_mult(const unit_mult &obj);
     unit* child;
     int count;
     std::stack<int> st;
@@ -1252,5 +1394,7 @@ protected:
   std::string params;
 };
 
-
+Coverage_Market::unit* new_unit_tagunit(Coverage_Market::unit_tag* l,
+					Coverage_Market::unit* u,
+					Coverage_Market::unit_tag* r);
 #endif

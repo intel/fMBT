@@ -46,8 +46,11 @@ bool Coverage_Market::execute(int action)
   
   int* p;
   int j=model->getprops(&p);
-  next.assign(p,p+j);
-  
+  if (j) {
+    next.assign(p,p+j);
+  } else {
+    next.clear();
+  }
   
   for(size_t i=0;i<Units.size();i++) {
     Units[i]->execute(prev,action,next);
@@ -246,10 +249,144 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const std::st
   }
 
   if (u && status && prev_tag) {
-    u=new Coverage_Market::unit_tagunit(prev_tag,u,next_tag);
+    u=new_unit_tagunit(prev_tag,u,next_tag);
   }
 
   return u;
+}
+
+Coverage_Market::unit* new_unit_tagunit(Coverage_Market::unit_tag* l,
+					Coverage_Market::unit* u,
+					Coverage_Market::unit_tag* r) {
+  Coverage_Market::unit_tagelist* tl=dynamic_cast<Coverage_Market::unit_tagelist*>(l);
+
+  // copy-constructor for unit*. We need to make a deep copy to get this thing working.
+
+  if (tl) {
+    // We have operator on the left side. Let's expand it a bit.
+    Coverage_Market::unit_tag* nl=tl->left;
+    Coverage_Market::unit_tag* nr=tl->right;
+
+    Coverage_Market::unit* ul = new_unit_tagunit(nl,u->clone(),
+						 (Coverage_Market::unit_tag*)r->clone());
+    Coverage_Market::unit* ur = new_unit_tagunit(nr,u,r);
+    
+    if (tl->op=='&') {
+      delete tl;
+      // and
+      return new Coverage_Market::unit_and(ul,ur);
+    } else {
+      delete tl;
+      // or
+      return new Coverage_Market::unit_or(ul,ur);
+    }
+  } else {
+    // Ok. Let's check if right hand side needs expanding.
+    Coverage_Market::unit_tagelist* tl=dynamic_cast<Coverage_Market::unit_tagelist*>(r);
+    if (tl) {
+      // We have operator on the right side. Let's expand it a bit.
+      Coverage_Market::unit_tag* nl=tl->left;
+      Coverage_Market::unit_tag* nr=tl->right;
+
+      Coverage_Market::unit* ul = new_unit_tagunit((Coverage_Market::unit_tag*)l->clone(),
+						   u->clone(),nl);
+      Coverage_Market::unit* ur = new_unit_tagunit(l,u,nr);
+
+      if (tl->op=='&') {
+	delete tl;
+	// and
+	return new Coverage_Market::unit_and(ul,ur);
+      } else {
+	delete tl;
+	// or
+	return new Coverage_Market::unit_or(ul,ur);
+      }
+    } else {
+      // No need to expand.
+      return new Coverage_Market::unit_tagunit(l,u,r);
+    }    
+  }  
+}
+
+Coverage_Market::unit_dual::unit_dual(Coverage_Market::unit_dual const& obj):
+  Coverage_Market::unit(obj) {
+  if (obj.left) 
+    left=obj.left->clone();
+  else
+    left=NULL;
+
+  if (obj.right) 
+    right=obj.right->clone();
+  else
+    right=NULL;
+}
+
+Coverage_Market::unit_not::unit_not(Coverage_Market::unit_not const& obj):
+  Coverage_Market::unit(obj) {
+  if (obj.child) 
+    child=obj.child->clone();
+  else
+    child=NULL;
+}
+
+Coverage_Market::unit_tagelist::unit_tagelist(Coverage_Market::unit_tagelist const& obj):
+  Coverage_Market::unit_tag(obj),op(obj.op) {
+  if (obj.left) 
+    left=(unit_tag*)obj.left->clone();
+  else 
+    left=NULL;
+
+  if (obj.right) 
+    right=(unit_tag*)obj.right->clone();
+  else 
+    right=NULL;
+}
+
+Coverage_Market::unit_tagnot::unit_tagnot(Coverage_Market::unit_tagnot const& obj):
+  unit_tag(obj) {
+  if (obj.child) 
+    child=(unit_tag*)obj.child->clone();
+  else 
+    child=NULL;
+ }
+
+Coverage_Market::unit_tagdual::unit_tagdual(Coverage_Market::unit_tagdual const& obj):
+  unit_tag(obj) {
+  if (obj.left) 
+    left=(unit_tag*)obj.left->clone();
+  else 
+    left=NULL;
+
+  if (obj.right) 
+    right=(unit_tag*)obj.right->clone();
+  else 
+    right=NULL;
+}
+
+Coverage_Market::unit_tagunit::unit_tagunit(Coverage_Market::unit_tagunit const& obj):
+  unit_tagdual(obj) {
+  if (obj.child) 
+    child=obj.child->clone();
+  else 
+    child=NULL;
+}
+
+Coverage_Market::unit_mult::unit_mult(Coverage_Market::unit_mult const& obj):
+  unit(obj),max(obj.max),count(obj.count) {
+  if (obj.child) 
+    child=obj.child->clone();
+  else 
+    child=NULL;  
+}
+
+Coverage_Market::unit_many::unit_many(const unit_many &obj):
+  unit(obj) {
+  for(unsigned i=0;i<obj.units.size();i++) {
+    unit* u=obj.units[i];
+    if (u) 
+      u=u->clone();
+    units.push_back(u);
+  }
 }
 
 FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Market, "usecase")

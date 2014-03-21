@@ -126,7 +126,7 @@ tagname: name { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc
 
 actionname: name { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2); } ;
 
-tag_spec: '[' tag_expr ']' { 
+tag_spec: '[' tag_expr_list ']' {
             $$.tag = $1.tag;
             //$$.str = new std::string($n1.start_loc.s+1,$n1.end-$n1.start_loc.s-2);
         } |
@@ -135,6 +135,18 @@ tag_spec: '[' tag_expr ']' {
             //$$.str = new std::string("");
         }
     ;
+
+// Dummy implementation...
+tag_expr_list: tag_expr { $$.tag = $0.tag; }
+    | tag_expr '|' tag_expr_list { 
+            $$.tag = new Coverage_Market::unit_tagelist('|',$0.tag,$2.tag) ;
+        }
+    | tag_expr '&' tag_expr_list {
+            $$.tag = new Coverage_Market::unit_tagelist('&',$0.tag,$2.tag) ;
+        }
+    ;
+        
+
 
 tag_node: tagname      { $$.tag = cobj->req_rx_tag(*$0.str); delete $0.str; }
     | '(' tag_expr ')' { $$.tag = $1.tag; }
