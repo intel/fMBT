@@ -63,6 +63,7 @@ public:
 
   void set_model(Alphabet* m);
   void set_props(std::string p);
+  void set_props(int* p,int c);
 
 protected:
   std::vector<int> act;
