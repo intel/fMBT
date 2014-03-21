@@ -104,9 +104,10 @@ public:
 
   void add_requirement(std::string& req);
 
-  unit* req_rx_action(const char m,const std::string &action,unit_tag* l=NULL,unit_tag* r=NULL);
+  unit* req_rx_action(const char m,const std::string &action,unit_tag* l=NULL,unit_tag* r=NULL,bool persistent=false);
 
   unit_tag* req_rx_tag(const std::string &tag);
+  unit_tag* req_rx_tag(const char m,const std::string &tag);
   
   void add_unit(unit* u) {
     Units.push_back(u);
@@ -510,7 +511,8 @@ public:
     std::stack<val> st2;
     std::map<int,std::vector<int> > manyleaf_instance_map;
   protected:
-    //unit_manyleaf(const unit_manyleaf &obj);
+    unit_manyleaf(const unit_manyleaf &obj): unit(obj),my_action(obj.my_action),
+					     value(obj.value) {}
   };
 
   class unit_manyleafand: public unit_manyleaf {
@@ -1153,7 +1155,8 @@ public:
 
   class unit_tagunit: public unit_tagdual {
   public:
-    unit_tagunit(unit_tag* l, unit* _child,unit_tag* r): unit_tagdual(l,r),child(_child) {
+    unit_tagunit(unit_tag* l, unit* _child,unit_tag* r,bool _persistent=false):
+      unit_tagdual(l,r),child(_child),persistent(_persistent) {
       value.first=0;
       value.second=l->value.second+right->value.second+child->value.second;
     }
@@ -1168,29 +1171,10 @@ public:
     }
 
     virtual void execute(const std::vector<int>& prev,int action,const std::vector<int>& next) {
-      /*
-	ööh. ei noin. vaan näin?
 
-	if (!left) {
-	  execute(left);
-	  if (!left) {
-	    return;
-	  }
-	}
-	if (!child) {
-	  execute(child);
-	  if (!child) {
-	    return;
-	  }
-	}
-	if (!right) {
-	  execite(right);
-	  if (!right) {
-	    return;
-	  }
-	}
-       */
-
+      if (persistent) {
+	left->reset();
+      }
       left->update();
       val v=left->get_value();
       if (v.first<v.second) {
@@ -1273,6 +1257,7 @@ public:
     }
     
     unit* child;
+    bool persistent;
     virtual unit* clone() {
       return new unit_tagunit(*this);
     }
@@ -1398,5 +1383,6 @@ protected:
 
 Coverage_Market::unit* new_unit_tagunit(Coverage_Market::unit_tag* l,
 					Coverage_Market::unit* u,
-					Coverage_Market::unit_tag* r);
+					Coverage_Market::unit_tag* r,
+					bool persistent);
 #endif
