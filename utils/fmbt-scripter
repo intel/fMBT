@@ -2353,6 +2353,8 @@ if __name__ == "__main__":
     script = ""
     if remainder:
         scriptFilename = remainder[0]
+        if not os.path.exists(scriptFilename):
+            file(scriptFilename, "w").close() # create empty file
         try:
             script = file(scriptFilename).read()
         except:
@@ -2371,7 +2373,7 @@ if __name__ == "__main__":
     else:
         initSequence = ""
 
-    if script:
+    if scriptFilename:
         _win.open(scriptFilename)
     else:
         _win.editor.append(initSequence)
