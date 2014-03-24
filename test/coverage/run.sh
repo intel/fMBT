@@ -311,6 +311,38 @@ if [ "$(fmbt-log -f '$ax' usecase-multiply.log | wc -l)" != "17" ]; then
 fi
 testpassed
 
+teststep "coverage usecase, start-end-tags..."
+
+cat > usecase-tags.conf.in <<EOF
+model     = aal_remote(remote_pyaal -l usecase-tags.aal.log usecase-tags.aal)
+adapter   = aal
+heuristic = lookahead(6)
+
+inconc    = steps(9)
+pass      = coverage(1.0)
+on_pass   = exit(0)
+on_fail   = exit(1)
+on_inconc = exit(2)
+EOF
+# test stopping each played sound when all sounds are playing
+(cat usecase-tags.conf.in; echo 'coverage=usecase(@[all "hear.*"](all "i:stop.*"))') > usecase-tags.conf
+if ! fmbt -l usecase-tags.log usecase-tags.conf >>$LOGFILE 2>&1; then
+    cat usecase-tags.log >> $LOGFILE
+    cat usecase-tags.conf >> $LOGFILE
+    echo "failed because fmbt -l usecase-tags.conf returned non-zero exit status" >> $LOGFILE
+    testfailed
+fi
+# check that when ever "i:stop ..." is executed, all tags were on
+for stop_thing in i:stop-alert i:stop-game i:stop-music; do
+    if ! ( fmbt-log -f '$ax\nTAGS: $tg' < usecase-tags.log | grep -B 1 $stop_thing | head -n 1 | grep hear-alert | grep hear-music | grep -q hear-game ); then
+        cat usecase-tags.log >> $LOGFILE
+        cat usecase-tags.conf >> $LOGFILE
+        echo "failed because alert, game or music was not heard when executing $stop_thing" >> $LOGFILE
+        testfailed
+    fi
+done
+testpassed
+
 teststep "coverage sum..."
 cat > sum.conf <<EOF
 model     = "lsts_remote(fmbt-gt -f coffee.gt)"

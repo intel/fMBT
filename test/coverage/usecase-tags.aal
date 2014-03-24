@@ -10,37 +10,37 @@ aal "mixer" {
         playing = set()
 
     }
-    input "play alert",
-          "play game",
-          "play music" {
+    input "play-alert",
+          "play-game",
+          "play-music" {
         guard {
-            play_what = action_name.split()[1]
+            play_what = action_name.split("-")[1]
             return not play_what in playing
         }
         body  {
-            play_what = action_name.split()[1]
+            play_what = action_name.split("-")[1]
             playing.add(play_what)
         }
     }
 
-    input "stop alert",
-          "stop game",
-          "stop music" {
+    input "stop-alert",
+          "stop-game",
+          "stop-music" {
         guard {
-            stop_what = action_name.split()[1]
+            stop_what = action_name.split("-")[1]
             return stop_what in playing
         }
         body  {
-            stop_what = action_name.split()[1]
+            stop_what = action_name.split("-")[1]
             playing.remove(stop_what)
         }
     }
 
-    tag "hear alert",
-        "hear game",
-        "hear music" {
+    tag "hear-alert",
+        "hear-game",
+        "hear-music" {
         guard {
-            hear_what = tag_name.split()[1]
+            hear_what = tag_name.split("-")[1]
             return hear_what in playing
         }
     }
