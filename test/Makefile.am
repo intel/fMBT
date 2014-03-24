@@ -14,7 +14,7 @@ dist_noinst_SCRIPTS += examples/run.sh
 
 dist_noinst_SCRIPTS += exitvalue/run.sh exitvalue/broken-adapter.aal exitvalue/broken-body.aal exitvalue/broken-guard.aal exitvalue/broken-initial_state.aal exitvalue/broken-language.aal exitvalue/broken-requiredvalue.gt exitvalue/run_new.sh
 
-dist_noinst_SCRIPTS += history/run.sh history/one-step-tests.sh history/one-step-tests.conf history/one-step-tests_old.sh history/abc.gt
+dist_noinst_SCRIPTS += history/run.sh history/history_test.conf history/history_test.aal history/one-step-tests.sh history/one-step-tests.conf history/one-step-tests_old.sh history/abc.gt
 
 dist_noinst_SCRIPTS += tutorial/run.sh
 
