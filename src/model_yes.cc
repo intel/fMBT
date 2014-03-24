@@ -50,3 +50,8 @@ void Model_yes::set_props(std::string p)
     props.push_back(find(prop_names,v[i]));
   }
 }
+
+void Model_yes::set_props(int* p,int c)
+{
+  props.assign(p,p+c);
+}

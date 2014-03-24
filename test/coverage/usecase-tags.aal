@@ -1,0 +1,47 @@
+aal "mixer" {
+    language "python" {}
+
+    # preview-hide-vars:
+    # preview-depth: 5
+    variables {
+        playing
+    }
+    initial_state {
+        playing = set()
+
+    }
+    input "play alert",
+          "play game",
+          "play music" {
+        guard {
+            play_what = action_name.split()[1]
+            return not play_what in playing
+        }
+        body  {
+            play_what = action_name.split()[1]
+            playing.add(play_what)
+        }
+    }
+
+    input "stop alert",
+          "stop game",
+          "stop music" {
+        guard {
+            stop_what = action_name.split()[1]
+            return stop_what in playing
+        }
+        body  {
+            stop_what = action_name.split()[1]
+            playing.remove(stop_what)
+        }
+    }
+
+    tag "hear alert",
+        "hear game",
+        "hear music" {
+        guard {
+            hear_what = tag_name.split()[1]
+            return hear_what in playing
+        }
+    }
+}

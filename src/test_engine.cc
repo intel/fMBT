@@ -118,14 +118,11 @@ namespace {
     log.print("<%s type=\"%s\" name=\"%s\" time=\"%i.%06i\"/>\n", tag, type,
 	      name,Adapter::current_time.tv_sec,Adapter::current_time.tv_usec);
   }
-  void log_adapter_suggest(Log& log, Adapter& adapter, int action) {
-    log_tag_type_name(log, "suggested_action", "input", adapter.getUActionName(action));
+  void log_adapter_suggest(Log& log, Adapter& adapter, int action, Model& m) {
+    log_tag_type_name(log, "suggested_action", m.is_output(action)?"output":"input", adapter.getUActionName(action));
   }
-  void log_adapter_execute(Log& log, Adapter& adapter, int action) {
-    log_tag_type_name(log, "action", "input", adapter.getUActionName(action));
-  }
-  void log_adapter_output(Log& log, Adapter& adapter, int action) {
-    log_tag_type_name(log, "action", "output", adapter.getUActionName(action));
+  void log_adapter(Log& log, Adapter& adapter, int action, Model& m) {
+    log_tag_type_name(log, "action", m.is_output(action)?"output":"input", adapter.getUActionName(action));
   }
   void log_status(Log& log, int step_count, float coverage) {
     log.print("<status steps=\"%d\" coverage=\"%f\" scov=\"%e\"/>\n",
@@ -260,6 +257,7 @@ void log_strarray(Log&l,
 Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
 {
   float last_coverage = heuristic.getCoverage();
+  Model* m=heuristic.get_model();
   end_time=_end_time;
 
   tagverify_disabled=disable_tagverify;
@@ -270,15 +268,16 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
   int action=0;
   std::vector<int> actions;
 
+  std::vector<std::string> tags=m->getSPNames();
+  ssize_t action_count = m->getActionNames().size();
+
   log_strarray(log,"action_name name=",
-               heuristic.get_model()->getActionNames());
+               m->getActionNames());
   log_strarray(log,"tag_name name=",
-               heuristic.get_model()->getSPNames());
+               tags);
 
   log.push("test_engine");
   gettime(&start_time);
-
-  std::vector<std::string> tags=heuristic.get_model()->getSPNames();
 
   for(unsigned i=0;i<tags.size();i++) {
     escape_string(tags[i]);
@@ -302,10 +301,10 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
 
       step_count++;
       action = policy.choose(actions);
-      if ((action>0)&&((unsigned)action>=heuristic.get_model()->getActionNames().size())) {
+      if ((action>0)&&((unsigned)action>=action_count)) {
         return stop_test(Verdict::W_ERROR, std::string("adapter communication failure. Adapter returned action "+to_string(action)+" which is out of range").c_str());
       }
-      log_adapter_output(log, adapter, action);
+      log_adapter(log, adapter, action,*m);
 
       if (!heuristic.execute(action)) {
         if (!heuristic.status) {
@@ -412,7 +411,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
       }
 
       action = actions[0]; // TODO: add policy here when it works
-      log_adapter_output(log, adapter, action);
+      log_adapter(log, adapter, action,*m);
       if (!heuristic.execute(action)) {
         log.debug("Test_engine::run: ERROR: action %i not possible in the model.\n", action);
         log.debug("%s %s",action,heuristic.getActionName(action).c_str(),"broken response");
@@ -424,7 +423,7 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
       log.debug("Test_engine::run: sending input action %i to the SUT.\n", action);
       actions.resize(1);
       actions[0]=action;
-      log_adapter_suggest(log, adapter, actions[0]);
+      log_adapter_suggest(log, adapter, actions[0],*m);
       adapter.execute(actions);
 
       if (!adapter.status) {
@@ -437,11 +436,12 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
       int adapter_response = policy.choose(actions);
 
       // Let's chect that adapter_response is in the valid range.
-      if ((adapter_response>0) && ((unsigned)adapter_response>=heuristic.get_model()->getActionNames().size())) {
+      if ((adapter_response>0) && ((unsigned)adapter_response>=action_count)) {
         return stop_test(Verdict::W_ERROR, std::string("adapter communication failure. Adapter returned action "+to_string(adapter_response)+" which is out of range").c_str());
       }
 
-      log_adapter_execute(log, adapter, adapter_response);
+      log_adapter(log, adapter, adapter_response,*m);
+
       log.debug("Test_engine::run: passing adapter response action %i to test generation.\n",
                 adapter_response);
       log.push("adapter_executed");
@@ -505,7 +505,7 @@ namespace interactive {
       std::vector<int> actions_v;
       actions_v.resize(1);
       actions_v[0] = action;
-      log_adapter_suggest(log, adapter, actions_v[0]);
+      log_adapter_suggest(log, adapter, actions_v[0],model);
       adapter.execute(actions_v);
       if (actions_v.empty()) {
         fprintf(stderr,"adapter:   [communication failure]\n");
@@ -519,7 +519,7 @@ namespace interactive {
           fprintf(stderr,"adapter:   [communication failure %i]\n",adapter_response);
           return;
         } else {
-          log_adapter_execute(log, adapter, adapter_response);
+          log_adapter(log, adapter, adapter_response,*heuristic.get_model());
           fprintf(stderr,"adapter:   %s\n", heuristic.getActionName(adapter_response).c_str());
         }
       }

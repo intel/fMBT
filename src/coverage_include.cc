@@ -31,16 +31,16 @@ Coverage_Include_base::Coverage_Include_base(Log& l,
   status&=(child!=NULL);
 }
 
-void Coverage_Include_base::set_model(Model* _model)
+void Coverage_Include_base::set_mode_helper(std::vector<std::string>& n,
+					    std::set<int>& filter,
+					    std::vector<std::string>& Names,
+					    std::vector<int>& map)
 {
-  Coverage::set_model(_model);
-
-  std::vector<std::string>& n=model->getActionNames();
   for(unsigned i=0;i<subs.size()-1;i++) {
     int p=find(n,subs[i]);
     if (p) {
-      log.debug("Action %s %i\n",subs[i].c_str(),p);
-      filteractions.insert(p);
+      log.debug("Action/tag %s %i\n",subs[i].c_str(),p);
+      filter.insert(p);
     } else {
       // regexp?
       std::vector<int> r;
@@ -51,22 +51,31 @@ void Coverage_Include_base::set_model(Model* _model)
       regexpmatch(subs[i],n,r,false);
       for(unsigned j=0;j<r.size();j++) {
 	log.debug("regexp %s %i\n",subs[i].c_str(),r[j]);
-	filteractions.insert(r[j]);
+	filter.insert(r[j]);
       }
     }
   }
 
-  ActionNames.push_back(""); // TAU
+  Names.push_back(""); // TAU
 
-  amap.resize(n.size()+1); // TAU
+  map.resize(n.size()+1); // TAU
 
   for(unsigned i=1;i<n.size();i++) {
-    if ((filteractions.find(i)==filteractions.end())==exclude) {
+    if ((filter.find(i)==filter.end())==exclude) {
       log.debug("N: %s\n",n[i].c_str());
-      amap[i]=ActionNames.size();
-      ActionNames.push_back(n[i]);
+      map[i]=Names.size();
+      Names.push_back(n[i]);
     }
   }
+
+}
+
+void Coverage_Include_base::set_model(Model* _model)
+{
+  Coverage::set_model(_model);
+
+  set_mode_helper(model->getActionNames(),filteractions,ActionNames,amap);
+  set_mode_helper(model->getSPNames(),filtertags,SPNames,smap);
 
   alpha=new Alphabet_impl(ActionNames,SPNames);
   submodel=new Model_yes(log,"");

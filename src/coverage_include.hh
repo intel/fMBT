@@ -59,6 +59,16 @@ public:
 
   virtual bool execute(int action) {
     if (child && ((filteractions.find(action)==filteractions.end())==exclude)) {
+      std::vector<int> opro;
+      int i;
+      int*p;
+      i=model->getprops(&p);
+      for(int j=0;j<i;j++) {
+	if ((filteractions.find(p[j])==filteractions.end())==exclude) {
+	  opro.push_back(smap[p[j]]);
+	}
+      }
+      submodel->set_props(p,i);
       return child->execute(amap[action]);
     }
     return true;
@@ -80,6 +90,12 @@ public:
   }
 
 protected:
+
+  void set_mode_helper(std::vector<std::string>& n,
+		       std::set<int>& filter,
+		       std::vector<std::string>& Names,
+		       std::vector<int>& map);
+		       
   Alphabet_impl* alpha;
   Model_yes* submodel;
   Coverage* child;
@@ -88,7 +104,9 @@ protected:
   std::vector<std::string> ActionNames;
   std::vector<std::string> SPNames;
   std::set<int> filteractions;
+  std::set<int> filtertags;
   std::vector<int> amap;
+  std::vector<int> smap;
 };
 
 #endif
