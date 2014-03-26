@@ -156,9 +156,9 @@ if 'max77803-muic' in devices:
         "VOLUMEUP": "gpio-keys",
         "VOLUMEDOWN": "gpio-keys",
         "HOME": "gpio-keys",
-        "MENU": "gpio-keys"
+        "MENU": "gpio-keys",
+        "BACK": "gpio-keys"
         }
-    _inputKeyNameToCode["HOME"] = 139
     if iAmRoot:
         touch_device = fmbtuinput.Touch().open("sec_touchscreen")
         mtInputDevFd = touch_device._fd
@@ -168,7 +168,7 @@ elif 'max77693-muic' in devices:
         "VOLUMEUP": "gpio-keys",
         "VOLUMEDOWN": "gpio-keys",
         "HOME": "gpio-keys",
-        "MENU": "gpio-keys"
+        "MENU": "gpio-keys",
         }
     _inputKeyNameToCode["HOME"] = 139
     if iAmRoot:
@@ -414,8 +414,11 @@ def sendHwKey(keyName, delayBeforePress, delayBeforeRelease):
     keyName = keyName.upper()
     fd = None
     closeFd = False
-    try: inputDevice = deviceToEventFile[hwKeyDevice[keyName]]
-    except: fd = keyboard_device._fd
+    try:
+        # Explicit IO device defined for the key?
+        inputDevice = deviceToEventFile[hwKeyDevice[keyName]]
+    except:
+        fd = keyboard_device._fd
     try: keyCode = _inputKeyNameToCode[keyName]
     except KeyError:
         try: keyCode = fmbtuinput.toKeyCode(keyName)
