@@ -1443,7 +1443,10 @@ class MainWindow(QtGui.QMainWindow):
             else:
                 log("executing line: %s" % (statement,))
         try:
+            screenshotBefore = self.screenshotLatestFilename()
             exec statement in self._fmbtEnv
+            if self.screenshotLatestFilename() != screenshotBefore:
+                self.screenshotShowLatest()
         except Exception, e:
             if not silent or opt_debug:
                 log("exception: %s\n  %s" %
@@ -1451,18 +1454,32 @@ class MainWindow(QtGui.QMainWindow):
             return None, e
         return None, None
 
-    def _fmbtEval(self, expression, silent=False):
+    def _fmbtEval(self, expression, silent=False, updateScreenshot=True):
         if not silent or opt_debug:
             log("evaluating: %s" % (expression,))
         try:
+            if updateScreenshot:
+                screenshotBefore = self.screenshotLatestFilename()
             rv = eval(expression, self._fmbtEnv, self._fmbtEnv)
             if opt_debug:
                 log("returned %s: %s" % (type(rv), rv))
+            if (updateScreenshot and
+                self.screenshotLatestFilename() != screenshotBefore):
+                self.screenshotShowLatest()
         except Exception, e:
             if not silent or opt_debug:
                 log("exception: %s" % (e,))
             return None, e
         return rv, None
+
+    def screenshotLatestFilename(self):
+        latest = None
+        if not self._sut:
+            self._findSutVariable()
+        if self._sut:
+            latest = self._fmbtEval("%s.screenshot().filename()" % (self._sut,),
+                                    silent=True, updateScreenshot=False)[0]
+        return latest
 
     def screenshotSet(self, index):
         if (index >= len(self._screenshotFilenames) or
@@ -1502,7 +1519,8 @@ class MainWindow(QtGui.QMainWindow):
             return
         latest = self._fmbtEval("%s.screenshot().filename()" % (self._sut,),
                                 silent=True)[0]
-        if (self._screenshotFilenames[self.screenshotImageIndex] != latest):
+        if (self.screenshotImageIndex == None or
+            self._screenshotFilenames[self.screenshotImageIndex] != latest):
             self._screenshotFilenames.append(latest)
             self.screenshotSet(len(self._screenshotFilenames)-1)
 
@@ -1531,13 +1549,18 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotSet(len(self._screenshotFilenames)-1)
         return True
 
+    def _findSutVariable(self):
+        for key, value in self._fmbtEnv.iteritems():
+            if isinstance(value, fmbtgti.GUITestInterface):
+                self._sut = key
+                break
+        else:
+            self._sut = None
+
     def updateScreenshot(self, recordable=True):
         if not self._sut:
-            for key, value in self._fmbtEnv.iteritems():
-                if isinstance(value, fmbtgti.GUITestInterface):
-                    self._sut = key
-                    break
-            else:
+            self._findSutVariable()
+            if not self._sut:
                 log("cannot update screenshot, no connection")
                 self.screenshotButtonRefresh.setChecked(False)
                 self.editor.setFocus()
