@@ -150,6 +150,8 @@ def readDeviceInfo():
         devices = ""
 readDeviceInfo()
 
+kbInputDevFd = None
+
 if 'max77803-muic' in devices:
     hwKeyDevice = {
         "POWER": "qpnp_pon",
@@ -287,8 +289,6 @@ elif iAmRoot:
 
     if keyboard_device:
         kbInputDevFd = keyboard_device._fd
-    else:
-        kbInputDevFd = None
 
     if isinstance(mouse_button_device, fmbtuinput.Mouse):
         time.sleep(1)
@@ -418,7 +418,10 @@ def sendHwKey(keyName, delayBeforePress, delayBeforeRelease):
         # Explicit IO device defined for the key?
         inputDevice = deviceToEventFile[hwKeyDevice[keyName]]
     except:
-        fd = keyboard_device._fd
+        # Fall back to giving input with keyboard - given that there is one
+        if not kbInputDevFd:
+            return False, 'No input device for key "%s"' % (keyName,)
+        fd = kbInputDevFd
     try: keyCode = _inputKeyNameToCode[keyName]
     except KeyError:
         try: keyCode = fmbtuinput.toKeyCode(keyName)
