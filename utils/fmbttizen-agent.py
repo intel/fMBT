@@ -158,9 +158,11 @@ if 'max77803-muic' in devices:
         "VOLUMEUP": "gpio-keys",
         "VOLUMEDOWN": "gpio-keys",
         "HOME": "gpio-keys",
-        "MENU": "gpio-keys",
-        "BACK": "gpio-keys"
+        "BACK": "sec_touchkey",
+        "MENU": "sec_touchkey"
         }
+    _inputKeyNameToCode["HOME"] = 139 # KEY_MENU
+    _inputKeyNameToCode["MENU"] = 169 # KEY_PHONE
     if iAmRoot:
         touch_device = fmbtuinput.Touch().open("sec_touchscreen")
         mtInputDevFd = touch_device._fd
@@ -409,9 +411,9 @@ def sendHwFingerUp(x, y, button):
         return False, str(e)
 
 def sendHwKey(keyName, delayBeforePress, delayBeforeRelease):
+    keyName = keyName.upper()
     if keyName.startswith("KEY_"):
         keyName = keyName.lstrip("KEY_")
-    keyName = keyName.upper()
     fd = None
     closeFd = False
     try:

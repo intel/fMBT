@@ -406,6 +406,28 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self.pressKey("HOME", **pressKeyKwArgs)
 
+    def pressMenu(self, **pressKeyKwArgs):
+        """
+        Press the menu button.
+
+        Parameters:
+
+          long, hold (optional):
+                  refer to pressKey documentation.
+        """
+        return self.pressKey("MENU", **pressKeyKwArgs)
+
+    def pressBack(self, **pressKeyKwArgs):
+        """
+        Press the back button.
+
+        Parameters:
+
+          long, hold (optional):
+                  refer to pressKey documentation.
+        """
+        return self.pressKey("BACK", **pressKeyKwArgs)
+
     def setDisplayBacklightTime(self, timeout):
         """
         Set time the LCD backlight will be kept on.
