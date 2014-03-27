@@ -26,11 +26,15 @@ class Unpicklable(object):
         return 'Unpicklable("%s")' % (self._string,)
 
 class Auth_rv(object):
-    def __init__(self, success):
+    def __init__(self, success, errormsg=""):
         self.success = success
+        if not errormsg and not success:
+            self.errormsg = "Permission denied"
+        else:
+            self.errormsg = errormsg
     def __str__(self):
-        return 'Auth_rv(success=)' % (
-            self.success)
+        return 'Auth_rv(success=%s, errormsg=%s)' % (
+            repr(self.success), repr(self.errormsg))
 
 class Exec(object):
     def __init__(self, namespace, code, expr, lock=True, async=False):

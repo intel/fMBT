@@ -56,11 +56,32 @@ def connection(hostspec, password=None):
     if not "://" in hostspec:
         hostspec = "socket://" + hostspec
     scheme, netloc, _, _, _ = _urlparse.urlsplit(hostspec)
+
     if scheme == "socket":
-        if ":" in netloc:
-            host, port = netloc.split(":")
+        # Parse URL
+        if "@" in netloc:
+            userinfo, hostport = netloc.split("@", 1)
         else:
-            host, port = netloc, default_port
+            userinfo, hostport = "", netloc
+        if ":" in userinfo:
+            userinfo_user, userinfo_password = userinfo.split(":", 1)
+        else:
+            userinfo_user, userinfo_password = userinfo, None
+        if ":" in hostport:
+            host, port = hostport.split(":")
+        else:
+            host, port = hostport, default_port
+
+        # If userinfo has been given, authenticate using it.
+        # Allow forms
+        # socket://password@host:port
+        # socket://dontcare:password@host:port
+        if password == None and userinfo:
+            if userinfo_password:
+                password = userinfo_password
+            else:
+                password = userinfo
+
         return client.Connection(host, int(port), password=password)
     else:
-        raise ValueError('invalid url "%s"' % (hostspec,))
+        raise ValueError('invalid URI "%s"' % (hostspec,))

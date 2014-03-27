@@ -59,7 +59,8 @@ Options for namespaces:
 
   -E, --export-to=hostspec
           Connect to pythonshare-server via hostspec, export local
-          namespace ns to that server.
+          namespace ns to that server. Hostspec syntax is
+          [password@]hostaddr[:port].
 
   -I, --import-from=hostspec
           Connect to pythonshare-server via hostspec, import namespace

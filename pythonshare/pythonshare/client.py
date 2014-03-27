@@ -24,7 +24,7 @@ import socket
 import cPickle
 
 import pythonshare
-from pythonshare.messages import Exec, Exec_rv, Async_rv, Register_ns, Request_ns
+from pythonshare.messages import Exec, Exec_rv, Async_rv, Register_ns, Request_ns, Ns_rv
 
 class Connection(object):
     def __init__(self, host, port, password=None):
@@ -133,22 +133,22 @@ class Connection(object):
         """
         cPickle.dump(Register_ns(namespace), self._to_server)
         self._to_server.flush()
-        ns_rv = cPickle.load(self._from_server)
-        if ns_rv.status:
+        rv = cPickle.load(self._from_server)
+        if isinstance(rv, Ns_rv) and rv.status:
             return True
         else:
-            raise PythonShareError(ns_rv.errormsg)
+            raise pythonshare.PythonShareError(rv.errormsg)
 
     def import_ns(self, namespace):
         """
         """
         cPickle.dump(Request_ns(namespace), self._to_server)
         self._to_server.flush()
-        ns_rv = cPickle.load(self._from_server)
-        if ns_rv.status:
+        rv = cPickle.load(self._from_server)
+        if isinstance(rv, Ns_rv) and rv.status:
             return True
         else:
-            raise PythonShareError(ns_rv.errormsg)
+            raise pythonshare.PythonShareError(rv.errormsg)
 
     def poll_rvs(self, namespace):
         return self.eval_in(namespace, "pythonshare_ns.poll_rvs()",
