@@ -30,6 +30,8 @@ from twisted.internet import reactor
 import vncdotool.client
 import vncdotool.api
 
+import string
+
 def _adapterLog(msg):
     fmbt.adapterlog("fmbtvnc %s" % (msg,))
 
@@ -70,6 +72,13 @@ class Screen(fmbtgti.GUITestInterface):
 
     def init(self):
         self._conn.init()
+
+    def keyNames(self):
+        """
+        Returns list of keyNames supported by pressKey.
+        """
+        return sorted(vncdotool.client.KEYMAP.keys() +
+                      list(string.lowercase + string.digits))
 
 class VNCConnection(fmbtgti.GUITestConnection):
     def __init__(self, hostspec, port, password, autoUpdate):

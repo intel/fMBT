@@ -231,6 +231,49 @@ def _run(command, expectedExitStatus = None, timeout=None):
 
     return (exitStatus, out, err)
 
+_g_keyNames = set((
+    "0", "1", "2", "3", "3D_MODE", "4", "5", "6", "7",
+    "8", "9", "A", "ALT_LEFT", "ALT_RIGHT", "APOSTROPHE",
+    "APP_SWITCH", "ASSIST", "AT", "AVR_INPUT", "AVR_POWER", "B",
+    "BACK", "BACKSLASH", "BOOKMARK", "BREAK", "BRIGHTNESS_DOWN",
+    "BRIGHTNESS_UP", "BUTTON_1", "BUTTON_10", "BUTTON_11",
+    "BUTTON_12", "BUTTON_13", "BUTTON_14", "BUTTON_15", "BUTTON_16",
+    "BUTTON_2", "BUTTON_3", "BUTTON_4", "BUTTON_5", "BUTTON_6",
+    "BUTTON_7", "BUTTON_8", "BUTTON_9", "BUTTON_A", "BUTTON_B",
+    "BUTTON_C", "BUTTON_L1", "BUTTON_L2", "BUTTON_MODE", "BUTTON_R1",
+    "BUTTON_R2", "BUTTON_SELECT", "BUTTON_START", "BUTTON_THUMBL",
+    "BUTTON_THUMBR", "BUTTON_X", "BUTTON_Y", "BUTTON_Z", "C",
+    "CALCULATOR", "CALENDAR", "CALL", "CAMERA", "CAPS_LOCK",
+    "CAPTIONS", "CHANNEL_DOWN", "CHANNEL_UP", "CLEAR", "COMMA",
+    "CONTACTS", "CTRL_LEFT", "CTRL_RIGHT", "D", "DEL", "DPAD_CENTER",
+    "DPAD_DOWN", "DPAD_LEFT", "DPAD_RIGHT", "DPAD_UP", "DVR", "E",
+    "EISU", "ENDCALL", "ENTER", "ENVELOPE", "EQUALS", "ESCAPE",
+    "EXPLORER", "F", "F1", "F10", "F11", "F12", "F2", "F3", "F4",
+    "F5", "F6", "F7", "F8", "F9", "FOCUS", "FORWARD", "FORWARD_DEL",
+    "FUNCTION", "G", "GRAVE", "GUIDE", "H", "HEADSETHOOK", "HENKAN",
+    "HOME", "I", "INFO", "INSERT", "J", "K", "KANA",
+    "KATAKANA_HIRAGANA", "L", "LANGUAGE_SWITCH", "LEFT_BRACKET", "M",
+    "MANNER_MODE", "MEDIA_AUDIO_TRACK", "MEDIA_CLOSE", "MEDIA_EJECT",
+    "MEDIA_FAST_FORWARD", "MEDIA_NEXT", "MEDIA_PAUSE", "MEDIA_PLAY",
+    "MEDIA_PLAY_PAUSE", "MEDIA_PREVIOUS", "MEDIA_RECORD",
+    "MEDIA_REWIND", "MEDIA_STOP", "MENU", "META_LEFT", "META_RIGHT",
+    "MINUS", "MOVE_END", "MOVE_HOME", "MUHENKAN", "MUSIC", "MUTE",
+    "N", "NOTIFICATION", "NUM", "NUMPAD_0", "NUMPAD_1", "NUMPAD_2",
+    "NUMPAD_3", "NUMPAD_4", "NUMPAD_5", "NUMPAD_6", "NUMPAD_7",
+    "NUMPAD_8", "NUMPAD_9", "NUMPAD_ADD", "NUMPAD_COMMA",
+    "NUMPAD_DIVIDE", "NUMPAD_DOT", "NUMPAD_ENTER", "NUMPAD_EQUALS",
+    "NUMPAD_LEFT_PAREN", "NUMPAD_MULTIPLY", "NUMPAD_RIGHT_PAREN",
+    "NUMPAD_SUBTRACT", "NUM_LOCK", "O", "P", "PAGE_DOWN", "PAGE_UP",
+    "PERIOD", "PICTSYMBOLS", "PLUS", "POUND", "POWER", "PROG_BLUE",
+    "PROG_GREEN", "PROG_RED", "PROG_YELLOW", "Q", "R",
+    "RIGHT_BRACKET", "RO", "S", "SCROLL_LOCK", "SEARCH", "SEMICOLON",
+    "SETTINGS", "SHIFT_LEFT", "SHIFT_RIGHT", "SLASH", "SOFT_LEFT",
+    "SOFT_RIGHT", "SPACE", "STAR", "STB_INPUT", "STB_POWER",
+    "SWITCH_CHARSET", "SYM", "SYSRQ", "T", "TAB", "TV", "TV_INPUT",
+    "TV_POWER", "U", "UNKNOWN", "V", "VOLUME_DOWN", "VOLUME_MUTE",
+    "VOLUME_UP", "W", "WINDOW", "X", "Y", "YEN", "Z",
+    "ZENKAKU_HANKAKU", "ZOOM_IN", "ZOOM_OUT"))
+
 class Device(fmbtgti.GUITestInterface):
     """
     The Device class provides
@@ -420,6 +463,12 @@ class Device(fmbtgti.GUITestInterface):
         configuration.
         """
         return self._conf
+
+    def keyNames(self):
+        """
+        Returns list of keyNames supported by pressKey.
+        """
+        return sorted(_g_keyNames)
 
     def loadConfig(self, filenameOrObj, override=True, level=""):
         try:
