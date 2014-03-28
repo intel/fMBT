@@ -20,7 +20,9 @@
 # This is a small tool for converting UI events into fmbtgti interface
 # method calls.
 
-# pylint: disable = C0103, C0111, R0913
+# pylint: disable = C0103, C0111, C0302, C0326
+# pylint: disable = R0902, R0903, R0904, R0911, R0912, R0913, R0914, R0915
+# pylint: disable = W0212
 
 """
 fmbt-scripter - bitmap grabber, UI testscript editor and recorder
@@ -47,7 +49,6 @@ import os
 import parser
 import pydoc
 import re
-import shutil
 import string
 import sys
 import time
@@ -74,21 +75,22 @@ def log(msg):
     sys.stdout.flush()
 
 def _setGlobalLog(logFunc):
-    global log
-    log = logFunc
+    globals()["log"] = logFunc
+    #global log
+    #log = logFunc
 
-_g_importFmbtRE = re.compile("\s*import fmbt(android|tizen|vnc|windows|x11)")
+_g_importFmbtRE = re.compile(r"\s*import fmbt(android|tizen|vnc|windows|x11)")
 _g_gtiInstantiateRE = re.compile(
-    "(([a-zA-Z_][a-zA-Z_0-9]*)\s*=\s*fmbt(android|tizen|vnc|windows|x11)"
-    "\.(Device|Screen)\s*\(.*\))")
+    r"(([a-zA-Z_][a-zA-Z_0-9]*)\s*=\s*fmbt(android|tizen|vnc|windows|x11)"
+    r"\.(Device|Screen)\s*\(.*\))")
 _g_scripterConnectRE = re.compile(
-    "[ \t]*#\s*scripter-connect:\s*(.*)\n")
+    r"[ \t]*#\s*scripter-connect:\s*(.*)\n")
 
 _g_scripterRecordTimingRE = re.compile(
-    "[ \t]*#\s*scripter-rectiming:\s*(.*)\n")
+    r"[ \t]*#\s*scripter-rectiming:\s*(.*)\n")
 
 _g_scripterSutVarRE = re.compile(
-    "[ \t]*#\s*scripter-sut:\s*(.*)\n")
+    r"[ \t]*#\s*scripter-sut:\s*(.*)\n")
 
 def _unifyIndentation(code):
     try:
@@ -126,8 +128,8 @@ class GestureEvent(object):
         self.pos = pos
         self.device = device
     def __str__(self):
-        return 'GestureEvent(time=%s, event="%s", key=%s, pos=%s, device=%s)' % (
-            self.time, self.event, self.key, self.pos, repr(self.device))
+        return 'GestureEvent(time=%s, event=%s, key=%s, pos=%s, device=%s)' % (
+            self.time, repr(self.event), self.key, self.pos, repr(self.device))
 
 def quantify(item, quantum):
     if not isinstance(item, tuple) and not isinstance(item, list):
@@ -235,7 +237,7 @@ class MyScaleEvents(QtCore.QObject):
         elif self.attrowner.wheel_scale > self.max_scale:
             self.attrowner.wheel_scale = self.max_scale
         self.attrowner.wheel_scale_changed()
-    def eventFilter(self, obj, event):
+    def eventFilter(self, _, event):
         if event.type() in (QtCore.QEvent.Type.DynamicPropertyChange,
                             QtCore.QEvent.Type.Hide,
                             QtCore.QEvent.Type.Destroy):
@@ -363,34 +365,7 @@ class MyScaleEvents(QtCore.QObject):
         self.mainwindow._screenshotCursorY = int(y)
         self.mainwindow.editorCursorPositionChanged()
 
-class fmbtdummy(object):
-    class Device(fmbtgti.GUITestInterface):
-        def __init__(self, screenshotList=()):
-            fmbtgti.GUITestInterface.__init__(self)
-            self._paths = fmbtgti._Paths(
-                os.getenv("FMBT_BITMAPPATH",""),
-                os.getenv("FMBT_BITMAPPATH_RELROOT", ""))
-            self.setConnection(
-                fmbtdummy.Connection(list(screenshotList)))
-    class Connection(fmbtgti.GUITestConnection):
-        def __init__(self, screenshotList):
-            fmbtgti.GUITestConnection.__init__(self)
-            self.scl = screenshotList
-        def recvScreenshot(self, filename):
-            scr = self.scl[0]
-            self.scl.append(self.scl.pop(0))
-            shutil.copyfile(scr, filename)
-            return True
-        def sendTap(self, x, y):
-            return True
-        def sendTouchDown(self, x, y):
-            return True
-        def sendTouchMove(self, x, y):
-            return True
-        def sendTouchUp(self, x, y):
-            return True
-
-def _makeScalableEditor(mainwindow, parent, font, EditorClass = QtGui.QTextEdit):
+def _scalableEditor(mainwindow, parent, font, EditorClass = QtGui.QTextEdit):
     editor = EditorClass(parent)
     editor.setUndoRedoEnabled(True)
     editor.setLineWrapMode(editor.NoWrap)
@@ -485,7 +460,8 @@ class SettingsDialog(QtGui.QDialog):
             "Example: use a user-defined functions instead:\n"
             "myutils.delayAndRefresh(%(delay)s, %(sut)s)")
         self.recordTabLayout = QtGui.QFormLayout()
-        self.recordTabLayout.addRow(self.recordTimingCodeLabel, self.recordTimingCode)
+        self.recordTabLayout.addRow(self.recordTimingCodeLabel,
+                                    self.recordTimingCode)
         self.recordTab.setLayout(self.recordTabLayout)
         self.mainWidget.addTab(self.recordTab, "Recording")
 
@@ -508,6 +484,9 @@ class SettingsDialog(QtGui.QDialog):
         self.mainLayout.addWidget(self.buttonBox)
         self.setLayout(self.mainLayout)
 
+        self._deviceNames = []
+        self._inputDeviceButtons = []
+
     def setInputDevices(self, deviceNames, recorded):
         self._inputDeviceButtons = []
         self._deviceNames = deviceNames
@@ -529,10 +508,9 @@ class SettingsDialog(QtGui.QDialog):
 
     def getRecDevices(self):
         rv = set()
-        if hasattr(self, "_deviceNames"):
-            for i, n in enumerate(self._deviceNames):
-                if self._inputDeviceButtons[i].isChecked():
-                    rv.add(n)
+        for i, n in enumerate(self._deviceNames):
+            if self._inputDeviceButtons[i].isChecked():
+                rv.add(n)
         return rv
 
     def browseDir(self, lineEdit):
@@ -560,14 +538,20 @@ class MainWindow(QtGui.QMainWindow):
         self._editorIgnoreNextCursorPositionChange = False
         self._editorIndentLineCalls = None
         self._editorIndentation = 4
+        self._editorIndentSugg = [] # suggested indentation levels
         self._findDialog = None
         self._helpDialog = None
         self._highlightingBitmap = None
         self._hwRecFilter = {"devices": None}
+        self._hwButtonEvents = []
         self._recordedHandledAbsXY = (None, None)
+        self._recordedTouchEvents = []
+        self._recordingHwEvents = False
+        self._screenshotImageOrig = None
         self._screenshotSaveDir = ""
         self._screenshotCursorX = -1
         self._screenshotCursorY = -1
+        self._scriptFilename = None
         self._fmbtEnv = {
             "pydoc": pydoc,
             "time": time
@@ -578,9 +562,11 @@ class MainWindow(QtGui.QMainWindow):
                                    "All files (*.*)"]
         self._selectingBitmap = None
         self._selectingBitmapSaveDir = None
+        self._selectingToggledInteract = None
         self._settingsDialog = None
         self._sut = None
-        self._recordTimingCode = "time.sleep(%(delay)s)\n%(sut)s.refreshScreenshot()\n"
+        self._recordTimingCode = (
+            "time.sleep(%(delay)s)\n%(sut)s.refreshScreenshot()\n")
         self._previousRecordTime = None
 
         self.status = QtGui.QLabel("", self)
@@ -756,7 +742,7 @@ class MainWindow(QtGui.QMainWindow):
         self.editorFont.setFamily('Courier')
         self.editorFont.setFixedPitch(True)
         self.editorFont.setPointSize(12)
-        self.editor = _makeScalableEditor(self, self.mainwidget, self.editorFont)
+        self.editor = _scalableEditor(self, self.mainwidget, self.editorFont)
         self.editorCombo.addWidget(self.editor)
         self.editor.cursorPositionChanged.connect(
             self.editorCursorPositionChanged)
@@ -766,12 +752,12 @@ class MainWindow(QtGui.QMainWindow):
         self.editorButtonRunSingle.released.connect(
             self.editorClearBackground)
 
-        self.console = _makeScalableEditor(self, self.mainwidget, self.editorFont)
+        self.console = _scalableEditor(self, self.mainwidget, self.editorFont)
         self.editorCombo.addWidget(self.console)
         self.editorCombo.setStretchFactor(0, 9)
         self.editorCombo.setStretchFactor(1, 1)
 
-        _setGlobalLog(lambda msg: self.console.append(msg))
+        _setGlobalLog(self.console.append)
 
         self.editorWidgetsLayout.addWidget(self.editorCombo)
 
@@ -949,7 +935,7 @@ class MainWindow(QtGui.QMainWindow):
         for ev in self._recordedTouchEvents:
             try:
                 x, y = ev.pos
-            except:
+            except (TypeError, ValueError):
                 pass
         t = None
         ev = "mousemove"
@@ -970,7 +956,8 @@ class MainWindow(QtGui.QMainWindow):
                         ev = "mousedown"
             elif typ == keyEvent:
                 keyName = fmbtuinput.toKeyName(cod)
-                if keyName == "BTN_TOUCH" and (ev == "mouseup" or ev == "mousedown"):
+                if (keyName == "BTN_TOUCH" and
+                    (ev == "mouseup" or ev == "mousedown")):
                     continue
                 t = ts
                 if val == 0:
@@ -1118,14 +1105,14 @@ class MainWindow(QtGui.QMainWindow):
     def newAndroid(self):
         try:
             _, o, _ = fmbtandroid._run(["adb", "devices"], expectedExitStatus=0)
-        except:
+        except fmbtandroid.FMBTAndroidRunError:
             log("cannot connect to Android devices: adb not available")
             return
         outputLines = [l.strip() for l in o.splitlines() if l.strip() != ""]
         try:
             deviceLines = outputLines[
                 outputLines.index("List of devices attached")+1:]
-        except:
+        except IndexError:
             deviceLines = []
         serialNumber = ""
         if len(deviceLines) > 1:
@@ -1142,16 +1129,17 @@ class MainWindow(QtGui.QMainWindow):
     def newTizen(self):
         o = None
         try:
-            s, o, e = fmbtandroid._run(["sdb", "devices"], expectedExitStatus=0)
-        except:
-            log("cannot list Tizen devices with sdb")
+            _, o, _ = fmbtandroid._run(["sdb", "devices"], expectedExitStatus=0)
+        except fmbtandroid.FMBTAndroidRunError:
+            log("cannot connect to Tizen devices: sdb not available")
+            return
         serialNumber = ""
         if o:
             outputLines = [l.strip() for l in o.splitlines() if l.strip() != ""]
             try:
                 deviceLines = outputLines[
                     outputLines.index("List of devices attached")+1:]
-            except:
+            except IndexError:
                 deviceLines = []
             if len(deviceLines) > 1:
                 choice, ok = QtGui.QInputDialog.getItem(
@@ -1173,8 +1161,9 @@ class MainWindow(QtGui.QMainWindow):
                         "sut = fmbtvnc.Screen()")
 
     def newWindows(self):
-        self._newScript("import fmbtwindows\n"
-                        'sut = fmbtwindows.Device("IP[:PORT]", password="PASSWORD")')
+        self._newScript(
+            "import fmbtwindows\n"
+            'sut = fmbtwindows.Device("IP[:PORT]", password="PASSWORD")')
 
     def buttonPressed(self, platform, name):
         self._hwButtonEvents = []
@@ -1231,13 +1220,13 @@ class MainWindow(QtGui.QMainWindow):
                     for m in self._autoConnectModules:
                         self._fmbtExec("import fmbt" + m)
                 if self._autoConnectGti:
-                    rv, exc = self._fmbtExec(self._autoConnectGti[0][0])
+                    _, exc = self._fmbtExec(self._autoConnectGti[0][0])
                     if exc == None:
                         # connected successfully
                         self._sut = self._autoConnectGti[0][1]
                 else:
                     self._sut = None
-        if (self._screenshotSaveDir and self._sut):
+        if self._screenshotSaveDir and self._sut:
             self.setScreenshotSaveDir(self._screenshotSaveDir)
         return self._sut != None # return True if connected
 
@@ -1330,14 +1319,17 @@ class MainWindow(QtGui.QMainWindow):
             if ".tap((" in cmd:
                 try:
                     x, y = [float(c) for c in
-                            re.findall("tap\(\(([.0-9]*), ([.0-9]*)\)", cmd)[0]]
-                except:
+                            re.findall(r"tap\(\(([.0-9]*), ([.0-9]*)\)",
+                                       cmd)[0]]
+                except IndexError:
                     pass
             elif ".swipe((" in cmd:
                 try:
-                    x, y = [float(c) for c in
-                            re.findall("swipe\(\(([.0-9]*), ([.0-9]*)\)", cmd)[0]]
-                except:
+                    x, y = [
+                        float(c) for c in
+                        re.findall(r"swipe\(\(([.0-9]*), ([.0-9]*)\)",
+                                   cmd)[0]]
+                except IndexError:
                     pass
             if x != None and y != None:
                 left, top, right, bottom = self.autoBitmapBoundingBox((x, y))
@@ -1351,7 +1343,7 @@ class MainWindow(QtGui.QMainWindow):
                 log('auto-selecting bitmap "%s" (%s, %s, %s, %s)' %
                     (self._selectingBitmap, left, top, right, bottom))
                 self.selectBitmapDone(left, top, right, bottom)
-                cmd = re.sub("\.(tap|swipe)\(\([.0-9]*, [.0-9]*\)",
+                cmd = re.sub(r"\.(tap|swipe)\(\([.0-9]*, [.0-9]*\)",
                              '.\\1Bitmap("%s"' % (bitmapFilename,),
                              cmd)
 
@@ -1369,7 +1361,8 @@ class MainWindow(QtGui.QMainWindow):
             if self._recordTimingCode:
                 for timingCodeLine in self._recordTimingCode.splitlines():
                     self.editorIndentLine(first=True)
-                    self.editor.insertPlainText(timingCodeLine % timingVariables + "\n")
+                    self.editor.insertPlainText(
+                        timingCodeLine % timingVariables + "\n")
         self._previousRecordTime = currentTime
 
         self.editorIndentLine(first=True)
@@ -1401,7 +1394,7 @@ class MainWindow(QtGui.QMainWindow):
     def findNextBitmap(self):
         cursor = self.editor.textCursor()
         c = self.editor.toPlainText()[cursor.position():]
-        searchMatch = re.search('"[^"]*\.png"', c)
+        searchMatch = re.search(r'"[^"]*\.png"', c)
         if searchMatch:
             cursor.movePosition(QtGui.QTextCursor.Right,
                                 QtGui.QTextCursor.MoveAnchor,
@@ -1411,7 +1404,7 @@ class MainWindow(QtGui.QMainWindow):
     def findPrevBitmap(self):
         cursor = self.editor.textCursor()
         c = self.editor.toPlainText()[cursor.position()-2::-1]
-        searchMatch = re.search('"gnp\.[^"]*"', c)
+        searchMatch = re.search(r'"gnp\.[^"]*"', c)
         if searchMatch:
             cursor.movePosition(QtGui.QTextCursor.Left,
                                 QtGui.QTextCursor.MoveAnchor,
@@ -1500,7 +1493,7 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotImageIndex = index
         self.updateScreenshotView()
 
-        if getattr(self, "_screenshotImageOrig", None) != None:
+        if self._screenshotImageOrig != None:
             self._screenshotImageOrig = None
 
         if self._sut:
@@ -1679,7 +1672,7 @@ class MainWindow(QtGui.QMainWindow):
             log('tapping bitmap "%s"' % (filepath,))
             rv, exc = self._fmbtEval('%s.tapBitmap("%s")' % (
                 self._sut, filename))
-            if rv:
+            if not exc and rv:
                 items, exc = self._fmbtEval(
                     '%s.screenshot().findItemsByBitmap("%s")' % (
                         self._sut, filename))
@@ -1714,8 +1707,8 @@ class MainWindow(QtGui.QMainWindow):
                 self._highlightingBitmap = None
 
     def editorIndentLine(self, lineNumber=None, first=False):
-        def indentNextLineDeeper(string):
-            line = string.rstrip()
+        def indentNextLineDeeper(fullLine):
+            line = fullLine.rstrip()
             if line.endswith(":"):
                 return True
             for parenOpen, parenClose in ["()", "{}", "[]"]:
@@ -1723,13 +1716,13 @@ class MainWindow(QtGui.QMainWindow):
                     return True
             return False
 
-        def indentNextLineShallower(string):
-            line = string.lstrip()
+        def indentNextLineShallower(fullLine):
+            line = fullLine.lstrip()
             for w in ["return", "raise", "pass"]:
                 if line.startswith(w):
                     return True
-            for open, close in ["()", "{}", "[]"]:
-                if line.count(close) > line.count(open):
+            for parenOpen, parenClose in ["()", "{}", "[]"]:
+                if line.count(parenClose) > line.count(parenOpen):
                     return True
             return False
 
@@ -1890,7 +1883,7 @@ class MainWindow(QtGui.QMainWindow):
             self.screenshotButtonSelect.setChecked(False)
 
     def drawRect(self, left, top, right, bottom, clear=False):
-        if getattr(self, "_screenshotImageOrig", None) == None:
+        if self._screenshotImageOrig == None:
             self._screenshotImageOrig = self.screenshotImage.copy()
         else:
             self.screenshotImage = self._screenshotImageOrig.copy()
@@ -2059,11 +2052,11 @@ class MainWindow(QtGui.QMainWindow):
             log("text cursor is not on object in the editor")
             return
         if self._helpDialog == None:
-            self._helpDialog = HelpDialog(self, QtCore.Qt.WindowType.Dialog, self.editorFont)
+            self._helpDialog = HelpDialog(self, QtCore.Qt.WindowType.Dialog,
+                                          self.editorFont)
 
         okChars = set(string.ascii_letters + string.digits + "._")
         cursor = self.editor.textCursor()
-        pos = cursor.positionInBlock()
         cursor.movePosition(QtGui.QTextCursor.EndOfWord,
                             QtGui.QTextCursor.MoveAnchor)
         cursor.movePosition(QtGui.QTextCursor.StartOfWord,
@@ -2076,7 +2069,8 @@ class MainWindow(QtGui.QMainWindow):
             if notOk:
                 break
             word = newWord
-        helpText, exc = self._fmbtEval("pydoc.plain(pydoc.render_doc(%s))" % (word,), silent=True)
+        helpText, exc = self._fmbtEval(
+            "pydoc.plain(pydoc.render_doc(%s))" % (word,), silent=True)
         if exc == None:
             log(helpText.rstrip())
             self._helpDialog.setText(helpText)
@@ -2085,7 +2079,6 @@ class MainWindow(QtGui.QMainWindow):
             log('no help on "%s"' % (word,))
 
     def showConsole(self):
-        s = self.editorCombo.size()
         if (self.editorCombo.orientation() ==
             QtCore.Qt.Orientation.Horizontal):
             self.editorCombo.setOrientation(QtCore.Qt.Vertical)
@@ -2108,7 +2101,8 @@ class MainWindow(QtGui.QMainWindow):
                 if self._sut:
                     oldDir, exc = self._fmbtEval("%s.screenshotDir()" %
                                             (self._sut,), silent=True)
-                    if exc: raise Exception(exc)
+                    if exc:
+                        raise Exception(exc)
                     if (not oldDir or
                         os.path.abspath(oldDir) != os.path.abspath(directory)):
                         self.doAPICall('.setScreenshotDir("%s")' %
@@ -2162,30 +2156,28 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
         bitmapFilenameFormat.setForeground(QtCore.Qt.darkGreen)
         bitmapFilenameFormat.setFontWeight(QtGui.QFont.Bold)
         self.highlightingRules.append(
-            (QtCore.QRegExp("\"[^\"]*\.[pP][nN][gG]\""),
+            (QtCore.QRegExp(r"\"[^\"]*\.[pP][nN][gG]\""),
              bitmapFilenameFormat))
 
         singleLineCommentFormat = QtGui.QTextCharFormat()
         singleLineCommentFormat.setForeground(QtCore.Qt.darkMagenta)
-        self.highlightingRules.append((QtCore.QRegExp("\s*#[^\n]*"),
+        self.highlightingRules.append((QtCore.QRegExp(r"\s*#[^\n]*"),
                                        singleLineCommentFormat))
 
         self.normalFormat = QtGui.QTextCharFormat()
         self.normalFormat.setForeground(QtCore.Qt.black)
 
     def highlightBlock(self, text):
-        highlightedSomething = False
         highlightedRegions = []
-        for pattern, format in self.highlightingRules:
+        for pattern, fmt in self.highlightingRules:
             expression = QtCore.QRegExp(pattern)
             index = expression.indexIn(text)
 
             while index >= 0:
                 length = expression.matchedLength()
-                self.setFormat(index, length, format)
+                self.setFormat(index, length, fmt)
                 highlightedRegions.append((index, index+length))
                 index = expression.indexIn(text, index + length)
-                highlightedSomething = True
         # workaround QSyntaxHighlighter + QTextEditor problem that
         # hides some (random) lines: when no formatting is present,
         # format always something
@@ -2200,9 +2192,14 @@ class FindDialog(QtGui.QDialog):
         self.textWidget = QtGui.QLineEdit(self)
         self.textWidget.textChanged.connect(self.textChanged)
         self.textWidget.returnPressed.connect(self.moveCursorAndQuit)
-        self.searchedText = {}
+
+        self.editor = None
         self.findCursor = None
+        self.found = []
         self.highlighted = None
+        self.origCursor = None
+        self.plainText = ""
+        self.searchedText = {}
 
         self.layout.addWidget(QtGui.QLabel("Find", self), 0, 0)
         self.layout.addWidget(self.textWidget, 0, 1)
@@ -2329,7 +2326,7 @@ class HelpDialog(QtGui.QDialog):
         self.font = font
         self.layout = QtGui.QGridLayout(self)
         self._texts = []
-        self.text = _makeScalableEditor(parent, self, self.font)
+        self.text = _scalableEditor(parent, self, self.font)
         fm = self.text.fontMetrics()
         self.text.setMinimumWidth(84 * fm.width('w'))
         self.layout.addWidget(self.text, 0, 0)
@@ -2338,49 +2335,37 @@ class HelpDialog(QtGui.QDialog):
         self._texts.append(text)
         self.text.setPlainText(self._texts[-1])
 
+opt_debug = 0
+_app = None
 
-if __name__ == "__main__":
+def main():
+    global opt_debug
+    global _app
+
     sys.path.insert(0, os.getcwd())
 
-    opt_connect = ""
-    opt_gti = None
-    opt_sut = None
-    opt_debug = 0
-    supported_platforms = ['android', 'tizen', 'x11', 'vnc', 'windows', 'dummy']
-
     opts, remainder = getopt.getopt(
-        sys.argv[1:], 'hd:p:V',
-        ['help', 'version', 'device=', 'platform=', 'debug'])
+        sys.argv[1:], 'hV',
+        ['help', 'version', 'debug'])
 
     for opt, arg in opts:
         if opt in ['-h', '--help']:
             print __doc__
             sys.exit(0)
         elif opt in ['-V', '--version']:
-            print "Version " + fmbt_config.fmbt_version + fmbt_config.fmbt_build_info
+            print ("Version " + fmbt_config.fmbt_version +
+                   fmbt_config.fmbt_build_info)
             sys.exit(0)
         elif opt in ['--debug']:
             opt_debug += 1
-        elif opt in ['-d', '--device']:
-            opt_connect = arg
-        elif opt in ['-p', '--platform']:
-            opt_gti = arg
-            if arg in ['android', 'tizen', 'windows', 'dummy']:
-                opt_gticlass = "Device"
-            elif arg in ['x11', 'vnc']:
-                opt_gticlass = "Screen"
-            else:
-                error('unknown platform: "%s". Use one of "%s"' % (
-                    arg, '", "'.join(supported_platforms)))
 
-    script = ""
     if remainder:
         scriptFilename = remainder[0]
         if not os.path.exists(scriptFilename):
             file(scriptFilename, "w").close() # create empty file
         try:
-            script = file(scriptFilename).read()
-        except:
+            file(scriptFilename).read()
+        except IOError:
             error('cannot read file "%s"' % (remainder[0],))
     else:
         scriptFilename = None
@@ -2389,12 +2374,7 @@ if __name__ == "__main__":
     _win = MainWindow()
     _win.resize(800, 600)
 
-    if opt_gti == "dummy":
-        initSequence = "# sut = fmbtdummy.Device(...)\n"
-        sut = fmbtdummy.Device(screenshotList = opt_connect.split(","))
-        opt_sut = "sut"
-    else:
-        initSequence = ""
+    initSequence = ""
 
     if scriptFilename:
         _win.open(scriptFilename)
@@ -2404,3 +2384,6 @@ if __name__ == "__main__":
         _win.scheduleUpdateScreenshot(1.0)
     _win.show()
     _app.exec_()
+
+if __name__ == "__main__":
+    main()
