@@ -1095,23 +1095,18 @@ public:
     }
     
     virtual void execute(const std::vector<int>& prev,int action,const std::vector<int>& next){
-      if (value.first<value.second) {
-	if (left_side) {
-	  if (std::find(prev.begin(), prev.end(), my_tag)!=prev.end()) {
-	    value.first++;	    
-	  }
-	} else {
-	  if (std::find(next.begin(), next.end(), my_tag)!=next.end()) {
-	    value.first++;	    
-	  }	  
+      if (left_side) {
+	if (std::find(prev.begin(), prev.end(), my_tag)!=prev.end()) {
+	  value.first=value.second;
+	  return;
 	}
-	/*
-	if (((left_side  && std::find(prev.begin(), prev.end(), my_tag)!=prev.end()) ||
-	     (!left_side && std::find(next.begin(), next.end(), my_tag)!=next.end()))) {
-	  value.first++;
+      } else {
+	if (std::find(next.begin(), next.end(), my_tag)!=next.end()) {
+	  value.first=value.second;
+	  return;
 	}
-	*/
       }
+      value.first=0;
     }
     virtual unit* clone() {
       return new unit_tagleaf(*this);
@@ -1430,7 +1425,7 @@ public:
   public:
 
     virtual std::string stringify(Alphabet&a) {
-      return to_string(max)+"("+child->stringify(a)+")";
+      return to_string(max)+"*("+child->stringify(a)+")";
     }
 
     unit_mult(unit* l,int i): max(i),child(l),count(0) {
