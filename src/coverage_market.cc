@@ -371,8 +371,11 @@ Coverage_Market::unit* new_unit_tagunit(Coverage_Market::unit_tag* l,
 					Coverage_Market::unit* u,
 					Coverage_Market::unit_tag* r,
 					int persistent) {
+  l->set_left(true);
+  r->set_left(false);
 
   Coverage_Market::unit_tagelist* tl=dynamic_cast<Coverage_Market::unit_tagelist*>(l);
+
 
   // copy-constructor for unit*. We need to make a deep copy to get this thing working.
 
