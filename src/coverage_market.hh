@@ -57,6 +57,8 @@ public:
     }
   }
 
+  virtual std::string stringify();
+
   virtual bool set_instance(int instance) {
     for (unsigned int i = 0; i < Units.size(); i++) {
       Units[i]->set_instance(instance,current_instance);
@@ -104,10 +106,10 @@ public:
 
   void add_requirement(std::string& req);
 
-  unit* req_rx_action(const char m,const std::string &action,unit_tag* l=NULL,unit_tag* r=NULL,bool persistent=false);
+  unit* req_rx_action(const char m,const std::string &action,unit_tag* l=NULL,unit_tag* r=NULL,int persistent=0);
 
-  unit_tag* req_rx_tag(const std::string &tag);
-  unit_tag* req_rx_tag(const char m,const std::string &tag);
+  unit_tag* req_rx_tag(const std::string &tag,char op='e');
+  unit_tag* req_rx_tag(const char m,const std::string &tag,int count=1,bool exactly=false);
   
   void add_unit(unit* u) {
     Units.push_back(u);
@@ -148,6 +150,8 @@ public:
     virtual void set_instance(int instance,int current_instance, bool force=false) =0;
     val value;
 
+    virtual std::string stringify(Alphabet& a)=0;
+
     class eunit {
     public:
       std::vector<int> prev;
@@ -184,6 +188,11 @@ public:
       */
       l.ref();
     }
+
+    virtual std::string stringify(Alphabet&a) {
+      return "perm("+p+")";
+    }
+
     virtual ~unit_perm() {
       delete child;
     }
@@ -245,6 +254,13 @@ public:
 
   class unit_walk: public unit {
   public:
+    virtual std::string stringify(Alphabet&a) {
+      if (minimi) {
+	return "uwalks("+child->stringify(a)+")";
+      }
+      return "eageruwalks("+child->stringify(a)+")";
+    }
+
     unit_walk(unit* c,bool _min):child(c),count(0),minimi(_min) {
       push_depth=0;
     }
@@ -517,6 +533,15 @@ public:
 
   class unit_manyleafand: public unit_manyleaf {
   public:
+    virtual std::string stringify(Alphabet&a) {
+      //TODO
+      std::string ret="\""+a.getActionName(my_action[0])+"\"";
+      for(size_t i=1;i<my_action.size();i++) {
+	ret+=" and \"" + a.getActionName(my_action[i])+"\"";
+      }
+      return ret;
+
+    }
     unit_manyleafand() {}
     virtual ~unit_manyleafand() {}
 
@@ -550,6 +575,15 @@ public:
 
   class unit_manyleafor: public unit_manyleaf {
   public:
+    virtual std::string stringify(Alphabet&a) {
+      //TODO
+      std::string ret="\""+a.getActionName(my_action[0])+"\"";
+      for(size_t i=1;i<my_action.size();i++) {
+	ret+=" or \"" + a.getActionName(my_action[i])+"\"";
+      }
+      return ret;
+
+    }
     unit_manyleafor() {}
     virtual ~unit_manyleafor() {}
 
@@ -586,6 +620,14 @@ public:
 
   class unit_manyand: public unit_many {
   public: 
+    virtual std::string stringify(Alphabet&a) {
+      std::string ret="(" + units[0]->stringify(a)+")";
+      for(size_t i=1;i<units.size();i++) {
+	ret+=" and (" + units[i]->stringify(a)+")";
+      }
+      return ret;
+    }
+
     unit_manyand() {}
     virtual ~unit_manyand() {
     }
@@ -612,6 +654,13 @@ public:
 
   class unit_manyor: public unit_many {
   public: 
+    virtual std::string stringify(Alphabet&a) {
+      std::string ret="(" + units[0]->stringify(a)+")";
+      for(size_t i=1;i<units.size();i++) {
+	ret+=" or (" + units[i]->stringify(a)+")";
+      }
+      return ret;
+    }
     unit_manyor() {}
     virtual ~unit_manyor() {
     }
@@ -684,6 +733,9 @@ public:
 
   class unit_and: public unit_dual {
   public:
+    virtual std::string stringify(Alphabet&a) {
+      return "("+left->stringify(a)+") and ("+right->stringify(a)+")";
+    }
     unit_and(unit* l,unit* r) : unit_dual(l,r) {}
 
     virtual void update() {
@@ -701,6 +753,9 @@ public:
 
   class unit_or: public unit_dual {
   public:
+    virtual std::string stringify(Alphabet&a) {
+      return "("+left->stringify(a)+") or ("+right->stringify(a)+")";
+    }
     unit_or(unit* l,unit* r) : unit_dual(l,r) {}
 
     virtual void update() {
@@ -721,6 +776,9 @@ public:
 
   class unit_not: public unit {
   public:
+    virtual std::string stringify(Alphabet&a) {
+      return "not("+child->stringify(a)+")";
+    }
     unit_not(unit *c):child(c) {
     }
 
@@ -764,6 +822,11 @@ public:
   public:
     int cpos;
     std::stack<int> csave;
+
+    virtual std::string stringify(Alphabet&a) {
+      //TODO
+      return "... then ... ";
+    }
 
     virtual void set_instance(int instance,int current_instance, bool force=false) {
       // not implemented..
@@ -834,6 +897,9 @@ public:
 
   class unit_then_: public unit_dual {
   public:
+    virtual std::string stringify(Alphabet&a) {
+      return "("+left->stringify(a)+") then ("+right->stringify(a)+")";
+    }
     unit_then_(unit* l,unit* r) : unit_dual(l,r) {}
     virtual ~unit_then_()  {}
 
@@ -873,6 +939,10 @@ public:
     unit_tag():unit(),left_side(false) {
     }
 
+    virtual std::string stringify(Alphabet&a) {
+      return "";
+    }
+
     virtual ~unit_tag() { }
     virtual void set_left(bool l) {
       left_side=l;
@@ -896,6 +966,10 @@ public:
 
   class unit_tagelist: public unit_tag {
   public:
+    virtual std::string stringify(Alphabet&a) {
+      // TODO
+      return "";
+    }
     unit_tagelist(char _op,unit_tag* l, unit_tag* r): op(_op),left(l),right(r) {
     }
 
@@ -933,6 +1007,9 @@ public:
 
   class unit_tagnot: public unit_tag {
   public:
+    virtual std::string stringify(Alphabet&a) {
+      return "not("+child->stringify(a)+")";
+    }
     unit_tagnot(unit_tag* t): child(t) {
       if (child)
 	value=child->value;
@@ -985,6 +1062,10 @@ public:
 
   class unit_tagleaf: public unit_tag {
   public:
+    virtual std::string stringify(Alphabet&a) {
+      //TODO
+      return "\""+a.getSPNames()[my_tag]+"\"";
+    }
     unit_tagleaf(int tag):my_tag(tag) {
       value.first=0;
       value.second=1;
@@ -1044,6 +1125,10 @@ public:
 
   class unit_leaf: public unit {
   public:
+    virtual std::string stringify(Alphabet&a) {
+      return a.getActionName(my_action);
+    }
+
     unit_leaf(int action, int count=1) : my_action(action)
     {
       value.second=count;
@@ -1155,7 +1240,27 @@ public:
 
   class unit_tagunit: public unit_tagdual {
   public:
-    unit_tagunit(unit_tag* l, unit* _child,unit_tag* r,bool _persistent=false):
+    virtual std::string stringify(Alphabet&a) {
+      std::string ls=left->stringify(a);
+      std::string rs=right->stringify(a);
+      std::string ret;
+
+      if (!ls.empty()) {
+	if (persistent&1) {
+	  ret="@";
+	}
+	ret+="["+ls+"] ";
+      }
+      ret+="("+child->stringify(a)+")";
+      if (!rs.empty()) {
+	if (persistent&2) {
+	  ret+="@";
+	}
+	ret+=" ["+rs+"]";
+      }
+      return ret;
+    }
+    unit_tagunit(unit_tag* l, unit* _child,unit_tag* r,int _persistent=0):
       unit_tagdual(l,r),child(_child),persistent(_persistent) {
       value.first=0;
       value.second=l->value.second+right->value.second+child->value.second;
@@ -1172,7 +1277,7 @@ public:
 
     virtual void execute(const std::vector<int>& prev,int action,const std::vector<int>& next) {
 
-      if (persistent) {
+      if (persistent&1) {
 	left->reset();
       }
       left->update();
@@ -1195,7 +1300,7 @@ public:
 	v=child->get_value();
 	child->pop();
 	if (v.first<v.second) {
-	  if (v.first==0) {
+	  if (v.first==0 || persistent&2) {
 	    // Handle nothing has happened case, when we need left side to be filled
 	    // when starting executing the child.
 	    // btw... we won't execute anyting on the right side before the action part
@@ -1257,7 +1362,7 @@ public:
     }
     
     unit* child;
-    bool persistent;
+    int persistent;
     virtual unit* clone() {
       return new unit_tagunit(*this);
     }
@@ -1267,6 +1372,10 @@ public:
 
   class unit_tagand : public unit_tagdual {
   public:
+    virtual std::string stringify(Alphabet&a) {
+      return "("+left->stringify(a)+") and ("+right->stringify(a)+")";
+    }
+
     unit_tagand(unit_tag* l,unit_tag*r): unit_tagdual(l,r) {
       value.second=l->value.second+right->value.second;
     }
@@ -1288,6 +1397,10 @@ public:
 
   class unit_tagor : public unit_tagdual {
   public:
+    virtual std::string stringify(Alphabet&a) {
+      return "("+left->stringify(a)+") or ("+right->stringify(a)+")";
+    }
+
     unit_tagor(unit_tag* l,unit_tag*r): unit_tagdual(l,r) {
       value.second=left->value.second+right->value.second;
     }
@@ -1315,6 +1428,11 @@ public:
 
   class unit_mult: public unit {
   public:
+
+    virtual std::string stringify(Alphabet&a) {
+      return to_string(max)+"("+child->stringify(a)+")";
+    }
+
     unit_mult(unit* l,int i): max(i),child(l),count(0) {
     }
 
@@ -1384,5 +1502,5 @@ protected:
 Coverage_Market::unit* new_unit_tagunit(Coverage_Market::unit_tag* l,
 					Coverage_Market::unit* u,
 					Coverage_Market::unit_tag* r,
-					bool persistent);
+					int persistent);
 #endif

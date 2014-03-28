@@ -37,7 +37,10 @@ Coverage_Market* cobj;
 extern D_ParserTables parser_tables_covlang;
 
 Coverage_Market::unit* tagspec_helper(Coverage_Market::unit_tag* l,Coverage_Market::unit* c,
-                                      Coverage_Market::unit_tag* r,bool persistent) {
+                                      Coverage_Market::unit_tag* r,int persistent) {
+    if (!c) {
+        return NULL;
+    }
     if (l || r) {
         if (!l) {
             l=new Coverage_Market::unit_tag();
@@ -88,10 +91,10 @@ expr: node             { $$.u = $0.u; }
 persistent: '@' { $$.type=1; }
     | { $$.type=0; } ;
 
-node: persistent tag_spec actionname tag_spec  { $$.type='e'; $$.u = cobj->req_rx_action($$.type,*$2.str,$1.tag,$3.tag,$0.type); delete $2.str; $2.str=NULL; }
+node: persistent tag_spec actionname persistent tag_spec  { $$.type='e'; $$.u = cobj->req_rx_action($$.type,*$2.str,$1.tag,$4.tag,$0.type&($3.type<1)); delete $2.str; $2.str=NULL; }
     | ('a' | 'A' | 'all' ) actionname   { $$.type='a'; $$.u = cobj->req_rx_action($$.type,*$1.str); delete $1.str; $1.str=NULL; }
     | ('e' | 'E' | 'any' ) actionname   { $$.type='e'; $$.u = cobj->req_rx_action($$.type,*$1.str); delete $1.str; $1.str=NULL; }
-    | persistent tag_spec '(' expr ')'  tag_spec   { $$.u = tagspec_helper($1.tag,$3.u,$5.tag,$0.type); }
+    | persistent tag_spec '(' expr ')' persistent tag_spec { $$.u = tagspec_helper($1.tag,$3.u,$6.tag,$0.type&($5.type<1)); }
     | "not" node       { $$.u = new Coverage_Market::unit_not($1.u); } 
     | uint '*' node    { $$.u = inthelper($2.u,$0.i); }
     | node '*' uint    { $$.u = inthelper($0.u,$2.i); }
@@ -138,9 +141,13 @@ tag_spec: '[' tag_expr_list ']' {
         }
     ;
 
+exactly: { $$.type=0; } |
+        'exactly' { $$.type=1; }
+    ;
+
 // Dummy implementation...
 tag_expr_list: tag_expr { $$.tag = $0.tag; }
-    | ('a' | 'A' | 'all' ) tagname { $$.tag = cobj->req_rx_tag('a',*$1.str); delete $1.str; }
+    | exactly 'every' count tagname { $$.tag = cobj->req_rx_tag('a',*$3.str,$2.i,$0.type); delete $3.str; }
     | ('e' | 'E' | 'any' ) tagname { $$.tag = cobj->req_rx_tag('e',*$1.str); delete $1.str; }
     | tag_expr '|' tag_expr_list { 
             $$.tag = new Coverage_Market::unit_tagelist('|',$0.tag,$2.tag) ;
@@ -152,9 +159,10 @@ tag_expr_list: tag_expr { $$.tag = $0.tag; }
         
 
 
-tag_node: tagname      { $$.tag = cobj->req_rx_tag(*$0.str); delete $0.str; }
-    | '(' tag_expr ')' { $$.tag = $1.tag; }
-    | "not" tag_node   { $$.tag = new Coverage_Market::unit_tagnot($1.tag); }
+tag_node:                  tagname { $$.tag = cobj->req_rx_tag(*$0.str);     delete $0.str; }
+    | ('a' | 'A' | 'all' ) tagname { $$.tag = cobj->req_rx_tag(*$1.str,'a'); delete $1.str; }
+    | '(' tag_expr ')'             { $$.tag = $1.tag; }
+    | "not" tag_node               { $$.tag = new Coverage_Market::unit_tagnot($1.tag); }
     ;
 
 tag_expr: tag_node { $$.tag = $0.tag; }
@@ -165,6 +173,10 @@ tag_expr: tag_node { $$.tag = $0.tag; }
 
 
 name: "\"([^\"\\]|\\[^])*\"" |  "\'([^\'\\]|\\[^])*\'";
+
+count: uint { $$.i = $0.i; }
+    | { $$.i = 1; }
+    ;
 
 uint: istr { $$.i = atoi($n0.start_loc.s); };
 
