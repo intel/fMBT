@@ -571,10 +571,12 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
                 _g_readImage, SCREENSHOT_FILENAME, psm)
         _, _g_hocr = _runcmd(cmd)
 
-        hocr_filename = SCREENSHOT_FILENAME + ".html"
+        hocr_filename = SCREENSHOT_FILENAME + ".html" # Tesseract 3.02
 
         if not os.access(hocr_filename, os.R_OK):
-            raise NoOCRResults("HOCR output missing. Tesseract OCR 3.02 or greater required.")
+            hocr_filename = SCREENSHOT_FILENAME + ".hocr" # Tesseract 3.03
+            if not os.access(hocr_filename, os.R_OK):
+                raise NoOCRResults("HOCR output missing. Tesseract OCR 3.02 or greater required.")
 
         # store every word and its coordinates
         _g_words.update(_hocr2words(file(hocr_filename).read()))
@@ -1438,8 +1440,10 @@ def findText(text, detected_words = None, match=-1):
     words_by_id = []
     for word in detected_words:
         for wid, middle, bbox in detected_words[word]:
+            # change word id from "word_2_42" to (2, 42)
+            int_wid = [int(n) for n in wid[5:].split("_")]
             words_by_id.append(
-                (int(wid.split("_")[1]), word, bbox))
+                (int_wid, word, bbox))
     words_by_id.sort()
 
     for i in xrange(len(words_by_id)-word_count+1):
@@ -1495,7 +1499,7 @@ def _hocr2words(hocr):
     for name, code in htmlentitydefs.name2codepoint.iteritems():
         if code < 128:
             hocr = hocr.replace('&' + name + ';', chr(code))
-    ocr_word = re.compile('''<span class=['"]ocrx?_word["'] id=['"]([^']*)["'] title=['"]bbox ([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+)["'][^>]*>([^<]*)</span>''')
+    ocr_word = re.compile('''<span class=['"]ocrx?_word["'] id=['"]([^']*)["'] title=['"]bbox ([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+)["';][^>]*>([^<]*)</span>''')
     for word_id, bbox_left, bbox_top, bbox_right, bbox_bottom, word in ocr_word.findall(hocr):
         bbox_left, bbox_top, bbox_right, bbox_bottom = \
             int(bbox_left), int(bbox_top), int(bbox_right), int(bbox_bottom)
