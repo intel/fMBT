@@ -52,6 +52,10 @@ doc/aal_python.txt
 doc/configuration.txt
         Test configuration reference documentation.
 
+https://github.com/01org/fMBT/wiki/GUI-testing
+        GUI testing interfaces for Android,
+        Tizen, VNC, Windows and X11.
+
 
 Examples
 --------
