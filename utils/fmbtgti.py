@@ -1375,7 +1375,11 @@ class GUITestInterface(object):
         structure exists).
         """
         t = datetime.datetime.now()
-        filename = _filenameTimestamp(t) + "-" + self._conn.target() + ".png"
+        if not self._conn:
+            target = ""
+        else:
+            target = self._conn.target()
+        filename = _filenameTimestamp(t) + "-" + target + ".png"
         filepath = os.path.join(self.screenshotDir(),
                                 t.strftime(self.screenshotSubdir()),
                                 filename)
@@ -1440,7 +1444,7 @@ class GUITestInterface(object):
 
         Returns Screenshot object, and makes the same object "the
         latest screenshot" that is used by all *Bitmap and *OcrText
-        methods.
+        methods. Returns None if screenshot cannot be taken.
         """
         if forcedScreenshot != None:
             if type(forcedScreenshot) == str:
@@ -1452,7 +1456,7 @@ class GUITestInterface(object):
                     screenshotRefCount=self._screenshotRefCount)
             else:
                 self._lastScreenshot = forcedScreenshot
-        else:
+        elif self._conn: # There is a connection, get new screenshot
             if self.screenshotDir() == None:
                 self.setScreenshotDir(self._screenshotDirDefault)
             if self.screenshotSubdir() == None:
@@ -1472,6 +1476,8 @@ class GUITestInterface(object):
                     screenshotRefCount=self._screenshotRefCount)
             else:
                 self._lastScreenshot = None
+        else: # No connection, cannot get a screenshot
+            self._lastScreenshot = None
         # Make sure unreachable Screenshot instances are released from
         # memory.
         gc.collect()
@@ -2566,10 +2572,13 @@ class _VisualLog:
             loggerSelf._highlightCounter = 0
             logCallReturnValue = loggerSelf.logCall()
             retval = loggerSelf.doCallLogException(origMethod, args, kwargs)
-            retval._logCallReturnValue = logCallReturnValue
-            loggerSelf.logReturn(retval, img=retval, tip=origMethod.func_name)
-            retval.findItemsByBitmap = loggerSelf.findItemsByBitmapLogger(retval.findItemsByBitmap, retval)
-            retval.findItemsByOcr = loggerSelf.findItemsByOcrLogger(retval.findItemsByOcr, retval)
+            if retval != None:
+                retval._logCallReturnValue = logCallReturnValue
+                loggerSelf.logReturn(retval, img=retval, tip=origMethod.func_name)
+                retval.findItemsByBitmap = loggerSelf.findItemsByBitmapLogger(retval.findItemsByBitmap, retval)
+                retval.findItemsByOcr = loggerSelf.findItemsByOcrLogger(retval.findItemsByOcr, retval)
+            else:
+                loggerSelf.logReturn(retval, tip=origMethod.func_name)
             return retval
         return refreshScreenshotWRAP
 
