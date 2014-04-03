@@ -83,6 +83,7 @@ protected:
   bool tag;
   bool adapter;
   bool this_is_input;
+  ANAMETYPE action_name_type;
   std::list<std::string> guard_requires;
 
   std::string requires;

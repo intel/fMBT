@@ -471,9 +471,15 @@ Special variables and functions in AAL/Python
 
 __file__ - string that contains the name of the AAL file.
 
+
 action_name - string that contains the name of an action.
 
-        Available: in guard(), body() and action() blocks of actions.
+        Available: in guard(), body() and adapter() blocks of actions.
+
+        When using action_name in "input" or "output" blocks,
+        action_name contains full name of the action, and
+        input_name/output_name variables contain the user-defined
+        name. See input_name.
 
         Example: Actions "iLogin:Alice" and "iLogin:Bob" can be
         executed when "Alice" or "Bob" is not yet logged in.
@@ -489,9 +495,34 @@ action_name - string that contains the name of an action.
             }
         }
 
+
+input_name - string that contains the name of an input
+
+        Available: in guard(), body() and adapter() blocks of inputs.
+
+        Example: Executing action "play music" in
+
+        input "play music", "play video" {
+            adapter() {
+                print "input name:", input_name
+                print "action name:", action_name
+            }
+        }
+
+        will print
+
+        input name: play music
+        action name: i:play music
+
+
+output_name - string that contains the name of an output
+
+        Available: in guard(), body() and adapter() blocks of outputs.
+
+
 tag_name - string that contains the name of a tag.
 
-        Available: in guard() and action() blocks of tags.
+        Available: in guard() and adapter() blocks of tags.
 
         Example: TODO
 

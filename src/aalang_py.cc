@@ -99,8 +99,16 @@ std::string aalang_py::action_helper(const codefileline& cfl,std::string s,
 				     std::string& funcname,int i,std::string& acnt)
 {
   funcname = "action" + acnt + s;
+  std::string extra_name;
+  if (action_name_type == aalang::IACT)
+      extra_name = "input_name =\"" + multiname[i].first.substr(2) + "\"";
+  else if (action_name_type == aalang::OBSERVE)
+      extra_name = "output_name =\"" + multiname[i].first.substr(2)  + "\"";
+
+
   return "    def " + funcname + "():\n" + variables
     +    "        action_name = \"" + multiname[i].first + "\"\n"
+    +    "        " + extra_name + "\n"
     +    "        action_index = " + to_string(i) + "\n"
     +    indent(8,cfl.first)+"\n";
 }
@@ -162,6 +170,8 @@ void aalang_py::set_name(std::string* name,bool first,ANAMETYPE t)
     adapter = false;
     serial_stack.push_back(0); // inside action block
   }
+
+  action_name_type = t;
 
   multiname.push_back(std::pair<std::string,int>(*name,action_cnt));
   action_cnt++;
@@ -531,13 +541,13 @@ void aalang_py::next_action()
       s+="    action" + acnt + "guard.requires += [\"" + serialN("guard") + "\"]\n";
     }
 
-    s+=python_lineno_wrapper(m_guard,funcname,3+m_lines_in_vars,4,
+    s+=python_lineno_wrapper(m_guard,funcname,4+m_lines_in_vars,4,
                              ", \"guard of action \\\"" + multiname[i].first +
                              "\\\"\")");
 
     /* actionXbody */
     s+=action_helper(m_body,"body",funcname,i,acnt);
-    s+=python_lineno_wrapper(m_body,funcname,3+m_lines_in_vars,4,
+    s+=python_lineno_wrapper(m_body,funcname,4+m_lines_in_vars,4,
                              ", \"body of action \\\"" + multiname[i].first +
                              "\\\"\")");
     if (!serial_stack.empty() && serial_stack.back() != 0) {
@@ -551,7 +561,7 @@ void aalang_py::next_action()
     } else {
       s+="        return False\n";
     }
-    s+=python_lineno_wrapper(m_adapter,funcname,3+m_lines_in_vars,4,
+    s+=python_lineno_wrapper(m_adapter,funcname,4+m_lines_in_vars,4,
                              ", \"adapter of action \\\"" + multiname[i].first
                              + "\\\"\")");
     /*
