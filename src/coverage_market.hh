@@ -194,7 +194,8 @@ public:
     }
 
     virtual ~unit_perm() {
-      delete child;
+      if (child)
+	delete child;
     }
 
     virtual void set_instance(int instance,int current_instance, bool force=false) {
@@ -976,21 +977,6 @@ public:
     virtual ~unit_tagelist() {
 
     }
-
-    /*
-    virtual unit* expand(unit* u) {
-      // So... We should expand to something
-      // [ <tag_expr1> & <tag_expr2> ] expr
-      //  -> ( [ <tag_expr1> ] expr ) and ( [ <tag_expr2> ] expr )
-      // So. Let's expand left and right and put correct operator between.
-      unit* ul = left->expand(u);
-      unit* ur = right->expand(u);
-      if (op=='&') {
-	return new Coverage_Market::unit_and(ul,ur);
-      }
-      return new Coverage_Market::unit_or(ul,ur);
-    }
-    */
     virtual void set_left(bool l) {
       left_side=l;
       left->set_left(l);
