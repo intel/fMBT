@@ -154,7 +154,6 @@ void Coverage_Tree::history(int action,std::vector<int>& props,
 
 Coverage_Tree::~Coverage_Tree()
 {
-  close(fd);
   if (push_depth) {
     pop();
   } else {
