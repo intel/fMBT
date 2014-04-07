@@ -161,7 +161,7 @@ protected:
   std::map<std::pair<int,int>, bool> mask;
   std::vector<int> act_depth;
 
- void print_tree(struct node* node,int depth);
+  void print_tree(struct node* node,int depth);
   int actions_at_depth(int depth);
 
   std::map<int,std::vector<std::pair<struct node*,bool> >*> instance_map;
