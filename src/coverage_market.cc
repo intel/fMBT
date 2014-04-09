@@ -21,6 +21,19 @@
 #include "model.hh"
 #include "helper.hh"
 
+std::string Coverage_Market::stringify()
+{
+  if (!status) {
+    return Writable::stringify();
+  }
+  std::string ret="usecase(";
+  for(size_t i=0;i<Units.size();i++) {
+    ret+=" "+Units[i]->stringify(*model);
+  }
+  ret+=")";
+  return ret;
+}
+
 Coverage_Market::Coverage_Market(Log& l,const std::string& _params) :
     Coverage(l)
 {
@@ -143,7 +156,47 @@ void Coverage_Market::add_requirement(std::string& req)
   free_D_Parser(p);
 }
 
-Coverage_Market::unit_tag* Coverage_Market::req_rx_tag(const char m,const std::string &tag)
+#include <set>
+
+void taghelper(const char op,int depth,
+	       int start_pos,
+	       Coverage_Market::unit_tag*& tu,
+	       std::vector<std::pair<Coverage_Market::unit_tag*, bool> >& uset,
+	       bool exactly) {
+
+  if (depth==0) {
+    Coverage_Market::unit_tag* u=NULL;
+
+    for(unsigned i=0;i<uset.size();i++) {
+      if (uset[i].second || exactly) {
+	Coverage_Market::unit_tag* u2=(Coverage_Market::unit_tag*)uset[i].first->clone();
+
+	if (!uset[i].second) {
+	  u2=new Coverage_Market::unit_tagnot(u2);
+	}
+
+	if (u) {
+	  u=new Coverage_Market::unit_tagand(u,u2);
+	} else {
+	  u=u2;
+	}
+      }
+    }    
+    if (tu) {
+      tu=new Coverage_Market::unit_tagelist(op,tu,u);
+    } else {
+      tu=u;
+    }
+  } else {
+    for(unsigned i=start_pos;i<uset.size();i++) {
+      uset[i].second=true;
+      taghelper(op,depth-1,i+1,tu,uset,exactly);
+      uset[i].second=false;
+    }
+  }
+}
+
+Coverage_Market::unit_tag* Coverage_Market::req_rx_tag(const char m,const std::string &tag,int count,bool exactly)
 {
   if (!status) {
     return new Coverage_Market::unit_tagleaf(0);
@@ -155,7 +208,7 @@ Coverage_Market::unit_tag* Coverage_Market::req_rx_tag(const char m,const std::s
   regexpmatch(tag, model->getSPNames(),tags  , false,1,1);  
   
   if (tags.empty()) {
-    errormsg = "No actions matching \"" + tag + "\"";
+    errormsg = "No tags matching \"" + tag + "\"";
     status = false;
     return new Coverage_Market::unit_tagleaf(0);
   }
@@ -164,17 +217,36 @@ Coverage_Market::unit_tag* Coverage_Market::req_rx_tag(const char m,const std::s
     op='|';
   }
 
-  Coverage_Market::unit_tag* u=new Coverage_Market::unit_tagleaf(tags[0]);
-  
+  //std::set<Coverage_Market::unit_tag*> uset;
+  std::vector<std::pair<Coverage_Market::unit_tag*, bool> > uset;
+
+  for(unsigned i=0;i<tags.size();i++) {
+    Coverage_Market::unit_tag* u2=new Coverage_Market::unit_tagleaf(tags[i]);
+    uset.push_back(std::pair<Coverage_Market::unit_tag*, bool>(u2,false));
+  }  
+
+
+  Coverage_Market::unit_tag* u=NULL;
+
+  taghelper(op,count,0,u,uset,exactly);
+
+  if (u==NULL) {
+    abort();
+  }
+
+  return u;
+
+  /*
   for(unsigned i=1;i<tags.size();i++) {
     Coverage_Market::unit_tag* u2=new Coverage_Market::unit_tagleaf(tags[i]);
     u=new Coverage_Market::unit_tagelist(op,u,u2);
   }
 
   return u;
+  */
 }
 
-Coverage_Market::unit_tag* Coverage_Market::req_rx_tag(const std::string &tag) {
+Coverage_Market::unit_tag* Coverage_Market::req_rx_tag(const std::string &tag,char op) {
   if (!status) {
     return new Coverage_Market::unit_tagleaf(0);
   }
@@ -183,7 +255,7 @@ Coverage_Market::unit_tag* Coverage_Market::req_rx_tag(const std::string &tag) {
   regexpmatch(tag, model->getSPNames(),tags  , false,1,1);  
   
   if (tags.empty()) {
-    errormsg = "No actions matching \"" + tag + "\"";
+    errormsg = "No tags matching \"" + tag + "\"";
     status = false;
     return NULL;
   }
@@ -191,8 +263,17 @@ Coverage_Market::unit_tag* Coverage_Market::req_rx_tag(const std::string &tag) {
   Coverage_Market::unit_tag* u=new Coverage_Market::unit_tagleaf(tags[0]);
 
   for(unsigned i=1;i<tags.size();i++) {
-    Coverage_Market::unit_tag* u2=new Coverage_Market::unit_tagleaf(tags[i]);
-    u=new Coverage_Market::unit_tagor(u,u2);
+      Coverage_Market::unit_tag* u2=new Coverage_Market::unit_tagleaf(tags[i]);
+    switch(op) {
+    case 'e': 
+      u=new Coverage_Market::unit_tagor(u,u2);
+      break;
+    case 'a':
+      u=new Coverage_Market::unit_tagand(u,u2);
+      break;
+    default:
+      abort();
+    }
   }
 
   return u;
@@ -201,7 +282,7 @@ Coverage_Market::unit_tag* Coverage_Market::req_rx_tag(const std::string &tag) {
 Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const std::string &action,
 						      unit_tag* prev_tag,
 						      unit_tag* next_tag,
-						      bool persistent) {
+						      int persistent) {
   /* m(ode) == a|e
      a(ll): cover all matching actions
      e(xists): cover any of matching actions
@@ -289,8 +370,12 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const std::st
 Coverage_Market::unit* new_unit_tagunit(Coverage_Market::unit_tag* l,
 					Coverage_Market::unit* u,
 					Coverage_Market::unit_tag* r,
-					bool persistent) {
+					int persistent) {
+  l->set_left(true);
+  r->set_left(false);
+
   Coverage_Market::unit_tagelist* tl=dynamic_cast<Coverage_Market::unit_tagelist*>(l);
+
 
   // copy-constructor for unit*. We need to make a deep copy to get this thing working.
 

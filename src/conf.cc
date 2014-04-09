@@ -278,6 +278,9 @@ std::string Conf::stringify() {
   t << "model = \"" << removehash(model_name) << capsulate(model->stringify()) << std::endl;
   t << "heuristic = \"" << heuristic_name << "\"" << std::endl;
   t << "coverage = \"" <<  coverage_name << "\"" << std::endl;
+  if (coverage && log.is_debug()) {
+    t << "#coverage = \"" <<  coverage->stringify() << "\"" << std::endl;
+  }
   t << "adapter = \"" << adapter_name
     << capsulate(adapter->stringify()) << std::endl;
 

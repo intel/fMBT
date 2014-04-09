@@ -341,6 +341,22 @@ for stop_thing in i:stop-alert i:stop-game i:stop-music; do
         testfailed
     fi
 done
+# test "exactly every 2" syntax
+(cat usecase-tags.conf.in; echo 'coverage = usecase( [ exactly every 2 "hear-.*" ] ("i:stop-.*") )') > usecase-tags-exactly.conf
+if ! fmbt -l usecase-tags-exactly.log usecase-tags-exactly.conf >>$LOGFILE 2>&1; then
+    cat usecase-tags-exactly.log >> $LOGFILE
+    cat usecase-tags-exactly.conf >> $LOGFILE
+    echo "failed because fmbt -l usecase-tags-exactly.conf returned non-zero exit status" >> $LOGFILE
+    testfailed
+fi
+# check that before each "i:stop ..." there was always unique
+# combination of two tags
+if [ $(fmbt-log -f '$ax\nTAGS: $tg' < usecase-tags-exactly.log | grep -B 1 i:stop- | grep TAGS | sort -u | wc -l) != "3" ]; then
+    fmbt-log -f '$ax\nTAGS: $tg' < usecase-tags-exactly.log | grep -B 1 i:stop- | grep TAGS | sort -u | nl >> $LOGFILE
+    echo "failed because expected 3 unique tag combinations" >> $LOGFILE
+    testfailed
+fi
+
 testpassed
 
 teststep "coverage sum..."
