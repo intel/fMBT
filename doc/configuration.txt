@@ -438,6 +438,19 @@ Available types & parameters:
                     been tested without leaving states tagged "paying
                     a car" between actions.
 
+                  "every n" and "exactly every n" shorthands forms
+                  combinations of n matching tags.
+
+                  Example:
+
+                    usecase([exactly every 2 "music|alarm|phone"]
+                            ("i:connect headset"))
+
+                  coverage reaches 1.0 when "i:connect headset" has
+                  been tested in every combination of exactly two tags
+                  from "music", "alarm" and "phone" (representing
+                  sound types being played in the background).
+
                 - expressions in parenthesis.
 
                 - <number> * <expression>, meaning that <expression>
