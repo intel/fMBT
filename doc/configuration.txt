@@ -391,22 +391,74 @@ Available types & parameters:
                   "all" keyword.  If no prefix is given, the default
                   is to cover "any" action matching the action-regexp.
 
+                  Example:
+
+                    usecase(all 'iUse(Cash|Credit)')
+
+                    coverage reaches 1.0 when generated test includes
+                    actions iUseCash and iUseCredit.
+
                 - two expressions combined with "and", "or" or "then"
                   operator.
 
+                  Example:
+
+                    usecase('iBuyCar' then ('iUseCash' or 'iUseCredit'))
+
+                    coverage reaches 1.0 if "iBuyCar" has been tested
+                    first, and "iUseCash" or "iUseCredit" gets tested
+                    after it.
+
                 - "not" <expression>, meaning that <expression> must
-                  not be covered. (EXPERIMENTAL)
+                  not be covered.
+
+                - "[" source-tagexpr "]" followed by "(" <expression>
+                  ")", and "(" <expression> ")" followed by "["
+                  dest-tagexpr "]" filters. Expression is covered only
+                  if source-tagexpr holds before, and dest-tagexpr
+                  holds after testing the expression.
+
+                  Example:
+
+                    usecase(['paying a car'](all 'iUse.*|iCancel.*'))
+
+                    coverage reaches 1.0 when all actions starting
+                    with 'iUse' and 'iCancel' have been tested starting
+                    from states with the 'buying a car' tag.
+
+                  If "[tagexpr]" is prefixed with "@", then tagexpr
+                  must hold in every state during executing the
+                  expression.
+
+                  Example:
+
+                    usecase(@['paying a car'](all 'iUse.*'))
+
+                    coverage reaches 1.0 when all iUse actions have
+                    been tested without leaving states tagged "paying
+                    a car" between actions.
 
                 - expressions in parenthesis.
 
                 - <number> * <expression>, meaning that <expression>
                   needs to be covered <number> of times.
 
-                Examples:
+                  Example:
 
-                    usecase(all 'iUse(Cash|Credit)')
-                    usecase('iBuyCar' then ('iUseCash' or 'iUseCredit'))
                     usecase((5 * 'iUseCash') and (10 * 'iUseCredit'))
+
+                    coverage reaches 1.0 after testing iUseCase five
+                    times and iUseCredit ten times. These actions can
+                    be tested in any order.
+
+                - perm(n)
+
+                  Example:
+
+                    usecase(["paying a car"](perm(2)))
+
+                    cover permutations of any two actions in states
+                    with tag "paying a car".
 
         walks(from regexp_1 to regexp_2)
 
