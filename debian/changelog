@@ -1,8 +1,32 @@
-fmbt (0.12.3-0.rc0) unstable; urgency=low
+fmbt (0.13-1) unstable; urgency=low
 
-  * Development version.
+  * usecase coverage:
+    - Supports covering actions on only certain tagged states.
+    - Supports covering various tag combinations.
+  * AAL/Python:
+    - New variables input_name and output_name work like
+      good old action_name and tag_name.
+  * fmbt-scripter:
+    - Support for testing Windows devices.
+    - Mouse hover shows screenshot coordinates on statusbar.
+    - Show new screenshot when "refreshScreenshot()" is run.
+    - Fixed launching with new (non-existent) files.
+  * fmbtwindows:
+    - fmbtandroid-like interface for testing Windows devices.
+  * fmbttizen:
+    - shellSOE can execute commands in pseudo terminal (usePty=True).
+    - Support for new Tizen mobile hardware added.
+  * fmbtandroid/tizen/vnc/windows/x11:
+    - Visual logs can be split into several html files.
+    - Support for Tesseract 3.03.
+  * pythonshare:
+    - RPC mechanism with code migration and namespace export/import.
+  * debugging test models:
+    - Log AAL variable values with remote_pyaal --verbose-fmbt-log.
+    - Log all enabled AAL actions with remote_pyaal --verbose-fmbt-log.
+  * many fixes and small improvements.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 7 Feb 2014 14:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 9 Apr 2014 15:42:00 +0300
 
 fmbt (0.12.2-1) unstable; urgency=low
 
