@@ -996,8 +996,8 @@ public:
     virtual std::string stringify(Alphabet&a) {
       return "not("+child->stringify(a)+")";
     }
-    unit_tagnot(unit_tag* t): child(t) {
-      if (child)
+    unit_tagnot(unit_tag* t): child(t),ex(false) {
+      if (child) 
 	value=child->value;
     }
 
@@ -1022,20 +1022,27 @@ public:
 
     virtual void push() {
       child->push();
+      st.push(ex);
     }
 
     virtual void pop() {
       child->pop();
+      ex=st.top();
+      st.pop();
     }
 
     virtual void execute(const std::vector<int>& prev,int action,const std::vector<int>& next){
+      ex=true;
       child->execute(prev,action,next);
     }
 
     virtual void update() {
       child->update();
       value=child->get_value();
-      value.first=value.second-value.first;
+      if (ex) 
+	value.first=value.second-value.first;
+      else
+	value.first=0;
     }
 
     unit_tag* child;
@@ -1043,6 +1050,8 @@ public:
       return new unit_tagnot(*this);
     }
   protected:
+    bool ex;
+    std::stack<bool> st;
     unit_tagnot(const unit_tagnot &obj);
   };
 
