@@ -130,6 +130,23 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self._conn.recvFile(remoteFilename, localFilename)
 
+    def getMatchingPaths(self, pathnamePattern):
+        """
+        Returns list of paths matching pathnamePattern on the device.
+
+        Parameters:
+
+          pathnamePattern (string):
+                  Pattern for matching files and directories on the device.
+
+        Example:
+
+          getMatchingPaths("c:/windows/*.ini")
+
+        Implementation runs glob.glob(pathnamePattern) on remote device.
+        """
+        return self._conn.recvMatchingPaths(pathnamePattern)
+
     def setDisplaySize(self, size):
         """
         Transform coordinates of synthesized events (like a tap) from
@@ -248,6 +265,10 @@ class WindowsConnection(fmbtgti.GUITestConnection):
             return True
         else:
             return data
+
+    def recvMatchingPaths(self, pathnamePattern):
+        return self._agent.eval_in(self._agent_ns,
+                                   "glob.glob(%s)" % (repr(pathnamePattern),))
 
     def recvScreenshot(self, filename, screenshotSize=(None, None)):
         ppmfilename = filename + ".ppm"
