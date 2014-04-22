@@ -262,6 +262,63 @@ class GUITestConnection(object):
         """
         return "GUITestConnectionTarget"
 
+class SimulatedGUITestConnection(GUITestConnection):
+    """
+    Simulates GUITestConnection: records method calls and fakes screenshots
+
+    All send* methods return True. recvScreenshot returns always True
+    if non-empty list of fake screenshot filenames is given (see
+    constructor and setScreenshotFilenames). Otherwise it returns
+    False.
+    """
+    def __init__(self, screenshotFilenames=()):
+        """
+        Parameters:
+
+          screenshotFilenames (tuple of filenames):
+                  calling recvScreenshot uses next item in this tuple as
+                  the observed screenshot.
+        """
+        GUITestConnection.__init__(self)
+        self.setScreenshotFilenames(screenshotFilenames)
+        self._calls = []
+
+        for recordedMethod in ("sendPress", "sendKeyDown", "sendKeyUp",
+                               "sendTap", "sendTouchDown", "sendTouchMove",
+                               "sendTouchUp", "sendType"):
+            self.__dict__[recordedMethod] = self._recorder(recordedMethod)
+
+    def _recorder(self, method):
+        return lambda *args, **kwargs: self._calls.append(
+            (time.time(), method, args, kwargs)) or True
+
+    def history(self):
+        return self._calls
+
+    def clearHistory(self):
+        self._calls = []
+
+    def setScreenshotFilenames(self, screenshotFilenames):
+        self._screenshotFilenames = screenshotFilenames
+        self._nextScreenshotFilename = 0
+
+    def recvScreenshot(self, filename):
+        self._calls.append((time.time(), "recvScreenshot", (filename,), {}))
+        if self._screenshotFilenames:
+            if self._nextScreenshotFilename >= len(self._screenshotFilenames):
+                self._nextScreenshotFilename = 0
+            fakeFilename = self._screenshotFilenames[self._nextScreenshotFilename]
+            self._nextScreenshotFilename += 1
+            if not os.access(fakeFilename, os.R_OK):
+                raise IOError('screenshot file not found: "%s"' % (fakeFilename,))
+            shutil.copy(fakeFilename, filename)
+            return True
+        else:
+            return False
+
+    def target(self):
+        return "SimulatedGUITestConnection"
+
 class OrEngine(object):
     """
     Optical recognition engine. Base class for OCR and OIR engines,
