@@ -508,12 +508,14 @@ OTHER = {'`': VK_OEM_3,
          '/': VK_OEM_2,
          '?': VK_OEM_2}
 
-def pressKey(hexKeyCode):
-    event = Keyboard(hexKeyCode, 0)
+def pressKey(keyName):
+    keyCode = keyNameToKeyCode(keyName)
+    event = Keyboard(keyCode, 0)
     return sendInput(event)
 
-def releaseKey(hexKeyCode):
-    event = Keyboard(hexKeyCode, KEYEVENTF_KEYUP)
+def releaseKey(keyName):
+    keyCode = keyNameToKeyCode(keyName)
+    event = Keyboard(keyCode, KEYEVENTF_KEYUP)
     return sendInput(event)
 
 def keyboardStream(string):
@@ -589,62 +591,44 @@ def sendType(text):
         time.sleep(0.05)
     return True
 
-def sendKey(keyname, modifiers):
-    mods = 0
-    '''
-    keyname can be either single character or constant defined in keyboard.py
-    w.pressKey("a")
-    w.pressKey("KEY_A")
-
-    modifier can be either VK_LWIN as defined in keyboard.py
-    or pure hex keycode 0x5B
-    w.pressKey("s",modifiers=["VK_LWIN"])
-    w.pressKey("KEY_A",modifiers=["VK_LSHIFT"])
-    '''
-
-    for m in modifiers:
-        print m
-        if "VK_" in str(m):
-            mods |= globals()[m]
+def keyNameToKeyCode(keyName):
+    if isinstance(keyName, int):
+        return keyName
+    elif isinstance(keyName, str):
+        if len(keyName) == 1:
+            return ord(keyName.upper())
+        elif keyName.startswith("VK_") or keyName.startswith("KEY_") and keyName in globals():
+            return globals()[keyName]
+        elif ("VK_" + keyName) in globals():
+            return globals()["VK_" + keyName]
+        elif ("KEY_" + keyName) in globals():
+            return globals()["KEY_" + keyName]
         else:
-            mods |= m
-    print sys._getframe().f_code.co_name, keyname, mods
-    if mods:
-        for m in modifiers:
-            if "VK_" in str(m):
-                pressKey(globals()[m])
-
-            else:
-                pressKey(m)
-            print "modifier down:", m
-    if len(keyname) == 1:
-        print "key down:", ord(keyname)
-        pressKey(ord(keyname.upper()))
-        time.sleep(0.1)
-        print "key up:", ord(keyname)
-        releaseKey(ord(keyname.upper()))
+            raise ValueError('invalid key: "%s"' % (keyName,))
     else:
-        print "key down:", globals()[keyname]
-        pressKey(globals()[keyname])
-        time.sleep(0.1)
-        print "key up:", globals()[keyname]
-        releaseKey(globals()[keyname])
-    if mods:
-        for m in modifiers:
-            if "VK_" in str(m):
-                releaseKey(globals()[m])
-            else:
-                releaseKey(m)
-            print "modifier up:", m
+        raise TypeError('invalid key type: %s (key name: %s)' % (type(keyName), keyName))
 
-def sendKeyDown(keyname, modifiers):
+def sendKey(keyName, modifiers):
+    """
+    keyName is a name (string) or a code (integer)
+    modifiers is a list of keyNames.
+
+    Examples:
+      pressKey("s", modifiers=["VK_LWIN"])
+      pressKey("KEY_A", modifiers=["VK_LSHIFT"])
+    """
+    sendKeyDown(keyName, modifiers)
+    time.sleep(0.1)
+    sendKeyUp(keyName, modifiers)
+
+def sendKeyDown(keyName, modifiers):
     for m in modifiers:
         pressKey(m)
-    pressKey(keyname)
+    pressKey(keyName)
     return True
 
-def sendKeyUp(keyname, modifiers):
-    releaseKey(keyname)
+def sendKeyUp(keyName, modifiers):
+    releaseKey(keyName)
     for m in modifiers:
         releaseKey(m)
     return True
