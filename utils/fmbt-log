@@ -153,6 +153,7 @@ fields = {
     '$st' : ['<current_time time=', '"', 1, time_formatter],
     '$tb' : ['<tags enabled=', '"', 1, memorise_formatter_gen("$tb")],
     '$tg' : ['<tags enabled=', '"', 1, identity_formatter],
+    '$tm' : ['<tag_name name=', '"', 1, identity_formatter],
     '$tv' : ['<stop verdict=', '"', 1, identity_formatter],
     '$tr' : ['<stop verdict=', '"', 3, identity_formatter],
     '$tt' : ['<elapsed_time', '"', 1, identity_formatter]
@@ -171,9 +172,9 @@ def extract(input_file_obj, output_file_obj, output_format, raw=0, must_be_nonem
         else:
             try:
                 if unique_prefix == "<tags enabled=":
-                    values = [ formatter(urllib2.unquote(v))
+                    values = [ urllib2.unquote(v)
                                for v in line.split(delimiter)[fieldindex].split(' ')]
-                    contents = VALUE_SEPARATOR.join(values)
+                    contents = formatter(VALUE_SEPARATOR.join(values))
                 else:
                     contents = formatter(urllib2.unquote(line.split(delimiter)[fieldindex]))
             except:
@@ -216,18 +217,21 @@ def extract(input_file_obj, output_file_obj, output_format, raw=0, must_be_nonem
             parsed_data = clean_data()
         elif ((parsed_data['$al'] != [] and '%($al)' in output_format) or
               (parsed_data['$aL'] != [] and '%($aL)' in output_format) or
-              (parsed_data['$am'] != [] and '%($am)' in output_format)):
+              (parsed_data['$am'] != [] and '%($am)' in output_format) or
+              (parsed_data['$tm'] != [] and '%($tm)' in output_format)):
             # print immediately and only this
             printable_data = {}
             for field in parsed_data:
                 if field == '$al' and parsed_data['$al']: printable_data[field] = parsed_data['$al'][0]
                 elif field == '$aL' and parsed_data['$aL']: printable_data[field] = parsed_data['$aL'][0]
                 elif field == '$am' and parsed_data['$am']: printable_data[field] = parsed_data['$am'][0]
+                elif field == '$tm' and parsed_data['$tm']: printable_data[field] = parsed_data['$tm'][0]
                 else: printable_data[field] = ''
             ppoutput = output_format % printable_data
             parsed_data['$al'] = []
             parsed_data['$aL'] = []
             parsed_data['$am'] = []
+            parsed_data['$tm'] = []
         if ppoutput != empty_row:
             output_file_obj.write(ppoutput)
 
