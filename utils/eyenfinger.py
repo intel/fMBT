@@ -288,14 +288,16 @@ def _exitHandler():
 atexit.register(_exitHandler)
 
 def _runcmd(cmd):
+    global _g_last_runcmd_error
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output = p.stdout.read()
     exit_status = p.wait()
+    _g_last_runcmd_error = p.stderr.read()
     if p.wait() != 0:
         _log("runcmd: " + cmd)
         _log("exit status: " + str(exit_status))
         _log("stdout: " + output)
-        _log("stderr: " + p.stderr.read())
+        _log("stderr: " + _g_last_runcmd_error)
     else:
         p.stderr.read()
     return exit_status, output
@@ -465,7 +467,7 @@ def imageSize(imageFilename):
         return None, None
     return struct_bbox.right, struct_bbox.bottom
 
-def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=None, ocrArea=(0, 0, 1.0, 1.0), ocrPageSegModes=(3,)):
+def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=None, ocrArea=(0, 0, 1.0, 1.0), ocrPageSegModes=(3,), lang="eng"):
     """
     DEPRECATED - use fmbtx11.Screen.refreshScreenshot instead.
 
@@ -498,6 +500,10 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
 
         ocrPageSegModes
                      tuple of integers, see tesseract -pagesegmodes
+
+        lang         Tesseract language setting, the default is "eng".
+                     Refer to LANGUAGES in Tesseract documentation or
+                     man page.
 
     Returns list of words detected by OCR from the read object.
     """
@@ -566,17 +572,20 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
                           preprocess[resize_m.end():])
     _g_words = {}
     for psm in ocrPageSegModes:
-        cmd = "convert %s %s %s %s && tesseract %s %s -l eng -psm %s hocr" % (
+        cmd = "convert %s %s %s %s && tesseract %s %s -l %s -psm %s hocr" % (
                 _g_origImage, croparea, preprocess, _g_readImage,
-                _g_readImage, SCREENSHOT_FILENAME, psm)
-        _, _g_hocr = _runcmd(cmd)
+                _g_readImage, SCREENSHOT_FILENAME, lang, psm)
+        exit_status, _g_hocr = _runcmd(cmd)
+
+        if exit_status != 0:
+            raise NoOCRResults("Tesseract returned non-zero exit code.\n%s" % (_g_last_runcmd_error,))
 
         hocr_filename = SCREENSHOT_FILENAME + ".html" # Tesseract 3.02
 
         if not os.access(hocr_filename, os.R_OK):
             hocr_filename = SCREENSHOT_FILENAME + ".hocr" # Tesseract 3.03
             if not os.access(hocr_filename, os.R_OK):
-                raise NoOCRResults("HOCR output missing. Tesseract OCR 3.02 or greater required.")
+                raise NoOCRResults("HOCR output missing. Tesseract OCR 3.02 or greater required.\n")
 
         # store every word and its coordinates
         _g_words.update(_hocr2words(file(hocr_filename).read()))

@@ -559,6 +559,11 @@ class _EyenfingerOcrEngine(OcrEngine):
               0.0, 1.0, 1.0), that is, search everywhere in the
               screenshot.
 
+      lang (string, optional):
+              pass given language option to Tesseract. See supported
+              LANGUAGES (-l) in Tesseract documentation. The default
+              is "eng" (English).
+
       pagesegmodes (list of integers, optional):
               try all integers as tesseract -pagesegmode
               arguments. The default is [3], another good option could
@@ -571,7 +576,7 @@ class _EyenfingerOcrEngine(OcrEngine):
 
     """
     class _OcrResults(object):
-        __slots__ = ("filename", "screenSize", "pagesegmodes", "preprocess", "area", "words")
+        __slots__ = ("filename", "screenSize", "pagesegmodes", "preprocess", "area", "words", "lang")
         def __init__(self, filename, screenSize):
             self.filename = filename
             self.screenSize = screenSize
@@ -579,9 +584,11 @@ class _EyenfingerOcrEngine(OcrEngine):
             self.preprocess = None
             self.area = None
             self.words = None
+            self.lang = None
 
     def __init__(self, *args, **engineDefaults):
         engineDefaults["area"] = engineDefaults.get("area", (0.0, 0.0, 1.0, 1.0))
+        engineDefaults["lang"] = engineDefaults.get("lang", "eng")
         engineDefaults["match"] = engineDefaults.get("match", 1.0)
         engineDefaults["pagesegmodes"] = engineDefaults.get("pagesegmodes", _OCRPAGESEGMODES)
         engineDefaults["preprocess"] = engineDefaults.get("preprocess", _OCRPREPROCESS)
@@ -597,9 +604,9 @@ class _EyenfingerOcrEngine(OcrEngine):
         if ssId in self._ss:
             del self._ss[ssId]
 
-    def _findText(self, screenshot, text, match=None, preprocess=None, area=None, pagesegmodes=None):
+    def _findText(self, screenshot, text, match=None, preprocess=None, area=None, pagesegmodes=None, lang=None):
         ssId = id(screenshot)
-        self._assumeOcrResults(screenshot, preprocess, area, pagesegmodes)
+        self._assumeOcrResults(screenshot, preprocess, area, pagesegmodes, lang)
 
         for ppfilter in self._ss[ssId].words.keys():
             try:
@@ -619,10 +626,9 @@ class _EyenfingerOcrEngine(OcrEngine):
                   for score, matching_text, bbox in score_text_bbox_list]
         return retval
 
-    def _dumpOcr(self, screenshot, match=None, preprocess=None, area=None, pagesegmodes=None):
+    def _dumpOcr(self, screenshot, match=None, preprocess=None, area=None, pagesegmodes=None, lang=None):
         ssId = id(screenshot)
-        if self._ss[ssId].words == None:
-            self._assumeOcrResults(screenshot, preprocess, area, pagesegmodes)
+        self._assumeOcrResults(screenshot, preprocess, area, pagesegmodes, lang)
         w = []
         for ppfilter in self._ss[ssId].preprocess:
             for word in self._ss[ssId].words[ppfilter]:
@@ -631,18 +637,26 @@ class _EyenfingerOcrEngine(OcrEngine):
                     w.append((word, (x1, y1, x2, y2)))
         return sorted(set(w), key=lambda i:(i[1][1]/8, i[1][0]))
 
-    def _assumeOcrResults(self, screenshot, preprocess, area, pagesegmodes):
+    def _assumeOcrResults(self, screenshot, preprocess, area, pagesegmodes, lang):
         ssId = id(screenshot)
         if not type(preprocess) in (list, tuple):
             preprocess = [preprocess]
 
-        if self._ss[ssId].words == None or self._ss[ssId].preprocess != preprocess or self._ss[ssId].area != area:
+        if (self._ss[ssId].words == None
+            or self._ss[ssId].preprocess != preprocess
+            or self._ss[ssId].area != area
+            or self._ss[ssId].lang != lang):
             self._ss[ssId].words = {}
             self._ss[ssId].preprocess = preprocess
             self._ss[ssId].area = area
+            self._ss[ssId].lang = lang
             for ppfilter in preprocess:
                 pp = ppfilter % { "zoom": "-resize %sx" % (self._ss[ssId].screenSize[0] * 2) }
-                eyenfinger.iRead(source=self._ss[ssId].filename, ocr=True, preprocess=pp, ocrArea=area, ocrPageSegModes=pagesegmodes)
+                try:
+                    eyenfinger.iRead(source=self._ss[ssId].filename, ocr=True, preprocess=pp, ocrArea=area, ocrPageSegModes=pagesegmodes, lang=lang)
+                except Exception:
+                    self._ss[ssId].words = None
+                    raise
                 self._ss[ssId].words[ppfilter] = eyenfinger._g_words
 
 def _defaultOcrEngine():
