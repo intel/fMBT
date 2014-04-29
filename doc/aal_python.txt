@@ -496,7 +496,7 @@ action_name - string that contains the name of an action.
         }
 
 
-input_name - string that contains the name of an input
+input_name - constant that contains the name of an input
 
         Available: in guard(), body() and adapter() blocks of inputs.
 
@@ -515,7 +515,7 @@ input_name - string that contains the name of an input
         action name: i:play music
 
 
-output_name - string that contains the name of an output
+output_name - constant that contains the name of an output
 
         Available: in guard(), body() and adapter() blocks of outputs.
 
@@ -529,7 +529,19 @@ tag_name - string that contains the name of a tag.
 
 action(name) - function that returns corresponding action (integer)
 
-        Available: TODO
+        Available: guard(), body() and adapter() blocks of inputs,
+        outputs and actions.
+
+        Adapter blocks that need to report execution of some other
+        action (input or output), do it with:
+
+        return action("i:play music")
+        return action("o:playback stopped")
+
+        or with corresponding shorthands
+
+        return input("play music")
+        return output("o:playback stopped")
 
         Example: TODO
 
@@ -590,6 +602,13 @@ guard_list - list of block names why the guard is executed
             }
         }
 
+
+input(name) - see action(name)
+
+
 log(message) - function that writes messages to remote_pyaal's log
 
         Available: everywhere.
+
+
+output(name) - see action(name)

@@ -30,6 +30,8 @@ class AALModel:
             self._has_serial = False
         self._variables = model_globals
         self._variables['action'] = lambda name: self._all_names.index(name) + 1
+        self._variables['output'] = lambda name: self._all_names.index("o:" + name) + 1
+        self._variables['input'] = lambda name: self._all_names.index("i:" + name) + 1
         self._variables['name'] = lambda name: self._all_names.index(name)
         self._variables['variable'] = lambda varname: self._variables[varname]
         self._variables['assign'] = lambda varname, v: self._variables.__setitem__(varname, v)
