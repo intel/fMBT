@@ -19,6 +19,8 @@
 import client
 import server
 import messages
+import socket
+import subprocess
 import urlparse as _urlparse
 
 from messages import Exec, Exec_rv
@@ -47,10 +49,11 @@ class InProgress(AsyncStatus):
 # Misc helpers for client and server
 def _close(*args):
     for a in args:
-        try:
-            a.close()
-        except (socket.error, IOError):
-            pass
+        if a:
+            try:
+                a.close()
+            except (socket.error, IOError):
+                pass
 
 def connection(hostspec, password=None):
     if not "://" in hostspec:
@@ -83,5 +86,11 @@ def connection(hostspec, password=None):
                 password = userinfo
 
         return client.Connection(host, int(port), password=password)
+    elif scheme == "shell":
+        p = subprocess.Popen(hostspec[len("shell://"):],
+                             shell=True,
+                             stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE)
+        return client.Connection(p.stdout, p.stdin)
     else:
         raise ValueError('invalid URI "%s"' % (hostspec,))

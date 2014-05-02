@@ -157,7 +157,10 @@ if __name__ == "__main__":
             try:
                 opt_bind_port = int(arg)
             except ValueError:
-                error('invalid port "%s", integer expected.' % (arg,))
+                if arg == "stdin":
+                    opt_bind_port = "stdin"
+                else:
+                    error('invalid port "%s", integer or "stdin" expected.' % (arg,))
         elif opt in ["--password"]:
             password_type, password = _parse_password(arg)
             opt_conn_opts["password." + password_type] = password

@@ -30,10 +30,31 @@ pythonshare\-client \- Code mobility client for Python
 .SH DESCRIPTION
 \fBpythonshare\-client\fR offers commandline interface for executing
 Python code and evaluating Python expressions in \fBpythonshare\-server\fRs.
+
 .SH OPTIONS
 .TP
 \fB\-h\fR, \fB\-\-help\fR
 print help, then exit.
+
+.TP
+\fB\-C\fR, \fB\-\-connect\fR=\fIHOSTSPEC\fR
+connect to \fBpythonshare-server\fR. \fIHOSTSPEC\fR syntax is
+.nf
+.B socket://[password@]host[:port]
+.fi
+.nf
+.B shell://command-where-stdin-stdout-communicates-with-server
+.fi
+
+.TP
+\fB-c\fR \fICODE\fR
+execute Python \fICODE\fR on the server.
+
+.TP
+\fB-e\fR \fIEXPRESSION\fR
+evaluate Python \fIEXPRESSION\fR on the server. Prints the result to
+standard output.
+
 .SH AUTHOR
 Written by Antti Kervinen.
 .SH "REPORTING BUGS"

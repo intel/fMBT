@@ -8,7 +8,7 @@ pythonshare\-server \- Code mobility server for Python
 .OP \-p PORT
 .OP \-\-password ALG:HASH
 .OP \-\-password-file FILE
-.OP \-\-interface interface
+.OP \-\-interface ADDRESS
 .OP \-n NS
 .OP \-E HOSTSPEC
 .OP \-I HOSTSPEC
@@ -26,6 +26,17 @@ been imported or exported (\fB\-E\fR, \fB\-I\fR) to this process.
 .TP
 \fB\-h\fR, \fB\-\-help\fR
 print help, then exit.
+.TP
+\fB\-p\fR, \fB\-\-port\fR=\fIPORT\fR
+listen to connections to \fIPORT\fR (the default port is 8089).
+If \fIPORT\fR is "stdin", pythonshare-server communicates with
+client through standard input and output.
+.TP
+\fB\-\-interface\fR=\fIADDRESS\fR
+listen to connections to \fIPORT\fR at \fIADDRESS\fR. If \fIADDRESS\fR
+is "all", \fBpythonshare-server\fR listens to connections to
+\fIPORT\fR on any network address. The default is 127.0.0.1, that is,
+only local connections to \fIPORT\fR are accepted.
 .SH EXAMPLES
 \fBpythonshare-server \-\-password=md5:06c219e5bc8378f3a8a3f83b4b7e4649 \\
         \-n mylocal \\
@@ -35,11 +46,12 @@ print help, then exit.
 .fi
 launches the server in debug mode: does not fork a daemon, logs to
 standard output. Clients connecting to this server must authenticate
-with password "mysecret".  The server has one namespace:
-"mylocal". Code block "from mylibrary import *" will be executed in
-this namespace before executing any client code in the namespace can
-be run. The server process listens to only the local network
-interface, because \fB--interface all\fR has not been given.
+with password "mysecret" (see \fBecho -n mysecret | md5sum\fR).  The
+server has one namespace: "mylocal". Code block "from mylibrary import
+*" will be executed in this namespace before executing any client code
+in the namespace can be run. The server process listens to only the
+local network interface, because \fB--interface all\fR has not been
+given.
 
 \fBpythonshare-client \-\-password\-file=mypwd.txt \-C localhost \\
         \-n mylocal \\

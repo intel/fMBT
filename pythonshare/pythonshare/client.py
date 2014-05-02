@@ -27,14 +27,25 @@ import pythonshare
 from pythonshare.messages import Exec, Exec_rv, Async_rv, Register_ns, Request_ns, Ns_rv
 
 class Connection(object):
-    def __init__(self, host, port, password=None):
+    def __init__(self, host_or_from_server, port_or_to_server, password=None):
+        """Connect to pythonshare server
+
+        Server is listening to connections at host:port, or it can be
+        communicated via file-like objects to_server:from_server.
         """
-        Connect to Python share server running on host:port.
-        """
-        self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._s.connect((host, port))
-        self._from_server = self._s.makefile("r")
-        self._to_server = self._s.makefile("w")
+        if isinstance(host_or_from_server, str) and isinstance(port_or_to_server, int):
+            host = host_or_from_server
+            port = port_or_to_server
+            self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self._s.connect((host, port))
+            self._from_server = self._s.makefile("r")
+            self._to_server = self._s.makefile("w")
+        elif isinstance(host_or_from_server, file) and isinstance(port_or_to_server, file):
+            self._s = None
+            self._to_server = port_or_to_server
+            self._from_server = host_or_from_server
+        else:
+            raise ValueError("invalid host:port (str:int) or to_server:from_server (file:file)")
 
         if password:
             # authenticate to server
@@ -158,4 +169,8 @@ class Connection(object):
         pythonshare._close(self._to_server, self._from_server, self._s)
 
     def getpeername(self):
-        return self._s.getpeername()
+        if self._s:
+            return self._s.getpeername()
+        else:
+            return (getattr(self._to_server, "name", None),
+                    getattr(self._from_server, "name", None))

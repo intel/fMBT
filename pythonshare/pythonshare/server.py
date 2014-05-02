@@ -336,20 +336,24 @@ def start_server(host, port,
     except socket.error:
         daemon_log("listen: %s:%s" % (host, port))
 
-    # Start listening to the port
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind((host, port))
-    s.listen(4)
-    while 1:
-        conn, _ = s.accept()
-        thread.start_new_thread(_serve_connection, (conn, conn_opts))
+    if isinstance(port, int):
+        # Start listening to the port
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind((host, port))
+        s.listen(4)
+        while 1:
+            conn, _ = s.accept()
+            thread.start_new_thread(_serve_connection, (conn, conn_opts))
+    elif port == "stdin":
+        conn = client.Connection(sys.stdin, sys.stdout)
+        _serve_connection(conn, conn_opts)
 
 def start_daemon(host="localhost", port=8089, debug=False,
                  log_fd=None, ns_init_import_export=[], conn_opts={}):
     global opt_log_fd, opt_debug
     opt_log_fd = log_fd
     opt_debug = debug
-    if opt_debug == False and not on_windows:
+    if opt_debug == False and not on_windows and isinstance(port, int):
         # The usual fork magic, cleaning up all connections to the parent process
         if os.fork() > 0:
             return
