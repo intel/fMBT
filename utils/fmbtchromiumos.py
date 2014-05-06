@@ -77,7 +77,7 @@ class ChromiumOSConnection(fmbtgti.GUITestConnection):
             inspect.getfile(inspect.currentframe())))
 
         self.sendFilesInTar(myDir,
-                            ("fmbtx11_agent.py",
+                            ("fmbtx11_conn.py",
                              "fmbtuinput.py"),
                             "/tmp/fmbtchromiumos")
 
@@ -102,8 +102,8 @@ class ChromiumOSConnection(fmbtgti.GUITestConnection):
             " sudo DISPLAY=:0 XAUTHORITY=/home/chronos/.Xauthority" +
             " python /tmp/fmbtchromiumos/pythonshare-server -p stdin",)
         self._agent_ns = "fmbtchromiumos-agent"
-        self.agentExec("import fmbtx11_agent")
-        self.agentExec("x = fmbtx11_agent.Display()")
+        self.agentExec("import fmbtx11_conn")
+        self.agentExec("x = fmbtx11_conn.Display()")
 
     def recvScreenshot(self, filename):
         img = self.agentEval("x.recvScreenshot()")

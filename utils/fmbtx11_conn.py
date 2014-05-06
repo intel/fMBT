@@ -60,7 +60,6 @@ libX11.XGetGeometry.argtypes = [
     ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, # width, height, borderw
     ctypes.c_void_p] # depth
 
-
 libX11.XGetImage.argtypes = [
     ctypes.c_void_p, ctypes.c_uint, # display, drawable
     ctypes.c_int, ctypes.c_int, # x, y
