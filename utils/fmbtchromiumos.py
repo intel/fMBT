@@ -130,69 +130,53 @@ class ChromiumOSConnection(fmbtgti.GUITestConnection):
         return True
 
     def sendType(self, text):
-        command = 'sendType(%s)' % (repr(text),)
-        self._agent.eval_in(self._agent_ns, command)
-        return True
+        return self.agentEval('x.sendType(%s)' % (repr(text),))
 
     def sendPress(self, keyCode, modifiers=None):
-        if modifiers == None:
-            command = 'sendKey("%s",[])' % (keyCode,)
-        else:
-            command = 'sendKey("%s",%s)' % (keyCode, repr(modifiers))
-        self._agent.eval_in(self._agent_ns, command)
-        return True
+        if modifiers != None:
+            raise NotImplementedError
+        return self.agentEval("x.sendPress(%s)" % (repr(keyCode),))
 
     def sendKeyDown(self, keyCode, modifiers=None):
-        if modifiers == None:
-            command = 'sendKeyDown("%s",[])' % (keyCode,)
-        else:
-            command = 'sendKeyDown("%s",%s)' % (keyCode, repr(modifiers))
-        self._agent.eval_in(self._agent_ns, command)
-        return True
+        if modifiers != None:
+            raise NotImplementedError
+        return self.agentEval("x.sendKeyDown(%s)" % (repr(keyCode),))
 
     def sendKeyUp(self, keyCode, modifiers=None):
-        if modifiers == None:
-            command = 'sendKeyUp("%s",[])' % (keyCode,)
-        else:
-            command = 'sendKeyUp("%s",%s)' % (keyCode, repr(modifiers))
-        self._agent.eval_in(self._agent_ns, command)
-        return True
+        if modifiers != None:
+            raise NotImplementedError
+        return self.agentEval("x.sendKeyUp(%s)" % (repr(keyCode),))
 
     def sendTap(self, x, y, button=None):
-        x, y = self._screenToDisplay(x, y)
         if button == None:
-            command = "sendTap(%s, %s)" % (x, y)
+            # TODO: synthesize touch display event, if available
+            command = "x.sendTap(%s, %s)" % (x, y)
         else:
-            command = "sendClick(%s, %s, %s)" % (x, y, button)
-        self._agent.eval_in(self._agent_ns, command)
-        return True
+            command = "x.sendTap(%s, %s, %s)" % (x, y, button)
+        return self.agentEval(command)
 
     def sendTouchDown(self, x, y, button=None):
-        x, y = self._screenToDisplay(x, y)
         if button == None:
-            command = "sendTouchDown(%s, %s)" % (x, y)
+            # TODO: synthesize touch display event, if available
+            command = "x.sendTouchDown(%s, %s)" % (x, y)
         else:
-            command = "sendMouseDown(%s, %s, %s)" % (x, y, button)
-        self._agent.eval_in(self._agent_ns, command)
-        return True
+            command = "x.sendTouchDown(%s, %s, %s)" % (x, y, button)
+        return self.agentEval(command)
 
     def sendTouchMove(self, x, y, button=None):
-        x, y = self._screenToDisplay(x, y)
         if button == None:
-            command = "sendTouchMove(%s, %s)" % (x, y)
+            # TODO: synthesize touch display event, if available
+            command = "x.sendTouchMove(%s, %s)" % (x, y)
         else:
-            command = "sendMouseMove(%s, %s, %s)" % (x, y, button)
-        self._agent.eval_in(self._agent_ns, command)
-        return True
+            command = "x.sendTouchMove(%s, %s)" % (x, y)
+        return self.agentEval(command)
 
     def sendTouchUp(self, x, y, button=None):
-        x, y = self._screenToDisplay(x, y)
         if button == None:
-            command = "sendTouchUp(%s, %s)" % (x, y)
+            # TODO: synthesize touch display event, if available
+            command = "x.sendTouchUp(%s, %s)" % (x, y)
         else:
-            command = "sendMouseUp(%s, %s, %s)" % (x, y, button)
-        self._agent.eval_in(self._agent_ns, command)
-        return True
-
+            command = "x.sendMouseUp(%s, %s, %s)" % (x, y, button)
+        return self.agentEval(command)
 
 class FMBTChromiumOsError(Exception): pass
