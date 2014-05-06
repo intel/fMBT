@@ -24,6 +24,7 @@ import os
 import pythonshare
 import shlex
 import subprocess
+import zlib
 
 def _run(command, sendStdin=None):
     p = subprocess.Popen(command,
@@ -96,8 +97,10 @@ class ChromiumOSConnection(fmbtgti.GUITestConnection):
                             "/tmp/fmbtchromiumos")
 
         self._agent = pythonshare.connection(
-            "shell://" + self._loginCommand +
-            " 'DISPLAY=:0 python /tmp/fmbtchromiumos/pythonshare-server -p stdin'",)
+            "shell://" +
+            self._loginCommand +
+            " sudo DISPLAY=:0 XAUTHORITY=/home/chronos/.Xauthority" +
+            " python /tmp/fmbtchromiumos/pythonshare-server -p stdin",)
         self._agent_ns = "fmbtchromiumos-agent"
         self.agentExec("import fmbtx11_agent")
         self.agentExec("x = fmbtx11_agent.Display()")
@@ -111,16 +114,16 @@ class ChromiumOSConnection(fmbtgti.GUITestConnection):
                 width, height, depth, bpp = [int(n) for n in header.split()[1:]]
                 data = zlib.decompress(zdata)
             except Exception, e:
-                raise TizenConnectionError("Corrupted screenshot data: %s" % (e,))
+                raise FMBTChromiumOsError("Corrupted screenshot data: %s" % (e,))
 
             if len(data) != width * height * 4:
-                raise FMBTTizenError("Image data size mismatch.")
+                raise FMBTChromiumOsError("Image data size mismatch.")
 
             fmbtgti.eye4graphics.bgrx2rgb(data, width, height)
             # TODO: use libimagemagick directly to save data to png?
             ppm_header = "P6\n%d %d\n%d\n" % (width, height, 255)
             f = file(filename + ".ppm", "w").write(ppm_header + data[:width*height*3])
-            _run(["convert", filename + ".ppm", filename], expectedExitStatus=0)
+            _run(["convert", filename + ".ppm", filename])
             os.remove("%s.ppm" % (filename,))
         else:
             file(filename, "w").write(img)
@@ -192,5 +195,4 @@ class ChromiumOSConnection(fmbtgti.GUITestConnection):
         return True
 
 
-class FMBTX11Error(Exception): pass
-class X11ConnectionError(Exception): pass
+class FMBTChromiumOsError(Exception): pass
