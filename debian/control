@@ -64,6 +64,12 @@ Description: fMBT adapter for Android GUI testing through USB
  Provides fmbtandroid.py, a Python library for Android GUI testing.
  The library needs Android Debug Bridge (adb).
 
+Package: fmbt-adapter-chromiumos
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, fmbt-adapter-eyenfinger (= ${binary:Version}), fmbt-python (= ${binary:Version}), fmbt-pythonshare (= ${binary:Version}), fmbt-adapter-x11 (= ${binary:Version})
+Description: fMBT adapter for Chromium OS GUI testing
+ Provides fmbtchromiumos.py, a Python library for Chromium OS GUI testing.
+
 Package: fmbt-adapter-tizen
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, fmbt-adapter-eyenfinger (= ${binary:Version}), fmbt-python (= ${binary:Version})

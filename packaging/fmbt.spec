@@ -121,6 +121,16 @@ Requires: %{name}-python
 Provides fmbtandroid.py, a Python library for Android GUI testing.
 The library needs Android Debug Bridge (adb).
 
+%package adapter-chromiumos
+Summary: fMBT adapter for Chromium OS GUI testing
+Requires: %{name}-adapter-eyenfinger
+Requires: %{name}-adapter-x11
+Requires: %{name}-python
+Requires: %{name}-pythonshare
+
+%description adapter-chromiumos
+Provides fmbtchromiumos.py, a Python library for Chromium OS GUI testing.
+
 %package adapter-tizen
 Summary: fMBT adapter for Tizen GUI testing through USB
 Requires: %{name}-adapter-eyenfinger
@@ -132,6 +142,8 @@ The library needs Smart Development Bridge (sdb) from Tizen SDK.
 
 %package adapter-windows
 Summary: fMBT adapter for Windows GUI testing
+Requires: %{name}-adapter-eyenfinger
+Requires: %{name}-python
 Requires: %{name}-pythonshare
 
 %description adapter-windows
@@ -183,6 +195,7 @@ various fMBT examples
 %package all
 Summary: Meta package for installing all fMBT packages
 Requires: %{name}-adapter-android
+Requires: %{name}-adapter-chromiumos
 Requires: %{name}-adapter-tizen
 Requires: %{name}-adapter-vnc
 Requires: %{name}-adapter-x11
@@ -286,6 +299,10 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %defattr(-, root, root, -)
 %{python_sitelib}/fmbtandroid.py*
 
+%files adapter-chromiumos
+%defattr(-, root, root, -)
+%{python_sitelib}/fmbtchromiumos.py*
+
 %files adapter-tizen
 %defattr(-, root, root, -)
 %{python_sitelib}/fmbttizen.py*
@@ -303,6 +320,7 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %files adapter-x11
 %defattr(-, root, root, -)
 %{python_sitelib}/fmbtx11.py*
+%{python_sitelib}/fmbtx11_conn.py*
 
 %files pythonshare
 %defattr(-, root, root, -)
