@@ -53,11 +53,19 @@ class X11Connection(fmbtgti.GUITestConnection):
         self.libXtst = ctypes.CDLL("libXtst.so.6")
 
         self.libX11.XOpenDisplay.restype        = ctypes.c_void_p
+
+        self.libX11.XDefaultScreen.argtypes     = [ctypes.c_void_p]
         self.libX11.XDefaultScreen.restype      = ctypes.c_int
+
+        self.libX11.XGetKeyboardMapping.argtypes = [
+            ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_void_p]
         if ctypes.sizeof(ctypes.c_void_p) == 4: # 32-bit
             self.libX11.XGetKeyboardMapping.restype = ctypes.POINTER(ctypes.c_uint32)
         else: # 64-bit
             self.libX11.XGetKeyboardMapping.restype = ctypes.POINTER(ctypes.c_uint64)
+        self.libX11.XKeysymToKeycode.argtypes = [
+            ctypes.c_void_p, ctypes.c_int]
+        self.libX11.XCloseDisplay.argtypes = [ctypes.c_void_p]
 
         self._X_True         = ctypes.c_int(1)
         self._X_False        = ctypes.c_int(0)
