@@ -56,6 +56,7 @@ import traceback
 
 import fmbtgti
 import fmbtandroid
+import fmbtchromiumos
 import fmbttizen
 import fmbtwindows
 import fmbtuinput
@@ -79,9 +80,9 @@ def _setGlobalLog(logFunc):
     #global log
     #log = logFunc
 
-_g_importFmbtRE = re.compile(r"\s*import fmbt(android|tizen|vnc|windows|x11)")
+_g_importFmbtRE = re.compile(r"\s*import fmbt(android|chromiumos|tizen|vnc|windows|x11)")
 _g_gtiInstantiateRE = re.compile(
-    r"(([a-zA-Z_][a-zA-Z_0-9]*)\s*=\s*fmbt(android|tizen|vnc|windows|x11)"
+    r"(([a-zA-Z_][a-zA-Z_0-9]*)\s*=\s*fmbt(android|chromiumos|tizen|vnc|windows|x11)"
     r"\.(Device|Screen)\s*\(.*\))")
 _g_scripterConnectRE = re.compile(
     r"[ \t]*#\s*scripter-connect:\s*(.*)\n")
@@ -769,6 +770,7 @@ class MainWindow(QtGui.QMainWindow):
         fileMenu = QtGui.QMenu("&File", self)
         self.menuBar().addMenu(fileMenu)
         fileMenu.addAction("New An&droid", self.newAndroid)
+        fileMenu.addAction("New &Chromium OS", self.newChromiumOS)
         fileMenu.addAction("New &Tizen", self.newTizen)
         fileMenu.addAction("New &VNC", self.newVNC)
         fileMenu.addAction("New &Windows", self.newWindows)
@@ -1125,6 +1127,10 @@ class MainWindow(QtGui.QMainWindow):
                 serialNumber = '"%s"' % (choice.split('\t')[0].strip(),)
         self._newScript("import fmbtandroid\n"
                         "sut = fmbtandroid.Device(%s)" % (serialNumber,))
+
+    def newChromiumOS(self):
+        self._newScript("import fmbtchromiumos\n"
+                        'sut = fmbtchromiumos.Device("ssh ... chronos@DEVICE-IP")')
 
     def newTizen(self):
         o = None
