@@ -27,11 +27,15 @@ import subprocess
 import zlib
 
 def _run(command, sendStdin=None):
-    p = subprocess.Popen(command,
-                         stdin=subprocess.PIPE,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE,
-                         close_fds=True)
+    try:
+        p = subprocess.Popen(command,
+                             stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE,
+                             close_fds=True)
+    except OSError, e:
+        raise FMBTChromiumOsError('Cannot execute (%s): %s' %
+                                  (e, command))
     if sendStdin:
         p.stdin.write(sendStdin)
     out, err = p.communicate()
@@ -96,13 +100,18 @@ class ChromiumOSConnection(fmbtgti.GUITestConnection):
                              "pythonshare/messages.py"),
                             "/tmp/fmbtchromiumos")
 
-        self._agent = pythonshare.connection(
-            "shell://" +
-            self._loginCommand +
-            " sudo DISPLAY=:0 XAUTHORITY=/home/chronos/.Xauthority" +
-            " python /tmp/fmbtchromiumos/pythonshare-server -p stdin",)
+        agentCmd = (self._loginCommand +
+                    " sudo DISPLAY=:0 XAUTHORITY=/home/chronos/.Xauthority" +
+                    " python /tmp/fmbtchromiumos/pythonshare-server -p stdin")
+
+        self._agent = pythonshare.connection("shell://" + agentCmd)
         self._agent_ns = "fmbtchromiumos-agent"
-        self.agentExec("import fmbtx11_conn")
+        try:
+            self.agentExec("import fmbtx11_conn")
+        except pythonshare.PythonShareError, e:
+            raise FMBTChromiumOsError(
+                "Cannot connect to pythonshare-server on device (%s): %s" %
+                (e, agentCmd))
         self.agentExec("x = fmbtx11_conn.Display()")
 
     def recvScreenshot(self, filename):
