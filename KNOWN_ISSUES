@@ -1,3 +1,14 @@
+* fmbtvnc / vncdotool has problems with some VNC servers.
+
+  VNC servers that work fine:
+  - x11vnc on Linux
+  - TightVNCServer on Windows
+  - built-in VNC server on Qemu
+
+  Problems reported with:
+  - RealVNC on Linux
+
+
 On Ubuntu 11.04 and Ubuntu 11.10 valgrind will complain about sse42 optimised version of strspn.
 
 ==30949== Conditional jump or move depends on uninitialised value(s)
