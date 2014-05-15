@@ -436,7 +436,7 @@ class FilePickerWidget(QtGui.QWidget):
 
         self.listModel.clear()
 
-        for fileName in os.listdir(self.folder):
+        for fileName in sorted(os.listdir(self.folder)):
             if self.filterExp.match(fileName):
                 absPath = os.path.join(self.folder, fileName)
                 icon = _thumbnail(absPath)
@@ -474,7 +474,6 @@ class FilePickerWidget(QtGui.QWidget):
             self.listModel.itemFromIndex(modelIndex).text()))
 
         if self.filterExp.match(fullName):
-            print('Selected %s' % fullName)
             self.filePicked.emit(fullName)
 
     def event(self, event):
@@ -492,8 +491,7 @@ class FilePickerWidget(QtGui.QWidget):
                 QtGui.QToolTip.showText(event.globalPos(), text)
             else:
                 QtGui.QToolTip.hideText()
-
-        return QtGui.QWidget().event(event)
+        return QtGui.QWidget.event(self, event)
 
 
 class SettingsDialog(QtGui.QDialog):
@@ -690,6 +688,8 @@ class MainWindow(QtGui.QMainWindow):
         self._filepicker = FilePickerWidget()
         self._filepicker.resize(640, 512)
         self._filepicker.setWindowTitle('fmbt-scripter filepicker (float)')
+        self._filepicker.filePicked.connect(
+            self.selectedBitmapFromFolder)
 
         self.status = QtGui.QLabel("", self)
         self.statusBar().setStyleSheet("""
@@ -931,7 +931,7 @@ class MainWindow(QtGui.QMainWindow):
         self.bitmapAutoSelect.setShortcut("Ctrl+B, Ctrl+A")
         bitmapMenu.addAction(
             "Select from &folder",
-            self.selectFromFolder, "Ctrl+B, Ctrl+F")
+            self.selectBitmapFromFolder, "Ctrl+B, Ctrl+F")
         bitmapMenu.addAction(
             "Se&lect from current screenshot",
             self.selectBitmap, "Ctrl+B, Ctrl+L")
@@ -1388,13 +1388,16 @@ class MainWindow(QtGui.QMainWindow):
         if ok and choice:
             self.renameBitmap(origFilename, choice)
 
-    def renameBitmap(self, origName, newName):
+    def renameBitmapStringAt(self, origName, newName):
         cursor = self.editor.textCursor()
         cursor.select(QtGui.QTextCursor.LineUnderCursor)
         l = cursor.selectedText()
         if '"%s"' % (origName,) in l:
             l = l.replace('"%s"' % (origName,), '"%s"' % (newName,))
             cursor.insertText(l)
+
+    def renameBitmap(self, origName, newName):
+        self.renameBitmapStringAt(origName, newName)
         origFilepath = self.bitmapFilepath(origName)
         if origFilepath:
             newFilepath = os.path.relpath(
@@ -1911,20 +1914,24 @@ class MainWindow(QtGui.QMainWindow):
                 self.screenshotButtonControl.setChecked(True)
         self.editor.setFocus()
 
-    @QtCore.Slot(str)
-    def selectFromFolder(self, folder=None):
+    def selectBitmapFromFolder(self, folder=None):
         """
-        Selects bitmap from the given folder or ~/Downloads if not given.
+        Selects bitmap from the given folder (the default is
+        previous folder or the current working directory).
         Launches a separate picker dialog with preview bitmaps.
         """
-
-        dlpath = os.path.join(os.path.expanduser('~'), 'Downloads')
-        if folder and os.path.isdir(folder):
-            self._filepicker.setFolder(folder)
-        elif dlpath and os.path.isdir(dlpath):
-            self._filepicker.setFolder(dlpath)
-
+        if folder == None:
+            folder = self._filepicker.folder
+        if folder == None:
+            folder = os.getcwd()
+        self._filepicker.setFolder(folder)
         self._filepicker.show()
+
+    def selectedBitmapFromFolder(self, filename):
+        self._filepicker.hide()
+        origFilename = self.bitmapStringAt()
+        if origFilename:
+            self.renameBitmapStringAt(origFilename, os.path.basename(filename))
 
     def selectBitmapStop(self):
         if self._selectingBitmap != None:
