@@ -20,6 +20,9 @@
 # servers, sending code for remote execution and exporting/importing
 # namespaces.
 
+"""pythonshare.client - interface for executing code on pythonshare servers
+"""
+
 import socket
 import cPickle
 
@@ -32,6 +35,20 @@ class Connection(object):
 
         Server is listening to connections at host:port, or it can be
         communicated via file-like objects to_server:from_server.
+
+        Execute code and evaluate an expression on a namespace on a
+        remote server with
+
+        connection.exec_in(ns, code) and
+        connection.eval_in(ns, expression).
+
+        Results of executed code are kept in the namespace after
+        connection is closed.
+
+        Register code that is executed in a namespace after closing
+        the connection:
+
+        connection.exec_in(ns, 'pythonshare_ns.exec_on_disconnect("code")')
         """
         if isinstance(host_or_from_server, str) and isinstance(port_or_to_server, int):
             host = host_or_from_server

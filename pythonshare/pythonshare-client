@@ -49,8 +49,8 @@ Options:
 
   -f, --format=format
           Evaluation return values will be converted to string with
-          given formatter. Valid options are str, repr, pickle and
-          raw.
+          given formatter. Valid options are str, repr, pickle, print
+          and raw.
 
   --password=password
           Authenticate to pythonshare server with password. The password
@@ -99,6 +99,7 @@ formatter_str    = lambda o: str(o)
 formatter_repr   = lambda o: repr(o)
 formatter_raw    = lambda o: o
 formatter_pickle = lambda o: cPickle.dumps(o)
+formatter_print  = lambda o: str(o) + "\n"
 
 if __name__ == "__main__":
     opts, remainder = getopt.gnu_getopt(

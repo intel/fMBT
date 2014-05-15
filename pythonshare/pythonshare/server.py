@@ -72,6 +72,42 @@ class Pythonshare_ns(object):
     """
     def __init__(self, ns):
         self.ns = ns
+        self._on_disconnect = []
+        self._on_delete = []
+
+    def on_disconnect(self):
+        """
+        Return codes that will be executed when a client has disconnected.
+        """
+        return self._on_disconnect
+
+    def exec_on_disconnect(self, code, any_connection=False):
+        """
+        Add code that will be executed when client has disconnected.
+        """
+        if not any_connection:
+            conn_id = _g_executing_pythonshare_conn_id
+        else:
+            conn_id = None
+        self._on_disconnect.append((conn_id, code))
+
+    def set_on_disconnect(self, list_of_code):
+        """
+        Replace all "on disconnect" codes with new list of codes.
+        """
+        self._on_disconnect = list_of_code
+
+    def call_on_disconnect(self, conn_id):
+        for setter_conn_id, code in self._on_disconnect:
+            if not setter_conn_id or setter_conn_id == conn_id:
+                exec_msg = messages.Exec(self.ns, code, None)
+                if opt_debug:
+                    daemon_log("on disconnect %s: %s" % (conn_id, exec_msg,))
+                rv = _local_execute(exec_msg)
+                if opt_debug:
+                    daemon_log("on disconnect rv: %s" % (rv,))
+                if setter_conn_id == conn_id:
+                    self._on_disconnect.remove((conn_id, code))
 
     def read_rv(self, async_rv):
         """
@@ -109,6 +145,10 @@ class Pythonshare_rns(object):
         pythonshare._close(self.conn, self.to_remote, self.from_remote)
 
 _g_local_namespaces = {}
+
+# client-id -> set of namespaces
+_g_namespace_users = {}
+_g_executing_pythonshare_conn_id = None
 
 # _g_remote_namespaces: namespace -> Connection to origin
 _g_remote_namespaces = {}
@@ -155,10 +195,17 @@ def _register_exported_namespace(ns, conn):
         _g_namespace_exports[ns] = []
     _g_namespace_exports[ns].append(conn)
 
-def _local_execute(exec_msg):
+def _local_execute(exec_msg, conn_id=None):
+    global _g_executing_pythonshare_conn_id
     ns = exec_msg.namespace
+    if conn_id:
+        if not conn_id in _g_namespace_users:
+            _g_namespace_users[conn_id] = set([ns])
+        else:
+            _g_namespace_users[conn_id].add(ns)
     code_exc, expr_exc, expr_rv = None, None, None
     if not exec_msg.lock or _g_local_namespace_locks[ns].acquire():
+        _g_executing_pythonshare_conn_id = conn_id
         try:
             if exec_msg.code not in [None, ""]:
                 try:
@@ -171,6 +218,7 @@ def _local_execute(exec_msg):
                 except Exception, e:
                     expr_exc = exception2string(sys.exc_info())
         finally:
+            _g_executing_pythonshare_conn_id = None
             if exec_msg.lock:
                 _g_local_namespace_locks[ns].release()
     else:
@@ -193,6 +241,12 @@ def _remote_execute(ns, exec_msg):
 def _remote_close(ns):
     del _g_remote_namespaces[ns]
 
+def _connection_lost(conn_id, *closables):
+    if closables:
+        pythonshare._close(*closables)
+    for ns in _g_namespace_users[conn_id]:
+        _g_local_namespaces[ns]["pythonshare_ns"].call_on_disconnect(conn_id)
+
 def _serve_connection(conn, conn_opts):
     global _g_async_rv_counter
     if isinstance(conn, client.Connection):
@@ -203,7 +257,7 @@ def _serve_connection(conn, conn_opts):
         from_client = conn.makefile("r")
     if opt_debug:
         daemon_log("connected %s:%s" % conn.getpeername())
-
+    conn_id = "%s-%s" % (timestamp(), id(conn))
     auth_ok = False
     passwords = [k for k in conn_opts.keys() if k.startswith("password.")]
     if passwords:
@@ -283,7 +337,7 @@ def _serve_connection(conn, conn_opts):
                     thread.start_new_thread(_local_async_execute, (exec_rv, obj))
                 else:
                     # synchronous execution, return true return value
-                    exec_rv = _local_execute(obj)
+                    exec_rv = _local_execute(obj, conn_id)
             if opt_debug:
                 daemon_log("%s:%s <= %s" % (conn.getpeername() + (exec_rv,)))
             try:
@@ -299,7 +353,7 @@ def _serve_connection(conn, conn_opts):
             auth_ok = False
     if opt_debug:
         daemon_log("disconnected %s:%s" % conn.getpeername())
-    pythonshare._close(to_client, from_client, conn)
+    _connection_lost(conn_id, to_client, from_client, conn)
 
 def start_server(host, port,
                  ns_init_import_export=[],
