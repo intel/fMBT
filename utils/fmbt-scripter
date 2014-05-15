@@ -379,6 +379,122 @@ def _scalableEditor(mainwindow, parent, font, EditorClass = QtGui.QTextEdit):
     editor.installEventFilter(editor._scaleevents)
     return editor
 
+
+def _thumbnail(filePath, size=100):
+    """
+    Takes a fully qualified file path, returns a QIcon for it.
+
+    Returns a thumbnail for an image file.
+    Returns a plain icon if the file was not a bitmap.
+    """
+
+    bitmap = QtGui.QPixmap(filePath)
+
+    if not bitmap.isNull():
+        return QtGui.QIcon(bitmap.scaled(QtCore.QSize(size, size)))
+
+    return QtGui.QIcon(filePath)
+
+
+class FilePickerWidget(QtGui.QWidget):
+    """
+    Widget for picking (image) files from a directory.
+    """
+
+    # Emits the fully qualified path to the picked file
+    filePicked = QtCore.Signal(str)
+
+    def __init__(self, parent=None):
+        super(FilePickerWidget, self).__init__(parent)
+
+        self.folder = None
+        self.filterExp = None
+        self.listModel = QtGui.QStandardItemModel()
+
+        self.listView = QtGui.QListView()
+        self.listView.setUniformItemSizes(True)
+        self.listView.setViewMode(QtGui.QListView.ViewMode.IconMode)
+        self.listView.setResizeMode(QtGui.QListView.ResizeMode.Adjust)
+        self.listView.setModel(self.listModel)
+        self.listView.setEditTriggers(
+                QtGui.QAbstractItemView.EditTrigger.NoEditTriggers)
+
+        # Transforming slot-signal combo for emitting file names as strings
+        self.listView.activated.connect(self.fileSelected)
+
+        self.setLayout(QtGui.QHBoxLayout())
+        self.layout().addWidget(self.listView)
+
+        self.setFilterExp()
+
+    @QtCore.Slot()
+    def resetFileList(self):
+        """
+        Resets the file listing after selecting a folder or setting new fileexp.
+        """
+        if not self.folder or not os.path.isdir(self.folder):
+            return
+
+        self.listModel.clear()
+
+        for fileName in sorted(os.listdir(self.folder)):
+            if self.filterExp.match(fileName):
+                absPath = os.path.join(self.folder, fileName)
+                icon = _thumbnail(absPath)
+                item = QtGui.QStandardItem(icon, fileName)
+                self.listModel.appendRow(item)
+
+    @QtCore.Slot(list)
+    def setFilterExp(self, matchedSuffixes=['bmp', 'jpg', 'jpeg', 'png']):
+        """
+        Sets the picker component to filter the given list of file suffixes.
+        """
+
+        # Create a regular expression string to match all the suffixes
+        filterString = r'|'.join([r'^.*\.' + s + '$' for s in matchedSuffixes])
+        self.filterExp = re.compile(filterString, re.IGNORECASE)
+        self.resetFileList()
+
+    @QtCore.Slot(str)
+    def setFolder(self, folder):
+        """
+        Sets the file picker's path to given folder.
+        """
+
+        self.folder = folder
+        self.resetFileList()
+
+    @QtCore.Slot(QtCore.QModelIndex)
+    def fileSelected(self, modelIndex):
+        """
+        Transforms QModelIndex signals to unicode string signals.
+        Emits filePicked with absolute file path after receiving fileSelected.
+        """
+
+        fullName = os.path.abspath(os.path.join(self.folder,
+            self.listModel.itemFromIndex(modelIndex).text()))
+
+        if self.filterExp.match(fullName):
+            self.filePicked.emit(fullName)
+
+    def event(self, event):
+        """
+        Catches tooltip type events. Propagates events forward.
+        """
+
+        if event.type() == QtCore.QEvent.ToolTip:
+            index = self.listView.indexAt(event.pos())
+
+            if index.isValid():
+                item = self.listModel.itemFromIndex(index)
+                path = os.path.join(self.folder, item.text())
+                text = '%s <br /> <img width="300" src="%s" />' % (path, path)
+                QtGui.QToolTip.showText(event.globalPos(), text)
+            else:
+                QtGui.QToolTip.hideText()
+        return QtGui.QWidget.event(self, event)
+
+
 class SettingsDialog(QtGui.QDialog):
     def __init__(self):
         QtGui.QDialog.__init__(self)
@@ -569,6 +685,12 @@ class MainWindow(QtGui.QMainWindow):
         self._recordTimingCode = (
             "time.sleep(%(delay)s)\n%(sut)s.refreshScreenshot()\n")
         self._previousRecordTime = None
+
+        self._filepicker = FilePickerWidget()
+        self._filepicker.resize(640, 512)
+        self._filepicker.setWindowTitle('fmbt-scripter filepicker (float)')
+        self._filepicker.filePicked.connect(
+            self.selectedBitmapFromFolder)
 
         self.status = QtGui.QLabel("", self)
         self.statusBar().setStyleSheet("""
@@ -810,6 +932,9 @@ class MainWindow(QtGui.QMainWindow):
                                               checkable=True)
         self.bitmapAutoSelect.changed.connect(self.autoSelectBitmap)
         self.bitmapAutoSelect.setShortcut("Ctrl+B, Ctrl+A")
+        bitmapMenu.addAction(
+            "Select from &folder",
+            self.selectBitmapFromFolder, "Ctrl+B, Ctrl+F")
         bitmapMenu.addAction(
             "Se&lect from current screenshot",
             self.selectBitmap, "Ctrl+B, Ctrl+L")
@@ -1276,13 +1401,16 @@ class MainWindow(QtGui.QMainWindow):
         if ok and choice:
             self.renameBitmap(origFilename, choice)
 
-    def renameBitmap(self, origName, newName):
+    def renameBitmapStringAt(self, origName, newName):
         cursor = self.editor.textCursor()
         cursor.select(QtGui.QTextCursor.LineUnderCursor)
         l = cursor.selectedText()
         if '"%s"' % (origName,) in l:
             l = l.replace('"%s"' % (origName,), '"%s"' % (newName,))
             cursor.insertText(l)
+
+    def renameBitmap(self, origName, newName):
+        self.renameBitmapStringAt(origName, newName)
         origFilepath = self.bitmapFilepath(origName)
         if origFilepath:
             newFilepath = os.path.relpath(
@@ -1798,6 +1926,25 @@ class MainWindow(QtGui.QMainWindow):
                 self.selectBitmapStop()
                 self.screenshotButtonControl.setChecked(True)
         self.editor.setFocus()
+
+    def selectBitmapFromFolder(self, folder=None):
+        """
+        Selects bitmap from the given folder (the default is
+        previous folder or the current working directory).
+        Launches a separate picker dialog with preview bitmaps.
+        """
+        if folder == None:
+            folder = self._filepicker.folder
+        if folder == None:
+            folder = os.getcwd()
+        self._filepicker.setFolder(folder)
+        self._filepicker.show()
+
+    def selectedBitmapFromFolder(self, filename):
+        self._filepicker.hide()
+        origFilename = self.bitmapStringAt()
+        if origFilename:
+            self.renameBitmapStringAt(origFilename, os.path.basename(filename))
 
     def selectBitmapStop(self):
         if self._selectingBitmap != None:
