@@ -908,6 +908,9 @@ class MainWindow(QtGui.QMainWindow):
         editMenu = QtGui.QMenu("&Edit", self)
         self.menuBar().addMenu(editMenu)
         editMenu.addAction("&Find", self.showFindDialog, "Ctrl+F")
+        editMenu.addAction("&Replace",
+                           lambda: self.showFindDialog(replaceMode=True),
+                           "Ctrl+H")
         editMenu.addAction("&Goto line", self.showGotoLineDialog, "Ctrl+G")
         editMenu.addSeparator()
         editMenu.addAction("&Settings", self.showSettingsDialog)
@@ -2180,16 +2183,16 @@ class MainWindow(QtGui.QMainWindow):
             self._autoBitmapSize = int(
                 self._settingsDialog.pathsBitmapAutoSelectSize.text())
 
-    def showFindDialog(self):
+    def showFindDialog(self, replaceMode=False):
         if self._findDialog == None:
             self._findDialog = FindDialog(self, QtCore.Qt.WindowType.Dialog)
         if self._findDialog.isVisible():
             self._findDialog.findNext()
         else:
             if self.console.hasFocus():
-                self._findDialog.show(self.console)
+                self._findDialog.show(self.console, replaceMode)
             else:
-                self._findDialog.show(self.editor)
+                self._findDialog.show(self.editor, replaceMode)
             self._findDialog.exec_()
             self.editorClearBackground()
             self.consoleClearBackground()
@@ -2345,6 +2348,8 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
             self.setFormat(0, len(text), self.normalFormat)
 
 class FindDialog(QtGui.QDialog):
+    # TODO: needs refactoring. This dialog is common to
+    # fmbt-editor and fmbt-scripter, put it in a library
     def __init__(self, *args):
         QtGui.QDialog.__init__(self, *args)
         self.layout = QtGui.QGridLayout(self)
@@ -2353,7 +2358,13 @@ class FindDialog(QtGui.QDialog):
         self.textWidget.textChanged.connect(self.textChanged)
         self.textWidget.returnPressed.connect(self.moveCursorAndQuit)
 
+        self.replaceTextWidget = QtGui.QLineEdit(self)
+        self.replaceHelp = QtGui.QLabel("Ctrl+N: replace forward, "
+                                        "Ctrl+P: replace backward", self)
+        self.replaceCaption = QtGui.QLabel("Replace", self)
+
         self.editor = None
+        self.escaped = True
         self.findCursor = None
         self.found = []
         self.highlighted = None
@@ -2364,8 +2375,13 @@ class FindDialog(QtGui.QDialog):
         self.layout.addWidget(QtGui.QLabel("Find", self), 0, 0)
         self.layout.addWidget(self.textWidget, 0, 1)
         self.layout.addWidget(self.foundItemWidget, 0, 2)
-        self.layout.addWidget(QtGui.QLabel("Ctrl+F: forward, Ctrl+R: reverse"),
+        self.layout.addWidget(QtGui.QLabel("Ctrl+F: find forward, "
+                                           "Ctrl+R: find backward"),
                               1, 1)
+
+        self.layout.addWidget(self.replaceCaption, 2, 0)
+        self.layout.addWidget(self.replaceTextWidget, 2, 1)
+        self.layout.addWidget(self.replaceHelp, 3, 1)
 
     def event(self, event):
         if event.type() == QtCore.QEvent.Type.KeyPress:
@@ -2377,20 +2393,47 @@ class FindDialog(QtGui.QDialog):
                 event.modifiers() == QtCore.Qt.ControlModifier):
                 self.findPrev()
                 return True
+            elif (event.key() == QtCore.Qt.Key_N and
+                event.modifiers() == QtCore.Qt.ControlModifier):
+                self.replaceNext()
+                return True
+            elif (event.key() == QtCore.Qt.Key_P and
+                event.modifiers() == QtCore.Qt.ControlModifier):
+                self.replacePrev()
+                return True
+            elif (event.key() == QtCore.Qt.Key_H and
+                event.modifiers() == QtCore.Qt.ControlModifier):
+                self.setReplaceVisibile(not self.replaceTextWidget.isVisible())
+                return True
+            elif event.key() == QtCore.Qt.Key_Return:
+                self.escaped = False
+                self.hide()
+                return True
+            elif event.key() == QtCore.Qt.Key_Escape:
+                self.escaped = True
+                self.hide()
+                return True
         elif event.type() == QtCore.QEvent.Type.Hide:
             if self.origCursor and self.editor:
                 self.editor.setTextCursor(self.origCursor)
         return QtGui.QDialog.event(self, event)
 
-    def show(self, editor):
+    def show(self, editor, replaceMode=False):
         self.editor = editor
         self.plainText = editor.toPlainText()
         self.findCursor = editor.textCursor()
         self.origCursor = editor.textCursor()
         self.textWidget.setText(self.searchedText.get(id(self.editor), ""))
+        self.setReplaceVisibile(replaceMode)
+
         QtGui.QDialog.show(self)
         self.textWidget.setFocus()
         self.textChanged(self.textWidget.text())
+
+    def setReplaceVisibile(self, visible):
+        self.replaceCaption.setVisible(visible)
+        self.replaceHelp.setVisible(visible)
+        self.replaceTextWidget.setVisible(visible)
 
     def textChanged(self, text):
         self.clearBackground()
@@ -2428,22 +2471,75 @@ class FindDialog(QtGui.QDialog):
             self.changeHighlighted(None, "?", len(self.found))
 
     def findNext(self):
-        p = self.findCursor.position()
-        nextHits = [f for f in self.found if f[0] > p]
-        if nextHits:
-            self.changeHighlighted(nextHits[0],
-                                   len(self.found) - len(nextHits) + 1,
-                                   len(self.found))
-            self.findCursor.setPosition(nextHits[0][1])
+        if not self.highlighted and self.found:
+            p = self.findCursor.position()
+            self.highlighted = (p, p+1)
+        if self.highlighted:
+            p = self.highlighted[0]
+            nextHits = [f for f in self.found if f[0] > p]
+            if nextHits:
+                self.changeHighlighted(nextHits[0],
+                                       len(self.found) - len(nextHits) + 1,
+                                       len(self.found))
+                self.findCursor.setPosition(nextHits[0][1])
+            elif not self.found:
+                self.changeHighlighted(None, "?", 0)
 
     def findPrev(self):
+        if not self.highlighted and self.found:
+            p = self.findCursor.position()
+            self.highlighted = (p, p+1)
+        if self.highlighted:
+            p = self.highlighted[1]
+            prevHits = [f for f in self.found if not f[1] >= p]
+            if prevHits:
+                self.changeHighlighted(prevHits[-1],
+                                       len(prevHits),
+                                       len(self.found))
+                self.findCursor.setPosition(prevHits[-1][1])
+            elif not self.found:
+                self.changeHighlighted(None, "?", 0)
+
+    def replaceHighlighted(self, newText):
+        startPos, endPos = self.highlighted
+        cursor = self.editor.textCursor()
+        cursor.clearSelection()
+        cursor.setPosition(startPos, QtGui.QTextCursor.MoveAnchor)
+        cursor.movePosition(QtGui.QTextCursor.Right,
+                            QtGui.QTextCursor.KeepAnchor,
+                            endPos - startPos)
+        cursor.insertText(newText)
+        lenDelta = len(newText) - (endPos - startPos)
+        self.highlighted = (startPos, endPos + lenDelta)
+        # update found text start/end positions after the cursor
         p = self.findCursor.position()
-        prevHits = [f for f in self.found if not f[1] >= p]
-        if prevHits:
-            self.changeHighlighted(prevHits[-1],
-                                   len(prevHits),
-                                   len(self.found))
-            self.findCursor.setPosition(prevHits[-1][1])
+        self.found = [((f[0], f[1]), (f[0] + lenDelta, f[1] + lenDelta))[f[0] > p]
+                      for f in self.found
+                      if f[0] != startPos]
+
+    def replaceNext(self):
+        if not self.replaceTextWidget.isVisible():
+            self.setReplaceVisibile(True)
+            self.replaceTextWidget.setFocus()
+            return
+
+        if self.highlighted:
+            self.replaceHighlighted(self.replaceTextWidget.text())
+            self.findNext()
+        elif self.found:
+            self.findNext()
+
+    def replacePrev(self):
+        if not self.replaceTextWidget.isVisible():
+            self.setReplaceVisibile(True)
+            self.replaceTextWidget.setFocus()
+            return
+
+        if self.highlighted:
+            self.replaceHighlighted(self.replaceTextWidget.text())
+            self.findPrev()
+        elif self.found:
+            self.findPrev()
 
     def changeHighlighted(self, newHighlighted, item, count):
         if self.highlighted:
