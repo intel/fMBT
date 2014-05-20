@@ -45,6 +45,11 @@ spec: osvec ',' strvec operator int {
             delete $0.strvec;
             delete $2.strvec;
         }
+    | '[' osvec ']' strvec operator int {
+            Hw->add(*$1.strvec,*$3.strvec,$5.val,$4.val);
+            delete $1.strvec;
+            delete $3.strvec;
+        }
     | strvec operator int {
             std::vector<std::string*>* tmp=new std::vector<std::string*>;
             Hw->add(*tmp,*$0.strvec,$2.val,$1.val);
