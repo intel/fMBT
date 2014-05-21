@@ -1266,6 +1266,8 @@ public:
     }
 
     virtual void execute(const std::vector<int>& prev,int action,const std::vector<int>& next) {
+      update();
+      if (value.first == value.second) return;
 
       if (persistent&1) {
 	left->reset();
