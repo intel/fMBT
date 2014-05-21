@@ -19,7 +19,12 @@ Xtst and taking screenshots with XGetImage.
 """
 
 import ctypes
+import getpass
+import os
+import subprocess
 import zlib
+
+_g_current_user = getpass.getuser()
 
 libX11 = ctypes.CDLL("libX11.so.6")
 libXtst = ctypes.CDLL("libXtst.so.6")
@@ -253,5 +258,64 @@ class Display(object):
         compressed_image = rawfmbt_header + zlib.compress(rawfmbt_data, 3)
         libX11.XDestroyImage(image_p)
         return compressed_image
+
+def shellSOE(command, username, asyncStatus, asyncOut, asyncError, usePty):
+    if not username:
+        username = _g_current_user
+    if username != _g_current_user:
+        command = ["sudo", "-u", username, "bash", "-c", command]
+    if usePty:
+        if isinstance(command, str):
+            spawn_command = shlex.split(command)
+        else:
+            spawn_command = command
+        command = '''python -c "import pty; pty.spawn(%s)" ''' % (repr(spawn_command),)
+    if (asyncStatus, asyncOut, asyncError) != (None, None, None):
+        # prepare for decoupled asynchronous execution
+        if asyncStatus == None: asyncStatus = "/dev/null"
+        if asyncOut == None: asyncOut = "/dev/null"
+        if asyncError == None: asyncError = "/dev/null"
+        try:
+            stdinFile = file("/dev/null", "r")
+            stdoutFile = file(asyncOut, "a+")
+            stderrFile = file(asyncError, "a+", 0)
+            statusFile = file(asyncStatus, "a+")
+        except IOError, e:
+            return False, (None, None, e)
+        try:
+            if os.fork() > 0:
+                # parent returns after successful fork, there no
+                # direct visibility to async child process beyond this
+                # point.
+                stdinFile.close()
+                stdoutFile.close()
+                stderrFile.close()
+                statusFile.close()
+                return True, (0, None, None)
+        except OSError, e:
+            return False, (None, None, e)
+        os.setsid()
+    else:
+        stdinFile = subprocess.PIPE
+        stdoutFile = subprocess.PIPE
+        stderrFile = subprocess.PIPE
+    try:
+        p = subprocess.Popen(command,
+                             shell=isinstance(command, str),
+                             stdin=stdinFile,
+                             stdout=stdoutFile,
+                             stderr=stderrFile,
+                             close_fds=True)
+    except Exception, e:
+        return False, (None, None, e)
+    if asyncStatus == None and asyncOut == None and asyncError == None:
+        # synchronous execution, read stdout and stderr
+        out, err = p.communicate()
+    else:
+        # asynchronous execution, store status to file
+        statusFile.write(str(p.wait()) + "\n")
+        statusFile.close()
+        out, err = None, None
+    return True, (p.returncode, out, err)
 
 class X11ConnectionError(Exception): pass

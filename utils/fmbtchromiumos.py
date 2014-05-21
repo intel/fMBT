@@ -57,6 +57,53 @@ class Device(fmbtgti.GUITestInterface):
         fmbtgti.GUITestInterface.__init__(self, **kwargs)
         self.setConnection(ChromiumOSConnection(loginCommand))
 
+    def shellSOE(self, shellCommand, username="", password="", asyncStatus=None, asyncOut=None, asyncError=None, usePty=False):
+        """
+        Get status, output and error of executing shellCommand on Chromium OS device
+
+        Parameters:
+
+          shellCommand (string)
+                  command to be executed on device.
+
+          username (string, optional)
+                  username who should execute the command. The default
+                  is "root".
+
+          asyncStatus (string or None)
+                  filename (on device) to which the status of
+                  asynchronously executed shellCommand will be
+                  written. The default is None, that is, command will
+                  be run synchronously, and status will be returned in
+                  the tuple.
+
+          asyncOut (string or None)
+                  filename (on device) to which the standard output of
+                  asynchronously executed shellCommand will be
+                  written. The default is None.
+
+          asyncError (string or None)
+                  filename (on device) to which the standard error of
+                  asynchronously executed shellCommand will be
+                  written. The default is None.
+
+          usePty (optional, boolean)
+                  execute shellCommand in pseudoterminal. The default
+                  is False.
+
+        Returns tuple (exitStatus, standardOutput, standardError).
+
+        If asyncStatus, asyncOut or asyncError is a string,
+        shellCommand will be run asynchronously, and (0, None, None)
+        will be returned. In case of asynchronous execution, if any of
+        asyncStatus, asyncOut or asyncError is None, corresponding
+        output will be written to /dev/null. The shellCommand will be
+        executed even if the device would be disconnected. All async
+        files are opened for appending, allowing writes to the same
+        file.
+        """
+        return self._conn.shellSOE(shellCommand, username, asyncStatus, asyncOut, asyncError, usePty)
+
 class ChromiumOSConnection(fmbtgti.GUITestConnection):
     def __init__(self, loginCommand):
         fmbtgti.GUITestConnection.__init__(self)
@@ -187,5 +234,13 @@ class ChromiumOSConnection(fmbtgti.GUITestConnection):
         else:
             command = "x.sendMouseUp(%s, %s, %s)" % (x, y, button)
         return self.agentEval(command)
+
+    def shellSOE(self, shellCommand, username, asyncStatus, asyncOut, asyncError, usePty):
+        _, (s, o, e) = self.agentEval(
+            "fmbtx11_conn.shellSOE(%s, %s, %s, %s, %s, %s)" % (
+                repr(shellCommand), repr(username), repr(asyncStatus),
+                repr(asyncOut), repr(asyncError), repr(usePty)))
+
+        return s, o, e
 
 class FMBTChromiumOsError(Exception): pass
