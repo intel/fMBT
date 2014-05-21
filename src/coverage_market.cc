@@ -56,7 +56,7 @@ void Coverage_Market::history(int action,
 bool Coverage_Market::execute(int action)
 {
   /* Dummy */
-  
+
   int* p;
   int j=model->getprops(&p);
   if (j) {
@@ -64,13 +64,13 @@ bool Coverage_Market::execute(int action)
   } else {
     next.clear();
   }
-  
+
   for(size_t i=0;i<Units.size();i++) {
     Units[i]->execute(prev,action,next);
   }
-  
+
   prev.swap(next);
-  
+
   return true;
 }
 
@@ -181,7 +181,7 @@ void taghelper(const char op,int depth,
 	  u=u2;
 	}
       }
-    }    
+    }
     if (tu) {
       tu=new Coverage_Market::unit_tagelist(op,tu,u);
     } else {
@@ -205,8 +205,8 @@ Coverage_Market::unit_tag* Coverage_Market::req_rx_tag(const char m,const std::s
   char op='&';
 
   std::vector<int> tags;
-  regexpmatch(tag, model->getSPNames(),tags  , false,1,1);  
-  
+  regexpmatch(tag, model->getSPNames(),tags  , false,1,1);
+
   if (tags.empty()) {
     errormsg = "No tags matching \"" + tag + "\"";
     status = false;
@@ -223,7 +223,7 @@ Coverage_Market::unit_tag* Coverage_Market::req_rx_tag(const char m,const std::s
   for(unsigned i=0;i<tags.size();i++) {
     Coverage_Market::unit_tag* u2=new Coverage_Market::unit_tagleaf(tags[i]);
     uset.push_back(std::pair<Coverage_Market::unit_tag*, bool>(u2,false));
-  }  
+  }
 
 
   Coverage_Market::unit_tag* u=NULL;
@@ -252,8 +252,8 @@ Coverage_Market::unit_tag* Coverage_Market::req_rx_tag(const std::string &tag,ch
   }
 
   std::vector<int> tags;
-  regexpmatch(tag, model->getSPNames(),tags  , false,1,1);  
-  
+  regexpmatch(tag, model->getSPNames(),tags  , false,1,1);
+
   if (tags.empty()) {
     errormsg = "No tags matching \"" + tag + "\"";
     status = false;
@@ -265,7 +265,7 @@ Coverage_Market::unit_tag* Coverage_Market::req_rx_tag(const std::string &tag,ch
   for(unsigned i=1;i<tags.size();i++) {
       Coverage_Market::unit_tag* u2=new Coverage_Market::unit_tagleaf(tags[i]);
     switch(op) {
-    case 'e': 
+    case 'e':
       u=new Coverage_Market::unit_tagor(u,u2);
       break;
     case 'a':
@@ -301,7 +301,7 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const std::st
       status = false;
       return NULL;
     }
-    
+
     if (prev_tag||next_tag) {
       if (!prev_tag) {
 	prev_tag=new unit_tag();
@@ -318,7 +318,7 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const std::st
     }
 
     if (actions.size()==1) {
-      u=new Coverage_Market::unit_leaf(actions[0]); 
+      u=new Coverage_Market::unit_leaf(actions[0]);
    } /*else {
       if (actions.size()==2) {
 	Coverage_Market::unit *l,*r;
@@ -327,7 +327,7 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const std::st
 	if (m=='e') {
 	  u=new Coverage_Market::unit_or(l,r);
 	} else {
-	  u=new Coverage_Market::unit_and(l,r);	  
+	  u=new Coverage_Market::unit_and(l,r);
 	}
 	} */else {
 	for(unsigned int i=0; i < actions.size(); i++) {
@@ -388,7 +388,7 @@ Coverage_Market::unit* new_unit_tagunit(Coverage_Market::unit_tag* l,
 						 (Coverage_Market::unit_tag*)r->clone(),
 						 persistent);
     Coverage_Market::unit* ur = new_unit_tagunit(nr,u,r,persistent);
-    
+
     if (tl->op=='&') {
       delete tl;
       // and
@@ -422,18 +422,18 @@ Coverage_Market::unit* new_unit_tagunit(Coverage_Market::unit_tag* l,
     } else {
       // No need to expand.
       return new Coverage_Market::unit_tagunit(l,u,r,persistent);
-    }    
-  }  
+    }
+  }
 }
 
 Coverage_Market::unit_dual::unit_dual(Coverage_Market::unit_dual const& obj):
   Coverage_Market::unit(obj) {
-  if (obj.left) 
+  if (obj.left)
     left=obj.left->clone();
   else
     left=NULL;
 
-  if (obj.right) 
+  if (obj.right)
     right=obj.right->clone();
   else
     right=NULL;
@@ -441,7 +441,7 @@ Coverage_Market::unit_dual::unit_dual(Coverage_Market::unit_dual const& obj):
 
 Coverage_Market::unit_not::unit_not(Coverage_Market::unit_not const& obj):
   Coverage_Market::unit(obj) {
-  if (obj.child) 
+  if (obj.child)
     child=obj.child->clone();
   else
     child=NULL;
@@ -449,59 +449,59 @@ Coverage_Market::unit_not::unit_not(Coverage_Market::unit_not const& obj):
 
 Coverage_Market::unit_tagelist::unit_tagelist(Coverage_Market::unit_tagelist const& obj):
   Coverage_Market::unit_tag(obj),op(obj.op) {
-  if (obj.left) 
+  if (obj.left)
     left=(unit_tag*)obj.left->clone();
-  else 
+  else
     left=NULL;
 
-  if (obj.right) 
+  if (obj.right)
     right=(unit_tag*)obj.right->clone();
-  else 
+  else
     right=NULL;
 }
 
 Coverage_Market::unit_tagnot::unit_tagnot(Coverage_Market::unit_tagnot const& obj):
   unit_tag(obj) {
-  if (obj.child) 
+  if (obj.child)
     child=(unit_tag*)obj.child->clone();
-  else 
+  else
     child=NULL;
  }
 
 Coverage_Market::unit_tagdual::unit_tagdual(Coverage_Market::unit_tagdual const& obj):
   unit_tag(obj) {
-  if (obj.left) 
+  if (obj.left)
     left=(unit_tag*)obj.left->clone();
-  else 
+  else
     left=NULL;
 
-  if (obj.right) 
+  if (obj.right)
     right=(unit_tag*)obj.right->clone();
-  else 
+  else
     right=NULL;
 }
 
 Coverage_Market::unit_tagunit::unit_tagunit(Coverage_Market::unit_tagunit const& obj):
   unit_tagdual(obj),persistent(obj.persistent) {
-  if (obj.child) 
+  if (obj.child)
     child=obj.child->clone();
-  else 
+  else
     child=NULL;
 }
 
 Coverage_Market::unit_mult::unit_mult(Coverage_Market::unit_mult const& obj):
   unit(obj),max(obj.max),count(obj.count) {
-  if (obj.child) 
+  if (obj.child)
     child=obj.child->clone();
-  else 
-    child=NULL;  
+  else
+    child=NULL;
 }
 
 Coverage_Market::unit_many::unit_many(const unit_many &obj):
   unit(obj) {
   for(unsigned i=0;i<obj.units.size();i++) {
     unit* u=obj.units[i];
-    if (u) 
+    if (u)
       u=u->clone();
     units.push_back(u);
   }

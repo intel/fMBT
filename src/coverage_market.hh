@@ -69,7 +69,7 @@ public:
     return true;
   }
 
-  virtual void push() { 
+  virtual void push() {
     next_prev_save.push(prev);
     next_prev_save.push(next);
     for (unsigned int i = 0; i < Units.size(); i++) Units[i]->push();
@@ -110,7 +110,7 @@ public:
 
   unit_tag* req_rx_tag(const std::string &tag,char op='e');
   unit_tag* req_rx_tag(const char m,const std::string &tag,int count=1,bool exactly=false);
-  
+
   void add_unit(unit* u) {
     Units.push_back(u);
   }
@@ -164,7 +164,7 @@ public:
 	}
 	return false;
       }
-      
+
     };
 
     virtual void execute(eunit& un) {
@@ -300,7 +300,7 @@ public:
 	    sexecuted.pop();
 	    sexecuted.push(executed);
 	  }
-	  child->pop();      
+	  child->pop();
 	} else {
 	  child_update_needed=false;
 	}
@@ -331,7 +331,7 @@ public:
 	executed.push_back(u);
 	added=true;
       }
-      
+
       if (tmp.first==tmp.second) {
 	if (!added) {
 	  eunit u={prev,action,next};
@@ -344,7 +344,7 @@ public:
 	  minimise();
 	}
 
-	if (push_depth!=0 && 
+	if (push_depth!=0 &&
 	    tcount_save[push_depth-1][executed]==0) {
 	  tcount_save[push_depth-1][executed]=tcount[executed];
 	}
@@ -413,7 +413,7 @@ public:
       push_depth=0;
       count=0;
     }
-  
+
     unsigned push_depth;
     unit* child;
     unsigned count;
@@ -479,14 +479,14 @@ public:
     unit_manyleaf() {}
     virtual ~unit_manyleaf() {}
 
-    virtual void set_instance(int instance,int current_instance, 
+    virtual void set_instance(int instance,int current_instance,
 			      bool forced=false) {
       if (forced) {
 	manyleaf_instance_map[current_instance]=value;
 	value=manyleaf_instance_map[instance];
       }
     }
-    
+
 
     virtual void reset() {
       unit::value.first=0;
@@ -620,7 +620,7 @@ public:
   };
 
   class unit_manyand: public unit_many {
-  public: 
+  public:
     virtual std::string stringify(Alphabet&a) {
       std::string ret="(" + units[0]->stringify(a)+")";
       for(size_t i=1;i<units.size();i++) {
@@ -654,7 +654,7 @@ public:
   };
 
   class unit_manyor: public unit_many {
-  public: 
+  public:
     virtual std::string stringify(Alphabet&a) {
       std::string ret="(" + units[0]->stringify(a)+")";
       for(size_t i=1;i<units.size();i++) {
@@ -681,7 +681,7 @@ public:
 	      vr.first/vr.second)*(value.second+vr.second);
 	value.second+=vr.second;
       }
-    }   
+    }
     virtual unit* clone() {
       return new unit_manyor(*this);
     }
@@ -694,7 +694,7 @@ public:
 
     virtual void set_instance(int instance,int current_instance, bool force=false) {
       left ->set_instance(instance,current_instance,force);
-      right->set_instance(instance,current_instance,force);      
+      right->set_instance(instance,current_instance,force);
     }
 
     virtual void reset() {
@@ -868,7 +868,7 @@ public:
     virtual void execute(const std::vector<int>& prev,int action,const std::vector<int>& next) {
       for(size_t i=cpos;i<units.size()-1;i++) {
 	units[i]->update();
-	val v=units[i]->get_value();	
+	val v=units[i]->get_value();
 	if (v.first==v.second) {
 	  continue;
 	} else {
@@ -886,7 +886,7 @@ public:
       value.second=0;
       for(size_t i=cpos;i<units.size();i++) {
 	units[i]->update();
-	val v=units[i]->get_value();	
+	val v=units[i]->get_value();
 	value.first+=v.first;
 	value.second+=v.second;
       }
@@ -962,7 +962,7 @@ public:
     unit_tag(const unit_tag&obj):unit(obj),left_side(obj.left_side) {
     }
     bool left_side;
-    
+
   };
 
   class unit_tagelist: public unit_tag {
@@ -980,7 +980,7 @@ public:
     virtual void set_left(bool l) {
       left_side=l;
       left->set_left(l);
-      right->set_left(l);      
+      right->set_left(l);
     }
     char op;
     unit_tag *left,*right;
@@ -997,7 +997,7 @@ public:
       return "not("+child->stringify(a)+")";
     }
     unit_tagnot(unit_tag* t): child(t),ex(false) {
-      if (child) 
+      if (child)
 	value=child->value;
     }
 
@@ -1039,7 +1039,7 @@ public:
     virtual void update() {
       child->update();
       value=child->get_value();
-      if (ex) 
+      if (ex)
 	value.first=value.second-value.first;
       else
 	value.first=0;
@@ -1075,7 +1075,7 @@ public:
 	value.first=leaf_instance_map[instance];
       }
     }
-    
+
     virtual void reset() {
       value.first=0;
     }
@@ -1088,7 +1088,7 @@ public:
       value=st.top();
       st.pop();
     }
-    
+
     virtual void execute(const std::vector<int>& prev,int action,const std::vector<int>& next){
       if (left_side) {
 	if (std::find(prev.begin(), prev.end(), my_tag)!=prev.end()) {
@@ -1164,7 +1164,7 @@ public:
   public:
     unit_tagdual(unit_tag*l,unit_tag*r): left(l),right(r) {
       if (left)
-	left->set_left(true);	
+	left->set_left(true);
     }
 
     virtual void set_instance(int instance,int current_instance, bool force=false) {
@@ -1308,7 +1308,7 @@ public:
 	  // We are on the way to the goal!
 	  // Let's check if this is allowed goal
 
-	  right->execute(prev,action,next);	  
+	  right->execute(prev,action,next);
 	  right->update();
 	  v=right->get_value();
 	  if (v.first==v.second) {
@@ -1323,14 +1323,14 @@ public:
       }
 
 
-    }  
-    
+    }
+
 
     virtual void reset() {
       unit_tagdual::reset();
       child->reset();
     }
-    
+
     virtual void update() {
       unit_tagdual::update();
       child->update();
@@ -1341,8 +1341,8 @@ public:
       value.first=left->value.first+
 	right->value.first+
 	child->value.first;
-    }      
-    
+    }
+
     virtual void push() {
       unit_tagdual::push();
       child->push();
@@ -1352,7 +1352,7 @@ public:
       unit_tagdual::pop();
       child->pop();
     }
-    
+
     unit* child;
     int persistent;
     virtual unit* clone() {
@@ -1402,7 +1402,7 @@ public:
       left->execute(prev,action,next);
       right->execute(prev,action,next);
     }
-    
+
     virtual void update() {
       unit_tagdual::update();
       if (left->value.first==left->value.second ||
@@ -1410,7 +1410,7 @@ public:
 	value.first=left->value.second+right->value.second;
       } else {
 	value.first=left->value.first+right->value.first;
-      } 
+      }
     }
     virtual unit* clone() {
       return new unit_tagor(*this);
@@ -1473,7 +1473,7 @@ public:
       value.first=count*v.second+v.first;
 
     }
-    
+
     int max;
     virtual unit* clone() {
       return new unit_mult(*this);
