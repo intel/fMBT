@@ -716,6 +716,17 @@ def shellSOE(command):
         status, out, err = None, None, None
     return status, out, err
 
+def topWindowProperties():
+    hwnd = ctypes.windll.user32.GetForegroundWindow()
+    if not hwnd:
+        return None
+    props = {}
+    MAXTITLE=1024
+    titleBuf = ctypes.create_string_buffer(MAXTITLE)
+    titleLen = ctypes.windll.user32.GetWindowTextA(hwnd, titleBuf, MAXTITLE)
+    props['title'] = titleBuf.value
+    return props
+
 def launchHTTPD():
     global _HTTPServerProcess
     _HTTPServerProcess = subprocess.Popen("python -m SimpleHTTPServer 8000")

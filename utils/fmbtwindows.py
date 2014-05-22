@@ -260,6 +260,9 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self._conn.evalPython('shellSOE(%s)' % (repr(command),))
 
+    def topWindowProperties(self):
+        return self._conn.recvTopWindowProperties()
+
     def launchHTTPD(self):
         """
         DEPRECATED, will be removed, do not use!
@@ -335,6 +338,9 @@ class WindowsConnection(fmbtgti.GUITestConnection):
         _run(["convert", ppmfilename, filename], expectedExitStatus=[0])
         os.remove(ppmfilename)
         return True
+
+    def recvTopWindowProperties(self):
+        return self.evalPython("topWindowProperties()")
 
     def sendType(self, text):
         command = 'sendType(%s)' % (repr(text),)
