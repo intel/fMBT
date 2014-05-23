@@ -261,6 +261,9 @@ class Device(fmbtgti.GUITestInterface):
         return self._conn.evalPython('shellSOE(%s)' % (repr(command),))
 
     def topWindowProperties(self):
+        """
+        Return properties of the top window as a dictionary
+        """
         return self._conn.recvTopWindowProperties()
 
     def launchHTTPD(self):

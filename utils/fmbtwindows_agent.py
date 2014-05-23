@@ -721,9 +721,9 @@ def topWindowProperties():
     if not hwnd:
         return None
     props = {}
-    MAXTITLE=1024
-    titleBuf = ctypes.create_string_buffer(MAXTITLE)
-    titleLen = ctypes.windll.user32.GetWindowTextA(hwnd, titleBuf, MAXTITLE)
+    titleLen = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
+    titleBuf = ctypes.create_unicode_buffer(titleLen + 1)
+    ctypes.windll.user32.GetWindowTextW(hwnd, titleBuf, titleLen + 1)
     props['title'] = titleBuf.value
     return props
 
