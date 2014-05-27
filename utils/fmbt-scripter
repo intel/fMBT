@@ -2215,8 +2215,7 @@ class MainWindow(QtGui.QMainWindow):
             log("text cursor is not on object in the editor")
             return
         if self._helpDialog == None:
-            self._helpDialog = HelpDialog(self, QtCore.Qt.WindowType.Dialog,
-                                          self.editorFont)
+            self._helpDialog = HelpDialog(self, self.editorFont)
 
         okChars = set(string.ascii_letters + string.digits + "._")
         cursor = self.editor.textCursor()
@@ -2416,6 +2415,7 @@ class FindDialog(QtGui.QDialog):
         elif event.type() == QtCore.QEvent.Type.Hide:
             if self.origCursor and self.editor:
                 self.editor.setTextCursor(self.origCursor)
+            self.clearBackground()
         return QtGui.QDialog.event(self, event)
 
     def show(self, editor, replaceMode=False):
@@ -2424,6 +2424,7 @@ class FindDialog(QtGui.QDialog):
         self.findCursor = editor.textCursor()
         self.origCursor = editor.textCursor()
         self.textWidget.setText(self.searchedText.get(id(self.editor), ""))
+        self.textWidget.setFocus()
         self.setReplaceVisibile(replaceMode)
 
         QtGui.QDialog.show(self)
@@ -2459,7 +2460,9 @@ class FindDialog(QtGui.QDialog):
             self.found.append(wordLoc)
             # Note: setBackground gets slow if there are thousands
             # of matches. Consider putting it in a background thread.
-            self.setBackground(wordLoc, QtCore.Qt.yellow)
+            # Now color only 128 first matches
+            if len(self.found) <= 128:
+                self.setBackground(wordLoc, QtCore.Qt.yellow)
             searchPos = foundPos + len(text)
             foundPos = self.plainText.find(text, searchPos)
         nextHits = [p for p in self.found if p[1] >= findPos]
@@ -2576,9 +2579,9 @@ class FindDialog(QtGui.QDialog):
         cf.setBackground(QtCore.Qt.white)
         cursor.setCharFormat(cf)
 
-class HelpDialog(QtGui.QDialog):
-    def __init__(self, parent, dialogType, font):
-        QtGui.QDialog.__init__(self, parent, dialogType)
+class HelpDialog(QtGui.QWidget):
+    def __init__(self, parent, font):
+        QtGui.QWidget.__init__(self)
         self.font = font
         self.layout = QtGui.QGridLayout(self)
         self._texts = []
@@ -2586,8 +2589,26 @@ class HelpDialog(QtGui.QDialog):
         fm = self.text.fontMetrics()
         self.text.setMinimumWidth(84 * fm.width('w'))
         self.layout.addWidget(self.text, 0, 0)
+        self._findDialog = None
+        self.setWindowTitle("fmbt-scripter - Help")
+
+    def event(self, event):
+        if event.type() == QtCore.QEvent.Type.KeyPress:
+            if (event.key() == QtCore.Qt.Key_F and
+                event.modifiers() == QtCore.Qt.ControlModifier):
+                if not self._findDialog:
+                    self._findDialog = FindDialog(self, QtCore.Qt.WindowType.Dialog)
+                self._findDialog.show(self.text)
+                return True
+            if (event.key() in [QtCore.Qt.Key_Q, QtCore.Qt.Key_W] and
+                event.modifiers() == QtCore.Qt.ControlModifier):
+                self.hide()
+                return True
+        return QtGui.QWidget.event(self, event)
 
     def setText(self, text):
+        if self._findDialog:
+            self._findDialog.close()
         self._texts.append(text)
         self.text.setPlainText(self._texts[-1])
 
