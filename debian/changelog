@@ -1,8 +1,33 @@
-fmbt (0.13.1-0.rc0) unstable; urgency=low
+fmbt (0.14-1) unstable; urgency=low
 
-  * Development version.
+  * fmbtchromiumos:
+    - fmbtandroid-like interface for testing Chromium OS / Chrome OS.
+  * fmbtwindows:
+    - keyNames() returns keys supported by pressKey and modifiers.
+    - getMathcingPaths() lists files on Windows device.
+    - topWindowProperties() returns information on the top window.
+  * fmbtandroid/chromiumos/tizen/vnc/windows/x11:
+    - Multilanguage OCR: d.tapOcrText("Abbrechen", lang="deu").
+  * fmbt-scripter:
+    - Replace functionality added, find and replace works now.
+    - Find functionality added to help window.
+    - Initial version of bitmap file picker added.
+  * fmbt-editor:
+    - Uses the same find and replace as fmbt-scripter.
+  * AAL/Python:
+    - Introduced input() and output() functions, that work similarly to
+      the action() function.
+  * usecase coverage:
+    - Persistent tag issues fixed.
+  * AAL/C++:
+    - Missing headers added to fmbt-dev, fixes building AAL models
+      without fMBT source tree.
+  * pythonshare:
+    - Server supports client connection from stdin.
+    - Hook for executing client-defined code after disconnection.
+  * Minor bug fixes.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 22 Apr 2014 15:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 28 May 2014 10:42:00 +0300
 
 fmbt (0.13-1) unstable; urgency=low
 
