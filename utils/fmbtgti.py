@@ -211,6 +211,14 @@ class _Bbox(ctypes.Structure):
                 ("right", ctypes.c_int32),
                 ("bottom", ctypes.c_int32),
                 ("error", ctypes.c_int32)]
+
+def _e4gOpenImage(filename):
+    image = eye4graphics.openImage(filename)
+    if not image:
+        raise IOError('Cannot open image "%s"' % (filename,))
+    else:
+        return image
+
 ### end of binding to eye4graphics.so
 
 def _e4gImageDimensions(e4gImage):
@@ -219,7 +227,7 @@ def _e4gImageDimensions(e4gImage):
     return (struct_bbox.right, struct_bbox.bottom)
 
 def _e4gImageIsBlank(filename):
-    e4gImage = eye4graphics.openImage(filename)
+    e4gImage = _e4gOpenImage(filename)
     rv = (eye4graphics.openedImageIsBlank(e4gImage) == 1)
     eye4graphics.closeImage(e4gImage)
     return rv
@@ -926,7 +934,7 @@ class _Eye4GraphicsOirEngine(OirEngine):
 
     def _addScreenshot(self, screenshot, **findBitmapDefaults):
         filename = screenshot.filename()
-        self._openedImages[filename] = eye4graphics.openImage(filename)
+        self._openedImages[filename] = _e4gOpenImage(filename)
         # make sure size() is available, this can save an extra
         # opening of the screenshot file.
         if screenshot.size(allowReadingFile=False) == None:
@@ -1018,9 +1026,7 @@ class _Eye4GraphicsOirEngine(OirEngine):
         if cacheKey in self._findBitmapCache[ssFilename]:
             return self._findBitmapCache[ssFilename][cacheKey]
         self._findBitmapCache[ssFilename][cacheKey] = []
-        e4gIcon = eye4graphics.openImage(bitmap)
-        if e4gIcon == 0:
-            raise IOError('Cannot open bitmap "%s".' % (bitmap,))
+        e4gIcon = _e4gOpenImage(bitmap)
         matchCount = 0
         leftTopRightBottomZero = (_intCoords((area[0], area[1]), ssSize) +
                                   _intCoords((area[2], area[3]), ssSize) +
@@ -2282,7 +2288,7 @@ class Screenshot(object):
         Returns screenshot size in pixels, as pair (width, height).
         """
         if self._screenSize == None and allowReadingFile:
-            e4gImage = eye4graphics.openImage(self._filename)
+            e4gImage = _e4gOpenImage(self._filename)
             self._screenSize = _e4gImageDimensions(e4gImage)
             eye4graphics.closeImage(e4gImage)
         return self._screenSize
