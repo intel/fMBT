@@ -706,7 +706,13 @@ Available measures, values and conditions:
                 to scope the behaviour only to certain tags.
                 Include/exclude behaviour is EXPERIMENTAL.
 
-        no_progress(<integer>)
+        lookahead_noprogress
+
+                finish with the verdict when the lookahead heuristic
+                cannot find any way to grow measured coverage. Test
+                generation must use the lookahead heuristic.
+
+        noprogress(<integer>)
 
                 finish with the verdict if <integer> test steps have
                 been executed in a row without progress in measured
