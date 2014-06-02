@@ -46,7 +46,7 @@ public:
 };
 
 Heuristic_greedy::Heuristic_greedy(Log& l,const std::string& params) :
-  Heuristic(l), m_search_depth(0), m_burst(false)
+  Heuristic(l), m_search_depth(0), m_burst(false),end_condition(false)
 {
   hg=this;
 
