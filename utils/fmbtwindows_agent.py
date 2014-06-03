@@ -722,6 +722,7 @@ def topWindowProperties():
         return None
     props = {}
     titleLen = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
+    titleLen = min(titleLen, 2047) # limit max length for safety
     titleBuf = ctypes.create_unicode_buffer(titleLen + 1)
     ctypes.windll.user32.GetWindowTextW(hwnd, titleBuf, titleLen + 1)
     props['title'] = titleBuf.value
