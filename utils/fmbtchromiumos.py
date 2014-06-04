@@ -18,6 +18,7 @@
 This library implements fmbt GUITestInterface for Chromium OS
 """
 
+import distutils.spawn
 import fmbtgti
 import inspect
 import os
@@ -112,7 +113,7 @@ class ChromiumOSConnection(fmbtgti.GUITestConnection):
         self.open()
 
     def sendFilesInTar(self, localDir, files, destDir):
-        _, package, _ = _run(("tar", "-C", localDir, "-c") + files)
+        _, package, _ = _run(("tar", "-h", "-C", localDir, "-c") + files)
         _run(self._loginTuple +
              ("mkdir -p %s; tar x -C %s" % (destDir, destDir),),
              package)
@@ -139,12 +140,18 @@ class ChromiumOSConnection(fmbtgti.GUITestConnection):
             pythonshareDir = os.path.join(myDir, "..", "pythonshare")
 
         self.sendFilesInTar(pythonshareDir,
-                            ("pythonshare-client",
-                             "pythonshare-server",
-                             "pythonshare/__init__.py",
+                            ("pythonshare/__init__.py",
                              "pythonshare/server.py",
                              "pythonshare/client.py",
                              "pythonshare/messages.py"),
+                            "/tmp/fmbtchromiumos")
+
+        pythonshareServer = distutils.spawn.find_executable("pythonshare-server")
+        if not pythonshareServer:
+            raise FMBTChromiumOsError("cannot find pythonshare-server executable")
+
+        self.sendFilesInTar(os.path.dirname(pythonshareServer),
+                            ("pythonshare-server",),
                             "/tmp/fmbtchromiumos")
 
         agentCmd = (self._loginCommand +
