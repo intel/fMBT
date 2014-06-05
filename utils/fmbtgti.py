@@ -1117,7 +1117,8 @@ class _OirRc(object):
         self._key2value = {}
         curdir = "."
         self._dir2oirArgsList = {curdir: [{}]}
-        for line in file(os.path.join(directory, _OirRc._filename)):
+        oirRcFilepath = os.path.join(directory, _OirRc._filename)
+        for line in file(oirRcFilepath):
             line = line.strip()
             if line == "" or line[0] in "#;":
                 continue
@@ -1130,6 +1131,9 @@ class _OirRc(object):
                 if key.strip().lower() == "includedir":
                     curdir = value_str
                     self._dir2oirArgsList[curdir] = [{}]
+                    if not os.access(curdir, os.X_OK):
+                        _fmbtLog("warning: %s: inaccessible includedir %s" %
+                                 (repr(oirRcFilepath), curdir))
                 else:
                     try: value = int(value_str)
                     except ValueError:
