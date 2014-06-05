@@ -656,7 +656,8 @@ class Device(fmbtgti.GUITestInterface):
         while True:
             dump = self._conn.recvViewData()
             if dump != None:
-                view = View(self.screenshotDir(), self.serialNumber, dump, displayToScreen)
+                viewDir = os.path.dirname(self._newScreenshotFilepath())
+                view = View(viewDir, self.serialNumber, dump, displayToScreen)
             else:
                 _adapterLog("refreshView window dump reading failed")
                 view = None
