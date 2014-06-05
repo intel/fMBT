@@ -113,6 +113,8 @@ _g_defaultOirEngine = None # optical image recognition engine
 _g_ocrEngines = []
 _g_oirEngines = []
 
+_g_forcedLocExt = ".fmbtoir.loc"
+
 def _fmbtLog(msg):
     fmbt.fmbtlog("fmbtgti: %s" % (msg,))
 
@@ -828,6 +830,24 @@ class OirEngine(OrEngine):
         Return list of fmbtgti.GUIItems that match to bitmap.
         """
         oirArgs = self.__oirArgs(screenshot, bitmap, **kwargs)
+        bitmapLocsFilename = bitmap + _g_forcedLocExt
+        if os.access(bitmapLocsFilename, os.R_OK):
+            # Use hardcoded bitmap locations file instead of real OIR
+            # bitmap.png.locs file format:
+            # [(x11, y11, x12, y12), ..., (xn1, yn1, xn2, yn2)]
+            try:
+                bboxList = eval(file(bitmapLocsFilename).read().strip())
+                foundItems = []
+                for (left, top, right, bottom) in bboxList:
+                    x1, y1 = _intCoords((left, top), screenshot.size())
+                    x2, y2 = _intCoords((right, bottom), screenshot.size())
+                    foundItems.append(
+                        GUIItem("bitmap location", (x1, y1, x2, y2),
+                                screenshot.filename(), bitmap=bitmapLocsFilename))
+                return foundItems
+            except Exception, e:
+                raise ValueError('Error reading bounding box list from %s: %s' %
+                                 repr(bitmapLocsFilename), e)
         return self._findBitmap(screenshot, bitmap, **oirArgs)
 
     def _findBitmap(self, screenshot, bitmap, **kwargs):
