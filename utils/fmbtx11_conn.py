@@ -259,6 +259,9 @@ class Display(object):
         libX11.XDestroyImage(image_p)
         return compressed_image
 
+    def recvScreenUpdated(self, waitTime, pollDelay):
+        return None # optimization not implemented
+
 def shellSOE(command, username, asyncStatus, asyncOut, asyncError, usePty):
     if not username:
         username = _g_current_user

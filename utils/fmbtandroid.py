@@ -1266,7 +1266,7 @@ class View(object):
         return 'View(items=%s, dump="%s")' % (
             len(self._viewItems), self._rawDumpFilename)
 
-class _AndroidDeviceConnection:
+class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
     """
     Connection to the Android Device being tested.
 
@@ -1277,6 +1277,7 @@ class _AndroidDeviceConnection:
     _w_port = _m_port + 1
 
     def __init__(self, serialNumber, stopOnError=True):
+        fmbtgti.GUITestConnection.__init__(self)
         self._serialNumber = serialNumber
         self._stopOnError = stopOnError
         self._shellSupportsTar = False

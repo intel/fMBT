@@ -263,6 +263,19 @@ class GUITestConnection(object):
         Saves screenshot from the GUI under test to given filename.
         """
         raise NotImplementedError('recvScreenshot("%s") needed but not implemented.' % (filename,))
+    def recvScreenUpdated(self, waitTime, pollDelay):
+        """
+        Wait until the screen has been updated, but no longer than the
+        timeout (waitTime). Return True if the screen was updated
+        before the timeout, otherwise False.
+
+        Implementing this method is optional. If not implemented, the
+        method returns None, and an inefficient recvScreenshot-based
+        implementation is used instead from fmbtgti. pollDelay can be
+        ignored if more efficient solutions are available
+        (update-event based triggering, for instance).
+        """
+        return None
     def target(self):
         """
         Returns a string that is unique to each test target. For
@@ -2245,6 +2258,46 @@ class GUITestInterface(object):
         """
         return self.waitAnyOcrText([text], **waitAndOcrArgs) != []
 
+    def waitScreenUpdated(self, **waitArgs):
+        """
+        Wait until screenshot has been updated or waitTime expired.
+
+        Parameters:
+
+          waitTime, pollDelay (float, optional):
+                  refer to wait documentation.
+
+        Returns True if screenshot was updated before waitTime expired,
+        otherwise False. If waitTime is 0, screenshot is refreshed once.
+        Returns True if the screenshot differs from the previous.
+
+        waitScreenUpdated refreshes the screenshot.
+        """
+        waitTime = waitArgs.get("waitTime", 5.0)
+        pollDelay = waitArgs.get("pollDelay", 1.0)
+        updated = self._conn.recvScreenUpdated(waitTime, pollDelay)
+        if updated == None:
+            # optimised version is not available, this is a fallback
+            previousScreenshot = self.screenshot()
+            if previousScreenshot == None:
+                self.refreshScreenshot()
+                return True
+            # return True if screen changed from previous even with
+            # waitTime == 0, therefore refresh before calling wait.
+            self.refreshScreenshot()
+            return self.wait(
+                self.refreshScreenshot,
+                lambda: not self.verifyBitmap(previousScreenshot.filename()),
+                waitTime = waitTime,
+                pollDelay = pollDelay)
+        elif updated == True:
+            self.refreshScreenshot()
+        elif updated == False:
+            pass # no need to fetch the same screen
+        else:
+            raise ValueError("recvScreenUpdated returned illegal value: %s" % (repr(updated),))
+        return updated
+
 class Screenshot(object):
     """
     Screenshot class takes and holds a screenshot (bitmap) of device
@@ -2436,7 +2489,8 @@ class _VisualLog:
                  'tapBitmap', 'tapId', 'tapItem', 'tapOcrText',
                  'tapText', 'topApp', 'topWindow', 'type',
                  'verifyOcrText', 'verifyText', 'verifyBitmap',
-                 'waitAnyBitmap', 'waitBitmap', 'waitOcrText', 'waitText']
+                 'waitAnyBitmap', 'waitBitmap', 'waitOcrText',
+                 'waitScreenUpdated', 'waitText']
         for a in attrs:
             if hasattr(device, a):
                 m = getattr(device, a)
