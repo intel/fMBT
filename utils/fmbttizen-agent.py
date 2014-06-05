@@ -152,7 +152,8 @@ readDeviceInfo()
 
 kbInputDevFd = None
 
-if 'max77803-muic' in devices:
+if ('max77803-muic' in devices or
+    'max77804k-muic' in devices):
     hwKeyDevice = {
         "POWER": "qpnp_pon",
         "VOLUMEUP": "gpio-keys",
