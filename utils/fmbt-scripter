@@ -109,12 +109,16 @@ def _unifyIndentation(code):
 def _bitmapScreenshotFilename(bitmapFilename):
     return bitmapFilename + ".fullscreen.png"
 
-def _notPython(code):
+def _pythonCode(code):
     try:
-        parser.suite(code)
+        parser.expr(code)
+        return "expression"
     except SyntaxError:
-        return True
-    return False
+        try:
+            parser.suite(code)
+            return "suite"
+        except SyntaxError:
+            return None
 
 ########################################################################
 # Convert events to fmbtgti API calls
@@ -1148,7 +1152,7 @@ class MainWindow(QtGui.QMainWindow):
         line = cursor.block().text().rstrip()
         indentation = len(line) - len(line.lstrip())
         line = line[indentation:]
-        if _notPython(line):
+        if not _pythonCode(line):
             while cursor.movePosition(QtGui.QTextCursor.Down,
                                       QtGui.QTextCursor.KeepAnchor):
                 cursor.movePosition(QtGui.QTextCursor.EndOfLine,
@@ -1162,7 +1166,8 @@ class MainWindow(QtGui.QMainWindow):
                                         QtGui.QTextCursor.KeepAnchor)
                     break
                 line = line + "\n" + nextLine[indentation:]
-        if not _notPython(line) and highlight:
+            line = line.rstrip()
+        if _pythonCode(line) and highlight:
             cf = cursor.charFormat()
             cf.setBackground(QtCore.Qt.yellow)
             cursor.setCharFormat(cf)
@@ -1193,7 +1198,7 @@ class MainWindow(QtGui.QMainWindow):
                 code = ""
             else: # if needed, take also next lines
                 code = self.selectPythonStatement(highlight=False)
-                if _notPython(code):
+                if not _pythonCode(code):
                     log("this block is not valid Python code:")
                     log(">>>" + code + "<<<")
                     code = ""
@@ -1223,7 +1228,10 @@ class MainWindow(QtGui.QMainWindow):
             autoUpdate = self.screenshotAutoRefresh.isChecked()
         if autoUpdate:
             self.invalidateScreenshot()
-        _, exc = self._fmbtExec(statement, silent=silent)
+        if _pythonCode(statement) == "expression":
+            _, exc = self._fmbtEval(statement, silent=silent)
+        else:
+            _, exc = self._fmbtExec(statement, silent=silent)
         self.screenshotShowLatest()
         if autoUpdate:
             self.scheduleUpdateScreenshot(1.0)
@@ -1578,9 +1586,9 @@ class MainWindow(QtGui.QMainWindow):
     def _fmbtExec(self, statement, silent=False):
         if not silent or opt_debug:
             if len(statement.splitlines()) > 1:
-                log("executing block:\n%s" % (statement,))
+                log("exec block:\n%s" % (statement,))
             else:
-                log("executing line: %s" % (statement,))
+                log("exec: %s" % (statement,))
         screenshotBefore = self.screenshotLatestFilename()
         startTime = time.time()
         endTime = startTime
@@ -1603,13 +1611,15 @@ class MainWindow(QtGui.QMainWindow):
 
     def _fmbtEval(self, expression, silent=False, updateScreenshot=True):
         if not silent or opt_debug:
-            log("evaluating: %s" % (expression,))
+            log("eval: %s" % (expression,))
         try:
             if updateScreenshot:
                 screenshotBefore = self.screenshotLatestFilename()
+            startTime = time.time()
             rv = eval(expression, self._fmbtEnv, self._fmbtEnv)
-            if opt_debug:
-                log("returned %s: %s" % (type(rv), rv))
+            endTime = time.time()
+            if opt_debug or not silent:
+                log("time: %.3f s, returned: %s" % (endTime-startTime, repr(rv)))
             if (updateScreenshot and
                 self.screenshotLatestFilename() != screenshotBefore):
                 self.screenshotShowLatest()
