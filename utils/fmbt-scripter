@@ -1581,9 +1581,12 @@ class MainWindow(QtGui.QMainWindow):
                 log("executing block:\n%s" % (statement,))
             else:
                 log("executing line: %s" % (statement,))
+        screenshotBefore = self.screenshotLatestFilename()
+        startTime = time.time()
+        endTime = startTime
         try:
-            screenshotBefore = self.screenshotLatestFilename()
             exec statement in self._fmbtEnv
+            endTime = time.time()
             if self.screenshotLatestFilename() != screenshotBefore:
                 self.screenshotShowLatest()
         except Exception, e:
@@ -1591,6 +1594,11 @@ class MainWindow(QtGui.QMainWindow):
                 log("exception: %s\n  %s" %
                     (e, "    \n".join(traceback.format_exc().splitlines())))
             return None, e
+        finally:
+            if not silent or opt_debug:
+                if endTime == startTime:
+                    endTime = time.time()
+                log("time: %.3f s" % (endTime - startTime,))
         return None, None
 
     def _fmbtEval(self, expression, silent=False, updateScreenshot=True):
@@ -2013,14 +2021,14 @@ class MainWindow(QtGui.QMainWindow):
             h = float(self.screenshotImage.height())
             w = float(self.screenshotImage.width())
             x1, y1, x2, y2 = (left/w, top/h, right/w, bottom/h)
-            file(forcedLocFilename, "w").write(
+            file(forcedLocFilepath, "w").write(
                 "[(%.3f, %.3f, %.3f, %.3f)]\n" % (x1, y1, x2, y2))
         else:
             # select without forcing location => remove old forced location
             forcedLocFilepath = bitmapFilepath + _g_forcedLocExt
             try:
                 os.remove(forcedLocFilepath)
-            except IOError:
+            except OSError:
                 pass
 
         self._selectingBitmap = None
