@@ -1196,7 +1196,7 @@ class _Paths(object):
         for singleDir in path:
             retval = os.path.join(singleDir, bitmap)
             if not checkReadable or os.access(retval, os.R_OK):
-                oirRc = _OirRc.load(singleDir)
+                oirRc = _OirRc.load(os.path.dirname(retval))
                 if oirRc:
                     self._oirAL[retval] = oirRc.oirArgsList(".")
                 else:
@@ -1205,13 +1205,13 @@ class _Paths(object):
                 break
             else:
                 # bitmap is not in singleDir, but there might be .fmbtoirrc
-                oirRc = _OirRc.load(singleDir)
+                oirRc = _OirRc.load(os.path.dirname(retval))
                 if oirRc:
                     for d in oirRc.searchDirs():
                         if d.startswith("/"):
-                            candidate = os.path.join(d, bitmap)
+                            candidate = os.path.join(d, os.path.basename(bitmap))
                         else:
-                            candidate = os.path.join(singleDir, d, bitmap)
+                            candidate = os.path.join(os.path.dirname(retval), d, os.path.basename(bitmap))
                         if os.access(candidate, os.R_OK):
                             self._oirAL[candidate] = oirRc.oirArgsList(d)
                             self._oirAL[bitmap] = self._oirAL[candidate]
