@@ -2022,8 +2022,11 @@ class MainWindow(QtGui.QMainWindow):
             w = float(self.screenshotImage.width())
             x1, y1, x2, y2 = (left/w, top/h, right/w, bottom/h)
             forcedLocation = "(%.3f, %.3f, %.3f, %.3f)" % (x1, y1, x2, y2)
-            file(forcedLocFilepath, "w").write("[%s]\n" % (forcedLocation,))
-            log('saved forced location %s' % (forcedLocation,))
+            try:
+                file(forcedLocFilepath, "w").write("[%s]\n" % (forcedLocation,))
+                log('saved forced location %s' % (forcedLocation,))
+            except IOError:
+                log('saving forced location "%s" failed' % (forcedLocFilepath,))
         else:
             # select without forcing location => remove old forced location
             forcedLocFilepath = bitmapFilepath + _g_forcedLocExt
