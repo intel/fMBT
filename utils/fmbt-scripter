@@ -2017,12 +2017,13 @@ class MainWindow(QtGui.QMainWindow):
             log('saving bitmap "%s" failed' % (bitmapFilename,))
         if forcedLocFilename:
             forcedLocFilepath = os.path.join(self._selectingBitmapSaveDir,
-                                             forcedLocFilename)
+                                             os.path.basename(forcedLocFilename))
             h = float(self.screenshotImage.height())
             w = float(self.screenshotImage.width())
             x1, y1, x2, y2 = (left/w, top/h, right/w, bottom/h)
-            file(forcedLocFilepath, "w").write(
-                "[(%.3f, %.3f, %.3f, %.3f)]\n" % (x1, y1, x2, y2))
+            forcedLocation = "(%.3f, %.3f, %.3f, %.3f)" % (x1, y1, x2, y2)
+            file(forcedLocFilepath, "w").write("[%s]\n" % (forcedLocation,))
+            log('saved forced location %s' % (forcedLocation,))
         else:
             # select without forcing location => remove old forced location
             forcedLocFilepath = bitmapFilepath + _g_forcedLocExt
