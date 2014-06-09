@@ -2,11 +2,23 @@
 fMBT tutorial
 =============
 
+------------------------------------------------------------------------
+
 WARNING: This tutorial introduces modelling with the GT language and
-using the remote_python adapter. Yet still supported, this is an old
-and pretty hard way to start using fMBT. For new comers, it's
-recommended to start with AAL/Python examples and AAL/Python reference
-documentation. See fMBT README file.
+using the remote_python adapter. Yet this is still supported, this is
+an old and pretty hard way to start using fMBT. For new comers, it's
+recommended to start with
+
+* https://github.com/01org/fMBT/wiki/Tutorial
+
+* AAL/Python examples
+
+* AAL/Python reference documentation.
+
+See fMBT README file.
+
+------------------------------------------------------------------------
+
 
 In this tutorial we will create a model-based test for mkdir and rmdir
 in the Python "os" module. We will cover everything from scratch to
