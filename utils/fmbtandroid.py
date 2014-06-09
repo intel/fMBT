@@ -450,6 +450,54 @@ class Device(fmbtgti.GUITestInterface):
         import gc
         gc.collect()
 
+    def drag(self, (x1, y1), (x2, y2), delayBetweenMoves=None, delayBeforeMoves=None, delayAfterMoves=None, movePoints=None):
+        """
+        Touch the screen on coordinates (x1, y1), drag along straight
+        line to coordinates (x2, y2), and raise fingertip.
+
+        coordinates (floats in range [0.0, 1.0] or integers):
+                floating point coordinates in range [0.0, 1.0] are
+                scaled to full screen width and height, others are
+                handled as absolute coordinate values.
+
+        delayBeforeMoves (float, optional):
+                seconds to wait after touching and before dragging.
+                If negative, starting touch event is not sent.
+
+        delayBetweenMoves (float, optional):
+                seconds to wait when moving between points when
+                dragging.
+
+        delayAfterMoves (float, optional):
+                seconds to wait after dragging, before raising
+                fingertip.
+                If negative, fingertip is not raised.
+
+        movePoints (integer, optional):
+                the number of intermediate move points between end
+                points of the line.
+
+        Returns True on success, False if sending input failed.
+        """
+        if (delayBetweenMoves == None and
+            delayBeforeMoves == None and
+            delayAfterMoves == None and
+            movePoints == None):
+            x1, y1 = self.intCoords((x1, y1))
+            x2, y2 = self.intCoords((x2, y2))
+            self._conn._runAdb(["shell", "input", "swipe",
+                                str(x1), str(y1), str(x2), str(y2)])
+            return True
+        else:
+            kwArgs = {}
+            if delayBetweenMoves != None: kwArgs["delayBetweenMoves"] = delayBetweenMoves
+            if delayBeforeMoves != None: kwArgs["delayBeforeMoves"] = delayBeforeMoves
+            if delayAfterMoves != None: kwArgs["delayAfterMoves"] = delayAfterMoves
+            if movePoints != None: kwArgs["movePoints"] = movePoints
+            return fmbtgti.GUITestInterface.drag(
+                self, (x1, y1), (x2, y2),
+                **kwArgs)
+
     def dumpIni(self):
         """
         Returns contents of current device configuration as a string (in
