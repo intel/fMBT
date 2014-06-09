@@ -71,7 +71,7 @@ def debug(msg, debugLevel=1):
     if opt_debug >= debugLevel:
         sys.stderr.write("screen2gti debug: %s\n" % (msg,))
 
-def log(msg):
+def log(msg, prompt=True):
     sys.stdout.write("%s\n" % (msg,))
     sys.stdout.flush()
 
@@ -255,6 +255,17 @@ class MyScaleEvents(QtCore.QObject):
             if event.key() == QtCore.Qt.Key_Tab:
                 self.mainwindow.editorIndentLine()
                 return True
+        elif (hasattr(self.mainwindow, "console") and
+              self.mainwindow.console.hasFocus() and
+              event.type() == QtCore.QEvent.KeyPress):
+            if event.key() == QtCore.Qt.Key_Return:
+                return self.mainwindow.consoleReturnPressed()
+            elif (event.key() == QtCore.Qt.Key_Up and
+                  event.modifiers() == QtCore.Qt.ControlModifier):
+                return self.mainwindow.consoleKeyUpPressed()
+            elif (event.key() == QtCore.Qt.Key_Down and
+                  event.modifiers() == QtCore.Qt.ControlModifier):
+                return self.mainwindow.consoleKeyDownPressed()
         if self.mainwindow._selectingBitmap:
             return self.eventToSelect(event)
         else:
@@ -658,6 +669,8 @@ class MainWindow(QtGui.QMainWindow):
         self._autoBitmapPrefix = ""
         self._autoBitmapSize = 48
         self._bitmapSaveDir = os.getcwd()
+        self._consoleHistory = []
+        self._consoleHistoryIndex = 0
         self._editorIgnoreNextCursorPositionChange = False
         self._editorIndentLineCalls = None
         self._editorIndentation = 4
@@ -886,7 +899,12 @@ class MainWindow(QtGui.QMainWindow):
         self.editorCombo.setStretchFactor(0, 9)
         self.editorCombo.setStretchFactor(1, 1)
 
-        _setGlobalLog(self.console.append)
+        def consoleLog(msg, prompt=True):
+            if prompt:
+                self.console.append(msg + "\n>>> ")
+            else:
+                self.console.append(msg)
+        _setGlobalLog(consoleLog)
 
         self.editorWidgetsLayout.addWidget(self.editorCombo)
 
@@ -1055,8 +1073,8 @@ class MainWindow(QtGui.QMainWindow):
                 self.handleHwEventSequence(events)
             QtCore.QTimer.singleShot(250, self.recReadHwEvents)
         elif exc:
-            log('error when reading events: "%s"'% (exc,))
-            log("hardware recording stopped.")
+            log(('error when reading events: "%s"\n' % (exc,)) +
+                "hardware recording stopped.")
 
     def handleHwEventSequence(self, events):
         synEvent = fmbtuinput.eventTypes["EV_SYN"]
@@ -1179,6 +1197,52 @@ class MainWindow(QtGui.QMainWindow):
     def consoleClearBackground(self):
         self.clearBackground(self.console)
 
+    def consoleHistoryUpDownEvent(self, delta):
+        """return True if event was handled by this routine"""
+        cursor = self.console.textCursor()
+        cursor.select(QtGui.QTextCursor.SelectionType.BlockUnderCursor)
+        t = cursor.selectedText()
+        if ">>>" in t:
+            if not self._consoleHistory:
+                return True
+            if not t in self._consoleHistory and t.split(">>>")[1].strip():
+                self._consoleHistory.append(t)
+            self._consoleHistoryIndex += delta
+            self._consoleHistoryIndex = max(0, self._consoleHistoryIndex)
+            self._consoleHistoryIndex = min(len(self._consoleHistory)-1, self._consoleHistoryIndex)
+            cursor.removeSelectedText()
+            cursor.insertText(self._consoleHistory[self._consoleHistoryIndex])
+            self.console.ensureCursorVisible()
+            return True
+        else:
+            return False
+
+    def consoleKeyUpPressed(self):
+        return self.consoleHistoryUpDownEvent(-1)
+
+    def consoleKeyDownPressed(self):
+        return self.consoleHistoryUpDownEvent(1)
+
+    def consoleReturnPressed(self):
+        cursor = self.console.textCursor()
+        cursor.select(QtGui.QTextCursor.SelectionType.BlockUnderCursor)
+        t = cursor.selectedText()
+        if ">>>" in t:
+            if t.split(">>>")[1].strip():
+                if not self._consoleHistory or self._consoleHistory[-1] != t:
+                    self._consoleHistory.append(t)
+                    self._consoleHistoryIndex = len(self._consoleHistory)
+                code = t.split(">>>")[1]
+                code = _unifyIndentation(code)
+                self.runStatement(code)
+            return True
+        elif not cursor.movePosition(QtGui.QTextCursor.End):
+            # already at the end of document, add prompt
+            log("", prompt=True)
+            return True
+        else:
+            return False
+
     def clearBackground(self, textEdit):
         cursor = textEdit.textCursor()
         cursor.select(QtGui.QTextCursor.Document)
@@ -1199,8 +1263,7 @@ class MainWindow(QtGui.QMainWindow):
             else: # if needed, take also next lines
                 code = self.selectPythonStatement(highlight=False)
                 if not _pythonCode(code):
-                    log("this block is not valid Python code:")
-                    log(">>>" + code + "<<<")
+                    log("this block is not valid Python code:\n" + code)
                     code = ""
         elif lineCount == "selection":
             autoSelected = False
@@ -1586,9 +1649,9 @@ class MainWindow(QtGui.QMainWindow):
     def _fmbtExec(self, statement, silent=False):
         if not silent or opt_debug:
             if len(statement.splitlines()) > 1:
-                log("exec block:\n%s" % (statement,))
+                log("exec block:\n%s" % (statement,), prompt=False)
             else:
-                log("exec: %s" % (statement,))
+                log("exec: %s" % (statement,), prompt=False)
         screenshotBefore = self.screenshotLatestFilename()
         startTime = time.time()
         endTime = startTime
@@ -1611,7 +1674,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def _fmbtEval(self, expression, silent=False, updateScreenshot=True):
         if not silent or opt_debug:
-            log("eval: %s" % (expression,))
+            log("eval: %s" % (expression,), prompt=False)
         try:
             if updateScreenshot:
                 screenshotBefore = self.screenshotLatestFilename()
