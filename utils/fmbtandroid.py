@@ -482,7 +482,8 @@ class Device(fmbtgti.GUITestInterface):
         if (delayBetweenMoves == None and
             delayBeforeMoves == None and
             delayAfterMoves == None and
-            movePoints == None):
+            movePoints == None and
+            self._platformVersion > "4.2"):
             x1, y1 = self.intCoords((x1, y1))
             x2, y2 = self.intCoords((x2, y2))
             self._conn._runAdb(["shell", "input", "swipe",
