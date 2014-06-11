@@ -141,3 +141,59 @@ def simulated():
 
 def _adapterlogWriter(fileObj, formattedMsg):
     fileObj.write(formattedMsg)
+
+_g_debug_socket = None
+_g_debug_conn = None
+
+def debug():
+    import inspect
+    import pdb
+    import socket
+
+    global _g_debug_conn, _g_debug_socket
+
+    if not _g_debug_socket:
+        port = 0xf4bd # 62653, fMBD
+        host = "127.0.0.1" # accept local host only, by default
+        _g_debug_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        _g_debug_socket.bind((host, port))
+        _g_debug_socket.listen(1)
+
+    if not _g_debug_conn:
+        fmbtlog("debugger waiting for connection at %s:%s" % (host, port))
+        (_g_debug_conn, addr) = _g_debug_socket.accept()
+
+    # socket.makefile does not work due to buffering issues
+    # therefore, use our own socket-to-file converter
+    class SocketToFile(object):
+        def __init__(self, socket_conn):
+            self._conn = socket_conn
+        def read(self, bytes=-1):
+            msg = []
+            rv = ""
+            try:
+                c = self._conn.recv(1)
+            except KeyboardInterrupt:
+                self._conn.close()
+                raise
+            while c and not rv:
+                msg.append(c)
+                if c == "\r":
+                    rv = "".join(msg)
+                elif c == "\n":
+                    rv = "".join(msg)
+                elif len(msg) == bytes:
+                    rv = "".join(msg)
+                else:
+                    c = self._conn.recv(1)
+            return rv
+        def readline(self):
+            return self.read()
+        def write(self, msg):
+            self._conn.sendall(msg)
+        def flush(self):
+            pass
+
+    connfile = SocketToFile(_g_debug_conn)
+    debugger = pdb.Pdb(stdin=connfile, stdout=connfile)
+    debugger.set_trace(inspect.currentframe().f_back)

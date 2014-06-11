@@ -243,10 +243,12 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %defattr(-, root, root, -)
 %{_bindir}/%{name}-aalc
 %{_bindir}/%{name}-aalp
+%{_bindir}/%{name}-debug
 %{_bindir}/%{name}-gt
 %{_bindir}/%{name}-log2lsts
 %{_bindir}/%{name}-parallel
 %{_bindir}/%{name}-trace-share
+%{python_sitelib}/%{name}/%{name}-debug
 %{python_sitelib}/%{name}/%{name}-gt
 %{python_sitelib}/%{name}/%{name}-parallel
 %{python_sitelib}/%{name}/%{name}-trace-share

@@ -1,0 +1,56 @@
+#!/usr/bin/env python
+#
+# fMBT, free Model Based Testing tool
+# Copyright (c) 2014, Intel Corporation.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU Lesser General Public License,
+# version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for
+# more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+import select
+import sys
+import socket
+import thread
+
+host = "127.0.0.1"
+port = 0xf4bd
+
+def error(msg, exitstatus=1):
+    sys.stderr.write("fmbt-debug: " + msg + "\n")
+    sys.exit(exitstatus)
+
+# main
+try:
+    conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    conn.connect((host, port))
+except socket.error, e:
+    error("cannot connect to process that called fmbt.debug(): %s" % (e,))
+
+in_file = sys.stdin
+out_file = sys.stdout
+while 1:
+    ready_read, _, _ = select.select([in_file, conn], [], [], 1)
+    for f in ready_read:
+        if f == in_file:
+            msg = in_file.readline()
+            if not msg:
+                sys.exit(0)
+            else:
+                conn.sendall(msg)
+        elif f == conn:
+            msg = f.recv(1024)
+            if not msg:
+                f.close()
+                error("connection closed", exitstatus=0)
+            else:
+                out_file.write(msg)
+                out_file.flush()
