@@ -466,6 +466,21 @@ Other previewer options are:
         directories listed in preview-image-path.
 
 
+Debugging
+---------
+
+remote_pyaal option --verbose-fmbt-log prints AAL/Python variables and
+their values to fMBT log.
+
+If you need pdb (Python debugger) prompt inside AAL/Python or other
+Python code during fMBT test run, call fmbt.debug() in the
+code, run the test, and run command
+
+fmbt-debug
+
+See python -c 'import fmbt; help(fmbt.debug)' for more information.
+
+
 Special variables and functions in AAL/Python
 ---------------------------------------------
 

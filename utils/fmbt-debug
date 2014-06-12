@@ -16,41 +16,110 @@
 # this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
+"""
+fMBT debugger
+
+Usage: fmbt-debug [session]
+
+Debug Python code that calls fmbt.debug([session]). Session is an
+integer, the default session is 0.
+
+If fmbt.debug() is called before fmbt-debug is launched, the call is
+blocked until fmbt-debug connects to the debug session.
+
+If fmbt-debug is executed before fmbt.debug() is called, then
+fmbt-debug waits for connection from fmbt.debug() call.
+
+Only one fmbt-debug process and fmbt.debug() call can participate a
+session at a time.
+"""
+
+import getopt
 import select
 import sys
 import socket
 import thread
 
 host = "127.0.0.1"
-port = 0xf4bd
+PORTBASE = 0xf4bd
 
 def error(msg, exitstatus=1):
     sys.stderr.write("fmbt-debug: " + msg + "\n")
     sys.exit(exitstatus)
 
-# main
-try:
-    conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    conn.connect((host, port))
-except socket.error, e:
-    error("cannot connect to process that called fmbt.debug(): %s" % (e,))
+def info(msg):
+    sys.stdout.write("fmbt-debug: " + msg + "\n")
+    sys.stdout.flush()
 
-in_file = sys.stdin
-out_file = sys.stdout
-while 1:
-    ready_read, _, _ = select.select([in_file, conn], [], [], 1)
-    for f in ready_read:
-        if f == in_file:
-            msg = in_file.readline()
-            if not msg:
-                sys.exit(0)
+# main
+if __name__ == "__main__":
+
+    opts, remainder = getopt.getopt(
+        sys.argv[1:], 'h',
+        ['help'])
+    for opt, arg in opts:
+        if opt in ['-h', '--help']:
+            print __doc__
+            sys.exit(0)
+    if len(remainder) > 1:
+        error("illegal arguments, see --help")
+    elif len(remainder) == 1:
+        try:
+            port = PORTBASE + int(remainder[0])
+        except ValueError:
+            error('illegal session "%s", integer expected' % (remainder[0],))
+    else:
+        port = PORTBASE
+
+    # Listen to connections from fmbt.debug() at host:port.
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    conn = None
+    try:
+        s.bind((host, port))
+        s.listen(1)
+        info("waiting for fmbt.debug(%s)" % (port-PORTBASE))
+        while True:
+            (conn, addr) = s.accept()
+            conn.sendall("fmbt-debug\n")
+            msg = conn.recv(len("fmbt.debug\n"))
+            if msg.startswith("fmbt.debug"):
+                break
+            conn.close()
+    except socket.error, e:
+        # Port is already in use. Perhaps fmbt.debug() is already
+        # listening to it and waiting for this process to
+        # connect.
+        try:
+            s.connect((host, port))
+            conn = s
+        except socket.error:
+            error('cannot listen or connect to %s:%s' % (host, port))
+        whos_there = conn.recv(len("fmbt.debug\n"))
+        # make sure to connect to fmbt.debug(), not to another fmbt-debug
+        if not whos_there.startswith("fmbt.debug"):
+            conn.close()
+            if whos_there.startswith("fmbt-debug"):
+                error('fmbt-debug is already listening to session %s"' % (port-PORTBASE,))
             else:
-                conn.sendall(msg)
-        elif f == conn:
-            msg = f.recv(1024)
-            if not msg:
-                f.close()
-                error("connection closed", exitstatus=0)
-            else:
-                out_file.write(msg)
-                out_file.flush()
+                error('unexpected answer "%s"' % (whos_there.strip(),))
+        conn.sendall("fmbt-debug\n")
+
+    in_file = sys.stdin
+    out_file = sys.stdout
+    while 1:
+        ready_read, _, _ = select.select([in_file, conn], [], [], 1)
+        for f in ready_read:
+            if f == in_file:
+                msg = in_file.readline()
+                if not msg:
+                    sys.exit(0)
+                else:
+                    conn.sendall(msg)
+            elif f == conn:
+                msg = f.recv(1024)
+                if not msg:
+                    f.close()
+                    error("connection closed", exitstatus=0)
+                else:
+                    out_file.write(msg)
+                    out_file.flush()

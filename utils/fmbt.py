@@ -145,7 +145,27 @@ def _adapterlogWriter(fileObj, formattedMsg):
 _g_debug_socket = None
 _g_debug_conn = None
 
-def debug():
+def debug(session=0):
+    """
+    Start debugging with fmbt-debug from the point where this function
+    was called. Execution will stop until connection to fmbt-debug
+    [session] has been established.
+
+    Parameters:
+
+      session (integer, optional):
+              debug session that identifies which fmbt-debug should
+              connect to this process. The default is 0.
+
+    Example:
+
+      - execute on command line "fmbt-debug 42"
+      - add fmbt.debug(42) in your Python code
+      - run the Python code so that it will call fmbt.debug(42)
+      - when done the debugging on the fmbt-debug prompt, enter "c"
+        for continue.
+    """
+    import bdb
     import inspect
     import pdb
     import socket
@@ -153,15 +173,40 @@ def debug():
     global _g_debug_conn, _g_debug_socket
 
     if not _g_debug_socket:
-        port = 0xf4bd # 62653, fMBD
+        PORTBASE = 0xf4bd # 62653, fMBD
         host = "127.0.0.1" # accept local host only, by default
+        port = PORTBASE + session
         _g_debug_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        _g_debug_socket.bind((host, port))
-        _g_debug_socket.listen(1)
+        try:
+            _g_debug_socket.bind((host, port))
+            _g_debug_socket.listen(1)
+            while True:
+                (_g_debug_conn, addr) = _g_debug_socket.accept()
+                _g_debug_conn.sendall("fmbt.debug\n")
+                msg = _g_debug_conn.recv(len("fmbt-debug\n"))
+                if msg.startswith("fmbt-debug"):
+                    break
+                _g_debug_conn.close()
+        except socket.error:
+            # already in use, perhaps fmbt-debug is already listening to
+            # the socket and waiting for this process to connect
+            try:
+                _g_debug_socket.connect((host, port))
+                _g_debug_conn = _g_debug_socket
+                whos_there = _g_debug_conn.recv(len("fmbt-debug\n"))
+                if not whos_there.startswith("fmbt-debug"):
+                    _g_debug_conn.close()
+                    _g_debug_socket = None
+                    _g_debug_conn = None
+                    raise ValueError(
+                        'unexpected answer "%s", fmbt-debug expected' %
+                        (whos_there.strip(),))
+                _g_debug_conn.sendall("fmbt.debug\n")
+            except socket.error:
+                raise ValueError('debugger cannot listen or connect to %s:%s' % (host, port))
 
     if not _g_debug_conn:
         fmbtlog("debugger waiting for connection at %s:%s" % (host, port))
-        (_g_debug_conn, addr) = _g_debug_socket.accept()
 
     # socket.makefile does not work due to buffering issues
     # therefore, use our own socket-to-file converter
