@@ -700,11 +700,35 @@ def shell(command):
             output = None
     return output
 
-def shellSOE(command):
+def _exitStatusWriter(process, statusFile):
+    statusFile.write(str(process.wait()))
+    statusFile.close()
+
+def shellSOE(command, asyncStatus=None, asyncOut=None, asyncError=None):
     if isinstance(command, list):
         useShell = False
     else:
         useShell = True
+
+    if (asyncStatus, asyncOut, asyncError) != (None, None, None):
+        # asynchronous execution
+        if not asyncStatus or asyncStatus == True:
+            asyncStatus = os.devnull
+        if not asyncOut or asyncOut == True:
+            asyncOut = os.devnull
+        if not asyncError or asyncError == True:
+            asyncError = os.devnull
+        sFile = file(asyncStatus, "w")
+        oFile = file(asyncOut, "w")
+        eFile = file(asyncError, "w")
+        p = subprocess.Popen(command, shell=useShell,
+                             stdin = file(os.devnull),
+                             stdout = oFile,
+                             stderr = eFile)
+        thread.start_new_thread(_exitStatusWriter, (p, sFile))
+        return (None, None, None)
+
+    # synchronous execution
     try:
         p = subprocess.Popen(command, shell=useShell,
                              stdin = subprocess.PIPE,

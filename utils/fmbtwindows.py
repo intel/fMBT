@@ -241,7 +241,7 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self._conn.evalPython('shell(%s)' % (repr(command),))
 
-    def shellSOE(self, command):
+    def shellSOE(self, command, asyncStatus=None, asyncOut=None, asyncError=None):
         """
         Execute command in Windows.
 
@@ -253,12 +253,32 @@ class Device(fmbtgti.GUITestInterface):
                   then it will be executed in subshell, otherwise without
                   shell.
 
+          asyncStatus (string or None)
+                  filename (on device) to which the status of
+                  asynchronously executed shellCommand will be
+                  written. The default is None, that is, command will
+                  be run synchronously, and status will be returned in
+                  the tuple.
+
+          asyncOut (string or None)
+                  filename (on device) to which the standard output of
+                  asynchronously executed shellCommand will be
+                  written. The default is None.
+
+          asyncError (string or None)
+                  filename (on device) to which the standard error of
+                  asynchronously executed shellCommand will be
+                  written. The default is None.
+
         Returns triplet: exit status, standard output and standard error
         from the command.
 
         If executing command fails, returns None, None, None.
         """
-        return self._conn.evalPython('shellSOE(%s)' % (repr(command),))
+        return self._conn.evalPython(
+            'shellSOE(%s, asyncStatus=%s, asyncOut=%s, asyncError=%s)'
+            % (repr(command),
+               repr(asyncStatus), repr(asyncOut), repr(asyncError)))
 
     def topWindowProperties(self):
         """
