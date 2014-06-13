@@ -192,6 +192,13 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self._conn.recvDisplayStatus()
 
+
+    def keyNames(self):
+        """
+        Returns list of key names recognized by pressKey
+        """
+        return self._conn.keyNames()
+
     def pinch(self, (x, y), startDistance, endDistance,
               finger1Dir=90, finger2Dir=270, duration=1.0, movePoints=20,
               sleepBeforeMove=0, sleepAfterMove=0):
@@ -704,8 +711,17 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
                 raise
         return self._agentAnswer()
 
-    def sendPress(self, keyName):
-        return self._agentCmd("kp %s" % (keyName,))[0]
+    def keyNames(self):
+        return self._agentCmd("kn")[1]
+
+    def sendPress(self, keyName, modifiers=()):
+        rv = True
+        for m in modifiers:
+            rv = rv and self.sendKeyDown(m)
+        rv = rv and self._agentCmd("kp %s" % (keyName,))[0]
+        for m in modifiers[::-1]:
+            rv = rv and self.sendKeyUp(m)
+        return rv
 
     def sendKeyDown(self, keyName):
         return self._agentCmd("kd %s" % (keyName,))[0]

@@ -287,11 +287,6 @@ elif iAmRoot:
         debug("touch device: %s" % (touch_device,))
         debug("mouse device: %s" % (mouse_button_device,))
         debug("keyb device:  %s" % (keyboard_device,))
-    if touch_device:
-        mtInputDevFd = touch_device._fd
-
-    if keyboard_device:
-        kbInputDevFd = keyboard_device._fd
 
     if isinstance(mouse_button_device, fmbtuinput.Mouse):
         time.sleep(1)
@@ -299,6 +294,13 @@ elif iAmRoot:
         mouse_button_device.setXY(0, 0)
 
     del _d
+
+if touch_device:
+    mtInputDevFd = touch_device._fd
+
+if keyboard_device:
+    kbInputDevFd = keyboard_device._fd
+
 
 # Read input devices
 deviceToEventFile = {}
@@ -935,6 +937,10 @@ if __name__ == "__main__":
             if iAmRoot: rv, msg = sendHwKey(cmd[3:], 0, -1)
             else: rv, msg = subAgentCommand("root", "tizen", cmd)
             write_response(rv, msg)
+        elif cmd.startswith("kn"): # list input key names
+            if not "hwKeyDevices" in globals():
+                hwKeyDevices={}
+            write_response(True, sorted(InputKeys + hwKeyDevices.keys()))
         elif cmd.startswith("kp "): # hw key press
             if iAmRoot: rv, msg = sendHwKey(cmd[3:], 0, 0)
             else: rv, msg = subAgentCommand("root", "tizen", cmd)
