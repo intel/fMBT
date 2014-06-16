@@ -931,9 +931,15 @@ if __name__ == "__main__":
             else: rv, msg = subAgentCommand("root", "tizen", cmd)
             write_response(rv, msg)
         elif cmd.startswith("kn"): # list input key names
-            if not "hwKeyDevices" in globals():
-                hwKeyDevices={}
-            write_response(True, sorted(InputKeys + hwKeyDevices.keys()))
+            if "hwKeyDevice" in globals():
+                hk = hwKeyDevice.keys()
+            else:
+                hk = []
+            if "keyboard_device" in globals():
+                ik = InputKeys
+            else:
+                ik = []
+            write_response(True, sorted(ik + hk))
         elif cmd.startswith("kp "): # hw key press
             if iAmRoot: rv, msg = sendHwKey(cmd[3:], 0, 0)
             else: rv, msg = subAgentCommand("root", "tizen", cmd)
