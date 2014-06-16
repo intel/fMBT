@@ -1,8 +1,27 @@
-fmbt (0.14.1-0.rc0) unstable; urgency=low
+fmbt (0.15-1) unstable; urgency=low
 
-  * Development version.
+  * fmbt-scripter:
+    - Interactive Python shell added to the console.
+    - Reference bitmap selection with forced locations.
+    - Running Python code prints return value when available.
+  * fmbt-debug:
+    - Gives Pdb prompt to where fmbt.debug() is called.
+    - Enables debugging AAL/Python code that is running in remote_pyaal.
+  * fmbtandroid/chromiumos/tizen/vnc/windows/x11:
+    - Supports forced location files for reference bitmaps (see GUI FAQ).
+    - waitScreenUpdated() added.
+  * fmbtandroid: default swipe/drag uses "input swipe" on Android 4.3+.
+  * fmbtchromiumos: added shellSOE(), fixed the connection bug.
+  * fmbttizen:
+    - support for new mobile hardware model.
+    - keyNames() added.
+    - pressKey() supports the modifiers parameter.
+  * fmbtwindows: added topWindowProperties() and async shellSOE().
+  * end conditions: lookahead_noprogess will stop test generation when
+    the lookahead heuristic does not see any growth in the coverage in
+    any simulated future.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 28 May 2014 11:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 16 Jun 2014 09:42:00 +0300
 
 fmbt (0.14-1) unstable; urgency=low
 
