@@ -1231,7 +1231,7 @@ class MainWindow(QtGui.QMainWindow):
             if t.split(">>>")[1].strip():
                 if not self._consoleHistory or self._consoleHistory[-1] != t:
                     self._consoleHistory.append(t)
-                    self._consoleHistoryIndex = len(self._consoleHistory)
+                self._consoleHistoryIndex = len(self._consoleHistory)
                 code = t.split(">>>")[1]
                 code = _unifyIndentation(code)
                 self.runStatement(code)
