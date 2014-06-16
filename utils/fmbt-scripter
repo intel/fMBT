@@ -1778,12 +1778,16 @@ class MainWindow(QtGui.QMainWindow):
             self._sut = None
 
     def updateScreenshot(self, recordable=True):
+        if self.console.hasFocus():
+            focusOnMe = self.console
+        else:
+            focusOnMe = self.editor
         if not self._sut:
             self._findSutVariable()
             if not self._sut:
                 log("cannot update screenshot, no connection")
                 self.screenshotButtonRefresh.setChecked(False)
-                self.editor.setFocus()
+                focusOnMe.setFocus()
                 return
 
         self.invalidateScreenshot()
@@ -1800,7 +1804,7 @@ class MainWindow(QtGui.QMainWindow):
                     self._fmbtEval("%s.screenshot().filename()" % (self._sut,),
                                    silent=True)[0])
                 self.screenshotSet(len(self._screenshotFilenames)-1)
-        self.editor.setFocus()
+        focusOnMe.setFocus()
 
     def updateScreenshotView(self):
         self.screenshotQLabel.setPixmap(
