@@ -166,7 +166,6 @@ if ('max77803-muic' in devices or
     _inputKeyNameToCode["MENU"] = 169 # KEY_PHONE
     if iAmRoot:
         touch_device = fmbtuinput.Touch().open("sec_touchscreen")
-        mtInputDevFd = touch_device._fd
 elif 'max77693-muic' in devices:
     hwKeyDevice = {
         "POWER": "gpio-keys",
@@ -178,7 +177,6 @@ elif 'max77693-muic' in devices:
     _inputKeyNameToCode["HOME"] = 139
     if iAmRoot:
         touch_device = fmbtuinput.Touch().open("sec_touchscreen")
-        mtInputDevFd = touch_device._fd
 elif 'TRATS' in cpuinfo:
     # Running on Lunchbox
     hwKeyDevice = {
@@ -190,7 +188,6 @@ elif 'TRATS' in cpuinfo:
     _inputKeyNameToCode["HOME"] = 139
     if iAmRoot:
         touch_device = fmbtuinput.Touch().open("/dev/input/event2")
-        mtInputDevFd = touch_device._fd
 elif 'QEMU Virtual CPU' in cpuinfo:
     # Running on Tizen emulator
     hwKeyDevice = {
@@ -202,7 +199,6 @@ elif 'QEMU Virtual CPU' in cpuinfo:
     _inputKeyNameToCode["HOME"] = 139
     if iAmRoot:
         touch_device = fmbtuinput.Touch().open("/dev/input/event2")
-        mtInputDevFd = touch_device._fd
 elif 'Synaptics_RMI4_touchkey' in devices:
     # Running on Geek
     hwKeyDevice = {
@@ -215,7 +211,6 @@ elif 'Synaptics_RMI4_touchkey' in devices:
         }
     if iAmRoot:
         touch_device = fmbtuinput.Touch().open("/dev/input/event1")
-        mtInputDevFd = touch_device._fd
 elif 'mxt224_key_0' in devices:
     # Running on Blackbay
     hwKeyDevice = {
@@ -226,12 +221,10 @@ elif 'mxt224_key_0' in devices:
         }
     if iAmRoot:
         touch_device = fmbtuinput.Touch().open("/dev/input/event0")
-        mtInputDevFd = touch_device._fd
 elif 'eGalax Inc. eGalaxTouch EXC7200-7368v1.010          ' in devices:
     if iAmRoot:
         touch_device = fmbtuinput.Touch(maxX=0x8000, maxY=0x8000).open(
             "eGalax Inc. eGalaxTouch EXC7200-7368v1.010          ")
-        mtInputDevFd = touch_device._fd
         keyboard_device = fmbtuinput.Keyboard().create()
 
 elif iAmRoot:
@@ -295,10 +288,10 @@ elif iAmRoot:
 
     del _d
 
-if touch_device:
+if "touch_device" in globals() and touch_device:
     mtInputDevFd = touch_device._fd
 
-if keyboard_device:
+if "keyboard_device" in globals() and keyboard_device:
     kbInputDevFd = keyboard_device._fd
 
 
