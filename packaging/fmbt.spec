@@ -1,6 +1,6 @@
 Name:           fmbt
-Version:        0.15
-Release:        1
+Version:        0.15.1
+Release:        0.rc0.<CI_CNT>.<B_CNT>
 Summary:        free Model-Based Testing tool
 
 License:        LGPL
@@ -274,10 +274,10 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %{python_sitelib}/fmbtgti.py*
 %{python_sitelib}/fmbtlogger.py*
 %{python_sitelib}/fmbtuinput.py*
-%{python_sitelib}/%{name}/lsts.py*
-%{python_sitelib}/%{name}/aalmodel.py*
-%{python_sitelib}/%{name}/%{name}parsers.py*
-%{python_sitelib}/%{name}/%{name}_config.py*
+%{python_sitelib}/lsts.py*
+%{python_sitelib}/aalmodel.py*
+%{python_sitelib}/%{name}parsers.py*
+%{python_sitelib}/%{name}_config.py*
 %dir %{_libdir}/python*/site-packages/%{name}
 %{_libdir}/python*/site-packages/%{name}/%{name}_cparsers.so
 
