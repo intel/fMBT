@@ -1,20 +1,54 @@
-if HAVE_PYTHON
+dist_noinst_SCRIPTS = \
+	setup.py
 
-PYTHON_WRAPPERS = wrapperdir/fmbt-gt wrapperdir/fmbt-editor wrapperdir/fmbt-scripter wrapperdir/fmbt-debug wrapperdir/fmbt-gteditor wrapperdir/fmbt-log wrapperdir/lsts2dot wrapperdir/fmbt-parallel wrapperdir/fmbt-trace-share wrapperdir/fmbt-stats wrapperdir/fmbt-view wrapperdir/remote_pyaal wrapperdir/remote_python
-CLEANFILES = $(PYTHON_WRAPPERS)
+# scripts
+dist_noinst_SCRIPTS +=		\
+	fmbt-gt			\
+	fmbt-editor		\
+	fmbt-scripter		\
+	fmbt-debug		\
+	fmbt-gteditor		\
+	fmbt-log		\
+	lsts2dot		\
+	fmbt-parallel		\
+	fmbt-trace-share	\
+	fmbt-stats		\
+	fmbt-view		\
+	remote_pyaal		\
+	remote_python
+# end of scripts
 
-wrapperdir:
-	$(MKDIR_P) $@
+# modules
+dist_noinst_SCRIPTS +=		\
+	aalmodel.py		\
+	eyenfinger.py		\
+	fmbt.py			\
+	fmbt_config.py		\
+	fmbtandroid.py		\
+	fmbtchromiumos.py	\
+	fmbtgti.py		\
+	fmbtlogger.py		\
+	fmbtparsers.py		\
+	fmbttizen-agent.py	\
+	fmbttizen.py		\
+	fmbtuinput.py		\
+	fmbtvnc.py		\
+	fmbtweb.py		\
+	fmbtwindows.py		\
+	fmbtwindows_agent.py	\
+	fmbtx11.py		\
+	fmbtx11_conn.py		\
+	lsts.py
+# end of modules
 
-$(PYTHON_WRAPPERS): wrapperdir ../config.status
-	@echo Generating $@...
-	@echo '#!/bin/sh' > $@
-	@echo 'LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$(pkgpythondir) exec $(PYTHON) $(pkgpythondir)/'$$(basename $@)' "$$@"' >> $@
+# extensions
+dist_noinst_SCRIPTS += \
+	eye4graphics.cc \
+	eye4graphics.h
+# end of extensions
 
-dist_bin_SCRIPTS = $(PYTHON_WRAPPERS) remote_exec.sh
+all-local: eye4graphics.cc eye4graphics.h
+	$(PYTHON) setup.py build
 
-pkgpython_PYTHON = aalmodel.py lsts.py fmbtparsers.py fmbt-editor fmbt-scripter fmbt-debug fmbt-gt fmbt-gteditor fmbt-log fmbt-stats lsts2dot fmbt-parallel fmbt-trace-share remote_pyaal remote_python fmbt-view fmbt_config.py
-
-python_PYTHON = fmbtweb.py fmbt.py eyenfinger.py fmbtandroid.py fmbtchromiumos.py fmbtgti.py fmbttizen.py fmbttizen-agent.py fmbtuinput.py fmbtvnc.py fmbtwindows.py fmbtwindows_agent.py fmbtx11.py fmbtx11_conn.py fmbtlogger.py
-
-endif
+install-exec-local:
+	$(PYTHON) setup.py install --root=$(DESTDIR)/ --prefix=$(PYTHON_PREFIX)

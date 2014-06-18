@@ -3,7 +3,3 @@ usr/bin/fmbt-log
 usr/bin/fmbt-stats
 usr/bin/lsts2dot
 usr/bin/fmbt-ucheck
-usr/lib/python*/*packages/fmbt/fmbt-log
-usr/lib/python*/*packages/fmbt/fmbt-stats
-usr/lib/python*/*packages/fmbt/fmbt-view
-usr/lib/python*/*packages/fmbt/lsts2dot

@@ -24,8 +24,6 @@ remote_adapter_loader_SOURCES = remote_adapter_loader.cc adapter.cc log.cc adapt
 
 fmbt_cparsers_la_SOURCES      = xrules.g.d_parser.cc lts.g.d_parser.cc helper.cc params.cc
 
-eye4graphics_la_SOURCES       = eye4graphics.cc
-
 fmbt_aalp_SOURCES = aalp.ll helper.cc params.cc log.cc
 
 fmbt_log2lsts_SOURCES = log2lsts.cc lts.cc model.cc log.cc coverage.cc lts.g.d_parser.cc history.cc helper.cc history_log.cc model_yes.cc params.cc

@@ -5,7 +5,3 @@ usr/bin/fmbt-gt
 usr/bin/fmbt-log2lsts
 usr/bin/fmbt-parallel
 usr/bin/fmbt-trace-share
-usr/lib/python*/*packages/fmbt/fmbt-debug
-usr/lib/python*/*packages/fmbt/fmbt-gt
-usr/lib/python*/*packages/fmbt/fmbt-parallel
-usr/lib/python*/*packages/fmbt/fmbt-trace-share

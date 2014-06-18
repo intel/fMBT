@@ -28,7 +28,7 @@ rm -f $LOGFILE
 
 if [ "$1" != "installed" ]; then
     export PATH=../../src:../../utils:$PATH
-    export LD_LIBRARY_PATH=../../src/.libs:$LD_LIBRARY_PATH
+    export LD_LIBRARY_PATH=$(dirname $(find ../.. -name eye4graphics.so | head -n 1)):$LD_LIBRARY_PATH
     export PYTHONPATH=../../utils:$PYTHONPATH
 fi
 

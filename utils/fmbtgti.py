@@ -221,8 +221,6 @@ def _e4gOpenImage(filename):
     else:
         return image
 
-### end of binding to eye4graphics.so
-
 def _e4gImageDimensions(e4gImage):
     struct_bbox = _Bbox(0, 0, 0, 0, 0)
     eye4graphics.openedImageDimensions(ctypes.byref(struct_bbox), e4gImage)
@@ -233,6 +231,7 @@ def _e4gImageIsBlank(filename):
     rv = (eye4graphics.openedImageIsBlank(e4gImage) == 1)
     eye4graphics.closeImage(e4gImage)
     return rv
+### end of binding to eye4graphics.so
 
 class GUITestConnection(object):
     """

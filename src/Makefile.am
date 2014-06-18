@@ -6,9 +6,6 @@ endif
 
 if HAVE_PYTHON
 pkgpyexec_LTLIBRARIES = fmbt_cparsers.la
-if HAVE_MAGICK
-pyexec_LTLIBRARIES = eye4graphics.la
-endif
 endif
 
 FMBTBUILDINFOCFLAGS=-DFMBTBUILDINFO='"@FMBTBUILDINFO@"'
@@ -20,7 +17,7 @@ FMBTBUILDINFOCFLAGS=-DFMBTBUILDINFO='"@FMBTBUILDINFO@"'
 
 include Sources.mk
 
-noinst_HEADERS =  aalang.hh aalang_cpp.hh aalang_java.hh aalang_py.hh adapter_rly08btech.hh adapter_dlopen.hh adapter_dummy.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_timer.hh adapter_v4l2.hh alg_bdfs.hh conf.hh coverage.hh coverage_proxy.hh coverage_exec_filter.hh coverage_join.hh coverage_include.hh coverage_mapper.hh coverage_market.hh coverage_of.hh coverage_prop.hh coverage_report.hh coverage_tema_seq.hh coverage_tree.hh end_condition.hh eye4graphics.h helper.hh heuristic_proxy.hh heuristic_include.hh heuristic_greedy.hh heuristic.hh heuristic_minerror.hh heuristic_mrandom.hh heuristic_random.hh history.hh history_glob.hh history_log.hh history_multi.hh history_remote.hh log_null.hh lts.hh lts_remote.hh lts_trace.hh lts_xrules.hh model.hh model_remote.hh null.hh of.hh of_csv.hh of_html.hh of_null.hh policy.hh rules.hh test_engine.hh xrules_remote.hh model_yes.hh aal_remote.hh coverage_uniq.hh coverage_set.hh heuristic_weight.hh coverage_avoid.hh coverage_trace.hh coverage_min.hh coverage_const.hh alphabet_impl.hh endhook.hh coverage_paths.hh model_filter.hh coverage_include.hh remote.hh coverage_end_condition.hh coverage_if.hh coverage_shared.hh coverage_short.hh coverage_notice.hh coverage_report_filter.hh coverage_restart.hh aalang_tag.hh aalang_action.hh model_cshared.hh coverage_nohistory.hh random.hh random_c.hh random_intel_hw.hh random_devrandom.hh random_supported.hh function.hh function_pid.hh function_const.hh function_time.hh function_ustime.hh function_supported.hh heuristic_coverage_random.hh coverage_random.hh proxy.hh
+noinst_HEADERS =  aalang.hh aalang_cpp.hh aalang_java.hh aalang_py.hh adapter_rly08btech.hh adapter_dlopen.hh adapter_dummy.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_timer.hh adapter_v4l2.hh alg_bdfs.hh conf.hh coverage.hh coverage_proxy.hh coverage_exec_filter.hh coverage_join.hh coverage_include.hh coverage_mapper.hh coverage_market.hh coverage_of.hh coverage_prop.hh coverage_report.hh coverage_tema_seq.hh coverage_tree.hh end_condition.hh helper.hh heuristic_proxy.hh heuristic_include.hh heuristic_greedy.hh heuristic.hh heuristic_minerror.hh heuristic_mrandom.hh heuristic_random.hh history.hh history_glob.hh history_log.hh history_multi.hh history_remote.hh log_null.hh lts.hh lts_remote.hh lts_trace.hh lts_xrules.hh model.hh model_remote.hh null.hh of.hh of_csv.hh of_html.hh of_null.hh policy.hh rules.hh test_engine.hh xrules_remote.hh model_yes.hh aal_remote.hh coverage_uniq.hh coverage_set.hh heuristic_weight.hh coverage_avoid.hh coverage_trace.hh coverage_min.hh coverage_const.hh alphabet_impl.hh endhook.hh coverage_paths.hh model_filter.hh coverage_include.hh remote.hh coverage_end_condition.hh coverage_if.hh coverage_shared.hh coverage_short.hh coverage_notice.hh coverage_report_filter.hh coverage_restart.hh aalang_tag.hh aalang_action.hh model_cshared.hh coverage_nohistory.hh random.hh random_c.hh random_intel_hw.hh random_devrandom.hh random_supported.hh function.hh function_pid.hh function_const.hh function_time.hh function_ustime.hh function_supported.hh heuristic_coverage_random.hh coverage_random.hh proxy.hh
 
 pkginclude_HEADERS = aal.hh adapter.hh alphabet.hh awrapper.hh factory.hh helper.hh log.hh model.hh mwrapper.hh params.hh reffable.hh verdict.hh writable.hh
 
@@ -36,7 +33,6 @@ fmbt_ucheck_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./d -I `pwd` $(LIBEDIT_CF
 fmbt_droid_CPPFLAGS            = -Wall -pedantic -fPIC -I d -I `pwd` -DDROI $(FMBTBUILDINFOCFLAGS)
 remote_adapter_loader_CPPFLAGS = -Wall -pedantic -I d -DDROI $(FMBTBUILDINFOCFLAGS) $(GLIB_CFLAGS)
 fmbt_cparsers_la_CPPFLAGS      = -Wall -pedantic -fPIC -I ./d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) -DCAPI $(FMBTBUILDINFOCFLAGS)
-eye4graphics_la_CPPFLAGS       = -Wall -fPIC -I `pwd` $(MAGIC_CFLAGS) $(FMBTBUILDINFOCFLAGS)
 fmbt_aalc_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) -DINCDIR=\"${pkgincludedir}\" $(FMBTBUILDINFOCFLAGS)
 fmbt_aalp_CPPFLAGS	       = $(FMBTBUILDINFOCFLAGS) $(GLIB_CFLAGS)
 fmbt_log2lsts_CPPFLAGS	       = -Wall -pedantic -fPIC -I d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) $(XML2_CFLAGS) $(FMBTBUILDINFOCFLAGS)
@@ -45,7 +41,6 @@ fmbt_LDFLAGS                   = -g $(JVMLDFLAGS) $(XML2_LIBS) $(GLIB_LIBS) $(GO
 fmbt_ucheck_LDFLAGS            = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E -ldl
 fmbt_droid_LDFLAGS             = -Wl,-E -ldl
 fmbt_cparsers_la_LDFLAGS       = -g $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E -ldl -avoid-version -module -shared -export-dynamic
-eye4graphics_la_LDFLAGS        = -g $(MAGIC_LIBS) -avoid-version -module -shared
 remote_adapter_loader_LDFLAGS  = -g -ldl $(GLIB_LIBS)
 fmbt_aalc_LDFLAGS	       = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) -lboost_regex -Wl,-E -ldl
 fmbt_aalp_LDFLAGS	       = -g $(GLIB_LIBS) -lboost_regex -ldl

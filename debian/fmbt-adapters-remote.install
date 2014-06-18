@@ -2,6 +2,4 @@ usr/bin/remote_adapter_loader
 usr/bin/remote_exec.sh
 usr/bin/remote_pyaal
 usr/bin/remote_python
-usr/lib/python*/*packages/fmbt/remote_pyaal
-usr/lib/python*/*packages/fmbt/remote_python
 usr/lib/python*/*packages/fmbtweb.py*
