@@ -46,6 +46,11 @@ import pythonshare
 import subprocess
 import zlib
 
+if os.name == "nt":
+    _g_closeFds = False
+else:
+    _g_closeFds = True
+
 def _adapterLog(msg):
     fmbt.adapterlog("fmbtwindows %s" % (msg,))
 
@@ -62,7 +67,7 @@ def _run(command, expectedExitStatus=None):
         p = subprocess.Popen(command, shell=shell,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE,
-                             close_fds=True)
+                             close_fds=_g_closeFds)
         if expectedExitStatus != None:
             out, err = p.communicate()
         else:

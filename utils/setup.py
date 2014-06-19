@@ -3,22 +3,56 @@
 from distutils.core import setup, Extension
 import os
 import subprocess
+import sys
 
 def pkg_config(package):
-    o = subprocess.check_output(["pkg-config", "--libs", "--cflags", package])
-    ext_args = {"libraries": [], "library_dirs": [], "include_dirs": [], "extra_compile_args": []}
-    for arg in o.split():
-        if arg.startswith("-L"):
-            ext_args["library_dirs"].append(arg[2:])
-        elif arg.startswith("-l"):
-            ext_args["libraries"].append(arg[2:])
-        elif arg.startswith("-I"):
-            ext_args["include_dirs"].append(arg[2:])
-        elif arg.startswith("-f"):
-            ext_args["extra_compile_args"].append(arg)
+    if os.name == "nt":
+        if package == "Magick++":
+            # pkg-config cannot be used, try to find needed libraries from the filesystem
+            import fnmatch
+            libraries = ["CORE_RL_Magick++_"]
+            library_dirs = []
+            include_dirs = []
+            missing_libs = set(["kernel32.lib"] + [l + ".lib" for l in libraries])
+            missing_headers = set(["Magick++.h"])
+            for rootdir, dirnames, filenames in os.walk(os.environ["ProgramFiles"]):
+                for library in sorted(missing_libs):
+                    if fnmatch.filter(filenames, library) and not "x64" in rootdir:
+                        library_dirs.append(rootdir)
+                        missing_libs.remove(library)
+                        if not missing_libs:
+                            break
+                for header in missing_headers:
+                    if fnmatch.filter(filenames, header):
+                        include_dirs.append(rootdir)
+                        missing_headers.remove(header)
+                        if not missing_headers:
+                            break
+                if not missing_libs and not missing_headers:
+                    break
+            ext_args = {
+                "libraries": libraries,
+                "library_dirs": library_dirs,
+                "include_dirs": include_dirs,
+            }
         else:
-            raise ValueError('Unexpected pkg-config output: "%s" in "%s"'
-                             % (arg, o))
+            sys.stderr.write('Unknown build parameters for package "%s"\n' % (package,))
+            sys.exit(1)
+    else:
+        o = subprocess.check_output(["pkg-config", "--libs", "--cflags", package])
+        ext_args = {"libraries": [], "library_dirs": [], "include_dirs": [], "extra_compile_args": []}
+        for arg in o.split():
+            if arg.startswith("-L"):
+                ext_args["library_dirs"].append(arg[2:])
+            elif arg.startswith("-l"):
+                ext_args["libraries"].append(arg[2:])
+            elif arg.startswith("-I"):
+                ext_args["include_dirs"].append(arg[2:])
+            elif arg.startswith("-f"):
+                ext_args["extra_compile_args"].append(arg)
+            else:
+                raise ValueError('Unexpected pkg-config output: "%s" in "%s"'
+                                 % (arg, o))
     return ext_args
 
 fmbt_utils_dir = os.path.abspath(os.path.dirname(__file__))

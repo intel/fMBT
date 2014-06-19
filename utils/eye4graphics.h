@@ -17,18 +17,26 @@
  *
  */
 
-#include <sys/types.h>
 
 #define ERROR_CANNOT_OPEN_IMAGEFILE -3
 #define ERROR_CANNOT_OPEN_ICONFILE -4
 
-#ifdef __MINGW32__
+#if defined(__MINGW32__) || defined(_MSC_VER)
 
 typedef signed int int32_t;
+#define EXPORT __declspec(dllexport)
+
+#else
+
+#define EXPORT
+
+#include <sys/types.h>
 
 #endif
 
 extern "C" {
+
+    EXPORT void initeye4graphics() {}
 
     typedef struct _bbox {
         int32_t left, top, right, bottom;
@@ -59,6 +67,7 @@ extern "C" {
      *   -4: cannot open iconfile
      */
 
+    EXPORT
     int findSingleIcon(BoundingBox* bbox,
                        const char* imagefile,
                        const char* iconfile,
@@ -87,6 +96,7 @@ extern "C" {
      *     see findSingleIcon
      */
 
+    EXPORT
     int findNextIcon(BoundingBox* bbox,
                      void* image,
                      void* icon,
@@ -114,17 +124,23 @@ extern "C" {
      *       on success, bbox.right is the width, and bbox.bottom is
      *       the height of the image.
      */
+    EXPORT
     int imageDimensions(BoundingBox* bbox,
                         const char* imagefile);
 
+    EXPORT
     int openedImageDimensions(BoundingBox* bbox, const void * image);
 
+    EXPORT
     int openedImageIsBlank(const void *image);
 
+    EXPORT
     void* openImage(const char* imagefile);
 
+    EXPORT
     void* openBlob(const void* blob, const char* pixelorder, int x, int y);
 
+    EXPORT
     void closeImage(void* image);
 
     /*
@@ -134,10 +150,12 @@ extern "C" {
      *    0: all pixels are black
      *    > 0: there is at least one non-black pixel
      */
+    EXPORT
     int bgrx2rgb(char* data, int width, int height);
 
     /*
      * wbgr2rgb - convert Windows GetDIBits (BGR, mirrored Y) image to RGB.
      */
+    EXPORT
     int wbgr2rgb(char* data, int width, int height);
 }
