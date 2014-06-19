@@ -34,6 +34,8 @@ using namespace Magick;
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
+void initeye4graphics() {}
+
 static int _ceil(float f) {
     int floor = int(f);
     static const float epsilon = 0.00001;

@@ -36,7 +36,7 @@ typedef signed int int32_t;
 
 extern "C" {
 
-    EXPORT void initeye4graphics() {}
+    EXPORT void initeye4graphics();
 
     typedef struct _bbox {
         int32_t left, top, right, bottom;
