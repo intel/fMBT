@@ -249,12 +249,12 @@ class MyScaleEvents(QtCore.QObject):
                             QtCore.QEvent.Type.Hide,
                             QtCore.QEvent.Type.Destroy):
             return False
-        if (hasattr(self.mainwindow, "editor") and
-            self.mainwindow.editor.hasFocus() and
-            event.type() == QtCore.QEvent.KeyPress):
-            if event.key() == QtCore.Qt.Key_Tab:
-                self.mainwindow.editorIndentLine()
-                return True
+        if (hasattr(self.mainwindow, "editor")):
+            if (self.mainwindow.editor.hasFocus() and
+                event.type() == QtCore.QEvent.KeyPress):
+                if event.key() == QtCore.Qt.Key_Tab:
+                    self.mainwindow.editorTabPressed()
+                    return True
         elif (hasattr(self.mainwindow, "console") and
               self.mainwindow.console.hasFocus() and
               event.type() == QtCore.QEvent.KeyPress):
@@ -412,6 +412,31 @@ def _thumbnail(filePath, size=100):
 
     return QtGui.QIcon(filePath)
 
+class _Completer(QtGui.QCompleter):
+    """code completer (tab) event filter"""
+    def __init__(self, editor, *args, **kwargs):
+        self.editor = editor
+        QtGui.QCompleter.__init__(self, *args, **kwargs)
+    def eventFilter(self, obj, ev):
+        if not ev.type() == QtCore.QEvent.KeyPress:
+            return False
+        if self.popup().isVisible():
+            if ev.type() == QtCore.QEvent.KeyPress:
+                if ev.key() in (QtCore.Qt.Key_Tab,
+                                QtCore.Qt.Key_Return,
+                                QtCore.Qt.Key_Right):
+                    selectedIndexes = self.popup().selectedIndexes()
+                    if len(selectedIndexes) > 0:
+                        i = self.popup().selectedIndexes()[0]
+                        d = self.popup().model().data(i)
+                        self.activated.emit(d)
+                    self.popup().hide()
+                    return True
+                else:
+                    if not ev.key() in (QtCore.Qt.Key_Escape,): # closing keys
+                        QtCore.QTimer.singleShot(0, self.editor.completerUpdate)
+                    return QtGui.QCompleter.eventFilter(self, obj, ev)
+        return False
 
 class FilePickerWidget(QtGui.QWidget):
     """
@@ -669,6 +694,9 @@ class MainWindow(QtGui.QMainWindow):
         self._autoBitmapPrefix = ""
         self._autoBitmapSize = 48
         self._bitmapSaveDir = os.getcwd()
+        self._completeAfter = None
+        self._completer = None
+        self._completerPrefix = None
         self._consoleHistory = []
         self._consoleHistoryIndex = 0
         self._editorIgnoreNextCursorPositionChange = False
@@ -1193,6 +1221,68 @@ class MainWindow(QtGui.QMainWindow):
 
     def editorClearBackground(self):
         self.clearBackground(self.editor)
+
+    def completerUpdate(self):
+        (expr, prefix) = self.completeExprPrefix()
+
+        if prefix == None:
+            self._completer.popup().hide()
+            return
+
+        if self._completerPrefix != prefix:
+            self._completerPrefix = prefix
+            self._completer.setCompletionPrefix(self._completerPrefix)
+
+        # find suitable width for completer
+        cr = self.editor.cursorRect()
+        cr.setWidth(self._completer.popup().sizeHintForColumn(0) +
+                    self._completer.popup().verticalScrollBar().sizeHint().width())
+        self._completer.complete(cr)
+
+    def completeExprPrefix(self):
+        """return pair (expression, prefix) for completer at current cursor pos,
+        or (None, None) if cursor position cannot be completed"""
+        cursor = self.editor.textCursor()
+        col = cursor.columnNumber()
+        cursor.select(QtGui.QTextCursor.LineUnderCursor)
+        lineBeforeCursor = cursor.selectedText()[:col]
+        if lineBeforeCursor.strip():
+            cursor = self.editor.textCursor()
+            cursor.select(QtGui.QTextCursor.WordUnderCursor)
+            wordUnderCursor = cursor.selectedText()
+        else:
+            wordUnderCursor = ""
+        if ("." in lineBeforeCursor and
+            (lineBeforeCursor[:lineBeforeCursor.rfind(".")] +
+             "." + wordUnderCursor) == lineBeforeCursor):
+            # there is at most one word after the last "." on the line
+            lastDot = lineBeforeCursor.rfind(".")
+            prefix = lineBeforeCursor[lastDot+1:]
+            expr =  re.split('[^0-9A-Za-z_.]', lineBeforeCursor[:lastDot])[-1]
+            self._completeAfter = lastDot+1
+        elif wordUnderCursor != "":
+            prefix = wordUnderCursor
+            cursor.movePosition(QtGui.QTextCursor.StartOfWord, QtGui.QTextCursor.KeepAnchor)
+            self._completeAfter = cursor.columnNumber()
+            expr = None
+        else:
+            prefix = None
+            expr = None
+        return (expr, prefix)
+
+    def completerInsert(self, string):
+        cursor = self.editor.textCursor()
+        col = cursor.columnNumber()
+        cursor.beginEditBlock()
+        cursor.clearSelection()
+        cursor.movePosition(QtGui.QTextCursor.StartOfLine,
+                            QtGui.QTextCursor.KeepAnchor)
+        cursor.movePosition(QtGui.QTextCursor.Right,
+                            QtGui.QTextCursor.KeepAnchor,
+                            self._completeAfter)
+        cursor.insertText(string)
+        cursor.endEditBlock()
+        self._completer.popup().hide()
 
     def consoleClearBackground(self):
         self.clearBackground(self.console)
@@ -1937,6 +2027,15 @@ class MainWindow(QtGui.QMainWindow):
                 self.drawRect(0, 0, 0, 0, True)
                 self._highlightingBitmap = None
 
+    def editorTabPressed(self):
+        # change indent or show completer? tab pressed after "."
+        expr, prefix = self.completeExprPrefix()
+        if (prefix != None):
+            QtCore.QTimer.singleShot(
+                0, lambda: self.showCompleter(expr, prefix))
+        else:
+            self.editorIndentLine()
+
     def editorIndentLine(self, lineNumber=None, first=False):
         def indentNextLineDeeper(fullLine):
             line = fullLine.rstrip()
@@ -1992,6 +2091,11 @@ class MainWindow(QtGui.QMainWindow):
         newLine = (" " * suggest) + currentLine
         self._editorIgnoreNextCursorPositionChange = True
         cursor.insertText(newLine)
+        cursor.clearSelection()
+        cursor.movePosition(QtGui.QTextCursor.StartOfLine)
+        cursor.movePosition(QtGui.QTextCursor.Right, QtGui.QTextCursor.MoveAnchor, suggest)
+        self.editor.setTextCursor(cursor)
+        self._editorIgnoreNextCursorPositionChange = False
 
     def editorCursorPositionChanged(self):
         if not hasattr(self, "editor"):
@@ -1999,7 +2103,6 @@ class MainWindow(QtGui.QMainWindow):
         if not self._editorIgnoreNextCursorPositionChange:
             self._editorIndentLineCalls = None
             self.highlightActiveBitmap()
-        self._editorIgnoreNextCursorPositionChange = False
         cursor = self.editor.textCursor()
         cursorPosString = "%s, line: %s col: %s; screen: (%s, %s)" % (
             self._scriptFilename,
@@ -2365,6 +2468,32 @@ class MainWindow(QtGui.QMainWindow):
             self._helpDialog.show()
         else:
             log('no help on "%s"' % (word,))
+
+    def showCompleter(self, expr="", prefix=""):
+        wordList = None
+        if not expr:
+            wordList = sorted(set(
+                re.split('[^0-9A-Za-z_]', self.editor.toPlainText())))
+        else:
+            rv, exc = self._fmbtEval(expr)
+            if not exc: # no exception
+                wordList = sorted([w for w in dir(rv)
+                                   if w and not w.startswith("_")])
+
+        if not wordList:
+            return # no matching completions
+
+        if self._completer == None:
+            self._completer = _Completer(self)#self.editor)
+            self._completer.setCompletionMode(QtGui.QCompleter.PopupCompletion)
+            self._completer.activated.connect(self.completerInsert)
+            self._completer.setWidget(self.editor)
+
+        self._completer.setModel(QtGui.QStringListModel(
+            wordList, self._completer))
+
+        self._completerPrefix = None
+        self.completerUpdate()
 
     def showConsole(self):
         if (self.editorCombo.orientation() ==
