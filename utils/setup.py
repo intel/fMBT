@@ -7,14 +7,14 @@ import sys
 
 def pkg_config(package):
     if os.name == "nt":
-        if package == "Magick++":
+        if package == "MagickCore":
             # pkg-config cannot be used, try to find needed libraries from the filesystem
             import fnmatch
-            libraries = ["CORE_RL_Magick++_"]
+            libraries = ["CORE_RL_magick_"]
             library_dirs = []
             include_dirs = []
             missing_libs = set(["kernel32.lib"] + [l + ".lib" for l in libraries])
-            missing_headers = set(["Magick++.h"])
+            missing_headers = set(["magick/MagickCore.h"])
             for rootdir, dirnames, filenames in os.walk(os.environ["ProgramFiles"]):
                 for library in sorted(missing_libs):
                     if fnmatch.filter(filenames, library) and not "x64" in rootdir:
@@ -23,8 +23,11 @@ def pkg_config(package):
                         if not missing_libs:
                             break
                 for header in missing_headers:
-                    if fnmatch.filter(filenames, header):
-                        include_dirs.append(rootdir)
+                    if fnmatch.filter(filenames, os.path.basename(header)):
+                        if os.path.dirname(header) == "":
+                            include_dirs.append(rootdir)
+                        elif os.path.dirname(header) == os.path.basename(rootdir):
+                            include_dirs.append(os.path.dirname(rootdir))
                         missing_headers.remove(header)
                         if not missing_headers:
                             break
@@ -32,7 +35,7 @@ def pkg_config(package):
                     break
             ext_args = {
                 "libraries": libraries,
-                "library_dirs": library_dirs,
+                "library_dirs": sorted(set(library_dirs)),
                 "include_dirs": include_dirs,
             }
         else:
@@ -76,7 +79,7 @@ modules = [module.replace(".py","")
 scripts = lines[lines.index("# scripts")+1:
                 lines.index("# end of scripts")]
 
-eye4graphcs_buildflags = pkg_config("Magick++")
+eye4graphcs_buildflags = pkg_config("MagickCore")
 ext_eye4graphics = Extension('eye4graphics',
                              sources = ['eye4graphics.cc'],
                              **eye4graphcs_buildflags)

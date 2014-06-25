@@ -17,14 +17,14 @@
  *
  */
 
-#include <math.h>
 #include <algorithm>
-#include <vector>
 #include <climits>
+#include <map>
+#include <math.h>
 #include <string.h>
+#include <vector>
 
-#include <Magick++.h>
-using namespace Magick;
+#include <magick/MagickCore.h>
 
 #include "eye4graphics.h"
 
@@ -35,6 +35,8 @@ using namespace Magick;
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
 void initeye4graphics() {}
+
+PixelPacket* getPixels(Image* image, size_t x1, size_t y1, size_t x2, size_t y2);
 
 static int _ceil(float f) {
     int floor = int(f);
@@ -309,8 +311,8 @@ long normdiag_error(int hayxsize,int neex,int neey,int x,int y,
 static int iconsearch(std::vector<BoundingBox>& retval,
                       const std::vector<BoundingBox>& ignore,
                       const BoundingBox& searchArea,
-                      Image& haystack,
-                      Image& needle,
+                      Image* haystack,
+                      Image* needle,
                       const int threshold,
                       const double colorMatch,
                       const double opacityLimit,
@@ -349,18 +351,18 @@ static int iconsearch(std::vector<BoundingBox>& retval,
     if (startX < searchArea.left) startX = searchArea.left;
     if (startY < searchArea.top) startY = searchArea.top;
 
-    int hayx = haystack.columns();
-    int hayy = haystack.rows();
-    int neex = needle.columns();
-    int neey = needle.rows();
+    int hayx = haystack->columns;
+    int hayy = haystack->rows;
+    int neex = needle->columns;
+    int neey = needle->rows;
     hayx = MIN(hayx, searchArea.right - searchArea.left);
     hayy = MIN(hayy, searchArea.bottom - searchArea.top);
 
     const PixelPacket *hay_pixel;
     const PixelPacket *nee_pixel;
 
-    Search_id search_id(static_cast<void*>(&haystack),
-                        static_cast<void*>(&needle),
+    Search_id search_id(static_cast<void*>(haystack),
+                        static_cast<void*>(needle),
                         threshold, colorMatch, opacityLimit, searchArea);
 
     ImagePixelsIterator it;
@@ -368,25 +370,9 @@ static int iconsearch(std::vector<BoundingBox>& retval,
         hay_pixel = it->first.hay_pixel;
         nee_pixel = it->first.nee_pixel;
     } else {
-        haystack.modifyImage();
-        needle.modifyImage();
+        hay_pixel = getPixels(haystack, searchArea.left, searchArea.top, hayx, hayy);
+        nee_pixel = getPixels(needle, 0, 0, neex, neey);
 
-        if (threshold == 0) {
-            if (skipTransparency > 0) {
-                haystack.type(TrueColorMatteType);
-                needle.type(TrueColorMatteType);
-            } else {
-                haystack.type(TrueColorType);
-
-                needle.type(TrueColorType);
-            }
-        } else {
-            haystack.type(GrayscaleType);
-            needle.type(GrayscaleType);
-        }
-
-        hay_pixel=haystack.getConstPixels(searchArea.left, searchArea.top, hayx, hayy);
-        nee_pixel=needle.getConstPixels(0,0,neex,neey);
         search_id.hay_pixel = hay_pixel;
         search_id.nee_pixel = nee_pixel;
         imagePixels[search_id] = true;
@@ -562,8 +548,8 @@ int findNextIcon(BoundingBox* bbox,
 
     if (iconsearch(found, ignore,
                    *searchArea,
-                   *static_cast<Image*>(image),
-                   *static_cast<Image*>(icon),
+                   static_cast<Image*>(image),
+                   static_cast<Image*>(icon),
                    threshold,
                    colorMatch, opacityLimit,
                    startX, startY,
@@ -594,23 +580,23 @@ int imageDimensions(BoundingBox* bbox,
     return 0;
 }
 
-int openedImageDimensions(BoundingBox* bbox, const void * image)
+int openedImageDimensions(BoundingBox* bbox, void* image)
 {
     bbox->left   = 0;
     bbox->top    = 0;
-    bbox->right = static_cast<const Image*>(image)->columns();
-    bbox->bottom = static_cast<const Image*>(image)->rows();
+    bbox->right = static_cast<Image*>(image)->columns;
+    bbox->bottom = static_cast<Image*>(image)->rows;
     bbox->error  = 0;
     return 0;
 }
 
-int openedImageIsBlank(const void *image)
+int openedImageIsBlank(void* image)
 {
-    const Image* im = static_cast<const Image*>(image);
-    int xsize = im->columns();
-    int ysize = im->rows();
+    Image* im = static_cast<Image*>(image);
+    int xsize = im->columns;
+    int ysize = im->rows;
 
-    const PixelPacket* pp = im->getConstPixels(0, 0, xsize, ysize);
+    const PixelPacket* pp = getPixels(im, 0, 0, xsize, ysize);
     for (int i = 0; i < xsize * ysize; ++i) {
         if (! (pp[i].red == 0 &&
                pp[i].green == 0 &&
@@ -623,22 +609,35 @@ int openedImageIsBlank(const void *image)
 
 void* openBlob(const void* blob, const char* pixelorder, int x, int y)
 {
-  Image* image = new Image(x,y,pixelorder,CharPixel,blob);
-  return static_cast<void*>(image);
-}
-
-
-void * openImage(const char* imagefile)
-{
-    Image* image;
-    try { image = new Image(imagefile); }
-    catch(ErrorFileOpen e) {
-        return NULL;
-    }
+    // Image* image = new Image(x,y,pixelorder,CharPixel,blob);
+    Image* image = NULL;
     return static_cast<void*>(image);
 }
 
-void closeImage(void * image)
+
+void* openImage(const char* imagefile)
+{
+    Image* image;
+    ExceptionInfo *exception;
+    ImageInfo *image_info;
+    exception = AcquireExceptionInfo();
+    image_info = CloneImageInfo((ImageInfo *) NULL);
+    strcpy(image_info->filename, imagefile);
+    image = ReadImage(image_info, exception);
+    DestroyExceptionInfo(exception);
+    return static_cast<void*>(image);
+}
+
+PixelPacket* getPixels(Image* image, size_t x1, size_t y1, size_t x2, size_t y2)
+{
+    ExceptionInfo *exception = AcquireExceptionInfo();
+    PixelPacket* p = GetAuthenticPixels(image, x1, y1, x2, y2, exception);
+    DestroyExceptionInfo(exception);
+    return p;
+}
+
+
+void closeImage(void* image)
 {
     ImagePixelsIterator it = imagePixels.begin();
     while (it != imagePixels.end()) {
@@ -651,7 +650,7 @@ void closeImage(void * image)
         }
     }
     if (image != NULL)
-        delete static_cast<Image*>(image);
+        DestroyImage(static_cast<Image*>(image));
 }
 
 int bgrx2rgb(char* data, int width, int height)

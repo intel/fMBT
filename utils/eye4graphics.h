@@ -129,10 +129,10 @@ extern "C" {
                         const char* imagefile);
 
     EXPORT
-    int openedImageDimensions(BoundingBox* bbox, const void * image);
+    int openedImageDimensions(BoundingBox* bbox, void* image);
 
     EXPORT
-    int openedImageIsBlank(const void *image);
+    int openedImageIsBlank(void* image);
 
     EXPORT
     void* openImage(const char* imagefile);

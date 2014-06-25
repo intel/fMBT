@@ -48,7 +48,7 @@ dist_noinst_SCRIPTS += \
 # end of extensions
 
 all-local: eye4graphics.cc eye4graphics.h
-	$(PYTHON) setup.py build
+	CC=g++ $(PYTHON) setup.py build
 
 install-exec-local:
 	$(PYTHON) setup.py install --root=$(DESTDIR)/ --prefix=$(PYTHON_PREFIX)
