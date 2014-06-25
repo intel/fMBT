@@ -26,6 +26,11 @@ libraries to a directory that is not in the default PYTHONPATH. You
 may need to add it to PYTHONPATH, for instance:
 export PYTHONPATH=$PYTHONPATH:/usr/local/lib/python2.7/site-packages)
 
+Windows users:
+
+fMBT is being ported to Windows, but the work is not ready yet. See
+README-windows.txt for current status and instructions.
+
 
 Getting started
 ---------------

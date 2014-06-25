@@ -4,6 +4,7 @@ SUBDIRS = utils src pythonshare test examples
 
 dist_doc_DATA = \
 	README			\
+	README-windows.txt      \
 	doc/aal_python.txt      \
 	doc/adapters.txt	\
 	doc/architecture.txt	\
