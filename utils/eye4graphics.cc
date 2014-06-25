@@ -624,6 +624,11 @@ void* openImage(const char* imagefile)
     image_info = CloneImageInfo((ImageInfo *) NULL);
     strcpy(image_info->filename, imagefile);
     image = ReadImage(image_info, exception);
+    if (image == NULL) {
+        char* debug = getenv("EYE4GRAPHICS_DEBUG");
+        if (debug != NULL)
+            CatchException(exception);
+    }
     DestroyExceptionInfo(exception);
     return static_cast<void*>(image);
 }

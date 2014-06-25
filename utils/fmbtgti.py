@@ -1,5 +1,5 @@
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2013, Intel Corporation.
+# Copyright (c) 2013-2014, Intel Corporation.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU Lesser General Public License,
@@ -2556,11 +2556,23 @@ class _VisualLog:
 
     def timestamp(self, t=None):
         if t == None: t = datetime.datetime.now()
-        return t.strftime(self._timeFormat)
+        if os.name == "nt":
+            if "%s" in self._timeFormat:
+                epoch = (t - datetime.datetime(1970,1,1)).total_seconds()
+                fmt = self._timeFormat.replace("%s", str(int(epoch)))
+            else:
+                fmt = self._timeFormat
+        else:
+            fmt = self._timeFormat
+        return t.strftime(fmt)
 
     def epochTimestamp(self, t=None):
         if t == None: t = datetime.datetime.now()
-        return t.strftime("%s.%f")
+        if os.name == "nt":
+            return "%s.%s" % ((t - datetime.datetime(1970,1,1)).total_seconds(),
+                              t.strftime("%f"))
+        else:
+            return t.strftime("%s.%f")
 
     def htmlTimestamp(self, t=None):
         if t == None: t = datetime.datetime.now()
