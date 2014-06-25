@@ -1817,9 +1817,10 @@ class MainWindow(QtGui.QMainWindow):
             _, exc = self._fmbtEval("%s.screenshot().filename()" %
                                           (self._sut,), silent=True)
             if exc == None:
-                self._fmbtExec('%s.refreshScreenshot("%s")' %
+                self._fmbtExec('%s.refreshScreenshot(r"%s")' %
                                (self._sut,
-                                self._screenshotFilenames[index]))
+                                self._screenshotFilenames[index]),
+                               silent=True)
 
         self.highlightActiveBitmap()
         return True

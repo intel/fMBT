@@ -7,7 +7,9 @@ What works
 
   - fmbtwindows
 
-    (tested: 32-bit Python, 32-bit ImageMagick, 64-bit Windows 8)
+  - fmbt-scripter
+
+  (tested: 32-bit Python, 32-bit ImageMagick, 64-bit Windows 8)
 
 
 What does not work / has not been tested
@@ -32,8 +34,6 @@ What does not work / has not been tested
 * Editors:
 
   - fmbt-editor
-
-  - fmbt-scripter
 
 * Utilities
 
@@ -93,21 +93,38 @@ Running on Windows
 
     https://www.python.org/ftp/python/2.7.7/python-2.7.7.msi
 
-  - fmbt-python-VERSION-*.exe (see Building for Windows)
+  - Pip (Python package manager)
 
-* A script for testing that installation was successful:
+    Download https://raw.githubusercontent.com/pypa/pip/master/contrib/get-pip.py
+    and run "python get-pip.py"
 
----8<---
+  - PySide (Qt Python bindings)
 
-# This test uses simulated GUI Test Connection, it does not synthesize
-# real user events. "screenshot.png" should contain a screenshot, and
-# "icon.png" an icon on it.
+    C:\Python27\Scripts>pip install -U PySide
 
-import fmbtgti
-d = fmbtgti.GUITestInterface()
-d.setConnection(fmbtgti.SimulatedGUITestConnection(["screenshot.png"])
-d.refreshScreenshot()
-print "OCR detected words:", d.screenshot().dumpOcr()
-print "tapBitmap returns:", d.tapBitmap("icon.png")
+  - fMBT
 
---->8---
+    fmbt-python-VERSION-*.exe (see Building for Windows)
+
+* Test that fmbt-scripter and fmbtwindows work:
+
+  - Launch and leave running pythonshare-server.
+    This enables testing localhost with fmbtwindows.
+
+    C:\fmbt-demo>python C:\Python27\Scripts\pythonshare-server
+
+  - Launch fmbt-scripter:
+
+    - C:\fmbt-demo>python C:\Python27\Scripts\fmbt-scripter example.py
+
+    - Select File / New Windows.
+
+    - Modify script: connect to localhost, no password:
+
+      sut = fmbtwindows.Device("localhost")
+
+    - Run the modified line (Run line) and press Ctrl-R to refresh screenshot.
+      Screenshot should appear on the right hand side.
+
+    - Press the "Control" button and click the screenshot. Touch event should
+      be synthesized to the clicked position on actual desktop.

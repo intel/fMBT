@@ -32,7 +32,6 @@ Example: python fmbtuinput.py -p /dev/input/event*
 """
 
 import array
-import fcntl
 import glob
 import os
 import platform
@@ -41,6 +40,13 @@ import struct
 import thread
 import time
 import Queue
+
+if os.name != "nt":
+    import fcntl
+else:
+    class fcntl:
+        def __getattr__(self, attr):
+            raise NotImplementedError("%s not available on Windows" % (attr,))
 
 # See /usr/include/linux/input.h
 eventTypes = {
