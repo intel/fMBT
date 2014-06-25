@@ -15,7 +15,8 @@ dist_noinst_SCRIPTS +=		\
 	fmbt-stats		\
 	fmbt-view		\
 	remote_pyaal		\
-	remote_python
+	remote_python           \
+	remote_exec.sh
 # end of scripts
 
 # modules

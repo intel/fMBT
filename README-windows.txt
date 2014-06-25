@@ -1,6 +1,48 @@
 fMBT Windows port is under development.
 
-Currently certain GUI test interfaces can be used in Windows.
+What works
+----------
+
+* GUI Test Interfaces:
+
+  - fmbtwindows
+
+    (tested: 32-bit Python, 32-bit ImageMagick, 64-bit Windows 8)
+
+
+What does not work / has not been tested
+----------------------------------------
+
+* Core (test generator, AAL/Python runtime)
+
+  - fmbt
+
+  - remote_pyaal
+
+* GUI Test Interfaces:
+
+  - fmbandroid
+
+  - fmbtchromiumos
+
+  - fmbttizen
+
+  - fmbtvnc
+
+* Editors:
+
+  - fmbt-editor
+
+  - fmbt-scripter
+
+* Utilities
+
+  - fmbt-log
+
+  - fmbt-view
+
+  - fmbt-stats
+
 
 Building for Windows
 --------------------
