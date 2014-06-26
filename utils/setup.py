@@ -51,7 +51,7 @@ def pkg_config(package):
                 ext_args["libraries"].append(arg[2:])
             elif arg.startswith("-I"):
                 ext_args["include_dirs"].append(arg[2:])
-            elif arg.startswith("-f"):
+            elif arg.startswith("-f") or arg.startswith("-D"):
                 ext_args["extra_compile_args"].append(arg)
             else:
                 raise ValueError('Unexpected pkg-config output: "%s" in "%s"'
