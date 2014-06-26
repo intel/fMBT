@@ -630,6 +630,7 @@ void* openImage(const char* imagefile)
             CatchException(exception);
     }
     DestroyExceptionInfo(exception);
+    DestroyImageInfo(image_info);
     return static_cast<void*>(image);
 }
 
