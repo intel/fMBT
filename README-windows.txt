@@ -7,6 +7,8 @@ What works
 
   - fmbtwindows
 
+* Editors:
+
   - fmbt-scripter
 
   (tested: 32-bit Python, 32-bit ImageMagick, 64-bit Windows 8)
@@ -66,12 +68,11 @@ Building for Windows
 
 * Build:
 
-  - C:\src\fmbt\utils>python setup.py bdist_wininst
+  C:\src\fmbt\utils>python setup.py bdist_wininst
 
+  This will create executable installer:
 
-* Install built package, for instance with 32-bit Python 2.7:
-
-  - C:\src\fmbt\utils>dist\fmbt-python-VERSION-win32-py2.7.exe
+  C:\src\fmbt\utils>dist\fmbt-python-*.exe
 
 
 Running on Windows
@@ -83,7 +84,7 @@ Running on Windows
 
     http://www.imagemagick.org/download/binaries/ImageMagick-6.8.9-4-Q16-x86-dll.exe
 
-    (Let installed add utilities to system PATH, or add them manually)
+    (Let the installer add utilities to system PATH, or add them manually)
 
   - Tesseract 3.02 or later (tested with v3.02.02, 32-bit)
 
@@ -93,7 +94,7 @@ Running on Windows
 
     https://www.python.org/ftp/python/2.7.7/python-2.7.7.msi
 
-  - Pip (Python package manager)
+  - Pip (a Python package manager)
 
     Download https://raw.githubusercontent.com/pypa/pip/master/contrib/get-pip.py
     and run "python get-pip.py"
@@ -104,7 +105,16 @@ Running on Windows
 
   - fMBT
 
-    fmbt-python-VERSION-*.exe (see Building for Windows)
+    fmbt-python-*.exe (see Building for Windows)
+
+    This will install Python scripts (like fmbt-scripter and pythonshare-server) to
+
+        C:\Python27\Scripts
+
+    and libraries (like fmbtwindows.py) to
+
+        C:\Python27\Lib\site-packages
+
 
 * Test that fmbt-scripter and fmbtwindows work:
 
