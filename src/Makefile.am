@@ -4,10 +4,6 @@ else
 bin_PROGRAMS = fmbt remote_adapter_loader fmbt-aalc fmbt-aalp fmbt-ucheck fmbt-log2lsts
 endif
 
-if HAVE_PYTHON
-pkgpyexec_LTLIBRARIES = fmbt_cparsers.la
-endif
-
 FMBTBUILDINFOCFLAGS=-DFMBTBUILDINFO='"@FMBTBUILDINFO@"'
 
 ##########################################
@@ -32,7 +28,6 @@ fmbt_CPPFLAGS                  = -Wall -pedantic -fPIC -I ./d -I `pwd` $(LIBEDIT
 fmbt_ucheck_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) $(XML2_CFLAGS) $(FMBTBUILDINFOCFLAGS)
 fmbt_droid_CPPFLAGS            = -Wall -pedantic -fPIC -I d -I `pwd` -DDROI $(FMBTBUILDINFOCFLAGS)
 remote_adapter_loader_CPPFLAGS = -Wall -pedantic -I d -DDROI $(FMBTBUILDINFOCFLAGS) $(GLIB_CFLAGS)
-fmbt_cparsers_la_CPPFLAGS      = -Wall -pedantic -fPIC -I ./d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) -DCAPI $(FMBTBUILDINFOCFLAGS)
 fmbt_aalc_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) -DINCDIR=\"${pkgincludedir}\" $(FMBTBUILDINFOCFLAGS)
 fmbt_aalp_CPPFLAGS	       = $(FMBTBUILDINFOCFLAGS) $(GLIB_CFLAGS)
 fmbt_log2lsts_CPPFLAGS	       = -Wall -pedantic -fPIC -I d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) $(XML2_CFLAGS) $(FMBTBUILDINFOCFLAGS)
@@ -40,7 +35,6 @@ fmbt_log2lsts_CPPFLAGS	       = -Wall -pedantic -fPIC -I d -I `pwd` $(LIBEDIT_CF
 fmbt_LDFLAGS                   = -g $(JVMLDFLAGS) $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E -ldl
 fmbt_ucheck_LDFLAGS            = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E -ldl
 fmbt_droid_LDFLAGS             = -Wl,-E -ldl
-fmbt_cparsers_la_LDFLAGS       = -g $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E -ldl -avoid-version -module -shared -export-dynamic
 remote_adapter_loader_LDFLAGS  = -g -ldl $(GLIB_LIBS)
 fmbt_aalc_LDFLAGS	       = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) -lboost_regex -Wl,-E -ldl
 fmbt_aalp_LDFLAGS	       = -g $(GLIB_LIBS) -lboost_regex -ldl
@@ -49,7 +43,6 @@ fmbt_log2lsts_LDFLAGS 	       = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(L
 fmbt_LDADD                     = d/libdparse.a
 fmbt_ucheck_LDADD              = d/libdparse.a
 fmbt_droid_LDADD               = d/libdparse.a
-fmbt_cparsers_la_LIBADD        = d/libdparse.a
 remote_adapter_loader_LDADD    = d/libdparse.a -lrt
 fmbt_aalc_LDADD                = d/libdparse.a
 fmbt_log2lsts_LDADD   	       = d/libdparse.a

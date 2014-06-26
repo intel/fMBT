@@ -3,5 +3,4 @@ usr/bin/fmbt-aalp
 usr/bin/fmbt-debug
 usr/bin/fmbt-gt
 usr/bin/fmbt-log2lsts
-usr/bin/fmbt-parallel
 usr/bin/fmbt-trace-share

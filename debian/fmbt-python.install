@@ -4,5 +4,4 @@ usr/lib/python*/*packages/fmbtlogger.py*
 usr/lib/python*/*packages/fmbtuinput.py*
 usr/lib/python*/*packages/lsts.py*
 usr/lib/python*/*packages/aalmodel.py*
-usr/lib/python*/*packages/*parsers*
 usr/lib/python*/*packages/fmbt_config.py*

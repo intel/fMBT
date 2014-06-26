@@ -10,7 +10,6 @@ dist_noinst_SCRIPTS +=		\
 	fmbt-gteditor		\
 	fmbt-log		\
 	lsts2dot		\
-	fmbt-parallel		\
 	fmbt-trace-share	\
 	fmbt-stats		\
 	fmbt-view		\
@@ -29,7 +28,6 @@ dist_noinst_SCRIPTS +=		\
 	fmbtchromiumos.py	\
 	fmbtgti.py		\
 	fmbtlogger.py		\
-	fmbtparsers.py		\
 	fmbttizen-agent.py	\
 	fmbttizen.py		\
 	fmbtuinput.py		\

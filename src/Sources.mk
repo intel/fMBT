@@ -22,8 +22,6 @@ fmbt_aalc_SOURCES = lang.g.d_parser.cc lang.cc helper.cc aalang_cpp.cc aalang_py
 
 remote_adapter_loader_SOURCES = remote_adapter_loader.cc adapter.cc log.cc adapter_dummy.cc adapter_model.cc adapter_v4l2.cc helper.cc model.cc random.cc function.cc random_c.cc params.cc
 
-fmbt_cparsers_la_SOURCES      = xrules.g.d_parser.cc lts.g.d_parser.cc helper.cc params.cc
-
 fmbt_aalp_SOURCES = aalp.ll helper.cc params.cc log.cc
 
 fmbt_log2lsts_SOURCES = log2lsts.cc lts.cc model.cc log.cc coverage.cc lts.g.d_parser.cc history.cc helper.cc history_log.cc model_yes.cc params.cc

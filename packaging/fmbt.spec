@@ -212,10 +212,11 @@ make %{?_smp_mflags}
 
 %{!?python_sitelib: %define python_sitelib %(python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
 
+%{!?python_sitearch: %define python_sitearch %(python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(plat_specific=True)")}
+
 %install
 rm -rf $RPM_BUILD_ROOT
 make install DESTDIR=$RPM_BUILD_ROOT
-rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/%{name}/%{name}_cparsers.la
 rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 
 %files core
@@ -228,10 +229,6 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %{_bindir}/%{name}-view
 %{_bindir}/lsts2dot
 %{_bindir}/%{name}-ucheck
-%{python_sitelib}/%{name}/%{name}-log
-%{python_sitelib}/%{name}/%{name}-stats
-%{python_sitelib}/%{name}/%{name}-view
-%{python_sitelib}/%{name}/lsts2dot
 
 %files coreutils
 %defattr(-, root, root, -)
@@ -240,12 +237,7 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %{_bindir}/%{name}-debug
 %{_bindir}/%{name}-gt
 %{_bindir}/%{name}-log2lsts
-%{_bindir}/%{name}-parallel
 %{_bindir}/%{name}-trace-share
-%{python_sitelib}/%{name}/%{name}-debug
-%{python_sitelib}/%{name}/%{name}-gt
-%{python_sitelib}/%{name}/%{name}-parallel
-%{python_sitelib}/%{name}/%{name}-trace-share
 
 %files devel
 %defattr(-, root, root, -)
@@ -257,23 +249,17 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %{_bindir}/%{name}-editor
 %{_bindir}/%{name}-scripter
 %{_bindir}/%{name}-gteditor
-%{python_sitelib}/%{name}/%{name}-editor
-%{python_sitelib}/%{name}/%{name}-scripter
-%{python_sitelib}/%{name}/%{name}-gteditor
 
 %files python
 %defattr(-, root, root, -)
-%dir %{python_sitelib}/%{name}
-%{python_sitelib}/fmbt.py*
-%{python_sitelib}/fmbtgti.py*
-%{python_sitelib}/fmbtlogger.py*
-%{python_sitelib}/fmbtuinput.py*
-%{python_sitelib}/%{name}/lsts.py*
-%{python_sitelib}/%{name}/aalmodel.py*
-%{python_sitelib}/%{name}/%{name}parsers.py*
-%{python_sitelib}/%{name}/%{name}_config.py*
-%dir %{_libdir}/python*/site-packages/%{name}
-%{_libdir}/python*/site-packages/%{name}/%{name}_cparsers.so
+%{python_sitearch}/fmbt.py*
+%{python_sitearch}/fmbtgti.py*
+%{python_sitearch}/fmbtlogger.py*
+%{python_sitearch}/fmbtuinput.py*
+%{python_sitearch}/lsts.py*
+%{python_sitearch}/aalmodel.py*
+%{python_sitearch}/%{name}_config.py*
+%{python_sitearch}/%{name}_python-*.egg-info
 
 %files adapters-remote
 %defattr(-, root, root, -)
@@ -281,42 +267,39 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %{_bindir}/remote_exec.sh
 %{_bindir}/remote_pyaal
 %{_bindir}/remote_python
-%{python_sitelib}/%{name}/remote_pyaal
-%{python_sitelib}/%{name}/remote_python
-
-%{python_sitelib}/%{name}web.py*
+%{python_sitearch}/%{name}web.py*
 
 %files adapter-eyenfinger
 %defattr(-, root, root, -)
 %{_libdir}/python*/site-packages/eye4graphics.so
-%{python_sitelib}/eyenfinger.py*
+%{python_sitearch}/eyenfinger.py*
 
 %files adapter-android
 %defattr(-, root, root, -)
-%{python_sitelib}/fmbtandroid.py*
+%{python_sitearch}/fmbtandroid.py*
 
 %files adapter-chromiumos
 %defattr(-, root, root, -)
-%{python_sitelib}/fmbtchromiumos.py*
+%{python_sitearch}/fmbtchromiumos.py*
 
 %files adapter-tizen
 %defattr(-, root, root, -)
-%{python_sitelib}/fmbttizen.py*
-%{python_sitelib}/fmbttizen-agent.py*
+%{python_sitearch}/fmbttizen.py*
+%{python_sitearch}/fmbttizen-agent.py*
 
 %files adapter-windows
 %defattr(-, root, root, -)
-%{python_sitelib}/fmbtwindows.py*
-%{python_sitelib}/fmbtwindows_agent.py*
+%{python_sitearch}/fmbtwindows.py*
+%{python_sitearch}/fmbtwindows_agent.py*
 
 %files adapter-vnc
 %defattr(-, root, root, -)
-%{python_sitelib}/fmbtvnc.py*
+%{python_sitearch}/fmbtvnc.py*
 
 %files adapter-x11
 %defattr(-, root, root, -)
-%{python_sitelib}/fmbtx11.py*
-%{python_sitelib}/fmbtx11_conn.py*
+%{python_sitearch}/fmbtx11.py*
+%{python_sitearch}/fmbtx11_conn.py*
 
 %files pythonshare
 %defattr(-, root, root, -)
