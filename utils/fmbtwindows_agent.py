@@ -796,11 +796,14 @@ if not "_g_monitors" in globals():
 
 
 if not "_g_touchInjenctionInitialized" in globals():
-    if (ctypes.windll.user32.InitializeTouchInjection(1, 1) != 0):
-        print "Initialized Touch Injection"
-        _g_touchInjenctionInitialized = True
-    else:
-        print "InitializeTouchInjection failed"
+    try:
+        if (ctypes.windll.user32.InitializeTouchInjection(1, 1) != 0):
+            print "Initialized Touch Injection"
+            _g_touchInjenctionInitialized = True
+        else:
+            print "InitializeTouchInjection failed"
+    except:
+        print "InitializeTouchInjection not supported"
 
 if __name__ == '__main__':
     start = time.time()
