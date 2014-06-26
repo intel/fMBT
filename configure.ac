@@ -54,8 +54,8 @@ AS_IF([test "x$enable_android" != "xyes"],
     [PKG_CHECK_MODULES([GOBJECT], [gobject-2.0], [],
         AC_MSG_FAILURE([gobject-2.0 required if not --enable-android]))]
 
-    [PKG_CHECK_MODULES([MAGIC], [Magick++], [],
-        AC_MSG_FAILURE([Magick++ required if not --enable-android]))]
+    [PKG_CHECK_MODULES([MAGIC], [MagickCore], [],
+        AC_MSG_FAILURE([MagickCore required if not --enable-android]))]
 
     [PKG_CHECK_MODULES([XML2], [libxml-2.0], [],
         AC_MSG_FAILURE([libxml-2.0 required if not --enable-android]))]
@@ -103,7 +103,7 @@ AC_ARG_WITH([imagemagick],
   [with_imagemagick="yes"])
 
 AS_IF([test "x$with_imagemagick" != "xno"],
-  [PKG_CHECK_MODULES([MAGICK], [Magick++], [],
+  [PKG_CHECK_MODULES([MAGICK], [MagickCore], [],
      [AC_MSG_FAILURE([ImageMagick not found.])])])
 
 AM_CONDITIONAL([HAVE_MAGICK], [test "x$with_imagemagick" != "xno"])

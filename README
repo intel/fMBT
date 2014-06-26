@@ -10,11 +10,11 @@ Building & installing
 
 Quick start for Debian/Ubuntu users:
 
-    sudo apt-get install build-essential libglib2.0-dev libboost-regex-dev libedit-dev libmagick++-dev python-pexpect python-dbus python-gobject gawk libtool autoconf automake debhelper libboost-dev flex libxml2-dev graphviz imagemagick gnuplot python-pyside tesseract-ocr
+    sudo apt-get install build-essential libglib2.0-dev libboost-regex-dev libedit-dev libmagickcore-dev python-pexpect python-dbus python-gobject gawk libtool autoconf automake debhelper libboost-dev flex libxml2-dev graphviz imagemagick gnuplot python-pyside tesseract-ocr
 
 Quick start for Fedora users:
 
-    yum install  glibc-devel glib2-devel boost-devel libedit-devel gcc-c++ pexpect dbus-python libtool autoconf automake flex libxml2-devel graphviz ImageMagick ImageMagick-c++-devel gnuplot python-pyside tesseract
+    yum install  glibc-devel glib2-devel boost-devel libedit-devel gcc-c++ pexpect dbus-python libtool autoconf automake flex libxml2-devel graphviz ImageMagick ImageMagick-devel gnuplot python-pyside tesseract
 
 ./autogen.sh # run only if you cloned sources from git
 ./configure

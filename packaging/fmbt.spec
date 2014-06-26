@@ -16,12 +16,12 @@ BuildRequires:  flex
 BuildRequires:  libedit-devel
 BuildRequires:  libicu-devel
 BuildRequires:  python
+BuildRequires:  python-devel
 BuildRequires:  automake autoconf libtool
+BuildRequires:  ImageMagick-devel
 %if 0%{?suse_version}
-BuildRequires:  libMagick++-devel
 BuildRequires:  boost-devel
 %else
-BuildRequires:  ImageMagick-c++-devel
 BuildRequires:  boost-regex
 %endif
 
@@ -98,12 +98,6 @@ Generic remote adapters for running shell script, Python expressions and Javascr
 
 %package adapter-eyenfinger
 Summary: Deprecated fMBT adapter for GUI testing, use fmbtx11 instead.
-
-%if 0%{?suse_version}
-# implicit Magick++[56]
-%else
-Requires: ImageMagick-c++
-%endif
 Requires: ImageMagick
 Requires: /usr/bin/xwd
 Requires: tesseract

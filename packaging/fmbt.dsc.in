@@ -5,6 +5,6 @@ Architecture: any
 Version: TEMPLATE-VERSION
 Maintainer: Antti Kervinen <antti.kervinen@intel.com>
 Standards-Version: 3.9.0
-Build-Depends: debhelper (>= 7.3.8), libglib2.0-dev, libboost-dev, libedit-dev, python (>= 2.6), automake, libtool, libxml2-dev, libmagick++-dev, libboost-regex-dev, flex | flex-old, dbus, python-pexpect, python-dbus, python-gobject, graphviz, imagemagick
+Build-Depends: debhelper (>= 7.3.8), libglib2.0-dev, libboost-dev, libedit-dev, python (>= 2.6), automake, libtool, libxml2-dev, libmagickcore-dev, libboost-regex-dev, flex | flex-old, dbus, python-dev, python-pexpect, python-dbus, python-gobject, graphviz, imagemagick
 Files:
  TEMPLATE-MD5SUM-SIZE-TARBALL
