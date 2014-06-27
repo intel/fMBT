@@ -156,7 +156,6 @@ window = Launcher
 
 import commands
 import os
-import platform
 import random
 import re
 import shutil
@@ -183,7 +182,7 @@ def _logFailedCommand(source, command, exitstatus, stdout, stderr):
     _adapterLog('in %s command "%s" failed:\n    output: %s\n    error: %s\n    status: %s' %
                 (source, command, stdout, stderr, exitstatus))
 
-if platform.system() == "Windows":
+if os.name == "nt":
     _g_closeFds = False
     _g_adbExecutable = "adb.exe"
 else:
@@ -191,8 +190,8 @@ else:
     _g_adbExecutable = "adb"
 
 def _run(command, expectedExitStatus = None, timeout=None):
-    if type(command) == str:
-        if timeout != None:
+    if type(command) == str or os.name == "nt":
+        if timeout != None and os.name != "nt":
             command = "timeout %s %s" % (timeout, command)
         shell=True
     else:

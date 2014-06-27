@@ -83,15 +83,22 @@ def _takePinchArgs(d):
 def _adapterLog(msg):
     fmbt.adapterlog("fmbttizen: %s" % (msg,))
 
+if os.name == "nt":
+    _g_closeFds = False
+else:
+    _g_closeFds = True
+
 def _run(command, expectedExitStatus=None):
-    if type(command) == str: shell=True
-    else: shell=False
+    if type(command) == str or os.name == "nt":
+        shell = True
+    else:
+        shell = False
 
     try:
         p = subprocess.Popen(command, shell=shell,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE,
-                             close_fds=True)
+                             close_fds=_g_closeFds)
         if expectedExitStatus != None:
             out, err = p.communicate()
         else:
