@@ -11,6 +11,11 @@ What works
 
   - fmbt-scripter
 
+* Agent middleware:
+
+  - pythonshare (platform for Python software agents, enables remote
+    Python execution)
+
   (tested: 32-bit Python, 32-bit ImageMagick, 64-bit Windows 8)
 
 
@@ -72,7 +77,16 @@ Building for Windows
 
   This will create executable installer:
 
-  C:\src\fmbt\utils>dist\fmbt-python-*.exe
+  C:\src\fmbt\utils\dist\fmbt-python-*.exe
+
+
+* Build test agent platform:
+
+  C:\src\fmbt\pythonshare>python setup.py bdist_wininst
+
+  This will create executable installer:
+
+  C:\src\fmbt\pythonshare\dist\pythonshare-*.exe
 
 
 Running on Windows
@@ -103,11 +117,23 @@ Running on Windows
 
     C:\Python27\Scripts>pip install -U PySide
 
+  - Pythonshare
+
+    pythonshare-*.exe (see Building for Windows / test agent platform)
+
+    This will install Python scripts (like pythonshare-server) to
+
+        C:\Python27\Scripts
+
+    and libraries (like pythonshare\server.py) to
+
+        C:\Python27\Lib\site-packages
+
   - fMBT
 
     fmbt-python-*.exe (see Building for Windows)
 
-    This will install Python scripts (like fmbt-scripter and pythonshare-server) to
+    This will install Python scripts (like fmbt-scripter) to
 
         C:\Python27\Scripts
 
@@ -138,3 +164,9 @@ Running on Windows
 
     - Press the "Control" button and click the screenshot. Touch event should
       be synthesized to the clicked position on actual desktop.
+
+
+* You can remotely test a Windows device by installing Python and
+  pythonshare on the device. Then launch pythonshare-server on the
+  device with parameters --interface=all --password=PASSWORD. (See the
+  fMBT GUI Testing wiki.)
