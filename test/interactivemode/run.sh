@@ -39,10 +39,6 @@ testpassed
 ##########################################
 # Run the test
 
-teststep "TODO: rewrite model without fmbt-parallel..."
-testpassed
-exit 0
-
 teststep "create model for interactive mode test..."
 ./create-model.sh >>$LOGFILE 2>&1 || {
     testfailed
