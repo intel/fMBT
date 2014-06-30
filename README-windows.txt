@@ -111,7 +111,10 @@ Running on Windows
   - Pip (a Python package manager)
 
     Download https://raw.githubusercontent.com/pypa/pip/master/contrib/get-pip.py
-    and run "python get-pip.py"
+    and run "python get-pip.py".
+
+    If connected to Internet via a proxy, run
+    "set https_proxy=http://PROXY:PORT" before "python get-pip.py".
 
   - PySide (Qt Python bindings)
 
