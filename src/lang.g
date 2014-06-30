@@ -223,7 +223,7 @@ ostr:   string          {
         } ;
 
 
-tag_content: (comment|guard|adapter|tag|act)*;
+tag_content: (comment|guard|adapter|tag|act|parser)*;
 
 tag: 'tag' tstr {
             abg_stack.push(guard);
@@ -330,6 +330,6 @@ bstr: (${scan bstr_scan(ops,ops_cache)})* {
 string: "\"([^\"\\]|\\[^])*\"" { $$.str = new std::string($n0.start_loc.s+1,$n0.end-$n0.start_loc.s-2);
         };
 
-pstring: "[a-zA-Z]+" { 
+pstring: "[a-zA-Z]+" {
             $$.str = new std::string($n0.start_loc.s,$n0.end-$n0.start_loc.s);
         };
