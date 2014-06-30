@@ -1,8 +1,19 @@
-fmbt (0.15.1-0.rc0) unstable; urgency=low
+fmbt (0.15.1) unstable; urgency=low
 
-  * Development version.
+  * Windows porting:
+    - fMBT utils use distutils, they were autotools-only.
+    - ImageMagick++ dependency dropped, only low-level C API is needed.
+    - eye4graphics DLL is built as a Python extension.
+    - fmbt-scripter and fmbtwindows.py run on Windows.
+    - fmbtandroid.py runs but has connection issues on Windows.
+    - See README-windows.txt for more details and instructions.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 17 Jun 2014 15:42:00 +0300
+  * fmbt-scripter:
+    - code completion on TAB for defined variables.
+
+  * Deprecated the fmbt-parallel tool.
+
+ -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 30 Jun 2014 13:42:00 +0300
 
 fmbt (0.15-1) unstable; urgency=low
 
