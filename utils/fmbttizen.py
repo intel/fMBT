@@ -1,5 +1,5 @@
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2013, Intel Corporation.
+# Copyright (c) 2013-2014, Intel Corporation.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU Lesser General Public License,
@@ -620,11 +620,11 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
 
         try:
             self._sdbShell = subprocess.Popen(remoteShellCmd,
-                                              shell=False,
+                                              shell=(os.name == "nt"),
                                               stdin=subprocess.PIPE,
                                               stdout=subprocess.PIPE,
                                               stderr=subprocess.PIPE,
-                                              close_fds=True)
+                                              close_fds=_g_closeFds)
         except OSError, msg:
             raise TizenConnectionError('Executing "%s" failed.' % (
                 " ".join(remoteShellCmd),))
