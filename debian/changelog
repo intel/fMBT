@@ -1,8 +1,10 @@
-fmbt (0.15.2-0.rc0) unstable; urgency=low
+fmbt (0.15.2-1) unstable; urgency=low
 
-  * Development version.
+  * Bugfix release:
+  * Fixed locating eye4graphics.so after "make install".
+  * Fixed fmbt-scripter Settings / Screenshot dir on Windows.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 30 Jun 2014 15:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 2 Jul 2014 13:42:00 +0300
 
 fmbt (0.15.1) unstable; urgency=low
 
