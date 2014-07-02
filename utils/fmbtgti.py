@@ -195,7 +195,9 @@ def _edgeDistanceInDirection((x, y), (width, height), direction):
     return min(distTopBottom, distLeftRight)
 
 ### Binding to eye4graphics.so
-_libpath = ["", ".", distutils.sysconfig.get_python_lib(plat_specific=1)]
+_libpath = ["", ".",
+            os.path.dirname(os.path.abspath(__file__)),
+            distutils.sysconfig.get_python_lib(plat_specific=1)]
 _suffix = ".so"
 if os.name == "nt":
     _suffix = ".pyd"
