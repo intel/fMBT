@@ -2401,7 +2401,7 @@ class MainWindow(QtGui.QMainWindow):
                                                     (self._sut,),
                                                     silent=True)
                 if not exc and bitmapPath != oldBitmapPath:
-                    self.doAPICall('.setBitmapPath("%s")' %
+                    self.doAPICall('.setBitmapPath(r"%s")' %
                                    (bitmapPath.replace('"', '\\"'),))
             bitmapDir = self._settingsDialog.pathsBitmapDir.text()
             if bitmapDir:
@@ -2523,7 +2523,7 @@ class MainWindow(QtGui.QMainWindow):
                         raise Exception(exc)
                     if (not oldDir or
                         os.path.abspath(oldDir) != os.path.abspath(directory)):
-                        self.doAPICall('.setScreenshotDir("%s")' %
+                        self.doAPICall('.setScreenshotDir(r"%s")' %
                                        (directory.replace('"', '\\"'),))
         except Exception, e:
             log('error in setting screenshot save directory "%s":' %
