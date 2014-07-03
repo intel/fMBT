@@ -255,9 +255,9 @@ class MyScaleEvents(QtCore.QObject):
                 if event.key() == QtCore.Qt.Key_Tab:
                     self.mainwindow.editorTabPressed()
                     return True
-        elif (hasattr(self.mainwindow, "console") and
-              self.mainwindow.console.hasFocus() and
-              event.type() == QtCore.QEvent.KeyPress):
+        if (hasattr(self.mainwindow, "console") and
+            self.mainwindow.console.hasFocus() and
+            event.type() == QtCore.QEvent.KeyPress):
             if event.key() == QtCore.Qt.Key_Return:
                 return self.mainwindow.consoleReturnPressed()
             elif (event.key() == QtCore.Qt.Key_Up and
