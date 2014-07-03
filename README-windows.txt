@@ -7,6 +7,8 @@ What works
 
   - fmbtwindows
 
+  - fmbttizen (mobile)
+
 * Editors:
 
   - fmbt-scripter
@@ -34,7 +36,7 @@ What does not work / has not been tested
 
   - fmbtchromiumos
 
-  - fmbttizen
+  - fmbttizen (ivi)
 
   - fmbtvnc
 

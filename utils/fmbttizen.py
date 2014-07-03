@@ -700,7 +700,10 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
         if self._sdbShell == None: return False, "disconnected"
         if self._debugAgentFile: self._debugAgentFile.write(">0 %s\n" % (command,))
         if self._useSdb:
-            eol = "\r"
+            if os.name == "nt":
+                eol = "\r\n"
+            else:
+                eol = "\r"
         else:
             eol = "\n"
         try:
@@ -811,15 +814,16 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
 
             # TODO: use libimagemagick directly to save data to png?
             ppm_header = "P6\n%d %d\n%d\n" % (width, height, 255)
-            f = file(filename + ".ppm", "w").write(ppm_header + data[:width*height*3])
+            f = file(filename + ".ppm", "wb").write(ppm_header + data[:width*height*3])
             _run(["convert", filename + ".ppm", filename], expectedExitStatus=0)
             os.remove("%s.ppm" % (filename,))
         else:
-            file(filename, "w").write(img)
+            file(filename, "wb").write(img)
         return True
 
     def recvSerialNumber(self):
-        s, o = commands.getstatusoutput("sdb get-serialno")
+        o = subprocess.check_output(["sdb", "get-serialno"],
+                                    shell=(os.name=="nt"))
         return o.splitlines()[-1]
 
     def recvInputDevices(self):
