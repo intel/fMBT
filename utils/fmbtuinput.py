@@ -461,6 +461,17 @@ absCodes = {
     "ABS_MAX":                 0x3f,
     }
 
+mscCodes = {
+    "MSC_SERIAL":              0x00,
+    "MSC_PULSELED":            0x01,
+    "MSC_GESTURE":             0x02,
+    "MSC_RAW":                 0x03,
+    "MSC_SCAN":                0x04,
+    "MSC_TIMESTAMP":           0x05,
+    "MSC_MAX":                 0x07,
+    "MSC_CNT":                 0x08,
+}
+
 abs_count = absCodes['ABS_MAX'] + 1
 
 event_codetables = {
@@ -1038,10 +1049,14 @@ class Keyboard(InputDevice):
         return self
 
     def press(self, keyCodeOrName):
+        # TODO: there should be different MSC_SCAN matrix location for each key
+        self.send("EV_MSC", mscCodes["MSC_SCAN"], 458793)
         self.send("EV_KEY", toKeyCode(keyCodeOrName), 1)
         self.sync()
 
     def release(self, keyCodeOrName):
+        # TODO: there should be different MSC_SCAN matrix location for each key
+        self.send("EV_MSC", mscCodes["MSC_SCAN"], 458793)
         self.send("EV_KEY", toKeyCode(keyCodeOrName), 0)
         self.sync()
 

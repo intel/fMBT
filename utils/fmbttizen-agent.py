@@ -645,10 +645,12 @@ def takeScreenshotOnX():
     libX11.XDestroyImage(image_p)
     return True, compressed_image
 
-def westonTakeScreenshotRoot():
+def westonTakeScreenshotRoot(retry=2):
     if westonTakeScreenshotRoot.ssFilename == None:
         westonTakeScreenshotRoot.ssFilename = findWestonScreenshotFilenameRoot()
     try:
+        if os.access(westonTakeScreenshotRoot.ssFilename, os.R_OK):
+            os.remove(westonTakeScreenshotRoot.ssFilename)
         keyboard_device.press("KEY_LEFTMETA")
         keyboard_device.tap("s")
         keyboard_device.release("KEY_LEFTMETA")
@@ -659,6 +661,8 @@ def westonTakeScreenshotRoot():
             time.sleep(0.25)
             while fuser(westonTakeScreenshotRoot.ssFilename, [writerPid]) != None:
                 time.sleep(0.25)
+        if not os.access(westonTakeScreenshotRoot.ssFilename, os.R_OK) and retry > 0:
+            return westonTakeScreenshotRoot(retry-1)
         shutil.move(westonTakeScreenshotRoot.ssFilename, "/tmp/screenshot.png")
         os.chmod("/tmp/screenshot.png", 0666)
     except Exception, e:
