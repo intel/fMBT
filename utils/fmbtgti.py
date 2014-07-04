@@ -1495,9 +1495,12 @@ class GUITestInterface(object):
         else:
             target = self._conn.target()
         filename = _filenameTimestamp(t) + "-" + target + ".png"
-        filepath = os.path.join(self.screenshotDir(),
-                                t.strftime(self.screenshotSubdir()),
-                                filename)
+        screenshotPath = self.screenshotDir()
+        if self.screenshotSubdir():
+            screenshotPath = os.path.join(screenshotPath,
+                                          self.screenshotSubdir())
+        screenshotPath = t.strftime(screenshotPath)
+        filepath = os.path.join(screenshotPath, filename)
         necessaryDirs = os.path.dirname(filepath)
         if necessaryDirs and not os.path.isdir(necessaryDirs):
             try:
@@ -1751,12 +1754,7 @@ class GUITestInterface(object):
 
     def setScreenshotDir(self, screenshotDir):
         self._screenshotDir = screenshotDir
-        if not os.path.isdir(self.screenshotDir()):
-            try:
-                os.makedirs(self.screenshotDir())
-            except Exception, e:
-                _fmbtLog('creating directory "%s" for screenshots failed: %s' % (self.screenshotDir(), e))
-                raise
+        self._newScreenshotFilepath() # make directories
 
     def setScreenshotLimit(self, screenshotLimit):
         """
