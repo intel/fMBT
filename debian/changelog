@@ -1,12 +1,16 @@
-fmbt (0.15.3-0.rc0) unstable; urgency=low
+fmbt (0.15.3-1) unstable; urgency=low
 
-  * Development version.
+  * Bugfix release.
+  * fmbttizen mobile: added Windows support.
+  * fmbttizen IVI: Device(keyboardDevice=...) parameter added.
+  * fmbt-scripter: fixed Return press on Python prompt.
+  * fmbtandroid: refreshView() fixed to work without screenshotSubdir.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Thu, 3 Jun 2014 11:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 4 Jul 2014 15:42:00 +0300
 
 fmbt (0.15.2-1) unstable; urgency=low
 
-  * Bugfix release:
+  * Bugfix release.
   * Fixed locating eye4graphics.so after "make install".
   * Fixed fmbt-scripter Settings / Screenshot dir on Windows.
 
