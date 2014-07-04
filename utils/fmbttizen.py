@@ -128,7 +128,8 @@ def _fileToQueue(f, outQueue):
     f.close()
 
 class Device(fmbtgti.GUITestInterface):
-    def __init__(self, serialNumber=None, loginCommand=None, debugAgentFile=None, **kwargs):
+    def __init__(self, serialNumber=None, loginCommand=None,
+                 debugAgentFile=None, keyboardDevice=None, **kwargs):
         """Parameters:
 
           serialNumber (string, optional)
@@ -151,6 +152,14 @@ class Device(fmbtgti.GUITestInterface):
                   The default is None: communication is not recorded.
                   Example: debugAgentFile=sys.stdout.
 
+          keyboardDevice (string, optional)
+                  "file:FILEPATH": use FILEPATH as keyboard input device.
+                  "virtual" create fMBT Virtual Keyboard device for input.
+                  "disabled" do not use keyboard input device.
+                  "sysrq" use first hardware keyboard with "sysrq".
+                  Example: keyboardDevice="file:/dev/input/event1"
+                  Affects Tizen IVI only.
+
           rotateScreenshot (integer, optional)
                   rotate new screenshots by rotateScreenshot degrees.
                   Example: rotateScreenshot=-90. The default is 0 (no
@@ -159,7 +168,8 @@ class Device(fmbtgti.GUITestInterface):
         fmbtgti.GUITestInterface.__init__(self, **kwargs)
         c = TizenDeviceConnection(serialNumber=serialNumber,
                                   loginCommand=loginCommand,
-                                  debugAgentFile=debugAgentFile)
+                                  debugAgentFile=debugAgentFile,
+                                  keyboardDevice=keyboardDevice)
         self.setConnection(c)
         if "rotateScreenshot" in kwargs:
             c.sendScreenshotRotation(kwargs["rotateScreenshot"])
@@ -546,7 +556,8 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
     TizenDeviceConnection copies _tizenAgent to Tizen device,
     and runs & communicates with it via sdb shell.
     """
-    def __init__(self, serialNumber=None, loginCommand=None, debugAgentFile=None):
+    def __init__(self, serialNumber=None, loginCommand=None,
+                 debugAgentFile=None, keyboardDevice=None):
         if loginCommand == None:
             if serialNumber == None:
                 self._serialNumber = self.recvSerialNumber()
@@ -567,6 +578,7 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
         self._sdbShell = None
         self._debugAgentFile = debugAgentFile
         self._agentNeedsResolution = True
+        self._keyboardDevice = keyboardDevice
         self.open()
 
     def __del__(self):
@@ -617,6 +629,8 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
             remoteShellCmd = ["sdb", "-s", self._serialNumber, "shell"]
         else: # using SSH
             remoteShellCmd = self._loginCommand + ["python", agentRemoteFilename]
+            if self._keyboardDevice:
+                remoteShellCmd.append("--keyboard=%s" % (self._keyboardDevice,))
 
         try:
             self._sdbShell = subprocess.Popen(remoteShellCmd,

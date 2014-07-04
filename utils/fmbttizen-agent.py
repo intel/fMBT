@@ -40,6 +40,31 @@ if "--debug" in sys.argv:
 else:
     g_debug = False
 
+try:
+    _opt_keyboard = [a.split("=")[1] for a in sys.argv if a.startswith("--keyboard=")][0]
+except IndexError:
+    _opt_keyboard = None
+
+def openKeyboardDevice(keyboardSpec=None):
+    keyboard_device = None
+    if keyboardSpec == None:
+        try:
+            keyboard_device = openKeyboardDevice("sysrq")
+        except IndexError:
+            keyboard_device = openKeyboardDevice("virtual")
+    elif keyboardSpec in (None, "virtual"):
+        keyboard_device = fmbtuinput.Keyboard().create()
+    elif keyboardSpec.startswith("file:"):
+        keyboard_device = fmbtuinput.Keyboard().open(keyboardSpec.split(":",1)[1])
+    elif keyboardSpec == "sysrq":
+        keyboard_device = fmbtuinput.Keyboard().open(
+            "/dev/input/" + re.findall(
+                '[ =](event[0-9]+)\s',
+                [i for i in devices.split("\n\n") if "sysrq" in i.lower()][0])[0])
+    elif keyboardSpec == "disabled":
+        keyboard_device = None
+    return keyboard_device
+
 def debug(msg):
     if g_debug:
         sys.stdout.write("debug: %s\n" % (msg,))
@@ -225,7 +250,7 @@ elif 'eGalax Inc. eGalaxTouch EXC7200-7368v1.010          ' in devices:
     if iAmRoot:
         touch_device = fmbtuinput.Touch(maxX=0x8000, maxY=0x8000).open(
             "eGalax Inc. eGalaxTouch EXC7200-7368v1.010          ")
-        keyboard_device = fmbtuinput.Keyboard().create()
+        keyboard_device = openKeyboardDevice(_opt_keyboard)
 
 elif iAmRoot:
     # Unknown platform, guessing best possible defaults for devices
@@ -255,20 +280,8 @@ elif iAmRoot:
         mouse_button_device = fmbtuinput.Mouse().create()
         virtualInputDeviceAdded = True
 
-    try:
-        keyboard_device = fmbtuinput.Keyboard().open(
-            "/dev/input/" + re.findall(
-                '[ =](event[0-9]+)\s',
-                [i for i in _d if "sysrq" in i.lower()][0])[0])
-    except IndexError:
-        if iAmRoot:
-            keyboard_device = fmbtuinput.Keyboard().create()
-            virtualInputDeviceAdded = True
-        else:
-            keyboard_device = None
+    keyboard_device = openKeyboardDevice(_opt_keyboard)
 
-    # TODO: find keyboard input device for the usual keys (sysrq, etc.)
-    # If nothing suitable seems to be present, create my own keyboard.
     hwKeyDevice = {
         "POWER": power_devname,
         "VOLUMEUP": "gpio-keys",
