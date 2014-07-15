@@ -205,9 +205,10 @@ except ImportError:
         file(LOG_FILENAME, "a").write("%13.2f %s\n" %
                                       (time.time(), msg))
 
-
 try:
-    _libpath = ["", ".", distutils.sysconfig.get_python_lib(plat_specific=1)]
+    _libpath = ["", ".",
+            os.path.dirname(os.path.abspath(__file__)),
+            distutils.sysconfig.get_python_lib(plat_specific=1)]
     _suffix = ".so"
     if os.name == "nt":
         _suffix = ".pyd"
