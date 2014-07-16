@@ -1,8 +1,9 @@
-fmbt (0.15.4-0.rc0) unstable; urgency=low
+fmbt (0.15.4-1) unstable; urgency=low
 
-  * Development version.
+  * Bugfix release.
+  * Fixed locating eye4graphics.so after "make install" for OCR.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 15 Jul 2014 23:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 16 Jul 2014 14:42:00 +0300
 
 fmbt (0.15.3-1) unstable; urgency=low
 
