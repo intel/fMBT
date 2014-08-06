@@ -169,6 +169,11 @@ import uu
 import fmbt
 import fmbtgti
 
+ROTATION_0 = 0
+ROTATION_90 = 1
+ROTATION_180 = 2
+ROTATION_270 = 3
+
 # See imagemagick convert parameters.
 fmbtgti._OCRPREPROCESS =  [
     '-sharpen 5 -filter Mitchell %(zoom)s -sharpen 5 -level 60%%,60%%,3.0 -sharpen 5',
@@ -448,6 +453,18 @@ class Device(fmbtgti.GUITestInterface):
             del self._lastView
         import gc
         gc.collect()
+
+    def displayRotation(self):
+        """
+        Returns current rotation of the display.
+
+        Returns integer, that is ROTATION_0, ROTATION_90, ROTATION_180
+        or ROTATION_270. Returns None if rotation is not available.
+        """
+        if self._conn:
+            return self._conn.recvCurrentDisplayOrientation()
+        else:
+            return None
 
     def drag(self, (x1, y1), (x2, y2), delayBetweenMoves=None, delayBeforeMoves=None, delayAfterMoves=None, movePoints=None):
         """
@@ -1518,6 +1535,14 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         except TypeError:
             return None, None
         return width, height
+
+    def recvCurrentDisplayOrientation(self):
+        _, output, _ = self._runAdb(["shell", "dumpsys", "display"], 0)
+        s = re.findall("mCurrentOrientation=([0-9])", output)
+        if s:
+            return int(s[0])
+        else:
+            return None
 
     def recvTopAppWindow(self):
         _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0)
