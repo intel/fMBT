@@ -33,6 +33,10 @@ Options:
   -k, --keep-session
           do not kill the session server when last client exits.
 
+  -K, --kill-session
+          kill the session server immediately and exit. Will not launch
+          client or new session server.
+
   -l, -L, --log-file <filename>
           write session server log to filename. -l, --log-file
           overwrites existing log, -L appends to it. If session server
@@ -70,6 +74,7 @@ FORWARD_BLOCKSIZE = 4096
 
 opt_debug                        = False
 opt_fork_server                  = False
+opt_kill_session                 = False
 opt_keep_running_without_clients = False
 opt_log_filename                 = None
 opt_overwrite_logfile            = False
@@ -358,6 +363,19 @@ def fork_server(port):
         conn, _ = s.accept()
         thread.start_new_thread(serve_connection, (conn,))
 
+def kill_server(server_port, retry=2):
+    if retry == 0:
+        raise OSError("Failed to terminate server listening to port %s." % (server_port,))
+    try:
+        server_pid = int(subprocess.check_output(
+            ["lsof", "-i:%s" % (server_port,), "-sTCP:LISTEN", "-t"]))
+    except subprocess.CalledProcessError:
+        # server is not running
+        return
+    os.kill(server_pid, signal.SIGTERM)
+    time.sleep(1)
+    return kill_server(server_port, retry=retry-1)
+
 def error(msg):
     sys.stderr.write("%s\n" % (msg,))
     sys.exit(1)
@@ -365,8 +383,8 @@ def error(msg):
 if __name__ == "__main__":
 
     opts, remainder = getopt.gnu_getopt(
-        sys.argv[1:], 'dhkl:L:s:SV',
-        ["help", "keep-session",
+        sys.argv[1:], 'dhkKl:L:s:SV',
+        ["help", "keep-session", "kill-session",
          "log-file=", "session=", "session-server", "version"])
 
     for opt, arg in opts:
@@ -377,6 +395,8 @@ if __name__ == "__main__":
             sys.exit(0)
         elif opt in ["-k", "--keep-session"]:
             opt_keep_running_without_clients = True
+        elif opt in ["-K", "--kill-session"]:
+            opt_kill_session = True
         elif opt in ["-l", "-L", "--log-file"]:
             opt_log_filename = arg
             if opt != "-L":
@@ -398,6 +418,9 @@ if __name__ == "__main__":
                 print "Version N/A"
             sys.exit(0)
 
+    if opt_kill_session:
+        kill_server(server_port)
+        sys.exit(0)
     if opt_fork_server:
         fork_server(server_port)
     else:
