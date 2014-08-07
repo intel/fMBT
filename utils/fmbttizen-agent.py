@@ -219,9 +219,12 @@ elif 'QEMU Virtual CPU' in cpuinfo:
         "POWER": "Power Button",
         "VOLUMEUP": "AT Translated Set 2 hardkeys",
         "VOLUMEDOWN": "AT Translated Set 2 hardkeys",
-        "HOME": "AT Translated Set 2 hardkeys"
+        "HOME": "AT Translated Set 2 hardkeys",
+        "BACK": "AT Translated Set 2 hardkeys",
+        "MENU": "AT Translated Set 2 hardkeys"
         }
     _inputKeyNameToCode["HOME"] = 139
+    _inputKeyNameToCode["MENU"] = 169 # KEY_PHONE
     if iAmRoot:
         touch_device = fmbtuinput.Touch().open("/dev/input/event2")
 elif 'Synaptics_RMI4_touchkey' in devices:
