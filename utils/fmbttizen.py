@@ -676,7 +676,7 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
             _adapterLog("fmbttizen agent error: %s" % (l,))
 
     def close(self):
-        if self._sdbShell != None:
+        if hasattr(self, "_sdbShell") and self._sdbShell != None:
             try: self._agentCmd("quit", retry=0)
             except: pass
             try: self._sdbShell.terminate()
