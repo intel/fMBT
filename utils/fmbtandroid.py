@@ -529,6 +529,58 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self._conf
 
+    def install(self, filename, lock=False, reinstall=False, downgrade=False,
+                sdcard=False, algo=None, key=None, iv=None):
+        """
+        Install apk on the device.
+
+        Parameters:
+
+          filename (string):
+                APK filename on host.
+
+          lock (boolean, optional):
+                forward-lock the app. Correspond to adb install "-l".
+                The default is False.
+
+          reinstall (boolean, optional):
+                Reinstall the app, keep its data. Corresponds to "-r".
+                The default is False.
+
+          downgrade (boolean, optional):
+                Allow downgrading the application. Corresponds to "-d".
+                The default is False.
+
+          sdcard (boolean, optional):
+                Install on SD card. Corresponds to "-s".
+                The default is False.
+
+          algo (string, optional):
+                Algorithm name. Corresponds to "--algo".
+                The default is None.
+
+          key (string, optional):
+                Hex-encoded key. Corresponds to "--key".
+                The default is None.
+
+          iv (string, optional):
+                Hex-encoded iv. Corresponds to "--iv".
+                The default is None.
+
+        Returns True if successful, False if device is not connected,
+        and "adb install" command output (string) otherwise.
+
+        Example:
+          status = d.install("/tmp/PythonAPK.apk")
+          if status != True:
+              print "Installation failed, output:", status
+        """
+        if self._conn:
+            return self._conn.install(filename, lock, reinstall, downgrade,
+                                      sdcard, algo, key, iv)
+        else:
+            return False
+
     def keyNames(self):
         """
         Returns list of keyNames supported by pressKey.
@@ -899,6 +951,29 @@ class Device(fmbtgti.GUITestInterface):
             time.sleep(pollDelay)
             tw = self._conn.recvTopAppWindow()[1]
         return tw
+
+    def uninstall(self, apkname, keepData=False):
+        """
+        Uninstall a package from the device.
+
+        Parameters:
+          package (string):
+                  the package to be uninstalled.
+
+          keepData (boolean, optional):
+                  keep app data and cache.
+                  Corresponds to adb uninstall "-k".
+                  The default is False.
+
+        Returns True on success, otherwise False.
+
+        Example:
+          d.uninstall("com.android.python27")
+        """
+        if self._conn:
+            return self._conn.uninstall(apkname, keepData)
+        else:
+            return False
 
     def verifyText(self, text, partial=False):
         """
@@ -1490,6 +1565,41 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
                 return self._monkeyCommand(command, retry=retry-1)
             else:
                 raise AndroidConnectionError('Android monkey socket connection lost while sending command "%s"' % (command,))
+
+    def install(self, filename, lock, reinstall, downgrade,
+                sdcard, algo, key, iv):
+        cmd = ["install"]
+        if lock:
+            cmd.append("-l")
+        if reinstall:
+            cmd.append("-r")
+        if downgrade:
+            cmd.append("-d")
+        if sdcard:
+            cmd.append("-s")
+        if algo != None:
+            cmd.extend(["--algo", algo])
+        if key != None:
+            cmd.extend(["--key", key])
+        if iv != None:
+            cmd.extend(["--iv", iv])
+        cmd.append(filename)
+        status, output, error = self._runAdb(cmd, [0, 1])
+        if "Success" in output:
+            return True
+        else:
+            return output + "\n" + error
+
+    def uninstall(self, apkname, keepData):
+        cmd = ["uninstall"]
+        if keepData:
+            cmd.append("-k")
+        cmd.append(apkname)
+        status, output, error = self._runAdb(cmd)
+        if "Success" in output:
+            return True
+        else:
+            return False
 
     def reboot(self, reconnect, firstBootAfterFlashing, timeout):
         if firstBootAfterFlashing:
