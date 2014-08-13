@@ -87,9 +87,9 @@ Description: fMBT adapter for Windows GUI testing
 Package: fmbt-adapter-vnc
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, fmbt-adapter-eyenfinger (= ${binary:Version}), fmbt-python (= ${binary:Version})
-Description: fMBT adapter for Tizen GUI testing through USB
- Provides fmbttizen.py, a Python library for Tizen GUI testing.
- The library needs Smart Development Bridge (sdb) from Tizen SDK.
+Description: fMBT adapter for GUI testing through VNC
+ Provides fmbtvnc.py, a Python library for GUI testing through VNC.
+ The library needs vncdotool, see GitHub or Python package index.
 
 Package: fmbt-adapter-x11
 Architecture: any
