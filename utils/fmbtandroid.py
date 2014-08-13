@@ -416,6 +416,15 @@ class Device(fmbtgti.GUITestInterface):
         self.setBitmapPath(self._conf.value("paths", "bitmapPath", ".:" + self._fmbtAndroidHomeDir + os.sep + "bitmaps" + os.sep + self.hardware + "-" + self.platformVersion()), self._fmbtAndroidHomeDir)
         self.setScreenshotDir(self._conf.value("paths", "screenshotDir", self._fmbtAndroidHomeDir + os.sep + "screenshots"))
 
+    def accelerometer(self):
+        """
+        Return 3-axis accelerometer readings.
+        """
+        if self._conn:
+            return self._conn.recvLastAccelerometer()
+        else:
+            return (None, None, None)
+
     def callContact(self, contact):
         """
         Call to given contact.
@@ -1653,6 +1662,15 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             return int(s[0])
         else:
             return None
+
+    def recvLastAccelerometer(self):
+        _, output, _ = self._runAdb(["shell", "dumpsys", "sensorservice"], 0)
+        s = re.findall("3-axis Accelerometer.*last=<([- .0-9]*),([- .0-9]*),([- .0-9]*)>", output)
+        try:
+            rv = tuple([float(d) for d in s[0]])
+        except (IndexError, ValueError):
+            rv = (None, None, None)
+        return rv
 
     def recvTopAppWindow(self):
         _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0)
