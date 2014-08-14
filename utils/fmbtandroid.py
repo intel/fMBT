@@ -802,6 +802,28 @@ class Device(fmbtgti.GUITestInterface):
                 self._lastView = view
                 return view
 
+    def setAccelerometer(self, abc):
+        """
+        Set emulator accelerometer readings
+
+        Parameters:
+
+          abc (tuple of floats):
+                  new 3-axis accelerometer readings, one to three values.
+
+        Returns True if successful, False if failed. Raises an exception
+        if emulator cannot be connected to. Does not work with real hardware.
+
+        Example:
+          d.setAccelerometer((9.8, 0))
+          d.setAccelerometer((0, 9.8))
+          d.setAccelerometer((-9.6, 0.2, 0.8))
+        """
+        if self._conn:
+            return self._conn.sendAcceleration(abc)
+        else:
+            return False
+
     def setDisplaySize(self, size=(None, None)):
         """
         Transform coordinates of synthesized events from screenshot
@@ -1434,6 +1456,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         self.setDisplayToScreenCoords(lambda x, y: (x, y))
 
         self._detectFeatures()
+        self._emulatorSocket = None
         try:
             self._resetMonkey()
             self._resetWindow()
@@ -1447,6 +1470,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
 
     def __del__(self):
         try: self._monkeySocket.close()
+        except: pass
+        try: self._emulatorSocket.close()
         except: pass
 
     def target(self):
@@ -1470,6 +1495,28 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         else:
             command = ["adb", "-s", self._serialNumber, command]
         return _run(command, expectedExitStatus=expect, timeout=timeout)
+
+    def _emulatorCommand(self, command):
+        if not self._emulatorSocket:
+            try:
+                emulatorPort = int(re.findall("emulator-([0-9]*)", self._serialNumber)[0])
+            except (IndexError, ValueError):
+                raise FMBTAndroidError("emulator port detection failed")
+            try:
+                self._emulatorSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self._emulatorSocket.connect(("localhost", emulatorPort))
+            except socket.error, e:
+                raise FMBTAndroidError("connecting to the emulator failed: %s" % (e,))
+        self._emulatorSocket.sendall(command + "\n")
+        data = self._emulatorSocket.recv(4096)
+        try:
+            data = data.splitlines()[-1].strip()
+        except IndexError:
+            raise FMBTAndroidError("no response from the emulator")
+        if data.startswith("OK"):
+            return True, data
+        else:
+            return False, data
 
     def _runSetupCmd(self, cmd, expectedExitStatus = 0):
         _adapterLog('setting up connections: "%s"' % (cmd,))
@@ -1671,6 +1718,16 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         except (IndexError, ValueError):
             rv = (None, None, None)
         return rv
+
+    def sendAcceleration(self, abc):
+        """abc is a tuple of 1, 2 or 3 floats, new accelerometer readings"""
+        try:
+            self._emulatorCommand("sensor set acceleration %s" %
+                                  (":".join([str(value) for value in abc]),))
+        except FMBTAndroidError, e:
+            raise FMBTAndroidError(
+                "accelerometer can be set only on emulator (%s)" % (e,))
+        return True
 
     def recvTopAppWindow(self):
         _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0)
