@@ -154,6 +154,16 @@ extern "C" {
     int bgrx2rgb(char* data, int width, int height);
 
     /*
+     * bgr2rgb - convert bitmap data BGR to RGB.
+     *
+     * Return value:
+     *    0: all pixels are black
+     *    > 0: there is at least one non-black pixel
+     */
+    EXPORT
+    int bgr2rgb(char* data, int width, int height);
+
+    /*
      * wbgr2rgb - convert Windows GetDIBits (BGR, mirrored Y) image to RGB.
      */
     EXPORT

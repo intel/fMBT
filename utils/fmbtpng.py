@@ -18,6 +18,7 @@
 # Converts raw images into PNG, based on libpng.
 
 import ctypes
+import fmbtgti
 
 PNG_HEADER_VERSION_STRING = None
 PNG_COLOR_MASK_COLOR = 2
@@ -79,7 +80,7 @@ def raw2png(data, width, height, depth=8, fmt="RGB"):
 
       fmt (string, optional):
               image data format. The default is "RGB".
-              Supported formats: "RGB", "RGBA".
+              Supported formats: "RGB", "RGBA", "BGR", "BGR_".
 
     Returns string that contains PNG image data.
 
@@ -106,6 +107,9 @@ def raw2png(data, width, height, depth=8, fmt="RGB"):
 
     libpng.png_set_write_fn(png_struct, NULL, c_cb_png_write, NULL)
 
+    buf = ctypes.c_buffer(data)
+    buf_addr = ctypes.addressof(buf)
+
     fmt = fmt.upper()
     if fmt == "RGB":
         color_type = PNG_COLOR_TYPE_RGB
@@ -113,6 +117,14 @@ def raw2png(data, width, height, depth=8, fmt="RGB"):
     elif fmt == "RGBA":
         color_type = PNG_COLOR_TYPE_RGB_ALPHA
         bytes_per_pixel = (depth / 8) * 4
+    elif fmt == "BGR":
+        fmbtgti.eye4graphics.bgr2rgb(buf, width, height)
+        color_type = PNG_COLOR_TYPE_RGB
+        bytes_per_pixel = (depth / 8) * 3
+    elif fmt == "BGR_":
+        fmbtgti.eye4graphics.bgrx2rgb(buf, width, height)
+        color_type = PNG_COLOR_TYPE_RGB
+        bytes_per_pixel = (depth / 8) * 3
     else:
         raise ValueError('Unsupported data format "%s", use "RGB" or "RGBA"')
 
@@ -120,9 +132,6 @@ def raw2png(data, width, height, depth=8, fmt="RGB"):
         png_struct, info_struct, width, height, depth,
         color_type, PNG_INTERLACE_NONE,
         PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT)
-
-    buf = ctypes.c_buffer(data)
-    buf_addr = ctypes.addressof(buf)
 
     rows = (ctypes.c_void_p * height)()
     bytes_per_row = width * bytes_per_pixel
