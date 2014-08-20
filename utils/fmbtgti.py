@@ -119,9 +119,7 @@ def _fmbtLog(msg):
     fmbt.fmbtlog("fmbtgti: %s" % (msg,))
 
 def _filenameTimestamp(t=None):
-    if t == None:
-        t = datetime.datetime.now()
-    return t.strftime("%Y%m%d-%H%M%S-%f")
+    return fmbt.formatTime("%Y%m%d-%H%M%S-%f", t)
 
 def _takeDragArgs(d):
     return _takeArgs(("startPos", "delayBeforeMoves", "delayBetweenMoves",
@@ -1499,7 +1497,7 @@ class GUITestInterface(object):
         if self.screenshotSubdir():
             screenshotPath = os.path.join(screenshotPath,
                                           self.screenshotSubdir())
-        screenshotPath = t.strftime(screenshotPath)
+        screenshotPath = fmbt.formatTime(screenshotPath, t)
         filepath = os.path.join(screenshotPath, filename)
         necessaryDirs = os.path.dirname(filepath)
         if necessaryDirs and not os.path.isdir(necessaryDirs):
@@ -2555,27 +2553,14 @@ class _VisualLog:
             self._outFileObj.flush()
 
     def timestamp(self, t=None):
-        if t == None: t = datetime.datetime.now()
-        if os.name == "nt":
-            if "%s" in self._timeFormat:
-                epoch = (t - datetime.datetime(1970,1,1)).total_seconds()
-                fmt = self._timeFormat.replace("%s", str(int(epoch)))
-            else:
-                fmt = self._timeFormat
-        else:
-            fmt = self._timeFormat
-        return t.strftime(fmt)
+        return fmbt.formatTime(self._timeFormat, t)
 
     def epochTimestamp(self, t=None):
-        if t == None: t = datetime.datetime.now()
-        if os.name == "nt":
-            return "%s.%s" % ((t - datetime.datetime(1970,1,1)).total_seconds(),
-                              t.strftime("%f"))
-        else:
-            return t.strftime("%s.%f")
+        return fmbt.formatTime("%s.%f", t)
 
     def htmlTimestamp(self, t=None):
-        if t == None: t = datetime.datetime.now()
+        if t == None:
+            t = datetime.datetime.now()
         retval = '<div class="time" id="%s"><a id="time%s">%s</a></div>' % (
             self.epochTimestamp(t), self.epochTimestamp(t), self.timestamp(t))
         return retval
@@ -2584,8 +2569,7 @@ class _VisualLog:
         """Returns True if old log file was closed and new initialised"""
         if "%" in self._outFilename:
             # log filename is strftime formatted
-            t = datetime.datetime.now()
-            newOutFilename = t.strftime(self._outFilename)
+            newOutFilename = fmbt.formatTime(self._outFilename)
             if newOutFilename != self._formattedOutFilename:
                 self.close()
                 # prepare new log file

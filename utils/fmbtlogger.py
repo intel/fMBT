@@ -146,7 +146,7 @@ class CSVLogWriter(LogWriter):
         if len(msg.strip()) > 0:
             columnPrefix = (self.separator * self.depth)
             if self.timeOnLinePrefix:
-                linePrefix = datetime.datetime.now().strftime(self.linePrefix)
+                linePrefix = fmbt.formatTime(self.linePrefix)
             else:
                 linePrefix = self.linePrefix
             self.logFunc(linePrefix + columnPrefix + msg)

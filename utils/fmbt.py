@@ -28,7 +28,9 @@
 # component such as remote_python or remote_pyaal.
 
 import datetime
+import os
 import sys
+import time
 import urllib
 
 _g_fmbt_adapterlogtimeformat="%s.%f"
@@ -48,6 +50,15 @@ def _fmbt_call_helper(func,param = ""):
             return urllib.unquote(code[1:])
     return ""
 
+def formatTime(timeformat="%s", timestamp=None):
+    if timestamp == None:
+        timestamp = datetime.datetime.now()
+    # strftime on Windows does not support conversion to epoch (%s).
+    # Calculate it here, if needed.
+    if os.name == "nt" and "%s" in timeformat:
+        epoch_time = time.mktime(timestamp.timetuple())
+        timeformat = timeformat.replace("%s", str(int(epoch_time)))
+    return timestamp.strftime(timeformat)
 
 def heuristic():
     return _fmbt_call_helper("heuristic.get")
@@ -108,9 +119,7 @@ def formatAdapterLogMessage(msg, fmt="%s %s\n"):
     """
     Return timestamped adapter log message
     """
-    return fmt % (
-        datetime.datetime.now().strftime(_g_fmbt_adapterlogtimeformat),
-        msg)
+    return fmt % (formatTime(_g_fmbt_adapterlogtimeformat), msg)
 
 def getActionName():
     """deprecated, use actionName()"""
