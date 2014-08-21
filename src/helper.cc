@@ -302,7 +302,7 @@ char* readfile(const char* filename,const char* preprocess,int& status)
 char* _readfile(const char* filename)
 {
   std::string fn(filename);
-  unsigned long cutpos = fn.find_last_of("#");
+  size_t cutpos = fn.find_last_of("#");
 
   if (cutpos == fn.npos) {
     /* read file contents always without preprocessing when glib not
@@ -312,6 +312,7 @@ char* _readfile(const char* filename)
     f.open(filename, std::fstream::in | std::fstream::ate);
     if (!f.is_open())
       return NULL;
+
     file_len = f.tellg();
     f.seekg(0, std::ios::beg);
     char *contents = (char*)malloc(file_len+1);
@@ -1055,3 +1056,7 @@ int getint(GIOChannel* out,GIOChannel* in,Log& log,
 
   return ret;
 }
+
+#ifdef __MINGW32__
+#include "rand_r.c"
+#endif

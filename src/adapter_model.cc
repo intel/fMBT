@@ -78,12 +78,11 @@ Adapter_model::~Adapter_model()
     r->unref();
 }
 
-
 int  Adapter_model::observe(std::vector<int> &action,bool block)
 {
   int* act,*iact;
   int actions=-model->getIActions(&iact)+model->getActions(&act);
-  int i=1+random()%actions;
+  int i=1+r->rand()%actions;
   int a;
   if (!actions) {
     return false;

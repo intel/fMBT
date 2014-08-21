@@ -37,10 +37,7 @@ int vasprintf(char **strp, const char *fmt, va_list ap);
 
 }
 
-#define srand48 srand
-#define drand48() (double(rand())/RAND_MAX)
-#define random rand
-#define srandom srand
+int rand_r(unsigned int *seedp);
 
 # define timeradd(a, b, result)                                               \
   do {                                                                        \

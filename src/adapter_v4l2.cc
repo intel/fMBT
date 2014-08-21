@@ -18,6 +18,7 @@
  */
 
 /* Video for Linux adapter. Takes video device path as a parameter. */
+#ifndef __MINGW32__
 
 #include "adapter_v4l2.hh"
 #include <cstdio>
@@ -178,3 +179,5 @@ int  Adapter_v4l2::observe(std::vector<int>& action, bool block)
 }
 
 FACTORY_DEFAULT_CREATOR(Adapter, Adapter_v4l2, "v4l2")
+
+#endif

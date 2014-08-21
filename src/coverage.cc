@@ -35,7 +35,7 @@ Coverage* CoverageFactory::create(Log& log, std::string name,
   } else {
     char* endp;
     float val=strtof(name.c_str(),&endp);
-    if (*endp==0 && (val>=0.0 || isnan(val))) {
+    if (*endp==0 && (val>=0.0 || std::isnan(val))) {
       i=(*creators).find("const");
       if (i!=(*creators).end()) {
 	return (i->second)(log,name);

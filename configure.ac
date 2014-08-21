@@ -2,7 +2,6 @@ AC_INIT([fmbt], [0.15.5-0.rc0], [antti.kervinen@intel.com])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
 
 AC_CONFIG_MACRO_DIR([m4])
-
 m4_pattern_allow([AM_PROG_AR])
 AM_PROG_AR
 AC_PROG_CC
@@ -13,11 +12,24 @@ AC_CONFIG_HEADERS([config.h])
 
 LT_INIT(win32-dll)
 
+AC_ARG_WITH([readline],
+    [AS_HELP_STRING([--with-readline[=yes/no]], [Enable GNU readline support. Default=no.])])
+
 # TODO: configurable readline?
 # here we could fall back to reading standard input in READLINE,
 # see test_engine.cc.
-PKG_CHECK_MODULES([LIBEDIT], [libedit], [],
-    AC_MSG_FAILURE([libedit required.]))
+if test "x$with_readline" != xyes; then
+    AC_MSG_RESULT([GNU readline disabled.])
+    PKG_CHECK_MODULES([LIBEDIT], [libedit], [],
+       AC_MSG_FAILURE([libedit required.]))
+else
+    AC_CHECK_HEADERS([readline/readline.h readline/history.h],
+            [AC_DEFINE([USE_GNU_READLINE], [], [Define if we have GNU readline])],
+            [AC_MSG_ERROR([Couldn't find GNU readline headers.])])
+    AC_CHECK_LIB([readline], [readline],
+            [LIBEDIT_LIBS="-lreadline"],
+            [AC_MSG_ERROR([Couldn't find readline libraries.])])
+fi
 
 AC_CHECK_LIB([rt], [clock_gettime])
 
@@ -28,7 +40,6 @@ AM_CONDITIONAL(RDRND, test "${enable_rdrnd}" = "yes")
 AC_ARG_ENABLE(android, AC_HELP_STRING([--enable-android],
     [enable building fmbt_droid]), [enable_android=${enableval}])
 AM_CONDITIONAL(ANDROID, test "${enable_android}" = "yes")
-
 
 AC_ARG_WITH([ndk-build],
             [AS_HELP_STRING([--with-ndk-build=/path/and/executable], [ndk-build for building Android binary])],
@@ -107,5 +118,13 @@ AS_IF([test "x$with_imagemagick" != "xno"],
      [AC_MSG_FAILURE([ImageMagick not found.])])])
 
 AM_CONDITIONAL([HAVE_MAGICK], [test "x$with_imagemagick" != "xno"])
+
+AS_CASE([$host],
+  [*-*-mingw32], [DLINK_OBJ=""],
+  [DLINK_OBJ=-ldl]
+)
+AC_SUBST([DLINK_OBJ])
+
+AM_CONDITIONAL(MINGW, test X"${DLINK_OBJ}" = "X")
 
 AC_OUTPUT

@@ -11,8 +11,10 @@ MAJOR=1
 MINOR=26
 RELEASE=$(MAJOR).$(MINOR)
 
-CC = gcc
 
+#PF=x86_64-w64-mingw32-
+#CC = gcc
+#CC=$(PF)gcc
 ifndef PREFIX
 PREFIX=/usr/local
 endif
@@ -150,35 +152,30 @@ all: $(EXECS) $(LIBRARIES) BUILD_VERSION make_dparser.cat
 version:
 	echo $(OS_TYPE) $(OS_VERSION)
 
-test:
-	(MAKE=$(MAKE) ./parser_tests)
+build%.o: %.c
+	gcc -c -o $@ $^
 
-install:
-	mkdir -p $(PREFIX)/bin
-	cp -f $(EXECUTABLES) $(PREFIX)/bin
-	mkdir -p $(PREFIX)/include
-	cp -f $(INCLUDES) $(PREFIX)/include
-	mkdir -p $(PREFIX)/lib
-	cp -f $(INSTALL_LIBRARIES) $(PREFIX)/lib
-	mkdir -p $(PREFIX)/man/man1
-	cp -f $(MANPAGES) $(PREFIX)/man/man1
+%.o: %.c
+	$(CC) -c -o $@ $^
 
-deinstall:
-	rm $(EXECUTABLES:%=$(PREFIX)/bin/%)
-	rm $(INCLUDES:%=$(PREFIX)/include/%)
-	rm $(INSTALL_LIBRARIES:%=$(PREFIX)/lib/%)
-	rm $(MANPAGES:%=$(PREFIX)/man/man1/%)
-
-make_dparser: $(MAKE_PARSER_OBJS) $(LIBRARIES)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ version.c $(LIBS)
+make_dparser: $(addprefix build,$(MAKE_PARSER_OBJS)) $(addprefix build,$(LIBRARIES))
+	gcc $(CFLAGS) $(LDFLAGS) -o $@ $^ version.c $(LIBS)
 
 $(LIBDPARSE): $(LIB_OBJS)
+	$(AR) cruv $@ $^
+	$(RANLIB) $@
+
+build$(LIBDPARSE): $(addprefix build,$(LIB_OBJS))
+	ar cruv $@ $^
+	ranlib $@ 
+
+build$(LIBMKDPARSE): $(addprefix build,$(MK_LIB_OBJS))
 	ar cruv $@ $^
 	ranlib $@
 
 $(LIBMKDPARSE): $(MK_LIB_OBJS)
-	ar cruv $@ $^
-	ranlib $@
+	$(AR) cruv $@ $^
+	$(RANLIB) $@
 
 %.d_parser.c: % make_dparser
 	$(MAKE_DPARSER) $<

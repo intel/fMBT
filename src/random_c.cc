@@ -21,6 +21,7 @@
 #include "random_c.hh"
 #include "params.hh"
 #include <cstdlib>
+#include "helper.hh" // mingw....
 
 Random_C::Random_C(const std::string& param) {
   max_val = RAND_MAX;

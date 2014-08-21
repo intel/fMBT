@@ -24,7 +24,7 @@
 #include <errno.h>
 
 #include <sys/types.h>
-#include <sys/wait.h>
+//#include <sys/wait.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -62,8 +62,29 @@ void error(int exitval, int dontcare, const char* format, ...)
 }
 #endif
 
+#ifdef __MINGW32__
+void error(int exitval, int dontcare, const char* format, ...)
+{
+  va_list ap;
+  fprintf(stderr, "fMBT error: ");
+  va_start(ap, format);
+  vfprintf(stderr, format, ap);
+  va_end(ap);
+  exit(exitval);
+}
+#endif
+
 extern "C" {
 extern D_ParserTables parser_tables_lang;
+}
+
+void process_end_callback(GPid pid,
+                         gint status,
+                         gpointer user_data)
+{
+  int* _status=(int*)user_data;
+  *_status=status;
+  g_main_loop_quit(NULL);
 }
 
 void print_usage()
@@ -255,10 +276,17 @@ int main(int argc,char** argv) {
 
     {
       int status;
+      g_child_watch_add(pid,process_end_callback,
+                       &status);
+      g_main_loop_run(NULL);
+      /*
       if (waitpid(pid, &status, 0)==-1)
         error(1,0,"could not read compiler status.");
       if (!WIFEXITED(status) || WEXITSTATUS(status)!=0)
+      */
+      if (!g_spawn_check_exit_status (status,NULL)) {
         error(1,0,"compiling failed.");
+      }
     }
   } else {
     fprintf(outputfile,"%s",result.c_str());

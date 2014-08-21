@@ -22,6 +22,20 @@
 #include <sys/types.h>
 #ifndef __MINGW32__
 #include <sys/wait.h>
+#define _g_spawn_async_with_pipes g_spawn_async_with_pipes
+#else
+gboolean
+_g_spawn_async_with_pipes (const gchar *working_directory,
+		gchar **argv,
+		gchar **envp,
+		GSpawnFlags flags,
+		GSpawnChildSetupFunc child_setup,
+		gpointer user_data,
+		GPid *child_pid,
+		gint *standard_input,
+		gint *standard_output,
+		gint *standard_error,
+		GError **error);
 #endif
 #include "writable.hh"
 
@@ -71,6 +85,21 @@ protected:
       if (r->_status)
 	*(r->_status)=false;
       return;
+    }
+#else
+    GError* g=NULL;
+    if (!g_spawn_check_exit_status (status,&g)) {
+      
+      if (g && g->message) {
+	fprintf(stderr,"%s returned error %s\n",r->prefix.c_str(),g->message);
+      } else {
+	fprintf(stderr,"%s returned error\n",r->prefix.c_str());
+      }
+      if (r->_status)
+	*(r->_status)=false;
+
+      if (g) 
+	g_error_free (g);
     }
 #endif
     // Currently we don't care about the rest 

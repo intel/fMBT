@@ -1,5 +1,8 @@
 if ANDROID
 bin_PROGRAMS = fmbt_droid
+endif
+if MINGW
+bin_PROGRAMS = fmbt fmbt-aalc fmbt-aalp
 else
 bin_PROGRAMS = fmbt remote_adapter_loader fmbt-aalc fmbt-aalp fmbt-ucheck fmbt-log2lsts
 endif
@@ -32,13 +35,13 @@ fmbt_aalc_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./d -I `pwd` $(LIBEDIT_CFLA
 fmbt_aalp_CPPFLAGS	       = $(FMBTBUILDINFOCFLAGS) $(GLIB_CFLAGS)
 fmbt_log2lsts_CPPFLAGS	       = -Wall -pedantic -fPIC -I d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) $(XML2_CFLAGS) $(FMBTBUILDINFOCFLAGS)
 
-fmbt_LDFLAGS                   = -g $(JVMLDFLAGS) $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E -ldl
-fmbt_ucheck_LDFLAGS            = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E -ldl
-fmbt_droid_LDFLAGS             = -Wl,-E -ldl
-remote_adapter_loader_LDFLAGS  = -g -ldl $(GLIB_LIBS)
-fmbt_aalc_LDFLAGS	       = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) -lboost_regex -Wl,-E -ldl
-fmbt_aalp_LDFLAGS	       = -g $(GLIB_LIBS) -lboost_regex -ldl
-fmbt_log2lsts_LDFLAGS 	       = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E -ldl
+fmbt_LDFLAGS                   = -g $(JVMLDFLAGS) $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E $(DLINK_OBJ)
+fmbt_ucheck_LDFLAGS            = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E $(DLINK_OBJ)
+fmbt_droid_LDFLAGS             = -Wl,-E $(DLINK_OBJ)
+remote_adapter_loader_LDFLAGS  = -g $(DLINK_OBJ) $(GLIB_LIBS)
+fmbt_aalc_LDFLAGS	       = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) -lboost_regex -Wl,-E $(DLINK_OBJ)
+fmbt_aalp_LDFLAGS	       = -g $(GLIB_LIBS) -lboost_regex $(DLINK_OBJ)
+fmbt_log2lsts_LDFLAGS 	       = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E $(DLINK_OBJ)
 
 fmbt_LDADD                     = d/libdparse.a
 fmbt_ucheck_LDADD              = d/libdparse.a
@@ -53,7 +56,7 @@ noinst_HEADERS += $(dsources)
 
 d/libdparse.a:
 	(mkdir d 2>/dev/null && cp -r d .) || true # qnd way to for VPATH build
-	cd d; $(MAKE) make_dparser libdparse.a
+	cd d;CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) $(MAKE) libdparse.a; make make_dparser
 
 # Building d/libdparse.a creates make_dparser, too. On the other hand,
 # building only d/make_dparser produces d/libdparse.a as well. Running

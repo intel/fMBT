@@ -327,7 +327,7 @@ void include_path_append(const char* path) {
   if (path) {
     std::vector<std::string> vec;
     std::string s(path);
-    strvec(vec,s,":");
+    strvec(vec,s,G_SEARCHPATH_SEPARATOR_S);
     for(unsigned i=0;i<vec.size();i++) {
       include_path.push_back(vec[i]);
     }
