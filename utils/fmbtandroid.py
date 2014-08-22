@@ -814,6 +814,8 @@ class Device(fmbtgti.GUITestInterface):
         Returns True if successful, False if failed. Raises an exception
         if emulator cannot be connected to. Does not work with real hardware.
 
+        Note: to rotate display with real hardware, see setUserRotation().
+
         Example:
           d.setAccelerometer((9.8, 0))
           d.setAccelerometer((0, 9.8))
@@ -821,6 +823,23 @@ class Device(fmbtgti.GUITestInterface):
         """
         if self._conn:
             return self._conn.sendAcceleration(abc)
+        else:
+            return False
+
+    def setAccelerometerRotation(self, value):
+        """
+        Enable or disable accelerometer-based screen rotation
+
+        Parameters:
+
+          value (boolean):
+                  True: enable accelerometer-based rotation
+                  False: disable accelerometer-based rotation.
+
+        Returns True if successful, otherwise False.
+        """
+        if self._conn:
+            return self._conn.sendAccelerometerRotation(value)
         else:
             return False
 
@@ -851,6 +870,33 @@ class Device(fmbtgti.GUITestInterface):
         self._conn.setDisplayToScreenCoords(
             lambda x, y: (x * screenWidth / width,
                           y * screenHeight / height))
+
+    def setUserRotation(self, rotation):
+        """
+        Enable or disable accelerometer-based screen rotation
+
+        Parameters:
+
+          rotation (integer):
+                  values 0, 1, 2 and 3 correspond to
+                  ROTATION_0, ROTATION_90, ROTATION_180, ROTATION_270.
+
+        Returns True if successful, otherwise False.
+
+        Example:
+          # Disable accelerometer-based rotation for user rotation
+          # to take effect.
+          d.setAccelerometerRotation(False)
+          d.setUserRotation(fmbtandroid.ROTATION_90)
+          time.sleep(2)
+          d.setUserRotation(fmbtandroid.ROTATION_0)
+          time.sleep(2)
+          d.setAccelerometerRotation(True)
+        """
+        if self._conn:
+            return self._conn.sendUserRotation(rotation)
+        else:
+            return False
 
     def shell(self, shellCommand):
         """
@@ -1727,6 +1773,35 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         except FMBTAndroidError, e:
             raise FMBTAndroidError(
                 "accelerometer can be set only on emulator (%s)" % (e,))
+        return True
+
+    def sendAccelerometerRotation(self, value):
+        if value:
+            sendValue = "i:1"
+        else:
+            sendValue = "i:0"
+        try:
+            self._runAdb(["shell", "content", "insert",
+                          "--uri", "content://settings/system",
+                          "--bind", "name:s:accelerometer_rotation",
+                          "--bind", "value:" + sendValue])
+        except Exception:
+            return False
+        return True
+
+    def sendUserRotation(self, rotation):
+        allowedRotations = [ROTATION_0, ROTATION_90, ROTATION_180, ROTATION_270]
+        if not rotation in allowedRotations:
+            raise ValueError("invalid rotation: %s, use one of %s" %
+                             (allowedRotations,))
+        sendValue = "i:%s" % (rotation,)
+        try:
+            self._runAdb(["shell", "content", "insert",
+                          "--uri", "content://settings/system",
+                          "--bind", "name:s:user_rotation",
+                          "--bind", "value:" + sendValue])
+        except Exception:
+            return False
         return True
 
     def recvTopAppWindow(self):
