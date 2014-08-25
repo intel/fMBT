@@ -72,6 +72,12 @@ Requires: %{name}-adapters-remote
 Requires: %{name}-core
 Requires: %{name}-coreutils
 Requires: %{name}-utils
+Requires: %{name}-adapter-android
+Requires: %{name}-adapter-chromiumos
+Requires: %{name}-adapter-tizen
+Requires: %{name}-adapter-vnc
+Requires: %{name}-adapter-windows
+Requires: %{name}-adapter-x11
 Requires: python-pyside
 
 %description editor
