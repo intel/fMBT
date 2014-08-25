@@ -244,13 +244,13 @@ class GUITestConnection(object):
       dependencies).
     """
     def sendPress(self, keyName):
-        raise NotImplementedError('sendPress("%s") needed but not implemented.' % (keyName,))
+        return self.sendKeyDown(keyName) and self.sendKeyUp(keyName)
     def sendKeyDown(self, keyName):
         raise NotImplementedError('sendKeyDown("%s") needed but not implemented.' % (keyName,))
     def sendKeyUp(self, keyName):
         raise NotImplementedError('sendKeyUp("%s") needed but not implemented.' % (keyName,))
     def sendTap(self, x, y):
-        raise NotImplementedError('sendTap(%d, %d) needed but not implemented.' % (x, y))
+        return self.sendTouchDown(x, y) and self.sendTouchUp(x, y)
     def sendTouchDown(self, x, y):
         raise NotImplementedError('sendTouchDown(%d, %d) needed but not implemented.' % (x, y))
     def sendTouchMove(self, x, y):

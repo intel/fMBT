@@ -65,7 +65,7 @@ def raw2png(data, width, height, depth=8, fmt="RGB"):
     """convert raw image into PNG
 
     Parameters:
-      data (string):
+      data (string or a ctypes pointer type):
               image data
 
       width (integer):
@@ -76,7 +76,7 @@ def raw2png(data, width, height, depth=8, fmt="RGB"):
 
       depth (integer, optional):
               color depth, bits per color channel.
-              The default is 8.
+              The default is 8 (that is, RGB has 24 bpp, RGBA 32 bpp).
 
       fmt (string, optional):
               image data format. The default is "RGB".
@@ -107,7 +107,11 @@ def raw2png(data, width, height, depth=8, fmt="RGB"):
 
     libpng.png_set_write_fn(png_struct, NULL, c_cb_png_write, NULL)
 
-    buf = ctypes.c_buffer(data)
+    if isinstance(type(data), str):
+        buf = ctypes.c_buffer(data)
+    else:
+        buf = data.contents
+
     buf_addr = ctypes.addressof(buf)
 
     fmt = fmt.upper()
