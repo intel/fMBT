@@ -475,6 +475,15 @@ class Device(fmbtgti.GUITestInterface):
         else:
             return None
 
+    def displayPowered(self):
+        """
+        Returns True if display is powered, otherwise False.
+        """
+        if self._conn:
+            return self._conn.recvDisplayPowered()
+        else:
+            return None
+
     def drag(self, (x1, y1), (x2, y2), delayBetweenMoves=None, delayBeforeMoves=None, delayAfterMoves=None, movePoints=None):
         """
         Touch the screen on coordinates (x1, y1), drag along straight
@@ -801,6 +810,15 @@ class Device(fmbtgti.GUITestInterface):
                 # successfully parsed or parsed with errors but no more retries
                 self._lastView = view
                 return view
+
+    def screenLocked(self):
+        """
+        Return True if showing lockscreen, otherwise False.
+        """
+        if self._conn:
+            return self._conn.recvShowingLockscreen()
+        else:
+            return None
 
     def setAccelerometer(self, abc):
         """
@@ -1753,6 +1771,25 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         s = re.findall("mCurrentOrientation=([0-9])", output)
         if s:
             return int(s[0])
+        else:
+            return None
+
+    def recvDisplayPowered(self):
+        _, output, _ = self._runAdb(["shell", "dumpsys", "power"], 0)
+        s = re.findall("Display Power: state=(OFF|ON)", output)
+        if s:
+            return s[0] == "ON"
+        else:
+            return None
+
+    def recvShowingLockscreen(self):
+        _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0)
+        s = re.findall("mShowingLockscreen=(true|false)", output)
+        if s:
+            if s[0] == "true":
+                return True
+            else:
+                return False
         else:
             return None
 
