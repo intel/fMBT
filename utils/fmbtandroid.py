@@ -1807,9 +1807,9 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
     def recvTopAppWindow(self):
         _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0)
         if self._platformVersion >= "4.2":
-            s = re.findall("mCurrentFocus=Window\{(#?[0-9A-Fa-f]{8})( [^ ]*)? (?P<winName>[^}]*)\}", output)
+            s = re.findall("mCurrentFocus=Window\{(#?[0-9A-Fa-f]{4,16})( [^ ]*)? (?P<winName>[^}]*)\}", output)
         else:
-            s = re.findall("mCurrentFocus=Window\{(#?[0-9A-Fa-f]{8}) (?P<winName>[^ ]*) [^ ]*\}", output)
+            s = re.findall("mCurrentFocus=Window\{(#?[0-9A-Fa-f]{4,16}) (?P<winName>[^ ]*) [^ ]*\}", output)
         if s and len(s[-1][-1].strip()) > 1:
             topWindowName = s[-1][-1]
             if len(s) > 0:
