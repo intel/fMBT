@@ -37,6 +37,7 @@ client = pythonshare.client
 
 on_windows = (platform.system() == "Windows")
 
+opt_debug_stdout_limit = 240
 opt_log_fd = None
 opt_allow_new_namespaces = True
 
@@ -56,7 +57,10 @@ def daemon_log(msg):
         if not on_windows:
             os.fdatasync(opt_log_fd)
     if opt_debug:
-        sys.stdout.write(formatted_msg)
+        if len(formatted_msg) > opt_debug_stdout_limit:
+            sys.stdout.write(formatted_msg[:opt_debug_stdout_limit-3] + "...\n")
+        else:
+            sys.stdout.write(formatted_msg)
         sys.stdout.flush()
 
 def code2string(code):
