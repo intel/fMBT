@@ -709,7 +709,7 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
                 pass
             l = self._sdbShell.stdout.readline()
             if l == "":
-                raise IOError("Unexpected termination of sdb shell: %s" % ("\n".join(output)))
+                raise IOError("Agent connection lost: %s" % ("\n".join(output)))
             l = l.strip()
 
     def _agentCmd(self, command, retry=3):
