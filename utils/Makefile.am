@@ -28,6 +28,7 @@ dist_noinst_SCRIPTS +=		\
 	fmbtchromiumos.py	\
 	fmbtgti.py		\
 	fmbtlogger.py		\
+	fmbtpng.py     	        \
 	fmbttizen-agent.py	\
 	fmbttizen.py		\
 	fmbtuinput.py		\

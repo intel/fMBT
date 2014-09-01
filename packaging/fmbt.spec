@@ -107,6 +107,11 @@ Summary: Deprecated fMBT adapter for GUI testing, use fmbtx11 instead.
 Requires: ImageMagick
 Requires: /usr/bin/xwd
 Requires: tesseract
+%if 0%{?suse_version}
+Requires: libpng12-0
+%else
+Requires: libpng12
+%endif
 
 %description adapter-eyenfinger
 Proof-of-concept adapter for X11 GUI testing with OCR and icon matching.
@@ -279,6 +284,7 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %defattr(-, root, root, -)
 %{_libdir}/python*/site-packages/eye4graphics.so
 %{python_sitearch}/eyenfinger.py*
+%{python_sitearch}/fmbtpng*
 
 %files adapter-android
 %defattr(-, root, root, -)
