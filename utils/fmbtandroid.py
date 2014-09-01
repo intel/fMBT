@@ -278,6 +278,26 @@ _g_keyNames = set((
     "VOLUME_UP", "W", "WINDOW", "X", "Y", "YEN", "Z",
     "ZENKAKU_HANKAKU", "ZOOM_IN", "ZOOM_OUT"))
 
+def listSerialNumbers():
+    """
+    Returns list of serial numbers of Android devices.
+    Equivalent for "adb devices".
+    """
+    listDevicesCommand = [_g_adbExecutable, "devices"]
+    status, output, err = _run(listDevicesCommand, expectedExitStatus = [0, 127])
+    if status == 127:
+        raise FMBTAndroidError('adb not found in PATH. Check your Android SDK installation.')
+
+    outputLines = [l.strip() for l in output.splitlines()]
+    try: deviceLines = outputLines[outputLines.index("List of devices attached")+1:]
+    except: deviceLines = []
+
+    deviceLines = [l for l in deviceLines if l.strip() != ""]
+
+    potentialDevices = [line.split()[0] for line in deviceLines]
+
+    return potentialDevices
+
 class Device(fmbtgti.GUITestInterface):
     """
     The Device class provides
@@ -349,20 +369,10 @@ class Device(fmbtgti.GUITestInterface):
         elif deviceName == "":
             # Connect to an unspecified device.
             # Go through devices in "adb devices".
-            listDevicesCommand = [_g_adbExecutable, "devices"]
-            status, output, err = _run(listDevicesCommand, expectedExitStatus = [0, 127])
-            if status == 127:
-                raise FMBTAndroidError('adb not found in PATH. Check your Android SDK installation.')
-            outputLines = [l.strip() for l in output.splitlines()]
-            try: deviceLines = outputLines[outputLines.index("List of devices attached")+1:]
-            except: deviceLines = []
+            potentialDevices = listSerialNumbers()
 
-            deviceLines = [l for l in deviceLines if l.strip() != ""]
-
-            if deviceLines == []:
+            if potentialDevices == []:
                 raise AndroidDeviceNotFound('No devices found with "%s"' % (listDevicesCommand,))
-
-            potentialDevices = [line.split()[0] for line in deviceLines]
 
             for deviceName in potentialDevices:
                 try:
@@ -1030,7 +1040,10 @@ class Device(fmbtgti.GUITestInterface):
         """
         Returns the name of the top application.
         """
-        return self._conn.recvTopAppWindow()[0]
+        if not self._conn:
+            return None
+        else:
+            return self._conn.recvTopAppWindow()[0]
 
     def topWindow(self):
         """
@@ -1038,6 +1051,8 @@ class Device(fmbtgti.GUITestInterface):
         """
         # the top window may be None during transitions, therefore
         # retry a couple of times if necessary.
+        if not self._conn:
+            return None
         timeout = 0.5
         pollDelay = 0.2
         start = time.time()
