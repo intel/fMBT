@@ -376,9 +376,8 @@ class Device(fmbtgti.GUITestInterface):
 
             for deviceName in potentialDevices:
                 try:
-                    self.serialNumber = deviceName
+                    self.setConnection(_AndroidDeviceConnection(deviceName))
                     self._conf.set("general", "serial", self.serialNumber)
-                    self.setConnection(_AndroidDeviceConnection(self.serialNumber))
                     break
                 except AndroidConnectionError, e:
                     continue
@@ -870,6 +869,10 @@ class Device(fmbtgti.GUITestInterface):
             return self._conn.sendAccelerometerRotation(value)
         else:
             return False
+
+    def setConnection(self, connection):
+        fmbtgti.GUITestInterface.setConnection(self, connection)
+        self.serialNumber = getattr(self.connection(), "_serialNumber", "unknown")
 
     def setDisplaySize(self, size=(None, None)):
         """
