@@ -107,7 +107,7 @@ def raw2png(data, width, height, depth=8, fmt="RGB"):
 
     libpng.png_set_write_fn(png_struct, NULL, c_cb_png_write, NULL)
 
-    if isinstance(type(data), str):
+    if isinstance(data, str):
         buf = ctypes.c_buffer(data)
     else:
         buf = data.contents
