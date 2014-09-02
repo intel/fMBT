@@ -55,9 +55,14 @@ def formatTime(timeformat="%s", timestamp=None):
         timestamp = datetime.datetime.now()
     # strftime on Windows does not support conversion to epoch (%s).
     # Calculate it here, if needed.
-    if os.name == "nt" and "%s" in timeformat:
-        epoch_time = time.mktime(timestamp.timetuple())
-        timeformat = timeformat.replace("%s", str(int(epoch_time)))
+    if os.name == "nt":
+        if "%s" in timeformat:
+            epoch_time = time.mktime(timestamp.timetuple())
+            timeformat = timeformat.replace("%s", str(int(epoch_time)))
+        if "%F" in timeformat:
+            timeformat = timeformat.replace("%F", "%Y-%m-%d")
+        if "%T" in timeformat:
+            timeformat = timeformat.replace("%T", "%H:%M:%S")
     return timestamp.strftime(timeformat)
 
 def heuristic():
