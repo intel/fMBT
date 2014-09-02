@@ -56,8 +56,8 @@ def daemon_log(msg):
         os.write(opt_log_fd, formatted_msg)
         if not on_windows:
             os.fdatasync(opt_log_fd)
-    if opt_debug:
-        if len(formatted_msg) > opt_debug_stdout_limit:
+    if opt_debug and opt_debug_stdout_limit != 0:
+        if opt_debug_stdout_limit > 0 and len(formatted_msg) > opt_debug_stdout_limit:
             sys.stdout.write(formatted_msg[:opt_debug_stdout_limit-3] + "...\n")
         else:
             sys.stdout.write(formatted_msg)
@@ -403,14 +403,18 @@ def start_server(host, port,
             conn, _ = s.accept()
             thread.start_new_thread(_serve_connection, (conn, conn_opts))
     elif port == "stdin":
+        opt_debug_stdout_limit = 0
         conn = client.Connection(sys.stdin, sys.stdout)
         _serve_connection(conn, conn_opts)
 
 def start_daemon(host="localhost", port=8089, debug=False,
-                 log_fd=None, ns_init_import_export=[], conn_opts={}):
-    global opt_log_fd, opt_debug
+                 log_fd=None, ns_init_import_export=[], conn_opts={},
+                 debug_stdout_limit=None):
+    global opt_log_fd, opt_debug, opt_debug_stdout_limit
     opt_log_fd = log_fd
     opt_debug = debug
+    if debug_stdout_limit != None:
+        opt_debug_stdout_limit = debug_stdout_limit
     if opt_debug == False and not on_windows and isinstance(port, int):
         # The usual fork magic, cleaning up all connections to the parent process
         if os.fork() > 0:
