@@ -546,6 +546,7 @@ if __name__ == "__main__":
                   (e, traceback.format_exc()))
 
     aalpy_fd, aalpy_filename = tempfile.mkstemp(suffix='.py', prefix='remote_pyaal.')
+    aal_code = aal_code.replace("\r\n", "\n")
     os.write(aalpy_fd, aal_code)
     os.close(aalpy_fd)
     atexit.register(lambda: os.remove(aalpy_filename))
