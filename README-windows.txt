@@ -75,20 +75,28 @@ Building for Windows
 
 * Build:
 
-  C:\src\fmbt\utils>python setup.py bdist_wininst
+  - Run "call vsvars32.bat" to setup Visual Studio variables. VS 2008 puts it in
 
-  This will create executable installer:
+    C:\Program files (x86)\Microsoft Visual Studio 9.0\Common7\Tools
 
-  C:\src\fmbt\utils\dist\fmbt-python-*.exe
+  - If environment variable VS90COMNTOOLS is not defined, see
+
+    http://stackoverflow.com/questions/2817869/error-unable-to-find-vcvarsall-bat
+
+  - Run "C:\src\fmbt\utils>python setup.py bdist_wininst"
+
+    This will create executable installer:
+
+    C:\src\fmbt\utils\dist\fmbt-python-*.exe
 
 
 * Build test agent platform:
 
-  C:\src\fmbt\pythonshare>python setup.py bdist_wininst
+  - Run "C:\src\fmbt\pythonshare>python setup.py bdist_wininst"
 
-  This will create executable installer:
+    This will create executable installer:
 
-  C:\src\fmbt\pythonshare\dist\pythonshare-*.exe
+    C:\src\fmbt\pythonshare\dist\pythonshare-*.exe
 
 
 Running on Windows
