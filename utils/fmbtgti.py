@@ -1300,7 +1300,9 @@ class GUITestInterface(object):
 
     def connection(self):
         """
-        Returns GUITestConnection instance.
+        Returns GUITestConnection instance or None if not available.
+
+        See also existingConnection().
         """
         return self._conn
 
@@ -1336,7 +1338,7 @@ class GUITestInterface(object):
         x1, y1 = self.intCoords((x1, y1))
         x2, y2 = self.intCoords((x2, y2))
         if delayBeforeMoves >= 0:
-            if not self._conn.sendTouchDown(x1, y1):
+            if not self.existingConnection().sendTouchDown(x1, y1):
                 return False
         if delayBeforeMoves > 0:
             time.sleep(delayBeforeMoves)
@@ -1345,13 +1347,13 @@ class GUITestInterface(object):
         for i in xrange(0, movePoints):
             nx = x1 + int(round(((x2 - x1) / float(movePoints+1)) * (i+1)))
             ny = y1 + int(round(((y2 - y1) / float(movePoints+1)) * (i+1)))
-            if not self._conn.sendTouchMove(nx, ny): return False
+            if not self.existingConnection().sendTouchMove(nx, ny): return False
             time.sleep(delayBetweenMoves)
         if delayAfterMoves > 0:
-            self._conn.sendTouchMove(x2, y2)
+            self.existingConnection().sendTouchMove(x2, y2)
             time.sleep(delayAfterMoves)
         if delayAfterMoves >= 0:
-            if self._conn.sendTouchUp(x2, y2):
+            if self.existingConnection().sendTouchUp(x2, y2):
                 return True
             else:
                 return False
@@ -1419,6 +1421,17 @@ class GUITestInterface(object):
                                      thumbnailWidth, timeFormat, delayedDrawing,
                                      copyBitmapsToScreenshotDir)
 
+    def existingConnection(self):
+        """
+        Returns GUITestConnection, raises ConnectionError if not available.
+
+        See also connection()
+        """
+        if self._conn:
+            return self._conn
+        else:
+            raise ConnectionError("not connected")
+
     def visualLog(self, *args):
         """Writes parameters to the visual log, given that visual logging is
         enabled.
@@ -1473,13 +1486,13 @@ class GUITestInterface(object):
             hold = self._longPressHoldTime
         if hold > 0.0:
             try:
-                assert self._conn.sendKeyDown(keyName, **extraParams)
+                assert self.existingConnection().sendKeyDown(keyName, **extraParams)
                 time.sleep(hold)
-                assert self._conn.sendKeyUp(keyName, **extraParams)
+                assert self.existingConnection().sendKeyUp(keyName, **extraParams)
             except AssertionError:
                 return False
             return True
-        return self._conn.sendPress(keyName, **extraParams)
+        return self.existingConnection().sendPress(keyName, **extraParams)
 
     def _newScreenshotFilepath(self):
         """
@@ -1578,7 +1591,7 @@ class GUITestInterface(object):
             if self.screenshotSubdir() == None:
                 self.setScreenshotSubdir(self._screenshotSubdirDefault)
             screenshotFile = self._newScreenshotFilepath()
-            if self._conn.recvScreenshot(screenshotFile):
+            if self.existingConnection().recvScreenshot(screenshotFile):
                 # New screenshot successfully received from device
                 if rotate == None:
                     rotate = self._rotateScreenshot
@@ -1981,17 +1994,17 @@ class GUITestInterface(object):
         if button != None:
             extraParams['button'] = button
         if count == 0:
-            self._conn.sendTouchMove(x, y)
+            self.existingConnection().sendTouchMove(x, y)
         while count > 0:
             if hold > 0.0:
                 try:
-                    assert self._conn.sendTouchDown(x, y, **extraParams)
+                    assert self.existingConnection().sendTouchDown(x, y, **extraParams)
                     time.sleep(hold)
-                    assert self._conn.sendTouchUp(x, y, **extraParams)
+                    assert self.existingConnection().sendTouchUp(x, y, **extraParams)
                 except AssertionError:
                     return False
             else:
-                if not self._conn.sendTap(x, y, **extraParams):
+                if not self.existingConnection().sendTap(x, y, **extraParams):
                     return False
             count = int(count) - 1
         return True
@@ -2084,7 +2097,7 @@ class GUITestInterface(object):
         """
         Type text.
         """
-        return self._conn.sendType(text)
+        return self.existingConnection().sendType(text)
 
     def verifyOcrText(self, text, **ocrArgs):
         """
@@ -2296,7 +2309,7 @@ class GUITestInterface(object):
         """
         waitTime = waitArgs.get("waitTime", 5.0)
         pollDelay = waitArgs.get("pollDelay", 1.0)
-        updated = self._conn.recvScreenUpdated(waitTime, pollDelay)
+        updated = self.existingConnection().recvScreenUpdated(waitTime, pollDelay)
         if updated == None:
             # optimised version is not available, this is a fallback
             previousScreenshot = self.screenshot()
@@ -2847,3 +2860,5 @@ class _VisualLog:
             c.co_argcount, c.co_nlocals, c.co_stacksize, c.co_flags,
             c.co_code, c.co_consts, c.co_names, c.co_varnames,
             c.co_filename, newName, c.co_firstlineno, c.co_lnotab, c.co_freevars)
+
+class ConnectionError(Exception): pass

@@ -529,8 +529,9 @@ class Device(fmbtgti.GUITestInterface):
             self._platformVersion > "4.2"):
             x1, y1 = self.intCoords((x1, y1))
             x2, y2 = self.intCoords((x2, y2))
-            self._conn._runAdb(["shell", "input", "swipe",
-                                str(x1), str(y1), str(x2), str(y2)])
+            self.existingConnection()._runAdb(
+                ["shell", "input", "swipe",
+                 str(x1), str(y1), str(x2), str(y2)])
             return True
         else:
             kwArgs = {}
@@ -749,7 +750,7 @@ class Device(fmbtgti.GUITestInterface):
 
         Returns True on success, otherwise False.
         """
-        return self._conn.reboot(reconnect, firstBoot, timeout)
+        return self.existingConnection().reboot(reconnect, firstBoot, timeout)
 
     def reconnect(self):
         """
@@ -798,7 +799,7 @@ class Device(fmbtgti.GUITestInterface):
 
         retryCount = 0
         while True:
-            dump = self._conn.recvViewData()
+            dump = self.existingConnection().recvViewData()
             if dump != None:
                 viewDir = os.path.dirname(self._newScreenshotFilepath())
                 view = View(viewDir, self.serialNumber, dump, displayToScreen)
@@ -895,10 +896,10 @@ class Device(fmbtgti.GUITestInterface):
         if height == None:
             height = int(self.systemProperty("display.height"))
         screenWidth, screenHeight = self.screenSize()
-        self._conn.setScreenToDisplayCoords(
+        self.existingConnection().setScreenToDisplayCoords(
             lambda x, y: (x * width / screenWidth,
                           y * height / screenHeight))
-        self._conn.setDisplayToScreenCoords(
+        self.existingConnection().setDisplayToScreenCoords(
             lambda x, y: (x * screenWidth / width,
                           y * screenHeight / height))
 
@@ -940,7 +941,7 @@ class Device(fmbtgti.GUITestInterface):
         If you wish to receive exitstatus or standard output and error
         separated from shellCommand, refer to shellSOE().
         """
-        return self._conn._runAdb(["shell", shellCommand])[1]
+        return self.existingConnection()._runAdb(["shell", shellCommand])[1]
 
     def shellSOE(self, shellCommand):
         """
@@ -952,7 +953,7 @@ class Device(fmbtgti.GUITestInterface):
 
         Requires tar and uuencode to be available on the device.
         """
-        return self._conn.shellSOE(shellCommand)
+        return self.existingConnection().shellSOE(shellCommand)
 
     def smsNumber(self, number, message):
         """
@@ -992,7 +993,7 @@ class Device(fmbtgti.GUITestInterface):
         Returns True if view data can be read, otherwise False.
         """
         try:
-            self._conn.recvViewData()
+            self.existingConnection().recvViewData()
             return True
         except AndroidConnectionError:
             return False
@@ -1002,7 +1003,7 @@ class Device(fmbtgti.GUITestInterface):
         Returns Android Monkey Device properties, such as
         "clock.uptime", refer to Android Monkey documentation.
         """
-        return self._conn.recvVariable(propertyName)
+        return self.existingConnection().recvVariable(propertyName)
 
     def tapId(self, viewItemId, **tapKwArgs):
         """
@@ -1059,10 +1060,10 @@ class Device(fmbtgti.GUITestInterface):
         timeout = 0.5
         pollDelay = 0.2
         start = time.time()
-        tw = self._conn.recvTopAppWindow()[1]
+        tw = self.existingConnection().recvTopAppWindow()[1]
         while tw == None and (time.time() - start < timeout):
             time.sleep(pollDelay)
-            tw = self._conn.recvTopAppWindow()[1]
+            tw = self.existingConnection().recvTopAppWindow()[1]
         return tw
 
     def uninstall(self, apkname, keepData=False):
@@ -1140,7 +1141,7 @@ class Device(fmbtgti.GUITestInterface):
         """
         Force the device to wake up.
         """
-        return self._conn.sendWake()
+        return self.existingConnection().sendWake()
 
     def _loadDeviceAndTestINIs(self, homeDir, deviceName, iniFile):
         if deviceName != None:
@@ -2034,6 +2035,6 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
 
 class FMBTAndroidError(Exception): pass
 class FMBTAndroidRunError(FMBTAndroidError): pass
-class AndroidConnectionError(FMBTAndroidError): pass
+class AndroidConnectionError(FMBTAndroidError, fmbtgti.ConnectionError): pass
 class AndroidConnectionLost(AndroidConnectionError): pass
 class AndroidDeviceNotFound(AndroidConnectionError): pass
