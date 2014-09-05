@@ -346,13 +346,8 @@ class WindowsConnection(fmbtgti.GUITestConnection):
         if screenshotSize == (None, None):
             screenshotSize = self._screenshotSize
 
-        if screenshotSize == (None, None):
-            zdata = self._agent.eval_in(self._agent_ns, "screenshotZYBGR()")
-            width, height = self._agent.eval_in(self._agent_ns, "zybgrSize()")
-        else:
-            zdata = self._agent.eval_in(
-                self._agent_ns, "screenshotZYBGR(%s)" % (screenshotSize,))
-            width, height = screenshotSize
+        width, height, zdata = self._agent.eval_in(
+            self._agent_ns, "screenshotZYBGR(%s)" % (repr(screenshotSize),))
 
         data = zlib.decompress(zdata)
 

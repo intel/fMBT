@@ -18,6 +18,7 @@ import ctypes
 import ctypes.wintypes
 import glob
 import os
+import Queue
 import string
 import struct
 import subprocess
@@ -380,7 +381,11 @@ def setTouchCoords(touchInfo, x, y, fingerRadius=5):
 
 def _sendTouch(pointerFlags, errorWhen="doTouch"):
     touchInfo.pointerInfo.pointerFlags = pointerFlags
-    if (ctypes.windll.user32.InjectTouchInput(1, ctypes.byref(touchInfo)) == 0):
+    try:
+        success = ctypes.windll.user32.InjectTouchInput(1, ctypes.byref(touchInfo))
+    except AttributeError:
+        raise NotImplementedError("this windows version does not support touch injection")
+    if (success == 0):
         print "%s error: %s" % (errorWhen, ctypes.FormatError())
         return False
     else:
@@ -537,53 +542,12 @@ def keyboardStream(string):
     if shiftPressed:
         yield Keyboard(VK_SHIFT, KEYEVENTF_KEYUP)
 
-_g_lastWidth = None
-_g_lastHeight = None
-
-def zybgrSize():
-    "Return dimensions of most recently returned ZYBGR screenshot"
-    return _g_lastWidth, _g_lastHeight
-
 def screenshotZYBGR(screenshotSize=(None, None)):
     "Return width, height and zlib-compressed pixel data"
-    global _g_lastWidth, _g_lastHeight
-    width, height = screenshotSize
-    if width == None: # try autodetect
-        left = ctypes.windll.user32.GetSystemMetrics(SM_XVIRTUALSCREEN)
-        right =ctypes.windll.user32.GetSystemMetrics(SM_CXVIRTUALSCREEN)
-        width = right - left
-    else:
-        left = 0
-    if height == None:
-        top = ctypes.windll.user32.GetSystemMetrics(SM_YVIRTUALSCREEN)
-        bottom = ctypes.windll.user32.GetSystemMetrics(SM_CYVIRTUALSCREEN)
-        height = bottom - top
-    else:
-        top = 0
-    _g_lastWidth = width
-    _g_lastHeight = height
-    print "W x H ==", width, "X", height
-
-    # width = monitor['width']
-    # height = monitor['height']
-    # left = monitor['left']
-    # top = monitor['top']
-    SRCCOPY = 0xCC0020
-    DIB_RGB_COLORS = 0
-    srcdc = ctypes.windll.user32.GetDC(0)
-    memdc = ctypes.windll.gdi32.CreateCompatibleDC(srcdc)
-    bmp = ctypes.windll.gdi32.CreateCompatibleBitmap(srcdc, width, height)
-    ctypes.windll.gdi32.SelectObject(memdc, bmp)
-    ctypes.windll.gdi32.BitBlt(memdc, 0, 0, width, height, srcdc, left, top, SRCCOPY)
-    bmp_header = struct.pack('LHHHH', struct.calcsize('LHHHH'), width, height, 1, 24)
-    c_bmp_header = ctypes.c_buffer(bmp_header)
-    c_bits =       ctypes.c_buffer(' ' * (height * ((width * 3 + 3) & -4)))
-    got_bits =     ctypes.windll.gdi32.GetDIBits(memdc, bmp, 0, height,
-                                c_bits, c_bmp_header, DIB_RGB_COLORS)
-    ctypes.windll.gdi32.DeleteObject(bmp)
-    ctypes.windll.gdi32.DeleteObject(memdc)
-    ctypes.windll.user32.ReleaseDC(0, srcdc)
-    return zlib.compress(c_bits.raw)
+    # Size of both queues is 1. Who manages to put a request in will
+    # get the response with requested resolution.
+    _g_screenshotRequestQueue.put(screenshotSize)
+    return _g_screenshotResponseQueue.get()
 
 def sendType(text):
     for event in keyboardStream(text):
@@ -762,30 +726,75 @@ def stopHTTPD():
     _HTTPServerProcess.terminate()
     return True
 
-def enum_display_monitors():
-    ''' Get positions and handles of one or more monitors. '''
+def screenshotTakerThread():
+    # Screenshots must be taken in the same thread. If BitBlt is
+    # called from different threads, screenshots are not update. On the
+    # other hand, creating new GetDC + ... for every screenshot worked
+    # on 32-bit Python in separate threads, but did not work in 64-bit
+    # after the first thread. Pythonshare-server creates a new thread for
+    # each connection. Therefore we need a single screenshot taker thread.
+    global _g_lastWidth, _g_lastHeight
 
-    def _callback(monitor, dc, rect, data):
-        rct = rect.contents
-        infos = {}
-        infos['left'] = rct.left
-        infos['right'] = rct.right
-        infos['top'] = rct.top
-        infos['bottom'] = rct.bottom
-        infos['hmon'] = monitor
-        infos['hdc'] = dc
-        results.append(infos)
-        return 0
+    def takerFree(srcdc, memdc, bmp):
+        if bmp != None:
+            ctypes.windll.gdi32.DeleteObject(bmp)
+        if memdc != None:
+            ctypes.windll.gdi32.DeleteObject(memdc)
+        if srcdc != None:
+            ctypes.windll.user32.ReleaseDC(0, srcdc)
 
-    results = []
-    MonitorEnumProc = ctypes.WINFUNCTYPE(ctypes.c_int, ctypes.c_ulong, ctypes.c_ulong,
-                                ctypes.POINTER(ctypes.wintypes.RECT), ctypes.c_double)
-    callback = MonitorEnumProc(_callback)
-    ctypes.windll.user32.EnumDisplayMonitors(0, 0, callback, 0)
-    return results
+    def takerRealloc(width, height, srcdc, memdc, bmp, c_bmp_header, c_bits):
+        takerFree(srcdc, memdc, bmp)
+        bmp_header = struct.pack('LHHHH', struct.calcsize('LHHHH'), width, height, 1, 24)
+        srcdc = ctypes.windll.user32.GetDC(0)
+        memdc = ctypes.windll.gdi32.CreateCompatibleDC(srcdc)
+        bmp = ctypes.windll.gdi32.CreateCompatibleBitmap(srcdc, width, height)
+        c_bmp_header = ctypes.c_buffer(bmp_header)
+        c_bits = ctypes.c_buffer(' ' * (height * ((width * 3 + 3) & -4)))
+        return srcdc, memdc, bmp, c_bmp_header, c_bits
 
-if not "_g_monitors" in globals():
-    #_g_monitors = enum_display_monitors()
+    srcdc, memdc, bmp, c_bmp_header, c_bits = (None,) * 5
+
+    SRCCOPY = 0xCC0020
+    DIB_RGB_COLORS = 0
+
+    width, height = _g_screenshotRequestQueue.get()
+    while width != "QUIT":
+
+        if width == None: # try autodetect
+            left = ctypes.windll.user32.GetSystemMetrics(SM_XVIRTUALSCREEN)
+            right =ctypes.windll.user32.GetSystemMetrics(SM_CXVIRTUALSCREEN)
+            width = right - left
+        else:
+            left = 0
+
+        if height == None:
+            top = ctypes.windll.user32.GetSystemMetrics(SM_YVIRTUALSCREEN)
+            bottom = ctypes.windll.user32.GetSystemMetrics(SM_CYVIRTUALSCREEN)
+            height = bottom - top
+        else:
+            top = 0
+
+        if (width, height) != (_g_lastWidth, _g_lastHeight):
+            srcdc, memdc, bmp, c_bmp_header, c_bits = takerRealloc(
+                width, height, srcdc, memdc, bmp, c_bmp_header, c_bits)
+            _g_lastWidth = width
+            _g_lastHeight = height
+
+        print "W x H ==", width, "X", height
+
+        ctypes.windll.gdi32.SelectObject(memdc, bmp)
+        ctypes.windll.gdi32.BitBlt(memdc, 0, 0, width, height, srcdc, left, top, SRCCOPY)
+        got_bits = ctypes.windll.gdi32.GetDIBits(
+            memdc, bmp, 0, height, c_bits, c_bmp_header, DIB_RGB_COLORS)
+
+        _g_screenshotResponseQueue.put((width, height, zlib.compress(c_bits.raw)))
+
+        width, height = _g_screenshotRequestQueue.get()
+
+    takerFree(srcdc, memdc, bmp)
+
+if not "_mouse_input_area" in globals():
     left = ctypes.windll.user32.GetSystemMetrics(SM_XVIRTUALSCREEN)
     right =ctypes.windll.user32.GetSystemMetrics(SM_CXVIRTUALSCREEN)
     top = ctypes.windll.user32.GetSystemMetrics(SM_YVIRTUALSCREEN)
@@ -793,7 +802,6 @@ if not "_g_monitors" in globals():
     width = right - left
     height = bottom - top
     _mouse_input_area = (width, height)
-
 
 if not "_g_touchInjenctionInitialized" in globals():
     try:
@@ -803,7 +811,16 @@ if not "_g_touchInjenctionInitialized" in globals():
         else:
             print "InitializeTouchInjection failed"
     except:
+        _g_touchInjenctionInitialized = False
         print "InitializeTouchInjection not supported"
+
+if not "_g_screenshotRequestQueue" in globals():
+    # Initialize screenshot thread and communication channels
+    _g_lastWidth = None
+    _g_lastHeight = None
+    _g_screenshotRequestQueue = Queue.Queue(1)
+    _g_screenshotResponseQueue = Queue.Queue(1)
+    thread.start_new_thread(screenshotTakerThread, ())
 
 if __name__ == '__main__':
     start = time.time()
