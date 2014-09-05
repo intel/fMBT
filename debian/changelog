@@ -1,8 +1,24 @@
-fmbt (0.15.5-0.rc0) unstable; urgency=low
+fmbt (0.16-1) unstable; urgency=low
 
-  * Development version.
+  * fmbtandroid new methods in the Device class:
+    - displayPowered() and screenLocked() => True/False.
+    - install("filename.apk") / uinstall("package").
+    - displayRotation() returns current rotation.
+    - setAutoRotateScreenshot() to compensate current rotation.
+    - accelerometer() for reading accelerometer data.
+    - setAccelerometer() for faking the data on emulator.
+    - setAccelerometerRotation(True|False): (dis)allows rotating display.
+    - setUserRotation() rotate when accelerometer rotation is disallowed.
+  * fmbttizen:
+    - user-definable Python launch command.
+    - pressMenu() and pressHome() enabled on mobile emulator.
+    - keyboard emulation can be forced on any hardware.
+  * Windows:
+    - fmbtwindows screenshot fixed on 64-bit Windows Python.
+    - minor fixes in Python libraries for Windows compatibility.
+  * Many fixes more invisible improvements.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 18 Jul 2014 16:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 5 Sep 2014 13:42:00 +0300
 
 fmbt (0.15.4-1) unstable; urgency=low
 
