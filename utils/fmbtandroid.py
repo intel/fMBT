@@ -173,6 +173,8 @@ ROTATION_0 = 0
 ROTATION_90 = 1
 ROTATION_180 = 2
 ROTATION_270 = 3
+ROTATIONS = [ROTATION_0, ROTATION_90, ROTATION_180, ROTATION_270]
+ROTATION_DEGS = [0, 90, 180, 270]
 
 # See imagemagick convert parameters.
 fmbtgti._OCRPREPROCESS =  [
@@ -278,13 +280,13 @@ _g_keyNames = set((
     "VOLUME_UP", "W", "WINDOW", "X", "Y", "YEN", "Z",
     "ZENKAKU_HANKAKU", "ZOOM_IN", "ZOOM_OUT"))
 
+_g_listDevicesCommand = [_g_adbExecutable, "devices"]
 def listSerialNumbers():
     """
     Returns list of serial numbers of Android devices.
     Equivalent for "adb devices".
     """
-    listDevicesCommand = [_g_adbExecutable, "devices"]
-    status, output, err = _run(listDevicesCommand, expectedExitStatus = [0, 127])
+    status, output, err = _run(_g_listDevicesCommand, expectedExitStatus = [0, 127])
     if status == 127:
         raise FMBTAndroidError('adb not found in PATH. Check your Android SDK installation.')
 
@@ -372,7 +374,7 @@ class Device(fmbtgti.GUITestInterface):
             potentialDevices = listSerialNumbers()
 
             if potentialDevices == []:
-                raise AndroidDeviceNotFound('No devices found with "%s"' % (listDevicesCommand,))
+                raise AndroidDeviceNotFound('No devices found with "%s"' % (_g_listDevicesCommand,))
 
             for deviceName in potentialDevices:
                 try:
@@ -478,6 +480,10 @@ class Device(fmbtgti.GUITestInterface):
 
         Returns integer, that is ROTATION_0, ROTATION_90, ROTATION_180
         or ROTATION_270. Returns None if rotation is not available.
+
+        Example: take a screenshot rotated to current display orientation
+
+          d.refreshScreenshot(rotate=-d.displayRotation())
         """
         if self._conn:
             return self._conn.recvCurrentDisplayOrientation()
@@ -766,6 +772,15 @@ class Device(fmbtgti.GUITestInterface):
             _adapterLog("reconnect failed: %s" % (e,))
             return False
 
+    def refreshScreenshot(self, forcedScreenshot=None, rotate=None):
+        # convert Android display/user rotation to degrees
+        if rotate in ROTATIONS:
+            rotate = ROTATION_DEGS[rotate]
+        elif rotate in [-ROTATION_0, -ROTATION_90, -ROTATION_180, -ROTATION_270]:
+            rotate = -ROTATION_DEGS[-rotate]
+        return fmbtgti.GUITestInterface.refreshScreenshot(self, forcedScreenshot, rotate)
+    refreshScreenshot.__doc__ = fmbtgti.GUITestInterface.refreshScreenshot.__doc__
+
     def refreshView(self, forcedView=None):
         """
         (Re)reads view items on display and updates the latest View
@@ -925,6 +940,13 @@ class Device(fmbtgti.GUITestInterface):
           time.sleep(2)
           d.setAccelerometerRotation(True)
         """
+        if rotation in ROTATIONS:
+            pass # already in correct scale
+        elif rotation in ROTATION_DEGS:
+            rotation = ROTATION_DEGS.index(rotation)
+        else:
+            raise ValueError('invalid rotation "%s"' % (rotation,))
+
         if self._conn:
             return self._conn.sendUserRotation(rotation)
         else:
