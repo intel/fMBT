@@ -343,15 +343,23 @@ class Device(fmbtgti.GUITestInterface):
                   ini. Connect to the device with a serial number
                   given in this file. The default is None.
 
-          rotateScreenshot (integer, optional)
+          rotateScreenshot (integer or "auto", optional)
                   rotate new screenshots by rotateScreenshot degrees.
                   Example: rotateScreenshot=-90. The default is 0 (no
-                  rotation).
+                  rotation). If "auto" is given, rotate automatically
+                  to compensate current display rotation.
 
         To create an ini file for a device, use dumpIni. Example:
 
         file("/tmp/test.ini", "w").write(fmbtandroid.Device().dumpIni())
         """
+
+        if kwargs.get("rotateScreenshot", None) == "auto":
+            # the base class does not understand "auto" rotate screenshot
+            del kwargs["rotateScreenshot"]
+            self._autoRotateScreenshot = True
+        else:
+            self._autoRotateScreenshot = False
         fmbtgti.GUITestInterface.__init__(self, **kwargs)
 
         self._fmbtAndroidHomeDir = os.getenv("FMBTANDROIDHOME", os.getcwd())
@@ -435,6 +443,15 @@ class Device(fmbtgti.GUITestInterface):
             return self._conn.recvLastAccelerometer()
         else:
             return (None, None, None)
+
+    def autoRotateScreenshot(self):
+        """
+        Return True if screenshots are rotated automatically,
+        otherwise False.
+
+        See also: setAutoRotateScreenshot
+        """
+        return self._autoRotateScreenshot
 
     def callContact(self, contact):
         """
@@ -778,6 +795,11 @@ class Device(fmbtgti.GUITestInterface):
             rotate = ROTATION_DEGS[rotate]
         elif rotate in [-ROTATION_0, -ROTATION_90, -ROTATION_180, -ROTATION_270]:
             rotate = -ROTATION_DEGS[-rotate]
+        elif rotate == None:
+            if self._autoRotateScreenshot:
+                drot = self.displayRotation()
+                if drot != None:
+                    return self.refreshScreenshot(forcedScreenshot, rotate=-drot)
         return fmbtgti.GUITestInterface.refreshScreenshot(self, forcedScreenshot, rotate)
     refreshScreenshot.__doc__ = fmbtgti.GUITestInterface.refreshScreenshot.__doc__
 
@@ -885,6 +907,26 @@ class Device(fmbtgti.GUITestInterface):
             return self._conn.sendAccelerometerRotation(value)
         else:
             return False
+
+    def setAutoRotateScreenshot(self, value):
+        """
+        Enable or disable automatic screenshot rotation.
+
+        Parameters:
+
+          value (boolean):
+                  If True, rotate screenshot automatically to compensate
+                  current display rotation.
+
+        refreshScreenshot()'s optional rotate parameter overrides this
+        setting.
+
+        See also autoRotateScreenshot(), displayRotation().
+        """
+        if value:
+            self._autoRotateScreenshot = True
+        else:
+            self._autoRotateScreenshot = False
 
     def setConnection(self, connection):
         fmbtgti.GUITestInterface.setConnection(self, connection)
