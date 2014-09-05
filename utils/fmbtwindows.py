@@ -46,6 +46,11 @@ import pythonshare
 import subprocess
 import zlib
 
+try:
+    import fmbtpng
+except ImportError:
+    fmbtpng = None
+
 if os.name == "nt":
     _g_closeFds = False
 else:
@@ -352,14 +357,18 @@ class WindowsConnection(fmbtgti.GUITestConnection):
         data = zlib.decompress(zdata)
 
         fmbtgti.eye4graphics.wbgr2rgb(data, width, height)
-        ppm_header = "P6\n%d %d\n%d\n" % (width, height, 255)
+        if fmbtpng != None:
+            file(filename, "wb").write(
+                fmbtpng.raw2png(data, width, height, 8, "RGB"))
+        else:
+            ppm_header = "P6\n%d %d\n%d\n" % (width, height, 255)
 
-        f = file(filename + ".ppm", "wb")
-        f.write(ppm_header)
-        f.write(data)
-        f.close()
-        _run(["convert", ppmfilename, filename], expectedExitStatus=[0])
-        os.remove(ppmfilename)
+            f = file(filename + ".ppm", "wb")
+            f.write(ppm_header)
+            f.write(data)
+            f.close()
+            _run(["convert", ppmfilename, filename], expectedExitStatus=[0])
+            os.remove(ppmfilename)
         return True
 
     def recvTopWindowProperties(self):
