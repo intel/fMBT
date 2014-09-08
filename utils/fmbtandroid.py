@@ -930,7 +930,8 @@ class Device(fmbtgti.GUITestInterface):
 
     def setConnection(self, connection):
         fmbtgti.GUITestInterface.setConnection(self, connection)
-        self.serialNumber = getattr(self.connection(), "_serialNumber", "unknown")
+        if hasattr(self.connection(), "_serialNumber"):
+            self.serialNumber = self.connection()._serialNumber
 
     def setDisplaySize(self, size=(None, None)):
         """
