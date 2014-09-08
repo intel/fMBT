@@ -219,6 +219,20 @@ class Device(fmbtgti.GUITestInterface):
             lambda x, y: (x * screenWidth / width,
                           y * screenHeight / height))
 
+    def setForegroundWindow(self, title):
+        """
+        Set a window with the title as a foreground window
+
+        Parameters:
+
+          title (string)
+                  title of the window.
+
+        Returns True if the window was brought to the foreground,
+        otherwise False.
+        """
+        return self._conn.sendSetForegroundWindow(title)
+
     def setScreenshotSize(self, size):
         """
         Force screenshots from device to use given resolution.
@@ -373,6 +387,10 @@ class WindowsConnection(fmbtgti.GUITestConnection):
 
     def recvTopWindowProperties(self):
         return self.evalPython("topWindowProperties()")
+
+    def sendSetForegroundWindow(self, title):
+        command = 'setForegroundWindow(%s)' % (repr(title),)
+        return self._agent.eval_in(self._agent_ns, command)
 
     def sendType(self, text):
         command = 'sendType(%s)' % (repr(text),)
