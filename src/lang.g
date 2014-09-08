@@ -126,7 +126,7 @@ aal_start: 'aal' string '{' language {
 
 header: variables | ainit | aexit | istate | push | pop | comment ;
 
-comment: '#' "[^\n]*" { } ;
+comment: "#[^\n]*\n" { } ;
 
 params: { $$.params = NULL; } | '(' paramlist ')' { $$.params=$1.params; } ;
 
