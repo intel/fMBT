@@ -38,6 +38,7 @@ import fmbtwindows
 d = fmbtwindows.Device("IP-ADDRESS-OF-THE-DEVICE", password="xxxxxxxx")
 """
 
+import ast
 import fmbt
 import fmbtgti
 import inspect
@@ -128,6 +129,45 @@ _g_keyNames = [
     "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
     "U", "V", "W", "X", "Y", "Z"]
 
+class ViewItem(fmbtgti.GUIItem):
+    def __init__(self, itemId, parentId, className, text, bbox, dumpFilename):
+        self._itemId = itemId
+        self._parentId = parentId
+        self._className = className
+        self._text = text
+        fmbtgti.GUIItem.__init__(self, self._className, bbox, dumpFilename)
+
+class View(object):
+    def __init__(self, dumpFilename, itemTree):
+        self._itemTree = itemTree
+        self._viewItems = {}
+        for itemId, winfoList in itemTree.iteritems():
+            for winfo in winfoList:
+                itemId, parentId, className, text, bbox = winfo
+                self._viewItems[itemId] = ViewItem(
+                    itemId, parentId, className, text, bbox, dumpFilename)
+
+    def _dumpItem(self, viewItem):
+        return "id=%s cls=%s text=%s bbox=%s" % (
+            viewItem._itemId, repr(viewItem._className), repr(viewItem._text),
+            viewItem._bbox)
+
+    def _dumpTree(self, itemId, depth=0):
+        l = []
+        if itemId in self._itemTree:
+            l = ["%s%s" % (" " * (depth * 4), self._dumpItem(self._viewItems[itemId]))]
+            for child in self._itemTree[itemId]:
+                l.extend(self._dumpTree(child[0], depth+1))
+        return l
+
+    def dumpTree(self):
+        rootItem = self._viewItems[self._itemTree["root"][0][0]]
+        return "\n".join(self._dumpTree(rootItem._itemId))
+
+    def findItems(self, comparator, count=-1, searchRootItem=None, searchItems=None):
+        foundItems = []
+
+
 class Device(fmbtgti.GUITestInterface):
     def __init__(self, connspec, password=None, screenshotSize=(None, None), **kwargs):
         """Connect to windows device under test.
@@ -195,6 +235,35 @@ class Device(fmbtgti.GUITestInterface):
         Returns list of key names recognized by pressKey
         """
         return sorted(_g_keyNames)
+
+    def refreshView(self, forcedView=None):
+        """
+        (Re)reads widgets on the top window and updates the latest view.
+
+        Parameters:
+
+          forcedView (View or filename, optional):
+                  use given View object or view file instead of reading the
+                  items from the device.
+
+        Returns View object.
+        """
+        if forcedView != None:
+            if isinstance(forcedView, View):
+                self._lastView = forcedView
+            elif type(forcedView) in [str, unicode]:
+                self._lastView = View(forcedView,
+                                      ast.literal_eval(file(forcedView).read()))
+        else:
+            if self.screenshotDir() == None:
+                self.setScreenshotDir(self._screenshotDirDefault)
+            if self.screenshotSubdir() == None:
+                self.setScreenshotSubdir(self._screenshotSubdirDefault)
+            viewFilename = self._newScreenshotFilepath()[:-3] + "view"
+            viewData = self._conn.recvViewData()
+            file(viewFilename, "w").write(repr(viewData))
+            self._lastView = View(viewFilename, viewData)
+        return self._lastView
 
     def setDisplaySize(self, size):
         """
@@ -310,6 +379,16 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self._conn.recvTopWindowProperties()
 
+    def windowList(self):
+        """
+        Return list of properties of windows.
+
+        Example: list window titles:
+          for w in d.windowList:
+              print w["title"]
+        """
+        return self._conn.recvWindowList()
+
     def launchHTTPD(self):
         """
         DEPRECATED, will be removed, do not use!
@@ -387,6 +466,12 @@ class WindowsConnection(fmbtgti.GUITestConnection):
 
     def recvTopWindowProperties(self):
         return self.evalPython("topWindowProperties()")
+
+    def recvViewData(self):
+        return self.evalPython("topWindowWidgets()")
+
+    def recvWindowList(self):
+        return self.evalPython("windowList()")
 
     def sendSetForegroundWindow(self, title):
         command = 'setForegroundWindow(%s)' % (repr(title),)
