@@ -130,42 +130,90 @@ _g_keyNames = [
     "U", "V", "W", "X", "Y", "Z"]
 
 class ViewItem(fmbtgti.GUIItem):
-    def __init__(self, itemId, parentId, className, text, bbox, dumpFilename):
+    def __init__(self, view, itemId, parentId, className, text, bbox, dumpFilename):
+        self._view = view
         self._itemId = itemId
         self._parentId = parentId
         self._className = className
         self._text = text
         fmbtgti.GUIItem.__init__(self, self._className, bbox, dumpFilename)
 
+    def children(self):
+        return [self._view._viewItems[winfo[0]]
+                for winfo in self._view._itemTree[self._itemId]]
+
+    def __str__(self):
+        return "ViewItem(%s)" % (self._view._dumpItem(self),)
+
 class View(object):
     def __init__(self, dumpFilename, itemTree):
+        self._dumpFilename = dumpFilename
         self._itemTree = itemTree
         self._viewItems = {}
         for itemId, winfoList in itemTree.iteritems():
             for winfo in winfoList:
                 itemId, parentId, className, text, bbox = winfo
                 self._viewItems[itemId] = ViewItem(
-                    itemId, parentId, className, text, bbox, dumpFilename)
+                    self, itemId, parentId, className, text, bbox, dumpFilename)
+
+    def rootItem(self):
+        return self._viewItems[self._itemTree["root"][0][0]]
 
     def _dumpItem(self, viewItem):
         return "id=%s cls=%s text=%s bbox=%s" % (
             viewItem._itemId, repr(viewItem._className), repr(viewItem._text),
             viewItem._bbox)
 
-    def _dumpTree(self, itemId, depth=0):
-        l = []
-        if itemId in self._itemTree:
-            l = ["%s%s" % (" " * (depth * 4), self._dumpItem(self._viewItems[itemId]))]
-            for child in self._itemTree[itemId]:
-                l.extend(self._dumpTree(child[0], depth+1))
+    def _dumpTree(self, rootItem, depth=0):
+        l = ["%s%s" % (" " * (depth * 4), self._dumpItem(rootItem))]
+        for child in rootItem.children():
+            l.extend(self._dumpTree(child, depth+1))
         return l
 
-    def dumpTree(self):
-        rootItem = self._viewItems[self._itemTree["root"][0][0]]
-        return "\n".join(self._dumpTree(rootItem._itemId))
+    def dumpTree(self, rootItem=None):
+        """
+        Returns item tree as a string
+        """
+        if rootItem == None:
+            rootItem = self.rootItem()
+        return "\n".join(self._dumpTree(rootItem))
+
+    def __str__(self):
+        return "View(%s, %s items)" % (repr(self._dumpFilename), len(self._viewItems))
 
     def findItems(self, comparator, count=-1, searchRootItem=None, searchItems=None):
         foundItems = []
+        if count == 0: return foundItems
+        if searchRootItem != None:
+            if comparator(searchRootItem):
+                foundItems.append(searchRootItem)
+            for c in searchRootItem.children():
+                foundItems.extend(self.findItems(comparator, count=count-len(foundItems), searchRootItem=c))
+        else:
+            if searchItems:
+                domain = iter(searchItems)
+            else:
+                domain = self._viewItems.itervalues
+            for i in domain():
+                if comparator(i):
+                    foundItems.append(i)
+                    if count > 0 and len(foundItems) >= count:
+                        break
+        return foundItems
+
+    def findItemsByText(self, text, partial=False, count=-1, searchRootItem=None, searchItems=None):
+        if partial:
+            c = lambda item: (text in item._text)
+        else:
+            c = lambda item: (text == item._text)
+        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
+
+    def findItemsByClass(self, className, partial=False, count=-1, searchRootItem=None, searchItems=None):
+        if partial:
+            c = lambda item: (className in item._className)
+        else:
+            c = lambda item: (className == item._className)
+        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
 
 
 class Device(fmbtgti.GUITestInterface):
@@ -197,6 +245,12 @@ class Device(fmbtgti.GUITestInterface):
         """
         fmbtgti.GUITestInterface.__init__(self, **kwargs)
         self.setConnection(WindowsConnection(connspec, password))
+
+    def existingView(self):
+        if self._lastView:
+            return self._lastView
+        else:
+            raise FMBTWindowsError("view is not available. Missing refreshView()?")
 
     def getFile(self, remoteFilename, localFilename=None):
         """
@@ -236,11 +290,14 @@ class Device(fmbtgti.GUITestInterface):
         """
         return sorted(_g_keyNames)
 
-    def refreshView(self, forcedView=None):
+    def refreshView(self, window=None, forcedView=None):
         """
         (Re)reads widgets on the top window and updates the latest view.
 
         Parameters:
+
+          window (integer (hWnd) or string (title), optional):
+                  read widgets from given window instead of the top window.
 
           forcedView (View or filename, optional):
                   use given View object or view file instead of reading the
@@ -260,7 +317,7 @@ class Device(fmbtgti.GUITestInterface):
             if self.screenshotSubdir() == None:
                 self.setScreenshotSubdir(self._screenshotSubdirDefault)
             viewFilename = self._newScreenshotFilepath()[:-3] + "view"
-            viewData = self._conn.recvViewData()
+            viewData = self._conn.recvViewData(window)
             file(viewFilename, "w").write(repr(viewData))
             self._lastView = View(viewFilename, viewData)
         return self._lastView
@@ -373,6 +430,28 @@ class Device(fmbtgti.GUITestInterface):
             % (repr(command),
                repr(asyncStatus), repr(asyncOut), repr(asyncError)))
 
+    def tapText(self, text, partial=False, **tapKwArgs):
+        """
+        Find an item with given text from the latest view, and tap it.
+
+        Parameters:
+
+          partial (boolean, optional):
+                  refer to verifyText documentation. The default is
+                  False.
+
+          tapPos (pair of floats (x, y)):
+                  refer to tapItem documentation.
+
+          button, long, hold, count, delayBetweenTaps (optional):
+                  refer to tap documentation.
+
+        Returns True if successful, otherwise False.
+        """
+        items = self.existingView().findItemsByText(text, partial=partial, count=1)
+        if len(items) == 0: return False
+        return self.tapItem(items[0], **tapKwArgs)
+
     def topWindowProperties(self):
         """
         Return properties of the top window as a dictionary
@@ -381,11 +460,11 @@ class Device(fmbtgti.GUITestInterface):
 
     def windowList(self):
         """
-        Return list of properties of windows.
+        Return list of properties of windows (dictionaries)
 
-        Example: list window titles:
-          for w in d.windowList:
-              print w["title"]
+        Example: list window handles and titles:
+          for props in d.windowList():
+              print props["hwnd"], props["title"]
         """
         return self._conn.recvWindowList()
 
@@ -400,6 +479,9 @@ class Device(fmbtgti.GUITestInterface):
         DEPRECATED, will be removed, do not use!
         """
         return self._conn.evalPython("stopHTTPD()")
+
+    def view(self):
+        return self._lastView
 
 class WindowsConnection(fmbtgti.GUITestConnection):
     def __init__(self, connspec, password):
@@ -467,8 +549,22 @@ class WindowsConnection(fmbtgti.GUITestConnection):
     def recvTopWindowProperties(self):
         return self.evalPython("topWindowProperties()")
 
-    def recvViewData(self):
-        return self.evalPython("topWindowWidgets()")
+    def recvViewData(self, window=None):
+        if window == None:
+            rv = self.evalPython("topWindowWidgets()")
+        elif isinstance(window, int):
+            rv = self.evalPython("windowWidgets(%s)" % (repr(window),))
+        elif isinstance(window, str) or isinstance(window, unicode):
+            wlist = self.evalPython("windowList()")
+            for w in wlist:
+                if w["title"] == window:
+                    rv = self.evalPython("windowWidgets(%s)" % (repr(w["hwnd"]),))
+                    break
+            else:
+                raise ValueError('no window with title "%s"' % (window,))
+        else:
+            raise ValueError('illegal window "%s", expected integer or string (hWnd or title)' % (window,))
+        return rv
 
     def recvWindowList(self):
         return self.evalPython("windowList()")
