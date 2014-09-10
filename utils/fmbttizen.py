@@ -634,14 +634,15 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
                 agentRemoteFilename = agentFilename
 
         # Launch agent, create persistent connection to it
+        self._agentArgs = []
+        if self._keyboardDevice:
+            self._agentArgs.append("--keyboard=%s" % (self._keyboardDevice,))
+
         if self._useSdb:
             remoteShellCmd = ["sdb", "-s", self._serialNumber, "shell"]
         else: # using SSH
             remoteShellCmd = (self._loginCommand + shlex.split(self._pythonCommand) +
-                              [agentRemoteFilename])
-            if self._keyboardDevice:
-                remoteShellCmd.append("--keyboard=%s" % (self._keyboardDevice,))
-
+                              [agentRemoteFilename] + self._agentArgs)
         try:
             self._sdbShell = subprocess.Popen(remoteShellCmd,
                                               shell=(os.name == "nt"),
@@ -660,7 +661,8 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
         if self._useSdb:
             self._sdbShell.stdin.write("\r")
             try:
-                ok, self._platformInfo = self._agentCmd(self._pythonCommand + (" %s; exit" % (agentRemoteFilename,)))
+                ok, self._platformInfo = self._agentCmd(
+                    self._pythonCommand + (" %s %s; exit" % (agentRemoteFilename, " ".join(self._agentArgs))))
             except IOError:
                 raise TizenConnectionError('Connecting to a Tizen device/emulator with "sdb -s %s shell" failed.' % (self._serialNumber,))
         else: # using SSH
