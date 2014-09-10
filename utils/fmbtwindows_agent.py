@@ -289,6 +289,8 @@ DWORD = ctypes.c_ulong
 ULONG_PTR = ctypes.POINTER(DWORD)
 WORD = ctypes.c_ushort
 
+WM_GETTEXT = 0x000d
+
 # Structs for mouse and keyboard input
 
 class MOUSEINPUT(ctypes.Structure):
@@ -663,6 +665,86 @@ def setForegroundWindow(title):
         else:
             return False
 
+def windowList():
+    windows = []
+    def enumWindowsProc(hwnd, p):
+        props = windowProperties(hwnd)
+        bbox = props["bbox"]
+        # skip zero-sized windows
+        if bbox[0] < bbox[2] and bbox[1] < bbox[3]:
+            windows.append(props)
+        return True
+
+    EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.wintypes.BOOL,
+                                         ctypes.wintypes.HWND,
+                                         ctypes.c_void_p)
+    callback = EnumWindowsProc(enumWindowsProc)
+    ctypes.windll.user32.EnumWindows(callback, 0)
+    return windows
+
+def topWindowWidgets():
+    hwnd = topWindow()
+    if not hwnd:
+        return None
+    return windowWidgets(hwnd)
+
+def windowWidgets(hwnd):
+    """
+    Returns dictionary hwnd -> [winfo, ...]
+    where winfo is a tuple:
+        hwnd, parenthwnd, classname, text, (left, top, right, bottom)
+    """
+    GetClassName = ctypes.windll.user32.GetClassNameW
+    GetWindowRect = ctypes.windll.user32.GetWindowRect
+    SendMessage = ctypes.windll.user32.SendMessageW
+    SBUFSIZE = 2048
+    sbuf = ctypes.create_unicode_buffer(SBUFSIZE)
+    r = ctypes.wintypes.RECT()
+
+    rootProp = windowProperties(hwnd)
+    rootInfo = (hwnd, None, "", rootProp["title"], rootProp["bbox"])
+
+    widgets = {hwnd: [], "root": [rootInfo]}
+    def enumChildProc(child_hwnd, parent_hwnd):
+        GetWindowRect(child_hwnd, ctypes.byref(r))
+        if r.top == r.bottom or r.left == r.right:
+            # nobody can click this size of object or its children
+            # => skip them
+            return True
+
+        GetClassName(child_hwnd, sbuf, SBUFSIZE)
+        cname = sbuf.value
+
+        textLen = SendMessage(child_hwnd, WM_GETTEXT, SBUFSIZE, ctypes.byref(sbuf))
+        if textLen:
+            text = sbuf.value
+        else:
+            text = ""
+
+        winfo = (child_hwnd, parent_hwnd, cname, text, (r.left, r.top, r.right, r.bottom))
+        widgets[parent_hwnd].append(winfo)
+        widgets[child_hwnd] = []
+        ctypes.windll.user32.EnumChildWindows(child_hwnd, cb, child_hwnd)
+        return True
+    EnumChildProc = ctypes.WINFUNCTYPE(ctypes.wintypes.BOOL,
+                                       ctypes.wintypes.HWND,
+                                       ctypes.c_void_p)
+    cb = EnumChildProc(enumChildProc)
+    ctypes.windll.user32.EnumChildWindows(hwnd, cb, hwnd)
+    return widgets
+
+def _dumpTree(depth, key, wt):
+    for hwnd, parent, cname, text, rect in wt[key]:
+        print "%s%s (%s) cls='%s' text='%s' rect=%s" % (
+            " " * (depth*4), hwnd, parent, cname, text, rect)
+        if hwnd in wt:
+            _dumpTree(depth + 1, hwnd, wt)
+
+def dumpWidgets():
+    hwnd = topWindow()
+    wt = widgetList(hwnd)
+    _dumpTree(0, hwnd, wt)
+
 def shell(command):
     if isinstance(command, list):
         useShell = False
@@ -717,16 +799,27 @@ def shellSOE(command, asyncStatus=None, asyncOut=None, asyncError=None):
         status, out, err = None, None, None
     return status, out, err
 
+def topWindow():
+    return ctypes.windll.user32.GetForegroundWindow()
+
 def topWindowProperties():
-    hwnd = ctypes.windll.user32.GetForegroundWindow()
+    hwnd = topWindow()
     if not hwnd:
         return None
-    props = {}
+    return windowProperties(hwnd)
+
+def windowProperties(hwnd):
+    props = {'hwnd': hwnd}
     titleLen = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
     titleLen = min(titleLen, 2047) # limit max length for safety
     titleBuf = ctypes.create_unicode_buffer(titleLen + 1)
     ctypes.windll.user32.GetWindowTextW(hwnd, titleBuf, titleLen + 1)
+
+    r = ctypes.wintypes.RECT()
+    ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(r))
+
     props['title'] = titleBuf.value
+    props['bbox'] = (r.left, r.top, r.right, r.bottom) # x1, y2, x2, y2
     return props
 
 def launchHTTPD():

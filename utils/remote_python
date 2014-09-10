@@ -69,12 +69,14 @@ import thread
 import random
 
 import subprocess
-import fcntl
+if os.name != "nt":
+    import fcntl
 
 import compiler
 import ast
 import re
 
+import tempfile
 import traceback
 
 import atexit
@@ -87,7 +89,10 @@ import Queue
 MAX_LINE_LENGTH=1024*1024 # bytes
 MAX_LOGGED_RETURN_VALUE_LENGTH = 142
 
-gLogFile = "/tmp/remote_python.log"
+if os.name != "nt":
+    gLogFile = "/tmp/remote_python.log"
+else:
+    gLogFile = os.path.join(tempfile.gettempdir(), "remote_python.log")
 
 def log(msg, writeToFile=1, writeToStdout=0, writeToStderr=0):
     timestamped = fmbt.formatAdapterLogMessage(msg.rstrip())
@@ -586,7 +591,7 @@ class Shell:
                              stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE,
-                             close_fds=True,
+                             close_fds=os.name != "nt",
                              shell=True,
                              **popen_kwargs)
         self._processList.append(p)
@@ -972,12 +977,8 @@ if __name__ == "__main__":
 
     gobject.threads_init()
     g_dbusEvalGlobals = {
-        'iDBus': DBusObjGetter(),
-        'iDBusListen': DBusSignalReceiver(),
         'iShell': Shell(),
         'Error': Error,
-        'DBusException': dbus.DBusException,
-        'dbus': dbus,
         're':   re,
         'time': time,
         'sys':  sys,
@@ -989,6 +990,13 @@ if __name__ == "__main__":
         'fmbtlog': lambda msg, flush=True: log(msg, writeToFile = 0, writeToStderr = 1),
         'iReportOutput': reportOutput
         }
+    if dbus:
+        g_dbusEvalGlobals.update({
+            'iDBus': DBusObjGetter(),
+            'iDBusListen': DBusSignalReceiver(),
+            'DBusException': dbus.DBusException,
+            'dbus': dbus,
+        })
     g_dbusEvalGlobals['iCatch'] = iCatch(g_dbusEvalGlobals)
     exec fuzzing_helpers in g_dbusEvalGlobals
     exec "sys.path.append(''); sys.path.append(os.getcwd())" in g_dbusEvalGlobals
