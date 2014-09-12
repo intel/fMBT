@@ -30,6 +30,7 @@
 
 #include <sstream>
 #include "helper.hh"
+#include "remote.hh"
 
 bool Adapter_remote::init()
 {
@@ -51,7 +52,7 @@ bool Adapter_remote::init()
     return false;
   }
 
-  g_spawn_async_with_pipes(NULL,argv,NULL,(GSpawnFlags)(G_SPAWN_SEARCH_PATH|G_SPAWN_DO_NOT_REAP_CHILD),NULL,NULL,&pid,&_stdin,&_stdout,&_stderr,&gerr);
+  _g_spawn_async_with_pipes(NULL,argv,NULL,(GSpawnFlags)(G_SPAWN_SEARCH_PATH|G_SPAWN_DO_NOT_REAP_CHILD),NULL,NULL,&pid,&_stdin,&_stdout,&_stderr,&gerr);
 
   for(int i=0;i<argc;i++) {
     if (argv[i]) {
@@ -75,7 +76,9 @@ bool Adapter_remote::init()
   d_stdout=g_io_channel_unix_new(_stdout);
   d_stderr=g_io_channel_unix_new(_stderr);
 
+#ifndef __MINGW32__
   g_io_channel_set_flags(d_stderr,G_IO_FLAG_NONBLOCK,NULL);
+#endif
 
   fprintf(d_stdin,"%i\n",(int)actions->size());
 
@@ -125,6 +128,8 @@ void Adapter_remote::execute(std::vector<int>& action)
   char* s = NULL;
   size_t si = 0;
   int e;
+  char* read_buf=NULL;
+  size_t read_buf_pos=0;
 
   fprintf(d_stdin, "%i\n", action[0]);
 
@@ -154,7 +159,6 @@ readagain:
     s = NULL;
     goto readagain;
   }
-
   if (!string2vector(log,s,action,Alphabet::ALPHABET_MIN,
 		     actions->size(),this) || action.size()==0) {
     // Something wrong...

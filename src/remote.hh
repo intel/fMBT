@@ -16,14 +16,18 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+#ifndef __REMOTE_HH__
+#define __REMOTE_HH__
+
 #include <glib.h>
 #include <string>
+#include <stdio.h>
 
 #include <sys/types.h>
 #ifndef __MINGW32__
 #include <sys/wait.h>
-#define _g_spawn_async_with_pipes g_spawn_async_with_pipes
-#else
+#endif
+
 gboolean
 _g_spawn_async_with_pipes (const gchar *working_directory,
 		gchar **argv,
@@ -36,7 +40,26 @@ _g_spawn_async_with_pipes (const gchar *working_directory,
 		gint *standard_output,
 		gint *standard_error,
 		GError **error);
-#endif
+gboolean
+_g_spawn_sync (const gchar *working_directory,
+              gchar **argv,
+              gchar **envp,
+              GSpawnFlags flags,
+              GSpawnChildSetupFunc child_setup,
+              gpointer u_data,
+              gchar **standard_output,
+              gchar **standard_error,
+              gint *exit_status,
+	      GError **error);
+
+gboolean
+_g_spawn_command_line_sync (const gchar *command_line,
+                           gchar **standard_output,
+                           gchar **standard_error,
+                           gint *exit_status,
+                           GError **error);
+
+
 #include "writable.hh"
 
 class remote {
@@ -88,8 +111,7 @@ protected:
     }
 #else
     GError* g=NULL;
-    if (!g_spawn_check_exit_status (status,&g)) {
-      
+    if (!g_spawn_check_exit_status (status,&g)) {      
       if (g && g->message) {
 	fprintf(stderr,"%s returned error %s\n",r->prefix.c_str(),g->message);
       } else {
@@ -103,9 +125,12 @@ protected:
     }
 #endif
     // Currently we don't care about the rest 
+    r->id=0;
   }
   GPid pid;
   guint id;
   std::string prefix;
   bool* _status;
 };
+
+#endif

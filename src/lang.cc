@@ -24,14 +24,12 @@
 #include <errno.h>
 
 #include <sys/types.h>
-//#include <sys/wait.h>
 
 #include <unistd.h>
 #include <fcntl.h>
 
 #include "aalang.hh"
 #include "config.h"
-
 
 #include "aalang_tag.hh"
 #include "aalang_action.hh"
@@ -58,19 +56,8 @@ void error(int exitval, int dontcare, const char* format, ...)
   vfprintf(stderr, format, ap);
   va_end(ap);
   fprintf(stderr, "\n");
-  exit(exitval);
-}
-#endif
-
-#ifdef __MINGW32__
-void error(int exitval, int dontcare, const char* format, ...)
-{
-  va_list ap;
-  fprintf(stderr, "fMBT error: ");
-  va_start(ap, format);
-  vfprintf(stderr, format, ap);
-  va_end(ap);
-  exit(exitval);
+  if (exitval)
+    exit(exitval);
 }
 #endif
 
@@ -207,7 +194,7 @@ int main(int argc,char** argv) {
     return -1;
   }
 
-  char *s;
+  char *s=NULL;
   int status=0;
   D_Parser *p = new_D_Parser(&parser_tables_lang, 5120);
 
@@ -218,6 +205,9 @@ int main(int argc,char** argv) {
   } else {
     s=readfile(argv[optind],prep_command.c_str(),status);
     if (status) {
+      if (s) {
+	error(1,0,"Preprocessing failure \"%s\" %s.",argv[optind],s);
+      }
       error(1,0,"Preprocessing failure \"%s\".",argv[optind]);
     }
   }
@@ -282,11 +272,9 @@ int main(int argc,char** argv) {
       /*
       if (waitpid(pid, &status, 0)==-1)
         error(1,0,"could not read compiler status.");
-      if (!WIFEXITED(status) || WEXITSTATUS(status)!=0)
       */
-      if (!g_spawn_check_exit_status (status,NULL)) {
+      if (!WIFEXITED(status) || WEXITSTATUS(status)!=0)
         error(1,0,"compiling failed.");
-      }
     }
   } else {
     fprintf(outputfile,"%s",result.c_str());

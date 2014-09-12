@@ -153,7 +153,7 @@ char* python_block(const char* input,FILE* yyout) {
   fprintf(c_in,"%s\n",input+2);
   g_io_channel_flush(c_in,NULL);
 
-  bgetline(&r,&len,c_out,lokki,false);
+  bgetline(&r,&len,c_out,lokki,NULL);
 
   return r;
 }
@@ -184,7 +184,7 @@ char* python_block(const char* input,FILE* yyout) {
 
     if (state!=INC && s[0]=='"') {
       std::string ss=s.substr(1);
-      unsigned long cutpos=ss.find_first_of("\"");
+      size_t cutpos=ss.find_first_of("\"");
       if (cutpos != ss.npos) {
         s=ss.substr(0,cutpos);
       }
@@ -194,7 +194,7 @@ char* python_block(const char* input,FILE* yyout) {
     case INC: {
       if (inc_split(sinc)) {
 	FILE* st=include_search_open(sinc);
-	fprintf(yyout,"# 1 \"%s\"\x0A",sinc.c_str(),fstack.size()+1);
+	fprintf(yyout,"# 1 \"%s\"\x0A",sinc.c_str()); //,fstack.size()+1);
 	if (st) {
 	  istack.push_back(YY_CURRENT_BUFFER);
 	  lstack.push_back(lineno);
@@ -304,7 +304,7 @@ char* python_block(const char* input,FILE* yyout) {
     lstack.pop_back();
     fstack.pop_back();
     include_path.pop_back();
-    fprintf(yyout,"# %i \"%s\"\x0A",lineno,fstack.back().c_str(),fstack.size());
+    fprintf(yyout,"# %i \"%s\"\x0A",lineno,fstack.back().c_str()); //,fstack.size());
   }
 }
 

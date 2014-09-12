@@ -263,7 +263,7 @@ void escape_string(std::string& msg)
 
 std::string removehash(const std::string& s)
 {
-  unsigned long cutpos = s.find_last_of("#");
+  size_t cutpos = s.find_last_of("#");
   if (cutpos == s.npos) {
     return s;
   } else {
@@ -276,12 +276,18 @@ std::string removehash(const std::string& s)
 char* readfile(const char* filename,const char* preprocess)
 {
   int status;
-  return readfile(filename,preprocess,status);
+  char* ret=readfile(filename,preprocess,status);
+  if (status) {
+    g_free(ret);
+    ret=NULL;
+  }
+  return ret;
 }
 
 char* readfile(const char* filename,const char* preprocess,int& status)
 {
   char* out=NULL;
+  char* err=NULL;
 
   if (preprocess==NULL) {
     return readfile(filename);
@@ -291,10 +297,22 @@ char* readfile(const char* filename,const char* preprocess,int& status)
 
   s=s + " " + filename;
 
-  if (!g_spawn_command_line_sync(s.c_str(),&out,NULL,&status,NULL)) {
-    throw (int)(24);
-  }
+  if (!g_spawn_command_line_sync(s.c_str(),&out,&err,&status,NULL)) {
 
+    if (!status) {
+      status=-1;
+    }
+
+    if (err) {
+      g_free(out);
+      out=err;
+      err=NULL;
+    }
+
+  }
+  if (err) {
+    free(err);
+  }
   return out;
  }
 #endif
@@ -312,7 +330,6 @@ char* _readfile(const char* filename)
     f.open(filename, std::fstream::in | std::fstream::ate);
     if (!f.is_open())
       return NULL;
-
     file_len = f.tellg();
     f.seekg(0, std::ios::beg);
     char *contents = (char*)malloc(file_len+1);
@@ -330,6 +347,8 @@ char* _readfile(const char* filename)
         free(contents);
         return NULL;
     }
+    memset(cleaned_up_contents,0,file_len+1);
+
     size_t clean_pos = 0; // position in "cleaned_up_contents"
     size_t cont_pos = 0; // position in "contents"
     char prev_char = '\n';
@@ -517,7 +536,7 @@ std::string to_string(const int cnt,const int* t,
 void strvec(std::vector<std::string>& v,std::string& s,
             const std::string& separator)
 {
-  unsigned long cutpos;
+  size_t cutpos;
 
   while ((cutpos=s.find_first_of(separator))!=s.npos) {
     std::string a=s.substr(0,cutpos);
@@ -559,8 +578,27 @@ ssize_t nonblock_getline(char **lineptr, size_t *n,
 {
 
   gsize si;
-  g_io_channel_set_flags(stream,(GIOFlags)(G_IO_FLAG_NONBLOCK|(int)g_io_channel_get_flags(stream)),NULL);
+#ifdef __MINGW32__
+  // Our dear friend windows doesn't support nonblocking read.
+  // Let's emulate it with poll
+  GPollFD pfd;
 
+  g_io_channel_win32_make_pollfd (stream,
+				  (GIOCondition)(G_IO_IN | G_IO_ERR | G_IO_HUP),
+				  &pfd);
+
+  gint poll_ret = g_io_channel_win32_poll (&pfd, 1, 1);
+
+  if (!(poll_ret>0 && (pfd.revents&G_IO_IN))) {
+    return 0;
+  }
+#else
+  GError *er=NULL;
+  g_io_channel_set_flags(stream,(GIOFlags)(G_IO_FLAG_NONBLOCK|(int)g_io_channel_get_flags(stream)),&er);
+  if (er) {
+    return 0;
+  }
+#endif
   g_io_channel_set_line_term(stream,NULL,-1);
 
   if (*lineptr) {

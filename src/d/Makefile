@@ -12,9 +12,6 @@ MINOR=26
 RELEASE=$(MAJOR).$(MINOR)
 
 
-#PF=x86_64-w64-mingw32-
-#CC = gcc
-#CC=$(PF)gcc
 ifndef PREFIX
 PREFIX=/usr/local
 endif

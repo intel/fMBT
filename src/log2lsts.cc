@@ -33,10 +33,23 @@ void error(int exitval, int dontcare, const char* format, ...)
   va_start(ap, format);
   vfprintf(stderr, format, ap);
   va_end(ap);
-  exit(exitval);
+  if (exitval)
+    exit(exitval);
 }
 #endif
 
+#ifdef __MINGW32__
+void error(int exitval, int dontcare, const char* format, ...)
+{
+  va_list ap;
+  fprintf(stderr, "fMBT error: ");
+  va_start(ap, format);
+  vfprintf(stderr, format, ap);
+  va_end(ap);
+  if (exitval)
+    exit(exitval);
+}
+#endif
 
 class ltscoverage: public Coverage {
 public:

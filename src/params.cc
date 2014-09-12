@@ -22,7 +22,7 @@
 void split(std::string val,std::string& name,
                  std::string& param, const char* s)
 {
-  unsigned long cutpos = val.find_first_of(s);
+  size_t cutpos = val.find_first_of(s);
 
   if (cutpos == val.npos) {
     name  = val;

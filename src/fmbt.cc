@@ -43,7 +43,9 @@ void error(int exitval, int dontcare, const char* format, ...)
   va_start(ap, format);
   vfprintf(stderr, format, ap);
   va_end(ap);
-  exit(exitval);
+  if (exitval) {
+    exit(exitval);
+  }
 }
 #else
 #include <error.h>

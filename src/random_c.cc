@@ -24,7 +24,11 @@
 #include "helper.hh" // mingw....
 
 Random_C::Random_C(const std::string& param) {
+#ifdef __MINGW32__
+  max_val = 2147483647;
+#else
   max_val = RAND_MAX;
+#endif
   if (param=="") {
     global=true;
     single=true;

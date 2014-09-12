@@ -71,10 +71,16 @@ aal_remote::aal_remote(Log&l,std::string& s)
 
   prefix="aal remote("+s+")";
 
+  //#ifndef __MINGW32__
   d_stdin=g_io_channel_unix_new(_stdin);
   d_stdout=g_io_channel_unix_new(_stdout);
   d_stderr=g_io_channel_unix_new(_stderr);
-
+  /*#else
+  d_stdin=g_io_channel_win32_new_fd(_stdin);
+  d_stdout=g_io_channel_win32_new_fd(_stdout);
+  d_stderr=g_io_channel_win32_new_fd(_stderr);
+#endif
+  */
   g_io_channel_set_encoding(d_stdout,NULL,NULL);
 
   g_io_channel_set_flags(d_stderr,(GIOFlags)(G_IO_FLAG_NONBLOCK|
@@ -120,8 +126,6 @@ void aal_remote::handle_stderr() {
   char* read_buf=NULL;
   size_t read_buf_pos=0;
 
-  _log.debug("nonblock_getline %i",g_io_channel_get_flags(d_stderr));
-
   if (nonblock_getline(&line,&n,d_stderr,read_buf,read_buf_pos) && line) {
     const char * escaped = escape_string(line);
     if (escaped) {
@@ -131,7 +135,6 @@ void aal_remote::handle_stderr() {
     }
     free(line);
   }
-  _log.debug("nonblock_getline ok");
   free(read_buf);
 }
 
@@ -335,6 +338,7 @@ int aal_remote::getprops(int** pro) {
   handle_stderr();
 
   fprintf(d_stdin, "mp\n");
+
   if ((rv = getact(pro,tags,d_stdin,d_stdout,_log,
                    0,tag_names.size(),this,d_stdin)) >= 0) {
     return rv;

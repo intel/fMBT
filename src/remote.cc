@@ -1,6 +1,6 @@
 /*
  * fMBT, free Model Based Testing tool
- * Copyright (c) 2014, Intel Corporation.
+ * Copyright (c) 2011, Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU Lesser General Public License,
@@ -25,9 +25,10 @@
 
 #ifdef __MINGW32__
 #include <windows.h>
-#endif
 
-void _search_path_append(const char* path,std::list<std::string>& _path) {
+std::list<std::string> _search_path;
+
+void _searchpathappend(const char* path,std::list<std::string>& _path) {
   if (path) {
     std::vector<std::string> vec;
     std::string s(path);
@@ -35,6 +36,39 @@ void _search_path_append(const char* path,std::list<std::string>& _path) {
     for(unsigned i=0;i<vec.size();i++) {
       _path.push_back(vec[i]);
     }
+  }
+}
+
+void _populatesearchpath() {
+  if (_search_path.empty()) {
+    gchar *dir = NULL;
+    wchar_t wdir[MAXPATHLEN];
+    int n;
+    
+    n = GetModuleFileNameW (NULL, wdir, MAXPATHLEN);
+    if (n > 0 && n < MAXPATHLEN) {
+      dir = g_utf16_to_utf8 ((gunichar2*)wdir, -1, NULL, NULL, NULL);
+      gchar* tmp=g_path_get_dirname(dir);
+      g_free(dir);
+      _search_path.push_back(tmp);
+      g_free(tmp);
+    }      
+    
+    n = GetSystemDirectoryW (wdir, MAXPATHLEN);
+    if (n > 0 && n < MAXPATHLEN) {
+      dir = g_utf16_to_utf8 ((gunichar2*)wdir, -1, NULL, NULL, NULL);
+      _search_path.push_back(dir);
+      g_free(dir);
+    }
+    
+    n = GetWindowsDirectoryW (wdir, MAXPATHLEN);
+    if (n > 0 && n < MAXPATHLEN) {
+      dir = g_utf16_to_utf8 ((gunichar2*)wdir, -1, NULL, NULL, NULL);
+      _search_path.push_back(dir);
+      g_free(dir);
+      }
+    // Let's append normal path....
+    _searchpathappend(g_getenv("PATH"),_search_path);      
   }
 }
 
@@ -61,6 +95,123 @@ gchar** _strv_addfirst(gchar** str_array,gchar* first) {
   }
   return str_array;
 }
+#endif
+
+gboolean
+_g_spawn_command_line_sync (const gchar  *command_line,
+                           gchar       **standard_output,
+                           gchar       **standard_error,
+                           gint         *exit_status,
+                           GError      **error)
+{
+  gboolean retval;
+  gchar **argv = 0;
+  
+  g_return_val_if_fail (command_line != NULL, FALSE);
+  
+  if (!g_shell_parse_argv (command_line,
+			   NULL, &argv,
+			   error))
+    return FALSE;
+  
+  retval = _g_spawn_sync (NULL,
+			  argv,
+			  NULL,
+			  G_SPAWN_SEARCH_PATH,
+			  NULL,
+			  NULL,
+			  standard_output,
+			  standard_error,
+			  exit_status,
+			  error);
+  g_strfreev (argv);
+
+  return retval;
+}
+
+
+gboolean
+_g_spawn_sync (const gchar *working_directory,
+              gchar **argv,
+              gchar **envp,
+              GSpawnFlags flags,
+              GSpawnChildSetupFunc child_setup,
+              gpointer u_data,
+              gchar **standard_output,
+              gchar **standard_error,
+              gint *exit_status,
+	      GError **error)
+{
+  GError* g=NULL;
+  gboolean ret=g_spawn_sync(working_directory,argv,envp,flags,child_setup,u_data,
+			    standard_output,standard_error,exit_status,&g);
+
+  if (error)
+    *error = g;
+
+  if (g==NULL)
+    return ret;
+
+#ifdef __MINGW32__
+  g=NULL;
+
+  if (g_path_is_absolute (argv[0])) {
+    return ret;
+  }
+
+  _populatesearchpath();
+
+  for(std::list<std::string>::iterator i=_search_path.begin();
+      i!=_search_path.end();i++) {
+    
+    gchar* tmp=g_build_filename(i->c_str(),argv[0],NULL);
+    
+    if (g_file_test(tmp,G_FILE_TEST_IS_REGULAR)) {
+      // Let's check if file contains #! and python at the first line...
+
+      GIOChannel *stream=g_io_channel_new_file (tmp,"r",NULL);
+      
+      if (stream) {
+	gchar* line=NULL;
+	size_t len=0;
+	getline(&line,&len,stream);
+	g_io_channel_shutdown(stream,FALSE,NULL);
+	
+	if (g_str_has_prefix (line,"#!")) {
+	  gchar* interp=NULL;
+	  if (g_strrstr(line,"python")) {
+	    interp="python";
+	  }
+	  
+	  if (interp) {
+	    gchar** newargv=_strv_addfirst(argv,interp);
+	    
+	    newargv[1]=tmp;
+
+	    ret=g_spawn_sync(working_directory,newargv,envp,flags,child_setup,u_data,
+			     standard_output,standard_error,exit_status,&g);
+	    
+	    g_free(newargv);
+	    
+	    if (error)
+	      *error=g;
+	    
+	    if (g==NULL) {
+	      g_free(tmp);
+	      return ret;
+	    }
+	    g=NULL;
+	  }
+	}
+      }
+    }
+    g_free(tmp);
+  }
+
+#endif
+
+  return ret;  
+}
 
 gboolean
 _g_spawn_async_with_pipes (const gchar *working_directory,
@@ -75,102 +226,76 @@ _g_spawn_async_with_pipes (const gchar *working_directory,
 			   gint *standard_error,
 			   GError **error)
 {
-  static std::list<std::string> _search_path;
   GError* g=NULL;
   gboolean ret=g_spawn_async_with_pipes(working_directory,argv,envp,flags,
 					child_setup,user_data,child_pid,
 					standard_input,standard_output,
 					standard_error,&g);
-  
+
   if (error)
     *error=g;
 
-  if (ret)
+  if (g==NULL)
     return ret;
 
 #ifdef __MINGW32__
+  g=NULL;
+
   if (g_path_is_absolute (argv[0])) {
-    if (_search_path.empty()) {
-      gchar *dir = NULL;
-      wchar_t wdir[MAXPATHLEN];
-      int n;
+    return ret;
+  }
 
-      n = GetModuleFileNameW (NULL, wdir, MAXPATHLEN);
-      if (n > 0 && n < MAXPATHLEN) {
-	dir = g_utf16_to_utf8 ((gunichar2*)wdir, -1, NULL, NULL, NULL);
-	gchar* tmp=g_path_get_dirname(dir);
-	g_free(dir);
-	_search_path.push_back(tmp);
-	g_free(tmp);
-      }      
+  _populatesearchpath();
+  
+  for(std::list<std::string>::iterator i=_search_path.begin();
+      i!=_search_path.end();i++) {
+    
+    gchar* tmp=g_build_filename(i->c_str(),argv[0],NULL);
+    
+    if (g_file_test(tmp,G_FILE_TEST_IS_REGULAR)) {
+      // Let's check if file contains #! and python at the first line...
 
-      n = GetSystemDirectoryW (wdir, MAXPATHLEN);
-      if (n > 0 && n < MAXPATHLEN) {
-	dir = g_utf16_to_utf8 ((gunichar2*)wdir, -1, NULL, NULL, NULL);
-	_search_path.push_back(dir);
-	g_free(dir);
-      }
-
-      n = GetWindowsDirectoryW (wdir, MAXPATHLEN);
-      if (n > 0 && n < MAXPATHLEN) {
-	dir = g_utf16_to_utf8 ((gunichar2*)wdir, -1, NULL, NULL, NULL);
-	_search_path.push_back(dir);
-	g_free(dir);
-      }
-      // Let's append normal path....
-      _search_path_append(g_getenv("PATH"),_search_path);      
-    }
-
-    for(std::list<std::string>::iterator i=_search_path.begin();
-	i!=_search_path.end();i++) {
-
-      gchar* tmp=g_build_filename(i->c_str(),argv[0]);
-
-      if (g_file_test(tmp,G_FILE_TEST_IS_REGULAR)) {
-	// Let's check if file contains #! and python at the first line...
-
-	GIOChannel *stream=g_io_channel_new_file (tmp,"r",NULL);
-
-	if (stream) {
-
-	  gchar* line=NULL;
-	  size_t len=0;
-	  getline(&line,&len,stream);
-	  g_io_channel_shutdown(stream,FALSE,NULL);
-
-	  if (g_str_has_prefix (line,"#!")) {
-	    gchar* interp=NULL;
-	    if (g_strrstr(line,"python")) {
-	      interp="python";
-	    }
-
-	    if (interp) {
-	      gchar** newargv=_strv_addfirst(argv,interp);
-
-	      newargv[1]=tmp;
+      GIOChannel *stream=g_io_channel_new_file (tmp,"r",NULL);
+      
+      if (stream) {
+	gchar* line=NULL;
+	size_t len=0;
+	getline(&line,&len,stream);
+	g_io_channel_shutdown(stream,FALSE,NULL);
+	
+	if (g_str_has_prefix (line,"#!")) {
+	  gchar* interp=NULL;
+	  if (g_strrstr(line,"python")) {
+	    interp="python";
+	  }
+	  
+	  if (interp) {
+	    gchar** newargv=_strv_addfirst(argv,interp);
 	    
-	      ret=g_spawn_async_with_pipes(working_directory,newargv,envp,flags,
-					   child_setup,user_data,child_pid,
-					   standard_input,standard_output,
-					   standard_error,&g);
+	    newargv[1]=tmp;
 
-	      g_free(newargv);
-	      
-	      if (error)
-		*error=g;
-	      
-	      if (ret) {
-		
-		g_free(tmp);
-		return ret;
-	      }
+	    ret=g_spawn_async_with_pipes(working_directory,newargv,envp,flags,
+					 child_setup,user_data,child_pid,
+					 standard_input,standard_output,
+					 standard_error,&g);
+	    
+	    g_free(newargv);
+	    
+	    if (error)
+	      *error=g;
+	    
+	    if (g==NULL) {
+	      g_free(tmp);
+	      return ret;
 	    }
+	    g=NULL;
 	  }
 	}
       }
-      g_free(tmp);
     }
+    g_free(tmp);
   }
+
 #endif
   return ret;
 }

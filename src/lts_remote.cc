@@ -20,6 +20,7 @@
 #include "factory.hh"
 #include "helper.hh"
 #include <glib.h>
+#include "remote.hh"
 
 bool Lts_remote::init()
 {
@@ -35,8 +36,8 @@ bool Lts_remote::init()
   int offset = 0;
   if (name.length() > 10 && name.c_str()[10] == '#') offset = 11;
 
-  g_spawn_command_line_sync(name.c_str() + offset,&__stdout,NULL,
-			    &exit_status,&ger);
+  _g_spawn_command_line_sync(name.c_str() + offset,&__stdout,NULL,
+			     &exit_status,&ger);
   if (!__stdout) {
     errormsg = std::string("Lts_remote cannot execute \"") + (name.c_str()+offset) + "\"";
     status = false;
