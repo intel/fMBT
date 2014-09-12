@@ -11,7 +11,7 @@ $(PKG_NAME).dsc: $(TARBALL) $(PKG_NAME).dsc.in
 			      < $(PKG_NAME).dsc.in > $(PKG_NAME).dsc
 
 $(TARBALL):
-		cd "$$(git rev-parse --show-toplevel)" \
+		cd "$$(git rev-parse --show-toplevel)/pythonshare" \
 			&& rm -rf dist \
 			&& python setup.py sdist \
 			&& mv dist/* "$(CURDIR)/$(TARBALL)"

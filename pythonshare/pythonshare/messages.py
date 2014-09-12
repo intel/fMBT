@@ -56,7 +56,7 @@ class Exec_rv(object):
         self.expr_rv = expr_rv
     def __str__(self):
         return 'Exec_rv(code_exc="%s", expr_exc="%s", rv=%s)' % (
-            self.code_exc, self.expr_exc, self.expr_rv)
+            self.code_exc, self.expr_exc, repr(self.expr_rv))
 
 class Async_rv(object):
     def __init__(self, ns=None, rvid=None):

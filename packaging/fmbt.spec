@@ -1,5 +1,5 @@
 Name:           fmbt
-Version:        0.15.5
+Version:        0.16.1
 Release:        0.rc0.<CI_CNT>.<B_CNT>
 Summary:        free Model-Based Testing tool
 
@@ -72,6 +72,12 @@ Requires: %{name}-adapters-remote
 Requires: %{name}-core
 Requires: %{name}-coreutils
 Requires: %{name}-utils
+Requires: %{name}-adapter-android
+Requires: %{name}-adapter-chromiumos
+Requires: %{name}-adapter-tizen
+Requires: %{name}-adapter-vnc
+Requires: %{name}-adapter-windows
+Requires: %{name}-adapter-x11
 Requires: python-pyside
 
 %description editor
@@ -101,6 +107,11 @@ Summary: Deprecated fMBT adapter for GUI testing, use fmbtx11 instead.
 Requires: ImageMagick
 Requires: /usr/bin/xwd
 Requires: tesseract
+%if 0%{?suse_version}
+Requires: libpng12-0
+%else
+Requires: libpng12
+%endif
 
 %description adapter-eyenfinger
 Proof-of-concept adapter for X11 GUI testing with OCR and icon matching.
@@ -273,6 +284,7 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 %defattr(-, root, root, -)
 %{_libdir}/python*/site-packages/eye4graphics.so
 %{python_sitearch}/eyenfinger.py*
+%{python_sitearch}/fmbtpng*
 
 %files adapter-android
 %defattr(-, root, root, -)

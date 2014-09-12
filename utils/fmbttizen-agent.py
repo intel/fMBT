@@ -304,6 +304,10 @@ elif iAmRoot:
 
     del _d
 
+if iAmRoot and _opt_keyboard and "keyboard_device" not in globals():
+    # Use forced keyboard with any hardware type
+    keyboard_device = openKeyboardDevice(_opt_keyboard)
+
 if "touch_device" in globals() and touch_device:
     mtInputDevFd = touch_device._fd
 

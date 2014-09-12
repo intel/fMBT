@@ -56,21 +56,27 @@ import urllib
 import time
 import getopt
 
-import gobject
+try:
+    import gobject
+    import dbus
+    import dbus.mainloop.glib
+except ImportError:
+    gobject = None
+    dbus = None
 
-import dbus
-import dbus.mainloop.glib
 import thread
 
 import random
 
 import subprocess
-import fcntl
+if os.name != "nt":
+    import fcntl
 
 import compiler
 import ast
 import re
 
+import tempfile
 import traceback
 
 import atexit
@@ -78,11 +84,15 @@ import atexit
 import signal
 
 import fmbt
+import Queue
 
 MAX_LINE_LENGTH=1024*1024 # bytes
 MAX_LOGGED_RETURN_VALUE_LENGTH = 142
 
-gLogFile = "/tmp/remote_python.log"
+if os.name != "nt":
+    gLogFile = "/tmp/remote_python.log"
+else:
+    gLogFile = os.path.join(tempfile.gettempdir(), "remote_python.log")
 
 def log(msg, writeToFile=1, writeToStdout=0, writeToStderr=0):
     timestamped = fmbt.formatAdapterLogMessage(msg.rstrip())
@@ -140,16 +150,121 @@ def rnde(elemlist):
     return retval
 '''
 
-dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-try: g_sessionBus = dbus.SessionBus()
-except:
-    g_sessionBus = None
-    warning("Could not connect to the session bus.")
+if dbus:
+    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+    try: g_sessionBus = dbus.SessionBus()
+    except:
+        g_sessionBus = None
+        warning("Could not connect to the session bus.")
 
-try: g_systemBus = dbus.SystemBus()
-except:
+    try: g_systemBus = dbus.SystemBus()
+    except:
+        g_systemBus = None
+        warning("Could not connect to the system bus.")
+else:
+    g_sessionBus = None
     g_systemBus = None
-    warning("Could not connect to the system bus.")
+
+# Fake gobject I/O for systems without glib.
+# Implemented without select, because it's not supported on Windows.
+class FakeFd:
+    def __init__(self, realFd):
+        self._buffer = []
+        self._lock = thread.allocate_lock()
+        self._realFd = realFd
+
+    def close(self):
+        try: os.close(self._realFd)
+        except: pass
+
+    def read(self, size=-1):
+        with self._lock:
+            if size == -1:
+                msg = "".join(self._buffer)
+                self._buffer = []
+            else:
+                limited_msg = []
+                msg_len = 0
+                while (msg_len < size and self._buffer):
+                    if len(self._buffer[0]) > msg_len:
+                        limited_msg.append(self._buffer[0][:(size - msg_len)])
+                        self._buffer[0] = self._buffer[0][size - msg_len:]
+                        msg_len = size
+                    else:
+                        limited_msg.append(self._buffer.pop(0))
+                        msg_len += len(limited_msg[-1])
+                msg = "".join(limited_msg)
+        return msg
+
+    def readline(self):
+        with self._lock:
+            if self._buffer:
+                return self._buffer.pop(0)
+            else:
+                return ""
+
+    def write(self, data):
+        with self._lock:
+            self._buffer.append(data)
+
+class FakeGobject:
+    def __init__(self):
+        self.IO_IN = 1
+        self.IO_ERR = 8
+        self.IO_HUP = 16
+        self._fdcb = {} # file descriptor -> (fakefd, flags, callback)
+        self._runQueue = Queue.Queue()
+        self._quit = False
+
+    def _readerThread(self, fd):
+        fakefd, flags, callback = self._fdcb[fd]
+        try:
+            for line in iter(fd.readline, b""):
+                fakefd, flags, callback = self._fdcb[fd]
+                # Writing line to fakefd here would result in a race,
+                # better pass fakefd and line to the main thread
+                # where the line will be read from the fakefd.
+                if line:
+                    if flags & self.IO_IN:
+                        self._runQueue.put((fakefd, line, callback, (fakefd, self.IO_IN)))
+                else:
+                    pass # eat line silently
+            if flags & self.IO_HUP:
+                self._runQueue.put((fakefd, "", callback, (fakefd, self.IO_HUP)))
+        except Exception, e:
+            warning('exception in reader thread of fd %s: %s %s' % (
+                fakefd.fileno(), type(e), e))
+
+    def threads_init(self):
+        pass
+
+    def io_add_watch(self, fd, flags, callback):
+        if not fd in self._fdcb:
+            self._fdcb[fd] = (FakeFd(fd), flags, callback)
+            thread.start_new_thread(self._readerThread, (fd,))
+        else:
+            raise ValueError('file descriptor "%s" already watched' % (fd,))
+
+    def MainLoop(self):
+        class _MainLoop:
+            def run(_mainloop):
+                while not self._quit:
+                    fakefd, line, func, args = self._runQueue.get()
+                    fakefd.write(line)
+                    if func != None:
+                        func(*args)
+
+            def quit(_mainloop):
+                for fd in self._fdcb.keys():
+                    fd.close()
+                self._quit = True
+                self._runQueue.put((None, "", None, None))
+
+        return _MainLoop()
+### end of fake gobject
+
+if gobject == None:
+    gobject = FakeGobject()
 
 g_actions = []
 
@@ -476,7 +591,7 @@ class Shell:
                              stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE,
-                             close_fds=True,
+                             close_fds=os.name != "nt",
                              shell=True,
                              **popen_kwargs)
         self._processList.append(p)
@@ -628,14 +743,17 @@ class AdapterIO:
         self._state = self.stateReadNumberOfActions
         self._nonblock_buffer = ""
 
-        fl = fcntl.fcntl(sys.stdin, fcntl.F_GETFL)
-        fcntl.fcntl(sys.stdin, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+        if not isinstance(gobject, FakeGobject) :
+            fl = fcntl.fcntl(sys.stdin, fcntl.F_GETFL)
+            fcntl.fcntl(sys.stdin, fcntl.F_SETFL, fl | os.O_NONBLOCK)
 
         gobject.io_add_watch(sys.stdin,
                              gobject.IO_IN | gobject.IO_ERR | gobject.IO_HUP,
                              self.readInput)
 
     def _nonblock_readline(self, fd):
+        if isinstance(fd, FakeFd):
+            return fd.readline()
         while 1:
             try: s = fd.read(1024)
             except: break
@@ -859,12 +977,8 @@ if __name__ == "__main__":
 
     gobject.threads_init()
     g_dbusEvalGlobals = {
-        'iDBus': DBusObjGetter(),
-        'iDBusListen': DBusSignalReceiver(),
         'iShell': Shell(),
         'Error': Error,
-        'DBusException': dbus.DBusException,
-        'dbus': dbus,
         're':   re,
         'time': time,
         'sys':  sys,
@@ -876,6 +990,13 @@ if __name__ == "__main__":
         'fmbtlog': lambda msg, flush=True: log(msg, writeToFile = 0, writeToStderr = 1),
         'iReportOutput': reportOutput
         }
+    if dbus:
+        g_dbusEvalGlobals.update({
+            'iDBus': DBusObjGetter(),
+            'iDBusListen': DBusSignalReceiver(),
+            'DBusException': dbus.DBusException,
+            'dbus': dbus,
+        })
     g_dbusEvalGlobals['iCatch'] = iCatch(g_dbusEvalGlobals)
     exec fuzzing_helpers in g_dbusEvalGlobals
     exec "sys.path.append(''); sys.path.append(os.getcwd())" in g_dbusEvalGlobals

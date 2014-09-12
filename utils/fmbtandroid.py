@@ -173,6 +173,8 @@ ROTATION_0 = 0
 ROTATION_90 = 1
 ROTATION_180 = 2
 ROTATION_270 = 3
+ROTATIONS = [ROTATION_0, ROTATION_90, ROTATION_180, ROTATION_270]
+ROTATION_DEGS = [0, 90, 180, 270]
 
 # See imagemagick convert parameters.
 fmbtgti._OCRPREPROCESS =  [
@@ -278,6 +280,26 @@ _g_keyNames = set((
     "VOLUME_UP", "W", "WINDOW", "X", "Y", "YEN", "Z",
     "ZENKAKU_HANKAKU", "ZOOM_IN", "ZOOM_OUT"))
 
+_g_listDevicesCommand = [_g_adbExecutable, "devices"]
+def listSerialNumbers():
+    """
+    Returns list of serial numbers of Android devices.
+    Equivalent for "adb devices".
+    """
+    status, output, err = _run(_g_listDevicesCommand, expectedExitStatus = [0, 127])
+    if status == 127:
+        raise FMBTAndroidError('adb not found in PATH. Check your Android SDK installation.')
+
+    outputLines = [l.strip() for l in output.splitlines()]
+    try: deviceLines = outputLines[outputLines.index("List of devices attached")+1:]
+    except: deviceLines = []
+
+    deviceLines = [l for l in deviceLines if l.strip() != ""]
+
+    potentialDevices = [line.split()[0] for line in deviceLines]
+
+    return potentialDevices
+
 class Device(fmbtgti.GUITestInterface):
     """
     The Device class provides
@@ -321,15 +343,23 @@ class Device(fmbtgti.GUITestInterface):
                   ini. Connect to the device with a serial number
                   given in this file. The default is None.
 
-          rotateScreenshot (integer, optional)
+          rotateScreenshot (integer or "auto", optional)
                   rotate new screenshots by rotateScreenshot degrees.
                   Example: rotateScreenshot=-90. The default is 0 (no
-                  rotation).
+                  rotation). If "auto" is given, rotate automatically
+                  to compensate current display rotation.
 
         To create an ini file for a device, use dumpIni. Example:
 
         file("/tmp/test.ini", "w").write(fmbtandroid.Device().dumpIni())
         """
+
+        if kwargs.get("rotateScreenshot", None) == "auto":
+            # the base class does not understand "auto" rotate screenshot
+            del kwargs["rotateScreenshot"]
+            self._autoRotateScreenshot = True
+        else:
+            self._autoRotateScreenshot = False
         fmbtgti.GUITestInterface.__init__(self, **kwargs)
 
         self._fmbtAndroidHomeDir = os.getenv("FMBTANDROIDHOME", os.getcwd())
@@ -349,26 +379,15 @@ class Device(fmbtgti.GUITestInterface):
         elif deviceName == "":
             # Connect to an unspecified device.
             # Go through devices in "adb devices".
-            listDevicesCommand = [_g_adbExecutable, "devices"]
-            status, output, err = _run(listDevicesCommand, expectedExitStatus = [0, 127])
-            if status == 127:
-                raise FMBTAndroidError('adb not found in PATH. Check your Android SDK installation.')
-            outputLines = [l.strip() for l in output.splitlines()]
-            try: deviceLines = outputLines[outputLines.index("List of devices attached")+1:]
-            except: deviceLines = []
+            potentialDevices = listSerialNumbers()
 
-            deviceLines = [l for l in deviceLines if l.strip() != ""]
-
-            if deviceLines == []:
-                raise AndroidDeviceNotFound('No devices found with "%s"' % (listDevicesCommand,))
-
-            potentialDevices = [line.split()[0] for line in deviceLines]
+            if potentialDevices == []:
+                raise AndroidDeviceNotFound('No devices found with "%s"' % (_g_listDevicesCommand,))
 
             for deviceName in potentialDevices:
                 try:
-                    self.serialNumber = deviceName
+                    self.setConnection(_AndroidDeviceConnection(deviceName))
                     self._conf.set("general", "serial", self.serialNumber)
-                    self.setConnection(_AndroidDeviceConnection(self.serialNumber))
                     break
                 except AndroidConnectionError, e:
                     continue
@@ -425,6 +444,15 @@ class Device(fmbtgti.GUITestInterface):
         else:
             return (None, None, None)
 
+    def autoRotateScreenshot(self):
+        """
+        Return True if screenshots are rotated automatically,
+        otherwise False.
+
+        See also: setAutoRotateScreenshot
+        """
+        return self._autoRotateScreenshot
+
     def callContact(self, contact):
         """
         Call to given contact.
@@ -469,9 +497,22 @@ class Device(fmbtgti.GUITestInterface):
 
         Returns integer, that is ROTATION_0, ROTATION_90, ROTATION_180
         or ROTATION_270. Returns None if rotation is not available.
+
+        Example: take a screenshot rotated to current display orientation
+
+          d.refreshScreenshot(rotate=-d.displayRotation())
         """
         if self._conn:
             return self._conn.recvCurrentDisplayOrientation()
+        else:
+            return None
+
+    def displayPowered(self):
+        """
+        Returns True if display is powered, otherwise False.
+        """
+        if self._conn:
+            return self._conn.recvDisplayPowered()
         else:
             return None
 
@@ -511,8 +552,9 @@ class Device(fmbtgti.GUITestInterface):
             self._platformVersion > "4.2"):
             x1, y1 = self.intCoords((x1, y1))
             x2, y2 = self.intCoords((x2, y2))
-            self._conn._runAdb(["shell", "input", "swipe",
-                                str(x1), str(y1), str(x2), str(y2)])
+            self.existingConnection()._runAdb(
+                ["shell", "input", "swipe",
+                 str(x1), str(y1), str(x2), str(y2)])
             return True
         else:
             kwArgs = {}
@@ -731,7 +773,7 @@ class Device(fmbtgti.GUITestInterface):
 
         Returns True on success, otherwise False.
         """
-        return self._conn.reboot(reconnect, firstBoot, timeout)
+        return self.existingConnection().reboot(reconnect, firstBoot, timeout)
 
     def reconnect(self):
         """
@@ -746,6 +788,20 @@ class Device(fmbtgti.GUITestInterface):
         except Exception, e:
             _adapterLog("reconnect failed: %s" % (e,))
             return False
+
+    def refreshScreenshot(self, forcedScreenshot=None, rotate=None):
+        # convert Android display/user rotation to degrees
+        if rotate in ROTATIONS:
+            rotate = ROTATION_DEGS[rotate]
+        elif rotate in [-ROTATION_0, -ROTATION_90, -ROTATION_180, -ROTATION_270]:
+            rotate = -ROTATION_DEGS[-rotate]
+        elif rotate == None:
+            if self._autoRotateScreenshot:
+                drot = self.displayRotation()
+                if drot != None:
+                    return self.refreshScreenshot(forcedScreenshot, rotate=-drot)
+        return fmbtgti.GUITestInterface.refreshScreenshot(self, forcedScreenshot, rotate)
+    refreshScreenshot.__doc__ = fmbtgti.GUITestInterface.refreshScreenshot.__doc__
 
     def refreshView(self, forcedView=None):
         """
@@ -780,7 +836,7 @@ class Device(fmbtgti.GUITestInterface):
 
         retryCount = 0
         while True:
-            dump = self._conn.recvViewData()
+            dump = self.existingConnection().recvViewData()
             if dump != None:
                 viewDir = os.path.dirname(self._newScreenshotFilepath())
                 view = View(viewDir, self.serialNumber, dump, displayToScreen)
@@ -801,6 +857,15 @@ class Device(fmbtgti.GUITestInterface):
                 # successfully parsed or parsed with errors but no more retries
                 self._lastView = view
                 return view
+
+    def screenLocked(self):
+        """
+        Return True if showing lockscreen, otherwise False.
+        """
+        if self._conn:
+            return self._conn.recvShowingLockscreen()
+        else:
+            return None
 
     def setAccelerometer(self, abc):
         """
@@ -843,6 +908,31 @@ class Device(fmbtgti.GUITestInterface):
         else:
             return False
 
+    def setAutoRotateScreenshot(self, value):
+        """
+        Enable or disable automatic screenshot rotation.
+
+        Parameters:
+
+          value (boolean):
+                  If True, rotate screenshot automatically to compensate
+                  current display rotation.
+
+        refreshScreenshot()'s optional rotate parameter overrides this
+        setting.
+
+        See also autoRotateScreenshot(), displayRotation().
+        """
+        if value:
+            self._autoRotateScreenshot = True
+        else:
+            self._autoRotateScreenshot = False
+
+    def setConnection(self, connection):
+        fmbtgti.GUITestInterface.setConnection(self, connection)
+        if hasattr(self.connection(), "_serialNumber"):
+            self.serialNumber = self.connection()._serialNumber
+
     def setDisplaySize(self, size=(None, None)):
         """
         Transform coordinates of synthesized events from screenshot
@@ -864,10 +954,10 @@ class Device(fmbtgti.GUITestInterface):
         if height == None:
             height = int(self.systemProperty("display.height"))
         screenWidth, screenHeight = self.screenSize()
-        self._conn.setScreenToDisplayCoords(
+        self.existingConnection().setScreenToDisplayCoords(
             lambda x, y: (x * width / screenWidth,
                           y * height / screenHeight))
-        self._conn.setDisplayToScreenCoords(
+        self.existingConnection().setDisplayToScreenCoords(
             lambda x, y: (x * screenWidth / width,
                           y * screenHeight / height))
 
@@ -893,6 +983,13 @@ class Device(fmbtgti.GUITestInterface):
           time.sleep(2)
           d.setAccelerometerRotation(True)
         """
+        if rotation in ROTATIONS:
+            pass # already in correct scale
+        elif rotation in ROTATION_DEGS:
+            rotation = ROTATION_DEGS.index(rotation)
+        else:
+            raise ValueError('invalid rotation "%s"' % (rotation,))
+
         if self._conn:
             return self._conn.sendUserRotation(rotation)
         else:
@@ -909,7 +1006,7 @@ class Device(fmbtgti.GUITestInterface):
         If you wish to receive exitstatus or standard output and error
         separated from shellCommand, refer to shellSOE().
         """
-        return self._conn._runAdb(["shell", shellCommand])[1]
+        return self.existingConnection()._runAdb(["shell", shellCommand])[1]
 
     def shellSOE(self, shellCommand):
         """
@@ -921,7 +1018,7 @@ class Device(fmbtgti.GUITestInterface):
 
         Requires tar and uuencode to be available on the device.
         """
-        return self._conn.shellSOE(shellCommand)
+        return self.existingConnection().shellSOE(shellCommand)
 
     def smsNumber(self, number, message):
         """
@@ -961,7 +1058,7 @@ class Device(fmbtgti.GUITestInterface):
         Returns True if view data can be read, otherwise False.
         """
         try:
-            self._conn.recvViewData()
+            self.existingConnection().recvViewData()
             return True
         except AndroidConnectionError:
             return False
@@ -971,7 +1068,7 @@ class Device(fmbtgti.GUITestInterface):
         Returns Android Monkey Device properties, such as
         "clock.uptime", refer to Android Monkey documentation.
         """
-        return self._conn.recvVariable(propertyName)
+        return self.existingConnection().recvVariable(propertyName)
 
     def tapId(self, viewItemId, **tapKwArgs):
         """
@@ -1012,7 +1109,10 @@ class Device(fmbtgti.GUITestInterface):
         """
         Returns the name of the top application.
         """
-        return self._conn.recvTopAppWindow()[0]
+        if not self._conn:
+            return None
+        else:
+            return self._conn.recvTopAppWindow()[0]
 
     def topWindow(self):
         """
@@ -1020,13 +1120,15 @@ class Device(fmbtgti.GUITestInterface):
         """
         # the top window may be None during transitions, therefore
         # retry a couple of times if necessary.
+        if not self._conn:
+            return None
         timeout = 0.5
         pollDelay = 0.2
         start = time.time()
-        tw = self._conn.recvTopAppWindow()[1]
+        tw = self.existingConnection().recvTopAppWindow()[1]
         while tw == None and (time.time() - start < timeout):
             time.sleep(pollDelay)
-            tw = self._conn.recvTopAppWindow()[1]
+            tw = self.existingConnection().recvTopAppWindow()[1]
         return tw
 
     def uninstall(self, apkname, keepData=False):
@@ -1104,7 +1206,7 @@ class Device(fmbtgti.GUITestInterface):
         """
         Force the device to wake up.
         """
-        return self._conn.sendWake()
+        return self.existingConnection().sendWake()
 
     def _loadDeviceAndTestINIs(self, homeDir, deviceName, iniFile):
         if deviceName != None:
@@ -1756,6 +1858,25 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         else:
             return None
 
+    def recvDisplayPowered(self):
+        _, output, _ = self._runAdb(["shell", "dumpsys", "power"], 0)
+        s = re.findall("Display Power: state=(OFF|ON)", output)
+        if s:
+            return s[0] == "ON"
+        else:
+            return None
+
+    def recvShowingLockscreen(self):
+        _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0)
+        s = re.findall("mShowingLockscreen=(true|false)", output)
+        if s:
+            if s[0] == "true":
+                return True
+            else:
+                return False
+        else:
+            return None
+
     def recvLastAccelerometer(self):
         _, output, _ = self._runAdb(["shell", "dumpsys", "sensorservice"], 0)
         s = re.findall("3-axis Accelerometer.*last=<([- .0-9]*),([- .0-9]*),([- .0-9]*)>", output)
@@ -1807,9 +1928,9 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
     def recvTopAppWindow(self):
         _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0)
         if self._platformVersion >= "4.2":
-            s = re.findall("mCurrentFocus=Window\{(#?[0-9A-Fa-f]{8})( [^ ]*)? (?P<winName>[^}]*)\}", output)
+            s = re.findall("mCurrentFocus=Window\{(#?[0-9A-Fa-f]{4,16})( [^ ]*)? (?P<winName>[^}]*)\}", output)
         else:
-            s = re.findall("mCurrentFocus=Window\{(#?[0-9A-Fa-f]{8}) (?P<winName>[^ ]*) [^ ]*\}", output)
+            s = re.findall("mCurrentFocus=Window\{(#?[0-9A-Fa-f]{4,16}) (?P<winName>[^ ]*) [^ ]*\}", output)
         if s and len(s[-1][-1].strip()) > 1:
             topWindowName = s[-1][-1]
             if len(s) > 0:
@@ -1979,6 +2100,6 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
 
 class FMBTAndroidError(Exception): pass
 class FMBTAndroidRunError(FMBTAndroidError): pass
-class AndroidConnectionError(FMBTAndroidError): pass
+class AndroidConnectionError(FMBTAndroidError, fmbtgti.ConnectionError): pass
 class AndroidConnectionLost(AndroidConnectionError): pass
 class AndroidDeviceNotFound(AndroidConnectionError): pass
