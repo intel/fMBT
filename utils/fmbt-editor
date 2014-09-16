@@ -772,7 +772,7 @@ Keyboard shortcuts:<br>
             validation_exitstatus, output = self.runcmd(aal2py_cmd)
             if validation_exitstatus == 0:
                 global model_tags
-                aal2tag_cmd = ["fmbt-aalc", "-l", "python"] + aal_ppflags + [self._modelFileName, "-l", "tag"]
+                aal2tag_cmd = ["fmbt-aalc"] + aal_ppflags + [self._modelFileName, "-l", "tag"]
                 tags_exitstatus, tags_output = self.runcmd(aal2tag_cmd)
                 if tags_exitstatus == 0:
                     model_tags = []
