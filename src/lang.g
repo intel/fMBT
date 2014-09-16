@@ -136,10 +136,11 @@ aal_start: 'aal' string '{' comment* language {
 header:
         {
             if (!obj)
-                obj=new aalang_py   ; obj->set_parser((Parser*)_parser);
+                obj=new aalang_py;
             if (namestr == NULL)
                 namestr = new std::string("");
             if (! name_is_set) {
+                obj->set_parser((Parser*)_parser);
                 obj->set_namestr(namestr);
                 name_is_set = true;
             }
