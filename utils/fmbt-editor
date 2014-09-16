@@ -2396,6 +2396,15 @@ if __name__ == '__main__':
                           ('", "'.join([n[0] for n in modelFiles]),))
                 if len(modelFiles) == 1:
                     opt_modelfile = modelFiles[0][0]
+
+                    # see if modelfile could be included from some include dir
+                    includeDirs = re.findall("-I[ ]*([/-_.a-zA-Z0-9]*)",
+                                        '\n'.join(modelLine))
+                    for d in includeDirs:
+                        if os.access(os.path.join(d, opt_modelfile), os.R_OK):
+                            opt_modelfile = os.path.join(d, opt_modelfile)
+                            break
+
         if not opt_modelfile:
             error('model filename missing')
 

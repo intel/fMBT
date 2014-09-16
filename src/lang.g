@@ -52,6 +52,9 @@ int count=1;
 char *ops;
 void *ops_cache=&count;
 
+std::string* namestr = NULL;
+bool name_is_set = false;
+
 #include "d.h"
 
 static std::pair<std::string,std::pair<std::string,int> > pa;
@@ -118,15 +121,34 @@ int bstr_scan(char *ops, void *ops_cache, d_loc_t *loc,
 }
 }
 
-aal: comment* aal_start header+ ( ( act | tag | parser ) (act | tag | parser | header )* )? '}' comment* ;
-
-aal_start: 'aal' string '{' language {
-            obj->set_namestr($1.str);
-        } ;
-
-header: variables | ainit | aexit | istate | push | pop | comment ;
+aal:    ( comment* aal_start header aal_body '}' comment* )
+        |
+        ( comment* language header aal_body )
+        |
+        ( header aal_body ) ;
 
 comment: "#[^\n]*\n" { } ;
+
+aal_start: 'aal' string '{' comment* language {
+            namestr = $1.str;
+        } ;
+
+header:
+        {
+            if (!obj)
+                obj=new aalang_py;
+            if (namestr == NULL)
+                namestr = new std::string("");
+            if (! name_is_set) {
+                obj->set_parser((Parser*)_parser);
+                obj->set_namestr(namestr);
+                name_is_set = true;
+            }
+        }
+        (variables | ainit | aexit | istate | push | pop | comment)+ ;
+
+aal_body: ( ( act | tag | parser ) (act | tag | parser | header )* )? ;
+
 
 params: { $$.params = NULL; } | '(' paramlist ')' { $$.params=$1.params; } ;
 

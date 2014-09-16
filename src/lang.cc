@@ -33,6 +33,8 @@
 
 #include "aalang_tag.hh"
 #include "aalang_action.hh"
+#include "aalang_cpp.hh"
+#include "aalang_py.hh"
 
 extern aalang* obj;
 
@@ -142,7 +144,7 @@ int main(int argc,char** argv) {
 
       case 'l':
 	if (obj) {
-	  printf("Only on -l parameter supported\n");
+	  printf("Only one -l parameter supported\n");
 	  print_usage();
 	  return 3;
 	}
@@ -153,7 +155,19 @@ int main(int argc,char** argv) {
 	if (strcmp(optarg,"action")==0) {
 	  obj=new aalang_action;
 	  break;
-	}
+        }
+        if (strcmp(optarg,"C++")==0
+            || strcmp(optarg,"cpp")==0
+            || strcmp(optarg,"c++")==0) {
+          obj=new aalang_cpp;
+          break;
+        }
+        if (strcmp(optarg,"Python")==0
+            || strcmp(optarg,"Python")==0
+            || strcmp(optarg,"py")==0) {
+          obj=new aalang_py;
+          break;
+        }
 	break;
       case 'V':
         printf("Version: "VERSION FMBTBUILDINFO"\n");
