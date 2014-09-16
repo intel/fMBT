@@ -72,6 +72,17 @@ static void name_syntax_error_report(struct D_Parser *ap) {
     FREE(fn);
 }
 
+static void undefined_language_error_report(struct D_Parser *ap) {
+    Parser *p = (Parser *)ap;
+
+    char *fn = d_dup_pathname_str(p->user.loc.pathname);
+
+    fprintf(stderr,"%s: AAL error: language not defined\n",
+            fn);
+
+    FREE(fn);
+}
+
 void raise_error(d_loc_t& sl,Parser *p) {
     p->last_syntax_error_line = sl.line;
     p->user.syntax_errors++;
@@ -85,6 +96,15 @@ void raise_name_error(d_loc_t& sl,Parser *p,std::string* name) {
     pa.second=obj->get_namepos(name);
     p->user.syntax_error_fn=name_syntax_error_report;
     raise_error(sl,p);
+}
+
+void raise_language_error(Parser *p) {
+    p->last_syntax_error_line = 1;
+    p->user.syntax_error_fn=undefined_language_error_report;
+    p->user.syntax_errors++;
+    p->user.loc.line= 1;
+    p->user.loc.ws = 0;
+    p->user.syntax_error_fn((D_Parser*)p);
 }
 
 int bstr_scan(char *ops, void *ops_cache, d_loc_t *loc,
@@ -135,8 +155,12 @@ aal_start: 'aal' string '{' comment* language {
 
 header:
         {
-            if (!obj)
-                obj=new aalang_py;
+            if (!obj) {
+                raise_language_error((Parser*)_parser);
+                // instantiate a language object, no matter which one,
+                // to let the parser exit gracefully when it feels like it.
+                obj = new aalang_py;
+            }
             if (namestr == NULL)
                 namestr = new std::string("");
             if (! name_is_set) {

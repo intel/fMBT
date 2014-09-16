@@ -749,7 +749,7 @@ Keyboard shortcuts:<br>
         return aal_ppflags, aal_modelflags
 
     def _aal2pyCmdline(self,aal_ppflags):
-        return ["fmbt-aalc"] + aal_ppflags + ["-o", self._aalcFileName, self._modelFileName]
+        return ["fmbt-aalc", "-l", "python"] + aal_ppflags + ["-o", self._aalcFileName, self._modelFileName]
 
     def saveAndValidateModel(self):
         """
@@ -772,7 +772,7 @@ Keyboard shortcuts:<br>
             validation_exitstatus, output = self.runcmd(aal2py_cmd)
             if validation_exitstatus == 0:
                 global model_tags
-                aal2tag_cmd = ["fmbt-aalc"] + aal_ppflags + [self._modelFileName, "-l", "tag"]
+                aal2tag_cmd = ["fmbt-aalc", "-l", "python"] + aal_ppflags + [self._modelFileName, "-l", "tag"]
                 tags_exitstatus, tags_output = self.runcmd(aal2tag_cmd)
                 if tags_exitstatus == 0:
                     model_tags = []

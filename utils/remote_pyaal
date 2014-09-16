@@ -520,7 +520,7 @@ if __name__ == "__main__":
     aal_filename = remainder[0]
 
     if aal_filename.endswith(".aal"):
-        cmd = ["fmbt-aalc"] + opt_ppflags + [ aal_filename ]
+        cmd = ["fmbt-aalc", "-l", "python"] + opt_ppflags + [ aal_filename ]
 	subout = subprocess.PIPE
 	p = subprocess.Popen(cmd,shell=False, stdout=subout,stderr=subout)
 	aal_code = p.stdout.read()
