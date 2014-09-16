@@ -155,7 +155,7 @@ int main(int argc,char** argv) {
           break;
         }
         if (strcmp(optarg,"Python")==0
-            || strcmp(optarg,"Python")==0
+            || strcmp(optarg,"python")==0
             || strcmp(optarg,"py")==0) {
           obj=new aalang_py;
           break;
