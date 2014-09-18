@@ -364,19 +364,22 @@ class Device(fmbtgti.GUITestInterface):
             lambda x, y: (x * screenWidth / width,
                           y * screenHeight / height))
 
-    def setForegroundWindow(self, title):
+    def setForegroundWindow(self, window):
         """
         Set a window with the title as a foreground window
 
         Parameters:
 
-          title (string)
-                  title of the window.
+          window (title (string) or hwnd (integer):
+                  title or handle of the window to be raised
+                  foreground.
 
         Returns True if the window was brought to the foreground,
         otherwise False.
+
+        Notes: calls SetForegroundWindow in user32.dll.
         """
-        return self._conn.sendSetForegroundWindow(title)
+        return self.existingConnection().sendSetForegroundWindow(window)
 
     def setScreenshotSize(self, size):
         """
@@ -467,7 +470,7 @@ class Device(fmbtgti.GUITestInterface):
         Returns True if the window was previously visible,
         otherwise False.
 
-        Notes: calls and returns like ShowWindow in user32.dll.
+        Notes: calls ShowWindow in user32.dll.
         """
         return self.existingConnection().sendShowWindow(window, showCmd)
 
@@ -610,19 +613,26 @@ class WindowsConnection(fmbtgti.GUITestConnection):
     def recvWindowList(self):
         return self.evalPython("windowList()")
 
-    def sendSetForegroundWindow(self, title):
-        command = 'setForegroundWindow(%s)' % (repr(title),)
-        return self._agent.eval_in(self._agent_ns, command)
-
-    def sendShowWindow(self, window, showCmd):
+    def _window2hwnd(self, window):
         if isinstance(window, str) or isinstance(window, unicode):
             windowList = self.recvWindowList()
             hwndList = [w["hwnd"] for w in windowList if w["title"] == window]
             if not hwndList:
-                return None
+                raise ValueError('no window with title "%s"' % (title,))
             hwnd = hwndList[0]
+        elif isinstance(window, int):
+            hwnd = window
         else:
-            hwnd = int(window)
+            raise ValueError('invalid window "%s", string or integer expected' % (window,))
+        return hwnd
+
+    def sendSetForegroundWindow(self, window):
+        hwnd = self._window2hwnd(window)
+        return 0 != self.evalPython("ctypes.windll.user32.SetForegroundWindow(%s)" %
+                                    (repr(hwnd),))
+
+    def sendShowWindow(self, window, showCmd):
+        hwnd = self._window2hwnd(window)
         if isinstance(showCmd, str) or isinstance(showCmd, unicode):
             if showCmd in _g_showCmds:
                 showCmd = _g_showCmds.index(showCmd)

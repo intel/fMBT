@@ -652,19 +652,6 @@ def sendMouseMove(x, y, button=1):
     event = Mouse(flags, x, y, 0)
     return sendInput(event)
 
-def setForegroundWindow(title):
-    if isinstance(title, unicode):
-        w = ctypes.windll.user32.FindWindowW(0, title)
-    else:
-        w = ctypes.windll.user32.FindWindowA(0, title)
-    if w == 0:
-        return False
-    else:
-        if ctypes.windll.user32.SetForegroundWindow(w):
-            return True
-        else:
-            return False
-
 def windowList():
     windows = []
     def enumWindowsProc(hwnd, p):
