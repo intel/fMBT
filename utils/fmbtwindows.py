@@ -129,6 +129,25 @@ _g_keyNames = [
     "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
     "U", "V", "W", "X", "Y", "Z"]
 
+# ShowWindow showCmd
+SW_HIDE          = 0
+SW_NORMAL        = 1
+SW_MINIMIZED     = 2
+SW_MAXIMIZE      = 3
+SW_NOACTIVATE    = 4
+SW_SHOW          = 5
+SW_MINIMIZE      = 6
+SW_MINNOACTIVE   = 7
+SW_SHOWNA        = 8
+SW_RESTORE       = 9
+SW_DEFAULT       = 10
+SW_FORCEMINIMIZE = 11
+
+_g_showCmds = [
+    "SW_HIDE", "SW_NORMAL", "SW_MINIMIZED", "SW_MAXIMIZE", "SW_NOACTIVATE",
+    "SW_SHOW", "SW_MINIMIZE", "SW_MINNOACTIVE", "SW_SHOWNA", "SW_RESTORE",
+    "SW_DEFAULT", "SW_FORCEMINIMIZE"]
+
 class ViewItem(fmbtgti.GUIItem):
     def __init__(self, view, itemId, parentId, className, text, bbox, dumpFilename):
         self._view = view
@@ -345,19 +364,22 @@ class Device(fmbtgti.GUITestInterface):
             lambda x, y: (x * screenWidth / width,
                           y * screenHeight / height))
 
-    def setForegroundWindow(self, title):
+    def setForegroundWindow(self, window):
         """
         Set a window with the title as a foreground window
 
         Parameters:
 
-          title (string)
-                  title of the window.
+          window (title (string) or hwnd (integer):
+                  title or handle of the window to be raised
+                  foreground.
 
         Returns True if the window was brought to the foreground,
         otherwise False.
+
+        Notes: calls SetForegroundWindow in user32.dll.
         """
-        return self._conn.sendSetForegroundWindow(title)
+        return self.existingConnection().sendSetForegroundWindow(window)
 
     def setScreenshotSize(self, size):
         """
@@ -429,6 +451,28 @@ class Device(fmbtgti.GUITestInterface):
             'shellSOE(%s, asyncStatus=%s, asyncOut=%s, asyncError=%s)'
             % (repr(command),
                repr(asyncStatus), repr(asyncOut), repr(asyncError)))
+
+    def showWindow(self, window, showCmd=SW_NORMAL):
+        """
+        Send showCmd to window.
+
+        Parameters:
+
+          window (window title (string) or handle (integer)):
+                  window to which the command will be sent.
+
+          showCmd (integer or string):
+                  command to be sent. Valid commands are 0..11:
+                  SW_HIDE, SW_NORMAL, SW_MINIMIZED, SW_MAXIMIZE,
+                  SW_NOACTIVATE, SW_SHOW SW_MINIMIZE, SW_MINNOACTIVE,
+                  SW_SHOWNA, SW_RESTORE, SW_DEFAULT, SW_FORCEMINIMIZE.
+
+        Returns True if the window was previously visible,
+        otherwise False.
+
+        Notes: calls ShowWindow in user32.dll.
+        """
+        return self.existingConnection().sendShowWindow(window, showCmd)
 
     def tapText(self, text, partial=False, **tapKwArgs):
         """
@@ -569,9 +613,33 @@ class WindowsConnection(fmbtgti.GUITestConnection):
     def recvWindowList(self):
         return self.evalPython("windowList()")
 
-    def sendSetForegroundWindow(self, title):
-        command = 'setForegroundWindow(%s)' % (repr(title),)
-        return self._agent.eval_in(self._agent_ns, command)
+    def _window2hwnd(self, window):
+        if isinstance(window, str) or isinstance(window, unicode):
+            windowList = self.recvWindowList()
+            hwndList = [w["hwnd"] for w in windowList if w["title"] == window]
+            if not hwndList:
+                raise ValueError('no window with title "%s"' % (title,))
+            hwnd = hwndList[0]
+        elif isinstance(window, int):
+            hwnd = window
+        else:
+            raise ValueError('invalid window "%s", string or integer expected' % (window,))
+        return hwnd
+
+    def sendSetForegroundWindow(self, window):
+        hwnd = self._window2hwnd(window)
+        return 0 != self.evalPython("ctypes.windll.user32.SetForegroundWindow(%s)" %
+                                    (repr(hwnd),))
+
+    def sendShowWindow(self, window, showCmd):
+        hwnd = self._window2hwnd(window)
+        if isinstance(showCmd, str) or isinstance(showCmd, unicode):
+            if showCmd in _g_showCmds:
+                showCmd = _g_showCmds.index(showCmd)
+            else:
+                raise ValueError('invalid showCmd: "%s"' % (showCmd,))
+        return 0 != self.evalPython("ctypes.windll.user32.ShowWindow(%s, %s)" %
+                                    (repr(hwnd), repr(showCmd)))
 
     def sendType(self, text):
         command = 'sendType(%s)' % (repr(text),)

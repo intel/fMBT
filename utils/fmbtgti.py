@@ -80,6 +80,20 @@ After that, device B can be tested without taking new screenshot.
 d = fmbtandroid.Device()
 d.setBitmapPath("bitmaps/android-4.2/device-B")
 
+
+All bitmap methods support alternative bitmaps. For example, if
+
+    verifyBitmap("bitmap.png")
+
+finds bitmap.png file in directory bitmapdir in the bitmap path, but
+bitmap.png cannot be found in the screenshot with any given match
+parameters, then it automatically tries the same for all
+
+    bitmap.png.alt*.png
+
+files in the same bitmapdir directory. If any of those match, then
+verifyBitmap("bitmap.png") returns True. Visual log shows the
+information about which of the alternatives actually matched.
 """
 
 import cgi
@@ -87,6 +101,7 @@ import ctypes
 import datetime
 import distutils.sysconfig
 import gc
+import glob
 import inspect
 import math
 import os
@@ -1176,11 +1191,11 @@ class _Paths(object):
         self.bitmapPath = bitmapPath
         self.relativeRoot = relativeRoot
         self._oirAL = {} # OIR parameters for bitmaps
-        self._abspath = {} # bitmap to abspath
+        self._abspaths = {} # bitmap to abspaths
 
-    def abspath(self, bitmap, checkReadable=True):
-        if bitmap in self._abspath:
-            return self._abspath[bitmap]
+    def abspaths(self, bitmap, checkReadable=True):
+        if bitmap in self._abspaths:
+            return self._abspaths[bitmap]
         if bitmap.startswith("/"):
             path = [os.path.dirname(bitmap)]
             bitmap = os.path.basename(bitmap)
@@ -1193,34 +1208,40 @@ class _Paths(object):
                     path.append(singleDir)
 
         for singleDir in path:
-            retval = os.path.join(singleDir, bitmap)
-            if not checkReadable or os.access(retval, os.R_OK):
-                oirRc = _OirRc.load(os.path.dirname(retval))
+            candidate = os.path.join(singleDir, bitmap)
+            if not checkReadable or os.access(candidate, os.R_OK):
+                oirRc = _OirRc.load(os.path.dirname(candidate))
                 if oirRc:
-                    self._oirAL[retval] = oirRc.oirArgsList(".")
+                    self._oirAL[candidate] = oirRc.oirArgsList(".")
                 else:
-                    self._oirAL[retval] = [{}]
-                self._oirAL[bitmap] = self._oirAL[retval]
+                    self._oirAL[candidate] = [{}]
+                self._oirAL[bitmap] = self._oirAL[candidate]
                 break
             else:
                 # bitmap is not in singleDir, but there might be .fmbtoirrc
-                oirRc = _OirRc.load(os.path.dirname(retval))
+                oirRc = _OirRc.load(os.path.dirname(candidate))
                 if oirRc:
                     for d in oirRc.searchDirs():
                         if d.startswith("/"):
                             candidate = os.path.join(d, os.path.basename(bitmap))
                         else:
-                            candidate = os.path.join(os.path.dirname(retval), d, os.path.basename(bitmap))
+                            candidate = os.path.join(os.path.dirname(candidate), d, os.path.basename(bitmap))
                         if os.access(candidate, os.R_OK):
                             self._oirAL[candidate] = oirRc.oirArgsList(d)
                             self._oirAL[bitmap] = self._oirAL[candidate]
-                            retval = candidate
                             break
 
-        if checkReadable and not os.access(retval, os.R_OK):
+        if checkReadable and not os.access(candidate, os.R_OK):
             raise ValueError('Bitmap "%s" not readable in bitmapPath %s' % (bitmap, ':'.join(path)))
-        self._abspath[bitmap] = retval
-        return retval
+        self._abspaths[bitmap] = [candidate]
+        # check for alternative bitmaps
+        try:
+            candidate_ext = "." + candidate.rsplit(".", 1)[1]
+        except IndexError:
+            candidate_ext = ""
+        alt_candidates = glob.glob(candidate + ".alt*" + candidate_ext)
+        self._abspaths[bitmap].extend(alt_candidates)
+        return self._abspaths[bitmap]
 
     def oirArgsList(self, bitmap):
         """Returns list of alternative OIR parameters associated to the bitmap
@@ -1229,7 +1250,7 @@ class _Paths(object):
         if bitmap in self._oirAL:
             return self._oirAL[bitmap]
         else:
-            absBitmap = self.abspath(bitmap)
+            absBitmap = self.abspaths(bitmap)[0]
             if absBitmap in self._oirAL:
                 return self._oirAL[absBitmap]
             else:
@@ -2412,6 +2433,13 @@ class Screenshot(object):
     def filename(self):
         return self._filename
 
+    def _findFirstMatchingBitmapCandidate(self, bitmap, **oirArgs):
+        for candidate in self._paths.abspaths(bitmap):
+            found = self._oirEngine.findBitmap(self, candidate, **oirArgs)
+            if found:
+                return found
+        return []
+
     def findItemsByBitmap(self, bitmap, **oirFindArgs):
         if self._oirEngine != None:
             self._notifyOirEngine()
@@ -2421,13 +2449,13 @@ class Screenshot(object):
                 for oirArgs in oirArgsList:
                     oirArgs, _ = _takeOirArgs(self._oirEngine, oirArgs.copy())
                     oirArgs.update(oirFindArgs)
-                    results.extend(self._oirEngine.findBitmap(
-                        self, self._paths.abspath(bitmap), **oirArgs))
+                    results.extend(self._findFirstMatchingBitmapCandidate(
+                        bitmap, **oirArgs))
                     if results: break
             else:
                 oirArgs = oirFindArgs
-                results.extend(self._oirEngine.findBitmap(
-                    self, self._paths.abspath(bitmap), **oirArgs))
+                results.extend(self._findFirstMatchingBitmapCandidate(
+                    bitmap, **oirArgs))
             return results
 
         else:
@@ -2762,7 +2790,7 @@ class _VisualLog:
     def findItemsByBitmapLogger(loggerSelf, origMethod, screenshotObj):
         def findItemsByBitmapWRAP(*args, **kwargs):
             bitmap = args[0]
-            absPathBitmap = screenshotObj._paths.abspath(bitmap)
+            absPathBitmap = screenshotObj._paths.abspaths(bitmap)[0]
             if loggerSelf._copyBitmapsToScreenshotDir:
                 screenshotDirBitmap = os.path.join(
                     os.path.dirname(screenshotObj.filename()),
@@ -2793,7 +2821,7 @@ class _VisualLog:
                 foundItems = retval
                 screenshotFilename = screenshotObj.filename()
                 highlightFilename = loggerSelf.highlightFilename(screenshotFilename)
-                eyenfinger.drawIcon(screenshotFilename, highlightFilename, bitmap, [i.bbox() for i in foundItems])
+                eyenfinger.drawIcon(screenshotFilename, highlightFilename, foundItems[0]._bitmap, [i.bbox() for i in foundItems])
                 loggerSelf.logReturn([str(quiItem) for quiItem in retval], img=highlightFilename, width=loggerSelf._screenshotWidth, tip=origMethod.func_name, imgTip=screenshotObj._logCallReturnValue)
             return retval
         return findItemsByBitmapWRAP
