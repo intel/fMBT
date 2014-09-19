@@ -42,7 +42,8 @@ def pkg_config(package):
             sys.stderr.write('Unknown build parameters for package "%s"\n' % (package,))
             sys.exit(1)
     else:
-        o = subprocess.check_output(["pkg-config", "--libs", "--cflags", package])
+        _pkg_config = os.getenv("PKG_CONFIG","pkg-config")
+        o = subprocess.check_output([_pkg_config, "--libs", "--cflags", package])
         ext_args = {"libraries": [], "library_dirs": [], "include_dirs": [], "extra_compile_args": []}
         for arg in o.split():
             if arg.startswith("-L"):
