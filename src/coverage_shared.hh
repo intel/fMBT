@@ -36,6 +36,9 @@ public:
     remote(),
     push_depth(0),
     child(NULL),
+    d_stdin(NULL),
+    d_stdout(NULL),
+    d_stderr(NULL),
     model_cs(NULL),
     write_data(true),
     read_data(true)
@@ -80,7 +83,7 @@ public:
 	  return;
 	}
 	
-	g_spawn_async_with_pipes(NULL,argv,NULL,(GSpawnFlags)(G_SPAWN_SEARCH_PATH|G_SPAWN_DO_NOT_REAP_CHILD),NULL,NULL,&pid,&_stdin,&_stdout,&_stderr,&gerr);
+	_g_spawn_async_with_pipes(NULL,argv,NULL,(GSpawnFlags)(G_SPAWN_SEARCH_PATH|G_SPAWN_DO_NOT_REAP_CHILD),NULL,NULL,&pid,&_stdin,&_stdout,&_stderr,&gerr);
 	
 	for(int i=0;i<argc;i++) {
 	  if (argv[i]) {
@@ -90,7 +93,8 @@ public:
 	free(argv);
 	
 	if (gerr) {
-	  errormsg = "coverage shared g_spawn_async_with_pipes error: " + std::string(gerr->message);
+	  errormsg = "coverage shared g_spawn_async_with_pipes error: " +
+	    std::string(gerr->message);
 	  log.debug(errormsg.c_str());
 	  status = false;
 	  return;
