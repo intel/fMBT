@@ -397,6 +397,8 @@ def start_server(host, port,
     if isinstance(port, int):
         # Start listening to the port
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if not on_windows:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind((host, port))
         s.listen(4)
         while 1:

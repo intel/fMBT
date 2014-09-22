@@ -81,8 +81,11 @@ opt_keep_running_without_clients = False
 opt_log_filename                 = None
 opt_overwrite_logfile            = False
 opt_session_id                   = 0
+stop_server                      = False
 
 server_port = 10277
+
+control_message_prefix = "!fmbt-trace-share> "
 
 def close(*args):
     for a in args:
@@ -90,6 +93,51 @@ def close(*args):
             a.close()
         except (socket.error, IOError):
             pass
+
+def handle_server_control_command(control_line):
+    global stop_server
+
+    cmd = control_line.strip()
+    if cmd == "quit":
+        stop_server = True
+         # Connect to the server to make it check the variable
+        send_server_control_command("")
+
+def send_server_control_command(command):
+    success = False
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.connect(("localhost", server_port))
+    except socket.error:
+        return False
+
+    try:
+        s.sendall(control_message_prefix + command + "\n")
+        success = True
+    except socket.error:
+        pass
+
+    try:
+        s.close()
+    except socket.error:
+        pass
+
+    return success
+
+def _readline(fileobj):
+    try:
+        line = fileobj.readline()
+    except socket.error:
+        line = ""
+    return line
+
+def get_line(fileobj):
+    line = _readline(fileobj)
+    while line.startswith(control_message_prefix):
+        handle_server_control_command(
+            line[len(control_message_prefix):])
+        line = _readline(fileobj)
+    return line
 
 def run_client(port, from_fmbt, to_fmbt):
     """
@@ -106,7 +154,10 @@ def run_client(port, from_fmbt, to_fmbt):
 
     def forward_everything(from_file, to_file):
         while 1:
-            data = from_file.readline()
+            try:
+                data = from_file.readline()
+            except socket.error:
+                data = ""
             if len(data) == 0:
                 break
             try:
@@ -126,9 +177,16 @@ def run_client(port, from_fmbt, to_fmbt):
     return True
 
 def server_log(msg):
-    if opt_log_filename != None:
-        file(opt_log_filename, "a+").write("%.3f session %s %s\n" %
-                                           (time.time(), opt_session_id, msg))
+    if opt_log_filename != None or opt_debug:
+        log_msg = "%.3f session %s %s\n" % (
+            time.time(), opt_session_id, msg)
+
+        if opt_log_filename != None:
+            file(opt_log_filename, "a+").write(log_msg)
+
+        if opt_debug:
+            sys.stdout.write(log_msg)
+            sys.stdout.flush()
 
 def recv_quoted_lines(f):
     """returns list of strings, None if failed"""
@@ -136,12 +194,12 @@ def recv_quoted_lines(f):
     # number of lines (integer)
     # <number of lines> * urlencoded line
     try:
-        number_of_lines = int(f.readline().strip())
+        number_of_lines = int(get_line(f).strip())
     except ValueError:
         return None
     lines = []
     for _ in xrange(number_of_lines):
-        lines.append(urllib.unquote(f.readline().strip()))
+        lines.append(urllib.unquote(get_line(f).strip()))
     return lines
 
 def format_execution(action_number, tag_numbers):
@@ -252,6 +310,7 @@ next_client_id  = 1
 client_lock = thread.allocate_lock()
 def serve_connection(conn):
     global next_client_id
+    global stop_server
     with client_lock:
         client_id = next_client_id
         next_client_id += 1
@@ -265,12 +324,14 @@ def serve_connection(conn):
         actions = recv_quoted_lines(from_fmbt)
         server_log("client %s actions: %s" %
                    (client_id, actions))
-        assert type(actions) == list
+        if actions == None:
+            raise AssertionError("actions")
 
         tags = recv_quoted_lines(from_fmbt)
         server_log("client %s tags: %s" %
                    (client_id, tags))
-        assert type(tags) == list
+        if actions == None:
+            raise AssertionError("tags")
 
         with client_lock:
             client_a2i[client_id] = {}
@@ -294,7 +355,7 @@ def serve_connection(conn):
         send_queued(unsent, to_fmbt)
 
         while 1:
-            reported_line = from_fmbt.readline()
+            reported_line = get_line(from_fmbt)
             if len(reported_line) == 0:
                 break
             parsed_execution = parse_execution(reported_line.strip())
@@ -307,7 +368,8 @@ def serve_connection(conn):
                 unsent = client_unsent[client_id]
                 client_unsent[client_id] = {}
             send_queued(unsent, to_fmbt)
-
+    except AssertionError:
+        pass
     finally:
         server_log("client %s left" % (client_id,))
         close(to_fmbt, from_fmbt, conn)
@@ -321,7 +383,7 @@ def serve_connection(conn):
         if not opt_keep_running_without_clients:
             with client_lock:
                 if len(clients) == 0:
-                    os.kill(os.getpid(), signal.SIGHUP)
+                    handle_server_control_command("quit")
 
 def fork_server(port):
     if opt_overwrite_logfile and opt_log_filename:
@@ -359,24 +421,23 @@ def fork_server(port):
     # Start listening to the port
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     bind_host_name = "127.0.0.1" # only accept local connections
+    if not on_windows:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind((bind_host_name, port))
     s.listen(4)
-    while 1:
+    while not stop_server:
         conn, _ = s.accept()
-        thread.start_new_thread(serve_connection, (conn,))
+        if opt_debug:
+            server_log("connection from %s" % (conn.getpeername(),))
+        if not stop_server:
+            thread.start_new_thread(serve_connection, (conn,))
+    time.sleep(0.5)
 
-def kill_server(server_port, retry=2):
-    if retry == 0:
-        raise OSError("Failed to terminate server listening to port %s." % (server_port,))
-    try:
-        server_pid = int(subprocess.check_output(
-            ["lsof", "-i:%s" % (server_port,), "-sTCP:LISTEN", "-t"]))
-    except subprocess.CalledProcessError:
-        # server is not running
-        return
-    os.kill(server_pid, signal.SIGTERM)
-    time.sleep(1)
-    return kill_server(server_port, retry=retry-1)
+def kill_server(server_port):
+    if send_server_control_command("quit"):
+        return True
+    else:
+        return False
 
 def error(msg):
     sys.stderr.write("%s\n" % (msg,))
@@ -386,7 +447,7 @@ if __name__ == "__main__":
 
     opts, remainder = getopt.gnu_getopt(
         sys.argv[1:], 'dhkKl:L:s:SV',
-        ["help", "keep-session", "kill-session",
+        ["debug", "help", "keep-session", "kill-session",
          "log-file=", "session=", "session-server", "version"])
 
     for opt, arg in opts:
@@ -406,7 +467,7 @@ if __name__ == "__main__":
         elif opt in ["-s", "--session"]:
             try:
                 opt_session_id = int(arg)
-                assert server_port < server_port + opt_session_id < 65535
+                assert server_port <= server_port + opt_session_id < 65535
                 server_port += opt_session_id
             except (AssertionError, ValueError):
                 error('Invalid id "%s", must be in range 0..%s' % (arg, 65535-server_port))
@@ -421,8 +482,10 @@ if __name__ == "__main__":
             sys.exit(0)
 
     if opt_kill_session:
-        kill_server(server_port)
-        sys.exit(0)
+        if kill_server(server_port):
+            sys.exit(0)
+        else:
+            sys.exit(1)
     if opt_fork_server:
         fork_server(server_port)
     else:
