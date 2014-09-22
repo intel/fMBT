@@ -72,6 +72,8 @@ import urllib
 
 FORWARD_BLOCKSIZE = 4096
 
+on_windows = (os.name == "nt")
+
 opt_debug                        = False
 opt_fork_server                  = False
 opt_kill_session                 = False
@@ -330,7 +332,7 @@ def fork_server(port):
     else:
         output_filename = "/dev/null"
 
-    if opt_debug == False:
+    if opt_debug == False and not on_windows:
         # The usual fork magic, cleaning up all connections to the parent process
         if os.fork() > 0:
             return

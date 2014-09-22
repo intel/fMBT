@@ -35,7 +35,7 @@ import pythonshare
 messages = pythonshare.messages
 client = pythonshare.client
 
-on_windows = (platform.system() == "Windows")
+on_windows = (os.name == "nt")
 
 opt_debug_stdout_limit = 240
 opt_log_fd = None
