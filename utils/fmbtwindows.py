@@ -549,6 +549,9 @@ class WindowsConnection(fmbtgti.GUITestConnection):
         self.setDisplayToScreenCoords(
             lambda x, y: (x * screenW / inputW, y * screenH / inputH))
 
+    def execPython(self, code):
+        return self._agent.exec_in(self._agent_ns, code)
+
     def evalPython(self, code):
         return self._agent.eval_in(self._agent_ns, code)
 
