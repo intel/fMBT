@@ -22,7 +22,7 @@ dist_noinst_SCRIPTS += interactivemode/breakpoints.aal interactivemode/breakpoin
 
 dist_noinst_SCRIPTS += fmbt-stats/run.sh fmbt-stats/teststeps.py fmbt-stats/model.gt
 
-dist_noinst_SCRIPTS += functions.sh
+dist_noinst_SCRIPTS += functions.sh fmbttestutils.py
 
 dist_noinst_SCRIPTS += eyenfinger/run.sh eyenfinger/screenshot2.png eyenfinger/screenshot2-icon.png eyenfinger/test.aal.conf eyenfinger/test.py.aal
 
