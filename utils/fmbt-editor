@@ -444,25 +444,25 @@ Keyboard shortcuts:<br>
         self.refreshImages()
 
     def newFileAAL(self, path=None):
-        self.editor.setPlainText('aal "noname" {\n'
-                                 '    language "python" {}\n'
+        self.editor.setPlainText('language "python" {}\n'
                                  '\n'
-                                 '    # preview-hide-vars: \n'
-                                 '    # preview-depth: 5\n'
-                                 '    variables {\n'
-                                 '        varname1, varname2\n'
-                                 '    }\n'
-                                 '    initial_state {\n'
-                                 '        varname1 = 42        # comment1\n'
-                                 '        varname2 = \'hello\' # comment2\n'
-                                 '    }\n'
-                                 '    input "test step 1" {\n'
-                                 '        guard { return varname1 == 42 }\n'
-                                 '        body  { varname2 = \'bye\' }\n'
-                                 '    }\n'
+                                 '# preview-hide-vars: \n'
+                                 '# preview-depth: 5\n'
+                                 'variables {\n'
+                                 '    varname1, varname2\n'
+                                 '}\n'
+                                 'initial_state {\n'
+                                 '    varname1 = 42        # comment1\n'
+                                 '    varname2 = \'hello\' # comment2\n'
+                                 '}\n'
+                                 'input "test step 1" {\n'
+                                 '    guard { return varname1 == 42 }\n'
+                                 '    body  { varname2 = \'bye\' }\n'
                                  '}\n')
-        self.editor.moveCursor(QtGui.QTextCursor.NextWord)
-        self.editor.moveCursor(QtGui.QTextCursor.NextCharacter)
+        for _ in xrange(5):
+            self.editor.moveCursor(QtGui.QTextCursor.Down)
+        for _ in xrange(4):
+            self.editor.moveCursor(QtGui.QTextCursor.NextCharacter)
         self.editor.setFocus()
         if not path:
             self._set_modelFileName(_g_tempdir + os.sep + "noname.aal")
