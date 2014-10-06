@@ -1,8 +1,25 @@
-fmbt (0.16.1-0.rc0) unstable; urgency=low
+fmbt (0.16.1-1) unstable; urgency=low
 
-  * Development version.
+  * AAL syntax change: the topmost block (aal "..." { ... })
+    and the language block are optional, allowing concatenation of
+    AAL files.
+  * fmbtandroid/chromiumos/rdp/tizen/vnc/windows/x11:
+    - "Alternative bitmap" support added to optical image recognition
+      for all *Bitmap methods.
+    - Example: if "ref.png" does not match on verifyBitmap("ref.png"),
+      "ref.png.alt*.png" are automatically searched for. If any of them
+      matches, then verifyBitmap("ref.png") will return True.
+  * fmbtwindows new methods in the Device class:
+    - setForegroundWindow() changes focus.
+    - showWindow() minimizes/normalizes/maximizes windows.
+    - windowList() lists top-level windows.
+    - refreshView() preliminary support for toolkit-based testing.
+    - tapText() finds texts recognized by the most recent refreshView().
+    - connection().execPython(CODE) executes CODE on Windows device.
+  * Windows compatibility improved on remote_python and fmbt-trace-share.
+  * Many bug fixes.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 8 Sep 2014 08:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 6 Oct 2014 09:42:00 +0300
 
 fmbt (0.16-1) unstable; urgency=low
 
