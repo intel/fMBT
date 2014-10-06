@@ -126,9 +126,26 @@ def error(msg):
     sys.stderr.write(msg)
     sys.exit(1)
 
+def atexit_remove_file(filename):
+    try:
+        try:
+            os.remove(filename)
+        except OSError:
+            _log("remote_pyaal error: removing file %s failed when exiting:\n" % (repr(filename),))
+            _log(traceback.format_exc(), flush=True)
+    except:
+        pass
+
 def bye():
-    _g_bridge._aal.aexit(None, None)
-    _log("quitting", flush=True)
+    try:
+        try:
+            _g_bridge._aal.aexit(None, None)
+        except:
+            _log("remote_pyaal error: exception at AAL adapter_exit failed when exiting:\n")
+            _log(format_pythonaalexception())
+        _log("quitting", flush=True)
+    except:
+        pass
 
 def put(msg):
     if opt_debug: _log("sending: '%s'" % (msg,))
@@ -549,7 +566,7 @@ if __name__ == "__main__":
     aal_code = aal_code.replace("\r\n", "\n")
     os.write(aalpy_fd, aal_code)
     os.close(aalpy_fd)
-    atexit.register(lambda: os.remove(aalpy_filename))
+    atexit.register(lambda: atexit_remove_file(aalpy_filename))
 
     try:
         exec file(aalpy_filename)

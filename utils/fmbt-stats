@@ -112,7 +112,12 @@ def read_from_log_duration_execaction(testlog_fileobj, include_regexps = []):
         while line:
             space = line.find(" ")
             actionname1, actionname2 = line[space+1:-1].split('|FMBT-STATS|')
-            this_duration = float(line[:space])
+            try:
+                this_duration = float(line[:space])
+            except ValueError:
+                # broken line, possibly adapter could not report anything
+                line = p.stdout.readline()
+                continue
 
             if actionname1 == actionname2:
                 current_action = actionname1
@@ -148,8 +153,12 @@ def read_from_log_timestamp_execaction(testlog_fileobj):
             actionname1, actionname2 = line[space+1:-1].split('|FMBT-STATS|')
             if actionname1 == actionname2:
                 timestamp_actionname_list.append((float(line[:space]), actionname1))
-            else:
+            elif actionname2.strip() != "":
                 timestamp_actionname_list.append((float(line[:space]), "%s => %s" % (actionname1, actionname2)))
+            else:
+                # adapter report is missing, skip this action
+                # (there is no way to get reliable timestamp)
+                pass
 
             line = p.stdout.readline()
     except Exception, e:
@@ -478,14 +487,10 @@ def stats_times(arg, testlog_fileobj, output_fileobj, plot_filename):
 
     action_exectimes = {} # map action name to list of exec time durations
     prev_timestamp = None
-    for timestamp, actionname in read_from_log_timestamp_execaction(testlog_fileobj):
-        if prev_timestamp != None:
-            timedelta = timestamp - prev_timestamp
-            if not prev_actionname in action_exectimes:
-                action_exectimes[prev_actionname] = []
-            action_exectimes[prev_actionname].append(timedelta)
-        prev_timestamp = timestamp
-        prev_actionname = actionname
+    for adapterexectime, actionname in read_from_log_duration_execaction(testlog_fileobj):
+        if not actionname in action_exectimes:
+            action_exectimes[actionname] = []
+        action_exectimes[actionname].append(adapterexectime)
 
     for a in action_exectimes:
         action_exectimes[a].sort()
