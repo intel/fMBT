@@ -1,3 +1,17 @@
+if MINGW
+bin_PROGRAMS = remote_pyaal fmbt-editor fmbt-view fmbt-log fmbt-stats lsts2dot
+
+AM_CFLAGS = $(GLIB_CFLAGS)
+AM_LDFLAGS = $(GLIB_LIBS)
+
+remote_pyaal_SOURCES = exec_wrapper.c
+fmbt_editor_SOURCES  = exec_wrapper.c
+fmbt_view_SOURCES    = exec_wrapper.c
+fmbt_stats_SOURCES   = exec_wrapper.c
+fmbt_log_SOURCES     = exec_wrapper.c
+lsts2dot_SOURCES     = exec_wrapper.c
+endif
+
 ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = utils src pythonshare test examples
