@@ -29,10 +29,13 @@ int main(int argc,char** argv)
   int i;
 
   char** margv;
+
+#if G_ENCODE_VERSION (GLIB_MAJOR_VERSION, GLIB_MINOR_VERSION) < G_ENCODE_VERSION (2, 36)
   g_type_init ();
+#endif
 
   margv=(char**)g_new0(char**,argc+2);
-  margv[0]="C:\\Python27\\python.exe";
+  margv[0]=g_find_program_in_path("python");
 
   margv[1]=g_find_program_in_path(argv[0]);
 
