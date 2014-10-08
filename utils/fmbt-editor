@@ -740,7 +740,7 @@ Keyboard shortcuts:<br>
                 aal_ppflags.extend(["-D%s" % f for f in re.findall('-D ?([^ ]*)', l)])
                 aal_ppflags.extend(["-I%s" % f for f in re.findall('-I ?([^ ]*)', l)])
                 try:
-                    _cmd_line = l.split('(',1)[1].rsplit(')')[0]
+                    _cmd_line = l.split('(',1)[1].rsplit(')',1)[0]
                     aal_modelflags = shlex.split(_cmd_line)
                 except:
                     showError('Cannot parse "model = ..."  in test configuration')
