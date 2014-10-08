@@ -975,10 +975,10 @@ Keyboard shortcuts:<br>
         if self._editingLSTS():
             modelspec="lsts(%s)" % (self._lstsFileName,)
         elif self._editingAAL():
-            modelspec="aal_remote(remote_pyaal -l %s.log '%s')" % (
+            modelspec='aal_remote(remote_pyaal -l "%s.log" "%s")' % (
                 (self._modelFileName, self._modelFileName))
         else:
-            modelspec="lsts_remote(fmbt-gt -f '%s')" % (self._modelFileName,)
+            modelspec='lsts_remote(fmbt-gt -f "%s")' % (self._modelFileName,)
         return modelspec
 
     def _generateAdapterSpec(self):
