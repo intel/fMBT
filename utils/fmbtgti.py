@@ -1312,7 +1312,8 @@ class GUITestInterface(object):
     def close(self):
         self._lastScreenshot = None
         if self._visualLog:
-            if hasattr(self._visualLog._outFileObj, "name"):
+            if (hasattr(self._visualLog._outFileObj, "name") and
+                self._visualLog._outFileObj.name in self._visualLogFilenames):
                 self._visualLogFilenames.remove(self._visualLog._outFileObj.name)
             self._visualLog.close()
             if self._visualLogFileObj:
