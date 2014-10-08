@@ -72,7 +72,7 @@ FILE* _include_search_open(std::string& f)
 
   if (inc_prefix) {
     std::string s(inc_prefix);
-    s=s+"/"+f;
+    s=s+G_SEARCHPATH_SEPARATOR_S+f;
     st=fopen(f.c_str(), "r" );
     if (st) {
       f=s;
@@ -203,6 +203,7 @@ char* python_block(const char* input,FILE* yyout) {
 	  yy_switch_to_buffer(yy_create_buffer( st, YY_BUF_SIZE ) );
 	} else {
 	  fprintf(stderr,"No such file \"%s\"\n",sinc.c_str());
+	  fflush(stderr);
 	  exit(-1);
 	}
       }
@@ -379,6 +380,7 @@ int main(int argc,char** argv)
     FILE* st=include_search_open(filename);
     if (!st) {
       fprintf(stderr,"Can't open input file %s\n",argv[optind]);
+      fflush(stderr);
       return -1;
     }
     yyset_in(st);

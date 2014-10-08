@@ -72,13 +72,18 @@ bool Adapter_remote::init()
 
   monitor();
 
+#ifndef __MINGW32__
   d_stdin=g_io_channel_unix_new(_stdin);
   d_stdout=g_io_channel_unix_new(_stdout);
   d_stderr=g_io_channel_unix_new(_stderr);
 
-#ifndef __MINGW32__
   g_io_channel_set_flags(d_stderr,G_IO_FLAG_NONBLOCK,NULL);
+#else
+  d_stdin=g_io_channel_win32_new_fd(_stdin);
+  d_stdout=g_io_channel_win32_new_fd(_stdout);
+  d_stderr=g_io_channel_win32_new_fd(_stderr);
 #endif
+  g_io_channel_set_encoding(d_stderr,NULL,NULL);
 
   fprintf(d_stdin,"%i\n",(int)actions->size());
 

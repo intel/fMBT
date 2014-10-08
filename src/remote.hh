@@ -72,7 +72,9 @@ public:
       while(g_main_context_iteration(NULL,FALSE));
       g_source_remove(id);
     }
-    g_spawn_close_pid(pid);
+    if (pid) {
+      g_spawn_close_pid(pid);
+    }
     while(g_main_context_iteration(NULL,FALSE));
     g_main_context_unref(g_main_context_default());
   }
@@ -120,12 +122,13 @@ protected:
       if (r->_status)
 	*(r->_status)=false;
 
-      if (g) 
+      if (g)
 	g_error_free (g);
     }
 #endif
     // Currently we don't care about the rest 
     r->id=0;
+    r->pid=0;
   }
   GPid pid;
   guint id;

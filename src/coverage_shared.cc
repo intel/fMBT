@@ -39,13 +39,24 @@ void Coverage_shared::receive_from_server()
   }
 
   ss=s;
-  if (strlen(s)>2) {
-    s[strlen(s)-2]='\0';
+
+  if (strlen(s)>2 && s[strlen(s)-1]=='\n') {
+    if (s[strlen(s)-2]=='\r') {
+      s[strlen(s)-2]='\0';
+    } else {
+      s[strlen(s)-1]='\0';
+    }
+  }
+
+
+  if (s[0]=='(' && s[strlen(s)-1]==')') {
+    s[strlen(s)-1]='\0';
     s++;
   }
 
+
   if (!string2vector(log,s,clients,0,INT_MAX,this)) {
-    g_free(s);
+    g_free(ss);
     status=false;
     return;
   }

@@ -24,6 +24,7 @@
 #include <errno.h>
 
 #include <sys/types.h>
+//#include <sys/wait.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -31,10 +32,9 @@
 #include "aalang.hh"
 #include "config.h"
 
+
 #include "aalang_tag.hh"
 #include "aalang_action.hh"
-#include "aalang_cpp.hh"
-#include "aalang_py.hh"
 
 extern aalang* obj;
 
@@ -58,6 +58,18 @@ void error(int exitval, int dontcare, const char* format, ...)
   vfprintf(stderr, format, ap);
   va_end(ap);
   fprintf(stderr, "\n");
+  exit(exitval);
+}
+#endif
+
+#ifdef __MINGW32__
+void error(int exitval, int dontcare, const char* format, ...)
+{
+  va_list ap;
+  fprintf(stderr, "fMBT error: ");
+  va_start(ap, format);
+  vfprintf(stderr, format, ap);
+  va_end(ap);
   if (exitval)
     exit(exitval);
 }
@@ -144,7 +156,7 @@ int main(int argc,char** argv) {
 
       case 'l':
 	if (obj) {
-	  printf("Only one -l parameter supported\n");
+	  printf("Only on -l parameter supported\n");
 	  print_usage();
 	  return 3;
 	}
@@ -155,19 +167,7 @@ int main(int argc,char** argv) {
 	if (strcmp(optarg,"action")==0) {
 	  obj=new aalang_action;
 	  break;
-        }
-        if (strcmp(optarg,"C++")==0
-            || strcmp(optarg,"cpp")==0
-            || strcmp(optarg,"c++")==0) {
-          obj=new aalang_cpp;
-          break;
-        }
-        if (strcmp(optarg,"Python")==0
-            || strcmp(optarg,"python")==0
-            || strcmp(optarg,"py")==0) {
-          obj=new aalang_py;
-          break;
-        }
+	}
 	break;
       case 'V':
         printf("Version: "VERSION FMBTBUILDINFO"\n");
@@ -286,9 +286,11 @@ int main(int argc,char** argv) {
       /*
       if (waitpid(pid, &status, 0)==-1)
         error(1,0,"could not read compiler status.");
-      */
       if (!WIFEXITED(status) || WEXITSTATUS(status)!=0)
+      */
+      if (!g_spawn_check_exit_status (status,NULL)) {
         error(1,0,"compiling failed.");
+      }
     }
   } else {
     fprintf(outputfile,"%s",result.c_str());

@@ -22,80 +22,7 @@
 #include <string>
 #include <vector>
 #include "helper.hh"
-
-#ifdef __MINGW32__
-#include <windows.h>
-
-std::list<std::string> _search_path;
-
-void _searchpathappend(const char* path,std::list<std::string>& _path) {
-  if (path) {
-    std::vector<std::string> vec;
-    std::string s(path);
-    strvec(vec,s,G_SEARCHPATH_SEPARATOR_S);
-    for(unsigned i=0;i<vec.size();i++) {
-      _path.push_back(vec[i]);
-    }
-  }
-}
-
-void _populatesearchpath() {
-  if (_search_path.empty()) {
-    gchar *dir = NULL;
-    wchar_t wdir[MAXPATHLEN];
-    int n;
-    
-    n = GetModuleFileNameW (NULL, wdir, MAXPATHLEN);
-    if (n > 0 && n < MAXPATHLEN) {
-      dir = g_utf16_to_utf8 ((gunichar2*)wdir, -1, NULL, NULL, NULL);
-      gchar* tmp=g_path_get_dirname(dir);
-      g_free(dir);
-      _search_path.push_back(tmp);
-      g_free(tmp);
-    }      
-    
-    n = GetSystemDirectoryW (wdir, MAXPATHLEN);
-    if (n > 0 && n < MAXPATHLEN) {
-      dir = g_utf16_to_utf8 ((gunichar2*)wdir, -1, NULL, NULL, NULL);
-      _search_path.push_back(dir);
-      g_free(dir);
-    }
-    
-    n = GetWindowsDirectoryW (wdir, MAXPATHLEN);
-    if (n > 0 && n < MAXPATHLEN) {
-      dir = g_utf16_to_utf8 ((gunichar2*)wdir, -1, NULL, NULL, NULL);
-      _search_path.push_back(dir);
-      g_free(dir);
-      }
-    // Let's append normal path....
-    _searchpathappend(g_getenv("PATH"),_search_path);      
-  }
-}
-
-gchar** _strv_addfirst(gchar** str_array,gchar* first) {
-  if (str_array) {
-    gint i=0;
-    gchar **retval;
-    
-    while (str_array[i])
-      ++i;
-    
-    retval = g_new (gchar*, i + 2);
-    
-    retval[0]=first;
-    i = 0;
-
-    while (str_array[i]) {
-	retval[i+1] = str_array[i];
-	++i;
-      }
-    retval[i+1] = NULL;
-    
-    return retval;
-  }
-  return str_array;
-}
-#endif
+#include "windows_helper.cc"
 
 gboolean
 _g_spawn_command_line_sync (const gchar  *command_line,
@@ -180,7 +107,7 @@ _g_spawn_sync (const gchar *working_directory,
 	if (g_str_has_prefix (line,"#!")) {
 	  gchar* interp=NULL;
 	  if (g_strrstr(line,"python")) {
-	    interp="python";
+	    interp=strdup("python");
 	  }
 	  
 	  if (interp) {
@@ -246,54 +173,35 @@ _g_spawn_async_with_pipes (const gchar *working_directory,
   }
 
   _populatesearchpath();
-  
-  for(std::list<std::string>::iterator i=_search_path.begin();
-      i!=_search_path.end();i++) {
-    
-    gchar* tmp=g_build_filename(i->c_str(),argv[0],NULL);
-    
-    if (g_file_test(tmp,G_FILE_TEST_IS_REGULAR)) {
-      // Let's check if file contains #! and python at the first line...
+  std::list<std::string>::iterator i=_search_path.begin();
+  std::list<std::string>::iterator e=_search_path.end();
 
-      GIOChannel *stream=g_io_channel_new_file (tmp,"r",NULL);
-      
-      if (stream) {
-	gchar* line=NULL;
-	size_t len=0;
-	getline(&line,&len,stream);
-	g_io_channel_shutdown(stream,FALSE,NULL);
-	
-	if (g_str_has_prefix (line,"#!")) {
-	  gchar* interp=NULL;
-	  if (g_strrstr(line,"python")) {
-	    interp="python";
-	  }
-	  
-	  if (interp) {
-	    gchar** newargv=_strv_addfirst(argv,interp);
-	    
-	    newargv[1]=tmp;
+  gchar* argpath=NULL,*interp=NULL;
+  while (_iterate(i,e,interp,argpath,argv[0])) {
+    
+    gchar** newargv=_strv_addfirst(argv,interp);
+    
+    newargv[1]=argpath;
+    
+    ret=g_spawn_async_with_pipes(working_directory,newargv,envp,flags,
+				 child_setup,user_data,child_pid,
+				 standard_input,standard_output,
+				 standard_error,&g);
+    
+    g_free(newargv);
 
-	    ret=g_spawn_async_with_pipes(working_directory,newargv,envp,flags,
-					 child_setup,user_data,child_pid,
-					 standard_input,standard_output,
-					 standard_error,&g);
-	    
-	    g_free(newargv);
-	    
-	    if (error)
-	      *error=g;
-	    
-	    if (g==NULL) {
-	      g_free(tmp);
-	      return ret;
-	    }
-	    g=NULL;
-	  }
-	}
-      }
-    }
-    g_free(tmp);
+    g_free(interp);
+    interp=NULL;
+
+    g_free(argpath);
+    argpath=NULL;
+    
+    if (error)
+      *error=g;
+    
+    if (g==NULL) {
+      return ret;
+    }    
   }
 
 #endif
