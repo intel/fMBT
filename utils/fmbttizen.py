@@ -284,14 +284,14 @@ class Device(fmbtgti.GUITestInterface):
         else: endDistanceInPixels = int(endDistance)
 
         finger1startX = int(x + math.cos(math.radians(finger1Dir)) * startDistanceInPixels)
-        finger1startY = int(y + math.sin(math.radians(finger1Dir)) * startDistanceInPixels)
+        finger1startY = int(y - math.sin(math.radians(finger1Dir)) * startDistanceInPixels)
         finger1endX = int(x + math.cos(math.radians(finger1Dir)) * endDistanceInPixels)
-        finger1endY = int(y + math.sin(math.radians(finger1Dir)) * endDistanceInPixels)
+        finger1endY = int(y - math.sin(math.radians(finger1Dir)) * endDistanceInPixels)
 
         finger2startX = int(x + math.cos(math.radians(finger2Dir)) * startDistanceInPixels)
-        finger2startY = int(y + math.sin(math.radians(finger2Dir)) * startDistanceInPixels)
+        finger2startY = int(y - math.sin(math.radians(finger2Dir)) * startDistanceInPixels)
         finger2endX = int(x + math.cos(math.radians(finger2Dir)) * endDistanceInPixels)
-        finger2endY = int(y + math.sin(math.radians(finger2Dir)) * endDistanceInPixels)
+        finger2endY = int(y - math.sin(math.radians(finger2Dir)) * endDistanceInPixels)
 
         return self._conn.sendMtLinearGesture(
             [[(finger1startX, finger1startY), (finger1endX, finger1endY)],
