@@ -27,15 +27,23 @@ int main(int argc,char** argv)
 {
   gint exit_status;
   int i;
-
   char** margv;
+  GSpawnFlags spawn_flags;
 
 #if G_ENCODE_VERSION (GLIB_MAJOR_VERSION, GLIB_MINOR_VERSION) < G_ENCODE_VERSION (2, 36)
   g_type_init ();
 #endif
-
   margv=(char**)g_new0(char**,argc+2);
-  margv[0]=g_find_program_in_path("python");
+
+  if (!g_getenv("fmbt_debug_windows") && 
+      (g_str_has_suffix(margv[0],"fmbt-editor.exe") ||
+       g_str_has_suffix(margv[0],"fmbt-editor")) ) {
+    margv[0]=g_find_program_in_path("pythonw");
+  }
+  
+  if (margv[0]==NULL) {
+    margv[0]=g_find_program_in_path("python");
+  }
 
   margv[1]=g_find_program_in_path(argv[0]);
 
@@ -47,8 +55,10 @@ int main(int argc,char** argv)
     margv[i+1]=argv[i];
   }
 
+  spawn_flags=G_SPAWN_CHILD_INHERITS_STDIN|G_SPAWN_LEAVE_DESCRIPTORS_OPEN;
+
   g_spawn_sync(NULL,margv,NULL,
-	       G_SPAWN_CHILD_INHERITS_STDIN,
+	       spawn_flags,
 	       NULL,NULL,
 	       NULL,NULL,
 	       &exit_status,NULL);

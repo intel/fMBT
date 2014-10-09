@@ -12,8 +12,8 @@
 !define DESCRIPTION "Free Model-Based Testing tool automates both generating and executing tests."
 # These three must be integers
 !define VERSIONMAJOR 0
-!define VERSIONMINOR 9
-!define VERSIONBUILD 5
+!define VERSIONMINOR 16
+!define VERSIONBUILD 1
 # These will be displayed by the "Click here for support information" link in "Add/Remove Programs"
 # It is possible to use "mailto:" links in here to open the email client
 !define HELPURL "https://01.org/fmbt" # "Support Information" link
@@ -39,6 +39,25 @@ outFile "fMBT-installer.exe"
 page license
 page directory
 Page instfiles
+
+Section -Prerequisites
+  SetOutPath $INSTDIR\Prerequisites
+  MessageBox MB_YESNO "Install Python 2.7.8" /SD IDYES IDNO endPython
+  file "python-2.7.8.amd64.msi"
+  ExecWait '"msiexec" /i "$INSTDIR\Prerequisites\python-2.7.8.amd64.msi"'
+  endPython:
+
+  MessageBox MB_YESNO "Install PySide?" /SD IDYES IDNO endPySide
+    File "PySide-1.2.2.win-amd64-py2.7.exe"
+    ExecWait "$INSTDIR\Prerequisites\PySide-1.2.2.win-amd64-py2.7.exe"
+  endPySide:
+
+  MessageBox MB_YESNO "Install Graphviz 2.38" /SD IDYES IDNO endGraphviz
+  file "graphviz-2.38.msi"
+  ExecWait '"msiexec" /i "$INSTDIR\Prerequisites\graphviz-2.38.msi"'
+  endGraphviz:
+
+SectionEnd
  
 !macro VerifyUserIsAdmin
 UserInfo::GetAccountType
@@ -60,41 +79,84 @@ section "install"
 	setOutPath $INSTDIR
 	# Files added here should be removed by the uninstaller (see section "uninstall")
 
-	file "fmbt-aalc.exe"
-	file "fmbt-aalp.exe"
-	file "fmbt.exe"
-	file "gspawn-win32-helper-console.exe"
-	file "gspawn-win32-helper.exe"
+# might work if the user is lucky. If unlucky, corrups path.
+#	ReadEnvStr $R0 "PATH"
+#	StrCpy $R0 "$R0;"$INSTDIR
+#	System::Call 'Kernel32::SetEnvironmentVariableA(t, t) i("PATH", R0).r0'
+
+	file "src/.libs/fmbt-aalc.exe"
+	file "src/.libs/fmbt-aalp.exe"
+	file "src/.libs/fmbt.exe"
+
+# I don't know any sane method to handle dependencies. So hard-code.
+
+	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/gspawn-win64-helper-console.exe"
+	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/gspawn-win64-helper.exe"
+
+	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/iconv.dll"
+	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libboost_regex.dll"
+	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libgcc_s_seh-1.dll"
+	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libglib-2.0-0.dll"
+	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libintl-8.dll"
+	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libstdc++-6.dll"
+
+# parts implemented in python
+	file "utils/remote_pyaal"
+	file ".libs/remote_pyaal.exe"
+
+	file "utils/fmbt-view"
+	file ".libs/fmbt-view.exe"
+
+	file "utils/fmbt-editor"
+	file ".libs/fmbt-editor.exe"
+
+	file "utils/fmbt-stats"
+	file ".libs/fmbt-stats.exe"
+
+	file "utils/lsts2dot"
+	file ".libs/lsts2dot.exe"
+
+	file "utils/fmbt-log"
+	file ".libs/fmbt-log.exe"
 	file "fmbt.ico"
 
-	file "aalmodel.py"
-	file "eyenfinger.py"
-	file "fmbtandroid.py"
-	file "fmbt_config.py"
-	file "fmbtgti.py"
-	file "fmbtlogger.py"
-	file "fmbtparsers.py"
-	file "fmbt.py"
-	file "fmbttizen.py"
-	file "fmbtweb.py"
-	file "fmbtx11.py"
-	file "lsts.py"
-	file "fmbt-editor"
-	file "fmbt-editor.exe"
+# python libraries.
 
-	file "eye4graphics.dll"
-	file "libMagick++-6.Q16-1.dll"
-	file "libMagickCore-6.Q16-1.dll"
-	file "libMagickWand-6.Q16-1.dll"
+	setOutPath "C:\python27\lib\"
 
-	file "remote_pyaal"
-	file "remote_pyaal.exe"
+	file "utils/aalmodel.py"
+	file "utils/eyenfinger.py"
+	file "utils/fmbtandroid.py"
+	file "utils/fmbtchromiumos.py"
+	file "utils/fmbt_config.py"
+	file "utils/fmbtgti.py"
+	file "utils/fmbtlogger.py"
+	file "utils/fmbtparsers.py"
+	file "utils/fmbtpng.py"
+	file "utils/fmbt.py"
+	file "utils/fmbtrdp.py"
+	file "utils/fmbttizen-agent.py"
+	file "utils/fmbttizen.py"
+	file "utils/fmbtuinput.py"
+	file "utils/fmbtvnc.py"
+	file "utils/fmbtweb.py"
+	file "utils/fmbtwindows_agent.py"
+	file "utils/fmbtwindows.py"
+	file "utils/fmbtx11_conn.py"
+	file "utils/fmbtx11.py"
+	file "utils/lsts.py"
 
-	file "fmbt-view"
-	file "fmbt-view.exe"
+	file "utils/.libs/eye4graphics.dll"
+	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/iconv.dll"
+	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libbz2-1.dll"
+	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libgcc_s_seh-1.dll"
+	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libMagickCore-6.Q16-1.dll"
+	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libpng16-16.dll"
+	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libstdc++-6.dll"
+	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libwinpthread-1.dll"
+	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libxml2-2.dll"
+	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/zlib1.dll"
 
-	file "fmbt-log"
-	file "fmbt-log.exe"
 
 	# Add any other files for the install directory (license files, app data, etc) here
  
@@ -103,8 +165,8 @@ section "install"
  
 	# Start Menu
 	createDirectory "$SMPROGRAMS\${COMPANYNAME}"
-	createShortCut "$SMPROGRAMS\${COMPANYNAME}\${APPNAME}.lnk" "$INSTDIR\fmbt.exe" "" "$INSTDIR\fmbt.ico"
- 
+	createShortCut "$SMPROGRAMS\${COMPANYNAME}\${APPNAME}.lnk" "$INSTDIR\fmbt-editor.exe" "" "$INSTDIR\fmbt.ico"
+
 	# Registry information for add/remove programs
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "DisplayName" "${COMPANYNAME} - ${APPNAME} - ${DESCRIPTION}"
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
@@ -143,6 +205,9 @@ section "uninstall"
 	delete "$SMPROGRAMS\${COMPANYNAME}\${APPNAME}.lnk"
 	# Try to remove the Start Menu folder - this will only happen if it is empty
 	rmDir "$SMPROGRAMS\${COMPANYNAME}"
+
+#	PATH cleanup
+#	${EnvVarUpdate} $0 "PATH" "R" "HKLM" $INSTDIR
  
 	# Remove files
 	delete $INSTDIR\fmbt-aalc.exe
@@ -167,6 +232,7 @@ section "uninstall"
 	delete $INSTDIR\fmbt-editor.exe
 
 	delete $INSTDIR\eye4graphics.dll
+
 	delete $INSTDIR\libMagick++-6.Q16-1.dll
 	delete $INSTDIR\libMagickCore-6.Q16-1.dll
 	delete $INSTDIR\libMagickWand-6.Q16-1.dll
