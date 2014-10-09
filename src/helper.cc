@@ -295,7 +295,11 @@ char* readfile(const char* filename,const char* preprocess,int& status)
 
   std::string s(preprocess);
 
-  s=s + " " + filename;
+  gchar* fn = g_shell_quote (filename);
+
+  s=s + " " + fn;
+
+  g_free(fn);
 
   if (!g_spawn_command_line_sync(s.c_str(),&out,&err,&status,NULL)) {
 
@@ -338,6 +342,7 @@ char* _readfile(const char* filename)
       return NULL;
     }
     f.read(contents, file_len);
+    file_len=f.gcount();
     f.close();
     contents[file_len] = '\0';
 
@@ -431,7 +436,7 @@ bool string2vector(Log& log,const char* s,std::vector<int>& a,
     i++;
   }
 
-  if (ss[0]!='\0' && ss[0]!='\n') {
+  if (ss[0]!='\0' && ss[0]!='\n' && ss[0]!='\r' ) {
     if (w) {
       w->status=false;
       w->errormsg=std::string("Illegal character \"")+ss[0]+"\"";
@@ -626,8 +631,8 @@ ssize_t nonblock_getline(char **lineptr, size_t *n,
 
 ssize_t getline(char **lineptr, size_t *n, GIOChannel *stream)
 {
-  gsize si;
-  gsize ret;
+  gsize si=0;
+  gsize ret=0;
   GIOStatus status;
 
   if (*lineptr) {
