@@ -93,6 +93,7 @@ import operator
 import subprocess
 import getopt
 import os
+import tempfile
 import re
 import fmbt_config
 
@@ -112,12 +113,7 @@ def read_from_log_duration_execaction(testlog_fileobj, include_regexps = []):
         while line:
             space = line.find(" ")
             actionname1, actionname2 = line[space+1:-1].split('|FMBT-STATS|')
-            try:
-                this_duration = float(line[:space])
-            except ValueError:
-                # broken line, possibly adapter could not report anything
-                line = p.stdout.readline()
-                continue
+            this_duration = float(line[:space])
 
             if actionname1 == actionname2:
                 current_action = actionname1
@@ -153,12 +149,8 @@ def read_from_log_timestamp_execaction(testlog_fileobj):
             actionname1, actionname2 = line[space+1:-1].split('|FMBT-STATS|')
             if actionname1 == actionname2:
                 timestamp_actionname_list.append((float(line[:space]), actionname1))
-            elif actionname2.strip() != "":
-                timestamp_actionname_list.append((float(line[:space]), "%s => %s" % (actionname1, actionname2)))
             else:
-                # adapter report is missing, skip this action
-                # (there is no way to get reliable timestamp)
-                pass
+                timestamp_actionname_list.append((float(line[:space]), "%s => %s" % (actionname1, actionname2)))
 
             line = p.stdout.readline()
     except Exception, e:
@@ -264,8 +256,7 @@ def init_plotting(plot_filename, plot_data_table):
         plot_output_format = 'set term postscript landscape "Helvetica" 10'
     elif plot_output_format in ['pdf']:
         plot_output_format = 'set term pdfcairo'
-    output_filename = "/tmp/fmbt-stats.%s.dat" % (os.getpid(),)
-
+    output_filename = tempfile.gettempdir() + os.sep + "fmbt-stats.%s.dat" % (os.getpid(),)
     plot_output_format += '\nset output "%s"' % (plot_filename,)
 
     file(output_filename, "w").write("".join(plot_data_table))
@@ -487,10 +478,14 @@ def stats_times(arg, testlog_fileobj, output_fileobj, plot_filename):
 
     action_exectimes = {} # map action name to list of exec time durations
     prev_timestamp = None
-    for adapterexectime, actionname in read_from_log_duration_execaction(testlog_fileobj):
-        if not actionname in action_exectimes:
-            action_exectimes[actionname] = []
-        action_exectimes[actionname].append(adapterexectime)
+    for timestamp, actionname in read_from_log_timestamp_execaction(testlog_fileobj):
+        if prev_timestamp != None:
+            timedelta = timestamp - prev_timestamp
+            if not prev_actionname in action_exectimes:
+                action_exectimes[prev_actionname] = []
+            action_exectimes[prev_actionname].append(timedelta)
+        prev_timestamp = timestamp
+        prev_actionname = actionname
 
     for a in action_exectimes:
         action_exectimes[a].sort()
@@ -788,7 +783,10 @@ if __name__ == '__main__':
         elif opt in ['-f', '--format']:
             output_format = arg
         elif opt in ['-o', '--output'] and not arg in ['', '-']:
-            output_fileobj = file(arg, 'w')
+            if (arg == "/dev/null"):
+                output_fileobj = file(os.devnull, 'w')
+            else:
+                output_fileobj = file(arg, 'w')
             output_fileobj_close = 1
         elif opt in ['-p', '--plot']:
             plot_filename = arg
