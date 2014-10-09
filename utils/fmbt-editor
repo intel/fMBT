@@ -743,7 +743,7 @@ Keyboard shortcuts:<br>
                     _cmd_line = l.split('(',1)[1].rsplit(')',1)[0]
                     aal_modelflags = shlex.split(_cmd_line)
                 except:
-                    showError('Cannot parse "model = ..."  in test configuration')
+                    self.showError('Cannot parse "model = ..."  in test configuration')
                     self._model_ok = False
                     return self._model_ok
         return aal_ppflags, aal_modelflags
