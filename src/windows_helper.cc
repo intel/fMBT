@@ -131,9 +131,5 @@ bool _iterate(std::list<std::string>::iterator &i,
 
   return false;
 }
-					  
-
-
-
 
 #endif

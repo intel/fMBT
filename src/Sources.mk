@@ -12,9 +12,9 @@ if RDRND
 COMMON_SOURCES += random_intel_hw.hh
 endif
 
-fmbt_SOURCES                  = $(COMMON_SOURCES) adapter_dlopen.cc adapter_remote.cc lts_remote.cc lts_trace.cc xrules_remote.cc coverage_shared.cc coverage_tema_seq.cc history_remote.cc model_remote.cc aal_java.cc aal_remote.cc history_log.cc history_multi.cc history_glob.cc remote.cc
+fmbt_SOURCES                  = $(COMMON_SOURCES) adapter_dlopen.cc adapter_remote.cc lts_remote.cc lts_trace.cc xrules_remote.cc coverage_shared.cc coverage_tema_seq.cc history_remote.cc model_remote.cc aal_java.cc aal_remote.cc history_log.cc history_multi.cc history_glob.cc remote.cc windows_helper.cc
 
-fmbt_ucheck_SOURCES	      = uc.cc helper.cc log.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc conf.cc end_condition.cc test_engine.cc adapter.cc history.cc heuristic.cc policy.cc alg_bdfs.cc conf.g.d_parser.cc uconf.g.d_parser.cc mrules.g.d_parser.cc of.cc of_null.cc awrapper.cc null.cc aal.cc history_log.cc $(LOCAL_COVERAGES) lts_remote.cc coverage_of.cc of_html.cc of_csv.cc endhook.cc $(LOCAL_MODELS) coverage_notice.cc coverage_report_filter.cc random.cc random_c.cc function.cc params.cc remote.cc
+fmbt_ucheck_SOURCES	      = uc.cc helper.cc log.cc lts.g.d_parser.cc xrules.g.d_parser.cc lts_xrules.cc conf.cc end_condition.cc test_engine.cc adapter.cc history.cc heuristic.cc policy.cc alg_bdfs.cc conf.g.d_parser.cc uconf.g.d_parser.cc mrules.g.d_parser.cc of.cc of_null.cc awrapper.cc null.cc aal.cc history_log.cc $(LOCAL_COVERAGES) lts_remote.cc coverage_of.cc of_html.cc of_csv.cc endhook.cc $(LOCAL_MODELS) coverage_notice.cc coverage_report_filter.cc random.cc random_c.cc function.cc params.cc remote.cc windows_helper.cc
 
 fmbt_droid_SOURCES            = $(COMMON_SOURCES)
 
