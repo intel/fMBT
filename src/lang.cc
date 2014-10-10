@@ -283,12 +283,8 @@ int main(int argc,char** argv) {
       g_child_watch_add(pid,process_end_callback,
                        &status);
       g_main_loop_run(NULL);
-      /*
-      if (waitpid(pid, &status, 0)==-1)
-        error(1,0,"could not read compiler status.");
-      if (!WIFEXITED(status) || WEXITSTATUS(status)!=0)
-      */
-      if (!g_spawn_check_exit_status (status,NULL)) {
+
+      if (status!=0) {
         error(1,0,"compiling failed.");
       }
     }
