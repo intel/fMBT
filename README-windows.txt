@@ -1,5 +1,18 @@
 fMBT Windows port is under development.
 
+Installing with fMBT-installer.exe
+----------------------------------
+
+* Run fMBT-installer.exe.
+
+* Make sure directories containing following executables are in PATH:
+  - python.exe  (C:\Python27)
+  - fmbt.exe (C:\Program Files (x86)\Intel\fMBT)
+  - dot.exe (C:\Program Files (x86)\Graphviz2.38\bin)
+  - gnuplot.exe (C:\Program Files\gnuplot\bin)
+
+
+
 What works
 ----------
 

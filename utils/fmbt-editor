@@ -341,7 +341,10 @@ def removeTemporaryFiles(basefilename = None):
     if _g_tempdir:
         shutil.rmtree(_g_tempdir, ignore_errors=True)
     if basefilename != None:
-        os.mkdir(_g_tempdir)
+        try:
+            os.mkdir(_g_tempdir)
+        except:
+            pass
 
 class MainWindow(QtGui.QMainWindow):
 
