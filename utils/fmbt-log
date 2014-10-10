@@ -80,6 +80,7 @@ import getopt
 import re
 import sys
 import urllib2
+import fmbt
 
 VALUE_SEPARATOR = '; '
 
@@ -288,7 +289,7 @@ if __name__ == '__main__':
             VALUE_SEPARATOR = arg
         elif opt in ['-t', '--time-format']:
             _g_time_format = arg
-            _g_time_formatter = lambda s: datetime.datetime.fromtimestamp(float(s)).strftime(_g_time_format)
+            _g_time_formatter = lambda s: fmbt.formatTime(_g_time_format,datetime.datetime.fromtimestamp(float(s)))
         elif opt in ['-o', '--output'] and not arg in ['', '-']:
             output_file_obj = file(arg, 'w')
 
