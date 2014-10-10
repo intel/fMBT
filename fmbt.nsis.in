@@ -24,15 +24,15 @@
  
 RequestExecutionLevel admin ;Require admin rights on NT6+ (When UAC is turned on)
  
-InstallDir "$PROGRAMFILES\${COMPANYNAME}\${APPNAME}"
+InstallDir "$PROGRAMFILES@PROGRAMFILES_SUFFIX@\${APPNAME}"
  
 # rtf or txt file - remember if it is txt, it must be in the DOS text format (\r\n)
 LicenseData "license.rtf"
 # This will be in the installer/uninstaller's title bar
 Name "${COMPANYNAME} - ${APPNAME}"
 Icon "fmbt.ico"
-outFile "fMBT-installer.exe"
- 
+outFile "fMBT-installer-@WINTYPE@.exe"
+
 !include LogicLib.nsh
  
 # Just three pages - license agreement, install location, and installation
@@ -43,19 +43,24 @@ Page instfiles
 Section -Prerequisites
   SetOutPath $INSTDIR\Prerequisites
   MessageBox MB_YESNO "Install Python 2.7.8" /SD IDYES IDNO endPython
-  file "python-2.7.8.amd64.msi"
-  ExecWait '"msiexec" /i "$INSTDIR\Prerequisites\python-2.7.8.amd64.msi"'
+    file "python-2.7.8@PYTHONPACKAGEARCH@.msi"
+    ExecWait '"msiexec" /i "$INSTDIR\Prerequisites\python-2.7.8@PYTHONPACKAGEARCH@.msi"'
   endPython:
 
   MessageBox MB_YESNO "Install PySide?" /SD IDYES IDNO endPySide
-    File "PySide-1.2.2.win-amd64-py2.7.exe"
-    ExecWait "$INSTDIR\Prerequisites\PySide-1.2.2.win-amd64-py2.7.exe"
+    File "PySide-1.2.2.win@PYSIDEARCH@-py2.7.exe"
+    ExecWait "$INSTDIR\Prerequisites\PySide-1.2.2.win@PYSIDEARCH@-py2.7.exe"
   endPySide:
 
   MessageBox MB_YESNO "Install Graphviz 2.38" /SD IDYES IDNO endGraphviz
-  file "graphviz-2.38.msi"
-  ExecWait '"msiexec" /i "$INSTDIR\Prerequisites\graphviz-2.38.msi"'
+    file "graphviz-2.38.msi"
+    ExecWait '"msiexec" /i "$INSTDIR\Prerequisites\graphviz-2.38.msi"'
   endGraphviz:
+
+  MessageBox MB_YESNO "Install GNUPlot 4.66" /SD IDYES IDNO endGNUplot
+    file "gp466-win64-setup.exe"
+    ExecWait "$INSTDIR\Prerequisites\gp466-@WINTYPE@-setup.exe"
+  endGNUplot:
 
 SectionEnd
  
@@ -90,15 +95,15 @@ section "install"
 
 # I don't know any sane method to handle dependencies. So hard-code.
 
-	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/gspawn-win64-helper-console.exe"
-	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/gspawn-win64-helper.exe"
+	file "@bindir@/gspawn-@WINTYPE@-helper-console.exe"
+	file "@bindir@/gspawn-@WINTYPE@-helper.exe"
 
-	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/iconv.dll"
-	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libboost_regex.dll"
-	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libgcc_s_seh-1.dll"
-	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libglib-2.0-0.dll"
-	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libintl-8.dll"
-	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libstdc++-6.dll"
+	file "@bindir@/iconv.dll"
+	file "@bindir@/libboost_regex.dll"
+	file "@bindir@/libgcc_s_seh-1.dll"
+	file "@bindir@/libglib-2.0-0.dll"
+	file "@bindir@/libintl-8.dll"
+	file "@bindir@/libstdc++-6.dll"
 
 # parts implemented in python
 	file "utils/remote_pyaal"
@@ -106,6 +111,9 @@ section "install"
 
 	file "utils/fmbt-view"
 	file ".libs/fmbt-view.exe"
+
+	file "utils/fmbt-scripter"
+	file ".libs/fmbt-scripter.exe"
 
 	file "utils/fmbt-editor"
 	file ".libs/fmbt-editor.exe"
@@ -147,15 +155,15 @@ section "install"
 	file "utils/lsts.py"
 
 	file "utils/.libs/eye4graphics.dll"
-	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/iconv.dll"
-	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libbz2-1.dll"
-	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libgcc_s_seh-1.dll"
-	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libMagickCore-6.Q16-1.dll"
-	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libpng16-16.dll"
-	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libstdc++-6.dll"
-	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libwinpthread-1.dll"
-	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/libxml2-2.dll"
-	file "/usr/x86_64-w64-mingw32/sys-root/mingw/bin/zlib1.dll"
+	file "@bindir@/iconv.dll"
+	file "@bindir@/libbz2-1.dll"
+	file "@bindir@/libgcc_s_seh-1.dll"
+	file "@bindir@/libMagickCore-6.Q16-1.dll"
+	file "@bindir@/libpng16-16.dll"
+	file "@bindir@/libstdc++-6.dll"
+	file "@bindir@/libwinpthread-1.dll"
+	file "@bindir@/libxml2-2.dll"
+	file "@bindir@/zlib1.dll"
 
 
 	# Add any other files for the install directory (license files, app data, etc) here
@@ -241,6 +249,8 @@ section "uninstall"
 
 	delete $INSTDIR\fmbt-view
 	delete $INSTDIR\fmbt-view.exe
+	delete $INSTDIR\fmbt-scripter
+	delete $INSTDIR\fmbt-scripter.exe
 	delete $INSTDIR\fmbt-log
 	delete $INSTDIR\fmbt-log.exe
 

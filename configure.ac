@@ -101,6 +101,7 @@ AC_CONFIG_FILES([
         examples/Makefile
         fMBT.spec
 	utils/fmbt_config.py
+	fmbt.nsis
         ])
 
 
@@ -117,13 +118,24 @@ AS_IF([test "x$with_imagemagick" != "xno"],
   [PKG_CHECK_MODULES([MAGICK], [MagickCore], [],
      [AC_MSG_FAILURE([ImageMagick not found.])])])
 
-AM_CONDITIONAL([HAVE_MAGICK], [test "x$with_imagemagick" != "xno"])
+AM_CONDITIONAL(HAVE_MAGICK, test x"$with_imagemagick" != "xno"])
 
 AS_CASE([$host],
   [*-*-mingw32], [DLINK_OBJ=""],
   [DLINK_OBJ=-ldl]
 )
+
+AS_CASE([$host],
+  [*64*-*-mingw32], [WINTYPE="win64" PYTHONPACKAGEARCH=".amd64" PYSIDEARCH="-amd64" PROGRAMFILES_SUFFIX="64"],
+  [i?86-*-mingw32], [WINTYPE="win32" PYTHONPACKAGEARCH="" PYSIDEARCH="32" PROGRAMFILES_SUFFIX=""],
+  [WINTYPE="" PYTHONPACKAGEARCH="" PYSIDEARCH="" PROGRAMFILES_SUFFIX=""]
+)
+
 AC_SUBST([DLINK_OBJ])
+AC_SUBST([WINTYPE])
+AC_SUBST([PYTHONPACKAGEARCH])
+AC_SUBST([PYSIDEARCH])
+AC_SUBST([PROGRAMFILES_SUFFIX])
 
 AM_CONDITIONAL(MINGW, test X"${DLINK_OBJ}" = "X")
 
