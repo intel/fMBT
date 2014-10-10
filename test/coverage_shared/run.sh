@@ -44,6 +44,8 @@ fmbt -l two.log two.conf >> $LOGFILE 2>&1 || {
     testfailed
 }
 
+fmbt-trace-share -K
+
 sleep 0.5
 
 if ps u -p `grep pid /tmp/fmbt.coverage_shared.trace.log|tail -1|awk '{print $NF}'` > /dev/null 2>&1; then
