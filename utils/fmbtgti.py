@@ -207,20 +207,20 @@ def _edgeDistanceInDirection((x, y), (width, height), direction):
 
     return min(distTopBottom, distLeftRight)
 
-### Binding to eye4graphics.so
+### Binding to eye4graphics C-library
 _libpath = ["", ".",
             os.path.dirname(os.path.abspath(__file__)),
             distutils.sysconfig.get_python_lib(plat_specific=1)]
 _suffix = ".so"
 if os.name == "nt":
-    _suffix = ".pyd"
+    _suffix = ".dll"
 for _dirname in _libpath:
     try:
         eye4graphics = ctypes.CDLL(os.path.join(_dirname , "eye4graphics"+_suffix))
         break
     except: pass
 else:
-    raise ImportError("%s cannot load eye4graphics.so" % (__file__,))
+    raise ImportError("%s cannot load eye4graphics.%s" % (__file__, _suffix))
 
 class _Bbox(ctypes.Structure):
     _fields_ = [("left", ctypes.c_int32),
