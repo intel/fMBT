@@ -376,6 +376,7 @@ class Device(fmbtgti.GUITestInterface):
 
         if connect == False and deviceName == "":
             deviceName = "nodevice"
+            self.serialNumber = self._conf.value("general", "serial", deviceName)
             self.setConnection(None)
         elif deviceName == "":
             # Connect to an unspecified device.
@@ -1502,7 +1503,7 @@ class View(object):
         self.serialNumber = serialNumber
         self._viewItems = []
         self._errors = []
-        self._lineRegEx = re.compile("(?P<indent>\s*)(?P<class>[\w.$]+)@(?P<id>[0-9A-Fa-f]{8} )(?P<properties>.*)")
+        self._lineRegEx = re.compile("(?P<indent>\s*)(?P<class>[\w.$]+)@(?P<id>[0-9A-Fa-f]{4,8} )(?P<properties>.*)")
         self._olderAndroidLineRegEx = re.compile("(?P<indent>\s*)(?P<class>[\w.$]+)@(?P<id>\w)(?P<properties>.*)")
         self._propRegEx = re.compile("(?P<prop>(?P<name>[^=]+)=(?P<len>\d+),)(?P<data>[^\s]* ?)")
         self._dump = dump
