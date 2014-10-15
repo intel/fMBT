@@ -2050,9 +2050,10 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         monkey_script = "type= raw events\ncount= %s\nspeed= 1.0\nstart data >>\n%s" % (
             len(eventLines.splitlines()), eventLines)
         remote_filename = "/sdcard/fmbtandroid.%s.monkey_script" % (fmbt.formatTime("%s.%f"),)
-        self._runAdb(["shell", "echo", monkey_script, ">", remote_filename, ";",
-                      "monkey", "-f", remote_filename, "1", ";",
-                      "rm", "-f", remote_filename])
+        cmd = ["shell", "echo \"" + monkey_script + "\" > " + remote_filename
+               + "; monkey -f" + remote_filename + " 1 ; rm -f " +
+               remote_filename]
+        self._runAdb(cmd)
 
     def sendMonkeyPinchZoom(self,
                   pt1XStart, pt1YStart, pt1XEnd, pt1YEnd,
