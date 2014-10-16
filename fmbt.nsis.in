@@ -21,6 +21,9 @@
 !define ABOUTURL "https://01.org/fmbt/about" # "Publisher" link
 # This is the size (in kB) of all the files copied into "Program Files"
 !define INSTALLSIZE 87233
+
+!define EDITENV_DLL "editenv.dll"
+!define ES_SYSTEM 1
  
 RequestExecutionLevel admin ;Require admin rights on NT6+ (When UAC is turned on)
  
@@ -88,6 +91,13 @@ section "install"
 #	ReadEnvStr $R0 "PATH"
 #	StrCpy $R0 "$R0;"$INSTDIR
 #	System::Call 'Kernel32::SetEnvironmentVariableA(t, t) i("PATH", R0).r0'
+
+	MessageBox MB_YESNO "Add fmbt to path?" IDYES addtopath IDNO skipaddtopath
+addtopath:
+	File "${EDITENV_DLL}"
+	System::Call "editenv::pathAdd(i ${ES_SYSTEM}, t '${INSTDIR}') ? u"
+	Delete "${EDITENV_DLL}"
+skipaddtopath:
 
 	file "src/.libs/fmbt-aalc.exe"
 	file "src/.libs/fmbt-aalp.exe"
@@ -216,6 +226,11 @@ section "uninstall"
 
 #	PATH cleanup
 #	${EnvVarUpdate} $0 "PATH" "R" "HKLM" $INSTDIR
+
+
+	File "${EDITENV_DLL}"
+	System::Call "editenv::pathRemove(i ${ES_SYSTEM}, t '${INSTDIR}') ? u"
+	Delete "${EDITENV_DLL}"
  
 	# Remove files
 	delete $INSTDIR\fmbt-aalc.exe
