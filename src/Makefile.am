@@ -16,7 +16,7 @@ FMBTBUILDINFOCFLAGS=-DFMBTBUILDINFO='"@FMBTBUILDINFO@"'
 
 include Sources.mk
 
-noinst_HEADERS =  aalang.hh aalang_cpp.hh aalang_java.hh aalang_py.hh adapter_rly08btech.hh adapter_dlopen.hh adapter_dummy.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_timer.hh adapter_v4l2.hh alg_bdfs.hh conf.hh coverage.hh coverage_proxy.hh coverage_exec_filter.hh coverage_join.hh coverage_include.hh coverage_mapper.hh coverage_market.hh coverage_of.hh coverage_prop.hh coverage_report.hh coverage_tema_seq.hh coverage_tree.hh end_condition.hh helper.hh heuristic_proxy.hh heuristic_include.hh heuristic_greedy.hh heuristic.hh heuristic_minerror.hh heuristic_mrandom.hh heuristic_random.hh history.hh history_glob.hh history_log.hh history_multi.hh history_remote.hh log_null.hh lts.hh lts_remote.hh lts_trace.hh lts_xrules.hh model.hh model_remote.hh null.hh of.hh of_csv.hh of_html.hh of_null.hh policy.hh rules.hh test_engine.hh xrules_remote.hh model_yes.hh aal_remote.hh coverage_uniq.hh coverage_set.hh heuristic_weight.hh coverage_avoid.hh coverage_trace.hh coverage_min.hh coverage_const.hh alphabet_impl.hh endhook.hh coverage_paths.hh model_filter.hh coverage_include.hh remote.hh coverage_end_condition.hh coverage_if.hh coverage_shared.hh coverage_short.hh coverage_notice.hh coverage_report_filter.hh coverage_restart.hh aalang_tag.hh aalang_action.hh model_cshared.hh coverage_nohistory.hh random.hh random_c.hh random_intel_hw.hh random_devrandom.hh random_supported.hh function.hh function_pid.hh function_const.hh function_time.hh function_ustime.hh function_supported.hh heuristic_coverage_random.hh coverage_random.hh proxy.hh
+noinst_HEADERS = windows_helper.cc aalang.hh aalang_cpp.hh aalang_java.hh aalang_py.hh adapter_rly08btech.hh adapter_dlopen.hh adapter_dummy.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_timer.hh adapter_v4l2.hh alg_bdfs.hh conf.hh coverage.hh coverage_proxy.hh coverage_exec_filter.hh coverage_join.hh coverage_include.hh coverage_mapper.hh coverage_market.hh coverage_of.hh coverage_prop.hh coverage_report.hh coverage_tema_seq.hh coverage_tree.hh end_condition.hh helper.hh heuristic_proxy.hh heuristic_include.hh heuristic_greedy.hh heuristic.hh heuristic_minerror.hh heuristic_mrandom.hh heuristic_random.hh history.hh history_glob.hh history_log.hh history_multi.hh history_remote.hh log_null.hh lts.hh lts_remote.hh lts_trace.hh lts_xrules.hh model.hh model_remote.hh null.hh of.hh of_csv.hh of_html.hh of_null.hh policy.hh rules.hh test_engine.hh xrules_remote.hh model_yes.hh aal_remote.hh coverage_uniq.hh coverage_set.hh heuristic_weight.hh coverage_avoid.hh coverage_trace.hh coverage_min.hh coverage_const.hh alphabet_impl.hh endhook.hh coverage_paths.hh model_filter.hh coverage_include.hh remote.hh coverage_end_condition.hh coverage_if.hh coverage_shared.hh coverage_short.hh coverage_notice.hh coverage_report_filter.hh coverage_restart.hh aalang_tag.hh aalang_action.hh model_cshared.hh coverage_nohistory.hh random.hh random_c.hh random_intel_hw.hh random_devrandom.hh random_supported.hh function.hh function_pid.hh function_const.hh function_time.hh function_ustime.hh function_supported.hh heuristic_coverage_random.hh coverage_random.hh proxy.hh
 
 pkginclude_HEADERS = aal.hh adapter.hh alphabet.hh awrapper.hh factory.hh helper.hh log.hh model.hh mwrapper.hh params.hh reffable.hh verdict.hh writable.hh
 
@@ -52,10 +52,8 @@ fmbt_log2lsts_LDADD   	       = d/libdparse.a
 
 dsources = d/baseline d/BUILD_VERSION d/calc d/CHANGES d/COPYRIGHT d/Makefile d/parser_tests d/README d/arg.h d/d.h d/dparse.h d/dparse_tables.h d/dparse_tree.h d/dsymtab.h d/gramgram.h d/gram.h d/lex.h d/lr.h d/mkdparse.h d/parse.h d/read_binary.h d/scan.h d/util.h d/write_tables.h d/arg.c d/dparse_tree.c d/driver_parsetree.c d/gram.c d/grammar.g.c d/lex.c d/lr.c d/make_dparser.c d/mkdparse.c d/my.c d/parse.c d/read_binary.c d/sample_parser.c d/scan.c d/symtab.c d/test_parser.c d/util.c d/version.c d/write_tables.c d/4calc.g d/C.g d/my.g d/sample.g d/faq.html d/index.html d/manual.html d/make_dparser.1 d/make_dparser.cat
 
-noinst_HEADERS += $(dsources)
-
 d/libdparse.a:
-	(mkdir d 2>/dev/null && cp -r d .) || true # qnd way to for VPATH build
+	(mkdir d 2>/dev/null && cp $(VPATH)/d/* d) || true # qnd way to for VPATH build
 	cd d;CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) $(MAKE) libdparse.a; make make_dparser
 
 # Building d/libdparse.a creates make_dparser, too. On the other hand,
@@ -65,40 +63,40 @@ d/libdparse.a:
 # following rules depend on d/libdparse.a, yet they need
 # d/make_dparser.
 weight.g.d_parser.cc: weight.g d/libdparse.a
-	d/make_dparser -o weight.g.d_parser.cc -i weight ./weight.g
+	d/make_dparser -o weight.g.d_parser.cc -i weight $(VPATH)/weight.g
 
 lang.g.d_parser.cc: lang.g d/libdparse.a
-	d/make_dparser -o lang.g.d_parser.cc -i lang ./lang.g
+	d/make_dparser -o lang.g.d_parser.cc -i lang $(VPATH)/lang.g
 
 mrules.g.d_parser.cc: mrules.g d/libdparse.a
-	d/make_dparser -o mrules.g.d_parser.cc -i mrules ./mrules.g
+	d/make_dparser -o mrules.g.d_parser.cc -i mrules $(VPATH)/mrules.g
 
 conf.g.d_parser.cc: conf.g d/libdparse.a
-	d/make_dparser -o conf.g.d_parser.cc -i conf ./conf.g
+	d/make_dparser -o conf.g.d_parser.cc -i conf $(VPATH)/conf.g
 
 lts.g.d_parser.cc: lts.g d/libdparse.a
-	d/make_dparser -o lts.g.d_parser.cc -i lts ./lts.g
+	d/make_dparser -o lts.g.d_parser.cc -i lts $(VPATH)/lts.g
 
 xrules.g.d_parser.cc: xrules.g d/libdparse.a
-	d/make_dparser -o xrules.g.d_parser.cc -i xrules ./xrules.g
+	d/make_dparser -o xrules.g.d_parser.cc -i xrules $(VPATH)/xrules.g
 
 xrules_extended.g.d_parser.cc: xrules_extended.g d/libdparse.a
-	d/make_dparser -o xrules_extended.g.d_parser.cc -i xrules_extended ./xrules_extended.g
+	d/make_dparser -o xrules_extended.g.d_parser.cc -i xrules_extended $(VPATH)/xrules_extended.g
 
 covlang.g.d_parser.cc: covlang.g d/libdparse.a
-	d/make_dparser -A -o covlang.g.d_parser.cc -i covlang ./covlang.g
+	d/make_dparser -A -o covlang.g.d_parser.cc -i covlang $(VPATH)/covlang.g
 
 uconf.g.d_parser.cc: uconf.g d/libdparse.a
-	d/make_dparser -o uconf.g.d_parser.cc -i uconf ./uconf.g
+	d/make_dparser -o uconf.g.d_parser.cc -i uconf $(VPATH)/uconf.g
 
 filter.g.d_parser.cc: filter.g d/libdparse.a
-	d/make_dparser -o filter.g.d_parser.cc -i filter ./filter.g
+	d/make_dparser -o filter.g.d_parser.cc -i filter $(VPATH)/filter.g
 
 set.g.d_parser.cc: set.g d/libdparse.a
-	d/make_dparser -o set.g.d_parser.cc -i set ./set.g
+	d/make_dparser -o set.g.d_parser.cc -i set $(VPATH)/set.g
 
 paths.g.d_parser.cc: paths.g d/libdparse.a
-	d/make_dparser -o paths.g.d_parser.cc -i paths ./paths.g
+	d/make_dparser -o paths.g.d_parser.cc -i paths $(VPATH)/paths.g
 
 clean-local:
 	(cd d; make clean)

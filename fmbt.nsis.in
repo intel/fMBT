@@ -61,7 +61,7 @@ Section -Prerequisites
   endGraphviz:
 
   MessageBox MB_YESNO "Install GNUPlot 4.66" /SD IDYES IDNO endGNUplot
-    file "gp466-win64-setup.exe"
+    file "gp466-@WINTYPE@-setup.exe"
     ExecWait "$INSTDIR\Prerequisites\gp466-@WINTYPE@-setup.exe"
   endGNUplot:
 
@@ -110,7 +110,7 @@ skipaddtopath:
 
 	file "@bindir@/iconv.dll"
 	file "@bindir@/libboost_regex.dll"
-	file "@bindir@/libgcc_s_seh-1.dll"
+	file "@bindir@/libgcc_s*.dll"
 	file "@bindir@/libglib-2.0-0.dll"
 	file "@bindir@/libintl-8.dll"
 	file "@bindir@/libstdc++-6.dll"
@@ -167,7 +167,6 @@ skipaddtopath:
 	file "utils/.libs/eye4graphics.dll"
 	file "@bindir@/iconv.dll"
 	file "@bindir@/libbz2-1.dll"
-	file "@bindir@/libgcc_s_seh-1.dll"
 	file "@bindir@/libMagickCore-6.Q16-1.dll"
 	file "@bindir@/libpng16-16.dll"
 	file "@bindir@/libstdc++-6.dll"
