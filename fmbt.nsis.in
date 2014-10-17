@@ -43,26 +43,31 @@ Page instfiles
 Section -Prerequisites
   SetOutPath $INSTDIR\Prerequisites
   MessageBox MB_YESNO "Install Python 2.7.8" /SD IDYES IDNO endPython
+    SetCompress off
     file "python-2.7.8@PYTHONPACKAGEARCH@.msi"
     ExecWait '"msiexec" /i "$INSTDIR\Prerequisites\python-2.7.8@PYTHONPACKAGEARCH@.msi"'
   endPython:
 
   MessageBox MB_YESNO "Install PySide?" /SD IDYES IDNO endPySide
+    SetCompress off
     File "PySide-1.2.2.win@PYSIDEARCH@-py2.7.exe"
     ExecWait "$INSTDIR\Prerequisites\PySide-1.2.2.win@PYSIDEARCH@-py2.7.exe"
   endPySide:
 
   MessageBox MB_YESNO "Install Graphviz 2.38" /SD IDYES IDNO endGraphviz
+    SetCompress off
     file "graphviz-2.38.msi"
     ExecWait '"msiexec" /i "$INSTDIR\Prerequisites\graphviz-2.38.msi"'
   endGraphviz:
 
   MessageBox MB_YESNO "Install GNUPlot 4.66" /SD IDYES IDNO endGNUplot
+    SetCompress off
     file "gp466-@WINTYPE@-setup.exe"
     ExecWait "$INSTDIR\Prerequisites\gp466-@WINTYPE@-setup.exe"
   endGNUplot:
 
   MessageBox MB_YESNO "Install tesseract" /SD IDYES IDNO endtesseract
+    SetCompress off
     file "tesseract-ocr-setup-3.02.02.exe"
     ExecWait "$INSTDIR\Prerequisites\tesseract-ocr-setup-3.02.02.exe"
   endtesseract:
@@ -89,10 +94,7 @@ section "install"
 	setOutPath $INSTDIR
 	# Files added here should be removed by the uninstaller (see section "uninstall")
 
-# might work if the user is lucky. If unlucky, corrups path.
-#	ReadEnvStr $R0 "PATH"
-#	StrCpy $R0 "$R0;"$INSTDIR
-#	System::Call 'Kernel32::SetEnvironmentVariableA(t, t) i("PATH", R0).r0'
+	SetCompress force
 
 	file "src/.libs/fmbt-aalc.exe"
 	file "src/.libs/fmbt-aalp.exe"
