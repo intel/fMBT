@@ -21,9 +21,6 @@
 !define ABOUTURL "https://01.org/fmbt/about" # "Publisher" link
 # This is the size (in kB) of all the files copied into "Program Files"
 !define INSTALLSIZE 87233
-
-!define EDITENV_DLL "editenv.dll"
-!define ES_SYSTEM 1
  
 RequestExecutionLevel admin ;Require admin rights on NT6+ (When UAC is turned on)
  
@@ -65,6 +62,11 @@ Section -Prerequisites
     ExecWait "$INSTDIR\Prerequisites\gp466-@WINTYPE@-setup.exe"
   endGNUplot:
 
+  MessageBox MB_YESNO "Install tesseract" /SD IDYES IDNO endtesseract
+    file "tesseract-ocr-setup-3.02.02.exe"
+    ExecWait "$INSTDIR\Prerequisites\tesseract-ocr-setup-3.02.02.exe"
+  endtesseract:
+
 SectionEnd
  
 !macro VerifyUserIsAdmin
@@ -92,13 +94,6 @@ section "install"
 #	StrCpy $R0 "$R0;"$INSTDIR
 #	System::Call 'Kernel32::SetEnvironmentVariableA(t, t) i("PATH", R0).r0'
 
-	MessageBox MB_YESNO "Add fmbt to path?" IDYES addtopath IDNO skipaddtopath
-addtopath:
-	File "${EDITENV_DLL}"
-	System::Call "editenv::pathAdd(i ${ES_SYSTEM}, t '${INSTDIR}') ? u"
-	Delete "${EDITENV_DLL}"
-skipaddtopath:
-
 	file "src/.libs/fmbt-aalc.exe"
 	file "src/.libs/fmbt-aalp.exe"
 	file "src/.libs/fmbt.exe"
@@ -107,6 +102,8 @@ skipaddtopath:
 
 	file "@bindir@/gspawn-@WINTYPE@-helper-console.exe"
 	file "@bindir@/gspawn-@WINTYPE@-helper.exe"
+
+	file "convert.exe"
 
 	file "@bindir@/iconv.dll"
 	file "@bindir@/libboost_regex.dll"
@@ -169,6 +166,7 @@ skipaddtopath:
 	file "@bindir@/libbz2-1.dll"
 	file "@bindir@/libMagickCore-6.Q16-1.dll"
 	file "@bindir@/libpng16-16.dll"
+	file "@bindir@/libMagickWand-6.Q16-1.dll"
 	file "@bindir@/libstdc++-6.dll"
 	file "@bindir@/libwinpthread-1.dll"
 	file "@bindir@/libxml2-2.dll"
@@ -225,11 +223,6 @@ section "uninstall"
 
 #	PATH cleanup
 #	${EnvVarUpdate} $0 "PATH" "R" "HKLM" $INSTDIR
-
-
-	File "${EDITENV_DLL}"
-	System::Call "editenv::pathRemove(i ${ES_SYSTEM}, t '${INSTDIR}') ? u"
-	Delete "${EDITENV_DLL}"
  
 	# Remove files
 	delete $INSTDIR\fmbt-aalc.exe
