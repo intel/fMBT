@@ -72,15 +72,16 @@ def error(msg, exit_status=1):
     sys.stderr.write("lsts2dot: %s\n" % (msg,))
     sys.exit(exit_status)
 
-COLOR_ST_CANNOT_SIMULATE = "#a08000"
-COLOR_ST_PASS            = "#00b000"
-COLOR_ST_FAIL            = "#d00000"
-COLOR_ST_INCONC          = "#c0c0c0"
-COLOR_ST_VISITED         = "#a0ffa0"
+COLOR_ST_CANNOT_SIMULATE = "#ffff80"
+COLOR_ST_PASS            = "#90e090"
+COLOR_ST_FAIL            = "#ffc0c0"
+COLOR_ST_INCONC          = "#e0e0e0"
+COLOR_ST_VISITED         = "#d0ffd0"
 COLOR_ST_INVERTED        = "#a0c0ff" # not visited state
 COLOR_TR_FAIL            = "#c00000"
-COLOR_TR_SUGG            = "#f000f0"
-COLOR_TR_EXEC            = "#00c020"
+COLOR_TR_SUGG            = "#000080"
+COLOR_TR_EXEC            = "#008000"
+COLOR_TR_EXEC_LOOP       = "#006000"
 COLOR_TR_INVERTED        = "#00a0ff" # not exec'd transition
 
 def colors(lsts_obj, testlog_fileobj):
@@ -108,29 +109,27 @@ def colors(lsts_obj, testlog_fileobj):
         line = p.stdout.readline()
         while line:
             action_sugg, action_exec, tv = line.strip().split('*LSTS2DOT*')
-            if action_exec == "":
+
+            if action_sugg != action_exec:
+                sugg_tr = find_transition(action_sugg, lsts_obj, current_state)
+                if sugg_tr and not sugg_tr in tr_colors:
+                    tr_colors[sugg_tr] = COLOR_TR_SUGG
+
+            if tv != "":
                 if tv == "pass":
                     state_colors[current_state] = COLOR_ST_PASS
                     current_state = initial_state
                 elif tv == "inconclusive":
                     state_colors[current_state] = COLOR_ST_INCONC
                     current_state = initial_state
-                elif tv == "fail":
-                    sys.stderr.write('failing... %s\n' % (action_sugg,))
-                    if action_sugg != "":
-                        sugg_tr = find_transition(action_sugg, lsts_obj, current_state)
-                        sys.stderr.write(str(sugg_tr) + '\n')
-                        if sugg_tr: tr_colors[sugg_tr] = COLOR_TR_FAIL
+                elif tv in ["fail", "error"]:
+                    if sugg_tr:
+                        tr_colors[sugg_tr] = COLOR_TR_FAIL
                     state_colors[current_state] = COLOR_ST_FAIL
                     current_state = initial_state
                 line = p.stdout.readline()
                 continue
             next_state = None
-
-            if action_sugg != action_exec:
-                sugg_tr = find_transition(action_sugg, lsts_obj, current_state)
-                if sugg_tr and not sugg_tr in tr_colors:
-                    tr_colors[sugg_tr] = COLOR_TR_SUGG
 
             exec_tr = find_transition(action_exec, lsts_obj, current_state)
             if exec_tr:
@@ -151,7 +150,8 @@ def colors(lsts_obj, testlog_fileobj):
 def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert_colors = False,
              erase_transitions = [], erase_untraversed = [],
              show_transitions = [], show_traversed = [],
-             erase_orphaned_states = False, erase_unvisited_states = False):
+             erase_orphaned_states = False, erase_unvisited_states = False,
+             opt_multilabel_transitions = True):
     outfileobj.write('digraph g {\n')
     outfileobj.write('    node [shape=box]\n')
     l = lsts.reader(infileobj)
@@ -195,7 +195,7 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
                     erase_all_actions.add(actionindex)
 
     for propname in l.get_stateprops():
-        prettyname = "[" + propname.replace('"','\\"') + "]"
+        prettyname = "[%s]" % (propname.replace('"','\\"'),)
         for state in l.get_stateprops()[propname]:
             if state in state2props:
                 state2props[state].append(prettyname)
@@ -203,6 +203,7 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
                 state2props[state]=[prettyname]
 
     states_with_transitions = set([])
+    visible_transitions = {}
     for source,outtrans in enumerate(l.get_transitions()):
         for dest,action in outtrans:
             if action in erase_all_actions: continue
@@ -213,8 +214,16 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
                 states_with_transitions.add(dest)
             a = actionnames[action]
             if loops_as_props and source==dest:
-                if source in state2props: state2props[source].append(a)
-                else: state2props[source] = [a]
+                if tr_colors and (source, action, dest) in tr_colors:
+                    colordata = ' color="%s"' % (tr_colors[(source, action, dest)],)
+                    if COLOR_TR_EXEC in colordata:
+                        colordata = colordata.replace(COLOR_TR_EXEC, COLOR_TR_EXEC_LOOP)
+                else:
+                    colordata = ''
+                if not source in state2props:
+                    state2props[source] = []
+                state2props[source].append('<font%s>%s</font>' %
+                                           (colordata, a))
             else:
                 if tr_colors and (source, action, dest) in tr_colors:
                     normal_color = tr_colors[(source, action, dest)]
@@ -231,14 +240,31 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
                         colordata = ' color="%s"' % (COLOR_TR_INVERTED,)
                     else:
                         colordata = ''
-                outfileobj.write('    S%s -> S%s [label="%s"%s]\n'
-                                 % (source,dest,a,colordata))
+                if not (source, dest) in visible_transitions:
+                    visible_transitions[(source, dest)] = []
+                source2dest_transitions = visible_transitions[(source, dest)]
+                if opt_multilabel_transitions and source2dest_transitions:
+                    old_label = source2dest_transitions[0]
+                    source2dest_transitions[0] = (
+                        old_label +
+                        ("<br align=\"left\"/><font%s>%s</font>" % (colordata, a)))
+                else:
+                    visible_transitions[(source, dest)].append("<font%s>%s</font>" % (colordata, a))
+    for (source, dest) in sorted(visible_transitions.keys()):
+        for label in visible_transitions[(source, dest)]:
+            if COLOR_TR_EXEC in label:
+                edge_color = ' color="%s"' % (COLOR_TR_EXEC,)
+            else:
+                edge_color = ""
+            outfileobj.write('    S%s -> S%s [label=<%s>%s]\n'
+                             % (source, dest, label, edge_color))
 
     for state in xrange(l.get_header().state_cnt):
         if erase_orphaned_states and not state in states_with_transitions:
             continue
         props = state2props.get(state, [])
-        props.sort()
+        _tags = [p for p in props if p.startswith("[")]
+        _loops = [p for p in props if not p.startswith("[")]
         colordata = ''
         if state_colors:
             if state in state_colors:
@@ -250,8 +276,11 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
                     continue
                 if invert_colors:
                     colordata = ' fillcolor="%s" style="filled"' % (COLOR_ST_INVERTED,)
-        outfileobj.write('    S%s [label="%s\\l"%s]\n'
-                         % (state,"\\l".join(props),colordata))
+        outfileobj.write(
+            '    S%s [label=<%s<br align="left"/>>%s]\n'
+            % (state,
+               "<br align=\"left\"/>".join(sorted(_tags) + sorted(_loops)),
+               colordata))
     outfileobj.write('}\n')
 
 if __name__=='__main__':
@@ -318,7 +347,8 @@ if __name__=='__main__':
 
     lsts2dot(infile, outfile, loops_as_props, logfile, invert_colors,
              erase_transitions, erase_untraversed, show_transitions, show_traversed,
-             erase_orphaned_states, erase_unvisited_states)
+             erase_orphaned_states, erase_unvisited_states,
+             True)
 
     try: outfile.close()
     except: pass
