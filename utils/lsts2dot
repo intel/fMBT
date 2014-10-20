@@ -153,7 +153,8 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
              erase_orphaned_states = False, erase_unvisited_states = False,
              opt_multilabel_transitions = True):
     outfileobj.write('digraph g {\n')
-    outfileobj.write('    node [shape=box]\n')
+    outfileobj.write('    node [shape=box fontname="sans-serif"];\n')
+    outfileobj.write('    edge [fontname="sans-serif"];\n')
     l = lsts.reader(infileobj)
 
     if logfile != None:
