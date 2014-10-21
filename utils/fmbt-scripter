@@ -2871,9 +2871,47 @@ class HelpDialog(QtGui.QWidget):
 opt_debug = 0
 _app = None
 
+def _checkUnsavedWork():
+    try:
+        unsaved_filename = _win._scriptFilename
+        unsaved_data = _win.editor.toPlainText()
+    except (NameError, AttributeError):
+        # window or data does not exist
+        return None
+
+    if unsaved_filename != None:
+        try:
+            saved_data = file(unsaved_filename).read()
+        except OSError:
+            # file not readable
+            return None
+
+        if unsaved_data == saved_data:
+            # everything is saved
+            return None
+        save_to_target = ' to "%s"' % (unsaved_filename,)
+    else:
+        if unsaved_data.strip() == "":
+            # no filename, only whitespace in editor
+            return None
+
+        save_to_target = ""
+
+    reply = QtGui.QMessageBox.question(
+        None, "fmbt-scripter",
+        'Save changes%s?' % (save_to_target,),
+        QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+
+    if reply == QtGui.QMessageBox.Yes:
+        _win.save()
+
+def _quitting():
+    _checkUnsavedWork()
+
 def main():
     global opt_debug
     global _app
+    global _win
 
     sys.path.insert(0, os.getcwd())
 
@@ -2916,6 +2954,7 @@ def main():
     if _win.autoConnect():
         _win.scheduleUpdateScreenshot(1.0)
     _win.show()
+    _app.aboutToQuit.connect(_quitting)
     _app.exec_()
 
 if __name__ == "__main__":
