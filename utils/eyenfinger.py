@@ -527,8 +527,10 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
         iUseWindow(windowId)
 
         # take a screenshot
-        _runcmd("xwd -root -screen -out %s.xwd && convert %s.xwd -crop %sx%s+%s+%s +repage '%s'" %
-               (SCREENSHOT_FILENAME, SCREENSHOT_FILENAME,
+        import fmbtx11
+        fmbtx11.Screen().refreshScreenshot().save(SCREENSHOT_FILENAME + ".png")
+        _runcmd("convert %s.png -crop %sx%s+%s+%s +repage '%s'" %
+               (SCREENSHOT_FILENAME,
                 _g_windowSizes[_g_lastWindow][0], _g_windowSizes[_g_lastWindow][1],
                 _g_windowOffsets[_g_lastWindow][0], _g_windowOffsets[_g_lastWindow][1],
                 SCREENSHOT_FILENAME))

@@ -20,6 +20,7 @@
 import ctypes
 import fmbtgti
 
+PNG_MAGIC = "\x89PNG\x0d\x0a\x1a\x0a"
 PNG_HEADER_VERSION_STRING = None
 PNG_COLOR_MASK_COLOR = 2
 PNG_COLOR_MASK_ALPHA = 4
