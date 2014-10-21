@@ -351,7 +351,7 @@ class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
 
-        self._modelFileName = _g_tempdir + os.sep + "noname.gt"
+        self._modelFileName = os.path.join(_g_tempdir, "noname.aal")
 
         self._modelEditorFiles = {}
         self._confFileName = None
@@ -387,6 +387,7 @@ class MainWindow(QtGui.QMainWindow):
         self._previewTabBeforeError = None
         self._previewTakeFocusOnTabChange = True
 
+        self.newFileAAL(self._modelFileName)
 
     def about(self):
         QtGui.QMessageBox.about(self, "fMBT editor",'''

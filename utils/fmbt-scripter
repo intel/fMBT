@@ -1060,7 +1060,7 @@ class MainWindow(QtGui.QMainWindow):
     def bitmapFilepath(self, filename):
         try:
             filepath, _ = self._fmbtEval(
-                '%s._paths.abspath("%s")' % (self._sut, filename),
+                '%s._paths.abspaths("%s")[0]' % (self._sut, filename),
                 silent=True)
             return filepath
         except ValueError:

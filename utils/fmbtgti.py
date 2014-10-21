@@ -220,7 +220,7 @@ for _dirname in _libpath:
         break
     except: pass
 else:
-    raise ImportError("%s cannot load eye4graphics.%s" % (__file__, _suffix))
+    raise ImportError("%s cannot load eye4graphics%s" % (__file__, _suffix))
 
 class _Bbox(ctypes.Structure):
     _fields_ = [("left", ctypes.c_int32),

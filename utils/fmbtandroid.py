@@ -376,6 +376,7 @@ class Device(fmbtgti.GUITestInterface):
 
         if connect == False and deviceName == "":
             deviceName = "nodevice"
+            self.serialNumber = self._conf.value("general", "serial", deviceName)
             self.setConnection(None)
         elif deviceName == "":
             # Connect to an unspecified device.
@@ -760,7 +761,7 @@ class Device(fmbtgti.GUITestInterface):
         """
         if self._platformVersion == None:
             if self._conn:
-                self._platformVersion = self._conn.recvVariable("build.version.release")
+                self._platformVersion = self._conn._platformVersion
             else:
                 self._platformVersion = "nosoftware"
         return self._platformVersion
@@ -1502,7 +1503,7 @@ class View(object):
         self.serialNumber = serialNumber
         self._viewItems = []
         self._errors = []
-        self._lineRegEx = re.compile("(?P<indent>\s*)(?P<class>[\w.$]+)@(?P<id>[0-9A-Fa-f]{8} )(?P<properties>.*)")
+        self._lineRegEx = re.compile("(?P<indent>\s*)(?P<class>[\w.$]+)@(?P<id>[0-9A-Fa-f]{4,8} )(?P<properties>.*)")
         self._olderAndroidLineRegEx = re.compile("(?P<indent>\s*)(?P<class>[\w.$]+)@(?P<id>\w)(?P<properties>.*)")
         self._propRegEx = re.compile("(?P<prop>(?P<name>[^=]+)=(?P<len>\d+),)(?P<data>[^\s]* ?)")
         self._dump = dump
@@ -1777,6 +1778,12 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
 
     def _detectFeatures(self):
         # check supported features
+        outputLines = self._runAdb(["shell", "getprop", "ro.build.version.release"])[1].splitlines()
+        if len(outputLines) >= 1:
+            self._platformVersion = outputLines[0].strip().split("=")[-1]
+        else:
+            self._platformVersion = "N/A"
+
         outputLines = self._runAdb(["shell", "id"])[1].splitlines()
         if len(outputLines) == 1 and "uid=0" in outputLines[0]:
             self._shellUid0 = True
@@ -1811,8 +1818,22 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             monkeyLaunch = ["su", "root", "monkey"]
         else:
             monkeyLaunch = ["monkey"]
+
+        if self._platformVersion >= "4.5":
+            monkeyLaunch += ["--no-system-exit-call"] # Workaround a monkey crash
+
         while time.time() < endTime:
-            if not self._runSetupCmd(["shell"] + monkeyLaunch + ["--port", "1080"], None):
+            monkeyStatus, monkeyOutput, _ = self._runAdb(["shell"] + monkeyLaunch + ["--port", "1080"])
+            if "Error: Unknown option:" in monkeyOutput:
+                uo = monkeyOutput.splitlines()[0].split(":")[-1].strip()
+                _adapterLog('monkey launch failed, unknown option "%s". Disabling it.' % (uo,))
+                try:
+                    monkeyLaunch.remove(uo)
+                except ValueError:
+                    pass
+                continue
+            elif monkeyStatus != 0:
+                _adapterLog("monkey launch failed, unexpected exit status %s, output: %s" % (monkeyStatus, monkeyOutput))
                 time.sleep(pollDelay)
                 failureCountSinceKill += 1
                 continue
@@ -1826,11 +1847,12 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
                 self._monkeySocket.connect((self._m_host, self._m_port))
                 self._monkeySocket.setblocking(0)
                 self._monkeySocket.settimeout(1.0)
-                self._platformVersion = self._monkeyCommand("getvar build.version.release", retry=0)[1]
-                if len(self._platformVersion) > 0:
+                _ping = self._monkeyCommand("getvar build.version.release", retry=0)[1]
+                if len(_ping) > 0:
                     self._monkeySocket.settimeout(5.0)
                     return True
             except Exception, e:
+                _adapterLog("monkey connection failed, output: %s" % (monkeyOutput,))
                 failureCountSinceKill += 1
             time.sleep(pollDelay)
             if failureCountSinceKill > 2 and tryKillingMonkeyOnFailure > 0:
@@ -2049,9 +2071,10 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         monkey_script = "type= raw events\ncount= %s\nspeed= 1.0\nstart data >>\n%s" % (
             len(eventLines.splitlines()), eventLines)
         remote_filename = "/sdcard/fmbtandroid.%s.monkey_script" % (fmbt.formatTime("%s.%f"),)
-        self._runAdb(["shell", "echo", monkey_script, ">", remote_filename, ";",
-                      "monkey", "-f", remote_filename, "1", ";",
-                      "rm", "-f", remote_filename])
+        cmd = ["shell", "echo \"" + monkey_script + "\" > " + remote_filename
+               + "; monkey -f" + remote_filename + " 1 ; rm -f " +
+               remote_filename]
+        self._runAdb(cmd)
 
     def sendMonkeyPinchZoom(self,
                   pt1XStart, pt1YStart, pt1XEnd, pt1YEnd,

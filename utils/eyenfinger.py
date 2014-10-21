@@ -15,7 +15,9 @@
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
 """
-eyenfinger - GUI testing library based on OCR and X event generation
+eyenfinger - DEPRECATED GUI testing library based on OCR and X event generation
+
+Use fmbtx11 instead.
 
 Configuring low-level key presses
 ---------------------------------
@@ -76,6 +78,7 @@ import sys
 import os
 import tempfile
 import atexit
+import shlex
 import shutil
 import ctypes
 import platform
@@ -287,11 +290,12 @@ atexit.register(_exitHandler)
 
 def _runcmd(cmd):
     global _g_last_runcmd_error
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(cmd, shell=isinstance(cmd, basestring),
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output = p.stdout.read()
     exit_status = p.wait()
     _g_last_runcmd_error = p.stderr.read()
-    if p.wait() != 0:
+    if exit_status != 0:
         _log("runcmd: " + cmd)
         _log("exit status: " + str(exit_status))
         _log("stdout: " + output)
@@ -553,11 +557,11 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
     # convert to text
     _g_readImage = _g_origImage + "-pp.png"
     if ocrArea == (0, 0, 1.0, 1.0):
-        croparea = ""
+        croparea = []
         wordXOffset = 0
         wordYOffset = 0
     else:
-        croparea = "-crop %sx%s+%s+%s +repage" % (x2-x1, y2-y1, x1, y1)
+        croparea = ["-crop", "%sx%s+%s+%s" % (x2-x1, y2-y1, x1, y1), "+repage"]
         wordXOffset = x1
         wordYOffset = y1
         # rescale possible resize preprocessing parameter
@@ -570,13 +574,19 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
                           preprocess[resize_m.end():])
     _g_words = {}
     for psm in ocrPageSegModes:
-        cmd = "convert %s %s %s %s && tesseract %s %s -l %s -psm %s hocr" % (
-                _g_origImage, croparea, preprocess, _g_readImage,
-                _g_readImage, SCREENSHOT_FILENAME, lang, psm)
-        exit_status, _g_hocr = _runcmd(cmd)
-
+        convert_cmd = (["convert", _g_origImage] + croparea +
+                       shlex.split(preprocess) + [_g_readImage])
+        tesseract_cmd = ["tesseract", _g_readImage, SCREENSHOT_FILENAME,
+                         "-l", lang, "-psm", str(psm), "hocr"]
+        exit_status, output = _runcmd(convert_cmd)
         if exit_status != 0:
-            raise NoOCRResults("Tesseract returned non-zero exit code.\n%s" % (_g_last_runcmd_error,))
+            raise NoOCRResults("Convert returned exit status (%s): %s"
+                               % (exit_status, _g_last_runcmd_error))
+
+        exit_status, output = _runcmd(tesseract_cmd)
+        if exit_status != 0:
+            raise NoOCRResults("Tesseract returned exit status (%s): %s"
+                               % (exit_status, _g_last_runcmd_error))
 
         hocr_filename = SCREENSHOT_FILENAME + ".html" # Tesseract 3.02
 
