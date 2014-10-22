@@ -28,7 +28,7 @@ fmbt -l shared.log shared.conf >> $LOGFILE 2>&1 || {
     testfailed
 }
 
-sleep 0.5
+sleep 2
 
 if ps u -p `grep pid /tmp/fmbt.coverage_shared.trace.log|tail -1|awk '{print $NF}'` > /dev/null 2>&1; then
     echo "fmbt-trace-shared session server alive" >>$LOGFILE
