@@ -24,6 +24,11 @@ import os
 import subprocess
 import zlib
 
+try:
+    import fmbtpng
+except ImportError:
+    fmbtpng = None
+
 _g_current_user = getpass.getuser()
 
 libX11 = ctypes.CDLL("libX11.so.6")
@@ -244,18 +249,25 @@ class Display(object):
             success = success and self.sendPress(character)
         return success
 
-    def recvScreenshot(self):
+    def recvScreenshot(self, fmt="FMBTRAWX11"):
         image_p = libX11.XGetImage(self._display, self._root_window,
                                    0, 0, self._width, self._height,
                                    _X_AllPlanes, _X_ZPixmap)
         image = image_p[0]
-        # FMBTRAWX11 image format header:
-        # FMBTRAWX11 [width] [height] [color depth] [bits per pixel]<linefeed>
-        # Binary data
-        rawfmbt_header = "FMBTRAWX11 %d %d %d %d\n" % (
-            image.width, image.height, self._depth, image.bits_per_pixel)
-        rawfmbt_data = ctypes.string_at(image.data, image.height * image.bytes_per_line)
-        compressed_image = rawfmbt_header + zlib.compress(rawfmbt_data, 3)
+        if fmt.upper() == "FMBTRAWX11" or fmbtpng == None:
+            # FMBTRAWX11 image format header:
+            # FMBTRAWX11 [width] [height] [color depth] [bits per pixel]<linefeed>
+            # Binary data
+            rawfmbt_header = "FMBTRAWX11 %d %d %d %d\n" % (
+                image.width, image.height, self._depth, image.bits_per_pixel)
+            rawfmbt_data = ctypes.string_at(image.data, image.height * image.bytes_per_line)
+            compressed_image = rawfmbt_header + zlib.compress(rawfmbt_data, 3)
+        elif fmt.upper() == "PNG" and fmbtpng != None:
+            rawdata = ctypes.string_at(image.data, image.height * image.bytes_per_line)
+            compressed_image = fmbtpng.raw2png(rawdata, image.width, image.height, image.bits_per_pixel / 4, "BGR_")
+        else:
+            compressed_image = None
+
         libX11.XDestroyImage(image_p)
         return compressed_image
 

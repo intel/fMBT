@@ -56,9 +56,30 @@ class X11Connection(fmbtx11_conn.Display):
     def recvScreenshot(self, filename):
         # This is a hack to get this stack quickly testable,
         # let's replace this with Xlib/libMagick functions, too...
-        import commands
-        commands.getstatusoutput("xwd -root -display '%s' -out '%s.xwd'" % (self._displayName, filename))
-        commands.getstatusoutput("convert '%s.xwd' '%s'" % (filename, filename))
+        data = fmbtx11_conn.Display.recvScreenshot(self, "PNG")
+        if data:
+            if data.startswith("FMBTRAWX11"):
+                try:
+                    header, zdata = img.split('\n', 1)
+                    width, height, depth, bpp = [int(n) for n in header.split()[1:]]
+                    data = zlib.decompress(zdata)
+                except Exception, e:
+                    raise FMBTX11Error("Corrupted screenshot data: %s" % (e,))
+
+                if len(data) != width * height * 4:
+                    raise FMBTX11Error("Image data size mismatch.")
+
+                fmbtgti.eye4graphics.bgrx2rgb(data, width, height)
+                ppm_header = "P6\n%d %d\n%d\n" % (width, height, 255)
+                f = file(filename + ".ppm", "w").write(ppm_header + data[:width*height*3])
+                _run(["convert", filename + ".ppm", filename])
+                os.remove("%s.ppm" % (filename,))
+            elif fmbtx11_conn.fmbtpng and data.startswith(fmbtx11_conn.fmbtpng.PNG_MAGIC):
+                file(filename, "w").write(data)
+            else:
+                raise FMBTX11Error('Unsupported image format "%s"...' % (data[:4],))
+        else:
+            return False
         return True
 
 class FMBTX11Error(Exception): pass

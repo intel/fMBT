@@ -105,7 +105,6 @@ Generic remote adapters for running shell script, Python expressions and Javascr
 %package adapter-eyenfinger
 Summary: Deprecated fMBT adapter for GUI testing, use fmbtx11 instead.
 Requires: ImageMagick
-Requires: /usr/bin/xwd
 Requires: tesseract
 %if 0%{?suse_version}
 Requires: libpng12-0

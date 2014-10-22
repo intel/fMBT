@@ -480,26 +480,26 @@ Keyboard shortcuts:<br>
         self._set_confFileName(path)
         self._doGenerateConf()
 
-    def saveFile(self):
+    def saveFile(self, updateOnSave=True):
         if self._previewOnlyMode: return
         if self.edit.currentIndex() == EDITTAB_GT:
             if self._modelFileName.startswith(_g_tempdir):
-                self.saveFileAs()
+                self.saveFileAs(updateOnSave=updateOnSave)
             else:
                 print "[saving '%s']" % (self._modelEditorActiveFile,)
                 file(self._modelEditorActiveFile, "w").write(_deleteTrailingWhitespace(self.editor.toPlainText()))
-                if self._menuOptionUpdateOnSave.isChecked():
+                if updateOnSave and self._menuOptionUpdateOnSave.isChecked():
                     self.refreshImages()
         else:
             if not self._confFileName or self._confFileName.startswith(_g_tempdir):
-                self.saveFileAs()
+                self.saveFileAs(updateOnSave=updateOnSave)
             else:
                 print "[saving '%s']" % (self._confFileName,)
                 file(self._confFileName, "w").write(_deleteTrailingWhitespace(self.conf_editor.toPlainText()))
-                if self._menuOptionUpdateOnSave.isChecked():
+                if updateOnSave and self._menuOptionUpdateOnSave.isChecked():
                     self.refreshImages()
 
-    def saveFileAs(self):
+    def saveFileAs(self, updateOnSave=True):
         fileFormats = {'gt': "fMBT GT commands (*.gt)",
                        'aal': "fMBT AAL models (*.aal)",
                        'lsts': "State machines (*.lsts)",
@@ -535,7 +535,7 @@ Keyboard shortcuts:<br>
         else:
             self._set_confFileName(newName)
 
-        self.saveFile()
+        self.saveFile(updateOnSave=updateOnSave)
 
     def openFile(self, path=None):
         if not path:
@@ -2369,6 +2369,44 @@ class FindDialog(QtGui.QDialog):
         cf.setBackground(QtCore.Qt.white)
         cursor.setCharFormat(cf)
 
+def _checkUnsavedWork():
+    try:
+        unsaved_filename = window._modelFileName
+        unsaved_data = window.editor.toPlainText()
+    except (NameError, AttributeError):
+        # window or data does not exist
+        return None
+
+    if unsaved_filename != None and not "noname." in unsaved_filename:
+        try:
+            saved_data = file(unsaved_filename).read()
+        except OSError:
+            # file not readable
+            return None
+
+        if unsaved_data == saved_data:
+            # everything is saved
+            return None
+        save_to_target = ' to "%s"' % (unsaved_filename,)
+    else:
+        if unsaved_data.strip() == "":
+            # no filename, only whitespace in editor
+            return None
+
+        save_to_target = ""
+
+    reply = QtGui.QMessageBox.question(
+        None, "fmbt-editor",
+        'Save changes%s?' % (save_to_target,),
+        QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+
+    if reply == QtGui.QMessageBox.Yes:
+        window.edit.setCurrentIndex(EDITTAB_GT)
+        window.saveFile(updateOnSave=False)
+
+def _quitting():
+    _checkUnsavedWork()
+
 def _exitHandler():
     removeTemporaryFiles()
 atexit.register(_exitHandler)
@@ -2439,5 +2477,6 @@ if __name__ == '__main__':
     timer = QtCore.QTimer()
     QtCore.QTimer.singleShot(300, window.refreshImages)
 
+    app.aboutToQuit.connect(_quitting)
     app.exec_()
     removeTemporaryFiles(window._modelFileName)

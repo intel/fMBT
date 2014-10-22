@@ -130,6 +130,7 @@ class ChromiumOSConnection(fmbtgti.GUITestConnection):
 
         self.sendFilesInTar(myDir,
                             ("fmbtx11_conn.py",
+                             "fmbtpng.py",
                              "fmbtuinput.py"),
                             "/tmp/fmbtchromiumos")
 

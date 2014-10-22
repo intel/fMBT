@@ -1823,20 +1823,10 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             monkeyLaunch += ["--no-system-exit-call"] # Workaround a monkey crash
 
         while time.time() < endTime:
-            monkeyStatus, monkeyOutput, _ = self._runAdb(["shell"] + monkeyLaunch + ["--port", "1080"])
-            if "Error: Unknown option:" in monkeyOutput:
-                uo = monkeyOutput.splitlines()[0].split(":")[-1].strip()
-                _adapterLog('monkey launch failed, unknown option "%s". Disabling it.' % (uo,))
-                try:
-                    monkeyLaunch.remove(uo)
-                except ValueError:
-                    pass
-                continue
-            elif monkeyStatus != 0:
-                _adapterLog("monkey launch failed, unexpected exit status %s, output: %s" % (monkeyStatus, monkeyOutput))
-                time.sleep(pollDelay)
-                failureCountSinceKill += 1
-                continue
+            monkeyShellCmd = (" ".join(monkeyLaunch + ["--port", "1080"]) +
+                              " >/sdcard/fmbtandroid.monkey.outerr 2>&1")
+            _adapterLog('launching monkey: adb shell "%s"' % (monkeyShellCmd,))
+            self._runAdb(["shell", monkeyShellCmd], expectedExitStatus=None)
             time.sleep(pollDelay)
             if not self._runSetupCmd(["forward", "tcp:"+str(self._m_port), "tcp:1080"]):
                 time.sleep(pollDelay)
@@ -1852,6 +1842,15 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
                     self._monkeySocket.settimeout(5.0)
                     return True
             except Exception, e:
+                _, monkeyOutput, _ = self._runAdb(["shell", "cat /sdcard/fmbtandroid.monkey.outerr"])
+                if "Error: Unknown option:" in monkeyOutput:
+                    uo = monkeyOutput.splitlines()[0].split(":")[-1].strip()
+                    _adapterLog('detected an unknown option for monkey: "%s". Disabling it.' % (uo,))
+                    try:
+                        monkeyLaunch.remove(uo)
+                    except ValueError:
+                        pass
+                    continue
                 _adapterLog("monkey connection failed, output: %s" % (monkeyOutput,))
                 failureCountSinceKill += 1
             time.sleep(pollDelay)
