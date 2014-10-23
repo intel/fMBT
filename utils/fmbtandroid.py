@@ -1844,7 +1844,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             except Exception, e:
                 _, monkeyOutput, _ = self._runAdb(["shell", "cat /sdcard/fmbtandroid.monkey.outerr"])
                 if "Error: Unknown option:" in monkeyOutput:
-                    uo = monkeyOutput.splitlines()[0].split(":")[-1].strip()
+                    uo = [l for l in monkeyOutput.splitlines() if "Error: Unknown option:" in l][0].split(":")[-1].strip()
                     _adapterLog('detected an unknown option for monkey: "%s". Disabling it.' % (uo,))
                     try:
                         monkeyLaunch.remove(uo)

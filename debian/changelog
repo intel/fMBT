@@ -1,8 +1,18 @@
-fmbt (0.16.2-0.rc0) unstable; urgency=low
+fmbt (0.16.2-1) unstable; urgency=low
 
-  * Development version.
+  * Cross-compiling for Windows supported (mingw on Linux, experimental).
+  * fmbt-editor:
+    - Show save unsaved changes dialog on quit.
+    - Color names of covered inputs/outputs in visualization.
+    - Draw at most one edge per direction between states in visualization.
+  * fmbt-scripter:
+    - Show save unsaved changes dialog on quit.
+  * fmbtandroid new methods in the Device class:
+    - pinch/pinchOpen/pinchClose() perform the multitouch pinch gesture.
+  * fmbtx11: screenshot optimized, xwd bug fixed, xwd dependency removed.
+  * Many bug and Windows compatibilty fixes.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 8 Oct 2014 09:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 22 Oct 2014 15:42:00 +0300
 
 fmbt (0.16.1-1) unstable; urgency=low
 
