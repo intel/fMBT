@@ -687,7 +687,7 @@ class WindowsConnection(fmbtgti.GUITestConnection):
         if button == None:
             command = "sendTouchDown(%s, %s)" % (x, y)
         else:
-            command = "sendMouseDown(%s, %s, %s)" % (x, y, button)
+            command = "(sendMouseMove(%s, %s), sendMouseDown(%s))" % (x, y, button)
         self._agent.eval_in(self._agent_ns, command)
         return True
 
