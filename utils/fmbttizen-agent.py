@@ -70,6 +70,11 @@ def debug(msg):
         sys.stdout.write("debug: %s\n" % (msg,))
         sys.stdout.flush()
 
+def error(msg, exitstatus=1):
+    sys.stdout.write("fmbttizen-agent: %s\n" % (msg,))
+    sys.stdout.flush()
+    sys.exit(exitstatus)
+
 iAmRoot = (os.getuid() == 0)
 virtualInputDeviceAdded = False
 
@@ -179,6 +184,7 @@ kbInputDevFd = None
 
 if ('max77803-muic' in devices or
     'max77804k-muic' in devices):
+    debug("detected max77803-muic or max77804k-muic")
     hwKeyDevice = {
         "POWER": "qpnp_pon",
         "VOLUMEUP": "gpio-keys",
@@ -192,6 +198,7 @@ if ('max77803-muic' in devices or
     if iAmRoot:
         touch_device = fmbtuinput.Touch().open("sec_touchscreen")
 elif 'max77693-muic' in devices:
+    debug("detected max77693-muic")
     hwKeyDevice = {
         "POWER": "gpio-keys",
         "VOLUMEUP": "gpio-keys",
@@ -203,6 +210,7 @@ elif 'max77693-muic' in devices:
     if iAmRoot:
         touch_device = fmbtuinput.Touch().open("sec_touchscreen")
 elif 'TRATS' in cpuinfo:
+    debug("detected TRATS")
     # Running on Lunchbox
     hwKeyDevice = {
         "POWER": "gpio-keys",
@@ -214,20 +222,27 @@ elif 'TRATS' in cpuinfo:
     if iAmRoot:
         touch_device = fmbtuinput.Touch().open("/dev/input/event2")
 elif 'QEMU Virtual CPU' in cpuinfo:
+    debug("detected QEMU Virtual CPU")
+    if "Maru Virtio Hwkey" in devices:
+        _hwkeydev = "Maru Virtio Hwkey" # Tizen 2.3b emulator
+    else:
+        _hwkeydev = "AT Translated Set 2 hardkeys"
     # Running on Tizen emulator
     hwKeyDevice = {
         "POWER": "Power Button",
-        "VOLUMEUP": "AT Translated Set 2 hardkeys",
-        "VOLUMEDOWN": "AT Translated Set 2 hardkeys",
-        "HOME": "AT Translated Set 2 hardkeys",
-        "BACK": "AT Translated Set 2 hardkeys",
-        "MENU": "AT Translated Set 2 hardkeys"
+        "VOLUMEUP": _hwkeydev,
+        "VOLUMEDOWN": _hwkeydev,
+        "HOME": _hwkeydev,
+        "BACK": _hwkeydev,
+        "MENU": _hwkeydev
         }
+    del _hwkeydev
     _inputKeyNameToCode["HOME"] = 139
     _inputKeyNameToCode["MENU"] = 169 # KEY_PHONE
     if iAmRoot:
         touch_device = fmbtuinput.Touch().open("/dev/input/event2")
 elif 'Synaptics_RMI4_touchkey' in devices:
+    debug("detected Synaptics_RMI4_touchkey")
     # Running on Geek
     hwKeyDevice = {
         "POWER": "mid_powerbtn",
@@ -240,6 +255,7 @@ elif 'Synaptics_RMI4_touchkey' in devices:
     if iAmRoot:
         touch_device = fmbtuinput.Touch().open("/dev/input/event1")
 elif 'mxt224_key_0' in devices:
+    debug("detected mxt225_key_0")
     # Running on Blackbay
     hwKeyDevice = {
         "POWER": "msic_power_btn",
@@ -250,12 +266,14 @@ elif 'mxt224_key_0' in devices:
     if iAmRoot:
         touch_device = fmbtuinput.Touch().open("/dev/input/event0")
 elif 'eGalax Inc. eGalaxTouch EXC7200-7368v1.010          ' in devices:
+    debug("detected eGalax Inc. eGalaxTouch EXC7200-7368v1.010")
     if iAmRoot:
         touch_device = fmbtuinput.Touch(maxX=0x8000, maxY=0x8000).open(
             "eGalax Inc. eGalaxTouch EXC7200-7368v1.010          ")
         keyboard_device = openKeyboardDevice(_opt_keyboard)
 
 elif iAmRoot:
+    debug("hardware detection uses generic defaults")
     # Unknown platform, guessing best possible defaults for devices
     _d = devices.split("\n\n")
     try:
@@ -334,6 +352,8 @@ if g_Xavailable:
         if display != None:
             libX11.XCloseDisplay(display)
         display        = libX11.XOpenDisplay(X_NULL)
+        if display == 0 or display == None:
+            error("cannot connect to X server")
         current_screen = libX11.XDefaultScreen(display)
         root_window    = libX11.XRootWindow(display, current_screen)
         X_AllPlanes    = libX11.XAllPlanes()

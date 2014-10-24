@@ -663,11 +663,11 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
             try:
                 ok, self._platformInfo = self._agentCmd(
                     self._pythonCommand + (" %s %s; exit" % (agentRemoteFilename, " ".join(self._agentArgs))))
-            except IOError:
+            except IOError, msg:
                 raise TizenConnectionError(
-                    'Connecting to a Tizen device/emulator failed. '
-                    'Try "sdb -s %s shell %s %s --debug".' %
-                    (self._serialNumber, self._pythonCommand, agentRemoteFilename))
+                    ('Connecting to a Tizen device/emulator failed. Error: %s '
+                    '\nTry "sdb -s %s shell %s %s --debug".') %
+                    (msg, self._serialNumber, self._pythonCommand, agentRemoteFilename))
         else: # using SSH
             ok, self._platformInfo = self._agentCmd("")
             pass # agent already started by remoteShellCmd
