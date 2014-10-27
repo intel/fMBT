@@ -42,7 +42,7 @@ Random_C::Random_C(const std::string& param) {
 
     if (!f->status) {
       status=false;
-      errormsg="Function error:"+f->errormsg;
+      errormsg="Function error: "+f->errormsg;
       return;
     }
 
@@ -54,7 +54,7 @@ Random_C::Random_C(const std::string& param) {
 
 std::string Random_C::stringify() {
   if (status) {
-    if (global) 
+    if (global)
       return std::string("c");
     return std::string("c(")+to_string(initial_seed)+")";
   }

@@ -33,7 +33,7 @@ void Coverage_exec_filter::mhandler
  std::vector<int>& tag)
 {
   for(unsigned i=0;i<from.size();i++) {
-    // uneascape 
+    // unescape
     remove_force(*from[i]);
 
     int pos=find(sp,*from[i],-1);
@@ -42,7 +42,7 @@ void Coverage_exec_filter::mhandler
       if (pos>0) {
 	act.push_back(pos);
       } else {
-	std::vector<int> r;	
+	std::vector<int> r;
 	regexpmatch(*(from[i]),sp,r,false);
 	if (!r.empty()) {
 	  // Let's dump to actions...
@@ -54,7 +54,7 @@ void Coverage_exec_filter::mhandler
 	  } else {
 	    status=false;
 	    errormsg=errormsg+"No match for "+from[i]->c_str()+"\n";
-	  }	  
+	  }
 	}
       }
     } else {
@@ -137,12 +137,12 @@ bool Coverage_exec_filter::execute(int action)
 
   if (online) {
     /* Ok. Let's search for drop. */
-    if (prop_set(rollback_tag,npro,props) || 
+    if (prop_set(rollback_tag,npro,props) ||
 	prop_set(rollback_action,1,&action)) {
       on_drop(action,p);
     } else {
       /* No drop? Let's search for to */
-      if (prop_set(end_tag,npro,props) || 
+      if (prop_set(end_tag,npro,props) ||
 	  prop_set(end_action,1,&action)) {
 	on_find(action,p);
       }
@@ -150,7 +150,7 @@ bool Coverage_exec_filter::execute(int action)
   }
 
   /* Let's search for from */
-  if (prop_set(start_tag,npro,props) || 
+  if (prop_set(start_tag,npro,props) ||
       prop_set(start_action,1,&action)) {
     if (online) {
       on_restart(action,p);
@@ -163,7 +163,7 @@ bool Coverage_exec_filter::execute(int action)
 }
 
 void Coverage_exec_filter::ds(std::string* s){
-  if (s) 
+  if (s)
     delete s;
 }
 
@@ -198,7 +198,7 @@ public:
       status=false;
       errormsg="can't create coverage "+s[1];
     }
-    
+
     if (!sub->status) {
       status=false;
       errormsg=sub->errormsg;
@@ -222,31 +222,31 @@ public:
   }
   virtual ~Coverage_from() {
     if (sub)
-      delete sub;      
+      delete sub;
   }
   virtual void push() {
     if (sub)
       sub->push();
-    
+
     return Coverage_exec_filter::push();
   }
 
   virtual void pop() {
     if (sub)
       sub->pop();
-    
+
     return Coverage_exec_filter::pop();
   }
 
   virtual float getCoverage()
   {
-    if (sub) 
+    if (sub)
       return sub->getCoverage();
 
     return Coverage_exec_filter::getCoverage();
   }
 
-  virtual int fitness(int* actions,int n, float* fitness) { 
+  virtual int fitness(int* actions,int n, float* fitness) {
     if (sub)
       return sub->fitness(actions,n,fitness);
 
@@ -264,17 +264,17 @@ public:
     Coverage_exec_filter::on_start(action,p);
     if (sub) {
       sub->execute(action);
-    }    
+    }
   }
 
   virtual void set_model(Model* _model) {
-    Coverage_exec_filter::set_model(_model);    
+    Coverage_exec_filter::set_model(_model);
 
     if (status && sub) {
       sub->set_model(model);
       if (sub->status==false) {
 	status=false;
-	errormsg=errormsg+"Sub model failed*:"+sub->errormsg;
+	errormsg=errormsg+"Sub model failed*: "+sub->errormsg;
       }
     }
   }

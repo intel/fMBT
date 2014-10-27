@@ -53,7 +53,13 @@ Heuristic_mrandom::Heuristic_mrandom(Log& l,const std::string& params) :
 
     if (heu==NULL) {
       status=false;
-      errormsg=std::string("Can't create heuristic ")+s[i+1];
+      errormsg=std::string("Can't create heuristic \"")+s[i+1]+
+        std::string("\"");
+      return;
+    }
+    if (heu->status==false) {
+      status=false;
+      errormsg=heu->errormsg;
       return;
     }
     total+=f;
@@ -75,7 +81,7 @@ float Heuristic_mrandom::getCoverage() {
   if (my_coverage==NULL) {
     return 0.0;
   }
-  return my_coverage->getCoverage();  
+  return my_coverage->getCoverage();
 }
 
 int Heuristic_mrandom::getAction()
@@ -107,7 +113,12 @@ void Heuristic_mrandom::set_model(Model* _model)
   Heuristic::set_model(_model);
   for(unsigned i=0;i<h.size();i++) {
     h[i].second->set_model(_model);
-  }  
+    if (h[i].second->status==false) {
+      status=false;
+      errormsg=h[i].second->errormsg;
+      return;
+    }
+  }
 }
 
 bool Heuristic_mrandom::execute(int action)

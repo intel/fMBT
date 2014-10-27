@@ -107,7 +107,7 @@ double AlgBDFS::path_to_best_evaluation(Model& model, std::vector<int>& path, in
 
     if (!model.status || !status) {
         if (!model.status)
-	  errormsg = "Model error:"+model.errormsg;
+	  errormsg = "Model error: "+model.errormsg;
         status=false;
         return 0.0;
     }
@@ -141,7 +141,7 @@ double AlgBDFS::path_to_best_evaluation(Model& model, std::vector<int>& path, in
             }
             if (!model.status) {
                 status = false;
-		errormsg = "Model:" + model.errormsg;
+		errormsg = "Model: " + model.errormsg;
                 return 0.0;
             }
         }
@@ -158,7 +158,7 @@ double AlgBDFS::path_to_best_evaluation(Model& model, std::vector<int>& path, in
 
             if (!model.status || !status) {
 	      if (!model.status)
-		errormsg = "Model error:"+model.errormsg;
+		errormsg = "Model error: "+model.errormsg;
 	      status=false;
 	      return 0.0;
             }
@@ -167,7 +167,7 @@ double AlgBDFS::path_to_best_evaluation(Model& model, std::vector<int>& path, in
 
             if (!model.status || !status) {
 	      if (!model.status)
-		errormsg = "Model error:"+model.errormsg;
+		errormsg = "Model error: "+model.errormsg;
 	      status=false;
 	      return 0.0;
             }
@@ -186,7 +186,7 @@ double AlgBDFS::path_to_best_evaluation(Model& model, std::vector<int>& path, in
 
     if (!model.status || !status) {
       if (!model.status)
-	errormsg = "Model error:"+model.errormsg;
+	errormsg = "Model error: "+model.errormsg;
       status=false;
       return 0.0;
     }
@@ -286,7 +286,7 @@ double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, i
     input_action_count = model.getIActions(&input_actions);
 
     if (!model.status) {
-      errormsg = "Model error:"+model.errormsg;
+      errormsg = "Model error: "+model.errormsg;
         status=false;
         return 0.0;
     }
@@ -312,7 +312,7 @@ double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, i
 
         if (!model.status || !status) {
 	  if (!model.status)
-	    errormsg = "Model error:"+model.errormsg;
+	    errormsg = "Model error: "+model.errormsg;
           status=false;
           return 0.0;
         }

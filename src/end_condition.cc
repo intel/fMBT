@@ -118,15 +118,15 @@ bool End_status_error::match(int step_count,int state, int action,
 			     int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags)
 {
   if (!heuristic.status) {
-    er="Heuristic error:"+heuristic.errormsg;
+    er="Heuristic error: "+heuristic.errormsg;
     return true;
   }
   if (!heuristic.get_model()->status) {
-    er="Model error:"+heuristic.get_model()->errormsg;
+    er="Model error: "+heuristic.get_model()->errormsg;
     return true;
   }
   if (!heuristic.get_coverage()->status) {
-    er="Coverage error:"+heuristic.get_coverage()->errormsg;
+    er="Coverage error: "+heuristic.get_coverage()->errormsg;
     return true;
   }
   return false;
@@ -201,7 +201,7 @@ bool End_condition_tagverify::evaluate_filter(std::vector<std::string>& tags,std
 #undef FACTORY_CREATOR_PARAMS2
 #undef FACTORY_CREATE_DEFAULT_PARAMS
 
-#define FACTORY_CREATE_DEFAULT_PARAMS /* */ 
+#define FACTORY_CREATE_DEFAULT_PARAMS /* */
 
 #define FACTORY_CREATE_PARAMS Verdict::Verdict v,	               \
                        std::string name,                               \

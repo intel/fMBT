@@ -42,7 +42,7 @@ extern Conf* conf_obj;
     log.pop();                                  \
     status=false;                               \
     if (i>0) {                                  \
-      errormsg=name+":"+to_string(i)+" " + s;	\
+      errormsg=name+": "+to_string(i)+" " + s;	\
     } else {					\
       errormsg=s;				\
     }						\
@@ -148,7 +148,7 @@ void Conf::load(std::string& name,std::string& content)
 
   if (heuristic->status==false)
     RETURN_ERROR_VOID(heuristic_lineno,"Error in heuristic \"" +
-		      heuristic_name + "\":" +
+		      heuristic_name + "\": " +
                       heuristic->errormsg);
 
   heuristic=new Heuristic_proxy(log,heuristic,heuristic_name);
