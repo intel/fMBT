@@ -1,3 +1,5 @@
+VPATH ?= .
+
 dist_noinst_SCRIPTS = \
 	setup.py
 
@@ -41,6 +43,10 @@ dist_noinst_SCRIPTS +=		\
 	lsts.py
 # end of modules
 
+utils_installer: $(dist_noinst_SCRIPTS)
+	cp $? . || true
+	touch $@
+
 if MINGW
 if HAVE_MAGICK
 lib_LTLIBRARIES = eye4graphics.la
@@ -54,8 +60,8 @@ dist_noinst_SCRIPTS += \
 	eye4graphics.cc \
 	eye4graphics.h
 # end of extensions
-all-local: eye4graphics.cc eye4graphics.h
-	CC=$(CXX) PKG_CONFIG=$(PKG_CONFIG) $(PYTHON) setup.py build
+all-local: utils_installer eye4graphics.cc eye4graphics.h
+	VPATH=$(VPATH) CC=$(CXX) PKG_CONFIG=$(PKG_CONFIG) $(PYTHON) setup.py build
 
 install-exec-local:
 	$(PYTHON) setup.py install --root=$(DESTDIR)/ --prefix=$(PYTHON_PREFIX)

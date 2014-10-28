@@ -196,3 +196,38 @@ Running on Windows
   pythonshare on the device. Then launch pythonshare-server on the
   device with parameters --interface=all --password=PASSWORD. (See the
   fMBT GUI Testing wiki.)
+
+
+Cross-compiling for Windows (32-bit)
+---------------------------
+
+* Under Ferora 20, install yum install mingw32-gettext mingw32-expat
+mingw32-winpthreads mingw32-dbus-glib mingw32-filesystem mingw32-bzip2
+mingw32-crt mingw32-win-iconv mingw32-libffi mingw32-cpp
+mingw32-libxml2 mingw32-readline mingw32-gcc mingw32-dbus mingw32-nsis
+mingw32-headers mingw32-termcap mingw32-boost mingw32-pkg-config
+mingw32-glib2 mingw32-gcc-c++ mingw32-zlib mingw32-libpng
+mingw-filesystem-base
+
+* Download source code for ImageMagick
+  (eg. ftp://ftp.fifi.org/pub/ImageMagick/ImageMagick-6.8.9-9.7z),
+  unpack, cd <imagemagick-dir> and run
+  .> mingw32-configure && make && make install
+
+* In the fmbt source dir
+  .> mingw32-configure --with-readline && make
+
+* To build windows installer
+
+  - get dependencies graphviz-2.38.msi
+    32-bit dependencies python-2.7.8.msi, gp466-win32-setup.exe,
+        PySide-1.2.2.win32-py2.7.exe
+    64-bit dependencies gp466-win64-setup.exe,
+        PySide-1.2.2.win-amd64-py2.7.exe, python-2.7.8.amd64.msi
+
+    run .> makensis fmbt.nsis
+    Runnin makensis might end up crashing. If that happens to you, try
+    using makensis binary from ubuntu. It might work :)
+
+* In the case you want to build 64-bit version, use install
+  mingw64-packaes and use mingw64-configure.

@@ -59,7 +59,7 @@ def pkg_config(package):
                                  % (arg, o))
     return ext_args
 
-fmbt_utils_dir = os.path.abspath(os.path.dirname(__file__))
+fmbt_utils_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)),os.getenv("VPATH",""))
 fmbt_dir = os.path.join(fmbt_utils_dir, "..")
 
 version = (file(os.path.join(fmbt_dir, "configure.ac"), "r")
