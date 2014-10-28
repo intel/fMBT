@@ -42,7 +42,7 @@ outFile "fMBT-installer-@WINTYPE@.exe"
 !define addToPath "!insertmacro addToPath"
 !macro addToPath DIRECTORY
        # Appends DIRECTORY to the PATH in the registry (HKLM\SYSTEM\...\Environment)
-       ExecWait '"$PYTHONDIR\python.exe" -c "import _winreg as r,sys,ctypes;d=sys.argv[1];k=r.OpenKey(r.HKEY_LOCAL_MACHINE,r\"SYSTEM\CurrentControlSet\Control\Session Manager\Environment\",0,r.KEY_ALL_ACCESS);v,_=r.QueryValueEx(k,\"PATH\");(r.SetValueEx(k,\"PATH\",0,r.REG_EXPAND_SZ,v+\";\"+d),r.CloseKey(k),ctypes.windll.user32.SendMessageW(0xffff,0x001a,0,u\"Environment\")) if not d in v.split(\";\") else 0" "${DIRECTORY}"'
+       ExecWait '"$PYTHONDIR\python.exe" -c "import _winreg as r,sys,ctypes;d=sys.argv[1];k=r.OpenKey(r.HKEY_LOCAL_MACHINE,r\"SYSTEM\CurrentControlSet\Control\Session Manager\Environment\",0,r.KEY_ALL_ACCESS);v,_=r.QueryValueEx(k,\"PATH\");(r.SetValueEx(k,\"PATH\",0,r.REG_EXPAND_SZ,d+\";\"+v),r.CloseKey(k),ctypes.windll.user32.SendMessageW(0xffff,0x001a,0,u\"Environment\")) if not d in v.split(\";\") else 0" "${DIRECTORY}"'
 !macroend
 
 
@@ -123,7 +123,9 @@ section "install"
 	file "convert.exe"
 
 	file "@bindir@/iconv.dll"
+	file "@bindir@/libMagick++-6.Q16*.dll"
 	file "@bindir@/libMagickCore-6.Q16*.dll"
+	file "@bindir@/libMagickWand-6.Q16*.dll"
 	file "@bindir@/libboost_regex.dll"
 	file "@bindir@/libbz2-1.dll"
 	file "@bindir@/libgcc_s*.dll"
