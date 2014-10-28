@@ -130,6 +130,9 @@ _g_oirEngines = []
 
 _g_forcedLocExt = ".fmbtoir.loc"
 
+class _USE_DEFAULTS:
+    pass
+
 def _fmbtLog(msg):
     fmbt.fmbtlog("fmbtgti: %s" % (msg,))
 
@@ -1292,6 +1295,7 @@ class GUITestInterface(object):
         self._screenshotSubdir = None
         self._screenshotSubdirDefault = ""
         self._screenSize = None
+        self._tapDefaults = {}
         self._visualLog = None
         self._visualLogFileObj = None
         self._visualLogFilenames = set()
@@ -1827,6 +1831,24 @@ class GUITestInterface(object):
         """
         self._screenshotSubdir = screenshotSubdir
 
+    def setTapDefaults(self, **tapDefaults):
+        """
+        Define default parameters for tap methods.
+
+        Parameters:
+
+          **tapDefaults (keyword arguments):
+                  default arguments to be used in sendTap call unless
+                  explicitely overridden by user.
+
+        Example:
+
+          sut.setTapDefaults(button=1)
+                  after this sut.tapBitmap("ref.png") does the same as
+                  sut.tapBitmap("ref.png", button=1) did before.
+        """
+        self._tapDefaults.update(tapDefaults)
+
     def swipe(self, (x, y), direction, distance=1.0, **dragArgs):
         """
         swipe starting from coordinates (x, y) to given direction.
@@ -1974,7 +1996,9 @@ class GUITestInterface(object):
             return False
         return self.swipeItem(items[0], direction, distance, **dragArgs)
 
-    def tap(self, (x, y), long=False, hold=0.0, count=1, delayBetweenTaps=0.175, button=None):
+    def tap(self, (x, y), long=_USE_DEFAULTS, hold=_USE_DEFAULTS,
+            count=_USE_DEFAULTS, delayBetweenTaps=_USE_DEFAULTS,
+            button=_USE_DEFAULTS):
         """
         Tap screen on coordinates (x, y).
 
@@ -2008,6 +2032,17 @@ class GUITestInterface(object):
 
         Returns True if successful, otherwise False.
         """
+        if long == _USE_DEFAULTS:
+            long = self._tapDefaults.get("long", False)
+        if hold == _USE_DEFAULTS:
+            hold = self._tapDefaults.get("hold", 0.0)
+        if count == _USE_DEFAULTS:
+            count = self._tapDefaults.get("count", 1)
+        if delayBetweenTaps == _USE_DEFAULTS:
+            delayBetweenTaps = self._tapDefaults.get("delayBetweenTaps", 0.175)
+        if button == _USE_DEFAULTS:
+            button = self._tapDefaults.get("button", None)
+
         x, y = self.intCoords((x, y))
         count = int(count)
         if long and hold == 0.0:
@@ -2059,6 +2094,14 @@ class GUITestInterface(object):
         if len(items) == 0:
             return False
         return self.tapItem(items[0], **tapArgs)
+
+    def tapDefaults(self):
+        """
+        Returns default parameters for sendTap method.
+
+        See also setTapDefaults.
+        """
+        return self._tapDefaults
 
     def tapItem(self, viewItem, **tapArgs):
         """

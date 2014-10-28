@@ -56,7 +56,7 @@ Heuristic_weight::Heuristic_weight(Log& l,const std::string& params) :
 	l.pop();
       }
     }
-    
+
     break;
   case 1:
     prm=subs[0];
@@ -71,7 +71,7 @@ Heuristic_weight::Heuristic_weight(Log& l,const std::string& params) :
 
 Heuristic_weight::~Heuristic_weight()
 {
-  if (r) 
+  if (r)
     r->unref();
 }
 
@@ -123,7 +123,7 @@ void Heuristic_weight::add(std::vector<std::string*> p,
     for(unsigned j=0;j<actions.size();j++) {
       switch (o) {
       case 1:
-	weights[std::pair<int,int>(props[i],actions[j])]=w;	
+	weights[std::pair<int,int>(props[i],actions[j])]=w;
 	break;
       default:
 	weights[std::pair<int,int>(props[i],actions[j])]+=w;
@@ -245,7 +245,7 @@ void Heuristic_weight::set_model(Model* _model)
     Hw=h;
   } else {
     status=false;
-    errormsg="Can't read inputfile";
+    errormsg="Can't read inputfile \"" + prm + "\"";
   }
 }
 

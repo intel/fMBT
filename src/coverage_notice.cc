@@ -28,10 +28,10 @@ std::string _stmp("1");
 Coverage_notice::Coverage_notice(Log&l,std::string _cc1,std::string _cc2):
   Coverage_report(l,dummy,dummy,dummy),cc1(_cc1),cc2(_cc2),const1(l,_stmp)
 {
-  
+
 }
 
-Coverage_notice::~Coverage_notice() 
+Coverage_notice::~Coverage_notice()
 {
   std::list<std::pair<std::pair<Coverage*,Coverage*>,
 		      std::pair<
@@ -73,17 +73,17 @@ void Coverage_notice::foo()
 
   if (!c1->status) {
     status=false;
-    errormsg="Submodel failure \""+cc1+"\":"+c1->errormsg;
+    errormsg="Submodel failure \""+cc1+"\": "+c1->errormsg;
     return;
   }
 
   if (!c2->status) {
     status=false;
-    errormsg="Submodel failure \""+cc2+"\":"+c2->errormsg;
+    errormsg="Submodel failure \""+cc2+"\": "+c2->errormsg;
   }
 
   std::vector<std::pair<int,std::vector<int> > > m;
-  
+
   subcovs.push_front(std::pair<std::pair<Coverage*,Coverage*>,
 				  std::pair<std::pair<struct timeval,struct timeval>,
 					    std::vector<std::pair<int,std::vector<int> > > > >
@@ -105,7 +105,7 @@ bool Coverage_notice::execute(int action)
 				 std::vector<std::pair<int,std::vector<int> > > > > &
 		     cpair) {
       float f=cpair.first .first ->getCoverage();
-      
+
       cpair.first .first ->execute(action);
       cpair.first .second->execute(action);
 
@@ -116,7 +116,7 @@ bool Coverage_notice::execute(int action)
 	// Start of the trace
 	cpair.second.first.first=History::current_time;
 	// We need to create an other instance...
-	r->foo();	
+	r->foo();
       }
 
       if (f1>0) {
@@ -156,7 +156,7 @@ bool Coverage_notice::execute(int action)
   callobject.r     =this;
 
   int ff=0;
-  
+
   std::list<std::pair<std::pair<Coverage*,Coverage*>,
 		      std::pair<
 			std::pair<struct timeval,struct timeval>,

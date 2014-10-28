@@ -24,7 +24,7 @@
 #include <list>
 
 #undef FACTORY_CREATOR_PARAMS
-#undef FACTORY_CREATOR_PARAMS2 
+#undef FACTORY_CREATOR_PARAMS2
 #undef FACTORY_CREATE_PARAMS
 
 class Conf;
@@ -52,7 +52,7 @@ EndHookExit::EndHookExit(Conf* _c,int _lineno,std::string& s): EndHook(_c,s) {
       errormsg="Can't create coverage "+s;
     } else if (!cov->status) {
       status=false;
-      errormsg="Error on coverage "+s+":"+cov->errormsg;
+      errormsg="Error on coverage "+s+": "+cov->errormsg;
     } else {
       End_condition_dummy* ec=new End_condition_dummy(c,Verdict::NOTIFY,"");
       c->set_model(cov);
@@ -74,7 +74,7 @@ EndHookExit::EndHookExit(Conf* _c,int _lineno,std::string& s): EndHook(_c,s) {
 
 
 EndHookExit::~EndHookExit() {
-  if (cov) 
+  if (cov)
     delete cov;
 }
 
@@ -114,19 +114,19 @@ void stringify_hooks(std::ostringstream& t,
     }
   }
 }
-		     
+
 
 void hook_runner(EndHook* e) {
-  if (e) 
+  if (e)
     e->run();
 }
 
-std::string EndHookExit::stringify() { 
+std::string EndHookExit::stringify() {
     if (!status) return Writable::stringify();
     return "exit("+to_string(exit_status)+")";
 }
 
-std::string EndHookInteractive::stringify() { 
+std::string EndHookInteractive::stringify() {
     if (!status) return Writable::stringify();
     return "interactive";
 }
@@ -149,5 +149,5 @@ EndHook* new_endhook(Conf* c,const std::string& s,int _lineno)
     fprintf(stderr,"DEPRECATED END SYNTAX. %s\nNew syntax is %s(%s)\n",
 	    s.c_str(),name.c_str(),option.c_str());
   }
-  return ret;  
+  return ret;
 }

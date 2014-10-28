@@ -37,7 +37,7 @@ Coverage_Min::Coverage_Min(Log& l,const std::string& _params,unit* _u) :
     coverages.push_back(cov);
     if (!cov->status) {
       status=false;
-      errormsg="coverage error at "+s[i]+ ":"+ cov->errormsg;
+      errormsg="coverage error at "+s[i]+ ": "+ cov->errormsg;
       return;
     }
   }
@@ -62,7 +62,7 @@ void Coverage_Min::pop()
 }
 
 void Coverage_Min::history(int action,
-			   std::vector<int>& props, 
+			   std::vector<int>& props,
 			   Verdict::Verdict verdict)
 {
   for(unsigned i=0;i<coverages.size();i++) {
@@ -107,7 +107,7 @@ int Coverage_Min::fitness(int* action,int n,float* fitness)
 {
   float m=-1;
   int pos=-1;
-  
+
   for(int i=0;i<n;i++) {
     model->push();
     model->execute(action[i]);
@@ -119,7 +119,7 @@ int Coverage_Min::fitness(int* action,int n,float* fitness)
       m=fitness[i];
     }
   }
-  
+
   return pos;
 }
 
@@ -133,7 +133,7 @@ void Coverage_Min::set_model(Model* _model) {
 	status=false;
       }
     }
-  }  
+  }
 }
 
 namespace {

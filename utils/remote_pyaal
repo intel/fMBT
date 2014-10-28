@@ -290,7 +290,9 @@ class RemoteAALBridge:
                 try:
                     rv = self._aal.adapter_execute(action_number,
                                                    adapter_call_arguments)
-                    if (type(rv) == int and (rv == 0 or rv > len(action_names))) or (type(rv) != int and (not rv or rv != None)):
+                    if rv == None or rv is True:
+                        rv = action_number
+                    if (type(rv) == int and (rv == 0 or rv > len(action_names))) or (type(rv) != int):
                         fmbtstderr('adapter() of action "%s" returned %s' % (action_names[action_number-1], rv))
                         rv = 0
                 except Exception, e:

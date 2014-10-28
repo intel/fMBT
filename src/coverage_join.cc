@@ -31,13 +31,13 @@ Coverage_Join::Coverage_Join(Log& l,const std::string& param)
 
   if (child==NULL) {
     status=false;
-    errormsg="Can't create coverage:"+subs.back();
+    errormsg="Can't create coverage: "+subs.back();
     return;
   }
 
   if (!child->status) {
     status=false;
-    errormsg="coverage error at "+subs.back()+ ":"+ child->errormsg;
+    errormsg="coverage error at "+subs.back()+ ": "+ child->errormsg;
   }
 
 }
@@ -47,7 +47,7 @@ void Coverage_Join::handle_sub(const std::string& sub)
   std::string mapped_to;
   std::string tmp;
   std::vector<std::string> mapped_from;
-  
+
   param_cut(sub,mapped_to,tmp);
   commalist(tmp,mapped_from);
   // mapped_to is the _new_ alphabet

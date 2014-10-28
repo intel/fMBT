@@ -61,7 +61,7 @@ Alphabet* History_glob::set_coverage(Coverage* cov,
 	RETURN_ERROR(h->errormsg);
       }
     } else {
-      RETURN_ERROR("Creating history \""+ v[0] + ":" + gl.gl_pathv[i] +
+      RETURN_ERROR("Creating history \""+ v[0] + ": " + gl.gl_pathv[i] +
 		   "\" failed");
     }
   }

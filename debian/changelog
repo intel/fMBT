@@ -1,3 +1,9 @@
+fmbt (0.16.3-0.rc0) unstable; urgency=low
+
+  * Development version.
+
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 24 Oct 2014 11:42:00 +0300
+
 fmbt (0.16.2-1) unstable; urgency=low
 
   * Cross-compiling for Windows supported (mingw on Linux, experimental).

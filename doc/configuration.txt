@@ -86,16 +86,6 @@ Available types & parameters:
                 loads state machine in lsts format from the standard
                 output of <command>.
 
-        parallel(<filename>)
-
-                loads state machine that is results in running state
-                machines defined in filename in parallel.
-
-        parallel_remote(<command>)
-
-                like parallel but reads standard output of <command>
-                instead of a file.
-
 Examples:
 
         model = aal_remote(remote_pyaal -l aal.log mytest.aal)
@@ -109,9 +99,6 @@ Examples:
         model = lsts_remote(wget -O- http://modelhost/mymodel.lsts)
 
         model = lsts_remote(./create_mymodel.sh --exclude negativecases)
-
-        model = parallel_remote(fmbt-parallel a.lsts b.lsts)
-
 
 
 Adapter

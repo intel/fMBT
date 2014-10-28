@@ -64,7 +64,7 @@ OutputFormat::~OutputFormat() {
 
   model=NULL;
 
-  
+
 }
 
 void OutputFormat::set_model(Model* m) {
@@ -190,7 +190,7 @@ void OutputFormat::add_notice(std::string filter,
 
     if (!c->status) {
       status=false;
-      errormsg=errormsg+" Notice failure:"+c->errormsg;
+      errormsg=errormsg+" Notice failure: "+c->errormsg;
       return;
     }
 
@@ -202,7 +202,7 @@ void OutputFormat::add_notice(std::string filter,
 
     if (!c->status) {
       status=false;
-      errormsg=errormsg+" Notice failure:"+c->errormsg;
+      errormsg=errormsg+" Notice failure: "+c->errormsg;
     } else {
       // c->set_model(model);
     }
@@ -224,7 +224,7 @@ void OutputFormat::add_report(std::string filter,
     c->_d=drop;
     if (!c->status) {
       status=false;
-      errormsg=errormsg+" Report failure:"+c->errormsg;
+      errormsg=errormsg+" Report failure: "+c->errormsg;
       return;
     }
 
@@ -233,10 +233,10 @@ void OutputFormat::add_report(std::string filter,
       cc->set_sub(c);
       c=cc;
     }
-        
+
     if (c->status==false) {
       status=false;
-      errormsg=errormsg+" Report failure:"+c->errormsg;
+      errormsg=errormsg+" Report failure: "+c->errormsg;
     } else {
       // c->set_model(model);
     }

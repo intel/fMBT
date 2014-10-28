@@ -35,7 +35,7 @@ class End_condition_bool: public End_condition_noprogress {
 public:
   End_condition_bool(Conf* _conf,Verdict::Verdict v, const std::string& p):
     End_condition_noprogress(_conf,v,p) {
-    
+
   }
   virtual ~End_condition_bool() {}
   virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags) {
@@ -163,7 +163,7 @@ int Heuristic_greedy::getIAction()
 
       if (!alg.status) {
         status=false;
-	errormsg = "Alg:" + alg.errormsg;
+	errormsg = "Alg: " + alg.errormsg;
 	retval = 0;
 	goto done;
       }
@@ -205,7 +205,7 @@ FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "lookahead")
 FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "action_fitness")
 
 #undef FACTORY_CREATE_DEFAULT_PARAMS
-#define FACTORY_CREATE_DEFAULT_PARAMS /* */ 
+#define FACTORY_CREATE_DEFAULT_PARAMS /* */
 
 #undef FACTORY_CREATOR_PARAMS
 #undef FACTORY_CREATOR_PARAMS2
