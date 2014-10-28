@@ -46,6 +46,13 @@ cd utils
     }
 cd ..
 
+cd pythonshare
+    make pythonshare_installer || {
+        echo "make pythonshare_installer failed"
+        exit 1
+    }
+cd ..
+
 # Fetch dependencies to be included in the package
 wget -nc http://www.graphviz.org/pub/graphviz/stable/windows/graphviz-2.38.msi
 wget -nc https://www.python.org/ftp/python/2.7.8/python-2.7.8.msi

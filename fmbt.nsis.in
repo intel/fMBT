@@ -185,6 +185,15 @@ section "install"
 	file "utils/fmbtx11.py"
 	file "utils/lsts.py"
 
+	setOutPath "$PYTHONDIR\Lib\pythonshare\"
+	file "pythonshare/__init__.py"
+	file "pythonshare/client.py"
+	file "pythonshare/messages.py"
+	file "pythonshare/server.py"
+
+	setOutPath "$PYTHONDIR\Scripts\"
+	file "pythonshare/pythonshare-client"
+	file "pythonshare/pythonshare-server"
 
 	# Add any other files for the install directory (license files, app data, etc) here
 
@@ -215,9 +224,6 @@ section "install"
 	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "EstimatedSize" ${INSTALLSIZE}
 
 	# PATH
-	Var /GLOBAL env_path
-	ReadRegStr $env_path HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" Path"
-
         MessageBox MB_YESNO "Add following directories to PATH?$\r$\n- $INSTDIR$\r$\n- $PYTHONDIR$\r$\n- $GRAPHVIZDIR$\r$\n- $GNUPLOTDIR" /SD IDYES IDNO skip_addpath
 		   ${addToPath} "$INSTDIR"
 		   ${addToPath} "$PYTHONDIR"
