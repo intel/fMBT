@@ -140,7 +140,8 @@ def _filenameTimestamp(t=None):
     return fmbt.formatTime("%Y%m%d-%H%M%S-%f", t)
 
 def _takeDragArgs(d):
-    return _takeArgs(("startPos", "delayBeforeMoves", "delayBetweenMoves",
+    return _takeArgs(("startOffset", "startPos",
+                      "delayBeforeMoves", "delayBetweenMoves",
                       "delayAfterMoves", "movePoints"), d)
 
 def _takeTapArgs(d):
@@ -1907,7 +1908,7 @@ class GUITestInterface(object):
           direction, distance
                   refer to swipe documentation.
 
-          startPos
+          startPos, startOffset
                   refer to swipeItem documentation.
 
           optical image recognition arguments (optional)
@@ -1940,13 +1941,21 @@ class GUITestInterface(object):
           direction, distance
                   refer to swipe documentation.
 
-          startPos (pair of floats (x,y)):
+          startPos (pair of floats (x, y)):
                   position of starting swipe, relative to the item.
                   (0.0, 0.0) is the top-left corner,
                   (1.0, 0.0) is the top-right corner,
                   (1.0, 1.0) is the lower-right corner.
                   Values < 0.0 and > 1.0 start swiping from coordinates
                   outside the item.
+                  The default is (0.5, 0.5), in the middle of the item.
+
+          startOffset (pair of integers or floats (x, y)):
+                  offset of swipe start coordinates. Integers are
+                  pixels, floats are relative to screensize.
+                  Example:
+                  startOffset=(0, 0.1) will keep the X coordinate
+                  unchagned and add 10 % of screensize to Y.
 
           delayBeforeMoves, delayBetweenMoves, delayAfterMoves,
           movePoints
@@ -1962,6 +1971,29 @@ class GUITestInterface(object):
                            y1 + (y2-y1) * posY)
         else:
             swipeCoords = viewItem.coords()
+
+        if "startOffset" in dragArgs:
+            offX, offY = dragArgs["startOffset"]
+            del dragArgs["startOffset"]
+            x, y = swipeCoords
+            if isinstance(offX, int):
+                x += offX
+            elif isinstance(offX, float):
+                width, _ = self.screenSize()
+                x += offX * width
+            else:
+                raise TypeError('invalid offset %s (int or float expected)' %
+                                (repr(offX),))
+            if isinstance(offY, int):
+                y += offY
+            elif isinstance(offY, float):
+                _, height = self.screenSize()
+                y += offY * height
+            else:
+                raise TypeError('invalid offset %s (int or float expected)' %
+                                (repr(offY),))
+            swipeCoords = (x, y)
+
         return self.swipe(swipeCoords, direction, distance, **dragArgs)
 
     def swipeOcrText(self, text, direction, distance=1.0, **dragAndOcrArgs):
@@ -2125,7 +2157,11 @@ class GUITestInterface(object):
                   The default is (0.5, 0.5), in the middle of the item.
 
           tapOffset (pair of floats or integers (x, y)):
-                  tap position offset. Added to tapPos.
+                  offset of tap coordinates. Integers are
+                  pixels, floats are relative to screensize.
+                  Example:
+                  tapOffset=(0, 0.1) will keep the X coordinate
+                  unchagned and add 10 % of screensize to Y.
 
           long, hold, count, delayBetweenTaps, button (optional):
                   refer to tap documentation.
