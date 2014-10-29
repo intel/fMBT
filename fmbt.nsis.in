@@ -227,10 +227,10 @@ section "install"
 
 	# PATH
         MessageBox MB_YESNO "Add following directories to PATH?$\r$\n- $INSTDIR$\r$\n- $PYTHONDIR$\r$\n- $GRAPHVIZDIR$\r$\n- $GNUPLOTDIR" /SD IDYES IDNO skip_addpath
-		   ${addToPath} "$INSTDIR"
 		   ${addToPath} "$PYTHONDIR"
 		   ${addToPath} "$GRAPHVIZDIR"
 		   ${addToPath} "$GNUPLOTDIR"
+		   ${addToPath} "$INSTDIR"
 	skip_addpath:
 
 sectionEnd
