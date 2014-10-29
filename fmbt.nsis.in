@@ -1,31 +1,35 @@
-# This installs two files, app.exe and fmbt.ico, creates a start menu shortcut, builds an uninstaller, and
-# adds uninstall information to the registry for Add/Remove Programs
- 
-# To get started, put this script into a folder with the two files (app.exe, fmbt.ico, and license.rtf -
-# You'll have to create these yourself) and run makensis on it
- 
-# If you change the names "app.exe", "fmbt.ico", or "license.rtf" you should do a search and replace - they
-# show up in a few places.
-# All the other settings can be tweaked by editing the !defines at the top of this script
+# This file is based on example:
+# http://nsis.sourceforge.net/A_simple_installer_with_start_menu_shortcut_and_uninstaller
+
 !define APPNAME "fMBT"
 !define COMPANYNAME "Intel"
 !define DESCRIPTION "Free Model-Based Testing tool automates both generating and executing tests."
+
 # These three must be integers
 !define VERSIONMAJOR 0
 !define VERSIONMINOR 16
 !define VERSIONBUILD 1
-# These will be displayed by the "Click here for support information" link in "Add/Remove Programs"
-# It is possible to use "mailto:" links in here to open the email client
+
+# These will be displayed by the "Click here for support information"
+# link in "Add/Remove Programs" It is possible to use "mailto:" links
+# in here to open the email client
+
 !define HELPURL "https://01.org/fmbt" # "Support Information" link
 !define UPDATEURL "https://01.org/fmbt/downloads" # "Product Updates" link
 !define ABOUTURL "https://01.org/fmbt/about" # "Publisher" link
-# This is the size (in kB) of all the files copied into "Program Files"
+
+# This is the size (in kB) of all the files copied into
+# "Program Files"
 !define INSTALLSIZE 87233
- 
+
+Var PYTHONDIR
+Var GRAPHVIZDIR
+Var GNUPLOTDIR
+
 RequestExecutionLevel admin ;Require admin rights on NT6+ (When UAC is turned on)
- 
+
 InstallDir "$PROGRAMFILES@PROGRAMFILES_SUFFIX@\${APPNAME}"
- 
+
 # rtf or txt file - remember if it is txt, it must be in the DOS text format (\r\n)
 LicenseData "license.rtf"
 # This will be in the installer/uninstaller's title bar
@@ -34,13 +38,24 @@ Icon "fmbt.ico"
 outFile "fMBT-installer-@WINTYPE@.exe"
 
 !include LogicLib.nsh
- 
+
+!define addToPath "!insertmacro addToPath"
+!macro addToPath DIRECTORY
+       # Appends DIRECTORY to the PATH in the registry (HKLM\SYSTEM\...\Environment)
+       ExecWait '"$PYTHONDIR\python.exe" -c "import _winreg as r,sys,ctypes;d=sys.argv[1];k=r.OpenKey(r.HKEY_LOCAL_MACHINE,r\"SYSTEM\CurrentControlSet\Control\Session Manager\Environment\",0,r.KEY_ALL_ACCESS);v,_=r.QueryValueEx(k,\"PATH\");(r.SetValueEx(k,\"PATH\",0,r.REG_EXPAND_SZ,d+\";\"+v),r.CloseKey(k),ctypes.windll.user32.SendMessageW(0xffff,0x001a,0,u\"Environment\")) if not d in v.split(\";\") else 0" "${DIRECTORY}"'
+!macroend
+
+
 # Just three pages - license agreement, install location, and installation
 page license
 page directory
 Page instfiles
 
 Section -Prerequisites
+  StrCpy $PYTHONDIR "C:\Python27"
+  StrCpy $GRAPHVIZDIR "C:\Program Files (x86)\Graphviz2.38\bin"
+  StrCpy $GNUPLOTDIR "C:\Program Files (x86)\gnuplot\bin"
+
   SetOutPath $INSTDIR\Prerequisites
   MessageBox MB_YESNO "Install Python 2.7.8" /SD IDYES IDNO endPython
     SetCompress off
@@ -73,7 +88,7 @@ Section -Prerequisites
   endtesseract:
 
 SectionEnd
- 
+
 !macro VerifyUserIsAdmin
 UserInfo::GetAccountType
 pop $0
@@ -83,12 +98,12 @@ ${If} $0 != "admin" ;Require admin rights on NT4+
         quit
 ${EndIf}
 !macroend
- 
+
 function .onInit
 	setShellVarContext all
 	!insertmacro VerifyUserIsAdmin
 functionEnd
- 
+
 section "install"
 	# Files for the install directory - to build the installer, these should be in the same directory as the install script (this file)
 	setOutPath $INSTDIR
@@ -108,11 +123,21 @@ section "install"
 	file "convert.exe"
 
 	file "@bindir@/iconv.dll"
+	file "@bindir@/libMagick++-6.Q16*.dll"
+	file "@bindir@/libMagickCore-6.Q16*.dll"
+	file "@bindir@/libMagickWand-6.Q16*.dll"
 	file "@bindir@/libboost_regex.dll"
+	file "@bindir@/libbz2-1.dll"
 	file "@bindir@/libgcc_s*.dll"
 	file "@bindir@/libglib-2.0-0.dll"
 	file "@bindir@/libintl-8.dll"
+	file "@bindir@/libpng16-16.dll"
 	file "@bindir@/libstdc++-6.dll"
+	file "@bindir@/libstdc++-6.dll"
+	file "@bindir@/libwinpthread-1.dll"
+	file "@bindir@/libxml2-2.dll"
+	file "@bindir@/zlib1.dll"
+	file "utils/.libs/eye4graphics.dll"
 
 # parts implemented in python
 	file "utils/remote_pyaal"
@@ -137,9 +162,10 @@ section "install"
 	file ".libs/fmbt-log.exe"
 	file "fmbt.ico"
 
+
 # python libraries.
 
-	setOutPath "C:\python27\lib\"
+	setOutPath "$PYTHONDIR\lib\"
 
 	file "utils/aalmodel.py"
 	file "utils/eyenfinger.py"
@@ -148,10 +174,8 @@ section "install"
 	file "utils/fmbt_config.py"
 	file "utils/fmbtgti.py"
 	file "utils/fmbtlogger.py"
-	file "utils/fmbtparsers.py"
 	file "utils/fmbtpng.py"
 	file "utils/fmbt.py"
-	file "utils/fmbtrdp.py"
 	file "utils/fmbttizen-agent.py"
 	file "utils/fmbttizen.py"
 	file "utils/fmbtuinput.py"
@@ -163,23 +187,21 @@ section "install"
 	file "utils/fmbtx11.py"
 	file "utils/lsts.py"
 
-	file "utils/.libs/eye4graphics.dll"
-	file "@bindir@/iconv.dll"
-	file "@bindir@/libbz2-1.dll"
-	file "@bindir@/libMagickCore-6.Q16-1.dll"
-	file "@bindir@/libpng16-16.dll"
-	file "@bindir@/libMagickWand-6.Q16-1.dll"
-	file "@bindir@/libstdc++-6.dll"
-	file "@bindir@/libwinpthread-1.dll"
-	file "@bindir@/libxml2-2.dll"
-	file "@bindir@/zlib1.dll"
+	setOutPath "$PYTHONDIR\Lib\pythonshare\"
+	file "pythonshare/__init__.py"
+	file "pythonshare/client.py"
+	file "pythonshare/messages.py"
+	file "pythonshare/server.py"
 
+	setOutPath "$PYTHONDIR\Scripts\"
+	file "pythonshare/pythonshare-client"
+	file "pythonshare/pythonshare-server"
 
 	# Add any other files for the install directory (license files, app data, etc) here
- 
+
 	# Uninstaller - See function un.onInit and section "uninstall" for configuration
 	writeUninstaller "$INSTDIR\uninstall.exe"
- 
+
 	# Start Menu
 	createDirectory "$SMPROGRAMS\${COMPANYNAME}"
 	createShortCut "$SMPROGRAMS\${COMPANYNAME}\${APPNAME}.lnk" "$INSTDIR\fmbt-editor.exe" "" "$INSTDIR\fmbt.ico"
@@ -202,30 +224,36 @@ section "install"
 	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "NoRepair" 1
 	# Set the INSTALLSIZE constant (!defined at the top of this script) so Add/Remove Programs can accurately report the size
 	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}" "EstimatedSize" ${INSTALLSIZE}
+
+	# PATH
+        MessageBox MB_YESNO "Add following directories to PATH?$\r$\n- $INSTDIR$\r$\n- $PYTHONDIR$\r$\n- $GRAPHVIZDIR$\r$\n- $GNUPLOTDIR" /SD IDYES IDNO skip_addpath
+		   ${addToPath} "$PYTHONDIR"
+		   ${addToPath} "$GRAPHVIZDIR"
+		   ${addToPath} "$GNUPLOTDIR"
+		   ${addToPath} "$INSTDIR"
+	skip_addpath:
+
 sectionEnd
- 
+
 # Uninstaller
- 
+
 function un.onInit
 	SetShellVarContext all
- 
+
 	#Verify the uninstaller - last chance to back out
 	MessageBox MB_OKCANCEL "Permanantly remove ${APPNAME}?" IDOK next
 		Abort
 	next:
 	!insertmacro VerifyUserIsAdmin
 functionEnd
- 
+
 section "uninstall"
- 
+
 	# Remove Start Menu launcher
 	delete "$SMPROGRAMS\${COMPANYNAME}\${APPNAME}.lnk"
 	# Try to remove the Start Menu folder - this will only happen if it is empty
 	rmDir "$SMPROGRAMS\${COMPANYNAME}"
 
-#	PATH cleanup
-#	${EnvVarUpdate} $0 "PATH" "R" "HKLM" $INSTDIR
- 
 	# Remove files
 	delete $INSTDIR\fmbt-aalc.exe
 	delete $INSTDIR\fmbt-aalp.exe
@@ -239,7 +267,6 @@ section "uninstall"
 	delete $INSTDIR\fmbt_config.py
 	delete $INSTDIR\fmbtgti.py
 	delete $INSTDIR\fmbtlogger.py
-	delete $INSTDIR\fmbtparsers.py
 	delete $INSTDIR\fmbt.py
 	delete $INSTDIR\fmbttizen.py
 	delete $INSTDIR\fmbtweb.py
@@ -250,9 +277,7 @@ section "uninstall"
 
 	delete $INSTDIR\eye4graphics.dll
 
-	delete $INSTDIR\libMagick++-6.Q16-1.dll
-	delete $INSTDIR\libMagickCore-6.Q16-1.dll
-	delete $INSTDIR\libMagickWand-6.Q16-1.dll
+	delete $INSTDIR\libMagickCore-6.Q16*.dll
 	delete $INSTDIR\remote_pyaal
 	delete $INSTDIR\remote_pyaal.exe
 
@@ -265,10 +290,10 @@ section "uninstall"
 
 	# Always delete uninstaller as the last action
 	delete $INSTDIR\uninstall.exe
- 
+
 	# Try to remove the install directory - this will only happen if it is empty
 	rmDir $INSTDIR
- 
+
 	# Remove uninstaller information from the registry
 	DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${COMPANYNAME} ${APPNAME}"
 sectionEnd

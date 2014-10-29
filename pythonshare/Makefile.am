@@ -13,3 +13,7 @@ dist_noinst_SCRIPTS = \
 
 install-exec-local:
 	$(PYTHON) setup.py install --root=$(DESTDIR)/ --prefix=$(PYTHON_PREFIX)
+
+pythonshare_installer: $(dist_noinst_SCRIPTS)
+	cp $? . || true
+	touch $@
