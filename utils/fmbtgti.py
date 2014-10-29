@@ -144,7 +144,7 @@ def _takeDragArgs(d):
                       "delayAfterMoves", "movePoints"), d)
 
 def _takeTapArgs(d):
-    return _takeArgs(("tapPos", "long", "hold", "count", "delayBetweenTaps", "button"), d)
+    return _takeArgs(("tapOffset", "tapPos", "long", "hold", "count", "delayBetweenTaps", "button"), d)
 
 def _takeWaitArgs(d):
     return _takeArgs(("waitTime", "pollDelay"), d)
@@ -2081,6 +2081,9 @@ class GUITestInterface(object):
           tapPos (pair of floats (x,y)):
                   refer to tapItem documentation.
 
+          tapOffset (pair of floats or integers (x, y)):
+                  refer to tapItem documentation.
+
           long, hold, count, delayBetweenTaps, button (optional):
                   refer to tap documentation.
 
@@ -2113,12 +2116,16 @@ class GUITestInterface(object):
                   item to be tapped, possibly returned by
                   findItemsBy... methods in Screenshot or View.
 
-          tapPos (pair of floats (x,y)):
+          tapPos (pair of floats (x, y)):
                   position to tap, relative to the item.
                   (0.0, 0.0) is the top-left corner,
                   (1.0, 0.0) is the top-right corner,
                   (1.0, 1.0) is the lower-right corner.
                   Values < 0 and > 1 tap coordinates outside the item.
+                  The default is (0.5, 0.5), in the middle of the item.
+
+          tapOffset (pair of floats or integers (x, y)):
+                  tap position offset. Added to tapPos.
 
           long, hold, count, delayBetweenTaps, button (optional):
                   refer to tap documentation.
@@ -2131,6 +2138,28 @@ class GUITestInterface(object):
                          y1 + (y2-y1) * posY)
         else:
             tapCoords = viewItem.coords()
+
+        if "tapOffset" in tapArgs:
+            offX, offY = tapArgs["tapOffset"]
+            del tapArgs["tapOffset"]
+            x, y = tapCoords
+            if isinstance(offX, int):
+                x += offX
+            elif isinstance(offX, float):
+                width, _ = self.screenSize()
+                x += offX * width
+            else:
+                raise TypeError('invalid offset %s (int or float expected)' %
+                                (repr(offX),))
+            if isinstance(offY, int):
+                y += offY
+            elif isinstance(offY, float):
+                _, height = self.screenSize()
+                y += offY * height
+            else:
+                raise TypeError('invalid offset %s (int or float expected)' %
+                                (repr(offY),))
+            tapCoords = (x, y)
         return self.tap(tapCoords, **tapArgs)
 
     def tapOcrText(self, text, appearance=0, **tapAndOcrArgs):
