@@ -1,2 +1,17 @@
 fmbt_version = "@VERSION@"
 fmbt_build_info = "@FMBTBUILDINFO@"
+
+import os
+if os.name == "nt":
+    import _winreg
+    try:
+        key = _winreg.OpenKey(
+            _winreg.HKEY_LOCAL_MACHINE,
+            r"Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Intel fMBT", 0, _winreg.KEY_ALL_ACCESS)
+        fmbt_install_location = _winreg.QueryValueEx(key, "InstallLocation")[0][1:-1]
+    except Exception:
+        fmbt_install_location = ""
+    imagemagick_convert = os.path.join(fmbt_install_location, "convert.exe")
+else:
+    fmbt_install_location = ""
+    imagemagick_convert = "convert"

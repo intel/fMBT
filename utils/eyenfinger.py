@@ -85,6 +85,8 @@ import platform
 import struct
 import warnings
 
+import fmbt_config
+
 def _DEPRECATED():
     warnings.warn("eyenfinger.py API is deprecated, use fmbtx11 instead.",
                   DeprecationWarning, stacklevel=2)
@@ -214,14 +216,14 @@ try:
             distutils.sysconfig.get_python_lib(plat_specific=1)]
     _suffix = ".so"
     if os.name == "nt":
-        _suffix = ".pyd"
+        _suffix = ".dll"
     for _dirname in _libpath:
         try:
             eye4graphics = ctypes.CDLL(os.path.join(_dirname , "eye4graphics"+_suffix))
             break
         except: pass
     else:
-        raise ImportError("%s cannot load eye4graphics.so" % (__file__,))
+        raise ImportError("%s cannot load eye4graphics%s" % (__file__, _suffix))
 
     class Bbox(ctypes.Structure):
         _fields_ = [("left", ctypes.c_int32),
@@ -296,7 +298,7 @@ def _runcmd(cmd):
     exit_status = p.wait()
     _g_last_runcmd_error = p.stderr.read()
     if exit_status != 0:
-        _log("runcmd: " + cmd)
+        _log("runcmd: %s" % (cmd,))
         _log("exit status: " + str(exit_status))
         _log("stdout: " + output)
         _log("stderr: " + _g_last_runcmd_error)
@@ -306,13 +308,15 @@ def _runcmd(cmd):
 
 def _runDrawCmd(inputfilename, cmd, outputfilename):
     if not _g_defaultDelayedDrawing:
-        return _runcmd("convert %s %s %s" % (inputfilename, cmd, outputfilename))
+        return _runcmd([fmbt_config.imagemagick_convert,
+                        inputfilename, cmd, outputfilename])
     # Do delayed drawing to save test execution time. If the output
     # file does not exist, just copy inputfile to outputfile and start
     # logging delayed draw commands to
     # outputfile.delayeddraw. Otherwise append latest command to
     # outputfile.delayeddraw.
-    delayedCmd = "convert %s %s %s\n" % (outputfilename, cmd, outputfilename)
+    delayedCmd = "%s %s %s %s\n" % (fmbt_config.imagemagick_convert,
+                                    outputfilename, cmd, outputfilename)
     delayedDrawFilename = outputfilename + ".delayeddraw"
     try:
         if os.access(outputfilename, os.R_OK) == False:
@@ -529,8 +533,8 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
         # take a screenshot
         import fmbtx11
         fmbtx11.Screen().refreshScreenshot().save(SCREENSHOT_FILENAME + ".png")
-        _runcmd("convert %s.png -crop %sx%s+%s+%s +repage '%s'" %
-               (SCREENSHOT_FILENAME,
+        _runcmd("%s %s.png -crop %sx%s+%s+%s +repage '%s'" %
+               (fmbt_config.imagemagick_convert, SCREENSHOT_FILENAME,
                 _g_windowSizes[_g_lastWindow][0], _g_windowSizes[_g_lastWindow][1],
                 _g_windowOffsets[_g_lastWindow][0], _g_windowOffsets[_g_lastWindow][1],
                 SCREENSHOT_FILENAME))
@@ -576,8 +580,10 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
                           preprocess[resize_m.end():])
     _g_words = {}
     for psm in ocrPageSegModes:
-        convert_cmd = (["convert", _g_origImage] + croparea +
-                       shlex.split(preprocess) + [_g_readImage])
+        convert_cmd = ([fmbt_config.imagemagick_convert, _g_origImage] +
+                       croparea +
+                       shlex.split(preprocess) +
+                       [_g_readImage])
         tesseract_cmd = ["tesseract", _g_readImage, SCREENSHOT_FILENAME,
                          "-l", lang, "-psm", str(psm), "hocr"]
         exit_status, output = _runcmd(convert_cmd)
