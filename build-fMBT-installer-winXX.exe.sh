@@ -79,9 +79,12 @@ wget -nc https://tesseract-ocr.googlecode.com/files/tesseract-ocr-setup-3.02.02.
 # Create $BUILD_OUTPUT
 makensis fmbt.nsis
 
+cd ..
+
 # Print result
 echo ""
 if [ -f "$BUILD_OUTPUT" ]; then
+    echo "Success, result:"
     echo "$BUILD_OUTPUT"
     exit 0
 else

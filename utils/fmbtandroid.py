@@ -1696,11 +1696,13 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
     _w_host = 'localhost'
     _w_port = _m_port + 1
 
-    def __init__(self, serialNumber, stopOnError=True):
+    def __init__(self, serialNumber, stopOnError=True, workaround_exit_call_crash=False):
         fmbtgti.GUITestConnection.__init__(self)
         self._serialNumber = serialNumber
         self._stopOnError = stopOnError
         self._shellSupportsTar = False
+        self._workaround_exit_call_crash = workaround_exit_call_crash
+
         self.setScreenToDisplayCoords(lambda x, y: (x, y))
         self.setDisplayToScreenCoords(lambda x, y: (x, y))
 
@@ -1819,7 +1821,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         else:
             monkeyLaunch = ["monkey"]
 
-        if self._platformVersion >= "4.5":
+        if self._platformVersion >= "4.5" and self._workaround_exit_call_crash:
             monkeyLaunch += ["--no-system-exit-call"] # Workaround a monkey crash
 
         while time.time() < endTime:
