@@ -43,6 +43,7 @@ Options:
 from PySide import QtCore
 from PySide import QtGui
 
+import codecs
 import getopt
 import math
 import os
@@ -111,11 +112,11 @@ def _bitmapScreenshotFilename(bitmapFilename):
 
 def _pythonCode(code):
     try:
-        parser.expr(code)
+        parser.expr(code.encode("utf8"))
         return "expression"
     except SyntaxError:
         try:
-            parser.suite(code)
+            parser.suite(code.encode("utf8"))
             return "suite"
         except SyntaxError:
             return None
@@ -1392,7 +1393,8 @@ class MainWindow(QtGui.QMainWindow):
 
     def save(self):
         if self._scriptFilename:
-            file(self._scriptFilename, "w").write(self.editor.toPlainText())
+            codecs.open(self._scriptFilename, "w", encoding="utf8").write(
+                self.editor.toPlainText())
         else:
             return self.saveAs()
 
@@ -1734,7 +1736,8 @@ class MainWindow(QtGui.QMainWindow):
         else:
             filepath = os.path.abspath(filename)
         self.setScriptFilename(filepath)
-        self.editor.setPlainText(file(self._scriptFilename).read())
+        self.editor.setPlainText(
+            codecs.open(self._scriptFilename, encoding="utf8").read())
 
     def _fmbtExec(self, statement, silent=False):
         if not silent or opt_debug:
@@ -2881,7 +2884,7 @@ def _checkUnsavedWork():
 
     if unsaved_filename != None:
         try:
-            saved_data = file(unsaved_filename).read()
+            saved_data = codecs.open(unsaved_filename, encoding="utf8").read()
         except OSError:
             # file not readable
             return None
