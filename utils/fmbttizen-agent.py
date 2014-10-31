@@ -780,7 +780,7 @@ def shellSOE(command, asyncStatus, asyncOut, asyncError, usePty):
                 stdoutFile.close()
                 stderrFile.close()
                 statusFile.close()
-                return True, (0, None, None)
+                return True, (0, None, None) # async parent finishes here
         except OSError, e:
             return False, (None, None, e)
         os.setsid()
@@ -804,6 +804,7 @@ def shellSOE(command, asyncStatus, asyncOut, asyncError, usePty):
         statusFile.write(str(p.wait()) + "\n")
         statusFile.close()
         out, err = None, None
+        sys.exit(0) # async child finishes here
     return True, (p.returncode, out, err)
 
 def waitOutput(nonblockingFd, acceptedOutputs, timeout, pollInterval=0.1):

@@ -824,7 +824,7 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
             rv, img = self._agentCmd("ss")
         else:
             rv, img = self._agentCmd("ss R") # retry
-        if rv == False:
+        if rv == False or img is None:
             return False
         if img.startswith("FMBTRAWX11"):
             try:
