@@ -77,7 +77,7 @@ Section -Prerequisites
 
   MessageBox MB_YESNO "Install GNUPlot 4.66" /SD IDYES IDNO endGNUplot
     SetCompress off
-    file "gp466-@WINTYPE@-setup.exe"
+    file "gp466-win32-setup.exe"
     ExecWait "$INSTDIR\Prerequisites\gp466-@WINTYPE@-setup.exe"
   endGNUplot:
 

@@ -1,25 +1,57 @@
-fMBT Windows port is under development.
+fMBT Windows version
 
-Installing with fMBT-installer-winXX.exe
-----------------------------------------
+Install
+-------
+
+* fMBT requires Python 2.7.
+
+* Choose fMBT installer for the same architecture as your Python. If
+  you have 32-bit Python 2.7, use fMBT-installer-win32.exe. Print
+  Python architecture:
+
+  C:\Python27> python -c "import platform; print platform.architecture()"
 
 * Run fMBT-installer-winXX.exe.
 
-* Install all dependencies and allow extending PATH.
-
-* Make sure directories containing following executables are in PATH:
-  - python.exe  (C:\Python27)
-  - fmbt.exe (C:\Program Files (x86)\Intel\fMBT)
-  - dot.exe (C:\Program Files (x86)\Graphviz2.38\bin)
-  - gnuplot.exe (C:\Program Files\gnuplot\bin)
+* Let the installer install all (missing) dependencies and allow
+  extending PATH.
 
 
-Cross-compiling fMBT-installer-win32.exe
-----------------------------------------
+Build
+-----
 
 * Run on Fedora 20:
 
-  ./build-fMBT-installer-winXX.exe.sh
+  ./build-fMBT-installer-winXX.exe.sh 32
+  or
+  ./build-fMBT-installer-winXX.exe.sh 64
 
-* In the case you want to build 64-bit version, install
-  mingw64-packages and use mingw64-configure.
+  to produce
+
+  build-win32/fMBT-installer-win32.exe
+  or
+  build-win64/fMBT-installer-win64.exe.
+
+
+Status
+------
+
+What is expected to work:
+
+* fmbt (test generation and execution)
+
+* fmbt-editor
+
+* fmbt-scripter
+
+* GUI test interfaces: fmbttizen and fmbtwindows
+
+
+What is likely to have issues (no porting efforts yet):
+
+* GUI test interfaces: fmbtandroid, fmbtchromiumos, fmbtvnc, fmbtrdp
+
+
+What will not be ported on Windows:
+
+* GUI test interfaces: fmbtx11
