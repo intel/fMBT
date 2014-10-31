@@ -309,14 +309,15 @@ def _runcmd(cmd):
 def _runDrawCmd(inputfilename, cmd, outputfilename):
     if not _g_defaultDelayedDrawing:
         return _runcmd([fmbt_config.imagemagick_convert,
-                        inputfilename, cmd, outputfilename])
+                        inputfilename] + cmd + [outputfilename])
     # Do delayed drawing to save test execution time. If the output
     # file does not exist, just copy inputfile to outputfile and start
     # logging delayed draw commands to
     # outputfile.delayeddraw. Otherwise append latest command to
     # outputfile.delayeddraw.
-    delayedCmd = "%s %s %s %s\n" % (fmbt_config.imagemagick_convert,
-                                    outputfilename, cmd, outputfilename)
+    delayedCmd = '%s "%s" "%s" "%s"\n' % (
+        fmbt_config.imagemagick_convert,
+        outputfilename, '%s' % ('" "'.join(cmd)), outputfilename)
     delayedDrawFilename = outputfilename + ".delayeddraw"
     try:
         if os.access(outputfilename, os.R_OK) == False:
@@ -1603,14 +1604,14 @@ def drawBbox(inputfilename, outputfilename, bbox, caption):
     if inputfilename == None:
         return
 
-    draw_commands = ""
+    draw_commands = []
 
     left, top, right, bottom = bbox
     color = "green"
-    draw_commands += """ -stroke %s -fill blue -draw "fill-opacity 0.2 rectangle %s,%s %s,%s" """ % (
-        color, left, top, right, bottom)
-    draw_commands += """ -stroke none -fill %s -draw "text %s,%s '%s'" """ % (
-        color, left, top, _safeForShell(caption))
+    draw_commands += ["-stroke", color, "-fill", "blue", "-draw", "fill-opacity 0.2 rectangle %s,%s %s,%s" % (
+        left, top, right, bottom)]
+    draw_commands += ["-stroke", "none", "-fill", color, "-draw", "text %s,%s '%s'" % (
+        left, top, _safeForShell(caption))]
     _runDrawCmd(inputfilename, draw_commands, outputfilename)
 
 def drawWords(inputfilename, outputfilename, words, detected_words):
@@ -1621,7 +1622,7 @@ def drawWords(inputfilename, outputfilename, words, detected_words):
     if inputfilename == None:
         return
 
-    draw_commands = ""
+    draw_commands = []
     for w in words:
         score, dw = findWord(w, detected_words)
         left, top, right, bottom = detected_words[dw][0][2]
@@ -1631,12 +1632,12 @@ def drawWords(inputfilename, outputfilename, words, detected_words):
             color = "brown"
         else:
             color = "green"
-        draw_commands += """ -stroke %s -fill blue -draw "fill-opacity 0.2 rectangle %s,%s %s,%s" """ % (
-            color, left, top, right, bottom)
-        draw_commands += """ -stroke none -fill %s -draw "text %s,%s '%s'" """ % (
-            color, left, top, _safeForShell(w))
-        draw_commands += """ -stroke none -fill %s -draw "text %s,%s '%.2f'" """ % (
-            color, left, bottom+10, score)
+        draw_commands += ["-stroke", color, "-fill", "blue", "-draw", "fill-opacity 0.2 rectangle %s,%s %s,%s" % (
+            left, top, right, bottom)]
+        draw_commands += ["-stroke", "none", "-fill", color, "-draw", "text %s,%s '%s'" % (
+            left, top, _safeForShell(w))]
+        draw_commands += ["-stroke", "none", "-fill", color, "-draw", "text %s,%s '%.2f'" % (
+            left, bottom+10, score)]
     _runDrawCmd(inputfilename, draw_commands, outputfilename)
 
 def drawIcon(inputfilename, outputfilename, iconFilename, bboxes, color='green', area=None):
@@ -1647,18 +1648,18 @@ def drawIcon(inputfilename, outputfilename, iconFilename, bboxes, color='green',
         show_number = False
     else:
         show_number = True
-    draw_commands = ""
+    draw_commands = []
     for index, bbox in enumerate(bboxes):
         left, top, right, bottom = bbox[0], bbox[1], bbox[2], bbox[3]
-        draw_commands += """ -stroke %s -fill blue -draw "fill-opacity 0.2 rectangle %s,%s %s,%s" """ % (color, left, top, right, bottom)
+        draw_commands += ["-stroke", color, "-fill", "blue", "-draw", "fill-opacity 0.2 rectangle %s,%s %s,%s" % (left, top, right, bottom)]
         if show_number:
             caption = "%s %s" % (index+1, iconFilename)
         else:
             caption = iconFilename
-        draw_commands += """ -stroke none -fill %s -draw "text %s,%s '%s'" """ % (
-            color, left, top, caption)
+        draw_commands += ["-stroke", "none", "-fill", color, "-draw", "text %s,%s '%s'" % (
+            left, top, _safeForShell(caption))]
     if area != None:
-        draw_commands += """ -stroke yellow -draw "fill-opacity 0.0 rectangle %s,%s %s,%s" """ % (area[0]-1, area[1]-1, area[2], area[3])
+        draw_commands += ["-stroke", "yellow", "-draw", "fill-opacity 0.0 rectangle %s,%s %s,%s" % (area[0]-1, area[1]-1, area[2], area[3])]
     _runDrawCmd(inputfilename, draw_commands, outputfilename)
 
 def drawClickedPoint(inputfilename, outputfilename, clickedXY):
@@ -1671,9 +1672,9 @@ def drawClickedPoint(inputfilename, outputfilename, clickedXY):
     x, y = clickedXY
     x -= _g_windowOffsets[_g_lastWindow][0]
     y -= _g_windowOffsets[_g_lastWindow][1]
-    draw_commands = """ -stroke red -fill blue -draw "fill-opacity 0.2 circle %s,%s %s,%s" """ % (
-        x, y, x + 20, y)
-    draw_commands += """ -stroke none -fill red -draw "point %s,%s" """ % (x, y)
+    draw_commands = ["-stroke", "red", "-fill", "blue", "-draw", "fill-opacity 0.2 circle %s,%s %s,%s" % (
+        x, y, x + 20, y)]
+    draw_commands += ["-stroke", "none", "-fill", "red", "-draw", "point %s,%s" % (x, y)]
     _runDrawCmd(inputfilename, draw_commands, outputfilename)
 
 def _screenToWindow(x,y):
