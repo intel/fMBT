@@ -356,7 +356,10 @@ directives:
 ^endif
 ^include "<filename>"
 
-The directives must be used in the beginning of each line.
+The directives must be used in the beginning of each line. Included
+filenames are looked for from directories listed in the
+AAL_INCLUDE_PATH environment variable, and in include directories
+given with -I to fmbt-aalp, fmbt-aalc or remote_pyaal.
 
 
 AAL compiler
