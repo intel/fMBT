@@ -1878,7 +1878,7 @@ on_inconc = exit(2)
             suggestions['parallel'] = suggestions['aal']
 
             currentBlock, blockStartIndex = parserishAAL(pt, pos)
-            if currentBlock == None and self._modelEditorActiveFile != self._modelFileName:
+            if currentBlock == None:
                 # AAL block is not in an included model file
                 # use it as default
                 currentBlock = 'aal'

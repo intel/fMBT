@@ -308,3 +308,110 @@ if [ "$(grep -A4 'observe: action "o:x == 3"' controlflow.aal.log | grep "guard 
     testfailed
 fi
 testpassed
+
+
+teststep "remote_pyaal composing models with cat"
+cat > cat1.aal <<EOF
+variables { playing }
+initial_state { playing = False; log("cat1-initial-state") }
+adapter_init { log("cat1-adapter-init") }
+adapter_exit { log("cat1-adapter-exit") }
+input "play" {
+    guard { return not playing }
+    body { playing = True }
+}
+input "pause" {
+    guard { return playing }
+    body { playing = False }
+}
+EOF
+cat > cat2.aal <<EOF
+variables { playing, headphones }
+initial_state { headphones = "no"; log("cat2-initial-state") }
+adapter_init { log("cat2-adapter-init") }
+adapter_exit { log("cat2-adapter-exit") }
+input "connect" {
+    guard { return headphones == "no" }
+    body { headphones = "yes" }
+}
+input "disconnect" {
+    guard { return headphones == "yes" }
+    body {
+        headphones = "no"
+        playing = False
+    }
+}
+EOF
+cat cat1.aal cat2.aal > cats.aal
+cat > cats.conf <<EOF
+model     = aal_remote(remote_pyaal -l cats.aal.log cats.aal)
+adapter   = aal
+heuristic = lookahead(4)
+coverage  = perm(2)
+pass      = steps(20)
+EOF
+if ! fmbt -l cats.log cats.conf >>$LOGFILE 2>&1; then
+    echo "failed because: non-zero exit status of 'fmbt cats.conf'" >>$LOGFILE
+    testfailed
+fi
+# check that adapter_init and adapter_exit block execution order is correct
+cat > cats.1.2.istate <<EOF
+cat1-initial-state
+cat2-initial-state
+EOF
+cat > cats.1.2.inits <<EOF
+cat1-adapter-init
+cat2-adapter-init
+EOF
+cat > cats.1.2.exits <<EOF
+cat1-adapter-exit
+cat2-adapter-exit
+EOF
+cat > cats.2.1.istate <<EOF
+cat2-initial-state
+cat1-initial-state
+EOF
+cat > cats.2.1.inits <<EOF
+cat2-adapter-init
+cat1-adapter-init
+EOF
+cat > cats.2.1.exits <<EOF
+cat2-adapter-exit
+cat1-adapter-exit
+EOF
+awk '/cat.-initial-state/{print $2}' < cats.aal.log > cats.aal.log.istate
+awk '/cat.-adapter-init/{print $2}' < cats.aal.log > cats.aal.log.inits
+awk '/cat.-adapter-exit/{print $2}' < cats.aal.log > cats.aal.log.exits
+if ! diff -u cats.aal.log.istate cats.1.2.istate >>$LOGFILE 2>&1; then
+    echo "failed because: adapter initial_state cat1 cat2 expected" >>$LOGFILE
+    testfailed
+fi
+if ! diff -u cats.aal.log.inits cats.1.2.inits >>$LOGFILE 2>&1; then
+    echo "failed because: adapter init cat1 cat2 expected" >>$LOGFILE
+    testfailed
+fi
+if ! diff -u cats.aal.log.exits cats.1.2.exits >>$LOGFILE 2>&1; then
+    echo "failed because: adapter exit cat1 cat2 expected" >>$LOGFILE
+    testfailed
+fi
+cat cat2.aal cat1.aal > cats.aal
+if ! fmbt -l cats.log cats.conf >>$LOGFILE 2>&1; then
+    echo "failed because: non-zero exit status of 'fmbt cats.conf'" >>$LOGFILE
+    testfailed
+fi
+awk '/cat.-initial-state/{print $2}' < cats.aal.log > cats.aal.log.istate
+awk '/cat.-adapter-init/{print $2}' < cats.aal.log > cats.aal.log.inits
+awk '/cat.-adapter-exit/{print $2}' < cats.aal.log > cats.aal.log.exits
+if ! diff -u cats.aal.log.inits cats.2.1.inits >>$LOGFILE 2>&1; then
+    echo "failed because: adapter init cat2 cat1 expected" >>$LOGFILE
+    testfailed
+fi
+if ! diff -u cats.aal.log.exits cats.2.1.exits >>$LOGFILE 2>&1; then
+    echo "failed because: adapter exit cat2 cat2 expected" >>$LOGFILE
+    testfailed
+fi
+if ! diff -u cats.aal.log.istate cats.2.1.istate >>$LOGFILE 2>&1; then
+    echo "failed because: adapter initial_state cat2 cat1 expected" >>$LOGFILE
+    testfailed
+fi
+testpassed

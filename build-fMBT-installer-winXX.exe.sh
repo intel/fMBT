@@ -20,6 +20,7 @@ sudo yum install mingw$XX-gettext mingw$XX-expat mingw$XX-winpthreads mingw$XX-d
 
 mkdir build-win$XX;
 rm -f "$BUILD_OUTPUT"
+rm -f build-win$XX/utils/*
 cd build-win$XX
 
 [ -f fmbt.ico ] || ln ../fmbt.ico .
