@@ -118,7 +118,7 @@ section "install"
 # I don't know any sane method to handle dependencies. So hard-code.
 
 	file "@bindir@/gspawn-@WINTYPE@-helper-console.exe"
-	file "@bindir@/gspawn-@WINTYPE@-helper.exe"
+	file /oname=gspawn-@WINTYPE@-helper.exe "@bindir@/gspawn-@WINTYPE@-helper-console.exe"
 
 	file "convert.exe"
 
