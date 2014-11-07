@@ -1703,7 +1703,7 @@ def drawLines(inputfilename, outputfilename, orig_coordinates, final_coordinates
         return
 
     # The command which will be run
-    drawCommand = ''
+    draw_commands = []
 
     for pos in xrange(len(final_coordinates)-1):
         # Get the pair coordinates
@@ -1716,20 +1716,21 @@ def drawLines(inputfilename, outputfilename, orig_coordinates, final_coordinates
 
         # Draw a pair of circles. User-given points are blue
         if (x, y) in orig_coordinates:
-            drawCommand +=  "-fill blue -stroke red -draw 'fill-opacity 0.2 circle %d, %d %d, %d' " % (drawX, drawY, drawX-5, drawY-5)
+            draw_commands +=  ["-fill", "blue", "-stroke", "red", "-draw", "fill-opacity 0.2 circle %d, %d %d, %d" % (drawX, drawY, drawX-5, drawY-5)]
         # Computer-generated points are white
         else:
-            drawCommand +=  "-fill white -stroke red -draw 'fill-opacity 0.2 circle %d, %d %d, %d' " % (drawX, drawY, drawX-5, drawY-5)
+            draw_commands +=  ["-fill", "white", "-stroke", "red", "-draw", "fill-opacity 0.2 circle %d, %d %d, %d" % (drawX, drawY, drawX-5, drawY-5)]
 
         # Draw the line between the points
-        drawCommand += "-stroke black -draw 'line %d, %d, %d, %d' " % (drawX, drawY, drawnextX, drawnextY)
+        draw_commands += ["-stroke", "red", "-draw", "line %d, %d, %d, %d" % (drawX, drawY, drawnextX, drawnextY)]
+        draw_commands += ["-stroke", "black", "-draw", "line %d, %d, %d, %d" % (drawX+1, drawY+1, drawnextX+1, drawnextY+1)]
 
     if len(final_coordinates) > 0:
         lastIndex = len(final_coordinates)-1
         (finalX, finalY) = _screenToWindow(final_coordinates[lastIndex][0], final_coordinates[lastIndex][1])
-        drawCommand +=  "-fill blue -stroke red -draw 'fill-opacity 0.2 circle %d, %d %d, %d' " % (finalX, finalY, finalX-5, finalY-5)
+        draw_commands += ["-fill", "blue", "-stroke", "red", "-draw", "fill-opacity 0.2 circle %d, %d %d, %d" % (finalX, finalY, finalX-5, finalY-5)]
 
-    _runDrawCmd(inputfilename, drawCommand, outputfilename)
+    _runDrawCmd(inputfilename, draw_commands, outputfilename)
 
 def evaluatePreprocessFilter(imageFilename, ppfilter, words):
     """
