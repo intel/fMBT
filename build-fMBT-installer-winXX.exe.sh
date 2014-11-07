@@ -12,7 +12,7 @@ fi
 BUILD_OUTPUT="build-win$XX/fMBT-installer-win$XX.exe"
 
 if [ -z "$WINDOWS_DEPENDENCY_MIRROR" ]; then
-    IMAGEMAGICK_URL=ftp://ftp.fifi.org/pub/ImageMagick/ImageMagick-6.8.9-9.7z
+    IMAGEMAGICK_URL=ftp://ftp.fifi.org/pub/ImageMagick/ImageMagick-6.8.9-10.7z
     GRAPHVIZ_URL=http://www.graphviz.org/pub/graphviz/stable/windows/graphviz-2.38.msi
     PYTHON32_URL=https://www.python.org/ftp/python/2.7.8/python-2.7.8.msi
     PYTHON64_URL=https://www.python.org/ftp/python/2.7.8/python-2.7.8.amd64.msi
@@ -21,7 +21,7 @@ if [ -z "$WINDOWS_DEPENDENCY_MIRROR" ]; then
     GNUPLOT_URL=http://sourceforge.net/projects/gnuplot/files/gnuplot/4.6.6/gp466-win32-setup.exe
     TESSERACT_URL=https://tesseract-ocr.googlecode.com/files/tesseract-ocr-setup-3.02.02.exe
 else
-    IMAGEMAGICK_URL=$WINDOWS_DEPENDENCY_MIRROR/ImageMagick-6.8.9-9.7z
+    IMAGEMAGICK_URL=$WINDOWS_DEPENDENCY_MIRROR/ImageMagick-6.8.9-10.7z
     GRAPHVIZ_URL=$WINDOWS_DEPENDENCY_MIRROR/graphviz-2.38.msi
     PYTHON32_URL=$WINDOWS_DEPENDENCY_MIRROR/python-2.7.8.msi
     PYTHON64_URL=$WINDOWS_DEPENDENCY_MIRROR/python-2.7.8.amd64.msi
