@@ -37,7 +37,7 @@ if [ "$(whoami)" == "root" ]; then
 else
     SUDO="sudo"
 fi
-$SUDO yum -y install autoconf automake flex mingw$XX-gettext mingw$XX-expat mingw$XX-winpthreads mingw$XX-dbus-glib mingw$XX-filesystem mingw$XX-bzip2 mingw$XX-crt mingw$XX-win-iconv mingw$XX-libffi mingw$XX-cpp mingw$XX-libxml2 mingw$XX-readline mingw$XX-gcc mingw$XX-dbus mingw32-nsis mingw$XX-headers mingw$XX-termcap mingw$XX-boost mingw$XX-pkg-config mingw$XX-glib2 mingw$XX-gcc-c++ mingw$XX-zlib mingw$XX-libpng mingw-filesystem-base wget p7zip
+$SUDO yum -y install dh-autoreconf flex mingw$XX-gettext mingw$XX-expat mingw$XX-winpthreads mingw$XX-dbus-glib mingw$XX-filesystem mingw$XX-bzip2 mingw$XX-crt mingw$XX-win-iconv mingw$XX-libffi mingw$XX-cpp mingw$XX-libxml2 mingw$XX-readline mingw$XX-gcc mingw$XX-dbus mingw32-nsis mingw$XX-headers mingw$XX-termcap mingw$XX-boost mingw$XX-pkg-config mingw$XX-glib2 mingw$XX-gcc-c++ mingw$XX-zlib mingw$XX-libpng mingw-filesystem-base wget p7zip
 
 [ -f configure ] || ./autogen.sh || {
     echo "./autogen.sh failed"
