@@ -1616,9 +1616,10 @@ class View(object):
         currentIndent = 0
         visible = True
         self.TOP_PAGED_VIEW = ""
+        last_line = set(["DONE", "DONE."])
 
         for lineIndex, line in enumerate(dump.splitlines()):
-            if line == "DONE.":
+            if line in last_line:
                 break
 
             # separate indent, class and properties for each GUI object
