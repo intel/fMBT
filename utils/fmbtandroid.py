@@ -917,8 +917,9 @@ class Device(fmbtgti.GUITestInterface):
 
         Returns created View object.
         """
-        def formatErrors(errors):
-            return "refreshView parse errors:\n    %s" % (
+        def formatErrors(errors, filename):
+            return 'refreshView parse errors in "%s":\n    %s' % (
+                filename,
                 "\n    ".join(["line %s: %s error: %s" % e for e in errors]),)
 
         if self._conn:
@@ -930,7 +931,7 @@ class Device(fmbtgti.GUITestInterface):
                 self._lastView = forcedView
             elif type(forcedView) == str:
                 self._lastView = View(self.screenshotDir(), self.serialNumber, file(forcedView).read(), displayToScreen)
-                _adapterLog(formatErrors(self._lastView.errors()))
+                _adapterLog(formatErrors(self._lastView.errors(), self._lastView.filename()))
             else:
                 raise ValueError("forcedView must be a View object or a filename")
             return self._lastView
@@ -948,7 +949,7 @@ class Device(fmbtgti.GUITestInterface):
                 retryCount += self._PARSE_VIEW_RETRY_LIMIT / 2
             if dump == None or len(view.errors()) > 0:
                 if view:
-                    _adapterLog(formatErrors(view.errors()))
+                    _adapterLog(formatErrors(view.errors(), view.filename()))
                 if retryCount < self._PARSE_VIEW_RETRY_LIMIT:
                     retryCount += 1
                     time.sleep(0.2) # sleep before retry
@@ -1457,14 +1458,20 @@ class ViewItem(fmbtgti.GUIItem):
         fmbtgti.GUIItem.__init__(self, className, self._calculateBbox(displayToScreen), dumpFilename)
     def addChild(self, child): self._children.append(child)
     def _calculateBbox(self, displayToScreen):
-        left = int(self._p["layout:mLeft"])
-        top = int(self._p["layout:mTop"])
-        parent = self._parent
-        while parent:
-            pp = parent._p
-            left += int(pp["layout:mLeft"]) - int(pp["scrolling:mScrollX"])
-            top += int(pp["layout:mTop"]) - int(pp["scrolling:mScrollY"])
-            parent = parent._parent
+        if "layout:getLocationOnScreen_x()" in self._p:
+            left = int(self._p["layout:getLocationOnScreen_x()"])
+            top = int(self._p["layout:getLocationOnScreen_y()"])
+        elif "layout:mLeft" in self._p:
+            left = int(self._p["layout:mLeft"])
+            top = int(self._p["layout:mTop"])
+            parent = self._parent
+            while parent:
+                pp = parent._p
+                left += int(pp["layout:mLeft"]) - int(pp["scrolling:mScrollX"])
+                top += int(pp["layout:mTop"]) - int(pp["scrolling:mScrollY"])
+                parent = parent._parent
+        else:
+            raise ValueError("bounding box not found, layout fields missing")
         height = int(self._p["layout:getHeight()"])
         width = int(self._p["layout:getWidth()"])
         screenLeft, screenTop = displayToScreen(left, top)
@@ -1511,7 +1518,8 @@ class View(object):
         file(self._rawDumpFilename, "w").write(self._dump)
         if displayToScreen == None:
             displayToScreen = lambda x, y: (x, y)
-        try: self._parseDump(dump, self._rawDumpFilename, displayToScreen)
+        try:
+            self._parseDump(dump, self._rawDumpFilename, displayToScreen)
         except Exception, e:
             self._errors.append((-1, "", "Parser error"))
 
@@ -1546,7 +1554,8 @@ class View(object):
         else: t = None
         return "id=%s cls=%s text=%s bbox=%s" % (
             i.id(), i.className(), t, i.bbox())
-
+    def filename(self):
+        return self._rawDumpFilename
     def findItems(self, comparator, count=-1, searchRootItem=None, searchItems=None):
         foundItems = []
         if count == 0: return foundItems
@@ -1631,7 +1640,7 @@ class View(object):
                 # should branch according to self._androidVersion!
                 matcher = self._olderAndroidLineRegEx.match(line)
                 if not matcher:
-                    self._errors.append((lineIndex + 1, line, "Illegal line"))
+                    self._errors.append((lineIndex + 1, line, "illegal line"))
                     continue # skip this line
 
             className = matcher.group("class")
@@ -1661,26 +1670,48 @@ class View(object):
             while index < len(propertiesData):
                 # Separate name and value for each property [^=]*=
                 propMatch = self._propRegEx.match(propertiesData[index:-1])
-                if not propMatch or len(propMatch.group("data")) < int(propMatch.group("len")):
-                    if not propMatch.group("data"):
-                        self._errors.append((lineIndex, propertiesData[index:-1], "Illegal property"))
-                        return None
-                    startFrom = index + propertiesData[index:-1].find(propMatch.group("data"))
-                    currFixedData = propertiesData[startFrom:(startFrom + int(propMatch.group("len")))]
-                    length = int(propMatch.group("len"))
-                    # [^=]+=?, == data
-                    properties[propMatch.group("name")] = currFixedData[0:length].lstrip()
-                else:
-                    length = int(propMatch.group("len"))
-                    # [^=]+=?, == data
-                    properties[propMatch.group("name")] = propMatch.group("data")[0:length].lstrip()
+                if not propMatch:
+                    self._errors.append((lineIndex, line,
+                                         "property parse error"))
+                    break
 
-                index += len(propMatch.group("prop")) + length + 1
+                name = propMatch.group("name")
+                if not name:
+                    self._errors.append(
+                        (lineIndex, line,
+                         'illegal property name "%s"' % (name,)))
+                    break
 
-            self._viewItems.append(ViewItem(matcher.group("class"), matcher.group("id"), indent, properties, parent, matcher.group("properties"), self._rawDumpFilename, displayToScreen))
+                try:
+                    dataLength = int(propMatch.group("len"))
+                except ValueError:
+                    self._errors.append(
+                        (lineIndex, line,
+                         'illegal length (int) "%s"' % (propMatch.group("len"),)))
+                    break
 
-            if parent:
-                parent.addChild(self._viewItems[-1])
+                data = propMatch.group("data")
+                dataStart = index + propMatch.start("data")
+
+                if len(data) < dataLength:
+                    if not data:
+                        self._errors.append(
+                            (lineIndex, line,
+                             'property "%s": data missing, expected %s' % (name, dataLength, len(data))))
+                        break
+
+                properties[name] = propertiesData[dataStart:dataStart + dataLength]
+                index = dataStart + dataLength + 1
+
+            try:
+                vi = ViewItem(matcher.group("class"), matcher.group("id"), indent, properties, parent, matcher.group("properties"), self._rawDumpFilename, displayToScreen)
+                self._viewItems.append(vi)
+                if parent:
+                    parent.addChild(self._viewItems[-1])
+            except Exception, e:
+                self._errors.append(
+                    (lineIndex, line,
+                     "creating view item failed (%s: %s)" % (type(e), e)))
         return self._viewItems
 
     def __str__(self):
