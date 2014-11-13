@@ -25,7 +25,9 @@ import inspect
 import os
 import pythonshare
 import shlex
+import StringIO
 import subprocess
+import tarfile
 import zlib
 
 def _run(command, sendStdin=None):
@@ -34,7 +36,7 @@ def _run(command, sendStdin=None):
                              stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE,
-                             close_fds=True)
+                             close_fds=(os.name != "nt"))
     except OSError, e:
         raise FMBTChromiumOsError('Cannot execute (%s): %s' %
                                   (e, command))
@@ -114,10 +116,15 @@ class ChromiumOSConnection(fmbtgti.GUITestConnection):
         self.open()
 
     def sendFilesInTar(self, localDir, files, destDir):
-        _, package, _ = _run(("tar", "-h", "-C", localDir, "-c") + files)
+        package = StringIO.StringIO()
+        t = tarfile.TarFile(mode="w", fileobj=package)
+        for filename in files:
+            t.add(os.path.join(localDir, filename), arcname=filename)
+        t.close()
+        package.seek(0)
         _run(self._loginTuple +
              ("mkdir -p %s; tar x -C %s" % (destDir, destDir),),
-             package)
+             package.read())
 
     def agentExec(self, pythonCode):
         self._agent.exec_in(self._agent_ns, pythonCode)
@@ -135,7 +142,7 @@ class ChromiumOSConnection(fmbtgti.GUITestConnection):
                              "fmbtuinput.py"),
                             "/tmp/fmbtchromiumos")
 
-        if os.access(os.path.join(myDir, "pythonshare/__init__.py"), os.R_OK):
+        if os.access(os.path.join(myDir, "pythonshare", "__init__.py"), os.R_OK):
             pythonshareDir = myDir
         elif os.access(os.path.join(myDir, "..", "pythonshare", "pythonshare",
                                     "__init__.py"), os.R_OK):
@@ -148,8 +155,13 @@ class ChromiumOSConnection(fmbtgti.GUITestConnection):
                              "pythonshare/messages.py"),
                             "/tmp/fmbtchromiumos")
 
-        pythonshareServer = distutils.spawn.find_executable("pythonshare-server")
-        if not pythonshareServer:
+        if os.name != "nt":
+            pythonshareServer = distutils.spawn.find_executable("pythonshare-server")
+        else:
+            pythonshareServer = os.path.join(
+                os.path.dirname(__file__), "..", "Scripts", "pythonshare-server")
+
+        if not pythonshareServer or not os.access(pythonshareServer, os.R_OK):
             raise FMBTChromiumOsError("cannot find pythonshare-server executable")
 
         self.sendFilesInTar(os.path.dirname(pythonshareServer),
@@ -187,11 +199,11 @@ class ChromiumOSConnection(fmbtgti.GUITestConnection):
             fmbtgti.eye4graphics.bgrx2rgb(data, width, height)
             # TODO: use libimagemagick directly to save data to png?
             ppm_header = "P6\n%d %d\n%d\n" % (width, height, 255)
-            f = file(filename + ".ppm", "w").write(ppm_header + data[:width*height*3])
+            f = file(filename + ".ppm", "wb").write(ppm_header + data[:width*height*3])
             _run([fmbt_config.imagemagick_convert, filename + ".ppm", filename])
             os.remove("%s.ppm" % (filename,))
         else:
-            file(filename, "w").write(img)
+            file(filename, "wb").write(img)
         return True
 
     def sendType(self, text):
