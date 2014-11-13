@@ -40,6 +40,7 @@ d = fmbtwindows.Device("IP-ADDRESS-OF-THE-DEVICE", password="xxxxxxxx")
 
 import ast
 import fmbt
+import fmbt_config
 import fmbtgti
 import inspect
 import os
@@ -589,7 +590,7 @@ class WindowsConnection(fmbtgti.GUITestConnection):
             f.write(ppm_header)
             f.write(data)
             f.close()
-            _run(["convert", ppmfilename, filename], expectedExitStatus=[0])
+            _run([fmbt_config.imagemagick_convert, ppmfilename, filename], expectedExitStatus=[0])
             os.remove(ppmfilename)
         return True
 

@@ -120,7 +120,7 @@ section "install"
 	file "@bindir@/gspawn-@WINTYPE@-helper-console.exe"
 	file /oname=gspawn-@WINTYPE@-helper.exe "@bindir@/gspawn-@WINTYPE@-helper-console.exe"
 
-	file "convert.exe"
+	file /oname=IMconvert.exe "convert.exe"
 
 	file "@bindir@/iconv.dll"
 	file "@bindir@/libMagick++-6.Q16*.dll"

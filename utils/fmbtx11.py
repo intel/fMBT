@@ -18,6 +18,7 @@
 This library implements fmbt GUITestInterface for X.
 """
 
+import fmbt_config
 import fmbtgti
 
 fmbtgti._OCRPREPROCESS = [
@@ -72,7 +73,7 @@ class X11Connection(fmbtx11_conn.Display):
                 fmbtgti.eye4graphics.bgrx2rgb(data, width, height)
                 ppm_header = "P6\n%d %d\n%d\n" % (width, height, 255)
                 f = file(filename + ".ppm", "w").write(ppm_header + data[:width*height*3])
-                _run(["convert", filename + ".ppm", filename])
+                _run([fmbt_config.imagemagick_convert, filename + ".ppm", filename])
                 os.remove("%s.ppm" % (filename,))
             elif fmbtx11_conn.fmbtpng and data.startswith(fmbtx11_conn.fmbtpng.PNG_MAGIC):
                 file(filename, "w").write(data)

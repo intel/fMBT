@@ -113,6 +113,7 @@ import traceback
 import types
 
 import fmbt
+import fmbt_config
 import eyenfinger
 
 # See imagemagick convert parameters.
@@ -1562,7 +1563,7 @@ class GUITestInterface(object):
             else:
                 widthHeight = self._screenshotArchiveMethod.split()[1]
                 convertArgs = ["-resize", widthHeight]
-            subprocess.call(["convert", filepath] + convertArgs + [filepath])
+            subprocess.call([fmbt_config.imagemagick_convert, filepath] + convertArgs + [filepath])
 
     def _archiveScreenshots(self):
         """
@@ -1623,7 +1624,7 @@ class GUITestInterface(object):
                 if rotate == None:
                     rotate = self._rotateScreenshot
                 if rotate != None and rotate != 0:
-                    subprocess.call(["convert", screenshotFile, "-rotate", str(rotate), screenshotFile])
+                    subprocess.call([fmbt_config.imagemagick_convert, screenshotFile, "-rotate", str(rotate), screenshotFile])
                 self._lastScreenshot = Screenshot(
                     screenshotFile=screenshotFile,
                     paths = self._paths,

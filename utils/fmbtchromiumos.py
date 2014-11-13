@@ -19,6 +19,7 @@ This library implements fmbt GUITestInterface for Chromium OS
 """
 
 import distutils.spawn
+import fmbt_config
 import fmbtgti
 import inspect
 import os
@@ -187,7 +188,7 @@ class ChromiumOSConnection(fmbtgti.GUITestConnection):
             # TODO: use libimagemagick directly to save data to png?
             ppm_header = "P6\n%d %d\n%d\n" % (width, height, 255)
             f = file(filename + ".ppm", "w").write(ppm_header + data[:width*height*3])
-            _run(["convert", filename + ".ppm", filename])
+            _run([fmbt_config.imagemagick_convert, filename + ".ppm", filename])
             os.remove("%s.ppm" % (filename,))
         else:
             file(filename, "w").write(img)
