@@ -3,13 +3,14 @@ fMBT Windows version
 Install
 -------
 
-* fMBT requires Python 2.7.
-
 * Choose fMBT installer for the same architecture as your Python. If
   you have 32-bit Python 2.7, use fMBT-installer-win32.exe. Print
   Python architecture:
 
   C:\Python27> python -c "import platform; print platform.architecture()"
+
+  If you do not have Python, the installer that you choose will install
+  Python 2.7.8 for the correct architecture, among other dependencies.
 
 * Run fMBT-installer-winXX.exe.
 
@@ -44,14 +45,22 @@ What is expected to work:
 
 * fmbt-scripter
 
-* GUI test interfaces: fmbttizen and fmbtwindows
+* GUI test interfaces:
+
+  - fmbtandroid
+
+  - fmbtchromiumos
+
+  - fmbttizen
+
+  - fmbtwindows
 
 
 What is likely to have issues (no porting efforts yet):
 
-* GUI test interfaces: fmbtandroid, fmbtchromiumos, fmbtvnc, fmbtrdp
+* GUI test interfaces: fmbtvnc, fmbtrdp
 
 
-What will not be ported on Windows:
+What is not planned to be ported on Windows:
 
 * GUI test interfaces: fmbtx11
