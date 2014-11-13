@@ -2167,6 +2167,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         Returns True on success, otherwise False.
         """
         remotefile = '/sdcard/' + os.path.basename(filename)
+        remotefile = remotefile.replace(':', '_') # vfat dislikes colons
 
         self._runAdb(['shell', 'screencap', '-p', remotefile], 0)
 
