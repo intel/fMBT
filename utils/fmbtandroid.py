@@ -367,6 +367,7 @@ class Device(fmbtgti.GUITestInterface):
 
         self._platformVersion = None
         self._lastView = None
+        self._supportsView = None
 
         self._conf = Ini()
 
@@ -1159,11 +1160,13 @@ class Device(fmbtgti.GUITestInterface):
 
         Returns True if view data can be read, otherwise False.
         """
-        try:
-            self.existingConnection().recvViewData()
-            return True
-        except AndroidConnectionError:
-            return False
+        if self._supportsView == None:
+            try:
+                self.existingConnection().recvViewData()
+                self._supportsView = True
+            except AndroidConnectionError:
+                self._supportsView = False
+        return self._supportsView
 
     def systemProperty(self, propertyName):
         """
