@@ -77,6 +77,9 @@ mingw$XX-configure --with-readline && make || {
     exit 1
 }
 
+FMBT_VERSION=$(awk '/^FMBT_VERSION = /{print $3}' < Makefile)
+FMBTBUILDINFO=$(awk '/^FMBTBUILDINFO = /{print $3}' < Makefile)
+
 cd utils
     make utils_installer || {
         echo "make utils_installer failed"
@@ -106,8 +109,10 @@ cd ..
 # Print result
 echo ""
 if [ -f "$BUILD_OUTPUT" ]; then
+    BUILD_OUTPUT_VER="${BUILD_OUTPUT/.exe/-$FMBT_VERSION$FMBTBUILDINFO.exe}"
+    mv "$BUILD_OUTPUT" "$BUILD_OUTPUT_VER"
     echo "Success, result:"
-    echo "$BUILD_OUTPUT"
+    echo "$BUILD_OUTPUT_VER"
     exit 0
 else
     echo "build failed."
