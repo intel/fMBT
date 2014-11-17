@@ -80,6 +80,14 @@ mingw$XX-configure --with-readline && make || {
 FMBT_VERSION=$(awk '/^FMBT_VERSION = /{print $3}' < Makefile)
 FMBTBUILDINFO=$(awk '/^FMBTBUILDINFO = /{print $3}' < Makefile)
 
+# Try to get commit count since the last release (tag) to untagged builds
+if [ ! -z "$FMBTBUILDINFO" ]; then
+    COMMITCOUNT=$(git log $(git describe --tags --abbrev=0)..HEAD --oneline | wc -l)
+    if [ ! -z "$COMMITCOUNT" ]; then
+        FMBTBUILDINFO="-$COMMITCOUNT$FMBTBUILDINFO"
+    fi
+fi
+
 cd utils
     make utils_installer || {
         echo "make utils_installer failed"
