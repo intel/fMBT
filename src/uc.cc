@@ -41,18 +41,9 @@ extern OutputFormat* uconf_obj;
 
 #ifndef DROI
 #include <glib-object.h>
-#include <error.h>
-#else
-void error(int exitval, int dontcare, const char* format, ...)
-{
-  va_list ap;
-  fprintf(stderr, "fMBT error: ");
-  va_start (ap, format);
-  vfprintf(stderr, format, ap);
-  va_end(ap);
-  exit(exitval);
-}
 #endif
+
+#include "error.hh"
 
 #include <cstdio>
 #include <getopt.h>

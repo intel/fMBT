@@ -35,21 +35,8 @@
 #include "config.h"
 
 #include <glib-object.h>
-#ifdef __MINGW32__
-void error(int exitval, int dontcare, const char* format, ...)
-{
-  va_list ap;
-  fprintf(stderr, "fMBT error: ");
-  va_start(ap, format);
-  vfprintf(stderr, format, ap);
-  va_end(ap);
-  if (exitval) {
-    exit(exitval);
-  }
-}
-#else
-#include <error.h>
-#endif
+
+#include "error.hh"
 
 #include <cstdio>
 #include <getopt.h>
