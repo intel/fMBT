@@ -1,2 +1,2 @@
-#!/bin/bash
+#!/bin/sh
 autoreconf -i -f
