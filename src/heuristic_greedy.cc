@@ -211,4 +211,4 @@ FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "action_fitness")
 #undef FACTORY_CREATOR_PARAMS2
 #define FACTORY_CREATOR_PARAMS Verdict::Verdict v, std::string params,Conf* co
 #define FACTORY_CREATOR_PARAMS2 co, v, params
-FACTORY_DEFAULT_CREATOR(End_condition, End_condition_bool, "lookahead_noprogress");
+FACTORY_DEFAULT_CREATOR(End_condition, End_condition_bool, "lookahead_noprogress")
