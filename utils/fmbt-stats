@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 #
 # fMBT, free Model Based Testing tool
 # Copyright (c) 2012, Intel Corporation.
@@ -257,7 +257,7 @@ def init_plotting(plot_filename, plot_data_table):
     elif plot_output_format in ['pdf']:
         plot_output_format = 'set term pdfcairo'
     output_filename = tempfile.gettempdir() + os.sep + "fmbt-stats.%s.dat" % (os.getpid(),)
-    plot_output_format += '\nset output "%s"' % (plot_filename,)
+    plot_output_format += '\nset output "%s"' % (plot_filename.replace("\\", "\\\\"),)
 
     file(output_filename, "w").write("".join(plot_data_table))
     return plot_output_format, output_filename

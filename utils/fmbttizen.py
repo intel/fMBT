@@ -67,6 +67,7 @@ import zlib
 import inspect
 
 import fmbt
+import fmbt_config
 import fmbtgti
 
 # See imagemagick convert parameters.
@@ -844,7 +845,7 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
             # TODO: use libimagemagick directly to save data to png?
             ppm_header = "P6\n%d %d\n%d\n" % (width, height, 255)
             f = file(filename + ".ppm", "wb").write(ppm_header + data[:width*height*3])
-            _run(["convert", filename + ".ppm", filename], expectedExitStatus=0)
+            _run([fmbt_config.imagemagick_convert, filename + ".ppm", filename], expectedExitStatus=0)
             os.remove("%s.ppm" % (filename,))
         else:
             file(filename, "wb").write(img)

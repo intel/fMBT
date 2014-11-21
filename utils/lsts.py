@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # Copyright (c) 2006-2010 Tampere University of Technology
 #
 # Permission is hereby granted, free of charge, to any person obtaining
