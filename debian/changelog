@@ -1,8 +1,27 @@
-fmbt (0.16.3-0.rc0) unstable; urgency=low
+fmbt (0.17-1) unstable; urgency=low
 
-  * Development version.
+  * Windows port:
+    - Windows is now a supported platform.
+    - The build-fMBT-installer-winXX.exe.sh script creates fMBT win32/64
+      installers that include all dependencies (Python, PySide, etc.).
+    - Many issues fixed on fmbt-editor, fmbt-scripter and GUI adapters.
+    - fmbtandroid and fmbtchromiumos ported to work on Windows.
+  * fmbtandroid/chromiumos/rdp/tizen/vnc/windows/x11:
+    - setTapDefaults() sets default values for optional arguments for
+      tap(). Example: dut.setTapDefaults(button=1).
+    - tapOffset and startOffset added to tap*() and swipe*() methods.
+    - Visualizing drag/swipe on visual log improved.
+   * fmbtandroid:
+    - Android 5 support improved.
+    - refreshView() is more robust for internal errors on window dump.
+    - refreshScreenshot() fixed with adb over TCP/IP.
+    - supportsView() caches the result.
+   * fmbttizen:
+    - Support for Tizen 2.3b emulator.
+    - Fixed async shellSOE issue (caused screenshot failures).
+   * fmbt-editor and fmbt-scripter use UTF-8 character encoding.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 24 Oct 2014 11:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 21 Nov 2014 10:42:00 +0300
 
 fmbt (0.16.2-1) unstable; urgency=low
 

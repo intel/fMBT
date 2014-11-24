@@ -35,19 +35,19 @@ int main(int argc,char** argv)
 #endif
   margv=(char**)g_new0(char**,argc+2);
 
-  if (!g_getenv("fmbt_debug_windows") && 
+  if (!g_getenv("fmbt_debug_windows") && margv[0] &&
       (g_str_has_suffix(margv[0],"fmbt-editor.exe") ||
        g_str_has_suffix(margv[0],"fmbt-editor")) ) {
     margv[0]=g_find_program_in_path("pythonw");
   }
-  
+
   if (margv[0]==NULL) {
     margv[0]=g_find_program_in_path("python");
   }
 
   margv[1]=g_find_program_in_path(argv[0]);
 
-  if (g_str_has_suffix(margv[1],".exe")) {
+  if (margv[1] && g_str_has_suffix(margv[1],".exe")) {
     margv[1]=g_strndup(margv[1],strlen(margv[1])-4);
   }
 
