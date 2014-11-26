@@ -23,8 +23,9 @@
 #ifndef __alg_bdfs_hh__
 #define __alg_bdfs_hh__
 
-class Model;
 class Coverage;
+class Learning;
+class Model;
 
 #include <vector>
 #include "writable.hh"
@@ -32,7 +33,11 @@ class Coverage;
 class AlgBDFS: public Writable
 {
 public:
-    AlgBDFS(int searchDepth): m_search_depth(searchDepth) {};
+    AlgBDFS(int searchDepth, Learning* learn):
+        m_search_depth(searchDepth), m_learn(learn) {
+        if (learn != NULL) // TODO: learn knows how to learn exec times
+            m_learn_exec_times = true;
+    };
     virtual ~AlgBDFS() {};
 
     /** \brief returns the shortest path that results in  the best evaluation
@@ -47,16 +52,20 @@ protected:
     virtual void doExecute(int action) = 0;
     virtual void undoExecute() = 0;
     int m_search_depth;
+    bool m_learn_exec_times;
+    Learning*  m_learn;
 private:
     double _path_to_best_evaluation(Model& model, std::vector<int>& path, int depth, double best_evaluation);
     bool grows_first(std::vector<int>&, int, std::vector<int>&, int);
+    bool grows_faster(std::vector<int>&, int, std::vector<int>&, int);
 };
 
 
 class AlgPathToBestCoverage: public AlgBDFS
 {
 public:
-    AlgPathToBestCoverage(int searchDepth = 3): AlgBDFS(searchDepth) {}
+    AlgPathToBestCoverage(int searchDepth = 3, Learning* learn = NULL):
+        AlgBDFS(searchDepth, learn) {}
     virtual ~AlgPathToBestCoverage() {};
 
     double search(Model& model, Coverage& coverage, std::vector<int>& path);
@@ -72,7 +81,8 @@ protected:
 class AlgPathToAction: public AlgBDFS
 {
 public:
-    AlgPathToAction(int searchDepth = 3): AlgBDFS(searchDepth) {}
+    AlgPathToAction(int searchDepth = 3, Learning* learn = NULL):
+        AlgBDFS(searchDepth, learn) {}
     virtual ~AlgPathToAction() {}
 
     double search(Model& model, int find_this_action, std::vector<int>& path);

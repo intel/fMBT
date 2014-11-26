@@ -153,7 +153,7 @@ int Heuristic_greedy::getIAction()
      * path is fully consumed */
     if (!m_burst || m_path.empty() ) {
       /* Spend more time for better coverage */
-      AlgPathToBestCoverage alg(m_search_depth);
+      AlgPathToBestCoverage alg(m_search_depth, learn);
       /* Use precalculated path (m_path) as a hint. */
       std::reverse(m_path.begin(), m_path.end());
       double current_score=my_coverage->getCoverage();

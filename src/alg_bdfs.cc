@@ -26,6 +26,8 @@
 #include <algorithm>
 #include <cstdlib>
 #include "helper.hh"
+#include "learn_proxy.hh"
+
 extern int _g_simulation_depth_hint;
 
 double AlgPathToBestCoverage::search(Model& model, Coverage& coverage, std::vector<int>& path)
@@ -263,6 +265,22 @@ bool AlgBDFS::grows_first(std::vector<int>& first_path, int first_path_start,
     else return false;
 }
 
+bool AlgBDFS::grows_faster(std::vector<int>& first_path, int first_path_start,
+                           std::vector<int>& second_path, int second_path_start)
+{
+    float first_path_time = m_learn->getE(first_path_start);
+    float second_path_time = m_learn->getE(second_path_start);
+
+    for (int i = first_path.size() - 1; i >= 0; i--) {
+        first_path_time += m_learn->getE(first_path[i]);
+    }
+    for (int i = second_path.size() - 1; i >= 0; i--) {
+        second_path_time += m_learn->getE(second_path[i]);
+    }
+
+    return first_path_time < second_path_time;
+}
+
 double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, int depth,
                                          double best_evaluation)
 {
@@ -322,9 +340,10 @@ double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, i
              (an_evaluation == best_evaluation &&
               (best_action == -1 ||
                (best_action > -1 &&
-                (a_path.size() < best_path_length ||
-                 (a_path.size() == best_path_length &&
-                  grows_first(a_path, action_candidates[i], best_path, best_action))))))))
+                ((m_learn_exec_times && grows_faster(a_path, action_candidates[i], best_path, best_action)) ||
+                 (a_path.size() < best_path_length ||
+                  (a_path.size() == best_path_length &&
+                   grows_first(a_path, action_candidates[i], best_path, best_action)))))))))
         {
             best_path_length = a_path.size();
             best_path = a_path;
