@@ -35,10 +35,15 @@ session at a time.
 """
 
 import getopt
-import select
+import os
 import sys
 import socket
-import thread
+
+if os.name != "nt":
+    import select
+else:
+    import thread
+    import Queue
 
 host = "127.0.0.1"
 PORTBASE = 0xf4bd
@@ -51,7 +56,45 @@ def info(msg):
     sys.stdout.write("fmbt-debug: " + msg + "\n")
     sys.stdout.flush()
 
-# main
+if os.name != "nt":
+    def read_input(list_of_files):
+        files_with_msg, _, _ = select.select(list_of_files, [], [])
+        if files_with_msg:
+            f = files_with_msg[0]
+            if hasattr(f, "recv"):
+                msg = f.recv(4096)
+            else:
+                msg = f.readline()
+        else:
+            msg, f = None, None
+        return (msg, f)
+else:
+    # select.select does not work for file objects on Windows,
+    # fallback to blocked reads on threads.
+    def _read_to_queue(f, q, allfiles):
+        msg = None
+        while msg != "":
+            if hasattr(f, "recv"):
+                msg = f.recv(4096)
+            else:
+                try:
+                    msg = f.readline()
+                except:
+                    msg = ""
+            q.put((msg, f))
+        allfiles.remove(f)
+
+    def read_input(list_of_files):
+        for f in list_of_files:
+            if not f in read_input._files:
+                read_input._files.add(f)
+                thread.start_new_thread(
+                    _read_to_queue, (f, read_input._queue, read_input._files))
+        return read_input._queue.get()
+
+    read_input._queue = Queue.Queue()
+    read_input._files = set()
+
 if __name__ == "__main__":
 
     opts, remainder = getopt.getopt(
@@ -107,19 +150,15 @@ if __name__ == "__main__":
     in_file = sys.stdin
     out_file = sys.stdout
     while 1:
-        ready_read, _, _ = select.select([in_file, conn], [], [], 1)
-        for f in ready_read:
-            if f == in_file:
-                msg = in_file.readline()
-                if not msg:
-                    sys.exit(0)
-                else:
-                    conn.sendall(msg)
-            elif f == conn:
-                msg = f.recv(1024)
-                if not msg:
-                    f.close()
-                    error("connection closed", exitstatus=0)
-                else:
-                    out_file.write(msg)
-                    out_file.flush()
+        msg, src_file = read_input([in_file, conn])
+        if msg == "" or msg == None:
+            break
+        elif src_file == in_file:
+            conn.sendall(msg)
+        elif src_file == conn:
+            out_file.write(msg)
+            out_file.flush()
+    try:
+        conn.close()
+    except socket.error:
+        pass

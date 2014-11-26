@@ -160,6 +160,13 @@ section "install"
 
 	file "utils/fmbt-log"
 	file ".libs/fmbt-log.exe"
+
+	file "utils/fmbt-debug"
+	file ".libs/fmbt-debug.exe"
+
+	file "utils/fmbt-trace-share"
+	file ".libs/fmbt-trace-share.exe"
+
 	file "fmbt.ico"
 
 
@@ -287,6 +294,10 @@ section "uninstall"
 	delete $INSTDIR\fmbt-scripter.exe
 	delete $INSTDIR\fmbt-log
 	delete $INSTDIR\fmbt-log.exe
+	delete $INSTDIR\fmbt-debug
+	delete $INSTDIR\fmbt-debug.exe
+	delete $INSTDIR\fmbt-trace-share
+	delete $INSTDIR\fmbt-trace-share.exe
 
 	# Always delete uninstaller as the last action
 	delete $INSTDIR\uninstall.exe
