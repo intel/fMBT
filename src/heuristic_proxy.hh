@@ -74,6 +74,11 @@ public:
     status=h->status;errormsg=h->errormsg;
   }
 
+  virtual void set_learn(Learning* _learn) {
+    Heutistic::set_learn(_learn);
+    h->set_learn(learn);
+  }
+
   virtual void set_model(Model* _model) {
     Heuristic::set_model(_model);
     h->set_model(model);
