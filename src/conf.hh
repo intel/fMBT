@@ -27,6 +27,7 @@
 #include "heuristic.hh"
 #include "adapter.hh"
 #include "coverage.hh"
+#include "learning.hh"
 
 #include "writable.hh"
 #include "helper.hh"
@@ -59,6 +60,11 @@ class Conf:public Writable {
   void set_heuristic(std::string& s,int line) {
     heuristic_name=s;
     heuristic_lineno=line;
+  }
+
+  void add_learning(std::string& s,int line) {
+    std::pair<std::string,int> _learn(s,line);
+    _learning.push_back(_learn);
   }
 
   void set_coverage(std::string& s,int line) {
@@ -111,6 +117,7 @@ class Conf:public Writable {
   bool exit_interactive;
  protected:
   std::list<EndHook*> pass_hooks,fail_hooks,inc_hooks,error_hooks;
+  std::list<std::pair<std::string, int> > _learning;
   std::vector<std::pair<std::string*,int> > history;
   std::string model_name;
   std::string heuristic_name;
@@ -132,6 +139,7 @@ class Conf:public Writable {
   Model* model;
   Adapter* adapter;
   Coverage* coverage;
+  Learning* learning;
   bool disable_tagverify;
   std::map<int,bool> disabled_tags;
   std::vector<std::string> disable_tags;
