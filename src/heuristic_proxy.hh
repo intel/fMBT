@@ -75,7 +75,7 @@ public:
   }
 
   virtual void set_learn(Learning* _learn) {
-    Heutistic::set_learn(_learn);
+    Heuristic::set_learn(_learn);
     h->set_learn(learn);
   }
 
@@ -97,7 +97,7 @@ protected:
     }
     return true;
   }
-  
+
   bool set(std::string params,std::string& ret_str) {
     Heuristic* hh=new_heuristic(log,params);
     if (hh) {

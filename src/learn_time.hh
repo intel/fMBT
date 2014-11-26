@@ -34,7 +34,7 @@ public:
 protected:
   Function* learning_multiplier;
   struct timeval last_time;
-  std::map<float,int> time_map;
+  std::map<int,float> time_map;
 };
 
 #endif

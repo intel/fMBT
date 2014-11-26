@@ -46,7 +46,7 @@ void Learn_time::execute(int action) {
     // called because of output action?
   }
   timersub(&Adapter::current_time,&last_time,&duration);
-  std::map<float,int>::iterator i=time_map.find(action);
+  std::map<int,float>::iterator i=time_map.find(action);
   if (i==time_map.end()) {
      time_map[action]=duration.tv_sec+duration.tv_usec/1000000.0;
   } else {
