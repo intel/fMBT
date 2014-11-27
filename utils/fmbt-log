@@ -61,6 +61,10 @@ Options:
           separator between values of multivalue fields,
           for instance $tg and $al. The default is '; '.
 
+  -S, --record-separator=<string>
+          separator between formatted records. The default
+          is new line.
+
   -t, --time-format=<fmt>
           fmt defines how timestamps are formatted. See
           strftime manual for details. %f gives microseconds.
@@ -83,6 +87,7 @@ import urllib2
 import fmbt
 
 VALUE_SEPARATOR = '; '
+RECORD_SEPARATOR = '\n'
 
 XUNIT_HEADER = '<?xml version="1.0" encoding="UTF-8" ?>\n'
 
@@ -160,7 +165,9 @@ fields = {
     '$tt' : ['<elapsed_time', '"', 1, identity_formatter]
 }
 
-def extract(input_file_obj, output_file_obj, output_format, raw=0, must_be_nonempty=set()):
+def extract(input_file_obj, output_file_obj, output_format, raw=0,
+            must_be_nonempty=set(), value_separator=VALUE_SEPARATOR,
+            record_separator=RECORD_SEPARATOR):
     # FIXME: this is just a quick to get input action names
     # printed. What this really should do is:
     # 1. parse everything that is done during a single test step
@@ -175,7 +182,7 @@ def extract(input_file_obj, output_file_obj, output_format, raw=0, must_be_nonem
                 if unique_prefix == "<tags enabled=":
                     values = [ urllib2.unquote(v)
                                for v in line.split(delimiter)[fieldindex].split(' ')]
-                    contents = formatter(VALUE_SEPARATOR.join(values))
+                    contents = formatter(value_separator.join(values))
                 else:
                     contents = formatter(urllib2.unquote(line.split(delimiter)[fieldindex]))
             except:
@@ -191,6 +198,7 @@ def extract(input_file_obj, output_file_obj, output_format, raw=0, must_be_nonem
     empty_row = output_format % dict([(field, '') for field in fields])
 
     parsed_data = clean_data()
+    first_output_line = True
     for lineno, line in enumerate(input_file_obj):
         for field in fields:
             match = fields[field][0]
@@ -200,20 +208,20 @@ def extract(input_file_obj, output_file_obj, output_format, raw=0, must_be_nonem
                     parsed_data[field].append(found_value)
 
         # a test step done, print values
-        ppoutput = ""
+        ppoutput = None
         if (('<status steps=' in line) or
             # ('<stop verdict' in line) or
             ('</test_engine>' in line)):
             printable_data = {}
             for field in parsed_data:
-                if field != '$st': printable_data[field] = VALUE_SEPARATOR.join(parsed_data[field])
+                if field != '$st': printable_data[field] = value_separator.join(parsed_data[field])
                 elif parsed_data[field]: printable_data[field] = parsed_data[field][0]
             if not '<status steps="0"' in line:
                 ppoutput = output_format % printable_data
 
             for field in must_be_nonempty:
                 if not field in parsed_data or not parsed_data[field]:
-                    ppoutput = "" # print nothing, not all required fields present
+                    ppoutput = None # print nothing, not all required fields present
                     break
             parsed_data = clean_data()
         elif ((parsed_data['$al'] != [] and '%($al)' in output_format) or
@@ -233,8 +241,13 @@ def extract(input_file_obj, output_file_obj, output_format, raw=0, must_be_nonem
             parsed_data['$aL'] = []
             parsed_data['$am'] = []
             parsed_data['$tm'] = []
-        if ppoutput != empty_row:
-            output_file_obj.write(ppoutput)
+        if ppoutput != None and ppoutput != empty_row:
+            if first_output_line:
+                output_file_obj.write(ppoutput)
+                first_output_line = False
+            else:
+                output_file_obj.write(record_separator + ppoutput)
+    return not first_output_line # True if something was extracted
 
 def extract_xunit(input_file_obj, output_file_obj):
     def extract_as_string(input_file_obj, output_format, must_be_nonempty=[]):
@@ -264,6 +277,9 @@ def extract_xunit(input_file_obj, output_file_obj):
 <system-err>%s</system-err>
 </testcase>\n''' % (conf_filename, total_time, failure, cgi.escape(system_err)))
 
+def unescape(s):
+    return s.replace('\\n', '\n').replace('\\t', '\t')
+
 if __name__ == '__main__':
     input_file_obj = sys.stdin
     output_file_obj = sys.stdout
@@ -272,8 +288,9 @@ if __name__ == '__main__':
     xunit_header_written = False
 
     opts, remainder = getopt.getopt(
-        sys.argv[1:], 'hrf:o:s:t:v',
-        ['help', 'raw', 'format=', 'output=', 'separator=', 'time-format=', 'version'])
+        sys.argv[1:], 'hrf:o:s:S:t:v',
+        ['help', 'raw', 'format=', 'output=', 'separator=',
+         'record-separator=', 'time-format=', 'version'])
     for opt, arg in opts:
         if opt in ['-h', '--help']:
             print __doc__
@@ -287,13 +304,18 @@ if __name__ == '__main__':
             output_format = arg
         elif opt in ['-s', '--separator']:
             VALUE_SEPARATOR = arg
+        elif opt in ['-S', '--record-separator']:
+            RECORD_SEPARATOR = arg
         elif opt in ['-t', '--time-format']:
             _g_time_format = arg
             _g_time_formatter = lambda s: fmbt.formatTime(_g_time_format,datetime.datetime.fromtimestamp(float(s)))
         elif opt in ['-o', '--output'] and not arg in ['', '-']:
             output_file_obj = file(arg, 'w')
 
-    output_format = output_format.replace('\\n', '\n').replace('\\t', '\t')
+    output_format = unescape(output_format)
+    RECORD_SEPARATOR = unescape(RECORD_SEPARATOR)
+    VALUE_SEPARATOR = unescape(VALUE_SEPARATOR)
+
     must_be_nonempty = set()
     for field in fields:
         if field + "!" in output_format:
@@ -301,8 +323,6 @@ if __name__ == '__main__':
             output_format = output_format.replace(field + "!", field)
         output_format = output_format.replace(field,
                                               '%(' + field + ')s')
-    output_format += '\n'
-
     if not remainder:
         remainder = ["-"]
 
@@ -318,7 +338,10 @@ if __name__ == '__main__':
                 xunit_header_written = True
             extract_xunit(input_file_obj, output_file_obj)
         else:
-            extract(input_file_obj, output_file_obj, output_format, option_raw, must_be_nonempty)
+            if extract(input_file_obj, output_file_obj, output_format,
+                       option_raw, must_be_nonempty,
+                       VALUE_SEPARATOR, RECORD_SEPARATOR):
+                output_file_obj.write('\n')
 
         try: input_file_obj.close()
         except: pass
