@@ -316,7 +316,8 @@ class Device(fmbtgti.GUITestInterface):
       bitmaps can be searched from this.
     """
     _PARSE_VIEW_RETRY_LIMIT = 10
-    def __init__(self, deviceName=None, iniFile=None, connect=True, **kwargs):
+    def __init__(self, deviceName=None, iniFile=None, connect=True,
+                 monkeyOptions=[], **kwargs):
         """
         Connect to given device, or the first not-connected Android
         device in the "adb devices" list, if nothing is defined.
@@ -344,6 +345,17 @@ class Device(fmbtgti.GUITestInterface):
                   ini. Connect to the device with a serial number
                   given in this file. The default is None.
 
+          connect (boolean, optional):
+                  Immediately establish connection to the device. The
+                  default is True. Example on using without connection:
+                    d = fmbtandroid.Device(connect=False)
+                    d.refreshView("screenshots/20141127-emulator-5554.view")
+                    print d.view().dumpTree()
+
+          monkeyOptions (list of strings, optional):
+                  Extra command line options to be passed to Android
+                  monkey on the device.
+
           rotateScreenshot (integer or "auto", optional)
                   rotate new screenshots by rotateScreenshot degrees.
                   Example: rotateScreenshot=-90. The default is 0 (no
@@ -368,6 +380,7 @@ class Device(fmbtgti.GUITestInterface):
         self._platformVersion = None
         self._lastView = None
         self._supportsView = None
+        self._monkeyOptions = monkeyOptions
 
         self._conf = Ini()
 
@@ -389,7 +402,8 @@ class Device(fmbtgti.GUITestInterface):
 
             for deviceName in potentialDevices:
                 try:
-                    self.setConnection(_AndroidDeviceConnection(deviceName))
+                    self.setConnection(_AndroidDeviceConnection(
+                        deviceName, monkeyOptions=self._monkeyOptions))
                     self._conf.set("general", "serial", self.serialNumber)
                     break
                 except AndroidConnectionError, e:
@@ -405,7 +419,8 @@ class Device(fmbtgti.GUITestInterface):
             # It may be given in device or test run INI files.
             self.serialNumber = self._conf.value("general", "serial", deviceName)
             if connect:
-                self.setConnection(_AndroidDeviceConnection(self.serialNumber))
+                self.setConnection(_AndroidDeviceConnection(
+                    self.serialNumber, monkeyOptions=self._monkeyOptions))
 
 
         _deviceIniFilename = self._fmbtAndroidHomeDir + os.sep + "etc" + os.sep + deviceName + ".ini"
@@ -885,7 +900,8 @@ class Device(fmbtgti.GUITestInterface):
         import gc
         gc.collect()
         try:
-            self.setConnection(_AndroidDeviceConnection(self.serialNumber))
+            self.setConnection(_AndroidDeviceConnection(
+                self.serialNumber, monkeyOptions=self._monkeyOptions))
             return True
         except Exception, e:
             _adapterLog("reconnect failed: %s" % (e,))
@@ -1739,12 +1755,12 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
     _w_host = 'localhost'
     _w_port = _m_port + 1
 
-    def __init__(self, serialNumber, stopOnError=True, workaround_exit_call_crash=False):
+    def __init__(self, serialNumber, stopOnError=True, monkeyOptions=[]):
         fmbtgti.GUITestConnection.__init__(self)
         self._serialNumber = serialNumber
         self._stopOnError = stopOnError
         self._shellSupportsTar = False
-        self._workaround_exit_call_crash = workaround_exit_call_crash
+        self._monkeyOptions = monkeyOptions
 
         self.setScreenToDisplayCoords(lambda x, y: (x, y))
         self.setDisplayToScreenCoords(lambda x, y: (x, y))
@@ -1864,8 +1880,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         else:
             monkeyLaunch = ["monkey"]
 
-        if self._platformVersion >= "4.5" and self._workaround_exit_call_crash:
-            monkeyLaunch += ["--no-system-exit-call"] # Workaround a monkey crash
+        if self._monkeyOptions:
+            monkeyLaunch += self._monkeyOptions
 
         while time.time() < endTime:
             monkeyShellCmd = (" ".join(monkeyLaunch + ["--port", "1080"]) +
