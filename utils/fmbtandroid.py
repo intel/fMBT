@@ -1146,9 +1146,17 @@ class Device(fmbtgti.GUITestInterface):
             return False
         _adapterLog("SMS command returned %s" % (out + err,))
         time.sleep(2)
-        self.pressKey("KEYCODE_DPAD_RIGHT")
-        time.sleep(1)
-        self.pressKey("KEYCODE_ENTER")
+        if 'talk' in self.topWindow():
+            _adapterLog("Messaging app is Hangouts")
+            self.pressKey("KEYCODE_ENTER")
+            time.sleep(1)
+            self.pressKey("KEYCODE_BACK")
+            time.sleep(1)
+            self.pressKey("KEYCODE_BACK")
+        else:
+            self.pressKey("KEYCODE_DPAD_RIGHT")
+            time.sleep(1)
+            self.pressKey("KEYCODE_ENTER")
         return True
 
     def supportsView(self):
