@@ -81,7 +81,7 @@ def raw2png(data, width, height, depth=8, fmt="RGB"):
 
       fmt (string, optional):
               image data format. The default is "RGB".
-              Supported formats: "RGB", "RGBA", "BGR", "BGR_".
+              Supported formats: "RGB", "RGBA", "RGB_", "BGR", "BGR_".
 
     Returns string that contains PNG image data.
 
@@ -122,6 +122,10 @@ def raw2png(data, width, height, depth=8, fmt="RGB"):
     elif fmt == "RGBA":
         color_type = PNG_COLOR_TYPE_RGB_ALPHA
         bytes_per_pixel = (depth / 8) * 4
+    elif fmt == "RGB_":
+        fmbtgti.eye4graphics.rgbx2rgb(buf, width, height)
+        color_type = PNG_COLOR_TYPE_RGB
+        bytes_per_pixel = (depth / 8) * 3
     elif fmt == "BGR":
         fmbtgti.eye4graphics.bgr2rgb(buf, width, height)
         color_type = PNG_COLOR_TYPE_RGB

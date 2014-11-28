@@ -155,6 +155,7 @@ window = Launcher
 '''
 
 import commands
+import gzip
 import math
 import os
 import random
@@ -162,6 +163,7 @@ import re
 import shutil
 import socket
 import StringIO
+import struct
 import subprocess
 import tempfile
 import time
@@ -169,6 +171,10 @@ import uu
 
 import fmbt
 import fmbtgti
+try:
+    import fmbtpng
+except ImportError:
+    fmbtpng = None
 
 ROTATION_0 = 0
 ROTATION_90 = 1
@@ -1761,6 +1767,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         self._stopOnError = stopOnError
         self._shellSupportsTar = False
         self._monkeyOptions = monkeyOptions
+        self._rawScreenshotFormat = None
 
         self.setScreenToDisplayCoords(lambda x, y: (x, y))
         self.setDisplayToScreenCoords(lambda x, y: (x, y))
@@ -2186,6 +2193,15 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
     def sendWake(self):
         return self._monkeyCommand("wake")[0]
 
+    def setRawScreenshotFormat(self, fmt):
+        """
+        Set fmt to True or tuple (depth, colorspace) to fetch
+        screenshots from the device without converting them to PNG
+        on the device. The conversion will be done on host, which
+        is often much faster. True is autodetect.
+        """
+        self._rawScreenshotFormat = fmt
+
     def recvScreenshot(self, filename, retry=2, retryDelay=1.0):
         """
         Capture a screenshot and copy the image file to given path or
@@ -2193,6 +2209,37 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
 
         Returns True on success, otherwise False.
         """
+        if self._rawScreenshotFormat and fmbtpng != None:
+            # EXPERIMENTAL: PNG encoding moved from device to host
+            remotefile = '/sdcard/fmbtandroid-s.raw'
+            self._runAdb(['shell', 'screencap | gzip -3 >' + remotefile])
+            self._runAdb(['pull', remotefile, filename + ".raw"], [0, 1])
+            data = gzip.open(filename + ".raw").read()
+            os.unlink(filename + ".raw")
+
+            width, height, fmt = struct.unpack("<LLL", data[:12])
+            if isinstance(self._rawScreenshotFormat, tuple):
+                depth, colorspace = self._rawScreenshotFormat
+            elif fmt == 1:
+                depth, colorspace = 8, "RGBA"
+            elif fmt == 2:
+                depth, colorspace = 8, "RGB_"
+            elif fmt == 3:
+                depth, colorspace = 8, "RGB"
+            elif fmt == 5:
+                depth, colorspace = 8, "BGR_" # ignore alpha
+            else:
+                _adapterLog("unsupported screenshot format %s" % (fmt,))
+                depth, colorspace = None, None
+
+            if depth != None:
+                file(filename, "w").write(fmbtpng.raw2png(
+                    data[12:], width, height, depth, colorspace))
+                return True
+            else:
+                # fallback to slower screenshot method
+                pass
+
         remotefile = '/sdcard/' + os.path.basename(filename)
         remotefile = remotefile.replace(':', '_') # vfat dislikes colons
 
