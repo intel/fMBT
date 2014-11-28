@@ -44,7 +44,8 @@ Options:
           $sn - number of test step
           $sb - coverage before the test step
           $sc - coverage after the test step
-          $st - time stamp of test step
+          $st - timestamp of test step (see option "-t")
+          $sT - time delta of test step from the start (see option "-T")
           $tb - tags before executing the test step
           $tg - tags after executing the test step
           $tv - test verdict: pass or fail
@@ -67,6 +68,10 @@ Options:
 
   -t, --time-format=<fmt>
           fmt defines how timestamps are formatted. See
+          strftime manual for details. %f gives microseconds.
+
+  -T, --time-delta-format=<fmt>
+          fmt defines how time deltas are formatted. See
           strftime manual for details. %f gives microseconds.
 
   -r, --raw
@@ -105,11 +110,17 @@ for _f in memorised_fields:
     memorise_formatter_gen.latest[_f] = "undefined"
 
 def TAU_formatter(s):
-   if s == "TAU": return "[unidentified action]"
-   return s
+    if s == "TAU": return "[unidentified action]"
+    return s
 
 def time_formatter(s):
     return _g_time_formatter(s)
+
+def time_delta_formatter(s):
+    if time_delta_formatter.logstart is None:
+        time_delta_formatter.logstart = float(s)
+    return _g_time_delta_formatter(float(s) - time_delta_formatter.logstart)
+time_delta_formatter.logstart=None
 
 def starttime_formatter(s):
     starttime_formatter.last = float(s)
@@ -136,7 +147,9 @@ def remove_preceding_timestamp_formatter(s):
 remove_preceding_timestamp_formatter_re=re.compile('[0-9]+\.[0-9]{4} ')
 
 _g_time_format = None
-_g_time_formatter = identity_formatter
+_g_time_formatter = lambda s: str(identity_formatter(s))
+_g_time_delta_format = None
+_g_time_delta_formatter = lambda s: str(identity_formatter(s))
 
 fields = {
     '$ab' : ['<suggested_action type=', '"', 5, starttime_formatter],
@@ -157,6 +170,7 @@ fields = {
     '$ec' : ['<status steps=', '"', 5, identity_formatter],
     '$sn' : ['<status steps=', '"', 1, identity_formatter],
     '$st' : ['<current_time time=', '"', 1, time_formatter],
+    '$sT' : ['<current_time time=', '"', 1, time_delta_formatter],
     '$tb' : ['<tags enabled=', '"', 1, memorise_formatter_gen("$tb")],
     '$tg' : ['<tags enabled=', '"', 1, identity_formatter],
     '$tm' : ['<tag_name name=', '"', 1, identity_formatter],
@@ -288,9 +302,10 @@ if __name__ == '__main__':
     xunit_header_written = False
 
     opts, remainder = getopt.getopt(
-        sys.argv[1:], 'hrf:o:s:S:t:v',
+        sys.argv[1:], 'hrf:o:s:S:t:T:v',
         ['help', 'raw', 'format=', 'output=', 'separator=',
-         'record-separator=', 'time-format=', 'version'])
+         'record-separator=', 'time-format=', 'time-delta-format=',
+         'version'])
     for opt, arg in opts:
         if opt in ['-h', '--help']:
             print __doc__
@@ -309,6 +324,9 @@ if __name__ == '__main__':
         elif opt in ['-t', '--time-format']:
             _g_time_format = arg
             _g_time_formatter = lambda s: fmbt.formatTime(_g_time_format,datetime.datetime.fromtimestamp(float(s)))
+        elif opt in ['-T', '--time-delta-format']:
+            _g_time_delta_format = arg
+            _g_time_delta_formatter = lambda s: fmbt.formatTime(_g_time_delta_format,datetime.datetime.utcfromtimestamp(float(s)))
         elif opt in ['-o', '--output'] and not arg in ['', '-']:
             output_file_obj = file(arg, 'w')
 
