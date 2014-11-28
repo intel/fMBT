@@ -474,7 +474,7 @@ def imageSize(imageFilename):
         return None, None
     return struct_bbox.right, struct_bbox.bottom
 
-def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=None, ocrArea=(0, 0, 1.0, 1.0), ocrPageSegModes=(3,), lang="eng"):
+def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=None, ocrArea=(0, 0, 1.0, 1.0), ocrPageSegModes=(3,), lang="eng", configfile=None):
     """
     DEPRECATED - use fmbtx11.Screen.refreshScreenshot instead.
 
@@ -511,6 +511,8 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
         lang         Tesseract language setting, the default is "eng".
                      Refer to LANGUAGES in Tesseract documentation or
                      man page.
+
+        configfile   Tesseract configuration file.
 
     Returns list of words detected by OCR from the read object.
     """
@@ -587,6 +589,10 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
                        [_g_readImage])
         tesseract_cmd = ["tesseract", _g_readImage, SCREENSHOT_FILENAME,
                          "-l", lang, "-psm", str(psm), "hocr"]
+        if isinstance(configfile, basestring):
+            tesseract_cmd += [configfile]
+        elif isinstance(configfile, list) or isinstance(configfile, tuple):
+            tesseract_cmd += configfile
         exit_status, output = _runcmd(convert_cmd)
         if exit_status != 0:
             raise NoOCRResults("Convert returned exit status (%s): %s"

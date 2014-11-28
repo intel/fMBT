@@ -616,9 +616,25 @@ class _EyenfingerOcrEngine(OcrEngine):
               result. Refer to eyenfinger.autoconfigure to search for
               a good one.
 
+      configfile (string, optional):
+              Tesseract configuration file.
+
+
+    Example: limit recognized characters to hexadecimals by creating file
+    "hexchars" with content
+
+        tessedit_char_whitelist 0123456789abcdefABCDEF
+
+    To use this file in a single run, pass it to any Ocr method:
+
+        dut.verifyOcrText("DEADBEEF", configfile="hexchars")
+
+    or to use it on every Ocr method, set it as a default:
+
+        dut.ocrEngine().setFindTextDefaults(configfile="hexchars")
     """
     class _OcrResults(object):
-        __slots__ = ("filename", "screenSize", "pagesegmodes", "preprocess", "area", "words", "lang")
+        __slots__ = ("filename", "screenSize", "pagesegmodes", "preprocess", "area", "words", "lang", "configfile")
         def __init__(self, filename, screenSize):
             self.filename = filename
             self.screenSize = screenSize
@@ -627,6 +643,7 @@ class _EyenfingerOcrEngine(OcrEngine):
             self.area = None
             self.words = None
             self.lang = None
+            self.configfile = None
 
     def __init__(self, *args, **engineDefaults):
         engineDefaults["area"] = engineDefaults.get("area", (0.0, 0.0, 1.0, 1.0))
@@ -634,6 +651,7 @@ class _EyenfingerOcrEngine(OcrEngine):
         engineDefaults["match"] = engineDefaults.get("match", 1.0)
         engineDefaults["pagesegmodes"] = engineDefaults.get("pagesegmodes", _OCRPAGESEGMODES)
         engineDefaults["preprocess"] = engineDefaults.get("preprocess", _OCRPREPROCESS)
+        engineDefaults["configfile"] = engineDefaults.get("configfile", None)
         super(_EyenfingerOcrEngine, self).__init__(*args, **engineDefaults)
         self._ss = {} # OCR results for screenshots
 
@@ -646,9 +664,9 @@ class _EyenfingerOcrEngine(OcrEngine):
         if ssId in self._ss:
             del self._ss[ssId]
 
-    def _findText(self, screenshot, text, match=None, preprocess=None, area=None, pagesegmodes=None, lang=None):
+    def _findText(self, screenshot, text, match=None, preprocess=None, area=None, pagesegmodes=None, lang=None, configfile=None):
         ssId = id(screenshot)
-        self._assumeOcrResults(screenshot, preprocess, area, pagesegmodes, lang)
+        self._assumeOcrResults(screenshot, preprocess, area, pagesegmodes, lang, configfile)
 
         for ppfilter in self._ss[ssId].words.keys():
             try:
@@ -668,9 +686,9 @@ class _EyenfingerOcrEngine(OcrEngine):
                   for score, matching_text, bbox in score_text_bbox_list]
         return retval
 
-    def _dumpOcr(self, screenshot, match=None, preprocess=None, area=None, pagesegmodes=None, lang=None):
+    def _dumpOcr(self, screenshot, match=None, preprocess=None, area=None, pagesegmodes=None, lang=None, configfile=None):
         ssId = id(screenshot)
-        self._assumeOcrResults(screenshot, preprocess, area, pagesegmodes, lang)
+        self._assumeOcrResults(screenshot, preprocess, area, pagesegmodes, lang, configfile)
         w = []
         for ppfilter in self._ss[ssId].preprocess:
             for word in self._ss[ssId].words[ppfilter]:
@@ -679,7 +697,7 @@ class _EyenfingerOcrEngine(OcrEngine):
                     w.append((word, (x1, y1, x2, y2)))
         return sorted(set(w), key=lambda i:(i[1][1]/8, i[1][0]))
 
-    def _assumeOcrResults(self, screenshot, preprocess, area, pagesegmodes, lang):
+    def _assumeOcrResults(self, screenshot, preprocess, area, pagesegmodes, lang, configfile):
         ssId = id(screenshot)
         if not type(preprocess) in (list, tuple):
             preprocess = [preprocess]
@@ -687,15 +705,17 @@ class _EyenfingerOcrEngine(OcrEngine):
         if (self._ss[ssId].words == None
             or self._ss[ssId].preprocess != preprocess
             or self._ss[ssId].area != area
-            or self._ss[ssId].lang != lang):
+            or self._ss[ssId].lang != lang
+            or self._ss[ssId].configfile != configfile):
             self._ss[ssId].words = {}
             self._ss[ssId].preprocess = preprocess
             self._ss[ssId].area = area
             self._ss[ssId].lang = lang
+            self._ss[ssId].configfile = configfile
             for ppfilter in preprocess:
                 pp = ppfilter % { "zoom": "-resize %sx" % (self._ss[ssId].screenSize[0] * 2) }
                 try:
-                    eyenfinger.iRead(source=self._ss[ssId].filename, ocr=True, preprocess=pp, ocrArea=area, ocrPageSegModes=pagesegmodes, lang=lang)
+                    eyenfinger.iRead(source=self._ss[ssId].filename, ocr=True, preprocess=pp, ocrArea=area, ocrPageSegModes=pagesegmodes, lang=lang, configfile=configfile)
                 except Exception:
                     self._ss[ssId].words = None
                     raise
