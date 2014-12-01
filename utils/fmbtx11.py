@@ -27,7 +27,20 @@ fmbtgti._OCRPREPROCESS = [
     ]
 
 import ctypes
+import os
+import subprocess
+import zlib
+
 import fmbtx11_conn
+
+def _run(command):
+    exit_status = subprocess.call(command,
+                                  stdin=subprocess.PIPE,
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE,
+                                  shell=False,
+                                  close_fds=(os.name != "nt"))
+    return exit_status
 
 class Screen(fmbtgti.GUITestInterface):
     def __init__(self, display="", **kwargs):
@@ -61,7 +74,7 @@ class X11Connection(fmbtx11_conn.Display):
         if data:
             if data.startswith("FMBTRAWX11"):
                 try:
-                    header, zdata = img.split('\n', 1)
+                    header, zdata = data.split('\n', 1)
                     width, height, depth, bpp = [int(n) for n in header.split()[1:]]
                     data = zlib.decompress(zdata)
                 except Exception, e:
