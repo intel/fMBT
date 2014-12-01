@@ -99,14 +99,17 @@ def raw2png(data, width, height, depth=8, fmt="RGB"):
     """
     png_data = []
 
-    png_struct = libpng.png_create_write_struct(PNG_LIBPNG_VERSION_STRING,
-                                                NULL, NULL, NULL)
+    png_struct = ctypes.c_void_p(
+        libpng.png_create_write_struct(PNG_LIBPNG_VERSION_STRING,
+                                       NULL, NULL, NULL))
+
     if not png_struct:
         raise PngError("png_create_write_struct failed")
 
-    info_struct = libpng.png_create_info_struct(png_struct)
+    info_struct = ctypes.c_void_p(
+        libpng.png_create_info_struct(png_struct))
     if not info_struct:
-        libpng.png_destroy_write_struct(png_struct)
+        libpng.png_destroy_write_struct(png_struct, ctypes.c_void_p(0))
         raise PngError("png_create_info_struct failed")
 
     def cb_png_write(png_struct, data, datalen):
@@ -158,6 +161,12 @@ def raw2png(data, width, height, depth=8, fmt="RGB"):
 
     libpng.png_set_rows(png_struct, info_struct, rows)
     libpng.png_write_png(png_struct, info_struct, PNG_TRANSFORM_IDENTITY, NULL)
+
+    png_structp = ctypes.POINTER(ctypes.c_void_p)(png_struct)
+    png_infop = ctypes.POINTER(ctypes.c_void_p)(info_struct)
+
+    libpng.png_destroy_write_struct(png_structp, png_infop)
+
     return "".join(png_data)
 
 class PngError(Exception):
