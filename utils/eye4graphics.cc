@@ -672,6 +672,19 @@ int bgrx2rgb(char* data, int width, int height)
     return has_nonblack_pixels;
 }
 
+int rgbx2rgb(char* data, int width, int height)
+{
+    int has_nonblack_pixels = 0;
+    for (int i = 0; i < height * width; ++i) {
+        data[3*i] = data[4*i];
+        data[3*i + 1] = data[4*i + 1];
+        data[3*i + 2] = data[4*i + 2];
+        if (data[3*i] || data[3*i+1] || data[3*i+2])
+            has_nonblack_pixels = 1;
+    }
+    return has_nonblack_pixels;
+}
+
 int bgr2rgb(char* data, int width, int height)
 {
     int has_nonblack_pixels = 0;

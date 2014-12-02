@@ -18,10 +18,14 @@
 # Converts raw images into PNG, based on libpng.
 
 import ctypes
-import fmbtgti
+try:
+    import fmbtgti
+except ImportError:
+    fmbtgti = None
 
 PNG_MAGIC = "\x89PNG\x0d\x0a\x1a\x0a"
 PNG_HEADER_VERSION_STRING = None
+PNG_LIBPNG_VERSION_STRING = None
 PNG_COLOR_MASK_COLOR = 2
 PNG_COLOR_MASK_ALPHA = 4
 PNG_COLOR_TYPE_RGB = PNG_COLOR_MASK_COLOR
@@ -36,7 +40,11 @@ NULL = ctypes.c_void_p(0)
 try:
     libpng = ctypes.CDLL("libpng12.so.0")
 except OSError, e:
-    raise ImportError("loading libpng.so failed")
+    try:
+        libpng = ctypes.CDLL("libpng16.so.16")
+        PNG_LIBPNG_VERSION_STRING = ctypes.c_char_p("1.6.8")
+    except OSError, e:
+        raise ImportError("loading libpng.so failed")
 
 libpng.png_create_write_struct.restype = ctypes.c_void_p
 libpng.png_create_write_struct.argtypes = [
@@ -81,7 +89,7 @@ def raw2png(data, width, height, depth=8, fmt="RGB"):
 
       fmt (string, optional):
               image data format. The default is "RGB".
-              Supported formats: "RGB", "RGBA", "BGR", "BGR_".
+              Supported formats: "RGB", "RGBA", "RGB_", "BGR", "BGR_".
 
     Returns string that contains PNG image data.
 
@@ -91,14 +99,17 @@ def raw2png(data, width, height, depth=8, fmt="RGB"):
     """
     png_data = []
 
-    png_struct = libpng.png_create_write_struct(PNG_HEADER_VERSION_STRING,
-                                                NULL, NULL, NULL)
+    png_struct = ctypes.c_void_p(
+        libpng.png_create_write_struct(PNG_LIBPNG_VERSION_STRING,
+                                       NULL, NULL, NULL))
+
     if not png_struct:
         raise PngError("png_create_write_struct failed")
 
-    info_struct = libpng.png_create_info_struct(png_struct)
+    info_struct = ctypes.c_void_p(
+        libpng.png_create_info_struct(png_struct))
     if not info_struct:
-        libpng.png_destroy_write_struct(png_struct)
+        libpng.png_destroy_write_struct(png_struct, ctypes.c_void_p(0))
         raise PngError("png_create_info_struct failed")
 
     def cb_png_write(png_struct, data, datalen):
@@ -122,11 +133,15 @@ def raw2png(data, width, height, depth=8, fmt="RGB"):
     elif fmt == "RGBA":
         color_type = PNG_COLOR_TYPE_RGB_ALPHA
         bytes_per_pixel = (depth / 8) * 4
-    elif fmt == "BGR":
+    elif fmt == "RGB_" and fmbtgti:
+        fmbtgti.eye4graphics.rgbx2rgb(buf, width, height)
+        color_type = PNG_COLOR_TYPE_RGB
+        bytes_per_pixel = (depth / 8) * 3
+    elif fmt == "BGR" and fmbtgti:
         fmbtgti.eye4graphics.bgr2rgb(buf, width, height)
         color_type = PNG_COLOR_TYPE_RGB
         bytes_per_pixel = (depth / 8) * 3
-    elif fmt == "BGR_":
+    elif fmt == "BGR_" and fmbtgti:
         fmbtgti.eye4graphics.bgrx2rgb(buf, width, height)
         color_type = PNG_COLOR_TYPE_RGB
         bytes_per_pixel = (depth / 8) * 3
@@ -146,6 +161,12 @@ def raw2png(data, width, height, depth=8, fmt="RGB"):
 
     libpng.png_set_rows(png_struct, info_struct, rows)
     libpng.png_write_png(png_struct, info_struct, PNG_TRANSFORM_IDENTITY, NULL)
+
+    png_structp = ctypes.POINTER(ctypes.c_void_p)(png_struct)
+    png_infop = ctypes.POINTER(ctypes.c_void_p)(info_struct)
+
+    libpng.png_destroy_write_struct(png_structp, png_infop)
+
     return "".join(png_data)
 
 class PngError(Exception):
