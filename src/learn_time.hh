@@ -31,10 +31,14 @@ public:
   virtual void suggest(int action);
   virtual void execute(int action);
   virtual float getE(int action);
+  virtual void setAlphabet(Alphabet* a) {
+    Learning::setAlphabet(a);
+    time_map.resize(alphabet->getActionNames().size()+1);
+  }
 protected:
   Function* learning_multiplier;
   struct timeval last_time;
-  std::map<int,float> time_map;
+  std::vector<float> time_map;
 };
 
 #endif

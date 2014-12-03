@@ -28,7 +28,6 @@ Learn_time::Learn_time(Log&l,std::string&s): Learning(l) {
   }
 }
 
-
 void Learn_time::suggest(int action) {
   suggested=true;
   last_time=Adapter::current_time;
@@ -46,13 +45,8 @@ void Learn_time::execute(int action) {
     // called because of output action?
   }
   timersub(&Adapter::current_time,&last_time,&duration);
-  std::map<int,float>::iterator i=time_map.find(action);
-  if (i==time_map.end()) {
-     time_map[action]=duration.tv_sec+duration.tv_usec/1000000.0;
-  } else {
-    float f=learning_multiplier->fval();
-    time_map[action]=time_map[action]*f+(1.0-f)*(duration.tv_sec+duration.tv_usec/1000000.0);
-  }
+  float f=learning_multiplier->fval();
+  time_map[action]=time_map[action]*f+(1.0-f)*(duration.tv_sec+duration.tv_usec/1000000.0);
 }
 
 FACTORY_DEFAULT_CREATOR(Learning, Learn_time, "time")
