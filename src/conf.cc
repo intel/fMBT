@@ -277,7 +277,7 @@ void Conf::load(std::string& name,std::string& content)
 
     if (h) {
       h->lineno=history[i].second;
-      h->set_coverage(&cof,model);
+      h->set_coverage(&cof,model,learning);
       if (!h->status) {
 	errormsg=h->errormsg;
 	delete h;

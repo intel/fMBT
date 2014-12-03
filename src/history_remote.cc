@@ -29,7 +29,8 @@ History_remote::History_remote(Log& l, std::string params) :
 }
 
 Alphabet* History_remote::set_coverage(Coverage* cov,
-				       Alphabet* alpha)
+				       Alphabet* alpha,
+				       Learning* learn)
 {
   a=alpha;
   c=cov;

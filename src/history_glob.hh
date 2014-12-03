@@ -30,7 +30,7 @@ public:
   virtual ~History_glob() {
     globfree(&gl);
   }
-  virtual Alphabet* set_coverage(Coverage*,Alphabet* alpha);
+  virtual Alphabet* set_coverage(Coverage*,Alphabet* alpha,Learning* learn=NULL);
 
 protected:
   glob_t gl;

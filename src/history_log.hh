@@ -31,7 +31,7 @@ class History_log: public History {
 public:
   History_log(Log& l, std::string params = "");
   virtual ~History_log();
-  virtual Alphabet* set_coverage(Coverage*,Alphabet* alpha);
+  virtual Alphabet* set_coverage(Coverage*,Alphabet* alpha,Learning* learn=NULL);
 
 protected:
   int alphabet_done;
@@ -42,12 +42,14 @@ protected:
 public:
   Alphabet* a;
   Model_yes* myes;
+  Learning* learn;
   bool model_from_log;
 private:
   void send_action();
   bool send_action(std::string& a,std::vector<std::string>& props,
 		   bool verdict=false);
   std::string file;
+  void handle_time(xmlTextReaderPtr reader);
 public:
   std::vector<std::string> anames;
   std::vector<std::string> tnames;

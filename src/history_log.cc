@@ -29,8 +29,23 @@
 #include <glib.h>
 #include <glib/gprintf.h>
 
+void History_log::handle_time(xmlTextReaderPtr reader) {
+    char* time=(char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"time");
+    char* endp;
+    long sec = strtol(time, &endp, 10);
+    if (*endp=='.') {
+      long usec=strtol(endp+1, &endp, 10);
+      current_time.tv_sec=sec;
+      current_time.tv_usec=usec;
+      Adapter::current_time=current_time;
+    }
+    free(time);
+    time=NULL;
+
+}
+
 History_log::History_log(Log& l, std::string params) :
-  History(l,params), alphabet_done(false), act(NULL), tag(NULL), c(NULL), a(NULL), myes(NULL), ada(NULL)
+  History(l,params), alphabet_done(false), act(NULL), tag(NULL), c(NULL), a(NULL), myes(NULL), learn(NULL), ada(NULL)
 {
   std::vector<std::string> prm;
   commalist(params,prm);
@@ -128,16 +143,7 @@ void History_log::processNode(xmlTextReaderPtr reader)
 
   if ((xmlTextReaderDepth(reader)==3) &&
       (strcmp((const char*)name,"current_time")==0)) {
-    char* time=(char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"time");
-    char* endp;
-    long sec = strtol(time, &endp, 10);
-    if (*endp=='.') {
-      long usec=strtol(endp+1, &endp, 10);
-      current_time.tv_sec=sec;
-      current_time.tv_usec=usec;
-    }
-    free(time);
-    time=NULL;
+    handle_time(reader);
   }
 
   if ((xmlTextReaderDepth(reader)==3) &&
@@ -146,11 +152,26 @@ void History_log::processNode(xmlTextReaderPtr reader)
     if (act) {
       send_action();
     }
+    handle_time(reader);
     act=unescape_string((char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"name"));
     log.debug("FOUND ACT %s\n",act);
     send_action();
   }
 
+  if ((xmlTextReaderDepth(reader)==3) &&
+      (strcmp((const char*)name,"suggested_action")==0)) {
+    if (learn) {
+      char* suggested_act=unescape_string((char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"name"));
+      handle_time(reader);
+      if (suggested_act) {
+	int action=find(a->getActionNames(),suggested_act);
+	if (learn && action) {
+	  learn->suggest(action);
+	}
+	free(suggested_act);
+      }
+    }
+  }
   if ((xmlTextReaderDepth(reader)==3) &&
       (strcmp((const char*)name,"tags")==0)) {
     // tags
@@ -188,10 +209,12 @@ void History_log::processNode(xmlTextReaderPtr reader)
 }
 
 Alphabet* History_log::set_coverage(Coverage* cov,
-				    Alphabet* alpha)
+				    Alphabet* alpha,
+				    Learning* _learn)
 {
   c=cov;
   alp=alpha;
+  learn=_learn;
 
   if (alpha) {
     model_from_log=false;
@@ -288,6 +311,9 @@ bool History_log::send_action(std::string& act,
     int action=find(a->getActionNames(),act);
 
     if (action>0) {
+      if (learn) {
+	learn->execute(action);
+      }
       if (coverage_execute) {
 	c->history(action,p,Verdict::UNDEFINED);
       }
