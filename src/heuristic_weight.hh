@@ -45,8 +45,10 @@ public:
 	   std::vector<std::string*> a,
 	   int w,int o);
 
+  virtual void set_learn(Learning* _learn);
 protected:
   Random* r;
+  bool use_learn;
   int weight_select(int i,int* actions);
   std::map<std::pair<int,int>, float> weights;
   std::map<std::pair<int,int>, int> weight_ids;
