@@ -75,7 +75,6 @@ public:
       int p=find(n,fa[i]);
       if (p) {
 	filteractions.insert(p);
-	printf("filtering action %i\n",p);
       } else {
 	// regexp?
 	std::vector<int> r;
@@ -86,7 +85,6 @@ public:
 	regexpmatch(fa[i],n,r,false);
 	for(unsigned j=0;j<r.size();j++) {
 	  filteractions.insert(r[j]);
-	  printf("rfiltering action %i\n",r[j]);
 	}
       }
     }
