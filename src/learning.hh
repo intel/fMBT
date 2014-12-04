@@ -36,9 +36,9 @@ public:
   }
   virtual void suggest(int action) { }
   virtual void execute(int action) { }
-  virtual float getF(int action)   { return FP_NAN; }
-  virtual float getC(int sug,int exe) { return FP_NAN; }
-  virtual float getE(int action) { return FP_NAN; }
+  virtual float getF(int action)   { return 0.0; }
+  virtual float getC(int sug,int exe) { return 0.0; }
+  virtual float getE(int action) { return 0.0; }
 protected:
   bool suggested;
   int  suggested_action;
