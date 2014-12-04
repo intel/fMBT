@@ -316,39 +316,67 @@ double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, i
     std::vector<int> best_path;
     unsigned int best_path_length = 0;
     int best_action = -1;
+    std::vector<double> pre_evaluation;
+    std::vector<double> an_evaluation;
+    std::vector<std::vector<int> > a_path;
+
+    an_evaluation.resize(input_action_count+1);
+    a_path.resize(input_action_count+1);
+    pre_evaluation.reserve(input_action_count+1);
+
     for (int i = 0; i < input_action_count; i++)
     {
-        std::vector<int> a_path;
-        volatile double an_evaluation;
+      doExecute(action_candidates[i]);
+      
+      a_path[i].resize(0);
+      pre_evaluation.push_back(_path_to_best_evaluation(model, a_path[i], depth - 1, best_evaluation));
+      undoExecute();
+      
+      if (!model.status || !status) {
+	if (!model.status)
+	  errormsg = "Model error: "+model.errormsg;
+	status=false;
+	return 0.0;
+      }
+    }
 
-        doExecute(action_candidates[i]);
+    for (int i = 0; i < input_action_count; i++)
+      {    
+	float weight_total=0.0;
+	
+	for (int j = 0; j < input_action_count; j++)
+	  {
+	    float weight=m_learn?m_learn->getC(action_candidates[i],action_candidates[j]):0.0;
+	    
+	    if (i==j) {
+	      weight+=1.0;
+	    }
+	    weight_total+=weight;
 
-        a_path.resize(0);
-        an_evaluation = _path_to_best_evaluation(model, a_path, depth - 1, best_evaluation);
-
-        undoExecute();
-
-        if (!model.status || !status) {
-	  if (!model.status)
-	    errormsg = "Model error: "+model.errormsg;
-          status=false;
-          return 0.0;
-        }
-
-        if (an_evaluation > current_state_evaluation &&
-            (an_evaluation > best_evaluation ||
-             (an_evaluation == best_evaluation &&
+	    an_evaluation[i]+=pre_evaluation[j]*weight;
+	  }
+	if (weight_total>0.0) {
+	  an_evaluation[i]=an_evaluation[i]/weight_total;
+	} else {
+	  an_evaluation[i]=0.0;
+	}
+      }
+    
+    for (int i = 0; i < input_action_count; i++) {    
+        if (an_evaluation[i] > current_state_evaluation &&
+            (an_evaluation[i] > best_evaluation ||
+             (an_evaluation[i] == best_evaluation &&
               (best_action == -1 ||
                (best_action > -1 &&
-                ((m_learn_exec_times && grows_faster(a_path, action_candidates[i], best_path, best_action)) ||
-                 (a_path.size() < best_path_length ||
-                  (a_path.size() == best_path_length &&
-                   grows_first(a_path, action_candidates[i], best_path, best_action)))))))))
+                ((m_learn_exec_times && grows_faster(a_path[i], action_candidates[i], best_path, best_action)) ||
+                 (a_path[i].size() < best_path_length ||
+                  (a_path[i].size() == best_path_length &&
+                   grows_first(a_path[i], action_candidates[i], best_path, best_action)))))))))
         {
-            best_path_length = a_path.size();
-            best_path = a_path;
+            best_path_length = a_path[i].size();
+            best_path = a_path[i];
             best_action = action_candidates[i];
-            best_evaluation = an_evaluation;
+            best_evaluation = an_evaluation[i];
         }
     }
 

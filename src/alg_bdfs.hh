@@ -37,6 +37,8 @@ public:
         m_search_depth(searchDepth), m_learn(learn) {
         if (learn != NULL) // TODO: learn knows how to learn exec times
             m_learn_exec_times = true;
+	else
+	    m_learn_exec_times = false;
     };
     virtual ~AlgBDFS() {};
 
