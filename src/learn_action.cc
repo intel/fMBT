@@ -62,8 +62,12 @@ bool Learn_action::add_action(std::string&s) {
 
 void Learn_action::setAlphabet(Alphabet* a) {
   Learning::setAlphabet(a);
-  add_action(constructor_param);
-  constructor_param="";
+
+  if (constructor_param!="") {
+    add_action(constructor_param);
+    constructor_param="";
+  }
+
   std::vector<std::string>& names=alphabet->getActionNames();
   unsigned actions=names.size();
   pvec.resize(actions);
