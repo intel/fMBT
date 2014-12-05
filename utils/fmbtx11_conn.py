@@ -176,8 +176,9 @@ class Display(object):
         if self._display:
             libX11.XCloseDisplay(self._display)
 
-    def _typeChar(self, origChar, press=True, release=True):
-        modifiers = []
+    def _typeChar(self, origChar, press=True, release=True, modifiers=[]):
+        _modifiers = [libX11.XKeysymToKeycode(
+            self._display, libX11.XStringToKeysym(c)) for c in modifiers]
         c = self._specialCharToXString.get(origChar, origChar)
         keysym = libX11.XStringToKeysym(c)
         if keysym == _NoSymbol:
@@ -190,11 +191,11 @@ class Display(object):
             if modifier == None: continue
             try:
                 if chr(self._keysyms[first + modifier_index + 1]) == origChar:
-                    modifiers.append(modifier)
+                    _modifiers.append(modifier)
                     break
             except ValueError: pass
 
-        for m in modifiers:
+        for m in _modifiers:
             libXtst.XTestFakeKeyEvent(self._display, m, _X_True, _X_CurrentTime)
             libX11.XFlush(self._display)
 
@@ -204,20 +205,20 @@ class Display(object):
             libXtst.XTestFakeKeyEvent(self._display, keycode, _X_False, _X_CurrentTime)
         libX11.XFlush(self._display)
 
-        for m in modifiers[::-1]:
+        for m in _modifiers[::-1]:
             libXtst.XTestFakeKeyEvent(self._display, m, _X_False, _X_CurrentTime)
             libX11.XFlush(self._display)
 
         return True
 
-    def sendKeyDown(self, key):
-        return self._typeChar(key, press=True, release=False)
+    def sendKeyDown(self, key, modifiers=[]):
+        return self._typeChar(key, press=True, release=False, modifiers=modifiers)
 
-    def sendKeyUp(self, key):
-        return self._typeChar(key, press=False, release=True)
+    def sendKeyUp(self, key, modifiers=[]):
+        return self._typeChar(key, press=False, release=True, modifiers=modifiers)
 
-    def sendPress(self, key):
-	return self._typeChar(key, press=True, release=True)
+    def sendPress(self, key, modifiers=[]):
+	return self._typeChar(key, press=True, release=True, modifiers=modifiers)
 
     def sendTap(self, x, y, button=1):
         libXtst.XTestFakeMotionEvent(self._display, self._current_screen, int(x), int(y), _X_CurrentTime)
