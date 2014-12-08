@@ -33,13 +33,7 @@ class Model;
 class AlgBDFS: public Writable
 {
 public:
-    AlgBDFS(int searchDepth, Learning* learn):
-        m_search_depth(searchDepth), m_learn(learn) {
-        if (learn != NULL) // TODO: learn knows how to learn exec times
-            m_learn_exec_times = true;
-	else
-	    m_learn_exec_times = false;
-    };
+    AlgBDFS(int searchDepth, Learning* learn);
     virtual ~AlgBDFS() {};
 
     /** \brief returns the shortest path that results in  the best evaluation
@@ -56,7 +50,6 @@ protected:
     int m_search_depth;
     bool m_learn_exec_times;
     Learning*  m_learn;
-private:
     double _path_to_best_evaluation(Model& model, std::vector<int>& path, int depth, double best_evaluation);
     bool grows_first(std::vector<int>&, int, std::vector<int>&, int);
     bool grows_faster(std::vector<int>&, int, std::vector<int>&, int);
@@ -80,6 +73,17 @@ protected:
 };
 
 
+class AlgPathToAdaptiveCoverage: public AlgPathToBestCoverage
+{
+public:
+    AlgPathToAdaptiveCoverage(int searchDepth = 3, Learning* learn = NULL):
+      AlgPathToBestCoverage(searchDepth, learn) {}
+    virtual ~AlgPathToAdaptiveCoverage() {};
+protected:
+    double _path_to_best_evaluation(Model& model, std::vector<int>& path, int depth, double best_evaluation);
+};
+
+
 class AlgPathToAction: public AlgBDFS
 {
 public:
@@ -95,6 +99,5 @@ protected:
     Model* m_model;
     int    m_find_this_action;
 };
-
 
 #endif

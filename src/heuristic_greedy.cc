@@ -24,6 +24,7 @@
 #include <vector>
 #include <algorithm>
 #include "random.hh"
+#include "learn_proxy.hh"
 
 extern int _g_simulation_depth_hint;
 
@@ -152,20 +153,37 @@ int Heuristic_greedy::getIAction()
     /* In burst mode new path is not searched before previosly found
      * path is fully consumed */
     if (!m_burst || m_path.empty() ) {
-      /* Spend more time for better coverage */
-      AlgPathToBestCoverage alg(m_search_depth, learn);
       /* Use precalculated path (m_path) as a hint. */
       std::reverse(m_path.begin(), m_path.end());
+
       double current_score=my_coverage->getCoverage();
-      double score = alg.search(*model, *my_coverage, m_path);
+      double score;
 
-      end_condition=(score<=current_score);
+      /* Spend more time for better coverage */
+      if (adaptive) {
+	AlgPathToAdaptiveCoverage alg(m_search_depth, learn);
+	score = alg.search(*model, *my_coverage, m_path);
 
-      if (!alg.status) {
-        status=false;
-	errormsg = "Alg: " + alg.errormsg;
-	retval = 0;
-	goto done;
+	end_condition=(score<=current_score);
+
+	if (!alg.status) {
+	  status=false;
+	  errormsg = "Alg: " + alg.errormsg;
+	  retval = 0;
+	  goto done;
+	}
+      } else {
+	AlgPathToBestCoverage alg(m_search_depth, learn);
+	score = alg.search(*model, *my_coverage, m_path);
+
+	end_condition=(score<=current_score);
+
+	if (!alg.status) {
+	  status=false;
+	  errormsg = "Alg: " + alg.errormsg;
+	  retval = 0;
+	  goto done;
+	}
       }
 
       if (m_path.size() > 0) {
@@ -200,9 +218,21 @@ done:
   return retval;
 }
 
-FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "greedy")
-FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "lookahead")
-FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "action_fitness")
+void Heuristic_adaptive_lookahead::set_learn(Learning* _learn) {
+  Heuristic::set_learn(_learn);
+  if (learn && ((Learn_proxy*)learn)->la) {
+    // Ok. Something we need to do?
+  } else {
+    status=false;
+    errormsg="adaptive_lookahead needs learning module action";
+  }
+}
+
+
+FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_lookahead, "greedy")
+FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_lookahead, "lookahead")
+FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_lookahead, "action_fitness")
+FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_adaptive_lookahead, "adaptive_lookahead")
 
 #undef FACTORY_CREATE_DEFAULT_PARAMS
 #define FACTORY_CREATE_DEFAULT_PARAMS /* */
@@ -211,4 +241,5 @@ FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "action_fitness")
 #undef FACTORY_CREATOR_PARAMS2
 #define FACTORY_CREATOR_PARAMS Verdict::Verdict v, std::string params,Conf* co
 #define FACTORY_CREATOR_PARAMS2 co, v, params
+
 FACTORY_DEFAULT_CREATOR(End_condition, End_condition_bool, "lookahead_noprogress")

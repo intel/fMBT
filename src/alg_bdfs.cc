@@ -30,6 +30,14 @@
 
 extern int _g_simulation_depth_hint;
 
+AlgBDFS::AlgBDFS(int searchDepth, Learning* learn):
+  m_search_depth(searchDepth), m_learn(learn) {
+  if (learn != NULL && ((Learn_proxy*)learn)->lt) // TODO: learn knows how to learn exec times
+    m_learn_exec_times = true;
+  else
+    m_learn_exec_times = false;
+};
+
 double AlgPathToBestCoverage::search(Model& model, Coverage& coverage, std::vector<int>& path)
 {
     m_coverage = &coverage;
@@ -281,8 +289,8 @@ bool AlgBDFS::grows_faster(std::vector<int>& first_path, int first_path_start,
     return first_path_time < second_path_time;
 }
 
-double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, int depth,
-                                         double best_evaluation)
+double AlgPathToAdaptiveCoverage::_path_to_best_evaluation
+       (Model& model, std::vector<int>& path, int depth,double best_evaluation)
 {
     int *input_actions = NULL;
     int input_action_count = 0;
@@ -340,6 +348,7 @@ double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, i
       }
     }
 
+    if (m_learn) {
     for (int i = 0; i < input_action_count; i++)
       {    
 	float weight_total=0.0;
@@ -347,7 +356,7 @@ double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, i
 	for (int j = 0; j < input_action_count; j++)
 	  {
 	    float weight=m_learn?m_learn->getC(action_candidates[i],action_candidates[j]):0.0;
-	    
+
 	    if (i==j) {
 	      weight+=1.0;
 	    }
@@ -361,6 +370,9 @@ double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, i
 	  an_evaluation[i]=0.0;
 	}
       }
+    } else {
+      an_evaluation.swap(pre_evaluation);
+    }
     
     for (int i = 0; i < input_action_count; i++) {    
         if (an_evaluation[i] > current_state_evaluation &&
@@ -377,6 +389,83 @@ double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, i
             best_path = a_path[i];
             best_action = action_candidates[i];
             best_evaluation = an_evaluation[i];
+        }
+    }
+
+    if ((int)best_action > -1) {
+        path = best_path;
+        path.push_back(best_action);
+        return best_evaluation;
+    }
+    return current_state_evaluation;
+}
+
+double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, int depth,
+                                         double best_evaluation)
+{
+    int *input_actions = NULL;
+    int input_action_count = 0;
+
+    if (!status) {
+        return 0.0;
+    }
+
+    volatile double current_state_evaluation = evaluate();
+
+    if (current_state_evaluation > best_evaluation)
+        best_evaluation = current_state_evaluation;
+
+    /* Can we still continue the search? */
+    if (depth <= 0)
+        return current_state_evaluation;
+
+    /* Recursive search for the best path */
+    input_action_count = model.getIActions(&input_actions);
+
+    if (!model.status) {
+      errormsg = "Model error:"+model.errormsg;
+        status=false;
+        return 0.0;
+    }
+
+    std::vector<int> action_candidates;
+    for (int i = 0; i < input_action_count; i++)
+      action_candidates.push_back(input_actions[i]);
+    std::vector<int> best_path;
+    unsigned int best_path_length = 0;
+    int best_action = -1;
+    for (int i = 0; i < input_action_count; i++)
+    {
+        std::vector<int> a_path;
+        volatile double an_evaluation;
+
+        doExecute(action_candidates[i]);
+
+        a_path.resize(0);
+        an_evaluation = _path_to_best_evaluation(model, a_path, depth - 1, best_evaluation);
+
+        undoExecute();
+
+        if (!model.status || !status) {
+          if (!model.status)
+            errormsg = "Model error:"+model.errormsg;
+          status=false;
+          return 0.0;
+        }
+
+        if (an_evaluation > current_state_evaluation &&
+            (an_evaluation > best_evaluation ||
+             (an_evaluation == best_evaluation &&
+              (best_action == -1 ||
+               (best_action > -1 &&
+                (a_path.size() < best_path_length ||
+                 (a_path.size() == best_path_length &&
+                  grows_first(a_path, action_candidates[i], best_path, best_action))))))))
+        {
+            best_path_length = a_path.size();
+            best_path = a_path;
+            best_action = action_candidates[i];
+            best_evaluation = an_evaluation;
         }
     }
 

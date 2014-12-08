@@ -36,3 +36,15 @@ Learning* new_learning(Log& l, std::string& s) {
 
   return ret;
 }
+
+class Learn_fail: public Learning {
+public:
+  Learn_fail(Log&l,std::string&s):Learning(l) {
+    status=false;
+    errormsg="ALWAYS FAIL learning module";
+  }
+  virtual ~Learn_fail() { }
+
+};
+
+FACTORY_DEFAULT_CREATOR(Learning, Learn_fail, "fail")

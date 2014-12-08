@@ -243,9 +243,12 @@ void Conf::load(std::string& name,std::string& content)
   // create learning
   for(i=_learning.begin();i!=_learning.end();i++) {
     Learning* tmp=new_learning(log,i->first);
-    if (!tmp || !tmp->status) {
-      // error....
-      return ;
+    if (!tmp) {
+      RETURN_ERROR_VOID(i->second,"Can't create learning \"" + i->first + "\"");
+    }
+    tmp->lineno=i->second;
+    if (!tmp->status) {
+      RETURN_ERROR_VOID(tmp->lineno,"learning error: " + tmp->stringify());
     }
     if ((dynamic_cast<Learn_time*>(tmp))!=NULL) {
       tmp->setAlphabet(model);
@@ -266,7 +269,11 @@ void Conf::load(std::string& name,std::string& content)
   }
   _learning.clear();
 
-  if (learning && learning->status && heuristic && heuristic->status) {
+  if (learning && !learning->status) {
+    RETURN_ERROR_VOID(learning->lineno,"learning error: " + learning->stringify());
+  }
+
+  if (heuristic && heuristic->status) {
     heuristic->set_learn(learning);
   }
 
