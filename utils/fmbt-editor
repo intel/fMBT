@@ -2406,7 +2406,7 @@ def _checkUnsavedWork():
         save_to_target = ""
 
     reply = QtGui.QMessageBox.question(
-        None, "fmbt-editor",
+        window, "fmbt-editor",
         'Save changes%s?' % (save_to_target,),
         QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
 

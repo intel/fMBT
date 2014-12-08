@@ -1029,6 +1029,8 @@ class MainWindow(QtGui.QMainWindow):
         self.gestureEvents = []
         self.gestureStarted = False
 
+        self.editor.setFocus()
+
     def bitmapStringAt(self, pos=None):
         filename = None
         if pos != None:
@@ -2901,7 +2903,7 @@ def _checkUnsavedWork():
         save_to_target = ""
 
     reply = QtGui.QMessageBox.question(
-        None, "fmbt-scripter",
+        _win, "fmbt-scripter",
         'Save changes%s?' % (save_to_target,),
         QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
 
