@@ -1767,7 +1767,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         self._stopOnError = stopOnError
         self._shellSupportsTar = False
         self._monkeyOptions = monkeyOptions
-        self._rawScreenshotFormat = None
+        self._screencapArgs = []
+        self._screencapFormat = "png"
 
         self.setScreenToDisplayCoords(lambda x, y: (x, y))
         self.setDisplayToScreenCoords(lambda x, y: (x, y))
@@ -2194,13 +2195,67 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         return self._monkeyCommand("wake")[0]
 
     def setRawScreenshotFormat(self, fmt):
-        """
+        """DEPRECATED - use setScreencapFormat("raw") instead.
         Set fmt to True or tuple (depth, colorspace) to fetch
         screenshots from the device without converting them to PNG
         on the device. The conversion will be done on host, which
         is often much faster. True is autodetect.
         """
-        self._rawScreenshotFormat = fmt
+        if fmt == True:
+            return self.setScreencapFormat("raw")
+        elif fmt == False:
+            return self.setScreencapFormat("png")
+        else:
+            return self.setScreencapFormat(fmt)
+
+    def setScreencapFormat(self, fmt):
+        """
+        Set screencap tool output format.
+
+        Parameters:
+          fmt (string or tuple):
+                  Valid formats are:
+                  "png" - save screenshot as PNG on device (the default).
+                  "raw" - output screenshot in raw format from device,
+                          PNG conversion takes place on host.
+                  (bits_per_channel, colorspace) - same as "raw", but
+                          use given raw data order instead of autodetect.
+                          Example: setScreencapFormat((8, "RGBA"))
+        """
+        if isinstance(fmt, basestring):
+            if not fmt.lower() in ("png", "raw"):
+                raise ValueError('invalid format "%s"' % (fmt,))
+            self._screencapFormat = fmt.lower()
+        else:
+            self._screencapFormat = fmt
+
+    def setScreencapArgs(self, args):
+        """
+        Set screencap tool arguments.
+
+        Parameters:
+          args (list of strings):
+                  current screencap arguments will be replaced by args.
+
+        See also: screencapArgs()
+
+        Example: shrink screenshots to 1/4 of the pixels
+            # (requires screencap -s parameter support)
+            # Use input resolution from display.* variables instead
+            # of screenshot resolution.
+            sut.setDisplaySize()
+            # Divide screenshot width and height by 2, that is, set
+            # divider exponent (two to the power of n) to 1.
+            args = sut.connection().screencapArgs()
+            sut.connection().setScreencapArgs(args + ["-s1"])
+        """
+        self._screencapArgs = args
+
+    def screencapArgs(self):
+        """
+        Return screencap tool arguments.
+        """
+        return self._screencapArgs[:] # return a copy
 
     def recvScreenshot(self, filename, retry=2, retryDelay=1.0):
         """
@@ -2209,17 +2264,18 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
 
         Returns True on success, otherwise False.
         """
-        if self._rawScreenshotFormat and fmbtpng != None:
+        if self._screencapFormat != "png" and fmbtpng != None:
             # EXPERIMENTAL: PNG encoding moved from device to host
             remotefile = '/sdcard/fmbtandroid-s.raw'
-            self._runAdb(['shell', 'screencap | gzip -3 >' + remotefile])
+            self._runAdb(['shell', 'screencap %s | gzip -3 > %s' % (
+                ' '.join(self._screencapArgs), remotefile)])
             self._runAdb(['pull', remotefile, filename + ".raw"], [0, 1])
             data = gzip.open(filename + ".raw").read()
             os.unlink(filename + ".raw")
 
             width, height, fmt = struct.unpack("<LLL", data[:12])
-            if isinstance(self._rawScreenshotFormat, tuple):
-                depth, colorspace = self._rawScreenshotFormat
+            if isinstance(self._screencapFormat, tuple):
+                depth, colorspace = self._screencapFormat
             elif fmt == 1:
                 depth, colorspace = 8, "RGBA"
             elif fmt == 2:
@@ -2229,7 +2285,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             elif fmt == 5:
                 depth, colorspace = 8, "BGR_" # ignore alpha
             else:
-                _adapterLog("unsupported screenshot format %s" % (fmt,))
+                _adapterLog("unsupported screencap raw format %s" % (fmt,))
                 depth, colorspace = None, None
 
             if depth != None:
@@ -2243,7 +2299,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         remotefile = '/sdcard/' + os.path.basename(filename)
         remotefile = remotefile.replace(':', '_') # vfat dislikes colons
 
-        self._runAdb(['shell', 'screencap', '-p', remotefile], 0)
+        self._runAdb(['shell', 'screencap %s -p %s' % (' '.join(self._screencapArgs), remotefile)], 0)
 
         status, out, err = self._runAdb(['pull', remotefile, filename], [0, 1])
 
