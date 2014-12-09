@@ -32,11 +32,11 @@ extern int _g_simulation_depth_hint;
 
 AlgBDFS::AlgBDFS(int searchDepth, Learning* learn):
   m_search_depth(searchDepth), m_learn(learn) {
-  if (learn != NULL && ((Learn_proxy*)learn)->lt) // TODO: learn knows how to learn exec times
+  if (learn != NULL && ((Learn_proxy*)learn)->lt!=NULL) // TODO: learn knows how to learn exec times
     m_learn_exec_times = true;
   else
     m_learn_exec_times = false;
-};
+}
 
 double AlgPathToBestCoverage::search(Model& model, Coverage& coverage, std::vector<int>& path)
 {
@@ -423,14 +423,14 @@ double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, i
     input_action_count = model.getIActions(&input_actions);
 
     if (!model.status) {
-      errormsg = "Model error:"+model.errormsg;
-        status=false;
-        return 0.0;
+        errormsg = "Model error:"+model.errormsg;
+	status=false;
+	return 0.0;
     }
 
     std::vector<int> action_candidates;
     for (int i = 0; i < input_action_count; i++)
-      action_candidates.push_back(input_actions[i]);
+        action_candidates.push_back(input_actions[i]);
     std::vector<int> best_path;
     unsigned int best_path_length = 0;
     int best_action = -1;
@@ -458,9 +458,10 @@ double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, i
              (an_evaluation == best_evaluation &&
               (best_action == -1 ||
                (best_action > -1 &&
-                (a_path.size() < best_path_length ||
-                 (a_path.size() == best_path_length &&
-                  grows_first(a_path, action_candidates[i], best_path, best_action))))))))
+                ((m_learn_exec_times && grows_faster(a_path, action_candidates[i], best_path, best_action)) ||
+		 (a_path.size() < best_path_length ||
+		  (a_path.size() == best_path_length &&
+		   grows_first(a_path, action_candidates[i], best_path, best_action)))))))))
         {
             best_path_length = a_path.size();
             best_path = a_path;
