@@ -644,6 +644,11 @@ public:
     Random* r;
     int random_pos;
 
+    virtual void reset() {
+      unit_manyleaf::reset();
+      random_pos=-1;
+    }
+
     virtual void execute(const std::vector<int>& prev,int action,const std::vector<int>& next) {
       if (unit::value.first==unit::value.second) {
 	return;
