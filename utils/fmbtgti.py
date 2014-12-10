@@ -1713,6 +1713,8 @@ class GUITestInterface(object):
         """
         Returns screen size in pixels in tuple (width, height).
         """
+        if self._lastScreenshot != None:
+            self._screenSize = self._lastScreenshot.size()
         if self._screenSize == None:
             if self._lastScreenshot == None:
                 self.refreshScreenshot()
