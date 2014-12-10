@@ -27,7 +27,7 @@
 std::string result("");
 
 typedef struct _node {
-  std::string* str;
+   std::string* str;
   std::list<std::string>* params;
 } node;
 #ifdef D_ParseNode_User
@@ -65,7 +65,7 @@ static void name_syntax_error_report(struct D_Parser *ap) {
     char *fn = d_dup_pathname_str(p->user.loc.pathname);
 
     fprintf(stderr,"%s:%d: name error '%s' already defined at %s:%d\n",
-                    fn,p->user.loc.line,pa.first.c_str(),
+                    fn,p->last_syntax_error_line,pa.first.c_str(),
                     pa.second.first.c_str(),
                     pa.second.second);
 
@@ -85,6 +85,7 @@ static void undefined_language_error_report(struct D_Parser *ap) {
 
 void raise_error(d_loc_t& sl,Parser *p) {
     p->last_syntax_error_line = sl.line;
+    p->user.loc.pathname = sl.pathname;
     p->user.syntax_errors++;
     p->user.loc.line= sl.line;
     p->user.loc.ws = sl.s-1;
