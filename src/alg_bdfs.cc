@@ -27,11 +27,12 @@
 #include <cstdlib>
 #include "helper.hh"
 #include "learn_proxy.hh"
+#include "function.hh"
 
 extern int _g_simulation_depth_hint;
 
-AlgBDFS::AlgBDFS(int searchDepth, Learning* learn):
-  m_search_depth(searchDepth), m_learn(learn) {
+AlgBDFS::AlgBDFS(int searchDepth, Learning* learn,Function* function):
+  m_search_depth(searchDepth), m_learn(learn),m_function(function) {
   if (learn != NULL && ((Learn_proxy*)learn)->lt!=NULL) // TODO: learn knows how to learn exec times
     m_learn_exec_times = true;
   else
@@ -318,8 +319,14 @@ double AlgPathToAdaptiveCoverage::_path_to_best_evaluation
     }
 
     std::vector<int> action_candidates;
-    for (int i = 0; i < input_action_count; i++)
-        action_candidates.push_back(input_actions[i]);
+    if (m_function) {
+      int base=m_function->val();
+      for (int i = 0; i < input_action_count; i++)
+	action_candidates.push_back(input_actions[(base+i)%input_action_count]);
+    } else {
+      for (int i = 0; i < input_action_count; i++)
+	action_candidates.push_back(input_actions[i]);
+    }
 
     std::vector<int> best_path;
     unsigned int best_path_length = 0;

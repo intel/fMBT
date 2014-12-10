@@ -28,6 +28,7 @@
 #include "lts.hh"
 
 class Random;
+class Function;
 
 class Heuristic_greedy : public Heuristic {
 public:
@@ -43,6 +44,7 @@ private:
   bool m_burst;
   std::vector<int> m_path;
   Random* r;
+  Function* randomise_function;
 protected:
   bool adaptive;
 public:

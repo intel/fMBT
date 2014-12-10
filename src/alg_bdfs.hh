@@ -26,6 +26,7 @@
 class Coverage;
 class Learning;
 class Model;
+class Function;
 
 #include <vector>
 #include "writable.hh"
@@ -33,7 +34,7 @@ class Model;
 class AlgBDFS: public Writable
 {
 public:
-    AlgBDFS(int searchDepth, Learning* learn);
+    AlgBDFS(int searchDepth, Learning* learn,Function* function);
     virtual ~AlgBDFS() {};
 
     /** \brief returns the shortest path that results in  the best evaluation
@@ -50,6 +51,7 @@ protected:
     int m_search_depth;
     bool m_learn_exec_times;
     Learning*  m_learn;
+    Function* m_function;
     double _path_to_best_evaluation(Model& model, std::vector<int>& path, int depth, double best_evaluation);
     bool grows_first(std::vector<int>&, int, std::vector<int>&, int);
     bool grows_faster(std::vector<int>&, int, std::vector<int>&, int);
@@ -59,8 +61,8 @@ protected:
 class AlgPathToBestCoverage: public AlgBDFS
 {
 public:
-    AlgPathToBestCoverage(int searchDepth = 3, Learning* learn = NULL):
-        AlgBDFS(searchDepth, learn) {}
+    AlgPathToBestCoverage(int searchDepth = 3, Learning* learn = NULL, Function* function = NULL):
+      AlgBDFS(searchDepth, learn,function) {}
     virtual ~AlgPathToBestCoverage() {};
 
     double search(Model& model, Coverage& coverage, std::vector<int>& path);
@@ -76,7 +78,7 @@ protected:
 class AlgPathToAdaptiveCoverage: public AlgPathToBestCoverage
 {
 public:
-    AlgPathToAdaptiveCoverage(int searchDepth = 3, Learning* learn = NULL):
+    AlgPathToAdaptiveCoverage(int searchDepth = 3, Learning* learn = NULL, Function* function = NULL):
       AlgPathToBestCoverage(searchDepth, learn) {}
     virtual ~AlgPathToAdaptiveCoverage() {};
 protected:
@@ -87,8 +89,9 @@ protected:
 class AlgPathToAction: public AlgBDFS
 {
 public:
-    AlgPathToAction(int searchDepth = 3, Learning* learn = NULL):
-        AlgBDFS(searchDepth, learn) {}
+    AlgPathToAction(int searchDepth = 3, Learning* learn = NULL, 
+		    Function* function = NULL):
+      AlgBDFS(searchDepth, learn,function) {}
     virtual ~AlgPathToAction() {}
 
     double search(Model& model, int find_this_action, std::vector<int>& path);

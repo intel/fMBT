@@ -42,8 +42,6 @@ char* READLINE(const char* prompt)
 }
 #else
 #ifdef USE_GNU_READLINE
-#include <readline/readline.h>
-#include <readline/history.h>
 #define READLINE(a) readline(a)
 #else
 #ifdef USE_EDITLINE
@@ -59,11 +57,16 @@ extern "C" {
        __result;}))
 #else
 /* Defaults to BSD editline readline.. */
-#include <editline/readline.h>
+extern "C" {
+extern FILE             *rl_instream;
+extern FILE             *rl_outstream;
+char            *readline(const char *);
+}
 #define READLINE(a) readline(a)
 #endif
 #endif
 #endif // ifdef DDROI else
+
 #include <cstdlib>
 #include <cstring>
 

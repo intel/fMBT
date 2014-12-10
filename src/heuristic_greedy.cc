@@ -25,6 +25,7 @@
 #include <algorithm>
 #include "random.hh"
 #include "learn_proxy.hh"
+#include "helper.hh"
 
 extern int _g_simulation_depth_hint;
 
@@ -50,11 +51,38 @@ Heuristic_greedy::Heuristic_greedy(Log& l,const std::string& params) :
   Heuristic(l), m_search_depth(0), m_burst(false),end_condition(false)
 {
   hg=this;
+  std::string s;
 
-  m_search_depth = atoi(params.c_str());
-  if (strchr(params.c_str(), 'b')) {
+  std::vector<std::string> fa;
+  commalist(params,fa);  
+
+  if (fa.size()>0) {
+    s=fa[0];
+  }
+
+  m_search_depth = atoi(s.c_str());
+  if (strchr(s.c_str(), 'b')) {
     m_burst = true;
   }
+
+  if (fa.size()>1) {
+    randomise_function = new_function(fa[1]);
+    if (randomise_function) {
+      status=randomise_function->status;
+      errormsg=randomise_function->errormsg;
+    } else {
+      status=false;
+      errormsg="Can't create function \""+fa[1]+"\"";
+    }
+  } else {
+    randomise_function=NULL;
+  }
+
+  if (fa.size()>2) {
+    status=false;
+    errormsg="Too many paramters. Expecting maxium of 2, got "+to_string((unsigned)fa.size());
+  }
+
   r = Random::default_random();
   r->ref();
 }
@@ -65,6 +93,10 @@ Heuristic_greedy::~Heuristic_greedy()
 
   if (r)
     r->unref();
+
+  if (randomise_function) {
+    delete randomise_function;
+  }
 }
 
 bool Heuristic_greedy::execute(int action)
@@ -161,7 +193,7 @@ int Heuristic_greedy::getIAction()
 
       /* Spend more time for better coverage */
       if (adaptive) {
-	AlgPathToAdaptiveCoverage alg(m_search_depth, learn);
+	AlgPathToAdaptiveCoverage alg(m_search_depth, learn, randomise_function);
 	score = alg.search(*model, *my_coverage, m_path);
 
 	end_condition=(score<=current_score);
