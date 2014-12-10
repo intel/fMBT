@@ -17,28 +17,44 @@
  *
  */
 
-#ifndef __learn_time_hh__
-#define __learn_time_hh__
+#ifndef __learn_function_hh__
+#define __learn_function_hh__
 
-#include "learning.hh"
+#include "learn_time.hh"
+#include "learn_action.hh"
 #include "helper.hh"
 #include "function.hh"
 
-class Learn_time: public Learning {
+class Learn_time_function: public Learn_time {
 public:
-  Learn_time(Log&l,std::string s);
-  virtual ~Learn_time() { }
-  virtual void suggest(int action);
-  virtual void execute(int action);
+  Learn_time_function(Log&l,std::string&s);
+  virtual ~Learn_time_function() { }
+  virtual void suggest(int action) {}
+  virtual void execute(int action) {}
+  virtual float getF(int action);
+  virtual float getC(int sug,int exe);
   virtual float getE(int action);
-  virtual void setAlphabet(Alphabet* a) { 
+  virtual void setAlphabet(Alphabet* a) {
     Learning::setAlphabet(a);
-    time_map.resize(alphabet->getActionNames().size()+1);
   }
 protected:
-  Function* learning_multiplier;
-  struct timeval last_time;
-  std::vector<float> time_map;
+  Function* f;
+};
+
+class Learn_action_function: public Learn_action {
+public:
+  Learn_action_function(Log&l,std::string&s);
+  virtual ~Learn_action_function() { }
+  virtual void suggest(int action) {}
+  virtual void execute(int action) {}
+  virtual float getF(int action);
+  virtual float getC(int sug,int exe);
+  virtual float getE(int action);
+  virtual void setAlphabet(Alphabet* a) {
+    Learning::setAlphabet(a);
+  }
+protected:
+  Function* f;
 };
 
 #endif

@@ -26,7 +26,7 @@
 
 class Learn_action: public Learning {
 public:
-  Learn_action(Log&l,std::string&s);
+  Learn_action(Log&l,std::string s);
   bool add_action(std::string& param);
   virtual ~Learn_action() { }
   virtual void setAlphabet(Alphabet* a);

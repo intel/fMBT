@@ -21,7 +21,7 @@
 #include "helper.hh"
 #include "adapter.hh"
 
-Learn_time::Learn_time(Log&l,std::string&s): Learning(l) {
+Learn_time::Learn_time(Log&l,std::string s): Learning(l) {
   learning_multiplier=new_function(s);
   if (!learning_multiplier) {
     learning_multiplier=new_function("0.5");

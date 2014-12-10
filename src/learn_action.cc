@@ -21,7 +21,7 @@
 #include "helper.hh"
 #include "params.hh"
 
-Learn_action::Learn_action(Log&l,std::string&s): Learning(l),
+Learn_action::Learn_action(Log&l,std::string s): Learning(l),
 						 constructor_param(s){
 }
 
