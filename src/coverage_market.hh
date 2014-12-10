@@ -40,6 +40,7 @@
 #include "coverage_tree.hh"
 #include "log_null.hh"
 #include "helper.hh"
+#include "random.hh"
 
 class Model;
 
@@ -616,6 +617,63 @@ public:
     */
     virtual unit* clone() {
       return new unit_manyleafor(*this);
+    }
+  };
+
+  class unit_manyleafrandom: public unit_manyleaf {
+  public:
+    virtual std::string stringify(Alphabet&a) {
+      //TODO
+      std::string ret="\""+a.getActionName(my_action[0])+"\"";
+      for(size_t i=1;i<my_action.size();i++) {
+	ret+=" or \"" + a.getActionName(my_action[i])+"\"";
+      }
+      return ret;
+
+    }
+
+    unit_manyleafrandom() {
+      r = Random::default_random();
+      random_pos=-1;
+    }
+
+    virtual ~unit_manyleafrandom() {
+      r->unref();
+    }
+
+    Random* r;
+    int random_pos;
+
+    virtual void execute(const std::vector<int>& prev,int action,const std::vector<int>& next) {
+      if (unit::value.first==unit::value.second) {
+	return;
+      }
+
+      if (random_pos==-1) {
+	random_pos=r->drand48()*my_action.size();
+      }
+      
+      if (action==my_action[random_pos]) {
+	if (value[random_pos]<unit::value.second) {
+	  value[random_pos]++;
+	  unit::value.first=unit::value.second;
+	  return;
+	}
+      }
+    }
+    /*
+    virtual void update(){
+      for(size_t i=0;i<value.size();i++) {
+	if (value[i]) {
+	  unit::value.first = unit::value.second;
+	  return;
+	}
+      }
+      unit::value.first=0;
+    }
+    */
+    virtual unit* clone() {
+      return new unit_manyleafrandom(*this);
     }
   };
 
