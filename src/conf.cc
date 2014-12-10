@@ -250,9 +250,10 @@ void Conf::load(std::string& name,std::string& content)
     if (!tmp->status) {
       RETURN_ERROR_VOID(tmp->lineno,"learning error: " + tmp->stringify());
     }
+    
     if ((dynamic_cast<Learn_time*>(tmp))!=NULL) {
       tmp->setAlphabet(model);
-      lp->lt=(Learn_time*)tmp;
+      lp->lt=tmp;
     } else {
       if (lp->la) {
 	// We have!

@@ -36,7 +36,7 @@ public:
   virtual float getC(int sug,int exe);
   virtual void setAlphabet(Alphabet* a);
 
-  Learn_time*   lt;
+  Learning*   lt;
   Learn_action* la;
 };
 
