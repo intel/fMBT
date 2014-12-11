@@ -205,7 +205,7 @@ int Heuristic_greedy::getIAction()
 	  goto done;
 	}
       } else {
-	AlgPathToBestCoverage alg(m_search_depth, learn);
+	AlgPathToBestCoverage alg(m_search_depth, learn, randomise_function);
 	score = alg.search(*model, *my_coverage, m_path);
 
 	end_condition=(score<=current_score);

@@ -436,8 +436,14 @@ double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, i
     }
 
     std::vector<int> action_candidates;
-    for (int i = 0; i < input_action_count; i++)
-        action_candidates.push_back(input_actions[i]);
+    if (m_function) {
+      int base=m_function->val();
+      for (int i = 0; i < input_action_count; i++)
+	action_candidates.push_back(input_actions[(base+i)%input_action_count]);
+    } else {
+      for (int i = 0; i < input_action_count; i++)
+	action_candidates.push_back(input_actions[i]);
+    }
     std::vector<int> best_path;
     unsigned int best_path_length = 0;
     int best_action = -1;
