@@ -58,6 +58,12 @@ Options:
           Predefined formats:
           xunit - use xunit XML output format
 
+  -u, --unbuffered
+          use unbuffered I/O. Example: read test log stream from file
+          while test is running:
+          $ fmbt -l test.log test.conf &
+          $ tail -f -n +0 test.log | fmbt-log -U -f '$sT s $ax'
+
   -s, --separator=<string>
           separator between values of multivalue fields,
           for instance $tg and $al. The default is '; '.
@@ -181,7 +187,7 @@ fields = {
 
 def extract(input_file_obj, output_file_obj, output_format, raw=0,
             must_be_nonempty=set(), value_separator=VALUE_SEPARATOR,
-            record_separator=RECORD_SEPARATOR):
+            record_separator=RECORD_SEPARATOR, output_file_flush=False):
     # FIXME: this is just a quick to get input action names
     # printed. What this really should do is:
     # 1. parse everything that is done during a single test step
@@ -261,6 +267,8 @@ def extract(input_file_obj, output_file_obj, output_format, raw=0,
                 first_output_line = False
             else:
                 output_file_obj.write(record_separator + ppoutput)
+            if output_file_flush:
+                output_file_obj.flush()
     return not first_output_line # True if something was extracted
 
 def extract_xunit(input_file_obj, output_file_obj):
@@ -294,18 +302,46 @@ def extract_xunit(input_file_obj, output_file_obj):
 def unescape(s):
     return s.replace('\\n', '\n').replace('\\t', '\t')
 
+class unbuffered:
+    def __init__(self, fileobj):
+        self._fileobj = fileobj
+    def __iter__(self):
+        return self
+    def next(self):
+        line = []
+        while True:
+            c = self._fileobj.read(1)
+            if len(c) == 0:
+                if not line:
+                    raise StopIteration
+                else:
+                    return "".join(line)
+            else:
+                line.append(c)
+                if c == "\n":
+                    return "".join(line)
+    def close(self):
+        self._fileobj.close()
+
 if __name__ == '__main__':
     input_file_obj = sys.stdin
+    input_file_unbuffered = False
     output_file_obj = sys.stdout
+    output_file_flush = False
     output_format = '$tv$ax'
     option_raw = 0
     xunit_header_written = False
 
-    opts, remainder = getopt.getopt(
-        sys.argv[1:], 'hrf:o:s:S:t:T:v',
-        ['help', 'raw', 'format=', 'output=', 'separator=',
-         'record-separator=', 'time-format=', 'time-delta-format=',
-         'version'])
+    try:
+        opts, remainder = getopt.getopt(
+            sys.argv[1:], 'hrf:o:us:S:t:T:v',
+            ['help', 'raw', 'format=', 'output=', 'separator=', 'unbuffered',
+             'record-separator=', 'time-format=', 'time-delta-format=',
+             'version'])
+    except getopt.GetoptError, e:
+        sys.stderr.write("fmbt-log: %s\n" % (e,))
+        sys.exit(1)
+
     for opt, arg in opts:
         if opt in ['-h', '--help']:
             print __doc__
@@ -317,6 +353,9 @@ if __name__ == '__main__':
             option_raw = 1
         elif opt in ['-f', '--format']:
             output_format = arg
+        elif opt in ['-u', '--unbuffered']:
+            output_file_flush = True
+            input_file_unbuffered = True
         elif opt in ['-s', '--separator']:
             VALUE_SEPARATOR = arg
         elif opt in ['-S', '--record-separator']:
@@ -350,6 +389,9 @@ if __name__ == '__main__':
         else:
             input_file_obj = sys.stdin
 
+        if input_file_unbuffered:
+            input_file_obj = unbuffered(input_file_obj)
+
         if output_format.strip() == "xunit":
             if not xunit_header_written:
                 output_file_obj.write(XUNIT_HEADER)
@@ -358,7 +400,7 @@ if __name__ == '__main__':
         else:
             if extract(input_file_obj, output_file_obj, output_format,
                        option_raw, must_be_nonempty,
-                       VALUE_SEPARATOR, RECORD_SEPARATOR):
+                       VALUE_SEPARATOR, RECORD_SEPARATOR, output_file_flush):
                 output_file_obj.write('\n')
 
         try: input_file_obj.close()

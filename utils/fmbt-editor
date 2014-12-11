@@ -615,7 +615,9 @@ Keyboard shortcuts:<br>
         hide_states_unvisited = False
         collapse_tags = []
         preview_depth = 5
-        pt = self._modelSources() + self._modelSource()
+        pt = self._modelSources()
+        if pt.strip() != self._modelSource().strip():
+            pt += "\n" + self._modelSource()
         for var in GT_COLLAPSETAGS.findall(pt):
             for v in var.replace(',', ' ').split():
                 collapse_tags.append(v)
@@ -2404,7 +2406,7 @@ def _checkUnsavedWork():
         save_to_target = ""
 
     reply = QtGui.QMessageBox.question(
-        None, "fmbt-editor",
+        window, "fmbt-editor",
         'Save changes%s?' % (save_to_target,),
         QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
 
