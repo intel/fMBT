@@ -149,6 +149,7 @@ static bool pixelperfect_match(const int hayxsize,
     /* try to fail fast, quick middle-row lookup */
     int samples = 16;
     int stepx = neexsize >= samples ? int(neexsize*xscale)/samples : 1;
+    if (stepx < 1) stepx = 1;
     if (stepx > 8) stepx = 8;
     for (int _x=0, _y=int(neeysize*yscale)/2;
          _x + neePixelSize < int(neexsize*xscale);
@@ -167,7 +168,9 @@ static bool pixelperfect_match(const int hayxsize,
     samples = 8;
     stepx = neexsize >= samples ? int(neexsize*xscale)/samples : 1;
     int stepy = neeysize >= samples ? int(neeysize*yscale)/samples : 1;
+    if (stepx < 1) stepx = 1;
     if (stepx > 16) stepx = 16;
+    if (stepy < 1) stepy = 1;
     if (stepy > 16) stepy = 16;
     for (int _x=0, _y=0;
          _x + neePixelSize < int(neexsize*xscale) &&

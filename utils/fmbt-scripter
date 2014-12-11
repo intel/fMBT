@@ -65,12 +65,12 @@ import fmbtuinput
 import fmbt_config
 
 def error(msg, exitStatus=1):
-    sys.stderr.write("screen2gti: %s\n" % (msg,))
+    sys.stderr.write("fmbt-scripter: %s\n" % (msg,))
     sys.exit(exitStatus)
 
 def debug(msg, debugLevel=1):
     if opt_debug >= debugLevel:
-        sys.stderr.write("screen2gti debug: %s\n" % (msg,))
+        sys.stderr.write("fmbt-scripter debug: %s\n" % (msg,))
 
 def log(msg, prompt=True):
     sys.stdout.write("%s\n" % (msg,))
@@ -84,7 +84,7 @@ def _setGlobalLog(logFunc):
 _g_importFmbtRE = re.compile(r"\s*import fmbt(android|chromiumos|gti|tizen|vnc|windows|x11)")
 _g_gtiInstantiateRE = re.compile(
     r"(([a-zA-Z_][a-zA-Z_0-9]*)\s*=\s*fmbt(android|chromiumos|gti|tizen|vnc|windows|x11)"
-    r"\.(Device|Screen)\s*\(.*\))")
+    r"\.(Device|Screen|GUITestInterface)\s*\(.*\))")
 _g_scripterConnectRE = re.compile(
     r"[ \t]*#\s*scripter-connect:\s*(.*)\n")
 
@@ -717,6 +717,8 @@ class MainWindow(QtGui.QMainWindow):
         self._screenshotCursorX = -1
         self._screenshotCursorY = -1
         self._scriptFilename = None
+        self._updateNextScreenshotFromFiles = []
+        self._updateScreenshotScheduled = False
         self._fmbtEnv = {
             "pydoc": pydoc,
             "time": time
@@ -1075,8 +1077,10 @@ class MainWindow(QtGui.QMainWindow):
         _app.processEvents()
 
     def scheduleUpdateScreenshot(self, seconds):
-        QtCore.QTimer.singleShot(int(seconds * 1000),
-                                 lambda: self.updateScreenshot(False))
+        if not self._updateScreenshotScheduled:
+            QtCore.QTimer.singleShot(int(seconds * 1000),
+                                     lambda: self.updateScreenshot(False))
+            self._updateScreenshotScheduled = True
 
     def rec(self):
         # switch on/off recording in device, if supported
@@ -1426,14 +1430,19 @@ class MainWindow(QtGui.QMainWindow):
 
     def newChromiumOS(self):
         self._newScript("import fmbtchromiumos\n"
-                        'sut = fmbtchromiumos.Device("ssh ... chronos@DEVICE-IP")')
+                        'sut = fmbtchromiumos.Device("ssh ... chronos@DEVICE-IP")',
+                        scrollTo="...")
 
-    def newSimulated(self):
+    def newSimulated(self, screenshotList=["screenshot1.png", "screenshot2.png"]):
+        if screenshotList:
+            filenames = '"%s"' % ('", "'.join(screenshotList),)
+        else:
+            filenames = ""
         self._newScript("import fmbtgti\n"
                         "sut = fmbtgti.GUITestInterface()\n"
                         "sut.setConnection(fmbtgti.SimulatedGUITestConnection(\n"
-                        '    ["screenshot1.png", ...]))\n')
-
+                        '    [%s]))\n' % (filenames,),
+                        scrollTo=QtGui.QTextCursor.End)
     def newTizen(self):
         o = None
         try:
@@ -1486,12 +1495,15 @@ class MainWindow(QtGui.QMainWindow):
             self.doAPICall(call)
         self.editor.setFocus()
 
-    def _newScript(self, script):
+    def _newScript(self, script, scrollTo="("):
         self.editor.setPlainText(script)
         _app.processEvents()
-        for _ in xrange(script.index("(")+1):
-            self.editor.moveCursor(QtGui.QTextCursor.Right,
-                                   QtGui.QTextCursor.MoveAnchor)
+        if isinstance(scrollTo, basestring):
+            for _ in xrange(script.index(scrollTo)+1):
+                self.editor.moveCursor(QtGui.QTextCursor.Right,
+                                       QtGui.QTextCursor.MoveAnchor)
+        else:
+            self.editor.moveCursor(scrollTo, QtGui.QTextCursor.MoveAnchor)
         self.editor.setFocus()
         if self.autoConnect():
             self.scheduleUpdateScreenshot(0.1)
@@ -1787,6 +1799,10 @@ class MainWindow(QtGui.QMainWindow):
             return None, e
         return rv, None
 
+    def screenshotFromFile(self, filename, silent=True):
+        self._fmbtExec('%s.refreshScreenshot(r"%s")' %
+                       (self._sut, filename), silent=silent)
+
     def screenshotLatestFilename(self):
         latest = None
         if not self._sut:
@@ -1822,21 +1838,22 @@ class MainWindow(QtGui.QMainWindow):
             _, exc = self._fmbtEval("%s.screenshot().filename()" %
                                           (self._sut,), silent=True)
             if exc == None:
-                self._fmbtExec('%s.refreshScreenshot(r"%s")' %
-                               (self._sut,
-                                self._screenshotFilenames[index]),
-                               silent=True)
-
+                self.screenshotFromFile(self._screenshotFilenames[index],
+                                        silent=True)
         self.highlightActiveBitmap()
         return True
 
     def screenshotShowLatest(self):
+        if not self._sut or not self._screenshotFilenames:
+            self.screenshotButtonNext.setEnabled(False)
+            self.screenshotButtonPrev.setEnabled(False)
         if not self._sut:
             return
         latest = self._fmbtEval("%s.screenshot().filename()" % (self._sut,),
                                 silent=True)[0]
-        if (self.screenshotImageIndex == None or
-            self._screenshotFilenames[self.screenshotImageIndex] != latest):
+        if (latest != None and
+            (self.screenshotImageIndex == None or
+             self._screenshotFilenames[self.screenshotImageIndex] != latest)):
             self._screenshotFilenames.append(latest)
             self.screenshotSet(len(self._screenshotFilenames)-1)
 
@@ -1874,6 +1891,7 @@ class MainWindow(QtGui.QMainWindow):
             self._sut = None
 
     def updateScreenshot(self, recordable=True):
+        self._updateScreenshotScheduled = False
         if self.console.hasFocus():
             focusOnMe = self.console
         else:
@@ -1890,16 +1908,23 @@ class MainWindow(QtGui.QMainWindow):
         if self._sut == None:
             self.autoConnect()
         if self._sut != None:
-            if recordable and self.editorButtonRec.isChecked():
-                self.addAPICall("refreshScreenshot()\n")
-            _, exc = self._fmbtExec(
-                '%s.refreshScreenshot()' %
-                (self._sut,))
-            if exc == None:
-                self._screenshotFilenames.append(
-                    self._fmbtEval("%s.screenshot().filename()" % (self._sut,),
-                                   silent=True)[0])
+            if self._updateNextScreenshotFromFiles:
+                for filename in self._updateNextScreenshotFromFiles:
+                    self._screenshotFilenames.append(filename)
                 self.screenshotSet(len(self._screenshotFilenames)-1)
+                self._updateNextScreenshotFromFiles = []
+            else:
+                if recordable and self.editorButtonRec.isChecked():
+                    self.addAPICall("refreshScreenshot()\n")
+                _, exc = self._fmbtExec(
+                    '%s.refreshScreenshot()' %
+                    (self._sut,))
+                failed, exc = self._fmbtEval(
+                    "%s.screenshot() == None" % (self._sut,),
+                    silent=True)
+                if failed:
+                    log("refreshScreenshot() returned None")
+                    self.screenshotButtonRefresh.setChecked(False)
         focusOnMe.setFocus()
 
     def updateScreenshotView(self):
@@ -2935,16 +2960,23 @@ def main():
         elif opt in ['--debug']:
             opt_debug += 1
 
-    if remainder:
-        scriptFilename = remainder[0]
+    screenshotList = []
+    scriptFilename = None
+    for filename in remainder:
+        if filename.lower().endswith(".png"):
+            screenshotList.append(filename)
+        elif scriptFilename == None:
+            scriptFilename = filename
+        else:
+            error('unexpected parameter "%s"' % (filename,))
+
+    if scriptFilename:
         if not os.path.exists(scriptFilename):
             file(scriptFilename, "w").close() # create empty file
         try:
             file(scriptFilename).read()
         except IOError:
             error('cannot read file "%s"' % (remainder[0],))
-    else:
-        scriptFilename = None
 
     _app = QtGui.QApplication(sys.argv)
     _win = MainWindow()
@@ -2952,11 +2984,16 @@ def main():
 
     initSequence = ""
 
-    if scriptFilename:
+    if not scriptFilename and screenshotList:
+        _win.newSimulated(screenshotList=screenshotList)
+    elif scriptFilename:
         _win.open(scriptFilename)
     else:
         _win.editor.append(initSequence)
+
     if _win.autoConnect():
+        if screenshotList:
+            _win._updateNextScreenshotFromFiles = screenshotList
         _win.scheduleUpdateScreenshot(1.0)
     _win.show()
     _app.aboutToQuit.connect(_quitting)
