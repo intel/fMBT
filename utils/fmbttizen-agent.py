@@ -45,6 +45,20 @@ try:
 except IndexError:
     _opt_keyboard = None
 
+try:
+    _opt_touch = [a.split("=")[1] for a in sys.argv if a.startswith("--touch=")][0]
+except IndexError:
+    _opt_touch = None
+
+try:
+    _opt_mouse = [a.split("=")[1] for a in sys.argv if a.startswith("--mouse=")][0]
+except IndexError:
+    _opt_mouse = None
+
+keyboard_device = None
+touch_device = None
+mouse_device = None
+
 def openKeyboardDevice(keyboardSpec=None):
     keyboard_device = None
     if keyboardSpec == None:
@@ -65,6 +79,53 @@ def openKeyboardDevice(keyboardSpec=None):
         keyboard_device = None
     return keyboard_device
 
+def openTouchDevice(touchSpec=None, fallback=None):
+    touch_device = None
+    if touchSpec == None:
+        if fallback != None:
+            return openTouchDevice(fallback)
+        else:
+            pass # will return None
+    elif touchSpec.startswith("virtual"):
+        inputResolution=re.findall("virtual:([0-9]*)x([0-9]*)", touchSpec)
+        if inputResolution:
+            maxX = int(inputResolution[0][0])
+            maxY = int(inputResolution[0][1])
+        else:
+            maxX, maxY = None, None
+        touch_device = fmbtuinput.Touch().create(maxX=maxX, maxY=maxY)
+    elif touchSpec.startswith("file:") or touchSpec.startswith("name:"):
+        touch_device = fmbtuinput.Touch().open(touchSpec.split(":",1)[1])
+    elif touchSpec == "disabled":
+        pass # will return None
+    else:
+        raise ValueError('invalid touch device "%s"' % (touchSpec,))
+    return touch_device
+
+def openMouseDevice(mouseSpec=None, fallback=None):
+    mouse_device = None
+    if mouseSpec == None:
+        if fallback != None:
+            return openMouseDevice(fallback)
+        else:
+            pass # will return None
+    elif mouseSpec.startswith("virtual:"):
+        abs_or_rel = mouseSpec.split(":",1)[1]
+        if abs_or_rel == "abs":
+            absoluteMove = True
+        elif abs_or_rel == "rel":
+            absoluteMove = False
+        else:
+            raise ValueError('invalid mouse "%s"' % (mouseSpec,))
+        mouse_device = fmbtuinput.Mouse(absoluteMove=absoluteMove).create()
+    elif mouseSpec.startswith("file:") or mouseSpec.startswith("name:"):
+        mouse_device = fmbtuinput.Mouse().open(mouseSpec.split(":",1)[1])
+    elif mouseSpec == "disabled":
+        pass # will return None
+    else:
+        raise ValueError('invalid mouse device "%s"' % (mouseSpec,))
+    return mouse_device
+
 def debug(msg):
     if g_debug:
         sys.stdout.write("debug: %s\n" % (msg,))
@@ -76,7 +137,6 @@ def error(msg, exitstatus=1):
     sys.exit(exitstatus)
 
 iAmRoot = (os.getuid() == 0)
-virtualInputDeviceAdded = False
 
 try:
     libc           = ctypes.CDLL("libc.so.6")
@@ -196,7 +256,7 @@ if ('max77803-muic' in devices or
     _inputKeyNameToCode["HOME"] = 139 # KEY_MENU
     _inputKeyNameToCode["MENU"] = 169 # KEY_PHONE
     if iAmRoot:
-        touch_device = fmbtuinput.Touch().open("sec_touchscreen")
+        touch_device = openTouchDevice(_opt_touch, "name:sec_touchscreen")
 elif 'max77693-muic' in devices:
     debug("detected max77693-muic")
     hwKeyDevice = {
@@ -208,7 +268,7 @@ elif 'max77693-muic' in devices:
         }
     _inputKeyNameToCode["HOME"] = 139
     if iAmRoot:
-        touch_device = fmbtuinput.Touch().open("sec_touchscreen")
+        touch_device = openTouchDevice(_opt_touch, "name:sec_touchscreen")
 elif 'TRATS' in cpuinfo:
     debug("detected TRATS")
     # Running on Lunchbox
@@ -220,7 +280,7 @@ elif 'TRATS' in cpuinfo:
         }
     _inputKeyNameToCode["HOME"] = 139
     if iAmRoot:
-        touch_device = fmbtuinput.Touch().open("/dev/input/event2")
+        touch_device = openTouchDevice(_opt_touch, "file:/dev/input/event2")
 elif 'QEMU Virtual CPU' in cpuinfo:
     debug("detected QEMU Virtual CPU")
     if "Maru Virtio Hwkey" in devices:
@@ -240,7 +300,7 @@ elif 'QEMU Virtual CPU' in cpuinfo:
     _inputKeyNameToCode["HOME"] = 139
     _inputKeyNameToCode["MENU"] = 169 # KEY_PHONE
     if iAmRoot:
-        touch_device = fmbtuinput.Touch().open("/dev/input/event2")
+        touch_device = openTouchDevice(_opt_touch, "file:/dev/input/event2")
 elif 'Synaptics_RMI4_touchkey' in devices:
     debug("detected Synaptics_RMI4_touchkey")
     # Running on Geek
@@ -253,7 +313,7 @@ elif 'Synaptics_RMI4_touchkey' in devices:
         "MENU": "Synaptics_RMI4_touchkey"
         }
     if iAmRoot:
-        touch_device = fmbtuinput.Touch().open("/dev/input/event1")
+        touch_device = openTouchDevice(_opt_touch, "file:/dev/input/event1")
 elif 'mxt224_key_0' in devices:
     debug("detected mxt225_key_0")
     # Running on Blackbay
@@ -264,12 +324,14 @@ elif 'mxt224_key_0' in devices:
         "HOME": "mxt224_key_0"
         }
     if iAmRoot:
-        touch_device = fmbtuinput.Touch().open("/dev/input/event0")
+        touch_device = openTouchDevice(_opt_touch, "file:/dev/input/event0")
 elif 'eGalax Inc. eGalaxTouch EXC7200-7368v1.010          ' in devices:
     debug("detected eGalax Inc. eGalaxTouch EXC7200-7368v1.010")
     if iAmRoot:
-        touch_device = fmbtuinput.Touch(maxX=0x8000, maxY=0x8000).open(
-            "eGalax Inc. eGalaxTouch EXC7200-7368v1.010          ")
+        touch_device = openTouchDevice(
+            _opt_touch,
+            "name:eGalax Inc. eGalaxTouch EXC7200-7368v1.010          ")
+        mouse_device = openMouseDevice(_opt_mouse, None)
         keyboard_device = openKeyboardDevice(_opt_keyboard)
 
 elif iAmRoot:
@@ -283,23 +345,17 @@ elif iAmRoot:
 
     touch_device = None
     try:
-        touch_device_f = "/dev/input/" + re.findall('[ =](event[0-9]+)\s',  [i for i in _d if "touch" in i.lower()][0])[0]
+        touch_device_f = "file:/dev/input/" + re.findall('[ =](event[0-9]+)\s',  [i for i in _d if "touch" in i.lower()][0])[0]
     except IndexError:
-        try:
-            touch_device_f = "/dev/input/" + re.findall('[ =](event[0-9]+)\s',  [i for i in _d if "mouse0" in i.lower()][0])[0]
-            # TODO: check which mouse is capable of emitting button events
-            # if none, then create my own mouse input device
-        except IndexError:
-            touch_device = None
+        touch_device_f = None
+    touch_device = openTouchDevice(_opt_touch, touch_device_f)
 
+    mouse_device = None
     try:
-        mouse_button_device = fmbtuinput.Mouse().open(
-            "/dev/input/" + re.findall(
-                '[ =](event[0-9]+)\s',
-                [i for i in _d if "Mouse" in i][0])[0])
+        mouse_device_f = "file:/dev/input/" + re.findall('[ =](event[0-9]+)\s', [i for i in _d if "Mouse" in i][0])[0]
     except IndexError:
-        mouse_button_device = fmbtuinput.Mouse().create()
-        virtualInputDeviceAdded = True
+        mouse_device_f = None
+    mouse_device = openMouseDevice(_opt_mouse, mouse_device_f)
 
     keyboard_device = openKeyboardDevice(_opt_keyboard)
 
@@ -310,17 +366,17 @@ elif iAmRoot:
         "HOME": "gpio-keys"
         }
 
-    if g_debug:
-        debug("touch device: %s" % (touch_device,))
-        debug("mouse device: %s" % (mouse_button_device,))
-        debug("keyb device:  %s" % (keyboard_device,))
-
-    if isinstance(mouse_button_device, fmbtuinput.Mouse):
+    if isinstance(mouse_device, fmbtuinput.Mouse):
         time.sleep(1)
-        mouse_button_device.move(-4096, -4096)
-        mouse_button_device.setXY(0, 0)
+        mouse_device.move(-4096, -4096)
+        mouse_device.setXY(0, 0)
 
     del _d
+
+if iAmRoot and g_debug:
+    debug("touch device: %s" % (touch_device,))
+    debug("mouse device: %s" % (mouse_device,))
+    debug("keyb device:  %s" % (keyboard_device,))
 
 if iAmRoot and _opt_keyboard and "keyboard_device" not in globals():
     # Use forced keyboard with any hardware type
@@ -409,7 +465,7 @@ def sendHwTap(x, y, button):
         if touch_device:
             touch_device.tap(x, y)
         else:
-            mouse_button_device.tap(x, y, button)
+            mouse_device.tap(x, y, button)
         return True, None
     except Exception, e:
         return False, str(e)
@@ -419,7 +475,16 @@ def sendHwMove(x, y):
         if touch_device:
             touch_device.move(x, y)
         else:
-            mouse_button_device.move(x, y)
+            mouse_device.move(x, y)
+        return True, None
+    except Exception, e:
+        return False, str(e)
+
+def sendRelMove(x, y):
+    try:
+        mouse_device.setXY(0,0)
+        mouse_device.move(x, y)
+        mouse_device.setXY(0,0)
         return True, None
     except Exception, e:
         return False, str(e)
@@ -429,8 +494,8 @@ def sendHwFingerDown(x, y, button):
         if touch_device:
             touch_device.pressFinger(button, x, y)
         else:
-            mouse_button_device.move(x, y)
-            mouse_button_device.press(button)
+            mouse_device.move(x, y)
+            mouse_device.press(button)
         return True, None
     except Exception, e:
         return False, str(e)
@@ -440,8 +505,8 @@ def sendHwFingerUp(x, y, button):
         if touch_device:
             touch_device.releaseFinger(button)
         else:
-            mouse_button_device.move(x, y)
-            mouse_button_device.release(button)
+            mouse_device.move(x, y)
+            mouse_device.release(button)
         return True, None
     except Exception, e:
         return False, str(e)
@@ -936,6 +1001,11 @@ if __name__ == "__main__":
             else:
                 if iAmRoot: rv, msg = sendHwMove(int(xs), int(ys))
                 else: rv, msg = subAgentCommand("root", "tizen", cmd)
+            write_response(True, None)
+        elif cmd.startswith("tr "):   # relative move(x, y)
+            xd, yd = cmd[3:].strip().split()
+            if iAmRoot: rv, msg = sendRelMove(int(xd), int(yd))
+            else: rv, msg = subAgentCommand("root", "tizen", cmd)
             write_response(True, None)
         elif cmd.startswith("tt "): # touch tap(x, y, button)
             x, y, button = [int(i) for i in cmd[3:].strip().split()]

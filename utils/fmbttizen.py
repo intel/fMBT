@@ -131,6 +131,7 @@ def _fileToQueue(f, outQueue):
 class Device(fmbtgti.GUITestInterface):
     def __init__(self, serialNumber=None, loginCommand=None,
                  debugAgentFile=None, keyboardDevice=None,
+                 touchDevice=None, mouseDevice=None,
                  pythonCommand="python", **kwargs):
         """Parameters:
 
@@ -155,12 +156,27 @@ class Device(fmbtgti.GUITestInterface):
                   Example: debugAgentFile=sys.stdout.
 
           keyboardDevice (string, optional)
-                  "file:FILEPATH": use FILEPATH as keyboard input device.
+                  "file:FILEPATH" use FILEPATH as keyboard input device.
                   "virtual" create fMBT Virtual Keyboard device for input.
                   "disabled" do not use keyboard input device.
                   "sysrq" use first hardware keyboard with "sysrq".
                   Example: keyboardDevice="file:/dev/input/event1"
                   Affects Tizen IVI only.
+
+          touchDevice (string, optional)
+                  "file:FILEPATH" use FILEPATH as touch input device.
+                  "name:NAME" use device NAME from /proc/bus/input/devices
+                  "virtual" create fMBT Virtual Touch device for input,
+                  "virtual:1024x768" create device with given input resolution,
+                  "disabled" do not use touch input device.
+                  By default, use only detected touch devices.
+
+          mouseDevice (string, optional):
+                  "file:FILEPATH" use FILEPATH as mouse input device,
+                  "name:NAME" use mouse with NAME in /proc/bus/input/devices,
+                  "virtual:rel" create fMBT Virtual mouse with relative coords,
+                  "virtual:abs" create mouse with absolute coordinates,
+                  "disabled" do not use mouse input device (default).
 
           pythonCommand (string, optional)
                   command to launch Python on the Tizen device.
@@ -177,6 +193,8 @@ class Device(fmbtgti.GUITestInterface):
                                   loginCommand=loginCommand,
                                   debugAgentFile=debugAgentFile,
                                   keyboardDevice=keyboardDevice,
+                                  touchDevice=touchDevice,
+                                  mouseDevice=mouseDevice,
                                   pythonCommand=pythonCommand)
         self.setConnection(c)
         if "rotateScreenshot" in kwargs:
@@ -566,6 +584,7 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
     """
     def __init__(self, serialNumber=None, loginCommand=None,
                  debugAgentFile=None, keyboardDevice=None,
+                 touchDevice=None, mouseDevice=None,
                  pythonCommand="python"):
         if loginCommand == None:
             if serialNumber == None:
@@ -588,6 +607,8 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
         self._debugAgentFile = debugAgentFile
         self._agentNeedsResolution = True
         self._keyboardDevice = keyboardDevice
+        self._touchDevice = touchDevice
+        self._mouseDevice = mouseDevice
         self._pythonCommand = pythonCommand
         self.open()
 
@@ -638,6 +659,10 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
         self._agentArgs = []
         if self._keyboardDevice:
             self._agentArgs.append("--keyboard=%s" % (self._keyboardDevice,))
+        if self._touchDevice:
+            self._agentArgs.append("--touch=%s" % (self._touchDevice,))
+        if self._mouseDevice:
+            self._agentArgs.append("--mouse=%s" % (self._mouseDevice,))
 
         if self._useSdb:
             remoteShellCmd = ["sdb", "-s", self._serialNumber, "shell"]
@@ -774,6 +799,9 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
 
     def sendScreenshotRotation(self, angle):
         return self._agentCmd("sa %s" % (angle,))[0]
+
+    def sendRelMove(self, x, y):
+        return self._agentCmd("tr %s %s" % (x, y))[0]
 
     def sendTap(self, x, y):
         return self._agentCmd("tt %s %s 1" % (x, y))[0]
