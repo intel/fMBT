@@ -105,6 +105,8 @@ import glob
 import inspect
 import math
 import os
+import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -183,6 +185,16 @@ def _takeArgs(argNames, d, thatsAll=False):
                         ('", "'.join(sorted(d.keys()))))
     return retval, d
 
+def _convert(srcFile, convertArgs, dstFile):
+    if isinstance(convertArgs, basestring):
+        convertArgs = shlex.split(convertArgs)
+    if (os.access(dstFile, os.R_OK) and
+        os.stat(srcFile).st_mtime < os.stat(dstFile).st_mtime):
+        return # cached file is up-to-date
+    subprocess.call([fmbt_config.imagemagick_convert, srcFile] + convertArgs + [dstFile])
+
+def _ppFilename(origFilename, preprocess):
+    return origFilename + ".fmbtoir.ppcache." + re.sub("[^a-zA-Z0-9.]", "", preprocess) + ".png"
 
 def _intCoords((x, y), (width, height)):
     if 0 <= x <= 1 and type(x) == float: x = x * width
@@ -972,6 +984,16 @@ class _Eye4GraphicsOirEngine(OirEngine):
               rectangle on bitmap. The default is scale *
               bitmapPixelSize.
 
+      preprocess (string, optional):
+              preprocess parameters that are executed to both screenshot
+              and reference bitmap before running comparison. By default
+              there is no preprocessing.
+              Example: d.verifyBitmap("ref.png", preprocess="-threshold 60%")
+              will execute two imagemagick commands:
+                1. convert screenshot.png -threshold 60% screenshot-pp.png
+                2. convert ref.png -threshold 60% ref-pp.png
+              and then search for ref-pp.png in screenshot-pp.png. This results
+              in black-and-white comparison (somewhat immune to color changes).
 
     If unsure about parameters, but you have a bitmap that should be
     detected in a screenshot, try obj.oirEngine().adjustParameters().
@@ -1000,6 +1022,7 @@ class _Eye4GraphicsOirEngine(OirEngine):
         engineDefaults["scale"] = engineDefaults.get("scale", 1.0)
         engineDefaults["bitmapPixelSize"] = engineDefaults.get("bitmapPixelSize", 0)
         engineDefaults["screenshotPixelSize"] = engineDefaults.get("screenshotPixelSize", 0)
+        engineDefaults["preprocess"] = engineDefaults.get("preprocess", "")
         OirEngine.__init__(self, *args, **engineDefaults)
         self._openedImages = {}
         self._findBitmapCache = {}
@@ -1087,17 +1110,31 @@ class _Eye4GraphicsOirEngine(OirEngine):
     def _findBitmap(self, screenshot, bitmap, colorMatch=None,
                     opacityLimit=None, area=None, limit=None,
                     allowOverlap=None, scale=None,
-                    bitmapPixelSize=None, screenshotPixelSize=None):
+                    bitmapPixelSize=None, screenshotPixelSize=None,
+                    preprocess=None):
         """
         Find items on the screenshot that match to bitmap.
         """
         ssFilename = screenshot.filename()
         ssSize = screenshot.size()
         cacheKey = (bitmap, colorMatch, opacityLimit, area, limit,
-                    scale, bitmapPixelSize, screenshotPixelSize)
+                    scale, bitmapPixelSize, screenshotPixelSize, preprocess)
         if cacheKey in self._findBitmapCache[ssFilename]:
             return self._findBitmapCache[ssFilename][cacheKey]
         self._findBitmapCache[ssFilename][cacheKey] = []
+
+        if preprocess:
+            ssFilenamePP = _ppFilename(ssFilename, preprocess)
+            bitmapPP = _ppFilename(bitmap, preprocess)
+            if not ssFilenamePP in self._openedImages:
+                _convert(ssFilename, preprocess, ssFilenamePP)
+                # TODO: this is a proto, make sure removeScreenshot will be called, too!
+                self.addScreenshot(Screenshot(ssFilenamePP))
+            _convert(bitmap, preprocess, bitmapPP)
+            ssFilename = ssFilenamePP
+            bitmap = bitmapPP
+            self._findBitmapCache[ssFilename][cacheKey] = []
+
         e4gIcon = _e4gOpenImage(bitmap)
         matchCount = 0
         leftTopRightBottomZero = (_intCoords((area[0], area[1]), ssSize) +

@@ -614,10 +614,20 @@ class InputDevice(object):
         self._uidev = None
         self._created = False
         self._opened = False
+        self._name = None
 
     def __del__(self):
         if self._created:
             self.destroy()
+
+    def __str__(self):
+        return "%s(name=%s, filename=%s, created=%s, opened=%s, fd=%s)" % (
+            self.__class__.__name__,
+            repr(self._name),
+            repr(self._filename),
+            repr(self._created),
+            repr(self._opened),
+            repr(self._fd))
 
     def startCreating(self, name, vendor, product, version,
                       absmin=None, absmax=None):
@@ -630,6 +640,7 @@ class InputDevice(object):
             absmax = [0 for _ in xrange(abs_count)]
         absfuzz = [0 for _ in xrange(abs_count)]
         absflat = [0 for _ in xrange(abs_count)]
+        self._name = name
         self._uidev = struct.pack(struct_uinput_user_dev,
                                   name, # name
                                   BUS_USB, # id.bus_type
@@ -672,6 +683,7 @@ class InputDevice(object):
         self._fd = os.open(filename, os.O_WRONLY | os.O_NONBLOCK)
         self._filename = filename
         self._created = False
+        self._name = toEventDeviceName(self._filename)
         return self
 
     def close(self):
@@ -846,19 +858,25 @@ class Touch(InputDevice):
                vendor=0xf4b7, product=0x70c5, version=1,
                maxX=0xffff, maxY=0xffff, maxPressure=None,
                multiTouch = True):
+        if maxX != None:
+            self._maxX = maxX
+        else:
+            self._maxX = 0xffff
+        if maxY != None:
+            self._maxY = maxY
+        else:
+            self._maxY = 0xffff
         absmin = [0 for _ in xrange(abs_count)]
         absmax = [0 for _ in xrange(abs_count)]
-        absmax[absCodes["ABS_X"]] = maxX
-        absmax[absCodes["ABS_Y"]] = maxY
+        absmax[absCodes["ABS_X"]] = self._maxX
+        absmax[absCodes["ABS_Y"]] = self._maxY
         if maxPressure != None:
             self._maxPressure = maxPressure
             absmax[absCodes["ABS_PRESSURE"]] = self._maxPressure
         absmax[absCodes["ABS_MT_SLOT"]] = 16
         absmax[absCodes["ABS_MT_TRACKING_ID"]] = 0x0fffffff
-        absmax[absCodes["ABS_MT_POSITION_X"]] = maxX
-        absmax[absCodes["ABS_MT_POSITION_Y"]] = maxY
-        self._maxX = maxX
-        self._maxY = maxY
+        absmax[absCodes["ABS_MT_POSITION_X"]] = self._maxX
+        absmax[absCodes["ABS_MT_POSITION_Y"]] = self._maxY
         self._multiTouch = multiTouch
 
         self.startCreating(name, vendor, product, version,
