@@ -255,7 +255,7 @@ void Heuristic_weight::set_model(Model* _model)
     free(s);
     status=ret;
     if (!ret) {
-      errormsg="parse error";
+      errormsg="Syntax error while parsing \""+prm+"\"";
     }
     Hw=h;
   } else {
