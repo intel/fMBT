@@ -576,10 +576,7 @@ class Device(fmbtgti.GUITestInterface):
             self._platformVersion > "4.2"):
             x1, y1 = self.intCoords((x1, y1))
             x2, y2 = self.intCoords((x2, y2))
-            self.existingConnection()._runAdb(
-                ["shell", "input", "swipe",
-                 str(x1), str(y1), str(x2), str(y2)])
-            return True
+            return self.existingConnection().sendSwipe(x1, y1, x2, y2)
         else:
             kwArgs = {}
             if delayBetweenMoves != None: kwArgs["delayBetweenMoves"] = delayBetweenMoves
@@ -2155,6 +2152,13 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         self.sendMonkeyScript("capturePinchZoom(%s,%s,%s,%s, %s,%s,%s,%s, %s)" % (
                   pt1XStart, pt1YStart, pt1XEnd, pt1YEnd,
                   pt2XStart, pt2YStart, pt2XEnd, pt2YEnd, count))
+
+    def sendSwipe(self, x1, y1, x2, y2):
+        _x1, _y1 = self._screenToDisplay(x1, y1)
+        _x2, _y2 = self._screenToDisplay(x2, y2)
+        self._runAdb(["shell", "input", "swipe",
+                      str(_x1), str(_y1), str(_x2), str(_y2)])
+        return True
 
     def sendTap(self, xCoord, yCoord):
         xCoord, yCoord = self._screenToDisplay(xCoord, yCoord)
