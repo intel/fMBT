@@ -22,8 +22,14 @@
 
 #include "config.h"
 
+#ifdef HAVE_ERROR
 #ifdef HAVE_ERROR_H
 #include <error.h>
+#else
+extern "C" {
+void error(int exitval, int dontcare, const char* format, ...);
+};
+#endif
 #else
 void error(int exitval, int dontcare, const char* format, ...)
 {
