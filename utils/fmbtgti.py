@@ -151,7 +151,8 @@ def _takeTapArgs(d):
     return _takeArgs(("tapOffset", "tapPos", "long", "hold", "count", "delayBetweenTaps", "button"), d)
 
 def _takeWaitArgs(d):
-    return _takeArgs(("waitTime", "pollDelay"), d)
+    return _takeArgs(("waitTime", "pollDelay",
+                      "beforeRefresh", "afterRefresh"), d)
 
 def _takeOirArgs(screenshotOrOirEngine, d, thatsAll=False):
     if isinstance(screenshotOrOirEngine, Screenshot):
@@ -2336,7 +2337,9 @@ class GUITestInterface(object):
         oirArgs["limit"] = 1
         return self._lastScreenshot.findItemsByBitmap(bitmap, **oirArgs) != []
 
-    def wait(self, refreshFunc, waitFunc, waitFuncArgs=(), waitFuncKwargs={}, waitTime = 5.0, pollDelay = 1.0):
+    def wait(self, refreshFunc, waitFunc, waitFuncArgs=(), waitFuncKwargs={},
+             waitTime = 5.0, pollDelay = 1.0,
+             beforeRefresh = lambda: None, afterRefresh = lambda: None):
         """
         Wait until waitFunc returns True or waitTime has expired.
 
@@ -2359,6 +2362,14 @@ class GUITestInterface(object):
                   time in seconds to sleep between refreshs. The
                   default is 1.0.
 
+          beforeRefresh (function, optional):
+                  this function will be called before every refreshFunc call.
+                  The default is no operation.
+
+          afterRefresh (function, optional):
+                  this function will be called after every refreshFunc call.
+                  The default is no operation.
+
         Returns True if waitFunc returns True - either immediately or
         before waitTime has expired - otherwise False.
 
@@ -2373,7 +2384,9 @@ class GUITestInterface(object):
         while now < endTime:
             time.sleep(min(pollDelay, (endTime - now)))
             now = time.time()
+            beforeRefresh()
             refreshFunc()
+            afterRefresh()
             if waitFunc(*waitFuncArgs, **waitFuncKwargs):
                 return True
         return False
@@ -2390,7 +2403,7 @@ class GUITestInterface(object):
           optical image recognition arguments (optional)
                   refer to help(obj.oirEngine()).
 
-          waitTime, pollDelay (float, optional):
+          waitTime, pollDelay, beforeRefresh, afterRefresh (optional):
                   refer to wait documentation.
 
         Returns list of bitmaps appearing in the first screenshot that
@@ -2422,7 +2435,7 @@ class GUITestInterface(object):
           listOfTexts (list of string):
                   texts to be waited for.
 
-          waitTime, pollDelay (float, optional):
+          waitTime, pollDelay, beforeRefresh, afterRefresh (optional):
                   refer to wait documentation.
 
           OCR engine specific arguments
@@ -2460,7 +2473,7 @@ class GUITestInterface(object):
           optical image recognition arguments (optional)
                   refer to help(obj.oirEngine()).
 
-          waitTime, pollDelay (float, optional):
+          waitTime, pollDelay, beforeRefresh, afterRefresh (optional):
                   refer to wait documentation.
 
         Returns True if bitmap appeared within given time limit,
@@ -2480,7 +2493,7 @@ class GUITestInterface(object):
           text (string):
                   text to be waited for.
 
-          waitTime, pollDelay (float, optional):
+          waitTime, pollDelay, beforeRefresh, afterRefresh (optional):
                   refer to wait documentation.
 
           OCR engine specific arguments
@@ -2500,7 +2513,7 @@ class GUITestInterface(object):
 
         Parameters:
 
-          waitTime, pollDelay (float, optional):
+          waitTime, pollDelay, beforeRefresh, afterRefresh (optional):
                   refer to wait documentation.
 
         Returns True if screenshot was updated before waitTime expired,
@@ -2511,21 +2524,26 @@ class GUITestInterface(object):
         """
         waitTime = waitArgs.get("waitTime", 5.0)
         pollDelay = waitArgs.get("pollDelay", 1.0)
+        beforeRefresh = waitArgs.get("beforeRefresh", lambda: None)
+        afterRefresh = waitArgs.get("afterRefresh", lambda: None)
         updated = self.existingConnection().recvScreenUpdated(waitTime, pollDelay)
         if updated == None:
             # optimised version is not available, this is a fallback
             previousScreenshot = self.screenshot()
             if previousScreenshot == None:
+                beforeRefresh()
                 self.refreshScreenshot()
+                afterRefresh()
                 return True
             # return True if screen changed from previous even with
             # waitTime == 0, therefore refresh before calling wait.
+            beforeRefresh()
             self.refreshScreenshot()
+            afterRefresh()
             return self.wait(
                 self.refreshScreenshot,
                 lambda: not self.verifyBitmap(previousScreenshot.filename()),
-                waitTime = waitTime,
-                pollDelay = pollDelay)
+                **waitArgs)
         elif updated == True:
             self.refreshScreenshot()
         elif updated == False:

@@ -1324,8 +1324,8 @@ class Device(fmbtgti.GUITestInterface):
           partial (boolean, optional):
                 refer to verifyText. The default is False.
 
-          waitTime, pollDelay (float, optional):
-                refer to wait.
+          waitTime, pollDelay, beforeRefresh, afterRefresh (optional):
+                refer to wait documentation.
 
         Returns True if text appeared within given time limit,
         otherwise False.
