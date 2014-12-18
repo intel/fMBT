@@ -194,7 +194,7 @@ def _convert(srcFile, convertArgs, dstFile):
     subprocess.call([fmbt_config.imagemagick_convert, srcFile] + convertArgs + [dstFile])
 
 def _ppFilename(origFilename, preprocess):
-    return origFilename + ".fmbtoir.ppcache." + re.sub("[^a-zA-Z0-9.]", "", preprocess) + ".png"
+    return origFilename + ".fmbtoir.cache." + re.sub("[^a-zA-Z0-9.]", "", preprocess) + ".png"
 
 def _intCoords((x, y), (width, height)):
     if 0 <= x <= 1 and type(x) == float: x = x * width
@@ -626,7 +626,9 @@ class _EyenfingerOcrEngine(OcrEngine):
       preprocess (string, optional):
               preprocess filter to be used in OCR for better
               result. Refer to eyenfinger.autoconfigure to search for
-              a good one.
+              a good one, or try with ImageMagick's convert:
+              $ convert screenshot.png <preprocess> screenshot-pp.png
+              $ tesseract screenshot-pp.png stdout
 
       configfile (string, optional):
               Tesseract configuration file.
@@ -986,14 +988,14 @@ class _Eye4GraphicsOirEngine(OirEngine):
 
       preprocess (string, optional):
               preprocess parameters that are executed to both screenshot
-              and reference bitmap before running comparison. By default
+              and reference bitmap before running findBitmap. By default
               there is no preprocessing.
               Example: d.verifyBitmap("ref.png", preprocess="-threshold 60%")
               will execute two imagemagick commands:
                 1. convert screenshot.png -threshold 60% screenshot-pp.png
                 2. convert ref.png -threshold 60% ref-pp.png
               and then search for ref-pp.png in screenshot-pp.png. This results
-              in black-and-white comparison (somewhat immune to color changes).
+              in black-and-white comparison (immune to slight color changes).
 
     If unsure about parameters, but you have a bitmap that should be
     detected in a screenshot, try obj.oirEngine().adjustParameters().
@@ -1011,7 +1013,6 @@ class _Eye4GraphicsOirEngine(OirEngine):
 
     Notice, that you can force refreshScreenshot to load old screenshot:
     d.refreshScreenshot("old.png")
-
     """
     def __init__(self, *args, **engineDefaults):
         engineDefaults["colorMatch"] = engineDefaults.get("colorMatch", 1.0)
@@ -1025,6 +1026,10 @@ class _Eye4GraphicsOirEngine(OirEngine):
         engineDefaults["preprocess"] = engineDefaults.get("preprocess", "")
         OirEngine.__init__(self, *args, **engineDefaults)
         self._openedImages = {}
+        # openedRelatedScreenshots maps a screenshot filename to
+        # a list of preprocessed screenshot objects. All those objects
+        # must be closed when the screenshot is removed.
+        self._openedRelatedScreenshots = {}
         self._findBitmapCache = {}
 
     def _addScreenshot(self, screenshot, **findBitmapDefaults):
@@ -1038,6 +1043,10 @@ class _Eye4GraphicsOirEngine(OirEngine):
 
     def _removeScreenshot(self, screenshot):
         filename = screenshot.filename()
+        if filename in self._openedRelatedScreenshots:
+            for screenshotPP in self._openedRelatedScreenshots[filename]:
+                self._removeScreenshot(screenshotPP)
+            del self._openedRelatedScreenshots[filename]
         eye4graphics.closeImage(self._openedImages[filename])
         del self._openedImages[filename]
         del self._findBitmapCache[filename]
@@ -1128,8 +1137,11 @@ class _Eye4GraphicsOirEngine(OirEngine):
             bitmapPP = _ppFilename(bitmap, preprocess)
             if not ssFilenamePP in self._openedImages:
                 _convert(ssFilename, preprocess, ssFilenamePP)
-                # TODO: this is a proto, make sure removeScreenshot will be called, too!
-                self.addScreenshot(Screenshot(ssFilenamePP))
+                screenshotPP = Screenshot(ssFilenamePP)
+                self.addScreenshot(screenshotPP)
+                if not ssFilename in self._openedRelatedScreenshots:
+                    self._openedRelatedScreenshots[ssFilename] = []
+                self._openedRelatedScreenshots[ssFilename].append(screenshotPP)
             _convert(bitmap, preprocess, bitmapPP)
             ssFilename = ssFilenamePP
             bitmap = bitmapPP
