@@ -49,33 +49,7 @@ extern aalang* obj;
        __result; }))
 #endif
 
-#ifndef DROI
-#include <error.h>
-#else
-void error(int exitval, int dontcare, const char* format, ...)
-{
-  va_list ap;
-  fprintf(stderr, "fmbt-aalc error: ");
-  va_start(ap, format);
-  vfprintf(stderr, format, ap);
-  va_end(ap);
-  fprintf(stderr, "\n");
-  exit(exitval);
-}
-#endif
-
-#ifdef __MINGW32__
-void error(int exitval, int dontcare, const char* format, ...)
-{
-  va_list ap;
-  fprintf(stderr, "fMBT error: ");
-  va_start(ap, format);
-  vfprintf(stderr, format, ap);
-  va_end(ap);
-  if (exitval)
-    exit(exitval);
-}
-#endif
+#include "error.hh"
 
 extern "C" {
 extern D_ParserTables parser_tables_lang;

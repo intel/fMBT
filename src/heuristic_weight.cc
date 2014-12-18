@@ -22,7 +22,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <algorithm>
-
+#include "learn_proxy.hh"
 #include "random.hh"
 
 #include "dparse.h"
@@ -33,7 +33,7 @@ extern "C" {
 extern Heuristic_weight* Hw;
 
 Heuristic_weight::Heuristic_weight(Log& l,const std::string& params) :
-  Heuristic(l), r(NULL)
+  Heuristic(l), r(NULL),use_learn(false)
 {
   std::vector<std::string> subs;
   commalist(params,subs);
@@ -134,6 +134,15 @@ void Heuristic_weight::add(std::vector<std::string*> p,
   weight_id++;
 }
 
+void Heuristic_weight::set_learn(Learning* _learn) {
+  Heuristic::set_learn(_learn);
+
+  if (learn && ((Learn_proxy*)learn)->la) {
+    use_learn=true;
+  }
+}
+
+
 int Heuristic_weight::weight_select(int i,int* actions)
 {
   int* props;
@@ -170,7 +179,13 @@ int Heuristic_weight::weight_select(int i,int* actions)
 
   // Make sure there are no negative weights
   for (int k=0; k<i; k++) {
-    if (f[k] < 0.0) f[k] = 0.0;
+    if (f[k] < 0.0) {
+      f[k] = 0.0;
+    } else {
+      if (use_learn) {
+	f[k]*=learn->getF(actions[k]);
+      }
+    }
     total += f[k];
   }
 
@@ -240,7 +255,7 @@ void Heuristic_weight::set_model(Model* _model)
     free(s);
     status=ret;
     if (!ret) {
-      errormsg="parse error";
+      errormsg="Syntax error while parsing \""+prm+"\"";
     }
     Hw=h;
   } else {

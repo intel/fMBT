@@ -24,6 +24,8 @@
 #include <vector>
 #include <algorithm>
 #include "random.hh"
+#include "learn_proxy.hh"
+#include "helper.hh"
 
 extern int _g_simulation_depth_hint;
 
@@ -49,11 +51,38 @@ Heuristic_greedy::Heuristic_greedy(Log& l,const std::string& params) :
   Heuristic(l), m_search_depth(0), m_burst(false),end_condition(false)
 {
   hg=this;
+  std::string s;
 
-  m_search_depth = atoi(params.c_str());
-  if (strchr(params.c_str(), 'b')) {
+  std::vector<std::string> fa;
+  commalist(params,fa);  
+
+  if (fa.size()>0) {
+    s=fa[0];
+  }
+
+  m_search_depth = atoi(s.c_str());
+  if (strchr(s.c_str(), 'b')) {
     m_burst = true;
   }
+
+  if (fa.size()>1) {
+    randomise_function = new_function(fa[1]);
+    if (randomise_function) {
+      status=randomise_function->status;
+      errormsg=randomise_function->errormsg;
+    } else {
+      status=false;
+      errormsg="Can't create function \""+fa[1]+"\"";
+    }
+  } else {
+    randomise_function=NULL;
+  }
+
+  if (fa.size()>2) {
+    status=false;
+    errormsg="Too many paramters. Expecting maxium of 2, got "+to_string((unsigned)fa.size());
+  }
+
   r = Random::default_random();
   r->ref();
 }
@@ -64,6 +93,10 @@ Heuristic_greedy::~Heuristic_greedy()
 
   if (r)
     r->unref();
+
+  if (randomise_function) {
+    delete randomise_function;
+  }
 }
 
 bool Heuristic_greedy::execute(int action)
@@ -152,20 +185,37 @@ int Heuristic_greedy::getIAction()
     /* In burst mode new path is not searched before previosly found
      * path is fully consumed */
     if (!m_burst || m_path.empty() ) {
-      /* Spend more time for better coverage */
-      AlgPathToBestCoverage alg(m_search_depth);
       /* Use precalculated path (m_path) as a hint. */
       std::reverse(m_path.begin(), m_path.end());
+
       double current_score=my_coverage->getCoverage();
-      double score = alg.search(*model, *my_coverage, m_path);
+      double score;
 
-      end_condition=(score<=current_score);
+      /* Spend more time for better coverage */
+      if (adaptive) {
+	AlgPathToAdaptiveCoverage alg(m_search_depth, learn, randomise_function);
+	score = alg.search(*model, *my_coverage, m_path);
 
-      if (!alg.status) {
-        status=false;
-	errormsg = "Alg: " + alg.errormsg;
-	retval = 0;
-	goto done;
+	end_condition=(score<=current_score);
+
+	if (!alg.status) {
+	  status=false;
+	  errormsg = "Alg: " + alg.errormsg;
+	  retval = 0;
+	  goto done;
+	}
+      } else {
+	AlgPathToBestCoverage alg(m_search_depth, learn, randomise_function);
+	score = alg.search(*model, *my_coverage, m_path);
+
+	end_condition=(score<=current_score);
+
+	if (!alg.status) {
+	  status=false;
+	  errormsg = "Alg: " + alg.errormsg;
+	  retval = 0;
+	  goto done;
+	}
       }
 
       if (m_path.size() > 0) {
@@ -200,9 +250,21 @@ done:
   return retval;
 }
 
-FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "greedy")
-FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "lookahead")
-FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "action_fitness")
+void Heuristic_adaptive_lookahead::set_learn(Learning* _learn) {
+  Heuristic::set_learn(_learn);
+  if (learn && ((Learn_proxy*)learn)->la) {
+    // Ok. Something we need to do?
+  } else {
+    status=false;
+    errormsg="adaptive_lookahead needs learning module action";
+  }
+}
+
+
+FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_lookahead, "greedy")
+FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_lookahead, "lookahead")
+FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_lookahead, "action_fitness")
+FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_adaptive_lookahead, "adaptive_lookahead")
 
 #undef FACTORY_CREATE_DEFAULT_PARAMS
 #define FACTORY_CREATE_DEFAULT_PARAMS /* */
@@ -211,4 +273,5 @@ FACTORY_DEFAULT_CREATOR(Heuristic, Heuristic_greedy, "action_fitness")
 #undef FACTORY_CREATOR_PARAMS2
 #define FACTORY_CREATOR_PARAMS Verdict::Verdict v, std::string params,Conf* co
 #define FACTORY_CREATOR_PARAMS2 co, v, params
-FACTORY_DEFAULT_CREATOR(End_condition, End_condition_bool, "lookahead_noprogress");
+
+FACTORY_DEFAULT_CREATOR(End_condition, End_condition_bool, "lookahead_noprogress")

@@ -94,6 +94,7 @@ persistent: '@' { $$.type=1; }
 node: persistent tag_spec actionname persistent tag_spec  { $$.type='e'; $$.u = cobj->req_rx_action($$.type,*$2.str,$1.tag,$4.tag,$0.type&($3.type<1)); delete $2.str; $2.str=NULL; }
     | ('a' | 'A' | 'all' ) actionname   { $$.type='a'; $$.u = cobj->req_rx_action($$.type,*$1.str); delete $1.str; $1.str=NULL; }
     | ('e' | 'E' | 'any' ) actionname   { $$.type='e'; $$.u = cobj->req_rx_action($$.type,*$1.str); delete $1.str; $1.str=NULL; }
+    | ('r' |  'random' ) actionname     { $$.type='r'; $$.u = cobj->req_rx_action($$.type,*$1.str); delete $1.str; $1.str=NULL; }
     | persistent tag_spec '(' expr ')' persistent tag_spec { $$.u = tagspec_helper($1.tag,$3.u,$6.tag,$0.type&($5.type<1)); }
     | "not" node       { $$.u = new Coverage_Market::unit_not($1.u); } 
     | uint '*' node    { $$.u = inthelper($2.u,$0.i); }

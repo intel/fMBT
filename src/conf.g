@@ -37,6 +37,7 @@ conf_file: conf_entry+;
 
 conf_entry: model               |
             heuristic           |
+            learning            |
             coverage            |
             adapter             |
             engine_cov          |
@@ -76,6 +77,8 @@ tag_checking: 'disable_tag_checking' { conf_obj->disable_tagchecking(); }
 model: 'model' '=' string { conf_obj->set_model(*$2.str,$n2.start_loc.line); delete $2.str; } ;
 
 heuristic: 'heuristic' '=' string { conf_obj->set_heuristic(*$2.str,$n2.start_loc.line); delete $2.str; } ;
+
+learning: 'learn' '=' string { conf_obj->add_learning(*$2.str,$n2.start_loc.line); delete $2.str; } ;
 
 coverage: 'coverage' '=' string { conf_obj->set_coverage(*$2.str,$n2.start_loc.line); delete $2.str; } ;
 

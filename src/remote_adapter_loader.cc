@@ -16,8 +16,10 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#include <stdio.h>
-    
+
+#define _GNU_SOURCE
+
+#include <cstdio>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -27,18 +29,9 @@
 
 #ifndef DROI
 #include <glib-object.h>
-#include <error.h>
-#else
-void error(int exitval, int dontcare, const char* format, ...)
-{
-  va_list ap;
-  fprintf(stderr, "remote_adapter_loader error: ");
-  va_start(ap, format);
-  vfprintf(stderr, format, ap);
-  va_end(ap);
-  exit(exitval);
-}
 #endif
+
+#include "error.hh"
 
 #include <string.h>
 #include <unistd.h>

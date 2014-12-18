@@ -44,7 +44,8 @@ History_glob::History_glob(Log& l, std::string _params) :
 }
 
 Alphabet* History_glob::set_coverage(Coverage* cov,
-				     Alphabet* alpha)
+				     Alphabet* alpha,
+				     Learning* learn)
 {
   std::vector<std::string> v;
   static const std::string separator(":");
@@ -56,7 +57,7 @@ Alphabet* History_glob::set_coverage(Coverage* cov,
     printf("Creating %s:%s\n",v[0].c_str(),gl.gl_pathv[i]);
     History* h=HistoryFactory::create(log,v[0],gl.gl_pathv[i]);
     if (h) {
-      h->set_coverage(cov,alpha);
+      h->set_coverage(cov,alpha,learn);
       if (!h->status) {
 	RETURN_ERROR(h->errormsg);
       }

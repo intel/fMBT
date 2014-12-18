@@ -1,6 +1,6 @@
 /*
  * fMBT, free Model Based Testing tool
- * Copyright (c) 2012, Intel Corporation.
+ * Copyright (c) 2011, Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU Lesser General Public License,
@@ -16,25 +16,32 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#ifndef __history_glob_hh__
-#define __history_glob_hh__
 
-#include "history.hh"
-#include "alphabet.hh"
-#include <vector>
-#include <glob.h>
+#ifndef __ERROR_H_WRAPPER__
+#define __ERROR_H_WRAPPER__ 1
 
-class History_glob: public History {
-public:
-  History_glob(Log& l, std::string _params = "");
-  virtual ~History_glob() {
-    globfree(&gl);
-  }
-  virtual Alphabet* set_coverage(Coverage*,Alphabet* alpha,Learning* learn=NULL);
+#include "config.h"
 
-protected:
-  glob_t gl;
-  std::string params;
+#ifdef HAVE_ERROR
+#ifdef HAVE_ERROR_H
+#include <error.h>
+#else
+extern "C" {
+void error(int exitval, int dontcare, const char* format, ...);
 };
+#endif
+#else
+void error(int exitval, int dontcare, const char* format, ...)
+{
+  va_list ap;
+  fprintf(stderr, "fMBT error: ");
+  va_start(ap, format);
+  vfprintf(stderr, format, ap);
+  va_end(ap);
+  if (exitval) {
+    exit(exitval);
+  }
+}
+#endif
 
 #endif

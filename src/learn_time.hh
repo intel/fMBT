@@ -16,25 +16,29 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#ifndef __history_glob_hh__
-#define __history_glob_hh__
 
-#include "history.hh"
-#include "alphabet.hh"
-#include <vector>
-#include <glob.h>
+#ifndef __learn_time_hh__
+#define __learn_time_hh__
 
-class History_glob: public History {
+#include "learning.hh"
+#include "helper.hh"
+#include "function.hh"
+
+class Learn_time: public Learning {
 public:
-  History_glob(Log& l, std::string _params = "");
-  virtual ~History_glob() {
-    globfree(&gl);
+  Learn_time(Log&l,std::string s);
+  virtual ~Learn_time() { }
+  virtual void suggest(int action);
+  virtual void execute(int action);
+  virtual float getE(int action);
+  virtual void setAlphabet(Alphabet* a) { 
+    Learning::setAlphabet(a);
+    time_map.resize(alphabet->getActionNames().size()+1);
   }
-  virtual Alphabet* set_coverage(Coverage*,Alphabet* alpha,Learning* learn=NULL);
-
 protected:
-  glob_t gl;
-  std::string params;
+  Function* learning_multiplier;
+  struct timeval last_time;
+  std::vector<float> time_map;
 };
 
 #endif

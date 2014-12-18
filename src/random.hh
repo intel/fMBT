@@ -46,7 +46,7 @@ public:
   virtual ~Random() {}
   virtual unsigned long rand() = 0;
   virtual double drand48() {
-    return (1.0*rand()) / (1.0*max_val);
+    return (1.0*rand()) / (1.0*max_val+1.0);
   }
   unsigned long max_val;
   static Random* _default_random;

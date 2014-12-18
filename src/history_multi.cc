@@ -41,7 +41,8 @@ History_multi::History_multi(Log& l, std::string _params) :
 }
 
 Alphabet* History_multi::set_coverage(Coverage* cov,
-				      Alphabet* alpha)
+				      Alphabet* alpha,
+				      Learning* learn)
 {
   std::vector<std::string> v;
   static const std::string separator(":");
@@ -50,7 +51,7 @@ Alphabet* History_multi::set_coverage(Coverage* cov,
     printf("Creating %s %s\n",v[0].c_str(),v[1].c_str());
     History* h=HistoryFactory::create(log,v[0],v[i]);
     if (h) {
-      h->set_coverage(cov,alpha);
+      h->set_coverage(cov,alpha,learn);
       if (!h->status) {
 	RETURN_ERROR(h->errormsg);
       }

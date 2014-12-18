@@ -27,43 +27,8 @@
 
 time_t    Test_engine::end_time;
 
-#if defined(DROI) || defined(__MINGW32__)
-char* READLINE(const char* prompt)
-{
-    char *s = (char*)malloc(1024);
-    int scanf_status;
-    if (s == NULL) return s;
-    fprintf(stderr, "%s", prompt);
-    scanf_status = scanf("%1023[^\n]", s);
-    scanf("\n");
-    if (scanf_status > 0) return s;
-    std::free(s);
-    return NULL;
-}
-#else
-#ifdef USE_GNU_READLINE
-#include <readline/readline.h>
-#include <readline/history.h>
-#define READLINE(a) readline(a)
-#else
-#ifdef USE_EDITLINE
-/* Let's use editline... */
-extern "C" {
-#include <editline.h>
-};
-#define READLINE(a)         \
-  (__extension__            \
-    ({ char* __result;      \
-       fprintf(stderr,"%s",a);      \
-       __result=readline(); \
-       __result;}))
-#else
-/* Defaults to BSD editline readline.. */
-#include <editline/readline.h>
-#define READLINE(a) readline(a)
-#endif
-#endif
-#endif // ifdef DDROI else
+char* READLINE(const char* prompt,FILE* ostream);
+
 #include <cstdlib>
 #include <cstring>
 
@@ -556,9 +521,6 @@ void Test_engine::interactive()
   std::vector<End_condition*> etags;
   std::vector<End_condition*> atags;
   std::string breakstr("breakpoint");
-#if !(defined(DROI) || defined(__MINGW32__))
-  rl_outstream=stderr;
-#endif
 
   while (run) {
 
@@ -572,7 +534,7 @@ void Test_engine::interactive()
       actions_v.resize(0);
     }
 
-    char* s=READLINE("fMBT> ");
+    char* s=READLINE("fMBT> ",stderr);
 
     if (s==NULL) {
       run=false;

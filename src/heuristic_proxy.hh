@@ -23,6 +23,7 @@
 #include "heuristic.hh"
 #include "coverage.hh"
 #include "proxy.hh"
+#include "learning.hh"
 
 extern Proxy callback_proxy;
 
@@ -38,6 +39,11 @@ public:
   virtual bool execute(int action) {
     bool ret= h->execute(action);
     status=h->status;errormsg=h->errormsg;
+
+    if (status && ret && learn) {
+      learn->execute(action);
+    }
+
     return ret;
   }
 
@@ -56,6 +62,9 @@ public:
   virtual int getIAction() {
     int ret= h->getIAction();
     status=h->status;errormsg=h->errormsg;
+    if (status && ret>0 && learn) {
+      learn->suggest(ret);
+    }
     return ret;
   }
 
@@ -63,6 +72,11 @@ public:
     Heuristic::set_coverage(c);
     h->set_coverage(c);
     status=h->status;errormsg=h->errormsg;
+  }
+
+  virtual void set_learn(Learning* _learn) {
+    Heuristic::set_learn(_learn);
+    h->set_learn(learn);
   }
 
   virtual void set_model(Model* _model) {
@@ -83,7 +97,7 @@ protected:
     }
     return true;
   }
-  
+
   bool set(std::string params,std::string& ret_str) {
     Heuristic* hh=new_heuristic(log,params);
     if (hh) {
@@ -101,7 +115,6 @@ protected:
 
   Heuristic* h;
   std::string name;
-
 };
 
 #endif

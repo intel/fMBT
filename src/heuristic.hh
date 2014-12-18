@@ -28,6 +28,7 @@
 class Coverage;
 class Model;
 class Log;
+class Learning;
 
 class Heuristic: public Writable {
 public:
@@ -52,9 +53,13 @@ public:
   virtual void set_coverage(Coverage* c);
   virtual Coverage* get_coverage();
   virtual void set_model(Model* _model);
+  virtual void set_learn(Learning* _learn) {
+    learn=_learn;
+  }
 
 protected:
   Model* model;
+  Learning* learn;
   Coverage* my_coverage;
   std::string none;
   Log& log;

@@ -1,0 +1,44 @@
+language "python" {
+    import time
+}
+
+# preview-hide-vars:
+# preview-depth: 5
+variables {
+    x
+}
+initial_state {
+    x = 5
+}
+input "inc" {
+    guard { return x < 10 }
+    body { x+= 1 }
+}
+input "dec" {
+    guard { return x > 1 }
+    body { x-= 1 }
+}
+input "fast1" {
+    adapter {}
+}
+input "fast2" {
+    adapter {}
+}
+input "slow1" {
+    adapter { time.sleep(0.1) }
+}
+input "slow2" {
+    adapter { time.sleep(0.1) }
+}
+input "slow3" {
+    adapter { time.sleep(0.1) }
+}
+input "slow4" {
+    adapter { time.sleep(0.1) }
+}
+input "fast3" {
+    adapter {}
+}
+input "fast4" {
+    adapter {}
+}

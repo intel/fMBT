@@ -16,25 +16,35 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#ifndef __history_glob_hh__
-#define __history_glob_hh__
 
-#include "history.hh"
-#include "alphabet.hh"
-#include <vector>
-#include <glob.h>
+#include "learning.hh"
 
-class History_glob: public History {
+FACTORY_IMPLEMENTATION(Learning)
+
+#include "log.hh"
+#include "params.hh"
+
+Learning::Learning(Log& l):suggested(false), alphabet(NULL), log(l)
+{
+  log.ref();
+}
+
+Learning* new_learning(Log& l, std::string& s) {
+  std::string name,option;
+  param_cut(s,name,option);
+  Learning* ret=LearningFactory::create(l, name, option);
+
+  return ret;
+}
+
+class Learn_fail: public Learning {
 public:
-  History_glob(Log& l, std::string _params = "");
-  virtual ~History_glob() {
-    globfree(&gl);
+  Learn_fail(Log&l,std::string&s):Learning(l) {
+    status=false;
+    errormsg="ALWAYS FAIL learning module";
   }
-  virtual Alphabet* set_coverage(Coverage*,Alphabet* alpha,Learning* learn=NULL);
+  virtual ~Learn_fail() { }
 
-protected:
-  glob_t gl;
-  std::string params;
 };
 
-#endif
+FACTORY_DEFAULT_CREATOR(Learning, Learn_fail, "fail")

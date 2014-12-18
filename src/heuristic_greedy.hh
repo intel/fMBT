@@ -28,6 +28,7 @@
 #include "lts.hh"
 
 class Random;
+class Function;
 
 class Heuristic_greedy : public Heuristic {
 public:
@@ -43,8 +44,34 @@ private:
   bool m_burst;
   std::vector<int> m_path;
   Random* r;
+  Function* randomise_function;
+protected:
+  bool adaptive;
 public:
   bool end_condition;
 };
+
+class Heuristic_lookahead: public Heuristic_greedy {
+public:
+  Heuristic_lookahead(Log& l,const std::string& params):
+    Heuristic_greedy(l,params)
+  {
+    adaptive=false;
+  }
+  virtual ~Heuristic_lookahead() {}
+
+};
+
+class Heuristic_adaptive_lookahead: public Heuristic_greedy {
+public:
+  Heuristic_adaptive_lookahead(Log& l,const std::string& params):
+    Heuristic_greedy(l,params)
+  {
+    adaptive=true;
+  }
+  virtual ~Heuristic_adaptive_lookahead() {}
+  virtual void set_learn(Learning* _learn);
+};
+
 
 #endif

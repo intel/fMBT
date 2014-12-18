@@ -283,9 +283,10 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const std::st
 						      unit_tag* prev_tag,
 						      unit_tag* next_tag,
 						      int persistent) {
-  /* m(ode) == a|e
+  /* m(ode) == a|e|r
      a(ll): cover all matching actions
      e(xists): cover any of matching actions
+     r(andom): randomly choose an action from set of actions
   */
   if (!status) {
     return NULL;
@@ -301,7 +302,6 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const std::st
       status = false;
       return NULL;
     }
-
     if (prev_tag||next_tag) {
       if (!prev_tag) {
 	prev_tag=new unit_tag();
@@ -319,30 +319,27 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const std::st
 
     if (actions.size()==1) {
       u=new Coverage_Market::unit_leaf(actions[0]);
-   } /*else {
-      if (actions.size()==2) {
-	Coverage_Market::unit *l,*r;
-	l=new Coverage_Market::unit_leaf(actions[0]);
-	r=new Coverage_Market::unit_leaf(actions[1]);
-	if (m=='e') {
-	  u=new Coverage_Market::unit_or(l,r);
-	} else {
-	  u=new Coverage_Market::unit_and(l,r);
-	}
-	} */else {
+   } else {
 	for(unsigned int i=0; i < actions.size(); i++) {
 	  if (!u) {
-	    if (m=='e') {
+	    switch (m) {
+	    case 'r': // Random
+	      u=new Coverage_Market::unit_manyleafrandom();	      
+	      break;
+	    case 'e': // Exists
 	      u=new Coverage_Market::unit_manyleafor();
-	    } else {
+	      break;
+	    case 'a': // All
 	      u=new Coverage_Market::unit_manyleafand();
+	      break;
+	    default:
+	      abort();
 	    }
 	  }
 	  ((unit_manyleaf*)u)->my_action.push_back(actions[i]);
 	  ((unit_manyleaf*)u)->value    .push_back(0);
 	  u->value.second++;
 	}
-	/*      }*/
     }
   } else {
     int an = model->action_number(action.c_str());

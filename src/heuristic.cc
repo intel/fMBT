@@ -20,13 +20,14 @@
 #include "coverage.hh"
 #include "heuristic.hh"
 #include "model.hh"
+#include "learning.hh"
 #include "log.hh"
 #include "helper.hh"
 
 FACTORY_IMPLEMENTATION(Heuristic)
 
 Heuristic::Heuristic(Log& l) :
-model(NULL),none(""), log(l)
+model(NULL),learn(NULL),none(""), log(l)
 {
   log.ref();
 }

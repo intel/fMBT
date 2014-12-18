@@ -24,32 +24,9 @@
 
 #ifndef DROI
 #include <glib-object.h>
-#include <error.h>
-#else
-void error(int exitval, int dontcare, const char* format, ...)
-{
-  va_list ap;
-  fprintf(stderr, "fMBT error: ");
-  va_start(ap, format);
-  vfprintf(stderr, format, ap);
-  va_end(ap);
-  if (exitval)
-    exit(exitval);
-}
 #endif
 
-#ifdef __MINGW32__
-void error(int exitval, int dontcare, const char* format, ...)
-{
-  va_list ap;
-  fprintf(stderr, "fMBT error: ");
-  va_start(ap, format);
-  vfprintf(stderr, format, ap);
-  va_end(ap);
-  if (exitval)
-    exit(exitval);
-}
-#endif
+#include "error.hh"
 
 class ltscoverage: public Coverage {
 public:

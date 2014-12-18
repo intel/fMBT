@@ -24,6 +24,7 @@
 #include <cstring>
 #include "heuristic_proxy.hh"
 #include "coverage_proxy.hh"
+#include "learn_proxy.hh"
 
 #ifndef DROI
 #include <glib.h>
@@ -67,7 +68,7 @@ Conf::Conf(Log& l, bool debug_enabled)
    on_error("exit(1)"), on_fail("interactive"),
    on_pass("exit(0)"), on_inconc("exit(1)"),
    heuristic(NULL), model(NULL),
-   adapter(NULL),coverage(NULL),
+   adapter(NULL),coverage(NULL),learning(NULL),
    disable_tagverify(false)
 {
   // Reserve first slot for THE coverage
@@ -235,6 +236,48 @@ void Conf::load(std::string& name,std::string& content)
   // Free some memory.
   disable_tags.clear();
 
+  Learn_proxy* lp=new Learn_proxy(log);
+  lp->setAlphabet(model);
+  std::list<std::pair<std::string,int> > ::iterator i;
+
+  // create learning
+  for(i=_learning.begin();i!=_learning.end();i++) {
+    Learning* tmp=new_learning(log,i->first);
+    if (!tmp) {
+      RETURN_ERROR_VOID(i->second,"Can't create learning \"" + i->first + "\"");
+    }
+    tmp->lineno=i->second;
+    if (!tmp->status) {
+      RETURN_ERROR_VOID(tmp->lineno,"learning error: " + tmp->stringify());
+    }
+    
+    if ((dynamic_cast<Learn_time*>(tmp))!=NULL) {
+      tmp->setAlphabet(model);
+      lp->lt=tmp;
+    } else {
+      if (lp->la) {
+	// We have!
+	std::string name,option;
+	param_cut(i->first,name,option);
+	delete tmp;
+	lp->la->add_action(option);
+      } else {
+	tmp->setAlphabet(model);
+	lp->la=(Learn_action*)tmp;
+      }
+    }
+    learning=lp;
+  }
+  _learning.clear();
+
+  if (learning && !learning->status) {
+    RETURN_ERROR_VOID(learning->lineno,"learning error: " + learning->stringify());
+  }
+
+  if (heuristic && heuristic->status) {
+    heuristic->set_learn(learning);
+  }
+
   /* handle history */
   for(unsigned i=0;i<history.size();i++) {
     History* h=new_history(log,* (history[i].first));
@@ -242,7 +285,7 @@ void Conf::load(std::string& name,std::string& content)
 
     if (h) {
       h->lineno=history[i].second;
-      h->set_coverage(&cof,model);
+      h->set_coverage(&cof,model,learning);
       if (!h->status) {
 	errormsg=h->errormsg;
 	delete h;

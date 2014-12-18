@@ -1,6 +1,6 @@
 /*
  * fMBT, free Model Based Testing tool
- * Copyright (c) 2012, Intel Corporation.
+ * Copyright (c) 2011, Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU Lesser General Public License,
@@ -16,25 +16,40 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#ifndef __history_glob_hh__
-#define __history_glob_hh__
 
-#include "history.hh"
-#include "alphabet.hh"
-#include <vector>
-#include <glob.h>
+#define _FUNCTION_INTERNAL_
+#include "random.hh"
+#include "function_random.hh"
 
-class History_glob: public History {
-public:
-  History_glob(Log& l, std::string _params = "");
-  virtual ~History_glob() {
-    globfree(&gl);
+Function_random::Function_random(const std::string& param) {
+
+  if (param!="") {
+    r=new_random(param);
+  } else {
+    r=Random::default_random();
   }
-  virtual Alphabet* set_coverage(Coverage*,Alphabet* alpha,Learning* learn=NULL);
+  if (!r) {
+    status=false;
+    errormsg="Can't create random!";
+  } else {
+    status=r->status;
+    errormsg=r->errormsg;
+  }
+}
 
-protected:
-  glob_t gl;
-  std::string params;
-};
+Function_random::~Function_random() {
+  r->unref();
+  r=NULL;
+}
 
-#endif
+
+double Function_random::fval() {
+  return r->drand48();
+}
+
+signed long Function_random::val() {
+  return r->rand();
+}
+
+
+FACTORY_DEFAULT_CREATOR(Function, Function_random, "random")

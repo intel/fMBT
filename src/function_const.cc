@@ -23,7 +23,7 @@
 Function_const::Function_const(const std::string& param) {
   char* endp;
   if (param=="") {
-    errormsg="empthy constant?";
+    errormsg="empty constant?";
     status=false;
     return;
   }
