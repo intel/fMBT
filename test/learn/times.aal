@@ -1,14 +1,12 @@
-language "python" {
-    import time
-}
-
-# preview-hide-vars:
-# preview-depth: 5
 variables {
     x
 }
 initial_state {
     x = 5
+}
+adapter_init {
+    global time
+    import time
 }
 input "inc" {
     guard { return x < 10 }
@@ -24,17 +22,17 @@ input "fast1" {
 input "fast2" {
     adapter {}
 }
-input "slow1" {
-    adapter { time.sleep(0.1) }
+input "aslow1" {
+    adapter { time.sleep(0.2) }
 }
-input "slow2" {
-    adapter { time.sleep(0.1) }
+input "bslow2" {
+    adapter { time.sleep(0.2) }
 }
-input "slow3" {
-    adapter { time.sleep(0.1) }
+input "xslow3" {
+    adapter { time.sleep(0.2) }
 }
-input "slow4" {
-    adapter { time.sleep(0.1) }
+input "yslow4" {
+    adapter { time.sleep(0.2) }
 }
 input "fast3" {
     adapter {}

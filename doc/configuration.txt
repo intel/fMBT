@@ -613,10 +613,15 @@ Syntax:
 
 Available types & parameters:
 
-        log(filename)
+        log(filename[, filters])
 
-                reads log from filename and feed it to the current
-                coverage configuration.
+                reads log from filename and feed it to configured
+                modules. By default, coverage and learning get the log
+                data. This can be changed with the filters
+                (comma-separated strings). Supported filters:
+
+                  C   - skip coverage (see Learning example)
+
 
 Examples:
 
@@ -780,6 +785,41 @@ Examples:
         on_inconc = interactive
 
         on_error  = exit(42)
+
+
+Learning
+--------
+
+Learning modules define how various observations during test execution
+affect test generation.
+
+Syntax:
+
+        learn = type(params)
+
+Available types & parameters:
+
+        time([f])
+
+                learn adapter block execution times. The lookahead
+                heuristic will generate tests that reach the best
+                coverage in the shortest wall clock time. By default
+                it optimizes tests for the minimal number of test
+                steps. The multiplier f (from 0.0 to 1.0) defines how
+                quickly action's learned execution time follows new
+                measurements. The equation is:
+
+                  new_time = f * latest_measured_time + (1.0-f) * old_time
+
+                The default f is 0.5. (That is, 1.0 uses always the
+                latest measured time as is.)
+
+                Example: learn adapter execution times from test.log
+                before test generation, but do not cover previously
+                executed test steps.
+
+                learn = time
+                history = log(test.log, C)
 
 
 Other

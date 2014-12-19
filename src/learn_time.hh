@@ -20,9 +20,12 @@
 #ifndef __learn_time_hh__
 #define __learn_time_hh__
 
+#define _ISOC99_SOURCE 1
+
 #include "learning.hh"
 #include "helper.hh"
 #include "function.hh"
+#include <math.h>
 
 class Learn_time: public Learning {
 public:
@@ -31,14 +34,14 @@ public:
   virtual void suggest(int action);
   virtual void execute(int action);
   virtual float getE(int action);
-  virtual void setAlphabet(Alphabet* a) { 
+  virtual void setAlphabet(Alphabet* a) {
     Learning::setAlphabet(a);
-    time_map.resize(alphabet->getActionNames().size()+1);
+    time_map.resize(alphabet->getActionNames().size()+1, NAN);
   }
 protected:
   Function* learning_multiplier;
   struct timeval last_time;
-  std::vector<float> time_map;
+  std::vector<double> time_map;
 };
 
 #endif
