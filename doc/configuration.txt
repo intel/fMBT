@@ -374,9 +374,10 @@ Available types & parameters:
                 that is given in coverage language. Valid expressions
                 are:
 
-                - quoted action-regexps, possibly prefixed by "any" or
-                  "all" keyword.  If no prefix is given, the default
-                  is to cover "any" action matching the action-regexp.
+                - quoted action-regexps, optionally prefixed by "all",
+                  "any" or "random" quantifier. If no quantifier is
+                  given, the default is to cover "any" action matching
+                  the action-regexp.
 
                   Example:
 
@@ -384,6 +385,12 @@ Available types & parameters:
 
                     coverage reaches 1.0 when generated test includes
                     actions iUseCash and iUseCredit.
+
+                  Both "any" and "random" quantifiers require that one
+                  matching action is covered. "Random" means that the
+                  action is randomly selected before test generation,
+                  while "any" counts any matching action during the
+                  generation.
 
                 - two expressions combined with "and", "or" or "then"
                   operator.
