@@ -356,7 +356,41 @@ if [ $(fmbt-log -f '$ax\nTAGS: $tg' < usecase-tags-exactly.log | grep -B 1 i:sto
     echo "failed because expected 3 unique tag combinations" >> $LOGFILE
     testfailed
 fi
+testpassed
 
+teststep "coverage usecase, all/any/random..."
+(cat usecase-tags.conf.in; echo 'coverage=usecase(all "i:play.*" then random "i:stop.*" then any "i:play.*")') > usecase-quantifiers.conf
+MISSING="alertgamemusic"
+COUNTER=0
+while ! [ -z "$MISSING" ]; do
+    if [ "$COUNTER" == "100" ]; then
+        echo "failed because of bad random, tried $COUNTER times but never hit $MISSING" >>$LOGFILE
+        testfailed
+    fi
+    if ! fmbt -l usecase-quantifiers.log usecase-quantifiers.conf >>$LOGFILE 2>&1; then
+        cat usecase-quantifiers.conf >> $LOGFILE
+        cat usecase-quantifiers.log >> $LOGFILE
+        echo "failed because fmbt -l usecase-quantifiers.conf returned non-zero exit status" >> $LOGFILE
+        testfailed
+    fi
+    if [ "$(fmbt-log -f '$as' usecase-quantifiers.log | grep play | wc -l)" != "4" ]; then
+        cat usecase-quantifiers.conf >> $LOGFILE
+        fmbt-log usecase-quantifiers.log >> $LOGFILE
+        echo "failed because four plays expected" >> $LOGFILE
+        testfailed
+    fi
+    if [ "$(fmbt-log -f '$as' usecase-quantifiers.log | grep stop | wc -l)" != "1" ]; then
+        cat usecase-quantifiers.conf >> $LOGFILE
+        fmbt-log usecase-quantifiers.log >> $LOGFILE
+        echo "failed because exactly one stop was expected" >> $LOGFILE
+        testfailed
+    fi
+    STOPPED=$(fmbt-log -f '$ax' usecase-quantifiers.log | tail -n 2 | head -n 1)
+    STOPPED=${STOPPED/i:stop-/}
+    echo "stopped $STOPPED" >> $LOGFILE
+    MISSING=${MISSING/$STOPPED/}
+    COUNTER=$(( $COUNTER + 1 ))
+done
 testpassed
 
 teststep "coverage sum..."
