@@ -1,4 +1,4 @@
-AC_INIT([fmbt], [0.17.1-0.rc0], [antti.kervinen@intel.com])
+AC_INIT([fmbt], [0.18-1], [antti.kervinen@intel.com])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
 
 AC_CONFIG_MACRO_DIR([m4])

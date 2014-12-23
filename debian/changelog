@@ -1,8 +1,53 @@
-fmbt (0.17.1-0.rc0) unstable; urgency=low
+fmbt (0.18-1) unstable; urgency=low
 
-  * Development version.
+  * Learning:
+    - learn=time test configuration learns test step execution times.
+    - Lookahead test generator optimizes coverage growth in wall clock
+      time when "time" learning is configured.
+    - Execution times can be learned from old logs before test generation.
+  * Test generation:
+    - Second parameter ("offset") added to lookahead. Enables generating
+      alternative deterministic and randomized (yet optimized) tests.
+  * Coverage:
+    - New quantifier "random" introduced to usecase coverage expressions,
+      complements existing "any" and "all".
+  * AAL:
+    - Fixed filename reporting on errors inside ^included files.
+  * fmbt-log:
+    - Added --record-separator for output formatting. Enables generating
+      usecase coverage expressions directly from test logs.
+    - New test step time format "$sT" shows time delta since the start.
+    - New --unbuffered option reads and prints logs without I/O buffering.
+  * fmbt-scripter:
+    - Shows screenshots from disk. Try: fmbt-scripter screenshots/*.png.
+  * fmbtandroid/chromiumos/rdp/tizen/vnc/windows/x11:
+    - "configfile" parameter added to OCR engine and *OcrText methods.
+      Enables giving a set of characters that Tesseract is allowed to
+      recognize among many other Tesseract parameters.
+    - "preprocess" parameter added to OIR engine and *Bitmap methods.
+      Matches ImageMagick converted versions of reference bitmaps
+      and screenshots. Enables matching detected edges and
+      black-and-white images, for instance.
+    - beforeRefresh and afterRefresh optional callbacks added to
+      wait* methods.
+  * fmbtandroid:
+    - refreshScreenshot() performance optimized, try:
+      device.connection().setScreencapFormat("raw")
+    - smsNumber() works on Android 5.
+    - device.connection().setScreencapArgs(list_of_args) added.
+  * fmbtpng supports libpng 1.6, a memory leak fixed.
+  * fmbttizen:
+    - "mouseDevice" and "touchDevice" optional parameters added to Device.
+      Gives better control on which devices that will be used for
+      synthesized user input. Example: touchDevice="virtual" creates new
+      virtual touch screen through which input is given.
+  * fmbtx11:
+    - pressKey() supports optional "modifiers" parameter.
+    - keyNames() added.
+  * Windows port:
+    - fmbt-debug (cli) and fmbt.debug() (Python) run on Windows.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 25 Nov 2014 14:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 23 Dec 2014 13:42:00 +0300
 
 fmbt (0.17-1) unstable; urgency=low
 
