@@ -204,14 +204,20 @@ Available types & parameters:
                 not a name of action, it is handled as a regular
                 expression.
 
-        lookahead[(depth)]
+        lookahead[(depth[, offset])]
 
-                if depth is given, simulates execution of all possible
-                paths of length <depth> in the test model. Chooses the
-                first action of a path that results in the best
-                coverage. If depth is not given, decision is made only
-                based on names of enabled actions in the current state
-                of the model without simulation.
+                if depth is given, lookahead will simulate execution
+                of all possible paths of length <depth>. It will
+                choose the first action of a path that results in the
+                best coverage. If depth is not given, lookahead will
+                make the decision based on names of enabled actions in
+                the current state without simulation.
+
+                If offset is not given, lookahead will choose the same
+                action on every test run. It is likely to choose
+                another, equally good action every time if the offset
+                is a natural number. With "random" offset the choice
+                is likely to be different on every test run.
 
         mrandom(weight, heuristic[, weight, heuristic...])
 
