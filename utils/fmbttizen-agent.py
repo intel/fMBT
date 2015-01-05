@@ -751,29 +751,40 @@ def takeScreenshotOnX():
     return True, compressed_image
 
 def westonTakeScreenshotRoot(retry=2):
-    if westonTakeScreenshotRoot.ssFilename == None:
-        westonTakeScreenshotRoot.ssFilename = findWestonScreenshotFilenameRoot()
+    if westonTakeScreenshotRoot.ssFilenames == None:
+        westonTakeScreenshotRoot.ssFilenames = findWestonScreenshotFilenames()
+    if not westonTakeScreenshotRoot.ssFilenames:
+        return False, "cannot find weston screenshot directory"
     try:
-        if os.access(westonTakeScreenshotRoot.ssFilename, os.R_OK):
-            os.remove(westonTakeScreenshotRoot.ssFilename)
+        for ssFilename in westonTakeScreenshotRoot.ssFilenames:
+            if os.access(ssFilename, os.R_OK):
+                os.remove(ssFilename)
         keyboard_device.press("KEY_LEFTMETA")
         keyboard_device.tap("s")
         keyboard_device.release("KEY_LEFTMETA")
         time.sleep(0.5)
+        # find which screenshot file got created?
+        for ssFilename in westonTakeScreenshotRoot.ssFilenames:
+            if os.access(ssFilename, os.R_OK):
+                break
+        else:
+            if retry > 0:
+                return westonTakeScreenshotRoot(retry-1)
+            else:
+                return False, "weston did not create any of files %s" % (
+                    westonTakeScreenshotRoot.ssFilenames,)
         # wait for the screenshot writer to finish
-        writerPid = fuser(westonTakeScreenshotRoot.ssFilename)
+        writerPid = fuser(ssFilename)
         if writerPid != None:
-            time.sleep(0.25)
-            while fuser(westonTakeScreenshotRoot.ssFilename, [writerPid]) != None:
-                time.sleep(0.25)
-        if not os.access(westonTakeScreenshotRoot.ssFilename, os.R_OK) and retry > 0:
-            return westonTakeScreenshotRoot(retry-1)
-        shutil.move(westonTakeScreenshotRoot.ssFilename, "/tmp/screenshot.png")
+            time.sleep(0.1)
+            while fuser(ssFilename, [writerPid]) != None:
+                time.sleep(0.1)
+        shutil.move(ssFilename, "/tmp/screenshot.png")
         os.chmod("/tmp/screenshot.png", 0666)
     except Exception, e:
         return False, str(e)
     return True, None
-westonTakeScreenshotRoot.ssFilename = None
+westonTakeScreenshotRoot.ssFilenames = None
 
 def takeScreenshotOnWeston():
     if iAmRoot:
@@ -802,19 +813,16 @@ def fuser(filename, usualSuspects=None):
         except OSError:
             pass
 
-def findWestonScreenshotFilenameRoot():
+def findWestonScreenshotFilenames():
     # find weston cwd
+    dirs = []
     for exe in glob.glob("/proc/[1-9][0-9][0-9]*/exe"):
         try:
             if os.path.realpath(exe) == "/usr/bin/weston":
-                cwd = os.path.realpath(os.path.dirname(exe) + "/cwd")
-                break
+                dirs.append(os.path.realpath(os.path.dirname(exe) + "/cwd"))
         except OSError:
             pass
-    else:
-        return False, "cannot find weston cwd"
-    rv = cwd + "/wayland-screenshot.png"
-    return rv
+    return [d + "/wayland-screenshot.png" for d in sorted(set(dirs))]
 
 if g_Xavailable:
     takeScreenshot = takeScreenshotOnX
