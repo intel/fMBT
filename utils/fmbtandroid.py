@@ -387,6 +387,7 @@ class Device(fmbtgti.GUITestInterface):
         self._lastView = None
         self._supportsView = None
         self._monkeyOptions = monkeyOptions
+        self._lastConnectionSettings = {}
 
         self._conf = Ini()
 
@@ -899,12 +900,18 @@ class Device(fmbtgti.GUITestInterface):
         """
         Close connections to the device and reconnect.
         """
+        conn = self.connection()
+        if hasattr(conn, "settings"):
+            self._lastConnectionSettings = conn.settings()
+        connSettings = self._lastConnectionSettings
         self.setConnection(None)
+        self._lastConnectionSettings = connSettings
+        del conn # make sure gc will collect the connection object
         import gc
         gc.collect()
         try:
             self.setConnection(_AndroidDeviceConnection(
-                self.serialNumber, monkeyOptions=self._monkeyOptions))
+                self.serialNumber, **connSettings))
             return True
         except Exception, e:
             _adapterLog("reconnect failed: %s" % (e,))
@@ -1051,6 +1058,7 @@ class Device(fmbtgti.GUITestInterface):
             self._autoRotateScreenshot = False
 
     def setConnection(self, connection):
+        self._lastConnectionSettings = {}
         fmbtgti.GUITestInterface.setConnection(self, connection)
         if hasattr(self.connection(), "_serialNumber"):
             self.serialNumber = self.connection()._serialNumber
@@ -1760,17 +1768,21 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
     _w_host = 'localhost'
     _w_port = _m_port + 1
 
-    def __init__(self, serialNumber, stopOnError=True, monkeyOptions=[]):
+    def __init__(self, serialNumber, **kwArgs):
         fmbtgti.GUITestConnection.__init__(self)
         self._serialNumber = serialNumber
-        self._stopOnError = stopOnError
-        self._shellSupportsTar = False
-        self._monkeyOptions = monkeyOptions
-        self._screencapArgs = []
-        self._screencapFormat = "png"
-
-        self.setScreenToDisplayCoords(lambda x, y: (x, y))
-        self.setDisplayToScreenCoords(lambda x, y: (x, y))
+        self._stopOnError = kwArgs.pop("stopOnError", True)
+        self._monkeyOptions = kwArgs.pop("monkeyOptions", [])
+        self._screencapArgs = kwArgs.pop("screencapArgs", [])
+        self._screencapFormat = kwArgs.pop("screencapFormat", "png")
+        self.setScreenToDisplayCoords(
+            kwArgs.pop("screenToDisplay", lambda x, y: (x, y)))
+        self.setDisplayToScreenCoords(
+            kwArgs.pop("displayToScreen", lambda x, y: (x, y)))
+        if kwArgs:
+            raise TypeError('_AndroidDeviceConnection.__init__() got an '
+                            'unexpected keyword argument %s=%s' % (
+                kwArgs.keys()[0], repr(kwArgs[kwArgs.keys()[0]])))
 
         self._detectFeatures()
         self._emulatorSocket = None
@@ -1790,6 +1802,18 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         except: pass
         try: self._emulatorSocket.close()
         except: pass
+
+    def settings(self):
+        """Returns restorable property values"""
+        rv = {
+            "stopOnError": self._stopOnError,
+            "monkeyOptions": self._monkeyOptions,
+            "screencapArgs": self._screencapArgs,
+            "screencapFormat": self._screencapFormat,
+            "screenToDisplay": self._screenToDisplay,
+            "displayToScreen": self._displayToScreen,
+        }
+        return rv
 
     def target(self):
         return self._serialNumber
