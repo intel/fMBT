@@ -61,7 +61,7 @@ cd build-win$XX
             wget -nc $IMAGEMAGICK_URL
             7za x *.7z || { echo extracting ImageMagick failed; exit 1; }
             cd $(basename *.7z .7z)
-                mingw$XX-configure && make && $SUDO make install
+                mingw$XX-configure --with-x=no && make && $SUDO make install
 	    cd ..
 	fi
     cd ..
