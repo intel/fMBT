@@ -1574,7 +1574,7 @@ class GUITestInterface(object):
                   time in seconds to hold the key down.
 
           modifiers (list of strings, optional)
-                  modifier key(s) to be pressed at the same time
+                  modifier key(s) to be pressed at the same time.
         """
 
         extraParams = {}

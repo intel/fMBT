@@ -810,7 +810,7 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self.pressKey("KEYCODE_HOME", **pressKeyKwArgs)
 
-    def pressKey(self, keyName, long=False, hold=0.0):
+    def pressKey(self, keyName, long=False, hold=0.0, modifiers=None):
         """
         Press a key on the device.
 
@@ -826,11 +826,18 @@ class Device(fmbtgti.GUITestInterface):
 
           hold (float, optional):
                   time in seconds to hold the key down.
+
+          modifiers (list of strings, optional):
+                  modifier key(s) to be pressed at the same time.
         """
         if not keyName.upper().startswith("KEYCODE_"):
             keyName = "KEYCODE_" + keyName
         keyName = keyName.upper()
-        return fmbtgti.GUITestInterface.pressKey(self, keyName, long, hold)
+        if modifiers != None:
+            modifiers = [
+                m.upper() if m.upper().startswith("KEYCODE_") else "KEYCODE_" + m.upper()
+                for m in modifiers]
+        return fmbtgti.GUITestInterface.pressKey(self, keyName, long, hold, modifiers)
 
     def pressMenu(self, **pressKeyKwArgs):
         """
@@ -2188,11 +2195,18 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         xCoord, yCoord = self._screenToDisplay(xCoord, yCoord)
         return self._monkeyCommand("tap " + str(xCoord) + " " + str(yCoord))[0]
 
-    def sendKeyUp(self, key):
-        return self._monkeyCommand("key up " + key)[0]
+    def sendKeyUp(self, key, modifiers=[]):
+        rv = self._monkeyCommand("key up " + key)[0]
+        for m in reversed(modifiers):
+            rv &= self._monkeyCommand("key up " + m)[0]
+        return rv
 
-    def sendKeyDown(self, key):
-        return self._monkeyCommand("key down " + key)[0]
+    def sendKeyDown(self, key, modifiers=[]):
+        rv = True
+        for m in modifiers:
+            rv &= self._monkeyCommand("key down " + m)[0]
+        rv &= self._monkeyCommand("key down " + key)[0]
+        return rv
 
     def sendTouchUp(self, xCoord, yCoord):
         xCoord, yCoord = self._screenToDisplay(xCoord, yCoord)
@@ -2210,8 +2224,20 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         dx, dy = self._screenToDisplay(dx, dy)
         return self._monkeyCommand("trackball " + str(dx) + " " + str(dy))[0]
 
-    def sendPress(self, key):
-        return self._monkeyCommand("press " + key)[0]
+    def sendPress(self, key, modifiers=[]):
+        if not modifiers:
+            return self._monkeyCommand("press " + key)[0]
+        else:
+            rv = True
+            for m in modifiers:
+                rv &= self.sendKeyDown(m)
+            # A press with modifiers must be sent using "key down" and "key up"
+            # primitives, not with "press".
+            rv &= self.sendKeyDown(key)
+            rv &= self.sendKeyUp(key)
+            for m in reversed(modifiers):
+                rv &= self.sendKeyUp(m)
+            return rv
 
     def sendType(self, text):
         for lineIndex, line in enumerate(text.split('\n')):
