@@ -244,7 +244,7 @@ void aalang_py::set_aexit(std::string* iai,const char* file,int line,int col)
   adapter_exit_counter++;
   const std::string funcname("adapter_exit"+to_string(adapter_exit_counter));
   s += "\n    def " + funcname + "(verdict,reason):\n" + variables +
-    indent(8, *iai) + "\n" "\n";
+    indent(8, *iai) + "\n" + indent(8, "pass\n") + "\n";
   s += python_lineno_wrapper(file,line,funcname,1+m_lines_in_vars,4);
 
   s += indent(4,"adapter_exit_list.append("+funcname+")")+"\n";
