@@ -605,7 +605,7 @@ Examples:
                 versa. Percentage of covered permutations of action
                 pairs is added to the measure.
 
-        coverage = covlang(a A then (a B or a C))
+        coverage = usecase(a A then (a B or a C))
 
                 coverage reaches 1.0 when action A has been executed
                 and at least either of actions B and C has been
