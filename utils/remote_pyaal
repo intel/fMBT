@@ -63,6 +63,9 @@ Options:
         Take variable varname into account when converting to
         LSTS. --lsts-show-var can be given several times.
 
+    --list-state-vars
+        Output list of variables that saved for each state.
+
     -d, --debug
         Run in debug mode.
 """
@@ -483,13 +486,15 @@ if __name__ == "__main__":
     opt_lsts_show_vars = []
     opt_c_exec_statements = []
     opt_lsts_hide_tags = []
+    opt_list_state_vars = False
 
     # Parse arguments
     opts, remainder = getopt.gnu_getopt(
         sys.argv[1:], 'c:dhl:L:t:o:D:H:S:VT:I:',
         ["debug", "help", "log-file=", "timeout=", "output=",
          "verbose-fmbt-log",
-         "lsts-depth=", "lsts-hide-var=", "lsts-show-var=", "version"])
+         "lsts-depth=", "lsts-hide-var=", "lsts-show-var=",
+         "list-state-vars", "version"])
 
     for opt, arg in opts:
         if opt in ["-T"]:
@@ -531,6 +536,10 @@ if __name__ == "__main__":
             opt_lsts_hide_vars.append(arg)
         elif opt in ["-S", "--lsts-show-var"]:
             opt_lsts_show_vars.append(arg)
+        elif opt in ["--list-state-vars"]:
+            opt_list_state_vars = True
+            if not opt_output_fileobj:
+                opt_output_fileobj = sys.stdout
 
     if len(remainder) != 1:
         print __doc__
@@ -605,7 +614,14 @@ if __name__ == "__main__":
             msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
             suffix=".dll"
         _g_bridge.communicate()
-    else:
+    elif opt_list_state_vars:
+        aal.reset()
+        opt_output_fileobj.write(
+            "\n".join([l.split(" = ",1)[0]
+                       for l in sorted(aal.state().splitlines())]))
+        opt_output_fileobj.write("\n")
+        opt_output_fileobj.close()
+    else: # output LSTS
         aal.reset()
         try:
             aal2lsts(aal, opt_output_fileobj, depth=opt_lsts_depth, discard_variables=set(opt_lsts_hide_vars), include_variables=set(opt_lsts_show_vars),_filter_tags=opt_lsts_hide_tags)
