@@ -1770,9 +1770,9 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
     Connection to the Android Device being tested.
 
     """
-    _m_host = 'localhost'
-    _m_port = random.randint(20000, 29999)
-    _w_host = 'localhost'
+    _m_host = os.getenv("FMBTANDROID_ADB_FORWARD_HOST", 'localhost')
+    _m_port = int(os.getenv("FMBTANDROID_ADB_FORWARD_PORT", random.randint(20000, 29999)))
+    _w_host = _m_host
     _w_port = _m_port + 1
 
     def __init__(self, serialNumber, **kwArgs):
