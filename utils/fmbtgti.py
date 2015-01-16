@@ -1277,7 +1277,7 @@ class _Paths(object):
         else:
             path = []
             for singleDir in self.bitmapPath.split(":"):
-                if not singleDir.startswith("/"):
+                if singleDir and not singleDir.startswith("/"):
                     path.append(os.path.join(self.relativeRoot, singleDir))
                 else:
                     path.append(singleDir)
