@@ -138,6 +138,19 @@ d.refreshScreenshot()
 then view the log:
 $ chromium example.html
 
+* * *
+
+Connect to devices on remote hosts. As serial number is not given,
+this example connects to the first device on the "adb devices" list on
+HOST.
+
+# Setup port forwards for ADB, monkey and window services:
+$ ssh -N -L10000:127.0.0.1:5037 \
+         -L10001:127.0.0.1:10001 \
+         -L10002:127.0.0.1:10002 HOST &
+# Pass forwarded ports to the Device constructor
+import fmbtandroid
+d = fmbtandroid.Device(adbPort=10000, adbForwardPort=10001)
 """
 
 DEVICE_INI_DEFAULTS = '''
@@ -288,12 +301,16 @@ _g_keyNames = set((
     "ZENKAKU_HANKAKU", "ZOOM_IN", "ZOOM_OUT"))
 
 _g_listDevicesCommand = [_g_adbExecutable, "devices"]
-def listSerialNumbers():
+def listSerialNumbers(adbPort=None):
     """
     Returns list of serial numbers of Android devices.
     Equivalent for "adb devices".
     """
-    status, output, err = _run(_g_listDevicesCommand, expectedExitStatus = [0, 127])
+    if adbPort:
+        command = [_g_adbExecutable, "-P", str(adbPort), "devices"]
+    else:
+        command = _g_listDevicesCommand
+    status, output, err = _run(command, expectedExitStatus = [0, 127])
     if status == 127:
         raise FMBTAndroidError('adb not found in PATH. Check your Android SDK installation.')
 
@@ -323,7 +340,8 @@ class Device(fmbtgti.GUITestInterface):
     """
     _PARSE_VIEW_RETRY_LIMIT = 10
     def __init__(self, deviceName=None, iniFile=None, connect=True,
-                 monkeyOptions=[], **kwargs):
+                 monkeyOptions=[], adbPort=None, adbForwardPort=None,
+                 **kwargs):
         """
         Connect to given device, or the first not-connected Android
         device in the "adb devices" list, if nothing is defined.
@@ -358,6 +376,17 @@ class Device(fmbtgti.GUITestInterface):
                     d.refreshView("screenshots/20141127-emulator-5554.view")
                     print d.view().dumpTree()
 
+          adbPort (integer, optional):
+                  Find and connect to devices via the ADB server that
+                  listens to adbPort. If not given, adb is executed
+                  without the port parameter (-P).
+
+          adbForwardPort (integer, optional):
+                  Connect to services needed on the device via
+                  forwarded ports starting from adbForwardPort. The
+                  default is FMBTANDROID_ADB_FORWARD_PORT, or
+                  random ports if undefined.
+
           monkeyOptions (list of strings, optional):
                   Extra command line options to be passed to Android
                   monkey on the device.
@@ -367,10 +396,6 @@ class Device(fmbtgti.GUITestInterface):
                   Example: rotateScreenshot=-90. The default is 0 (no
                   rotation). If "auto" is given, rotate automatically
                   to compensate current display rotation.
-
-        To create an ini file for a device, use dumpIni. Example:
-
-        file("/tmp/test.ini", "w").write(fmbtandroid.Device().dumpIni())
         """
 
         if kwargs.get("rotateScreenshot", None) == "auto":
@@ -379,6 +404,13 @@ class Device(fmbtgti.GUITestInterface):
             self._autoRotateScreenshot = True
         else:
             self._autoRotateScreenshot = False
+
+        adbPortArgs = {}
+        if adbPort != None:
+            adbPortArgs["adbPort"] = adbPort
+        if adbForwardPort != None:
+            adbPortArgs["adbForwardPort"] = adbForwardPort
+
         fmbtgti.GUITestInterface.__init__(self, **kwargs)
 
         self._fmbtAndroidHomeDir = os.getenv("FMBTANDROIDHOME", os.getcwd())
@@ -402,7 +434,7 @@ class Device(fmbtgti.GUITestInterface):
         elif deviceName == "":
             # Connect to an unspecified device.
             # Go through devices in "adb devices".
-            potentialDevices = listSerialNumbers()
+            potentialDevices = listSerialNumbers(adbPort=adbPort)
 
             if potentialDevices == []:
                 raise AndroidDeviceNotFound('No devices found with "%s"' % (_g_listDevicesCommand,))
@@ -410,7 +442,7 @@ class Device(fmbtgti.GUITestInterface):
             for deviceName in potentialDevices:
                 try:
                     self.setConnection(_AndroidDeviceConnection(
-                        deviceName, monkeyOptions=self._monkeyOptions))
+                        deviceName, monkeyOptions=self._monkeyOptions, **adbPortArgs))
                     self._conf.set("general", "serial", self.serialNumber)
                     break
                 except AndroidConnectionError, e:
@@ -427,7 +459,7 @@ class Device(fmbtgti.GUITestInterface):
             self.serialNumber = self._conf.value("general", "serial", deviceName)
             if connect:
                 self.setConnection(_AndroidDeviceConnection(
-                    self.serialNumber, monkeyOptions=self._monkeyOptions))
+                    self.serialNumber, monkeyOptions=self._monkeyOptions, **adbPortArgs))
 
 
         _deviceIniFilename = self._fmbtAndroidHomeDir + os.sep + "etc" + os.sep + deviceName + ".ini"
@@ -1773,11 +1805,15 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
     _m_host = os.getenv("FMBTANDROID_ADB_FORWARD_HOST", 'localhost')
     _m_port = int(os.getenv("FMBTANDROID_ADB_FORWARD_PORT", random.randint(20000, 29999)))
     _w_host = _m_host
-    _w_port = _m_port + 1
 
     def __init__(self, serialNumber, **kwArgs):
         fmbtgti.GUITestConnection.__init__(self)
         self._serialNumber = serialNumber
+        self._adbPort = kwArgs.pop("adbPort", None)
+        self._monkeyPortForward = kwArgs.pop(
+            "adbForwardPort", _AndroidDeviceConnection._m_port)
+        self._windowPortForward = kwArgs.pop(
+            "windowPortForward", self._monkeyPortForward + 1)
         self._stopOnError = kwArgs.pop("stopOnError", True)
         self._monkeyOptions = kwArgs.pop("monkeyOptions", [])
         self._screencapArgs = kwArgs.pop("screencapArgs", [])
@@ -1799,9 +1835,6 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
 
         finally:
             # Next _AndroidDeviceConnection instance will use different ports
-            self._w_port = _AndroidDeviceConnection._w_port
-            self._m_port = _AndroidDeviceConnection._m_port
-            _AndroidDeviceConnection._w_port += 100
             _AndroidDeviceConnection._m_port += 100
 
     def __del__(self):
@@ -1813,6 +1846,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
     def settings(self):
         """Returns restorable property values"""
         rv = {
+            "adbPort": self._adbPort,
+            "adbForwardPort": self._monkeyPortForward,
             "stopOnError": self._stopOnError,
             "monkeyOptions": self._monkeyOptions,
             "screencapArgs": self._screencapArgs,
@@ -1833,15 +1868,20 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         os.remove(filename)
         return contents
 
-    def _runAdb(self, command, expectedExitStatus=0, timeout=None):
+    def _runAdb(self, adbCommand, expectedExitStatus=0, timeout=None):
         if not self._stopOnError:
             expect = None
         else:
             expect = expectedExitStatus
-        if type(command) == list:
-            command = ["adb", "-s", self._serialNumber] + command
+        if self._adbPort:
+            adbPortArgs = ["-P", str(self._adbPort)]
         else:
-            command = ["adb", "-s", self._serialNumber, command]
+            adbPortArgs = []
+        command = ["adb", "-s", self._serialNumber] + adbPortArgs
+        if type(adbCommand) == list or type(adbCommand) == tuple:
+            command.extend(adbCommand)
+        else:
+            command.append(adbCommand)
         return _run(command, expectedExitStatus=expect, timeout=timeout)
 
     def _emulatorCommand(self, command):
@@ -1903,7 +1943,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
 
     def _resetWindow(self):
         setupCommands = [["shell", "service" , "call", "window", "1", "i32", "4939"],
-                         ["forward", "tcp:"+str(self._w_port), "tcp:4939"]]
+                         ["forward", "tcp:"+str(self._windowPortForward), "tcp:4939"]]
         for c in setupCommands:
             self._runSetupCmd(c)
 
@@ -1927,13 +1967,13 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             _adapterLog('launching monkey: adb shell "%s"' % (monkeyShellCmd,))
             self._runAdb(["shell", monkeyShellCmd], expectedExitStatus=None)
             time.sleep(pollDelay)
-            if not self._runSetupCmd(["forward", "tcp:"+str(self._m_port), "tcp:1080"]):
+            if not self._runSetupCmd(["forward", "tcp:"+str(self._monkeyPortForward), "tcp:1080"]):
                 time.sleep(pollDelay)
                 failureCountSinceKill += 1
                 continue
             try:
                 self._monkeySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self._monkeySocket.connect((self._m_host, self._m_port))
+                self._monkeySocket.connect((self._m_host, self._monkeyPortForward))
                 self._monkeySocket.setblocking(0)
                 self._monkeySocket.settimeout(1.0)
                 _ping = self._monkeyCommand("getvar build.version.release", retry=0)[1]
@@ -2422,7 +2462,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         _dataBufferLen = 4096 * 16
         try:
             self._windowSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self._windowSocket.connect( (self._w_host, self._w_port) )
+            self._windowSocket.connect( (self._w_host, self._windowPortForward) )
             self._windowSocket.settimeout(60)
 
             # DUMP -1: get foreground window info
