@@ -68,6 +68,11 @@ Options:
 
     -d, --debug
         Run in debug mode.
+
+    --profile FILE
+        Run with profiler, write statistics to FILE.
+        Print statistics from FILE with:
+        python -c 'import pstats; pstats.Stats("FILE").print_stats()'
 """
 
 import sys
@@ -87,6 +92,7 @@ import StringIO
 sys.path.append(os.getcwd())
 
 opt_debug = False
+opt_profile = None
 filter_tags = []
 log_filename = None
 log_flush_interval = 1.0 # in seconds
@@ -494,7 +500,7 @@ if __name__ == "__main__":
         ["debug", "help", "log-file=", "timeout=", "output=",
          "verbose-fmbt-log",
          "lsts-depth=", "lsts-hide-var=", "lsts-show-var=",
-         "list-state-vars", "version"])
+         "list-state-vars", "profile=", "version"])
 
     for opt, arg in opts:
         if opt in ["-T"]:
@@ -540,6 +546,8 @@ if __name__ == "__main__":
             opt_list_state_vars = True
             if not opt_output_fileobj:
                 opt_output_fileobj = sys.stdout
+        elif opt in ["--profile"]:
+            opt_profile = arg
 
     if len(remainder) != 1:
         print __doc__
@@ -603,6 +611,11 @@ if __name__ == "__main__":
     aal._variables['fmbtlog'] = fmbtlog
     aal._variables['__file__'] = aal_filename
 
+    if opt_profile:
+        import cProfile
+        profiler = cProfile.Profile()
+        profiler.enable()
+
     if not opt_output_fileobj:
         _g_bridge = RemoteAALBridge(aal)
         _log("starting")
@@ -629,3 +642,7 @@ if __name__ == "__main__":
             report_simulation_error(aal)
             fmbtstderr('Error on simulation %s: %s\n%s' % (type(e).__name__, e, format_pythonaalexception()))
         opt_output_fileobj.close()
+
+    if opt_profile:
+        profiler.disable()
+        s = profiler.dump_stats(opt_profile)
