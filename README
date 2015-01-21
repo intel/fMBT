@@ -16,15 +16,22 @@ Quick start for Fedora users:
 
     yum install  glibc-devel glib2-devel boost-devel libedit-devel gcc-c++ pexpect dbus-python libtool dh-autoreconf flex libpng12 libxml2-devel graphviz ImageMagick ImageMagick-devel gnuplot python-devel python-pyside tesseract
 
+Quick start for Arch users (assuming base and base-devel to be installed):
+
+    pacman -S libedit imagemagick libxml2 boost python2 python gnuplot graphviz gts leptonica tesseract tesseract-data python-pexpect python-dbus boost libtool flex imagemagick python2-pexpect python2-pyside python-pyside-common python2-shiboken
+
+    You will also need X (xorg-server) in order to use fmbt-editor and
+    fmbt-scripter.
+
 ./autogen.sh # run only if you cloned sources from git
-./configure
+./configure  # add parameter PYTHON=python2 when building on Arch Linux
 make
 sudo make install
 
-(There is a known issue with Fedora: "make install" may install Python
-libraries to a directory that is not in the default PYTHONPATH. You
-may need to add it to PYTHONPATH, for instance:
-export PYTHONPATH=$PYTHONPATH:/usr/local/lib/python2.7/site-packages)
+Known issue with Fedora and Arch Linux: By default "make install"
+installs Python libraries into a directory that is not in the default
+PYTHONPATH. Add it to the path:
+    export PYTHONPATH=$PYTHONPATH:/usr/local/lib/python2.7/site-packages
 
 Windows users:
 
