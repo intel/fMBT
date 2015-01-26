@@ -2201,7 +2201,10 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
                             % ('", "'.join([w[-1] for w in s]),))
         else: topWindowName = None
 
-        s = re.findall("mFocusedApp=AppWindowToken.*ActivityRecord\{#?[0-9A-Fa-f]{8}( [^ ]*)? (?P<appName>[^}]*)\}", output)
+        if self._platformVersion >= "4.2":
+            s = re.findall("mFocusedApp=AppWindowToken.*ActivityRecord\{#?[0-9A-Fa-f]*( [^ ]*)? (?P<appName>[^} ]*)[^}]*\}", output)
+        else:
+            s = re.findall("mFocusedApp=AppWindowToken.*ActivityRecord\{#?[0-9A-Fa-f]*( [^ ]*)? (?P<appName>[^}]*)\}", output)
         if s and len(s[0][-1].strip()) > 1:
             topAppName = s[0][-1].strip()
         else:
