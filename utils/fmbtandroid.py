@@ -1312,6 +1312,14 @@ class Device(fmbtgti.GUITestInterface):
             tw = self.existingConnection().recvTopAppWindow()[1]
         return tw
 
+    def topWindowStack(self):
+        """
+        Returns window names in the stack of the top fullscreen application.
+
+        The topmost window is the last one in the list.
+        """
+        return self.existingConnection().recvTopWindowStack()
+
     def uninstall(self, apkname, keepData=False):
         """
         Uninstall a package from the device.
@@ -2210,6 +2218,25 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         else:
             topAppName = None
         return topAppName, topWindowName
+
+    def recvTopWindowStack(self):
+        rv = None
+        _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0)
+        # Find out top window id.
+        s = re.findall("mTopFullscreenOpaqueWindowState=Window\{(?P<winId>[0-9A-Fa-f]*) ", output)
+        if s:
+            win_id = s[0]
+            # Find out top task id (cannot directly rely on mFocusedApp,
+            # it may be outdated)
+            t = re.findall(r"AppWindowToken\{[0-9A-Fa-f]* token=Token\{[0-9A-Fa-f]* ActivityRecord\{[0-9A-Fa-f]* [^ ]* [^ ]* t(?P<taskId>[0-9]*)\}\}\}:[ \r\n]*windows=\[Window\{%s " % (win_id,), output)
+            if t:
+                task_id = t[0]
+                # Find window stack of the task
+                stack_line = re.findall(r"(\{taskId=%s appTokens=\[.*)" % (task_id,), output)
+                if stack_line:
+                    # Find names of windows on the stack
+                    rv = re.findall(r"ActivityRecord\{[0-9A-Fa-f]* [^ ]* ([^ ]*) t%s\}" % (task_id,), stack_line[0])
+        return rv
 
     def sendMonkeyScript(self, eventLines):
         monkey_script = "type= raw events\ncount= %s\nspeed= 1.0\nstart data >>\n%s" % (
