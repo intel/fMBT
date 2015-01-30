@@ -202,6 +202,10 @@ def _intCoords((x, y), (width, height)):
     if 0 <= y <= 1 and type(y) == float: y = y * height
     return (int(round(x)), int(round(y)))
 
+def _boxOnRegion((x1, y1, x2, y2), (minX, minY, maxX, maxY)):
+    return (x1 < x2 and ((minX <= x1 <= maxX) or (minX <= x2 <= maxX)) and
+            y1 < y2 and ((minY <= y1 <= maxY) or (minY <= y2 <= maxY)))
+
 def _edgeDistanceInDirection((x, y), (width, height), direction):
     x, y = _intCoords((x, y), (width, height))
 
@@ -1543,6 +1547,14 @@ class GUITestInterface(object):
         """
         width, height = self.screenSize()
         return _intCoords((x, y), (width, height))
+
+    def itemOnScreen(self, guiItem):
+        """
+        Returns True if bbox of guiItem is non-empty and at least
+        partially on screen, otherwise False.
+        """
+        maxX, maxY = self.screenSize()
+        return _boxOnRegion(guiItem.bbox(), (0, 0, maxX, maxY))
 
     def ocrEngine(self):
         """

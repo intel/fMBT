@@ -996,7 +996,7 @@ class Device(fmbtgti.GUITestInterface):
             if isinstance(forcedView, View):
                 self._lastView = forcedView
             elif type(forcedView) == str:
-                self._lastView = View(self.screenshotDir(), self.serialNumber, file(forcedView).read(), displayToScreen)
+                self._lastView = View(self.screenshotDir(), self.serialNumber, file(forcedView).read(), displayToScreen, self.itemOnScreen)
                 _adapterLog(formatErrors(self._lastView.errors(), self._lastView.filename()))
             else:
                 raise ValueError("forcedView must be a View object or a filename")
@@ -1007,7 +1007,7 @@ class Device(fmbtgti.GUITestInterface):
             dump = self.existingConnection().recvViewData()
             if dump != None:
                 viewDir = os.path.dirname(self._newScreenshotFilepath())
-                view = View(viewDir, self.serialNumber, dump, displayToScreen)
+                view = View(viewDir, self.serialNumber, dump, displayToScreen, self.itemOnScreen)
             else:
                 _adapterLog("refreshView window dump reading failed")
                 view = None
@@ -1256,7 +1256,7 @@ class Device(fmbtgti.GUITestInterface):
         Find an item with given id from the latest view, and tap it.
         """
         assert self._lastView != None, "View required."
-        items = self._lastView.findItemsById(viewItemId, count=1)
+        items = self._lastView.findItemsById(viewItemId, count=1, onScreen=True)
         if len(items) > 0:
             return self.tapItem(items[0], **tapKwArgs)
         else:
@@ -1282,7 +1282,7 @@ class Device(fmbtgti.GUITestInterface):
         Returns True if successful, otherwise False.
         """
         assert self._lastView != None, "View required."
-        items = self._lastView.findItemsByText(text, partial=partial, count=1)
+        items = self._lastView.findItemsByText(text, partial=partial, count=1, onScreen=True)
         if len(items) == 0: return False
         return self.tapItem(items[0], **tapKwArgs)
 
@@ -1359,7 +1359,7 @@ class Device(fmbtgti.GUITestInterface):
                   the given text. The default is False (exact match).
         """
         assert self._lastView != None, "View required."
-        return self._lastView.findItemsByText(text, partial=partial, count=1) != []
+        return self._lastView.findItemsByText(text, partial=partial, count=1, onScreen=True) != []
 
     def view(self):
         """
@@ -1538,12 +1538,15 @@ class ViewItem(fmbtgti.GUIItem):
         self._code = code
         self._indent = indent
         self._children = []
+        self._parentsVisible = True
         self._rawProps = ""
         if not "scrolling:mScrollX" in self._p:
             self._p["scrolling:mScrollX"] = 0
             self._p["scrolling:mScrollY"] = 0
         fmbtgti.GUIItem.__init__(self, className, self._calculateBbox(displayToScreen), dumpFilename)
-    def addChild(self, child): self._children.append(child)
+    def addChild(self, child):
+        child._parentsVisible = self.visibleBranch()
+        self._children.append(child)
     def _calculateBbox(self, displayToScreen):
         if "layout:getLocationOnScreen_x()" in self._p:
             left = int(self._p["layout:getLocationOnScreen_x()"])
@@ -1573,6 +1576,10 @@ class ViewItem(fmbtgti.GUIItem):
     def properties(self): return self._p
     def property(self, propertyName):
         return self._p.get(propertyName, None)
+    def visibleBranch(self):
+        """Returns True if this item and all items containing this are visible
+        up to the root node"""
+        return self._parentsVisible and self.visible()
     def text(self):       return self.property("text:mText")
     def visible(self):
         return self._p.get("getVisibility()", "") == "VISIBLE"
@@ -1592,7 +1599,7 @@ class View(object):
     the dump to a hierarchy of ViewItems. find* methods enable searching
     for ViewItems based on their properties.
     """
-    def __init__(self, screenshotDir, serialNumber, dump, displayToScreen=None):
+    def __init__(self, screenshotDir, serialNumber, dump, displayToScreen=None, itemOnScreen=None):
         self.screenshotDir = screenshotDir
         self.serialNumber = serialNumber
         self._viewItems = []
@@ -1605,6 +1612,9 @@ class View(object):
         file(self._rawDumpFilename, "w").write(self._dump)
         if displayToScreen == None:
             displayToScreen = lambda x, y: (x, y)
+        if itemOnScreen == None:
+            itemOnScreen = lambda item: True
+        self._itemOnScreen = itemOnScreen
         try:
             self._parseDump(dump, self._rawDumpFilename, displayToScreen)
         except Exception, e:
@@ -1639,19 +1649,21 @@ class View(object):
         i = viewItem
         if i.text() != None: t = '"%s"' % (i.text(),)
         else: t = None
-        return "id=%s cls=%s text=%s bbox=%s" % (
-            i.id(), i.className(), t, i.bbox())
+        return "id=%s cls=%s text=%s bbox=%s vis=%s" % (
+            i.id(), i.className(), t, i.bbox(), i.visibleBranch())
     def filename(self):
         return self._rawDumpFilename
-    def findItems(self, comparator, count=-1, searchRootItem=None, searchItems=None):
+    def findItems(self, comparator, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
         foundItems = []
         if count == 0: return foundItems
         if searchRootItem != None:
             # find from searchRootItem and its children
-            if comparator(searchRootItem):
+            if comparator(searchRootItem) and (
+                    not onScreen or
+                    searchRootItem.visibleBranch() and self._itemOnScreen(searchRootItem)):
                 foundItems.append(searchRootItem)
             for c in searchRootItem.children():
-                foundItems.extend(self.findItems(comparator, count=count-len(foundItems), searchRootItem=c))
+                foundItems.extend(self.findItems(comparator, count=count-len(foundItems), searchRootItem=c, onScreen=onScreen))
         else:
             if searchItems != None:
                 # find from listed items only
@@ -1660,13 +1672,15 @@ class View(object):
                 # find from all items
                 searchDomain = self._viewItems
             for i in searchDomain:
-                if comparator(i):
+                if comparator(i) and (
+                        not onScreen or
+                        i.visibleBranch() and self._itemOnScreen(i)):
                     foundItems.append(i)
                     if count > 0 and len(foundItems) >= count:
                         break
         return foundItems
 
-    def findItemsByText(self, text, partial=False, count=-1, searchRootItem=None, searchItems=None):
+    def findItemsByText(self, text, partial=False, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
         """
         Searches the GUI hiearhy for a object with a given text
         """
@@ -1676,24 +1690,24 @@ class View(object):
         else:
             c = lambda item: (
                 item.properties().get("text:mText", None) == text )
-        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
+        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
 
-    def findItemsById(self, id, count=-1, searchRootItem=None, searchItems=None):
+    def findItemsById(self, id, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
         c = lambda item: item.properties().get("mID", "") == id
-        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
+        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
 
-    def findItemsByClass(self, className, partial=True, count=-1, searchRootItem=None, searchItems=None):
+    def findItemsByClass(self, className, partial=True, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
         if partial: c = lambda item: item.className().find(className) != -1
         else: c = lambda item: item.className() == className
-        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
+        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
 
-    def findItemsByIdAndClass(self, id, className, partial=True, count=-1, searchRootItem=None, searchItems=None):
-        idOk = self.findItemsById(id, count=-1, searchRootItem=searchRootItem)
-        return self.findItemsByClass(className, partial=partial, count=count, searchItems=idOk)
+    def findItemsByIdAndClass(self, id, className, partial=True, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
+        idOk = self.findItemsById(id, count=-1, searchRootItem=searchRootItem, onScreen=onScreen)
+        return self.findItemsByClass(className, partial=partial, count=count, searchItems=idOk, onScreen=onScreen)
 
-    def findItemsByRawProps(self, s, count=-1, searchRootItem=None, searchItems=None):
+    def findItemsByRawProps(self, s, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
         c = lambda item: item._rawProps.find(s) != -1
-        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
+        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
 
     def save(self, fileOrDirName):
         shutil.copy(self._rawDumpFilename, fileOrDirName)
