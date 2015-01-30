@@ -1,8 +1,21 @@
-fmbt (0.18.1-0.rc0) unstable; urgency=low
+fmbt (0.19-1) unstable; urgency=low
 
-  * Development version.
+  * fmbtandroid:
+    - Support controlling multiple devices behind separate adb servers
+      (possibly on remote hosts) on the same test run.
+      See adbPort and adbPortForward parameters of the Device constructor.
+    - tapText(txt) etc. require that txt is visible on the screen.
+    - topWindowStack() returns the window stack of the topmost appliction.
+    - pressKey() supports the modifiers parameter.
+  * fmbt-editor:
+    - Tab completion improvements.
+  * AAL/Python:
+    - Support profiling: remote_pyaal --profile parameter.
+  * fmbttizen:
+    - refreshScreenshot() works with multiple weston servers.
+  * Bug fixes.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 5 Jan 2015 09:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 30 Jan 2015 11:42:00 +0300
 
 fmbt (0.18-1) unstable; urgency=low
 
