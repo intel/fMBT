@@ -1,3 +1,9 @@
+fmbt (0.20-0.rc0) unstable; urgency=low
+
+  * Development version.
+
+ -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 3 Feb 2015 12:42:00 +0300
+
 fmbt (0.19-1) unstable; urgency=low
 
   * fmbtandroid:
