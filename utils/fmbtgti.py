@@ -230,6 +230,13 @@ def _edgeDistanceInDirection((x, y), (width, height), direction):
     return min(distTopBottom, distLeftRight)
 
 ### Binding to eye4graphics C-library
+class _Bbox(ctypes.Structure):
+    _fields_ = [("left", ctypes.c_int32),
+                ("top", ctypes.c_int32),
+                ("right", ctypes.c_int32),
+                ("bottom", ctypes.c_int32),
+                ("error", ctypes.c_int32)]
+
 _libpath = ["", ".",
             os.path.dirname(os.path.abspath(__file__)),
             distutils.sysconfig.get_python_lib(plat_specific=1)]
@@ -239,17 +246,20 @@ if os.name == "nt":
 for _dirname in _libpath:
     try:
         eye4graphics = ctypes.CDLL(os.path.join(_dirname , "eye4graphics"+_suffix))
+        struct_bbox = _Bbox(0, 0, 0, 0, 0)
+        eye4graphics.findNextData.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_double,
+            ctypes.c_void_p]
+        eye4graphics.openImage.restype = ctypes.c_void_p
+        eye4graphics.closeImage.argtypes = [ctypes.c_void_p]
         break
     except: pass
 else:
     raise ImportError("%s cannot load eye4graphics%s" % (__file__, _suffix))
-
-class _Bbox(ctypes.Structure):
-    _fields_ = [("left", ctypes.c_int32),
-                ("top", ctypes.c_int32),
-                ("right", ctypes.c_int32),
-                ("bottom", ctypes.c_int32),
-                ("error", ctypes.c_int32)]
 
 def _e4gOpenImage(filename):
     image = eye4graphics.openImage(filename)

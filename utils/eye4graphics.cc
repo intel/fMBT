@@ -570,6 +570,58 @@ int findNextIcon(BoundingBox* bbox,
     return retval;
 }
 
+int findNextData(
+    BoundingBox* bbox,
+    void* image,
+    const int columns,
+    const int rows,
+    const double threshold,
+    const BoundingBox* searchArea)
+{
+    Image* haystack = static_cast<Image*>(image);
+    int hayx = haystack->columns;
+    int hayy = haystack->rows;
+    const int dataWidth = hayx / columns;
+    const int dataHeight = hayy / rows;
+    const PixelPacket* hay_pixel = getPixels(haystack, 0, 0, hayx, hayy);
+    const int maxcolor = (1 << haystack->depth) - 1;
+    const int sqmaxcolor = maxcolor * maxcolor;
+    int next_left = bbox->left + dataWidth;
+    for (int y = bbox->top; y < hayy - dataHeight; y += dataHeight) {
+        for (int x = next_left; x < hayx - dataWidth; x += dataWidth) {
+            double avg = 0;
+            double var = 0;
+            int count = 0;
+            for (int yd = 0; yd < dataHeight; yd++) {
+                for (int xd = 0; xd < dataWidth; xd++) {
+                    int green = (hay_pixel + ((y + yd) * hayx) + (x + xd))->green;
+                    avg = (avg * count + green) / (count+1);
+                    count++;
+                }
+            }
+            count = 0;
+            for (int yd = 0; yd < dataHeight; yd++) {
+                for (int xd = 0; xd < dataWidth; xd++) {
+                    int green = (hay_pixel + ((y + yd) * hayx) + (x + xd))->green;
+                    var += ((avg - green) * (avg - green)) / sqmaxcolor;
+                    count++;
+                }
+            }
+            if (var / count / sqmaxcolor > threshold) {
+                bbox->left = x;
+                bbox->top = y;
+                bbox->right = x + dataWidth;
+                bbox->bottom = y + dataHeight;
+                bbox->error = (var / count);
+                return 1;
+            }
+        }
+        next_left = 0;
+    }
+    return 0;
+}
+
+
 int imageDimensions(BoundingBox* bbox,
                     const char* imagefile)
 {
@@ -644,6 +696,7 @@ PixelPacket* getPixels(Image* image, size_t x1, size_t y1, size_t x2, size_t y2)
     DestroyExceptionInfo(exception);
     return p;
 }
+
 
 
 void closeImage(void* image)

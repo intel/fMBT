@@ -110,6 +110,14 @@ extern "C" {
                      const int neeRectSize,
                      const int hayRectSize);
 
+    EXPORT
+    int findNextData(BoundingBox* bbox,
+                     void* image,
+                     const int columns,
+                     const int rows,
+                     const double threshold,
+                     const BoundingBox* searchArea);
+
     /*
      * imageDimensions
      *
