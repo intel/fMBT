@@ -1,5 +1,5 @@
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2013, Intel Corporation.
+# Copyright (c) 2013-2015, Intel Corporation.
 #
 # Author: antti.kervinen@intel.com
 #
@@ -36,6 +36,7 @@ messages = pythonshare.messages
 client = pythonshare.client
 
 on_windows = (os.name == "nt")
+has_os_fdatasync = hasattr(os, "fdatasync")
 
 opt_debug_stdout_limit = 240
 opt_log_fd = None
@@ -54,7 +55,7 @@ def daemon_log(msg):
     formatted_msg = "%s %s\n" % (timestamp(), msg)
     if opt_log_fd != None:
         os.write(opt_log_fd, formatted_msg)
-        if not on_windows:
+        if has_os_fdatasync:
             os.fdatasync(opt_log_fd)
     if opt_debug and opt_debug_stdout_limit != 0:
         if opt_debug_stdout_limit > 0 and len(formatted_msg) > opt_debug_stdout_limit:
