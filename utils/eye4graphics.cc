@@ -570,7 +570,7 @@ int findNextIcon(BoundingBox* bbox,
     return retval;
 }
 
-int findNextData(
+int findNextHighErrorBlock(
     BoundingBox* bbox,
     void* image,
     const int columns,
@@ -584,35 +584,37 @@ int findNextData(
     const int dataWidth = hayx / columns;
     const int dataHeight = hayy / rows;
     const PixelPacket* hay_pixel = getPixels(haystack, 0, 0, hayx, hayy);
-    const int maxcolor = (1 << haystack->depth) - 1;
-    const int sqmaxcolor = maxcolor * maxcolor;
+    const double max_sqerr = (QuantumRange / 2.0) * (QuantumRange / 2.0);
     int next_left = bbox->left + dataWidth;
     for (int y = bbox->top; y < hayy - dataHeight; y += dataHeight) {
         for (int x = next_left; x < hayx - dataWidth; x += dataWidth) {
-            double avg = 0;
-            double var = 0;
+            double avg_green = 0;
+            double avg_sqerr = 0;
             int count = 0;
             for (int yd = 0; yd < dataHeight; yd++) {
                 for (int xd = 0; xd < dataWidth; xd++) {
                     int green = (hay_pixel + ((y + yd) * hayx) + (x + xd))->green;
-                    avg = (avg * count + green) / (count+1);
+                    avg_green = (avg_green * count + green) / (count+1);
                     count++;
                 }
             }
             count = 0;
             for (int yd = 0; yd < dataHeight; yd++) {
+                double prev_sqerr = 0.0;
                 for (int xd = 0; xd < dataWidth; xd++) {
                     int green = (hay_pixel + ((y + yd) * hayx) + (x + xd))->green;
-                    var += ((avg - green) * (avg - green)) / sqmaxcolor;
+                    double sqerr = (avg_green - green) * (avg_green - green);
+                    avg_sqerr = ((avg_sqerr * count) + abs(prev_sqerr - sqerr)) / (count + 1);
+                    prev_sqerr = sqerr;
                     count++;
                 }
             }
-            if (var / count / sqmaxcolor > threshold) {
+            if (sqrt(avg_sqerr) / sqrt(max_sqerr) > threshold) {
                 bbox->left = x;
                 bbox->top = y;
                 bbox->right = x + dataWidth;
                 bbox->bottom = y + dataHeight;
-                bbox->error = (var / count);
+                bbox->error = sqrt(avg_sqerr);
                 return 1;
             }
         }

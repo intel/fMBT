@@ -111,12 +111,12 @@ extern "C" {
                      const int hayRectSize);
 
     EXPORT
-    int findNextData(BoundingBox* bbox,
-                     void* image,
-                     const int columns,
-                     const int rows,
-                     const double threshold,
-                     const BoundingBox* searchArea);
+    int findNextHighErrorBlock(BoundingBox* bbox,
+                               void* image,
+                               const int columns,
+                               const int rows,
+                               const double threshold,
+                               const BoundingBox* searchArea);
 
     /*
      * imageDimensions

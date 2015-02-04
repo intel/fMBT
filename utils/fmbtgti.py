@@ -247,7 +247,7 @@ for _dirname in _libpath:
     try:
         eye4graphics = ctypes.CDLL(os.path.join(_dirname , "eye4graphics"+_suffix))
         struct_bbox = _Bbox(0, 0, 0, 0, 0)
-        eye4graphics.findNextData.argtypes = [
+        eye4graphics.findNextHighErrorBlock.argtypes = [
             ctypes.c_void_p,
             ctypes.c_void_p,
             ctypes.c_int,
