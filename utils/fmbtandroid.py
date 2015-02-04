@@ -1120,6 +1120,8 @@ class Device(fmbtgti.GUITestInterface):
         width, height = size
         if width == None or height == None:
             w, h = self.existingConnection().recvScreenSize()
+            if w == h == 0:
+                w, h = self.existingConnection().recvDefaultViewportSize()
         if width == None:
             width = w
         if height == None:
@@ -2129,6 +2131,18 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         try:
             width = int(re.findall("mDisplayWidth=([0-9]*)", output)[0])
             height = int(re.findall("mDisplayHeight=([0-9]*)", output)[0])
+        except (IndexError, ValueError), e:
+            _adapterLog('recvScreenSize: cannot read size from "%s"' %
+                        (output,))
+            raise FMBTAndroidError('cannot read screen size from dumpsys')
+        return width, height
+
+    def recvDefaultViewportSize(self):
+        _, output, _ = self._runAdb(["shell", "dumpsys", "display"], 0)
+        try:
+            w, h = re.findall("mDefaultViewport=DisplayViewport\{.*deviceWidth=([0-9]*), deviceHeight=([0-9]*)\}", output)[0]
+            width = int(w)
+            height = int(h)
         except (IndexError, ValueError), e:
             _adapterLog('recvScreenSize: cannot read size from "%s"' %
                         (output,))
