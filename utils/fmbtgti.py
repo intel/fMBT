@@ -2636,6 +2636,15 @@ class Screenshot(object):
             if id(self._oirEngine) == id(self._ocrEngine):
                 self._ocrEngineNotified = True
 
+    def dumpHcr(self, filename, **hcrArgs):
+        """
+        Visualize high contrast regions, write image to given file.
+        Experimental.
+        """
+        items = self.findItemsByHcr(**hcrArgs)
+        eyenfinger.drawBboxes(self.filename(), filename,
+                             [i.bbox() for i in items])
+
     def dumpOcr(self, **kwargs):
         """
         Return what OCR engine recognizes on this screenshot.
@@ -2689,6 +2698,31 @@ class Screenshot(object):
         else:
             raise RuntimeError('Trying to use OCR on "%s" without OCR engine.' % (self.filename(),))
 
+    def findItemsByHcr(self, xRes=24, yRes=24, threshold=0.1):
+        """
+        Return "high contrast regions" in the screenshot.
+
+        Experimental. See if it finds regions that could be
+        interacted with.
+        """
+        ppFilename = "%s-hcrpp.png" % (self.filename(),)
+        _convert(self.filename(),
+                 ["-colorspace", "gray", "-depth", "3"],
+                 ppFilename)
+        bbox = _Bbox(0, 0, 0, 0, 0)
+        foundItems = []
+        try:
+            image = _e4gOpenImage(ppFilename)
+            while True:
+                if eye4graphics.findNextHighErrorBlock(ctypes.byref(bbox), image, xRes, yRes, threshold, 0) == 0:
+                    break
+                foundItems.append(GUIItem(
+                    "%sx%s/%s" % (bbox.left/xRes, bbox.top/yRes, bbox.error),
+                    (bbox.left, bbox.top, bbox.right, bbox.bottom),
+                    self.filename()))
+        finally:
+            eye4graphics.closeImage(image)
+        return foundItems
     def save(self, fileOrDirName):
         shutil.copy(self._filename, fileOrDirName)
 

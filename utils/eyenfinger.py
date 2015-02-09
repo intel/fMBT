@@ -1603,6 +1603,21 @@ def iActiveWindow(windowId = None):
 
     return windowId
 
+def drawBboxes(inputfilename, outputfilename, bboxes):
+    """
+    Draw bounding boxes
+    """
+    if inputfilename == None:
+        return
+
+    draw_commands = []
+    for bbox in bboxes:
+        left, top, right, bottom = bbox
+        color = "green"
+        draw_commands += ["-stroke", color, "-fill", "blue", "-draw", "fill-opacity 0.2 rectangle %s,%s %s,%s" % (
+            left, top, right, bottom)]
+    _runDrawCmd(inputfilename, draw_commands, outputfilename)
+
 def drawBbox(inputfilename, outputfilename, bbox, caption):
     """
     Draw bounding box
