@@ -1,0 +1,11 @@
+P(s,p)->
+P(s, "tag1")
+P(s, "T1")
+
+T(s,"iCoverSecond",s2)
+P(s2, "tag2")
+
+T(s2, "iCoverComb", ss)
+P(ss, "tag1")
+P(ss, "tag2")
+P(ss, "Taginput")

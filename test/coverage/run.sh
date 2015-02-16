@@ -132,6 +132,28 @@ if fmbt-log -f '$ax' tag2.log | grep -q iCoverBoth; then
 fi
 testpassed
 
+teststep "coverage tag regexp case..."
+cat > test.conf <<EOF
+model = "lsts_remote(fmbt-gt -f t3.gt)"
+coverage = tag("tag.*")
+pass = "coverage(1.0)"
+on_fail = "exit(1)"
+EOF
+
+fmbt test.conf -l tag2.log >>$LOGFILE 2>&1 || {
+    testfailed
+}
+
+if ! ( fmbt-log -f '$ax' tag2.log | grep -q iCoverSecond ); then
+    echo "iCoverSecond should have been executed before reaching full coverage" >>$LOGFILE
+    testfailed
+fi
+if fmbt-log -f '$ax' tag2.log | grep -q iCoverBoth; then
+    echo "iCoverBoth should not have been executed - full coverage reached before it" >>$LOGFILE
+    testfailed
+fi
+testpassed
+
 teststep "coverage walks between tags"
 cat > walks.conf <<EOF
 model     = "aal_remote(remote_pyaal -l twocounters.aal.log 'twocounters.aal')"
