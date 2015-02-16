@@ -55,11 +55,13 @@ public:
 
   virtual void set_model(Model* _model);
 
-protected:
-  std::string params;
   int props_total;
   int props_seen;
   std::vector<bool> data;
+protected:
+  void regexp_try(std::string&,std::vector<std::string>&);
+
+  std::string params;
   std::map<int,bool> prop_included;
   std::list<std::pair<std::vector<bool>,int> > state_save;
 };
