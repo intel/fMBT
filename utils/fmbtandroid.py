@@ -2511,6 +2511,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         os.write(fd, shellCommand + "\n")
         os.close(fd)
         self._runAdb(["push", filename, remotename], 0)
+        os.remove(filename)
         cmd = "source %s >%s.out 2>%s.err; echo $? > %s.status" % ((remotename,)*4)
         if self._shellSupportsTar:
             # do everything we can in one command to minimise adb
