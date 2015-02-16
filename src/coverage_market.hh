@@ -38,6 +38,7 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
 #include "coverage_tree.hh"
+#include "coverage_prop.hh"
 #include "log_null.hh"
 #include "helper.hh"
 #include "random.hh"
@@ -174,6 +175,60 @@ public:
   protected:
     unit(const unit &obj):value(obj.value) {}
 
+  };
+  class unit_coverage_tag: public unit {
+  public:
+    unit_coverage_tag(std::string* s,Coverage_Market* _m):p(*s) {
+    }
+
+    virtual std::string stringify(Alphabet&a) {
+      return "tag("+p+")";
+    }
+
+    virtual ~unit_coverage_tag() {
+      if (child)
+	delete child;
+    }
+
+    virtual void set_instance(int instance,int current_instance, bool force=false) {
+      child->set_instance(instance);
+    }
+
+    virtual void execute(const std::vector<int>& prev,int action,const std::vector<int>& next)
+    {
+      child->execute(action);
+    }
+
+    virtual void update()
+    {
+      value.first=child->props_seen;
+      value.second=child->props_total;
+    }
+
+    virtual void pop()
+    {
+      child->pop();
+    }
+
+    virtual void push()
+    {
+      child->push();
+    }
+
+    virtual void reset()
+    {
+      for(unsigned i=0;i<child->data.size();i++) {
+	child->data[i]=false;
+      }
+      child->props_seen=0;
+    }
+
+    virtual unit* clone() {
+      return new unit_coverage_tag(*this);
+    }
+
+    std::string p;
+    Coverage_Prop* child;
   };
 
   class unit_perm: public unit {
