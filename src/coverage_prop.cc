@@ -110,6 +110,12 @@ void Coverage_Prop::regexp_try(std::string& s,std::vector<std::string>& sp) {
   std::vector<int> regexp_match;
   regexpmatch(s,sp,regexp_match,true);
 
+  if (regexp_match.empty()) {
+    status=false;
+    errormsg = "No tags matching \"" + s + "\"";
+    return;
+  }
+
   for(unsigned i=0;i<regexp_match.size();i++) {
     if (regexp_match[i]) {
       prop_included[regexp_match[i]]=true;
