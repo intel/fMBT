@@ -274,7 +274,28 @@ class MyScaleEvents(QtCore.QObject):
     def eventToSelect(self, event):
         w = self.mainwindow
         if event.type() == QtCore.QEvent.MouseButtonPress:
-            self.selLeft, self.selTop = self.posToAbs(event.pos)
+            w.drawRect(0, 0, 0, 0, clear=True)
+            if w._selectingBitmap.startswith("fmbt-scripter://view-item-at-pos"):
+                view_supported, _ = w._fmbtEval("hasattr(%s, 'view')" % (w._sut,), silent=True)
+                if not view_supported:
+                    log("Platform does not support view items.")
+                else:
+                    if w._refreshedViewOnScreen != w._fmbtEval("%s.screenshot().filename()" %
+                                                               (w._sut,), silent=True)[0]:
+                        log("Reading view items...", prompt=False)
+                        self.mainwindow.repaint()
+                        w._fmbtEval("%s.refreshView()" % (w._sut,))
+                        w._refreshedViewOnScreen = w._fmbtEval("%s.screenshot().filename()" %
+                                                               (w._sut,), silent=True)[0]
+                    items, _ = w._fmbtEval("%s.view().findItemsByPos((%s, %s), onScreen=True)" %
+                                           ((w._sut,) + self.posToAbs(event.pos)))
+                    msgs = ["Items from large to small"]
+                    for index, i in enumerate(reversed(items)):
+                        w.drawRect(*i.bbox(), onOrig=False)
+                        msgs.append(str(i))
+                    log("\n".join(msgs))
+            else:
+                self.selLeft, self.selTop = self.posToAbs(event.pos)
         elif event.type() == QtCore.QEvent.MouseMove:
             if self.selTop != None:
                 right, bottom = self.posToAbs(event.pos)
@@ -712,6 +733,7 @@ class MainWindow(QtGui.QMainWindow):
         self._recordedHandledAbsXY = (None, None)
         self._recordedTouchEvents = []
         self._recordingHwEvents = False
+        self._refreshedViewOnScreen = None
         self._screenshotImageOrig = None
         self._screenshotSaveDir = ""
         self._screenshotCursorX = -1
@@ -802,7 +824,7 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotButtonControl.clicked.connect(self.controlDevice)
         self.screenshotButtonsL.addWidget(self.screenshotButtonControl)
         self.screenshotButtonSelect = QtGui.QPushButton(self.screenshotButtons,
-                                                         text="Select",
+                                                         text="Select/View",
                                                          checkable = True)
         self.screenshotButtonSelect.clicked.connect(self.selectBitmap)
         self.screenshotButtonsL.addWidget(self.screenshotButtonSelect)
@@ -2052,8 +2074,7 @@ class MainWindow(QtGui.QMainWindow):
                 self.doVerifyBitmap(bmFilename)
                 self._highlightingBitmap = bmFilename
         else:
-            self.screenshotButtonSelect.setText("Select")
-            self.screenshotButtonSelect.setEnabled(False)
+            self.screenshotButtonSelect.setText("Select/View")
             if self._highlightingBitmap:
                 self.drawRect(0, 0, 0, 0, True)
                 self._highlightingBitmap = None
@@ -2172,7 +2193,8 @@ class MainWindow(QtGui.QMainWindow):
 
     def selectBitmapStop(self):
         if self._selectingBitmap != None:
-            log('selecting bitmap "%s" canceled' % (self._selectingBitmap,))
+            if not self._selectingBitmap.startswith("fmbt-scripter://"):
+                log('selecting bitmap "%s" canceled' % (self._selectingBitmap,))
             self._selectingBitmap = None
             self._selectingBitmapSaveDir = None
         self.drawRect(0, 0, 0, 0, True)
@@ -2256,6 +2278,8 @@ class MainWindow(QtGui.QMainWindow):
                 self.screenshotButtonSelect.setText(
                     "Select %s" % (self._selectingBitmap[:-len(_g_forcedLocExt)],))
                 self.selectBitmapStop()
+            elif self._selectingBitmap.startswith("fmbt-scripter://"):
+                self.selectBitmapStop()
             else:
                 self.screenshotButtonSelect.setText(
                     "Forced %s" % (self._selectingBitmap,))
@@ -2286,7 +2310,7 @@ class MainWindow(QtGui.QMainWindow):
                 self._selectingBitmap = filename
                 self._selectingBitmapSaveDir = os.path.dirname(filepath)
             else:
-                log('text cursor is not on bitmap filename')
+                self._selectingBitmap = "fmbt-scripter://view-item-at-pos"
         elif filepath != None:
             log('select bitmap "%s"' % (filepath,))
             self._selectingBitmap = filepath
@@ -2300,11 +2324,12 @@ class MainWindow(QtGui.QMainWindow):
         else:
             self.screenshotButtonSelect.setChecked(False)
 
-    def drawRect(self, left, top, right, bottom, clear=False, forced=False):
+    def drawRect(self, left, top, right, bottom, clear=False, onOrig=True, forced=False):
         if self._screenshotImageOrig == None:
             self._screenshotImageOrig = self.screenshotImage.copy()
         else:
-            self.screenshotImage = self._screenshotImageOrig.copy()
+            if onOrig:
+                self.screenshotImage = self._screenshotImageOrig.copy()
         if not clear:
             x, y = left, top
             w, h = (right-left), (bottom-top)
