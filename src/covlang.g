@@ -101,7 +101,7 @@ node: persistent tag_spec actionname persistent tag_spec  { $$.type='e'; $$.u = 
     | node '*' uint    { $$.u = inthelper($0.u,$2.i); }
     | 'uwalks' '(' expr ')' { $$.u = new Coverage_Market::unit_walk($2.u,true); }
     | 'eageruwalks' '(' expr ')' { $$.u = new Coverage_Market::unit_walk($2.u,false); }
-    | 'tag' '(' name ')' { $$.u = new Coverage_Market::unit_coverage_tag($2.str,cobj); }
+    | 'tag' '(' tagname ')' { $$.u = new Coverage_Market::unit_coverage_tag($2.str,cobj); }
     | 'perm' '(' uint ')' { $$.u = new Coverage_Market::unit_perm($2.i,cobj); }
     | 'file' '(' name ')' [
             char* ss=strndup($n2.start_loc.s+1, $n2.end-$n2.start_loc.s-2);
