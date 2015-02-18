@@ -996,7 +996,7 @@ class Device(fmbtgti.GUITestInterface):
             if isinstance(forcedView, View):
                 self._lastView = forcedView
             elif type(forcedView) == str:
-                self._lastView = View(self.screenshotDir(), self.serialNumber, file(forcedView).read(), displayToScreen, self.itemOnScreen)
+                self._lastView = View(self.screenshotDir(), self.serialNumber, file(forcedView).read(), displayToScreen, self.itemOnScreen, self.itemCoords)
                 _adapterLog(formatErrors(self._lastView.errors(), self._lastView.filename()))
             else:
                 raise ValueError("forcedView must be a View object or a filename")
@@ -1007,7 +1007,7 @@ class Device(fmbtgti.GUITestInterface):
             dump = self.existingConnection().recvViewData()
             if dump != None:
                 viewDir = os.path.dirname(self._newScreenshotFilepath())
-                view = View(viewDir, self.serialNumber, dump, displayToScreen, self.itemOnScreen)
+                view = View(viewDir, self.serialNumber, dump, displayToScreen, self.itemOnScreen, self.intCoords)
             else:
                 _adapterLog("refreshView window dump reading failed")
                 view = None
@@ -1592,8 +1592,12 @@ class ViewItem(fmbtgti.GUIItem):
             len(self._children), self._className, self._code, self._indent,
             '\n\t\t'.join(['"%s": %s' % (key, p[key]) for key in sorted(p.keys())]))
     def __str__(self):
-        return ("ViewItem(className='%s', id=%s, bbox=%s)"  % (
-                self._className, self.id(), self.bbox()))
+        if "text:mText" in self._p:
+            text = ", text='%s'" % (self.text(),)
+        else:
+            text = ""
+        return ("ViewItem(className='%s', id=%s, bbox=%s%s)"  % (
+                self._className, self.id(), self.bbox(), text))
 
 class View(object):
     """
@@ -1601,7 +1605,8 @@ class View(object):
     the dump to a hierarchy of ViewItems. find* methods enable searching
     for ViewItems based on their properties.
     """
-    def __init__(self, screenshotDir, serialNumber, dump, displayToScreen=None, itemOnScreen=None):
+    def __init__(self, screenshotDir, serialNumber, dump, displayToScreen=None,
+                 itemOnScreen=None, intCoords=None):
         self.screenshotDir = screenshotDir
         self.serialNumber = serialNumber
         self._viewItems = []
@@ -1617,6 +1622,9 @@ class View(object):
         if itemOnScreen == None:
             itemOnScreen = lambda item: True
         self._itemOnScreen = itemOnScreen
+        if intCoords == None:
+            intCoords = lambda x, y: (int(x), int(y))
+        self._intCoords = intCoords
         try:
             self._parseDump(dump, self._rawDumpFilename, displayToScreen)
         except Exception, e:
@@ -1710,6 +1718,14 @@ class View(object):
     def findItemsByRawProps(self, s, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
         c = lambda item: item._rawProps.find(s) != -1
         return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
+
+    def findItemsByPos(self, (x, y), count=-1, searchRootItem=None, searchItems=None, onScreen=False):
+        x, y = self._intCoords((x, y))
+        c = lambda item: (item.bbox()[0] <= x <= item.bbox()[2] and item.bbox()[1] <= y <= item.bbox()[3])
+        items = self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
+        # sort from smallest to greatest area
+        area_items = [((i.bbox()[2] - i.bbox()[0]) * (i.bbox()[3] - i.bbox()[1]), i) for i in items]
+        return [i for _, i in sorted(area_items)]
 
     def save(self, fileOrDirName):
         shutil.copy(self._rawDumpFilename, fileOrDirName)
