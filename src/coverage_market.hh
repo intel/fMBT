@@ -102,12 +102,14 @@ public:
     std::vector<int> tmp;
     model=_model;
     add_requirement(params);
-    int* p;
-    int j=model->getprops(&p);
-    prev.assign(p,p+j);
-    tmp=prev;
-    execute(0);
-    prev=tmp;
+    if (status) {
+      int* p;
+      int j=model->getprops(&p);
+      prev.assign(p,p+j);
+      tmp=prev;
+      execute(0);
+      prev=tmp;
+    }
   }
 
   void add_requirement(std::string& req);
