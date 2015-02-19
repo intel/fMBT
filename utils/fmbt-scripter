@@ -370,13 +370,12 @@ class MyScaleEvents(QtCore.QObject):
                 if varname == None:
                     QtGui.QToolTip.hideText()
                     self.visibleTip = None
+                    self.mainwindow.tooltipVariableText(None)
                 else:
                     if self.visibleTip != varname:
                         QtGui.QToolTip.hideText()
-                        txt = "%s == %s" % (
-                            varname,
-                            str(self.mainwindow._fmbtEnv[varname])[:72])
-                        QtGui.QToolTip.showText(event.globalPos(), txt)
+                        text = self.mainwindow.tooltipVariableText(varname)
+                        QtGui.QToolTip.showText(event.globalPos(), text)
                         self.visibleTip = varname
             else:
                 filepath = self.mainwindow.bitmapFilepath(filename)
@@ -1904,6 +1903,22 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotSet(len(self._screenshotFilenames)-1)
         return True
 
+    def tooltipVariableText(self, varname):
+        self.drawRect(0, 0, 0, 0, clear=True)
+        if varname == None or not varname in self._fmbtEnv:
+            text = ""
+        else:
+            value = self._fmbtEnv[varname]
+            if isinstance(value, fmbtgti.GUIItem):
+                self.drawRect(*(value.bbox()))
+            elif isinstance(value, list) or isinstance(value, set) or isinstance(value, tuple):
+                if (len(value) < 1024 and # do not draw too many rectangles
+                    len(value) == len([i for i in value if isinstance(i, fmbtgti.GUIItem)])):
+                    for i in value:
+                        self.drawRect(*(i.bbox()), onOrig=False)
+            text = "%s == %s" % (varname, str(value)[:128])
+        return text
+
     def _findSutVariable(self):
         for key, value in self._fmbtEnv.iteritems():
             if isinstance(value, fmbtgti.GUITestInterface):
@@ -2325,6 +2340,8 @@ class MainWindow(QtGui.QMainWindow):
             self.screenshotButtonSelect.setChecked(False)
 
     def drawRect(self, left, top, right, bottom, clear=False, onOrig=True, forced=False):
+        if not self.screenshotImage:
+            return
         if self._screenshotImageOrig == None:
             self._screenshotImageOrig = self.screenshotImage.copy()
         else:
