@@ -370,13 +370,12 @@ class MyScaleEvents(QtCore.QObject):
                 if varname == None:
                     QtGui.QToolTip.hideText()
                     self.visibleTip = None
+                    self.mainwindow.variablePresentation(None)
                 else:
                     if self.visibleTip != varname:
                         QtGui.QToolTip.hideText()
-                        txt = "%s == %s" % (
-                            varname,
-                            str(self.mainwindow._fmbtEnv[varname])[:72])
-                        QtGui.QToolTip.showText(event.globalPos(), txt)
+                        text = self.mainwindow.variablePresentation(varname)
+                        QtGui.QToolTip.showText(event.globalPos(), text)
                         self.visibleTip = varname
             else:
                 filepath = self.mainwindow.bitmapFilepath(filename)
@@ -1353,7 +1352,7 @@ class MainWindow(QtGui.QMainWindow):
                 self._consoleHistoryIndex = len(self._consoleHistory)
                 code = t.split(">>>")[1]
                 code = _unifyIndentation(code)
-                self.runStatement(code)
+                self.runStatement(code, visual=True)
             return True
         elif not cursor.movePosition(QtGui.QTextCursor.End):
             # already at the end of document, add prompt
@@ -1393,7 +1392,7 @@ class MainWindow(QtGui.QMainWindow):
             raise NotImplementedError
 
         if not code == "":
-            self.runStatement(code, autoUpdate=autoUpdate)
+            self.runStatement(code, autoUpdate=autoUpdate, visual=True)
             if autoSelected:
                 for _ in xrange(len(code.splitlines())):
                     self.editor.moveCursor(QtGui.QTextCursor.Down,
@@ -1405,13 +1404,18 @@ class MainWindow(QtGui.QMainWindow):
         if runButton != None:
             runButton.setChecked(False)
 
-    def runStatement(self, statement, silent=False, autoUpdate=None):
+    def runStatement(self, statement, silent=False, autoUpdate=None, visual=False):
         if autoUpdate == None:
             autoUpdate = self.screenshotAutoRefresh.isChecked()
         if autoUpdate:
             self.invalidateScreenshot()
+        if visual:
+            self.drawRect(0, 0, 0, 0, clear=True)
         if _pythonCode(statement) == "expression":
+            t = self._fmbtEnv.get("fmbt-scripter://console-last-return-timestamp", 0)
             _, exc = self._fmbtEval(statement, silent=silent)
+            if visual and t != self._fmbtEnv.get("fmbt-scripter://console-last-return-timestamp", 0):
+                self.variablePresentation("fmbt-scripter://console-last-return-value")
         else:
             _, exc = self._fmbtExec(statement, silent=silent)
         self.screenshotShowLatest()
@@ -1812,6 +1816,8 @@ class MainWindow(QtGui.QMainWindow):
             endTime = time.time()
             if opt_debug or not silent:
                 log("time: %.3f s, returned: %s" % (endTime-startTime, repr(rv)))
+                self._fmbtEnv["fmbt-scripter://console-last-return-value"] = rv
+                self._fmbtEnv["fmbt-scripter://console-last-return-timestamp"] = endTime
             if (updateScreenshot and
                 self.screenshotLatestFilename() != screenshotBefore):
                 self.screenshotShowLatest()
@@ -1903,6 +1909,22 @@ class MainWindow(QtGui.QMainWindow):
         self._screenshotFilenames.append(screenshotFilename)
         self.screenshotSet(len(self._screenshotFilenames)-1)
         return True
+
+    def variablePresentation(self, varname):
+        self.drawRect(0, 0, 0, 0, clear=True)
+        if varname == None or not varname in self._fmbtEnv:
+            text = ""
+        else:
+            value = self._fmbtEnv[varname]
+            if isinstance(value, fmbtgti.GUIItem):
+                self.drawRect(*(value.bbox()))
+            elif isinstance(value, list) or isinstance(value, set) or isinstance(value, tuple):
+                if (len(value) < 1024 and # do not draw too many rectangles
+                    len(value) == len([i for i in value if isinstance(i, fmbtgti.GUIItem)])):
+                    for i in value:
+                        self.drawRect(*(i.bbox()), onOrig=False)
+            text = "%s == %s" % (varname, str(value)[:128])
+        return text
 
     def _findSutVariable(self):
         for key, value in self._fmbtEnv.iteritems():
@@ -2325,6 +2347,8 @@ class MainWindow(QtGui.QMainWindow):
             self.screenshotButtonSelect.setChecked(False)
 
     def drawRect(self, left, top, right, bottom, clear=False, onOrig=True, forced=False):
+        if not self.screenshotImage:
+            return
         if self._screenshotImageOrig == None:
             self._screenshotImageOrig = self.screenshotImage.copy()
         else:
