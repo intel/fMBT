@@ -35,7 +35,7 @@ aal "mixer" {
             playing.remove(stop_what)
         }
     }
-
+^ifndef "NOTAGS"
     tag "hear-alert",
         "hear-game",
         "hear-music" {
@@ -44,4 +44,5 @@ aal "mixer" {
             return hear_what in playing
         }
     }
+^endif
 }

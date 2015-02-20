@@ -38,6 +38,7 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
 #include "coverage_tree.hh"
+#include "coverage_prop.hh"
 #include "log_null.hh"
 #include "helper.hh"
 #include "random.hh"
@@ -98,11 +99,17 @@ public:
 
   virtual void set_model(Model* _model)
   {
+    std::vector<int> tmp;
     model=_model;
     add_requirement(params);
-    int* p;
-    int j=model->getprops(&p);
-    prev.assign(p,p+j);
+    if (status) {
+      int* p;
+      int j=model->getprops(&p);
+      prev.assign(p,p+j);
+      tmp=prev;
+      execute(0);
+      prev=tmp;
+    }
   }
 
   void add_requirement(std::string& req);
@@ -175,18 +182,100 @@ public:
     unit(const unit &obj):value(obj.value) {}
 
   };
+  class unit_coverage_tag: public unit {
+  public:
+    unit_coverage_tag(std::string* s,Coverage_Market* _m):p(*s),m(_m) {
+      if (m) {
+	child = new Coverage_Prop(m->log,p);
+
+	if (child && !child->status && m->status) {
+	  m->status=child->status;
+	  m->errormsg=child->errormsg;
+	} else {
+	  if (child) {
+	    reset();
+	    if (!child->status && m->status) {
+	      m->status=child->status;
+	      m->errormsg=child->errormsg;
+	    }
+	  } else {
+	    m->status=false;
+	    m->errormsg="Can't create tag coverage";
+	  }
+	}
+      }
+    }
+    virtual std::string stringify(Alphabet&a) {
+      return "tag("+p+")";
+    }
+
+    virtual ~unit_coverage_tag() {
+      if (child)
+	delete child;
+    }
+
+    virtual void set_instance(int instance,int current_instance, bool force=false) {
+      child->set_instance(instance);
+    }
+
+    virtual void execute(const std::vector<int>& prev,int action,const std::vector<int>& next)
+    {
+      child->execute(action);
+    }
+
+    virtual void update()
+    {
+      value.first=child->props_seen;
+      value.second=child->props_total;
+      if (value.second==0) {
+	value.first=1;
+	value.second=1;
+      }
+    }
+
+    virtual void pop()
+    {
+      child->pop();
+    }
+
+    virtual void push()
+    {
+      child->push();
+    }
+
+    virtual void reset()
+    {
+      if (!child->status) {
+	m->status=child->status;
+	m->errormsg=child->errormsg;
+	return;
+      }
+      for(unsigned i=0;i<child->data.size();i++) {
+	child->data[i]=false;
+      }
+      child->set_model(m->get_model());
+      if (!child->status) {
+	m->status=child->status;
+	m->errormsg=child->errormsg;
+	return;
+      }
+      value.first=child->props_seen;
+      value.second=child->props_total;
+    }
+
+    virtual unit* clone() {
+      return new unit_coverage_tag(*this);
+    }
+
+    std::string p;
+    Coverage_Market* m;
+    Coverage_Prop* child;
+  };
 
   class unit_perm: public unit {
   public:
-    unit_perm(int i,Coverage_Market* _m) {
-      p=to_string(i);
-      m=_m;
+    unit_perm(int i,Coverage_Market* _m):m(_m),p(to_string(i)) {
       reset();
-      /*
-      child=new Coverage_Tree(l,p);
-      child->set_model(m->get_model());
-      value.second=child->max_count;
-      */
       l.ref();
     }
 
@@ -237,7 +326,8 @@ public:
 
     virtual void execute(const std::vector<int>& prev,int action,const std::vector<int>& next)
     {
-      child->execute(action);
+      if (action)
+	child->execute(action);
     }
 
     Log_null l;
@@ -314,51 +404,53 @@ public:
     }
 
     virtual void execute(const std::vector<int>& prev,int action,const std::vector<int>& next) {
-      bool added=false;
+      if (action) {
+	bool added=false;
 
-      child->update();
-      val tmp=child->get_value();
-      if (tmp.first>0) {
-	eunit u={prev,action,next};
-	executed.push_back(u);
-	added=true;
-      }
-      child->execute(prev,action,next);
-      child->update();
-      tmp=child->get_value();
-
-      if (tmp.first>0 && !added) {
-	eunit u={prev,action,next};
-	executed.push_back(u);
-	added=true;
-      }
-
-      if (tmp.first==tmp.second) {
-	if (!added) {
+	child->update();
+	val tmp=child->get_value();
+	if (tmp.first>0) {
 	  eunit u={prev,action,next};
 	  executed.push_back(u);
+	  added=true;
+	}
+	child->execute(prev,action,next);
+	child->update();
+	tmp=child->get_value();
+
+	if (tmp.first>0 && !added) {
+	  eunit u={prev,action,next};
+	  executed.push_back(u);
+	  added=true;
 	}
 
-	// minimise...
+	if (tmp.first==tmp.second) {
+	  if (!added) {
+	    eunit u={prev,action,next};
+	    executed.push_back(u);
+	  }
 
-	if (minimi) {
-	  minimise();
+	  // minimise...
+
+	  if (minimi) {
+	    minimise();
+	  }
+
+	  if (push_depth!=0 &&
+	      tcount_save[push_depth-1][executed]==0) {
+	    tcount_save[push_depth-1][executed]=tcount[executed];
+	  }
+
+	  tcount[executed]++;
+	  executed.clear();
+	  child->reset();
+	  value=tmp;
+	  value.first=0;
+	} else {
+	  value=tmp;
 	}
-
-	if (push_depth!=0 &&
-	    tcount_save[push_depth-1][executed]==0) {
-	  tcount_save[push_depth-1][executed]=tcount[executed];
-	}
-
-	tcount[executed]++;
-	executed.clear();
-	child->reset();
-	value=tmp;
-	value.first=0;
-      } else {
-	value=tmp;
+	value.first+=tcount.size()*value.second;
       }
-      value.first+=tcount.size()*value.second;
     }
 
     virtual void update() {
@@ -393,7 +485,7 @@ public:
       std::map<std::vector<eunit >, int>::iterator e;
       i=tcount_save[push_depth].begin();
       e=tcount_save[push_depth].end();
-      for(;i!=e;i++) {
+      for(;i!=e;++i) {
 	if (i->second) {
 	  tcount[i->first] = i->second;
 	} else {
@@ -981,6 +1073,11 @@ public:
         right->execute(prev,action,next);
       } else {
         left->execute(prev,action,next);
+	left->update();
+	v=left->get_value();
+	if (v.first==v.second) {
+	  right->execute(prev,0,next);
+	}
       }
     }
 
@@ -1154,18 +1251,20 @@ public:
     }
 
     virtual void execute(const std::vector<int>& prev,int action,const std::vector<int>& next){
-      if (left_side) {
-	if (std::find(prev.begin(), prev.end(), my_tag)!=prev.end()) {
-	  value.first=value.second;
-	  return;
+      if (action) {
+	if (left_side) {
+	  if (std::find(prev.begin(), prev.end(), my_tag)!=prev.end()) {
+	    value.first=value.second;
+	    return;
+	  }
+	} else {
+	  if (std::find(next.begin(), next.end(), my_tag)!=next.end()) {
+	    value.first=value.second;
+	    return;
+	  }
 	}
-      } else {
-	if (std::find(next.begin(), next.end(), my_tag)!=next.end()) {
-	  value.first=value.second;
-	  return;
-	}
+	value.first=0;
       }
-      value.first=0;
     }
     virtual unit* clone() {
       return new unit_tagleaf(*this);

@@ -132,6 +132,78 @@ if fmbt-log -f '$ax' tag2.log | grep -q iCoverBoth; then
 fi
 testpassed
 
+teststep "coverage tag regexp case..."
+cat > test.conf <<EOF
+model = "lsts_remote(fmbt-gt -f t3.gt)"
+coverage = tag("tag.*")
+pass = "coverage(1.0)"
+on_fail = "exit(1)"
+EOF
+
+fmbt test.conf -l tag2.log >>$LOGFILE 2>&1 || {
+    testfailed
+}
+
+if ! ( fmbt-log -f '$ax' tag2.log | grep -q iCoverSecond ); then
+    echo "iCoverSecond should have been executed before reaching full coverage" >>$LOGFILE
+    testfailed
+fi
+if fmbt-log -f '$ax' tag2.log | grep -q iCoverBoth; then
+    echo "iCoverBoth should not have been executed - full coverage reached before it" >>$LOGFILE
+    testfailed
+fi
+testpassed
+
+teststep "coverage tag in usecase..."
+
+for HEURISTIC in "lookahead(1)" "lookahead(5)"; do
+    for TAGSDEF in "TAGS" "NOTAGS"; do
+        for EXPR in "tag(\".*\")" "tag(\"hear-music\") then tag(\".*\")" "tag(\"hear-music\") and tag(\"hear-game\") then tag(\"hear-alert\")"; do
+cat > test.conf <<EOF
+model     = aal_remote(remote_pyaal -l usecase-tags.aal.log -D$TAGSDEF usecase-tags.aal)
+adapter   = aal
+heuristic = $HEURISTIC
+coverage  = usecase($EXPR)
+pass      = coverage(1.0)
+inconc    = steps(3)
+on_pass   = exit(0)
+on_fail   = exit(1)
+on_inconc = exit(2)
+EOF
+            if [ "$EXPR" != "tag(\".*\")" ] && [ "$TAGSDEF" == "NOTAGS" ]; then
+                EXPECTED_EXITSTATUS=4 # the default for error
+            else
+                EXPECTED_EXITSTATUS=0
+            fi
+
+            fmbt test.conf -l tag3.log >>$LOGFILE 2>&1
+            EXITSTATUS=$?
+            if [ "$EXITSTATUS" != "$EXPECTED_EXITSTATUS" ]; then
+                cat test.conf >>$LOGFILE
+                cat tag3.log >>$LOGFILE
+                echo "failed because of unexpected exit status ($EXITSTATUS) expected $EXPECTED_EXITSTATUS" >>$LOGFILE
+                testfailed
+            fi
+
+            STEPCOUNT=$(fmbt-log -f '$ax' tag3.log | wc -l)
+            if [ "$TAGSDEF" == "NOTAGS" ]; then
+                EXPECTED_STEPS=0
+            else
+                EXPECTED_STEPS=3
+            fi
+
+            if [ "$STEPCOUNT" != "$EXPECTED_STEPS" ]; then
+                cat test.conf >>$LOGFILE
+                cat tag3.log >>$LOGFILE
+                echo "failed because of steps ($STEPCOUNT), $EXPECTED_STEPS expected." >>$LOGFILE
+                testfailed
+            fi
+        done
+    done
+done
+testpassed
+
+
 teststep "coverage walks between tags"
 cat > walks.conf <<EOF
 model     = "aal_remote(remote_pyaal -l twocounters.aal.log 'twocounters.aal')"

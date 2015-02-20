@@ -6,7 +6,7 @@ dist_noinst_SCRIPTS += heuristic_mrandom/run.sh heuristic_mrandom/t1.conf heuris
 
 dist_noinst_SCRIPTS += adapters/run.sh adapters/timer/run.sh adapters/timer/timer.conf adapters/timer/timer.gt adapters/timer/timer.mrules
 
-dist_noinst_SCRIPTS += coverage/run.sh coverage/abc.gt coverage/abc_reg.gt coverage/coffee.gt coverage/usecase-tags.aal coverage/t1.gt coverage/t2.gt coverage/twocounters.aal
+dist_noinst_SCRIPTS += coverage/run.sh coverage/abc.gt coverage/abc_reg.gt coverage/coffee.gt coverage/usecase-tags.aal coverage/t1.gt coverage/t2.gt coverage/t3.gt coverage/twocounters.aal
 
 dist_noinst_SCRIPTS += coverage_shared/run.sh coverage_shared/shared.conf coverage_shared/two.aal coverage_shared/two.conf
 

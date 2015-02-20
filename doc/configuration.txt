@@ -473,16 +473,30 @@ Available types & parameters:
                     cover permutations of any two actions in states
                     with tag "paying a car".
 
+                - tag(tag-regexp) is covered when every matching tag
+                  has been seen in at least one state.
+
+                  Example:
+
+                    usecase(all "i:connect.*" then tag("playing music"))
+
+                    cover all "connect" inputs and finally a state
+                    with the "playing music" tag. Note that if the
+                    current state after the last "connect" input is
+                    tagged with "playing music", coverage is reached
+                    without executing anything else.
+
         walks(from regexp_1 to regexp_2)
 
                 like uwalks, but not restricted to unique walks only.
                 That is, testing the same walk again increases the
                 count.
 
-        tag
+        tag[(tag-regexp)]
 
-                measures the percentage of coverage of all tags in the
-                states of the model.
+                measures the percentage of covered versus matching
+                tags. If tag-regexp is not given, measures covered
+                versus all tags in the model.
 
 
         Following EXPERIMENTAL coverages may not pass all their tests

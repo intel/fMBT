@@ -22,7 +22,7 @@
 #include "helper.hh"
 
 Coverage_Prop::Coverage_Prop(Log& l, std::string& _params) :
-  Coverage(l), params(_params),props_total(0),props_seen(0)
+  Coverage(l),props_total(0),props_seen(0),params(_params)
 {
 
 }
@@ -58,6 +58,7 @@ bool Coverage_Prop::execute(int action)
 {
   int* pro;
   int cnt=model->getprops(&pro);
+  int already_seen=0;
 
   for(int i=0;i<cnt;i++) {
     if (prop_included[pro[i]] && !data[pro[i]]) {
@@ -106,6 +107,23 @@ int Coverage_Prop::fitness(int* action,int n,float* fitness)
   return pos;
 }
 
+void Coverage_Prop::regexp_try(std::string& s,std::vector<std::string>& sp) {
+  std::vector<int> regexp_match;
+  regexpmatch(s,sp,regexp_match,true);
+
+  if (regexp_match.empty()) {
+    status=false;
+    errormsg = "No tags matching \"" + s + "\"";
+    return;
+  }
+
+  for(unsigned i=0;i<regexp_match.size();i++) {
+    if (regexp_match[i]) {
+      prop_included[regexp_match[i]]=true;
+    }
+  }
+}
+
 void Coverage_Prop::set_model(Model* _model) {
   Coverage::set_model(_model);
   /*
@@ -124,26 +142,21 @@ void Coverage_Prop::set_model(Model* _model) {
     std::vector<std::string> props;
     std::vector<std::string>& sp=model->getSPNames();
     commalist(params,props);
+    strlist(props);
     for(unsigned i=0;i<props.size();i++) {
       int propnum = find(sp,props[i]);
       if (propnum) {
 	prop_included[propnum]=true;
       } else {
-	remove_force(props[i]);
-	propnum = find(sp,props[i]);
-	if (propnum) {
-	  prop_included[propnum]=true;	  
-	} else {
-	  status=false;
-	  errormsg+="No such tag in the model \""+props[i]+"\"";
-	}
+	regexp_try(props[i],sp);
       }
     }
     props_total=prop_included.size();
   }
-  data.resize(props_total+1);
+  data.resize(model->getSPNames().size()+1);
 
-  execute(0);
+  if (status)
+    execute(0);
 }
 
 FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Prop, "tag")
