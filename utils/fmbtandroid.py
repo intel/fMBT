@@ -2145,13 +2145,15 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
     def recvScreenSize(self):
         _, output, _ = self._runAdb(["shell", "dumpsys", "display"], 0)
         try:
-            width = int(re.findall("mDisplayWidth=([0-9]*)", output)[0])
-            height = int(re.findall("mDisplayHeight=([0-9]*)", output)[0])
+            # parse default display properties
+            ddName, ddWidth, ddHeight, ddWdpi, ddHdpi = re.findall(
+                r'DisplayDeviceInfo\{"([^"]*)": ([0-9]*) x ([0-9]*),.*, ([0-9.]*) x ([0-9.]*) dpi,.*FLAG_DEFAULT_DISPLAY.*\}',
+                output)[0]
         except (IndexError, ValueError), e:
             _adapterLog('recvScreenSize: cannot read size from "%s"' %
                         (output,))
             raise FMBTAndroidError('cannot read screen size from dumpsys')
-        return width, height
+        return int(ddWidth), int(ddHeight)
 
     def recvDefaultViewportSize(self):
         _, output, _ = self._runAdb(["shell", "dumpsys", "display"], 0)
