@@ -58,6 +58,7 @@ bool Coverage_Prop::execute(int action)
 {
   int* pro;
   int cnt=model->getprops(&pro);
+  int already_seen=0;
 
   for(int i=0;i<cnt;i++) {
     if (prop_included[pro[i]] && !data[pro[i]]) {
@@ -152,9 +153,10 @@ void Coverage_Prop::set_model(Model* _model) {
     }
     props_total=prop_included.size();
   }
-  data.resize(props_total+1);
+  data.resize(model->getSPNames().size()+1);
 
-  execute(0);
+  if (status)
+    execute(0);
 }
 
 FACTORY_DEFAULT_CREATOR(Coverage, Coverage_Prop, "tag")
