@@ -227,6 +227,10 @@ public:
     {
       value.first=child->props_seen;
       value.second=child->props_total;
+      if (value.second==0) {
+	value.first=1;
+	value.second=1;
+      }
     }
 
     virtual void pop()
