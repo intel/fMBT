@@ -2723,6 +2723,24 @@ class Screenshot(object):
         finally:
             eye4graphics.closeImage(image)
         return foundItems
+
+    def ocrItems(self, **ocrArgs):
+        """
+        Return list of GUIItems, each of them corresponding to a word
+        recognized by OCR. OCR engine must support dumpOcr.
+
+        Parameters:
+
+          **ocrArgs (keyword parameters):
+                  refer to ocrEngine() documentation.
+        """
+        foundItems = []
+        if self._ocrEngine != None:
+            self._notifyOcrEngine()
+            for word, bbox in self._ocrEngine.dumpOcr(self, **ocrArgs):
+                foundItems.append((GUIItem(word, bbox, self.filename())))
+        return foundItems
+
     def save(self, fileOrDirName):
         shutil.copy(self._filename, fileOrDirName)
 
