@@ -725,6 +725,7 @@ class MainWindow(QtGui.QMainWindow):
         self._editorIndentation = 4
         self._editorIndentSugg = [] # suggested indentation levels
         self._findDialog = None
+        self._focusStack = []
         self._helpDialog = None
         self._highlightingBitmap = None
         self._hwRecFilter = {"devices": None}
@@ -1369,6 +1370,7 @@ class MainWindow(QtGui.QMainWindow):
         cursor.setCharFormat(cf)
 
     def runLines(self, lineCount=None, runButton=None, autoUpdate=None):
+        self._pushTextEditorFocus()
         if runButton != None:
             runButton.setChecked(True)
         if autoUpdate == None:
@@ -1389,6 +1391,7 @@ class MainWindow(QtGui.QMainWindow):
             code = code.replace(unichr(0x2029), "\n")
             code = _unifyIndentation(code)
         else:
+            self._popTextEditorFocus()
             raise NotImplementedError
 
         if not code == "":
@@ -1400,7 +1403,7 @@ class MainWindow(QtGui.QMainWindow):
         else:
             self.editor.moveCursor(QtGui.QTextCursor.Down,
                                    QtGui.QTextCursor.MoveAnchor)
-        self.editor.setFocus()
+        self._popTextEditorFocus()
         if runButton != None:
             runButton.setChecked(False)
 
@@ -1513,13 +1516,14 @@ class MainWindow(QtGui.QMainWindow):
         self._hwButtonEvents.append(GestureEvent("keydown", name, None))
 
     def buttonReleased(self, platform, name):
+        self._pushTextEditorFocus()
         self._hwButtonEvents.append(GestureEvent("keyup", name, None))
         call = gestureToGti(self._hwButtonEvents)
         if self.editorButtonRec.isChecked():
             self.insertRecordedCommand(self._sut + call + "\n")
         if self.screenshotButtonControl.isChecked():
             self.doAPICall(call)
-        self.editor.setFocus()
+        self._popTextEditorFocus()
 
     def _newScript(self, script, scrollTo="("):
         self.editor.setPlainText(script)
@@ -1934,18 +1938,24 @@ class MainWindow(QtGui.QMainWindow):
         else:
             self._sut = None
 
+    def _pushTextEditorFocus(self):
+        if self.console.hasFocus():
+            self._focusStack.append(self.console)
+        else:
+            self._focusStack.append(self.editor)
+
+    def _popTextEditorFocus(self):
+        self._focusStack.pop().setFocus()
+
     def updateScreenshot(self, recordable=True):
         self._updateScreenshotScheduled = False
-        if self.console.hasFocus():
-            focusOnMe = self.console
-        else:
-            focusOnMe = self.editor
+        self._pushTextEditorFocus()
         if not self._sut:
             self._findSutVariable()
             if not self._sut:
                 log("cannot update screenshot, no connection")
                 self.screenshotButtonRefresh.setChecked(False)
-                focusOnMe.setFocus()
+                self._popTextEditorFocus()
                 return
 
         self.invalidateScreenshot()
@@ -1969,9 +1979,10 @@ class MainWindow(QtGui.QMainWindow):
                 if failed:
                     log("refreshScreenshot() returned None")
                     self.screenshotButtonRefresh.setChecked(False)
-        focusOnMe.setFocus()
+        self._popTextEditorFocus()
 
     def updateScreenshotView(self):
+        self._pushTextEditorFocus()
         self.screenshotQLabel.setPixmap(
             QtGui.QPixmap.fromImage(
                 self.screenshotImage))
@@ -1990,8 +2001,7 @@ class MainWindow(QtGui.QMainWindow):
         else:
             self.sutButtonsAndroid.setVisible(False)
             self.sutButtonsTizen.setVisible(False)
-
-        self.editor.setFocus()
+        self._popTextEditorFocus()
 
     def addAPICall(self, call, cursorOffset=0):
         if not call.startswith("."):
@@ -2188,11 +2198,12 @@ class MainWindow(QtGui.QMainWindow):
         self.status.setText(cursorPosString)
 
     def controlDevice(self):
+        self._pushTextEditorFocus()
         if self.screenshotButtonControl.isChecked():
             if self._selectingBitmap:
                 self.selectBitmapStop()
                 self.screenshotButtonControl.setChecked(True)
-        self.editor.setFocus()
+        self._popTextEditorFocus()
 
     def selectBitmapFromFolder(self, folder=None):
         """
@@ -2214,6 +2225,7 @@ class MainWindow(QtGui.QMainWindow):
             self.renameBitmapStringAt(origFilename, os.path.basename(filename))
 
     def selectBitmapStop(self):
+        self._pushTextEditorFocus()
         if self._selectingBitmap != None:
             if not self._selectingBitmap.startswith("fmbt-scripter://"):
                 log('selecting bitmap "%s" canceled' % (self._selectingBitmap,))
@@ -2224,7 +2236,7 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotButtonControl.setChecked(
             self._selectingToggledInteract)
         self._screenshotImageOrig = None
-        self.editor.setFocus()
+        self._popTextEditorFocus()
 
     def selectBitmapDone(self, left, top, right, bottom):
         if left > right:
