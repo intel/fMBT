@@ -2147,7 +2147,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         try:
             # parse default display properties
             ddName, ddWidth, ddHeight, ddWdpi, ddHdpi = re.findall(
-                r'DisplayDeviceInfo\{"([^"]*)": ([0-9]*) x ([0-9]*),.*, ([0-9.]*) x ([0-9.]*) dpi,.*FLAG_DEFAULT_DISPLAY.*\}',
+                r'DisplayDeviceInfo\{[^,]*"([^"]*)"[:,] ([0-9]*) x ([0-9]*),.*, ([0-9.]*) x ([0-9.]*) dpi,.*FLAG_DEFAULT_DISPLAY.*\}',
                 output)[0]
         except (IndexError, ValueError), e:
             _adapterLog('recvScreenSize: cannot read size from "%s"' %
