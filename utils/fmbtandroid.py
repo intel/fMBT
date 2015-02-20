@@ -1,5 +1,5 @@
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2013, Intel Corporation.
+# Copyright (c) 2013-2015, Intel Corporation.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU Lesser General Public License,
@@ -996,7 +996,7 @@ class Device(fmbtgti.GUITestInterface):
             if isinstance(forcedView, View):
                 self._lastView = forcedView
             elif type(forcedView) == str:
-                self._lastView = View(self.screenshotDir(), self.serialNumber, file(forcedView).read(), displayToScreen, self.itemOnScreen, self.itemCoords)
+                self._lastView = View(self.screenshotDir(), self.serialNumber, file(forcedView).read(), displayToScreen, self.itemOnScreen, self.intCoords)
                 _adapterLog(formatErrors(self._lastView.errors(), self._lastView.filename()))
             else:
                 raise ValueError("forcedView must be a View object or a filename")
