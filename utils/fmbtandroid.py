@@ -547,6 +547,26 @@ class Device(fmbtgti.GUITestInterface):
         import gc
         gc.collect()
 
+    def deviceLog(self, msg, priority="i", tag="fMBT"):
+        """
+        Write a message to device log (seen via logcat)
+
+        Parameters:
+          msg (string):
+                  message to be written.
+
+          priority (string, optional):
+                  priorityChar, one of "v", "d", "i", "w", "e".
+                  The default is "i".
+
+          tag (string, optional):
+                  tag for the log entry, the default is "fMBT".
+        """
+        if not priority.lower() in ["v", "d", "i", "w", "e"]:
+            return False
+        return self.existingConnection().sendDeviceLog(
+            msg, priority.lower(), tag)
+
     def displayRotation(self):
         """
         Returns current rotation of the display.
@@ -2222,6 +2242,10 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
                           "--bind", "value:" + sendValue])
         except Exception:
             return False
+        return True
+
+    def sendDeviceLog(self, msg, priority, tag):
+        self._runAdb(["shell", "log", "-p", priority, "-t", tag, msg])
         return True
 
     def sendUserRotation(self, rotation):
