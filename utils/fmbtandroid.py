@@ -415,7 +415,6 @@ class Device(fmbtgti.GUITestInterface):
 
         self._fmbtAndroidHomeDir = os.getenv("FMBTANDROIDHOME", os.getcwd())
 
-        self._platformVersion = None
         self._lastView = None
         self._supportsView = None
         self._monkeyOptions = monkeyOptions
@@ -606,7 +605,7 @@ class Device(fmbtgti.GUITestInterface):
             delayBeforeMoves == None and
             delayAfterMoves == None and
             movePoints == None and
-            self._platformVersion > "4.2"):
+            self.platformVersion() > "4.2"):
             x1, y1 = self.intCoords((x1, y1))
             x2, y2 = self.intCoords((x2, y2))
             return self.existingConnection().sendSwipe(x1, y1, x2, y2)
@@ -811,12 +810,10 @@ class Device(fmbtgti.GUITestInterface):
         """
         Returns the platform version of the device.
         """
-        if self._platformVersion == None:
-            if self._conn:
-                self._platformVersion = self._conn._platformVersion
-            else:
-                self._platformVersion = "nosoftware"
-        return self._platformVersion
+        if self._conn:
+            return self._conn._platformVersion
+        else:
+            return "nosoftware"
 
     def pressAppSwitch(self, **pressKeyKwArgs):
         """
