@@ -1709,7 +1709,7 @@ class View(object):
 
     def findItemsByText(self, text, partial=False, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
         """
-        Searches the GUI hiearhy for a object with a given text
+        Returns list of ViewItems with given text.
         """
         if partial:
             c = lambda item: (
@@ -1720,23 +1720,41 @@ class View(object):
         return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
 
     def findItemsById(self, id, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
+        """
+        Returns list of ViewItems with given id.
+        """
         c = lambda item: item.properties().get("mID", "") == id
         return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
 
     def findItemsByClass(self, className, partial=True, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
+        """
+        Returns list of ViewItems with given class.
+        """
         if partial: c = lambda item: item.className().find(className) != -1
         else: c = lambda item: item.className() == className
         return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
 
     def findItemsByIdAndClass(self, id, className, partial=True, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
+        """
+        Returns list of ViewItems with given id and class.
+        """
         idOk = self.findItemsById(id, count=-1, searchRootItem=searchRootItem, onScreen=onScreen)
         return self.findItemsByClass(className, partial=partial, count=count, searchItems=idOk, onScreen=onScreen)
 
     def findItemsByRawProps(self, s, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
+        """
+        Returns list of ViewItems with given string in properties.
+        """
         c = lambda item: item._rawProps.find(s) != -1
         return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
 
     def findItemsByPos(self, (x, y), count=-1, searchRootItem=None, searchItems=None, onScreen=False):
+        """
+        Returns list of ViewItems whose bounding box contains the position.
+
+        Items are listed in ascending order based on area. They may
+        or may not be from the same branch in the widget hierarchy.
+        """
         x, y = self._intCoords((x, y))
         c = lambda item: (item.bbox()[0] <= x <= item.bbox()[2] and item.bbox()[1] <= y <= item.bbox()[3])
         items = self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
@@ -1745,6 +1763,9 @@ class View(object):
         return [i for _, i in sorted(area_items)]
 
     def save(self, fileOrDirName):
+        """
+        Save view dump to a file.
+        """
         shutil.copy(self._rawDumpFilename, fileOrDirName)
 
     def _parseDump(self, dump, rawDumpFilename, displayToScreen):
