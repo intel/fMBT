@@ -1,8 +1,27 @@
-fmbt (0.20-0.rc0) unstable; urgency=low
+fmbt (0.20-1) unstable; urgency=low
 
-  * Development version.
+  * Coverage:
+    - tag() supports regexps for specifying tags to be covered.
+    - tag() can be used inside usecase expressions.
+  * fmbt-scripter:
+    - Lists and highlights ViewItems when clicking the screenshot
+      with Select/View button pressed.
+    - When a tooltip presents the value of a variable and the value
+      is GUIItem (returned by findItemsBy* functions), the item is
+      highlighted in the screenshot.
+    - Highlights GUIItems returned by expressions that are run with
+      "Run line", "Run block" or in the console.
+  * fmbtandroid:
+    - view().findItemsByPos((x, y)) added.
+    - deviceLog() added.
+    - refreshScreenshot() timeouts if device hangs.
+    - Fixed cleaning up temp files created by shellSOE().
+  * fmbtandroid/chromiumos/rdp/tizen/vnc/windows/x11:
+    - screenshot().ocrItems() returns GUIItems recognized by OCR.
+  * pythonshare: server runs on Python on Android.
+  * Bug fixes.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 3 Feb 2015 12:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Thu, 26 Feb 2015 09:42:00 +0300
 
 fmbt (0.19-1) unstable; urgency=low
 
