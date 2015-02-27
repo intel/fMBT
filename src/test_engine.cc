@@ -305,6 +305,12 @@ Verdict::Verdict Test_engine::run(time_t _end_time,bool disable_tagverify)
                 action, heuristic.getActionName(action).c_str());
     }
 
+    // Check if end_condition matches. Might be because of the heuristics
+    // tells to stop.
+    if (-1 != (condition_i = matching_end_condition(step_count,0))) {
+      goto out;
+    }
+
     step_count++;
 
     log.debug("Step %i",step_count);

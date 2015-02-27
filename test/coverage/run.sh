@@ -503,7 +503,8 @@ on_pass   = "exit(0)"
 on_fail   = "exit(1)"
 on_inconc = "exit(2)"
 EOF
-../../src/fmbt cinclude.conf -l cinclude.log 2> cinclude.txt || {
+
+fmbt cinclude.conf -l cinclude.log 2> cinclude.txt || {
     testfailed
     exit 1
 }
