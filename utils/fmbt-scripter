@@ -941,7 +941,7 @@ class MainWindow(QtGui.QMainWindow):
         self.editorCombo.addWidget(self.editor)
         self.editor.cursorPositionChanged.connect(
             self.editorCursorPositionChanged)
-        self.editorHighlighter = PythonHighlighter(self.editor.document())
+        self.editorHighlighter = PythonHighlighter(self.editor.document(), self._fmbtEnv)
         self.editorButtonRunSingle.pressed.connect(
             self.selectPythonStatement)
         self.editorButtonRunSingle.released.connect(
@@ -1421,6 +1421,8 @@ class MainWindow(QtGui.QMainWindow):
                 self.variablePresentation("fmbt-scripter://console-last-return-value")
         else:
             _, exc = self._fmbtExec(statement, silent=silent)
+        self.editorHighlighter.updateVariables()
+        self.editorHighlighter.rehighlight()
         self.screenshotShowLatest()
         if autoUpdate:
             self.scheduleUpdateScreenshot(1.0)
@@ -2636,11 +2638,13 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotQLabel._scaleevents.changeScale(0.9)
 
 class PythonHighlighter(QtGui.QSyntaxHighlighter):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, variables={}):
         super(PythonHighlighter, self).__init__(parent)
         keywordFormat = QtGui.QTextCharFormat()
         keywordFormat.setForeground(QtCore.Qt.darkBlue)
         keywordFormat.setFontWeight(QtGui.QFont.Bold)
+
+        self._variables = variables
 
         keywordPatterns = [
             "\\band\\b", "\\bdel\\b", "\\bfor\\b", "\\bis\\b", "\\braise\\b",
@@ -2651,14 +2655,17 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
             "\\bexec\\b", "\\bimport\\b", "\\bpass\\b", "\\byield\\b",
             "\\bdef\\b", "\\bfinally\\b", "\\bin\\b", "\\bprint\\b"]
 
-        self.highlightingRules = [(QtCore.QRegExp(pattern), keywordFormat)
-                for pattern in keywordPatterns]
+        keywordRegexp = "|".join(keywordPatterns)
+        self.highlightingRules = [(QtCore.QRegExp(keywordRegexp), keywordFormat)]
 
-        quotationFormat = QtGui.QTextCharFormat()
-        self._quotationFormat = quotationFormat
-        quotationFormat.setForeground(QtCore.Qt.darkGreen)
-        self.highlightingRules.append((QtCore.QRegExp("\"[^\"]*\""),
-                                       quotationFormat))
+        self._quotationFormat = QtGui.QTextCharFormat()
+        self._quotationFormat.setForeground(QtCore.Qt.darkGreen)
+        for quotationRegexp in [r'"[^"]*"', r"'[^']*'"]:
+            self.highlightingRules.append((QtCore.QRegExp(quotationRegexp),
+                                           self._quotationFormat))
+
+        self._variableFormat = QtGui.QTextCharFormat()
+        self._variableFormat.setFontUnderline(True)
 
         bitmapFilenameFormat = QtGui.QTextCharFormat()
         self._bitmapFilenameFormat = bitmapFilenameFormat
@@ -2676,10 +2683,21 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
         self.normalFormat = QtGui.QTextCharFormat()
         self.normalFormat.setForeground(QtCore.Qt.black)
 
+        self.updateVariables()
+
+    def updateVariables(self):
+        varRegexps = []
+        for v in self._variables.keys():
+            varRegexps.append(r"\b%s\b" % (v,))
+        varRegexp = "|".join(varRegexps)
+        self._highlightVarsAndRules = [
+            (QtCore.QRegExp(varRegexp),
+             self._variableFormat)] + self.highlightingRules
+
     def highlightBlock(self, text):
         highlightedRegions = []
-        for pattern, fmt in self.highlightingRules:
-            expression = QtCore.QRegExp(pattern)
+        for pattern, fmt in self._highlightVarsAndRules:
+            expression = pattern
             index = expression.indexIn(text)
 
             while index >= 0:
