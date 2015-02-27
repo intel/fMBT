@@ -46,7 +46,7 @@ on_pass   = "exit(2)"
 EOF
 
 fmbt test.conf  >>$LOGFILE 2>&1
-if [ $? -ne 1 ] 
+if [ $? -ne 1 ]
 then
     testfailed
 else
@@ -187,4 +187,30 @@ grep 'ZeroDivisionError' stdout.txt >>$LOGFILE 2>&1 || {
     echo "missing error in log" >>$LOGFILE
     testfailed
 }
+testpassed
+
+teststep "end condition: lookahead_noprogress"
+cat > lookaheadnp.conf <<EOF
+model     = aal_remote(remote_pyaal lookaheadnp.aal)
+adapter   = aal
+heuristic = lookahead(3)
+coverage  = perm(1)
+pass      = coverage(42)
+pass      = lookahead_noprogress
+fail      = steps(3)
+EOF
+cat > lookaheadnp.aal <<EOF
+variables {}
+input "1" {}
+input "2" {}
+EOF
+if ! fmbt -l lookaheadnp.log lookaheadnp.conf >>$LOGFILE 2>&1; then
+    echo "failed because of non-zero exit status $?" >>$LOGFILE
+    testfailed
+fi
+STEPS=$(fmbt-log -f '$ax' lookaheadnp.log | wc -l)
+if [ "$STEPS" != "2" ]; then
+    echo "failed because number of steps ($STEPS), expected 2" >>$LOGFILE
+    testfailed
+fi
 testpassed
