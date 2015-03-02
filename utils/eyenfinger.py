@@ -1478,16 +1478,27 @@ def findText(text, detected_words = None, match=-1):
                 (int_wid, word, bbox))
     words_by_id.sort()
 
-    for i in xrange(len(words_by_id)-word_count+1):
-        detected_texts.append(
-            (" ".join([w[1] for w in words_by_id[i:i+word_count]]),
-             biggerBox([w[2] for w in words_by_id[i:i+word_count]])))
-
-    norm_text = " ".join(words) # normalize whitespace
     scored_texts = []
-    for t in detected_texts:
-        scored_texts.append((_score(t[0], norm_text), t[0], t[1]))
-    scored_texts.sort()
+    if word_count > 0:
+        for i in xrange(len(words_by_id)-word_count+1):
+            detected_texts.append(
+                (" ".join([w[1] for w in words_by_id[i:i+word_count]]),
+                 biggerBox([w[2] for w in words_by_id[i:i+word_count]])))
+
+        norm_text = " ".join(words) # normalize whitespace
+        for t in detected_texts:
+            scored_texts.append((_score(t[0], norm_text), t[0], t[1]))
+        scored_texts.sort()
+    elif match == 0.0:
+        # text == "", match == 0 => every word is a match
+        for w in words_by_id:
+            detected_texts.append((w[1], w[2]))
+        scored_texts = [(0.0, t[0], t[1]) for t in detected_texts]
+    else:
+        # text == "", match != 0 => no hits
+        detected_texts = []
+        scored_texts = []
+
     return [st for st in scored_texts if st[0] >= match]
 
 def _score(w1, w2):
