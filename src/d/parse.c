@@ -1494,7 +1494,7 @@ static void
 free_paths(VecVecZNode *paths) {
   int i;  
   vec_free(&path1);
-  for (i = 1; i < paths->n; i++) {
+  for (i = 0; i < paths->n; i++) {
     vec_free(paths->v[i]);
     FREE(paths->v[i]);
   }
