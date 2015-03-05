@@ -1895,7 +1895,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         self._stopOnError = kwArgs.pop("stopOnError", True)
         self._monkeyOptions = kwArgs.pop("monkeyOptions", [])
         self._screencapArgs = kwArgs.pop("screencapArgs", [])
-        self._screencapFormat = kwArgs.pop("screencapFormat", "png")
+        self._screencapFormat = kwArgs.pop("screencapFormat", "raw")
         self.setScreenToDisplayCoords(
             kwArgs.pop("screenToDisplay", lambda x, y: (x, y)))
         self.setDisplayToScreenCoords(
