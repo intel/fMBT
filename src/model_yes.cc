@@ -53,5 +53,9 @@ void Model_yes::set_props(std::string p)
 
 void Model_yes::set_props(int* p,int c)
 {
-  props.assign(p,p+c);
+  if (c) {
+    props.assign(p,p+c);
+  } else {
+    props.clear();
+  }
 }

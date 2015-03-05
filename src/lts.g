@@ -27,6 +27,8 @@ typedef struct _node {
 } node;
 #define D_ParseNode_User node
 
+int lts_node_size = sizeof(node);
+
 std::vector<int> oa;
 std::vector<int> ia;
 std::vector<int> os;

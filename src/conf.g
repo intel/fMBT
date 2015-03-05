@@ -25,6 +25,9 @@ typedef struct _node {
   std::string* str;
   float f;
 } node;
+
+int conf_node_size = sizeof(node);
+
 #define D_ParseNode_User node
 #include "conf.hh"
 #include "verdict.hh"

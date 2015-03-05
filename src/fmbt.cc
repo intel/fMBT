@@ -41,6 +41,8 @@
 #include <cstdio>
 #include <getopt.h>
 
+#include "random.hh"
+
 void print_usage()
 {
   std::printf(
@@ -232,6 +234,12 @@ int main(int argc,char * const argv[])
       } else if (!quiet && v != Verdict::UNDEFINED) {
         std::fprintf(stderr, "%s\n",c.errormsg.c_str());
       }
+
+      if (Random::_default_random) {
+	Random::_default_random->unref();
+	Random::_default_random=NULL;
+      }
+
       return c.exit_status;
     }
   }

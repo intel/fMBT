@@ -144,15 +144,16 @@ void Lts::add_prop(std::string* name,std::vector<int>& pr)
   }
 }
 
+extern int lts_node_size;
+
 bool Lts::init()
 {
   const std::string& name = params;
-  D_Parser *p = new_D_Parser(&parser_tables_lts, 512);
+  D_Parser *p = new_D_Parser(&parser_tables_lts, lts_node_size);
   p->loc.pathname = name.c_str();
   char *s;
   Lts* tmp=obj;
   bool ret;
-
   log.debug("Lts::load %s",name.c_str());
 
   lts_name=name;

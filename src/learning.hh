@@ -30,7 +30,7 @@ class Log;
 class Learning: public Writable {
 public:
   Learning(Log&l);
-  virtual ~Learning() { }
+  virtual ~Learning();
   virtual void setAlphabet(Alphabet* a) {
     alphabet=a;
   }
