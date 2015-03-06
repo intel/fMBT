@@ -62,7 +62,7 @@ Options:
           use unbuffered I/O. Example: read test log stream from file
           while test is running:
           $ fmbt -l test.log test.conf &
-          $ tail -f -n +0 test.log | fmbt-log -U -f '$sT s $ax'
+          $ tail -f -n +0 test.log | fmbt-log -u -f '$sT s $ax'
 
   -s, --separator=<string>
           separator between values of multivalue fields,
