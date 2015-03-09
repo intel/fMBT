@@ -34,6 +34,8 @@ extern "C" {
   extern D_ParserTables parser_tables_set;
 }
 
+extern int set_node_size;
+
 class Coverage_setw: public Coverage_set {
 public:
   Coverage_setw(Log& l,std::string params):
@@ -45,7 +47,7 @@ public:
     filtervec = &_fv;
     asize=&allowed_set_size;
     mcount=&max_count;
-    D_Parser *p = new_D_Parser(&parser_tables_set, 512);
+    D_Parser *p = new_D_Parser(&parser_tables_set, set_node_size);
     remove_force(params);
     bool ret=dparse(p,(char*)params.c_str(),strlen(params.c_str()));
     ret=p->syntax_errors==0 && ret;
@@ -77,7 +79,7 @@ Coverage_set::~Coverage_set()
 {
   for(unsigned i=0;i<covs.size();i++) {
     delete covs[i];
-  }  
+  }
   for(size_t i=0;i<_fv.size();i++) {
     delete _fv[i].first;
   }
@@ -162,7 +164,7 @@ bool Coverage_set::filter()
 {
 
   // check max_count
-  if (max_count>0 && sets[current_set]==max_count) 
+  if (max_count>0 && sets[current_set]==max_count)
     return false;
 
   // Check current_set size....
@@ -189,10 +191,10 @@ bool Coverage_set::filter()
 
     if (!range(current_set[i->first],i->second)) {
       return false;
-    }    
+    }
   }
 
-  // Now we know that there aren't too many current_sets, 
+  // Now we know that there aren't too many current_sets,
   // current_set belongs to set_filter and set_filter belongs to current_set.
   // So let's return true :)
   return true;
@@ -247,7 +249,7 @@ void Coverage_set::set_model(Model* _model) {
     total_count=(allowed_set_size.second-allowed_set_size.first+1)*max_count;
     log.debug("total_count %i\n",total_count);
   }
-  
+
 }
 
 void Coverage_set::push()

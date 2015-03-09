@@ -41,6 +41,8 @@ typedef struct _node {
 #include "aalang_py.hh"
 aalang* obj=NULL;
 
+int lang_node_size = sizeof(node);
+
 std::vector<std::string> aname;
 
 bool adapter,body,guard;

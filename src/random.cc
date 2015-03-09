@@ -108,8 +108,8 @@ Random* Random::default_random() {
   if (!_default_random) {
     std::string rname("C(supported(/dev/urandom,ustime))");
     _default_random = new_random(rname);
-  } else {
-    _default_random->ref();
+    _default_random->nullme=(void**)&_default_random;
   }
+  _default_random->ref();
   return _default_random;
 }

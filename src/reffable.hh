@@ -22,7 +22,7 @@
 
 class reffable {
 public:
-  reffable(): refcount(0) {}
+  reffable(void** _nullme=NULL): refcount(0),nullme(_nullme) {}
   virtual ~reffable() {}
 
   void ref() {
@@ -32,11 +32,15 @@ public:
   void unref() {
     refcount--;
     if (refcount<=0) {
+      if (nullme) {
+	*nullme=NULL;
+      }
       delete this;
     }
   }
 protected:
   int refcount;
+  void** nullme;
 };
 
 #endif

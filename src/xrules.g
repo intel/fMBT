@@ -31,6 +31,8 @@ typedef struct _node {
 } node;
 #define D_ParseNode_User node
 
+int xrules_node_size=sizeof(node);
+
 #ifdef CAPI
 
 #include "dparse.h"
@@ -51,7 +53,7 @@ extern "C" {
     int xrules_component(void (*f)(unsigned int, const char*)) {
         add_component_cb = f; return f != NULL;}
     int xrules_load(const char* filename) {
-        D_Parser* p = new_D_Parser(&parser_tables_xrules, 16);
+        D_Parser* p = new_D_Parser(&parser_tables_xrules, xrules_node_size);
         p->loc.pathname = filename;
         char* s = readfile(filename);
         dparse(p, s, strlen(s));

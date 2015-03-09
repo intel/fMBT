@@ -27,6 +27,8 @@ extern "C" {
   extern D_ParserTables parser_tables_paths;
 }
 
+extern int paths_node_size;
+
 class Coverage_pathsw: public Coverage_paths_base {
 public:
   Coverage_pathsw(Log& l,std::string params):
@@ -36,7 +38,7 @@ public:
     paths_tt=&_t;
     paths_dd=&_d;
 
-    D_Parser *p = new_D_Parser(&parser_tables_paths, 512);
+    D_Parser *p = new_D_Parser(&parser_tables_paths, paths_node_size);
     remove_force(params);
     bool ret=dparse(p,(char*)params.c_str(),strlen(params.c_str()));
     ret=p->syntax_errors==0 && ret;

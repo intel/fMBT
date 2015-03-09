@@ -32,6 +32,8 @@ typedef struct _node {
   std::vector<std::pair<std::string*,std::pair<int,int> > >* filtervec;
 } node;
 
+int set_node_size = sizeof(node);
+
 std::pair<int,int>* asize;
 int* mcount;
 std::vector<std::string*> *set_ff,*set_tt,*set_dd;

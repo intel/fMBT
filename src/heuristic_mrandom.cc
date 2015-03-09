@@ -29,8 +29,9 @@ Heuristic_mrandom::~Heuristic_mrandom()
   for(unsigned i=0;i<h.size();i++) {
     delete h[i].second;
   }
-  if (r)
+  if (r) {
     r->unref();
+  }
 }
 
 Heuristic_mrandom::Heuristic_mrandom(Log& l,const std::string& params) :

@@ -60,6 +60,8 @@ void print_usage()
     );
 }
 
+extern int uconf_node_size;
+
 int main(int argc,char * const argv[])
 {
   FILE* outfile=stdout;
@@ -150,7 +152,7 @@ int main(int argc,char * const argv[])
     std::printf("Can't read input file \"%s\"\n",usecasefile);
     return 3;
   }
-  D_Parser *p = new_D_Parser(&parser_tables_uconf,5120);
+  D_Parser *p = new_D_Parser(&parser_tables_uconf,uconf_node_size);
   p->loc.pathname = usecasefile;
   dparse(p,s,std::strlen(s));
 

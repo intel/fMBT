@@ -237,12 +237,10 @@ int main(int argc,char * const argv[])
       } else if (!quiet && v != Verdict::UNDEFINED) {
         std::fprintf(stderr, "%s\n",c.errormsg.c_str());
       }
-
       if (Random::_default_random) {
 	Random::_default_random->unref();
-	Random::_default_random=NULL;
+	//Random::_default_random=NULL;
       }
-
       return c.exit_status;
     }
   }

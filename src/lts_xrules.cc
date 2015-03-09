@@ -71,9 +71,11 @@ void Lts_xrules::prop_create()
   }
 }
 
+extern int xrules_node_size;
+
 bool Lts_xrules::init()
 {
-  D_Parser *p = new_D_Parser(&parser_tables_xrules, 16);
+  D_Parser *p = new_D_Parser(&parser_tables_xrules, xrules_node_size);
   p->loc.pathname = params.c_str();
   char *s;
 

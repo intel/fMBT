@@ -751,7 +751,7 @@ public:
       if (random_pos==-1) {
 	random_pos=r->drand48()*my_action.size();
       }
-      
+
       if (action==my_action[random_pos]) {
 	if (value[random_pos]<unit::value.second) {
 	  value[random_pos]++;

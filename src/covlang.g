@@ -29,6 +29,7 @@ typedef struct _node {
   int i;
 } cnode;
 #define D_ParseNode_User cnode
+int cnode_size = sizeof(cnode);
 Coverage_Market* cobj;
 
 #include "d/d.h"
@@ -60,7 +61,7 @@ Coverage_Market::unit* tagspec_helper(Coverage_Market::unit_tag* l,Coverage_Mark
 
 Coverage_Market::unit* inthelper(Coverage_Market::unit* u,
                                  int count) {
-    Coverage_Market::unit_leaf* ul = 
+    Coverage_Market::unit_leaf* ul =
         dynamic_cast<Coverage_Market::unit_leaf*>(u);
 
     if (ul) {
@@ -104,7 +105,7 @@ node: persistent tag_spec actionname persistent tag_spec  { $$.type='e'; $$.u = 
               $$.u = new Coverage_Market::unit_tag();
             }
         }
-    | "not" node       { $$.u = new Coverage_Market::unit_not($1.u); } 
+    | "not" node       { $$.u = new Coverage_Market::unit_not($1.u); }
     | uint '*' node    { $$.u = inthelper($2.u,$0.i); }
     | node '*' uint    { $$.u = inthelper($0.u,$2.i); }
     | 'uwalks' '(' expr ')' { $$.u = new Coverage_Market::unit_walk($2.u,true); }
@@ -118,7 +119,7 @@ node: persistent tag_spec actionname persistent tag_spec  { $$.type='e'; $$.u = 
                 free(ss);
                 ${reject};
             } else {
-                D_Parser *p = new_D_Parser(&parser_tables_covlang, 32);
+                D_Parser *p = new_D_Parser(&parser_tables_covlang, cnode_size);
                 p->start_state = D_START_STATE_expr;
                 p->loc.pathname=ss;
                 p->save_parse_tree=1;
@@ -161,14 +162,14 @@ exactly: { $$.type=0; } |
 tag_expr_list: tag_expr { $$.tag = $0.tag; }
     | exactly 'every' count tagname { $$.tag = cobj->req_rx_tag('a',*$3.str,$2.i,$0.type); delete $3.str; }
     | ('e' | 'E' | 'any' ) tagname { $$.tag = cobj->req_rx_tag('e',*$1.str); delete $1.str; }
-    | tag_expr '|' tag_expr_list { 
+    | tag_expr '|' tag_expr_list {
             $$.tag = new Coverage_Market::unit_tagelist('|',$0.tag,$2.tag) ;
         }
     | tag_expr '&' tag_expr_list {
             $$.tag = new Coverage_Market::unit_tagelist('&',$0.tag,$2.tag) ;
         }
     ;
-        
+
 
 
 tag_node:                  tagname { $$.tag = cobj->req_rx_tag(*$0.str);     delete $0.str; }

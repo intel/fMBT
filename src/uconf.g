@@ -29,6 +29,9 @@ typedef struct _node {
   std::string* str;
   std::vector<std::string*>* strvec;
 } node;
+
+int uconf_node_size = sizeof(node);
+
 #define D_ParseNode_User node
 #include "of.hh"
 OutputFormat* uconf_obj;

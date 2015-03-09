@@ -26,6 +26,9 @@ typedef struct _node {
 #define D_ParseNode_User node
 #include "adapter_mapper.hh"
 Rules* amobj;
+
+int mrules_node_size=sizeof(node);
+
 }
 
 xrules_e_file: filename+ rule+;

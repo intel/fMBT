@@ -38,7 +38,7 @@ Heuristic_random::Heuristic_random(Log& l,const std::string& _params) :
   std::string params(_params);
   if (params == "") {
     r = Random::default_random();
-    r->ref();
+    //r->ref();
   } else {
     r = new_random(params);
     if (!r) {

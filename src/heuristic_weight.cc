@@ -239,6 +239,8 @@ int Heuristic_weight::getIAction()
   return actions[pos];
 }
 
+extern int weight_node_size;
+
 void Heuristic_weight::set_model(Model* _model)
 {
   Heuristic::set_model(_model);
@@ -247,7 +249,7 @@ void Heuristic_weight::set_model(Model* _model)
   if (s) {
     Heuristic_weight* h=Hw;
     Hw=this;
-    D_Parser *p = new_D_Parser(&parser_tables_weight, 512);
+    D_Parser *p = new_D_Parser(&parser_tables_weight, weight_node_size);
     p->loc.pathname = prm.c_str();
     bool ret=dparse(p,s,std::strlen(s));
     ret=p->syntax_errors==0 && ret;

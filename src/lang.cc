@@ -111,6 +111,8 @@ parse_syntax_error_report(struct D_Parser *ap) {
   FREE(fn);
 }
 
+extern int lang_node_size;
+
 int main(int argc,char** argv) {
   int c;
   bool lib=false;
@@ -198,7 +200,7 @@ int main(int argc,char** argv) {
 
   char *s=NULL;
   int status=0;
-  D_Parser *p = new_D_Parser(&parser_tables_lang, 5120);
+  D_Parser *p = new_D_Parser(&parser_tables_lang, lang_node_size);
 
   p->loc.pathname = argv[optind];
 

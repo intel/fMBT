@@ -74,7 +74,7 @@ extern "C" {
         add_transition_cb = f;     return f != NULL; }
 
     int lts_load(const char* filename) {
-        D_Parser* p = new_D_Parser(&parser_tables_lts, 512);
+        D_Parser* p = new_D_Parser(&parser_tables_lts, lts_node_size);
         p->loc.pathname = filename;
         char* s = readfile(filename);
         dparse(p, s, strlen(s));

@@ -27,6 +27,8 @@ typedef struct _node {
   std::vector<std::string*>* strvec;
 } node;
 
+int paths_node_size = sizeof(node);
+
 #define D_ParseNode_User node
 std::vector<std::string*> *paths_ff,*paths_tt,*paths_dd;
 }

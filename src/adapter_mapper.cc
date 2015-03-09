@@ -151,10 +151,11 @@ void Adapter_mapper::add_map(std::vector<int>& index,std::vector<std::string>& n
   log.debug("%s ready",__func__);
 }
 
+extern int mrules_node_size;
 
 bool Adapter_mapper::load(std::string& name)
 {
-  D_Parser *p = new_D_Parser(&parser_tables_mrules, 16);
+  D_Parser *p = new_D_Parser(&parser_tables_mrules, mrules_node_size);
   p->loc.pathname = name.c_str();
   char *s;
 

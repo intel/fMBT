@@ -248,9 +248,11 @@ void Coverage_Mapper::load(const std::string& name)
   load_name = name;
 }
 
+extern int mrules_node_size;
+
 bool Coverage_Mapper::pload(std::string& name)
 {
-  D_Parser *p = new_D_Parser(&parser_tables_mrules, 16);
+  D_Parser *p = new_D_Parser(&parser_tables_mrules, mrules_node_size);
   p->loc.pathname = name.c_str();
   char *s;
 

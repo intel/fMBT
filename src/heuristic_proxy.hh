@@ -32,8 +32,10 @@ public:
   Heuristic_proxy(Log& l,Heuristic* _h,const std::string& _n);
 
   virtual ~Heuristic_proxy() {
-    delete h;
-    HeuristicFactory::remove_factory("old");
+    if (h) {
+      HeuristicFactory::remove_factory("old");
+      delete h;
+    }
   }
 
   virtual bool execute(int action) {
