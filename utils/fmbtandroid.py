@@ -2502,7 +2502,13 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             if status != 0:
                 _adapterLog(errmsg)
                 raise FMBTAndroidError(errmsg)
-            data = gzip.open(filename + ".raw").read()
+            try:
+                data = gzip.open(filename + ".raw").read()
+            except Exception, e:
+                msg = 'reading screenshot from "%s" failed: %s' % (
+                    filename + ".raw", e)
+                _adapterLog(msg)
+                raise FMBTAndroidError(msg)
             os.unlink(filename + ".raw")
 
             width, height, fmt = struct.unpack("<LLL", data[:12])
