@@ -170,6 +170,7 @@ class ChromiumOSConnection(fmbtgti.GUITestConnection):
 
         agentCmd = (self._loginCommand +
                     " sudo DISPLAY=:0 XAUTHORITY=/home/chronos/.Xauthority" +
+                    " LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64:/usr/lib:/usr/lib64" +
                     " python /tmp/fmbtchromiumos/pythonshare-server -p stdin")
 
         self._agent = pythonshare.connection("shell://" + agentCmd)
