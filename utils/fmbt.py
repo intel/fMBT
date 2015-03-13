@@ -28,6 +28,7 @@
 # component such as remote_python or remote_pyaal.
 
 import datetime
+import inspect
 import os
 import sys
 import time
@@ -155,6 +156,31 @@ def simulated():
 
 def _adapterlogWriter(fileObj, formattedMsg):
     fileObj.write(formattedMsg)
+
+def funcSpec(func):
+    """
+    Return function name and args as they could have been defined
+    based on function object.
+    """
+    argspec = inspect.getargspec(func)
+    if argspec.defaults:
+        kwarg_count = len(argspec.defaults)
+    else:
+        kwarg_count = 0
+    arg_count = len(argspec.args) - kwarg_count
+    arglist = [str(arg) for arg in argspec.args[:arg_count]]
+    kwargs = argspec.args[arg_count:]
+    for index, kwarg in enumerate(kwargs):
+        arglist.append("%s=%s" % (kwarg, repr(argspec.defaults[index])))
+    if argspec.varargs:
+        arglist.append("*%s" % (argspec.varargs,))
+    if argspec.keywords:
+        arglist.append("**%s" % (argspec.keywords,))
+    try:
+        funcspec = "%s(%s)" % (func.func_name, ", ".join(arglist))
+    except:
+        funcspec = "%s(fmbt.funcSpec error)" % (func.func_name,)
+    return funcspec
 
 _g_debug_socket = None
 _g_debug_conn = None

@@ -284,7 +284,7 @@ def _logCalls(orig_self, report, logDepth_):
     localVars.testStep = -1
     localVars.actionName = None
     def logMethodCall(func, throughInstance = None):
-        def callee(*args, **kwargs):
+        def fmbtlogger_wrap(*args, **kwargs):
             currentTestStep = fmbt.getTestStep()
             if localVars.testStep != currentTestStep:
                 if localVars.actionName not in [None, "undefined"]:
@@ -309,8 +309,11 @@ def _logCalls(orig_self, report, logDepth_):
                 raise
             localVars.logDepth += 1
             return rv
-        return callee
+        fmbtlogger_wrap.__doc__ = "%s\n%s" % (
+            fmbt.funcSpec(func), func.__doc__)
+        return fmbtlogger_wrap
     class _detectCalls(orig_self.__class__):
+        __doc__ = orig_self.__class__.__doc__
         def __init__(self): pass
         def __del__(self): pass
         def __getattribute__(self, attr):
