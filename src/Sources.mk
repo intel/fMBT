@@ -12,15 +12,15 @@ if RDRND
 COMMON_SOURCES += random_intel_hw.hh
 endif
 
-fmbt_SOURCES                  = $(COMMON_SOURCES) adapter_dlopen.cc adapter_remote.cc lts_remote.cc lts_trace.cc xrules_remote.cc coverage_shared.cc coverage_tema_seq.cc history_remote.cc model_remote.cc aal_java.cc aal_remote.cc history_log.cc history_multi.cc history_glob.cc remote.cc learn_function.cc function_random.cc
+fmbt_SOURCES                  = $(COMMON_SOURCES) adapter_dlopen.cc adapter_remote.cc lts_remote.cc lts_trace.cc xrules_remote.cc coverage_shared.cc coverage_tema_seq.cc history_remote.cc model_remote.cc aal_java.cc aal_remote.cc history_log.cc history_multi.cc history_glob.cc remote.cc learn_function.cc function_random.cc function_array.cc
 
-fmbt_ucheck_SOURCES	      = uc.cc helper.cc log.cc xrules.g.d_parser.cc lts_xrules.cc conf.cc end_condition.cc date.g.d_parser.cc test_engine.cc adapter.cc history.cc heuristic.cc policy.cc alg_bdfs.cc conf.g.d_parser.cc uconf.g.d_parser.cc mrules.g.d_parser.cc of.cc of_null.cc awrapper.cc null.cc aal.cc history_log.cc $(LOCAL_COVERAGES) lts_remote.cc coverage_of.cc of_html.cc of_csv.cc endhook.cc $(LOCAL_MODELS) coverage_notice.cc coverage_report_filter.cc random.cc random_c.cc function.cc params.cc remote.cc learn_proxy.cc learning.cc learn_action.cc learn_time.cc learn_function.cc readline_wrapper.cc
+fmbt_ucheck_SOURCES	      = uc.cc helper.cc log.cc xrules.g.d_parser.cc lts_xrules.cc conf.cc end_condition.cc date.g.d_parser.cc test_engine.cc adapter.cc history.cc heuristic.cc policy.cc alg_bdfs.cc conf.g.d_parser.cc uconf.g.d_parser.cc mrules.g.d_parser.cc of.cc of_null.cc awrapper.cc null.cc aal.cc history_log.cc $(LOCAL_COVERAGES) lts_remote.cc coverage_of.cc of_html.cc of_csv.cc endhook.cc $(LOCAL_MODELS) coverage_notice.cc coverage_report_filter.cc random.cc random_c.cc function.cc params.cc remote.cc learn_proxy.cc learning.cc learn_action.cc learn_time.cc learn_function.cc readline_wrapper.cc function_const.cc function_array.cc
 
 fmbt_droid_SOURCES            = $(COMMON_SOURCES)
 
 fmbt_aalc_SOURCES = lang.g.d_parser.cc lang.cc helper.cc aalang_cpp.cc aalang_py.cc aalang_java.cc params.cc
 
-remote_adapter_loader_SOURCES = remote_adapter_loader.cc adapter.cc log.cc adapter_dummy.cc adapter_model.cc adapter_v4l2.cc helper.cc model.cc random.cc function.cc random_c.cc params.cc
+remote_adapter_loader_SOURCES = remote_adapter_loader.cc adapter.cc log.cc adapter_dummy.cc adapter_model.cc adapter_v4l2.cc helper.cc model.cc random.cc function.cc random_c.cc params.cc function_const.cc function_array.cc
 
 fmbt_aalp_SOURCES = aalp.ll helper.cc params.cc log.cc
 

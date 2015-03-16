@@ -30,7 +30,14 @@
 class Learn_time: public Learning {
 public:
   Learn_time(Log&l,std::string s);
-  virtual ~Learn_time() { }
+  virtual ~Learn_time() {
+    if (learning_multiplier) {
+      delete learning_multiplier;
+    }
+    if (default_value) {
+      delete default_value;
+    }
+  }
   virtual void suggest(int action);
   virtual void execute(int action);
   virtual float getE(int action);
@@ -40,8 +47,10 @@ public:
   }
 protected:
   Function* learning_multiplier;
+  Function* default_value;
   struct timeval last_time;
   std::vector<double> time_map;
+  double _duration;
 };
 
 #endif

@@ -20,14 +20,46 @@
 #include "learn_time.hh"
 #include "helper.hh"
 #include "adapter.hh"
+#include "function_export.hh"
 
-Learn_time::Learn_time(Log&l,std::string s): Learning(l) {
-  learning_multiplier = NULL;
-  if (s.length() > 0) {
-    learning_multiplier=new_function(s);
+Learn_time::Learn_time(Log&l,std::string s): Learning(l),learning_multiplier(NULL),
+					     default_value(NULL) {
+
+  std::vector<std::string> fa;
+  commalist(s,fa);
+
+  Export_double _exp("duration",&_duration);
+
+  switch (fa.size()) {
+  case 2:
+    default_value=new_function(fa[1]);
+    if (!default_value) {
+      status=false;
+      errormsg="Can't create function \""+fa[1]+"\"";
+      break;
+    }
+
+  case 1:
+    learning_multiplier=new_function(fa[0]);
+    if (!learning_multiplier) {
+      status=false;
+      errormsg="Can't create function \""+fa[0]+"\"";
+    }
+
+  case 0:
+    break;
+
+  default:
+    status=false;
+    errormsg="Expecting 0,1 or 2 parameters. Got "+to_string((unsigned)fa.size());
   }
+
   if (!learning_multiplier) {
     learning_multiplier=new_function("0.5");
+  }
+
+  if (!default_value) {
+    default_value=new_function("0.0");
   }
 }
 
@@ -39,7 +71,8 @@ void Learn_time::suggest(int action) {
 float Learn_time::getE(int action) {
   float retval = time_map[action];
   if (std::isnan(retval))
-    retval = 0;
+    retval = default_value->fval();
+
   return retval;
 }
 
@@ -51,11 +84,12 @@ void Learn_time::execute(int action) {
     // called because of output action?
   }
   timersub(&Adapter::current_time,&last_time,&duration);
+  _duration = (duration.tv_sec+duration.tv_usec/1000000.0);
   if (std::isnan(time_map[action])) {
-    time_map[action] = (duration.tv_sec+duration.tv_usec/1000000.0);
+    time_map[action] = _duration;
   } else {
     float f=learning_multiplier->fval();
-    time_map[action]=time_map[action]*(1.0-f)+f*(duration.tv_sec+duration.tv_usec/1000000.0);
+    time_map[action]=time_map[action]*(1.0-f)+f*_duration;
   }
 }
 

@@ -18,11 +18,15 @@
  */
 
 #ifndef __FUNCTION_const_HH__
+#define __FUNCTION_const_HH__
 #include "function.hh"
 
 class Function_const: public Function {
 public:
   Function_const(const std::string& param);
+  Function_const(signed long);
+  Function_const(int);
+  Function_const(double);
   virtual ~Function_const() {}
   virtual signed long val();
   virtual double fval();

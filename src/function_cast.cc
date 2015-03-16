@@ -18,39 +18,32 @@
  */
 
 #define _FUNCTION_INTERNAL_
-#include "random.hh"
-#include "function_random.hh"
 
-Function_random::Function_random(const std::string& param) {
+#include "function_cast.hh"
 
-  if (param!="") {
-    r=new_random(param);
-  } else {
-    r=Random::default_random();
-  }
-  if (!r) {
+Function_int::Function_int(const std::string& param) {
+  prefer = INT;
+  child=new_function(param);
+  if (!child) {
     status=false;
-    errormsg="Can't create random!";
+    errormsg="Can't create \""+param+"\"";
   } else {
-    status=r->status;
-    errormsg=r->errormsg;
+    status=child->status;
+    errormsg=child->errormsg;
   }
-  prefer=FLOAT;
 }
 
-Function_random::~Function_random() {
-  r->unref();
-  r=NULL;
+Function_float::Function_float(const std::string& param) {
+  prefer = FLOAT;
+  child=new_function(param);
+  if (!child) {
+    status=false;
+    errormsg="Can't create \""+param+"\"";
+  } else {
+    status=child->status;
+    errormsg=child->errormsg;
+  }
 }
 
-
-double Function_random::fval() {
-  return r->drand48();
-}
-
-signed long Function_random::val() {
-  return r->rand();
-}
-
-
-FACTORY_DEFAULT_CREATOR(Function, Function_random, "random")
+FACTORY_DEFAULT_CREATOR(Function, Function_int, "int")
+FACTORY_DEFAULT_CREATOR(Function, Function_float, "float")

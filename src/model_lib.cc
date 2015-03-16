@@ -37,7 +37,7 @@ namespace {
     }
   }
 
-  Model* lib_creator(Log& l, std::string params) {
+  Model* lib_creator(Log& l, std::string params,void*) {
     Model* m;
     std::vector<std::string> s;
 

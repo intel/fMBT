@@ -20,9 +20,12 @@
 #include "learn_function.hh"
 #include "helper.hh"
 #include "adapter.hh"
+#include "function_export.hh"
 
 Learn_time_function::Learn_time_function(Log&l,std::string&s): Learn_time(l,"") {
+  Export_double _exp("duration",&_duration);
   f=new_function(s);
+
   if (!f) {
     status=false;
     errormsg="Can't create function \""+s+"\"";
@@ -30,6 +33,12 @@ Learn_time_function::Learn_time_function(Log&l,std::string&s): Learn_time(l,"") 
     status=f->status;
     errormsg=f->errormsg;
   }
+}
+
+void Learn_action_function::suggest(int action) {
+  Learn_action::suggest(action);
+  index_action=action;
+  learn_as_function=pos[index_action];
 }
 
 float Learn_time_function::getF(int action) {

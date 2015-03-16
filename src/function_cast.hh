@@ -17,40 +17,45 @@
  *
  */
 
-#define _FUNCTION_INTERNAL_
-#include "random.hh"
-#include "function_random.hh"
+#ifndef __FUNCTION_cast_HH__
+#include "function.hh"
 
-Function_random::Function_random(const std::string& param) {
+#include <vector>
 
-  if (param!="") {
-    r=new_random(param);
-  } else {
-    r=Random::default_random();
+class Function_int: public Function {
+public:
+  Function_int(const std::string& param);
+  virtual ~Function_int() {
+    if (child) {
+      delete child;
+      child=NULL;
+    }
   }
-  if (!r) {
-    status=false;
-    errormsg="Can't create random!";
-  } else {
-    status=r->status;
-    errormsg=r->errormsg;
+  virtual signed long val() {
+    return child->val();
   }
-  prefer=FLOAT;
-}
+  virtual double fval() {
+    return child->val();
+  }
+  Function* child;
+};
 
-Function_random::~Function_random() {
-  r->unref();
-  r=NULL;
-}
+class Function_float: public Function {
+public:
+  Function_float(const std::string& param);
+  virtual ~Function_float() {
+    if (child) {
+      delete child;
+      child=NULL;
+    }
+  }
+  virtual signed long val() {
+    return child->fval();
+  }
+  virtual double fval() {
+    return child->fval();
+  }
+  Function* child;
+};
 
-
-double Function_random::fval() {
-  return r->drand48();
-}
-
-signed long Function_random::val() {
-  return r->rand();
-}
-
-
-FACTORY_DEFAULT_CREATOR(Function, Function_random, "random")
+#endif /* __FUNCTION_cast_HH__ */

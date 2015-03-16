@@ -202,11 +202,11 @@ int Adapter_remote::observe(std::vector<int> &action,bool block)
 }
 
 namespace {
-  Adapter* adapter_creator(Log& l, std::string params) {
+  Adapter* adapter_creator(Log& l, std::string params,void*) {
     return new Adapter_remote(l, params, true);
   }
 
-  Adapter* adapter_creator_noencode(Log& l, std::string params) {
+  Adapter* adapter_creator_noencode(Log& l, std::string params,void*) {
     return new Adapter_remote(l, params, false);
   }
 
