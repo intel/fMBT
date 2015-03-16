@@ -35,15 +35,23 @@
 
 class Function: public Writable {
 public:
+  Function(): prefer(INT) { }
   virtual ~Function() { }
   virtual signed long val() = 0;
   virtual double fval() {
     return val();
   }
+  enum PREFER {
+    INT,
+    FLOAT,
+    CARE
+  };
+  PREFER prefer;
 };
 
 FACTORY_DECLARATION(Function)
 Function* new_function(const std::string&);
+
 
 #ifndef _FUNCTION_INTERNAL_
 

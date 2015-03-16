@@ -29,6 +29,7 @@
 
 class Random;
 class Function;
+#include "function_const.hh"
 
 class Heuristic_greedy : public Heuristic {
 public:
@@ -40,13 +41,15 @@ public:
   virtual int getAction();
   virtual int getIAction();
 private:
-  int m_search_depth;
+  Function* m_search_depth;
   bool m_burst;
   std::vector<int> m_path;
   Random* r;
   Function* randomise_function;
 protected:
   bool adaptive;
+  Function_const* const_index;
+  int  array_size;
 public:
   bool end_condition;
 };

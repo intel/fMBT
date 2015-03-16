@@ -41,8 +41,14 @@ AlgBDFS::AlgBDFS(int searchDepth, Learning* learn,Function* function):
 
 double AlgPathToBestCoverage::search(Model& model, Coverage& coverage, std::vector<int>& path)
 {
+    return search(model,coverage,path,m_search_depth);
+}
+
+double AlgPathToBestCoverage::search(Model& model, Coverage& coverage, std::vector<int>& path,int search_depth)
+{
     m_coverage = &coverage;
     m_model = &model;
+    m_search_depth = search_depth;
     return path_to_best_evaluation(model, path, m_search_depth);
 }
 
@@ -74,12 +80,21 @@ void AlgPathToBestCoverage::undoExecute()
     m_coverage->pop();
 }
 
+
 double AlgPathToAction::search(Model& model, int find_this_action, std::vector<int> &path)
 {
     m_model = &model;
     m_find_this_action = find_this_action;
     return path_to_best_evaluation(model, path, m_search_depth);
 }
+
+double AlgPathToAction::search(Model& model, int find_this_action, std::vector<int> &path,
+			       int search_depth)
+{
+    m_search_depth = search_depth;
+    return search(model,find_this_action,path);
+}
+
 
 double AlgPathToAction::evaluate()
 {
