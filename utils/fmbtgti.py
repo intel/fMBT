@@ -2719,7 +2719,7 @@ class Screenshot(object):
                 foundItems.append(GUIItem(
                     "%sx%s/%s" % (bbox.left/xRes, bbox.top/yRes, bbox.error),
                     (bbox.left, bbox.top, bbox.right, bbox.bottom),
-                    self.filename()))
+                    self))
         finally:
             eye4graphics.closeImage(image)
         return foundItems
@@ -2759,7 +2759,12 @@ class GUIItem(object):
     """
     def __init__(self, name, bbox, screenshot, bitmap=None, ocrFind=None, ocrFound=None):
         self._name = name
-        self._bbox = bbox
+        if screenshot:
+            x1, y1 = _intCoords(bbox[:2], screenshot.size())
+            x2, y2 = _intCoords(bbox[2:], screenshot.size())
+            self._bbox = (x1, y1, x2, y2)
+        else:
+            self._bbox = bbox
         self._bitmap = bitmap
         self._screenshot = screenshot
         self._ocrFind = ocrFind
