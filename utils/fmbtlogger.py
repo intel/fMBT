@@ -309,6 +309,7 @@ def _logCalls(orig_self, report, logDepth_):
                 raise
             localVars.logDepth += 1
             return rv
+        fmbtlogger_wrap.func_name = func.func_name
         fmbtlogger_wrap.__doc__ = "%s\n%s" % (
             fmbt.funcSpec(func), func.__doc__)
         return fmbtlogger_wrap

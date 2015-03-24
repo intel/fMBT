@@ -3004,14 +3004,14 @@ class _VisualLog:
             retval = loggerSelf.doCallLogException(origMethod, args, kwargs)
             loggerSelf.logReturn(retval, tip=origMethod.func_name)
             return retval
-        loggerSelf.changeCodeName(origMethodWRAP, origMethod.func_code.co_name + "WRAP")
+        loggerSelf.changeCodeName(origMethodWRAP, origMethod.func_name + "WRAP")
         return origMethodWRAP
 
     def messageLogger(loggerSelf, origMethod):
         def origMethodWRAP(*args, **kwargs):
             loggerSelf.logMessage(" ".join([str(a) for a in args]))
             return True
-        loggerSelf.changeCodeName(origMethodWRAP, origMethod.func_code.co_name + "WRAP")
+        loggerSelf.changeCodeName(origMethodWRAP, origMethod.func_name + "WRAP")
         return origMethodWRAP
 
     def dragLogger(loggerSelf, origMethod):
