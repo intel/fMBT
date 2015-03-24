@@ -2759,7 +2759,7 @@ class GUIItem(object):
     """
     def __init__(self, name, bbox, screenshot, bitmap=None, ocrFind=None, ocrFound=None):
         self._name = name
-        if screenshot:
+        if screenshot and hasattr(screenshot, "size"):
             x1, y1 = _intCoords(bbox[:2], screenshot.size())
             x2, y2 = _intCoords(bbox[2:], screenshot.size())
             self._bbox = (x1, y1, x2, y2)
