@@ -181,21 +181,6 @@ void Conf::load(std::string& name,std::string& content)
   if (!model->status || !model->init() || !model->reset())
     RETURN_ERROR_VOID(model->lineno,"Error in model: " + model->stringify());
 
-  heuristic->set_coverage(coverage);
-
-  heuristic->set_model(model);
-
-  set_model_callbacks[0]=coverage;
-
-  // Handle post set_model calls.
-
-  for(std::vector<Coverage*>::iterator i=set_model_callbacks.begin();i!=set_model_callbacks.end();++i) {
-    (*i)->set_model(model);
-    if (!((*i)->status)) {
-      RETURN_ERROR_VOID((*i)->lineno,"Coverage error: " + (*i)->stringify());
-    }
-  }
-
   adapter = new_adapter(log, adapter_name);
 
   if (adapter == NULL)
@@ -233,6 +218,29 @@ void Conf::load(std::string& name,std::string& content)
 
   }
 
+  adapter->set_actions(&model->getActionNames());
+
+  if (!adapter->status)
+    RETURN_ERROR_VOID(adapter->lineno,"Adapter error: " + adapter->stringify());
+
+  if (!adapter->init())
+    RETURN_ERROR_VOID(adapter->lineno,"Initialising adapter failed: " + adapter->stringify());
+
+  heuristic->set_coverage(coverage);
+
+  heuristic->set_model(model);
+
+  set_model_callbacks[0]=coverage;
+
+  // Handle post set_model calls.
+
+  for(std::vector<Coverage*>::iterator i=set_model_callbacks.begin();i!=set_model_callbacks.end();++i) {
+    (*i)->set_model(model);
+    if (!((*i)->status)) {
+      RETURN_ERROR_VOID((*i)->lineno,"Coverage error: " + (*i)->stringify());
+    }
+  }
+
   // Free some memory.
   disable_tags.clear();
 
@@ -250,7 +258,7 @@ void Conf::load(std::string& name,std::string& content)
     if (!tmp->status) {
       RETURN_ERROR_VOID(tmp->lineno,"learning error: " + tmp->stringify());
     }
-    
+
     if ((dynamic_cast<Learn_time*>(tmp))!=NULL) {
       tmp->setAlphabet(model);
       lp->lt=tmp;
@@ -296,11 +304,6 @@ void Conf::load(std::string& name,std::string& content)
       RETURN_ERROR_VOID(history[i].second,"Creating history \""+ *(history[i].first) + "\" failed.");
     }
   }
-
-  adapter->set_actions(&model->getActionNames());
-
-  if (!adapter->status)
-    RETURN_ERROR_VOID(adapter->lineno,"Adapter error: " + adapter->stringify());
 
   log.pop();
 }
@@ -350,9 +353,6 @@ Verdict::Verdict Conf::execute(bool interactive) {
     errormsg = "cannot start executing test due to earlier errors: " + errormsg;
     return Verdict::W_ERROR;
   }
-
-  if (!adapter->init())
-    RETURN_ERROR_VERDICT("Initialising adapter failed: " + adapter->stringify());
 
   // Validate and finish existing end_conditions
   {
