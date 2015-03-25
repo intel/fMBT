@@ -727,6 +727,12 @@ class Device(fmbtgti.GUITestInterface):
             return
         _adapterLog('Loaded %s configuration from "%s"' % (level, filename))
 
+    def navigationBarVisible(self):
+        """
+        Returns True if the navigation bar is showing, otherwise False.
+        """
+        return self.existingConnection().recvNavigationBarVisible()
+
     def pinch(self, (x, y), startDistance, endDistance,
               finger1Dir=90, finger2Dir=270, movePoints=100):
         """
@@ -1245,6 +1251,12 @@ class Device(fmbtgti.GUITestInterface):
             time.sleep(1)
             self.pressKey("KEYCODE_ENTER")
         return True
+
+    def statusBarVisible(self):
+        """
+        Returns True if the status bar is showing, otherwise False.
+        """
+        return self.existingConnection().recvStatusBarVisible()
 
     def supportsView(self):
         """
@@ -2283,6 +2295,22 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         except Exception:
             return False
         return True
+
+    def recvStatusBarVisible(self):
+        _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0)
+        s = re.findall("BarController.StatusBar\r\n\s*mState=(.*)\r", output)
+        if "WINDOW_STATE_SHOWING" in s:
+            return True
+        else:
+            return False
+
+    def recvNavigationBarVisible(self):
+        _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0)
+        s = re.findall("BarController.NavigationBar\r\n\s*mState=(.*)\r", output)
+        if "WINDOW_STATE_SHOWING" in s:
+            return True
+        else:
+            return False
 
     def recvTopAppWindow(self):
         _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0)
