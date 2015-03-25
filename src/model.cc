@@ -53,6 +53,7 @@ std::string& Model::getActionName(int action)
 
 bool Model::is_output(int action)
 {
+  if (action == 0) return false;
   if (outputs.size()<inputs.size()) {
     for(size_t i=0;i<outputs.size();i++) {
       if (outputs[i]==action) {
