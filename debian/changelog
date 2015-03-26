@@ -1,6 +1,20 @@
-fmbt (0.21-0.rc0) unstable; urgency=low
+fmbt (0.21-1) unstable; urgency=low
 
-  * Development version.
+  * fmbtandroid:
+    - Faster screenshots, uses raw by default.
+    - New methods: statusBarVisible() and navigationBarVisible().
+    - Rotate screenshots automatically according to orientation.
+    - Improved error handling on corrupted data from device.
+  * fmbt-scripter:
+    - Underline variables with values.
+  * fmbtchromiumos:
+    - Changed to works with Chromebooks from shop self, see
+      fMBT GUI testing wiki for how-to.
+  * Bug fixes:
+    - end conditions (lookahead_noprogress).
+    - OCR (find with empty string, match=0.0 returns all).
+    - combined fmbtlogger and visual logging from GUI test libs.
+    - test generator (adapter_init and tag coverage, logging TAU).
 
  -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 27 Feb 2015 11:42:00 +0300
 
