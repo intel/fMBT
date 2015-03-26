@@ -393,14 +393,15 @@ class Device(fmbtgti.GUITestInterface):
 
           rotateScreenshot (integer or "auto", optional)
                   rotate new screenshots by rotateScreenshot degrees.
-                  Example: rotateScreenshot=-90. The default is 0 (no
-                  rotation). If "auto" is given, rotate automatically
-                  to compensate current display rotation.
+                  Example: rotateScreenshot=-90. The default is "auto".
+                  If "auto" is given, rotate automatically to compensate
+                  current display rotation.
         """
 
-        if kwargs.get("rotateScreenshot", None) == "auto":
+        if kwargs.get("rotateScreenshot", "auto") == "auto":
             # the base class does not understand "auto" rotate screenshot
-            del kwargs["rotateScreenshot"]
+            if "rotateScreenshot" in kwargs:
+                del kwargs["rotateScreenshot"]
             self._autoRotateScreenshot = True
         else:
             self._autoRotateScreenshot = False
