@@ -223,6 +223,9 @@ int main(int argc,char * const argv[])
       error(0, 0, "%s\n", c.stringify().c_str());
       // Let's handle verdict
       c.handle_hooks(Verdict::W_ERROR);
+      if (Random::_default_random) {
+	Random::_default_random->unref();
+      }
       return c.exit_status;
     }
     if (E) {
@@ -242,6 +245,11 @@ int main(int argc,char * const argv[])
 
       return c.exit_status;
     }
+  }
+
+  if (Random::_default_random) {
+    Random::_default_random->unref();
+    //Random::_default_random=NULL;
   }
 
   return 0;
