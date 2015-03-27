@@ -165,6 +165,7 @@ bool Lts::init()
   if (s==NULL) {
     errormsg=std::string("Can't load lts \"")+name+std::string("\"");
     status=false;
+    free_D_Parser(p);
     return false;
   }
 
