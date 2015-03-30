@@ -501,6 +501,16 @@ class Device(fmbtgti.GUITestInterface):
         else:
             return (None, None, None)
 
+    def accelerometerRotation(self):
+        """
+        Returns True if accelerometer changes screen rotation.
+
+        See also:
+            setAccelerometerRotation()
+            userRotation()
+        """
+        return self.existingConnection().recvAccelerometerRotation()
+
     def autoRotateScreenshot(self):
         """
         Return True if screenshots are rotated automatically,
@@ -1374,6 +1384,12 @@ class Device(fmbtgti.GUITestInterface):
             return self._conn.uninstall(apkname, keepData)
         else:
             return False
+
+    def userRotation(self):
+        """
+        Returns rotation set with setUserRotation.
+        """
+        return self.existingConnection().recvUserRotation()
 
     def verifyText(self, text, partial=False):
         """
@@ -2278,6 +2294,16 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             return False
         return True
 
+    def recvAccelerometerRotation(self):
+        try:
+            _, output, _ = self._runAdb(
+                ["shell", "content", "query",
+                 "--uri", "content://settings/system/accelerometer_rotation"])
+            s = re.findall("value=(.*)", output)[0]
+            return int(s) == 1 # True if accelerometer_rotation is enabled
+        except Exception:
+            return None
+
     def sendDeviceLog(self, msg, priority, tag):
         self._runAdb(["shell", "log", "-p", priority, "-t", tag, msg])
         return True
@@ -2296,6 +2322,16 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         except Exception:
             return False
         return True
+
+    def recvUserRotation(self):
+        try:
+            _, output, _ = self._runAdb(
+                ["shell", "content", "query",
+                 "--uri", "content://settings/system/user_rotation"])
+            s = re.findall("value=(.*)", output)[0]
+            return int(s)
+        except Exception:
+            return None
 
     def recvStatusBarVisible(self):
         _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0)
