@@ -770,6 +770,12 @@ class MainWindow(QtGui.QMainWindow):
         QStatusBar QLabel { padding-left: 11px }""")
         self.status.setFrameStyle(QtGui.QFrame.NoFrame)
         self.statusBar().addPermanentWidget(self.status, stretch=1)
+        self.consoleScrollLabel = QtGui.QLabel("Console scroll", self.statusBar())
+        self.consoleScrollCheck = QtGui.QCheckBox(self.statusBar())
+        self.consoleScrollCheck.setChecked(True)
+        self.statusBar().insertWidget(1, self.consoleScrollLabel)
+        self.statusBar().insertWidget(2, self.consoleScrollCheck)
+        self.consoleScrollCheck.setToolTip("Auto scroll console on output")
 
         self.setScriptFilename(None)
 
@@ -957,6 +963,9 @@ class MainWindow(QtGui.QMainWindow):
                 self.console.append(msg + "\n>>> ")
             else:
                 self.console.append(msg)
+            if self.consoleScrollCheck.isChecked():
+                sb = self.console.verticalScrollBar()
+                sb.setValue(sb.maximum())
         _setGlobalLog(consoleLog)
 
         self.editorWidgetsLayout.addWidget(self.editorCombo)
