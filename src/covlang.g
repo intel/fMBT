@@ -96,6 +96,14 @@ node: persistent tag_spec actionname persistent tag_spec  { $$.type='e'; $$.u = 
     | ('e' | 'E' | 'any' ) actionname   { $$.type='e'; $$.u = cobj->req_rx_action($$.type,*$1.str); delete $1.str; $1.str=NULL; }
     | ('r' |  'random' ) actionname     { $$.type='r'; $$.u = cobj->req_rx_action($$.type,*$1.str); delete $1.str; $1.str=NULL; }
     | persistent tag_spec '(' expr ')' persistent tag_spec { $$.u = tagspec_helper($1.tag,$3.u,$6.tag,$0.type&($5.type<1)); }
+    | ('tag' | 'T' ) tag_spec {
+            if ($1.tag) {
+              $$.u = $1.tag;
+              $1.tag->set_left(false);
+            } else {
+              $$.u = new Coverage_Market::unit_tag();
+            }
+        }
     | "not" node       { $$.u = new Coverage_Market::unit_not($1.u); } 
     | uint '*' node    { $$.u = inthelper($2.u,$0.i); }
     | node '*' uint    { $$.u = inthelper($0.u,$2.i); }
