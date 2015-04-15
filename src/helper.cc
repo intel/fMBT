@@ -810,13 +810,17 @@ ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,GIOChan
       } else {
 	if (magic && strncmp(*lineptr,"fmbtmagic",9)==0) {
 	  const int magic_length = 10;
-	  if (*(*lineptr + magic_length-1) == 'l' || *(*lineptr + magic_length-1) == 'e') {
+	  if (*(*lineptr + magic_length-1) == 'l' || *(*lineptr + magic_length-1) == 'L' || *(*lineptr + magic_length-1) == 'e') {
 	    // remote log messages must be url encoded when sent through
 	    // the remote adapter protocol
 	    *(*lineptr + ret) = '\0';
-	    log.print("<remote msg=\"%s\"/>\n",*lineptr+magic_length);
-	    if (*(*lineptr + magic_length-1) == 'e')
-	      fprintf(stderr, "%s\n", unescape_string(*lineptr+magic_length));
+	    if (*(*lineptr + magic_length-1) == 'L') {
+	      log.print("%s",unescape_string(*lineptr + magic_length));
+	    } else {
+	      log.print("<remote msg=\"%s\"/>\n",*lineptr+magic_length);
+	      if (*(*lineptr + magic_length-1) == 'e')
+		fprintf(stderr, "%s\n", unescape_string(*lineptr+magic_length));
+	    }
 	    g_free(*lineptr);
 	    *lineptr = NULL;
 	    log_redirect = true;
