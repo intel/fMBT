@@ -347,7 +347,7 @@ def _serve_connection(conn, conn_opts):
                 daemon_log("%s:%s <= %s" % (conn.getpeername() + (exec_rv,)))
             try:
                 cPickle.dump(exec_rv, to_client)
-            except (TypeError, cPickle.PicklingError): # pickling rv fails
+            except (TypeError, ValueError, cPickle.PicklingError): # pickling rv fails
                 exec_rv.expr_rv = messages.Unpicklable(exec_rv.expr_rv)
                 cPickle.dump(exec_rv, to_client)
             to_client.flush()
