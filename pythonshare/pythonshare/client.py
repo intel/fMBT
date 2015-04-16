@@ -30,26 +30,51 @@ import pythonshare
 from pythonshare.messages import Exec, Exec_rv, Async_rv, Register_ns, Request_ns, Ns_rv
 
 class Connection(object):
-    def __init__(self, host_or_from_server, port_or_to_server, password=None):
-        """Connect to pythonshare server
+    """Connection to a Pythonshare server.
 
-        Server is listening to connections at host:port, or it can be
-        communicated via file-like objects to_server:from_server.
+    Example: connect to a server that is listening to port 8089 on localhost.
+    Execute *code* and evaluate *expression* on the default namespace on the
+    remote server.
 
-        Execute code and evaluate an expression on a namespace on a
-        remote server with
+    c = Connection("localhost", 8089)
+    c.exec_(code)
+    c.eval_(expression)
 
-        connection.exec_in(ns, code) and
-        connection.eval_in(ns, expression).
+    Results of executed code are kept on the server after the
+    connection is closed.
 
-        Results of executed code are kept in the namespace after
-        connection is closed.
+    Example: Register code that is executed in namespace "goodbye" after
+    closing the connection:
 
-        Register code that is executed in a namespace after closing
-        the connection:
+    c.exec_in("goodbye", 'pythonshare_ns.exec_on_disconnect("code")')
+    """
+    def __init__(self, host_or_from_server, port_or_to_server,
+                 password=None, namespace="default"):
+        """Connect to a pythonshare server
 
-        connection.exec_in(ns, 'pythonshare_ns.exec_on_disconnect("code")')
+        The server is listening to connections at host:port, or it can be
+        communicated via file-like objects from_server and to_server.
+
+        Parameters:
+
+          host_or_from_server (string or file-like object)
+                  string: host
+                  file: file for receiving messages from the server
+
+          port_or_to_server (int or file-like object)
+                  int: port number
+                  file: file for sending messages to the server
+
+          password (string, optional)
+                  server password. The default is None, that is,
+                  do not send password to the server when connecting.
+
+          namespace (string, optional)
+                  the default namespace that is used on eval_() and exec_().
+                  The default is "default".
         """
+        self._ns = namespace
+
         if isinstance(host_or_from_server, str) and isinstance(port_or_to_server, int):
             host = host_or_from_server
             port = port_or_to_server
@@ -86,8 +111,14 @@ class Connection(object):
                 rv = rv.expr_rv
         return rv
 
+    def exec_(self, code, **kwargs):
+        """Execute code in the default namespace.
+
+        See exec_in for optional parameters."""
+        return self.exec_in(self._ns, code, **kwargs)
+
     def exec_in(self, namespace, code, expr=None, async=False, lock=True):
-        """Execute code in the namespace.
+        """Execute code in a namespace.
 
         Parameters:
 
@@ -105,7 +136,11 @@ class Connection(object):
           async (boolean, optional)
                   If true, execute code and expr asynchronously. If
                   so, handle to the return value (Async_rv) will be
-                  returned.
+                  returned. The default is False.
+
+          lock (boolean, optional)
+                  lock the namespace from others until this execution
+                  has finished. The default is True.
 
         Returns return value from expr or None.
 
@@ -121,7 +156,36 @@ class Connection(object):
             raise pythonshare.PythonShareError(
                 'No connection to namespace "%s"' % (namespace,))
 
+    def eval_(self, expr, **kwargs):
+        """Evaluate expr in the default namespace.
+
+        See eval_in for optional parameters."""
+        return self.eval_in(self._ns, expr, **kwargs)
+
     def eval_in(self, namespace, expr, async=False, lock=True):
+        """Evaluate expr in a namespace.
+
+        Parameters:
+
+          namespace (string)
+                  namespace in which the expression will be evaluated.
+
+          expr (string)
+                  Python expression.
+
+          async (boolean, optional)
+                  If True, expression will be evaluated asynchronously
+                  and a handle to the return value (Async_rv) will be
+                  returned.
+
+          lock (boolean, optional)
+                  lock the namespace from others until this execution
+                  has finished. The default is True.
+
+        Returns return value of the expr.
+
+        Raises RemoteEvalError if expr caused an exception.
+        """
         return self.exec_in(namespace, "", expr, async=async, lock=lock)
 
     def read_rv(self, async_rv, timeout=0):
@@ -179,6 +243,21 @@ class Connection(object):
             raise pythonshare.PythonShareError(rv.errormsg)
 
     def poll_rvs(self, namespace):
+        """Poll available async return values from namespace.
+
+        Parameters:
+
+          namespace (string)
+                  namespace from which return values are queried.
+
+        Example:
+
+        rv = c.eval_("time.sleep(1)", async=True)
+        print c.poll_rvs(rv.ns)
+        time.sleep(1)
+        print c.poll_rvs(rv.ns)
+        print c.read_rv(rv)
+        """
         return self.eval_in(namespace, "pythonshare_ns.poll_rvs()",
                             async=False, lock=False)
 
