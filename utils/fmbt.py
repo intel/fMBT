@@ -85,6 +85,10 @@ def fmbtlog(msg, flush=True):
     try: file("/tmp/fmbt.fmbtlog", "a").write("%s\n" % (msg,))
     except: pass
 
+def fmbtlograw(msg, flush=True):
+    try: file("/tmp/fmbt.fmbtlog", "a").write("%s\n" % (msg,))
+    except: pass
+
 def adapterlog(msg, flush=True):
     try:
         _adapterlogWriter(file("/tmp/fmbt.adapterlog", "a"),

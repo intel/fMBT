@@ -120,12 +120,16 @@ def fmbtlog(msg, flush=True):
     timestamped = "fmbtmagicl%.4f %s" % (current_time, msg)
     sys.stdout.write(urllib.quote(timestamped)+"\n")
 
+def fmbtlograw(msg, flush=True):
+    sys.stdout.write(urllib.quote("fmbtmagicL %s" % (msg))+"\n")
+
 def fmbtstderr(msg):
     to_fmbt = urllib.quote("fmbtmagice%s" % (msg,)) + '\n'
     sys.stdout.write(to_fmbt)
     _log(msg)
 
 fmbt.fmbtlog = fmbtlog
+fmbt.fmbtlograw = fmbtlograw
 fmbt.adapterlog = _log
 log = _log
 
@@ -609,6 +613,7 @@ if __name__ == "__main__":
     aal._log = _log
     aal.timeout = opt_timeout
     aal._variables['fmbtlog'] = fmbtlog
+    aal._variables['fmbtlograw'] = fmbtlograw
     aal._variables['__file__'] = aal_filename
 
     if opt_profile:
