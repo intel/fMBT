@@ -2082,10 +2082,9 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
                 self._monkeySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self._monkeySocket.connect((self._m_host, self._monkeyPortForward))
                 self._monkeySocket.setblocking(0)
-                self._monkeySocket.settimeout(1.0)
+                self._monkeySocket.settimeout(5.0)
                 _ping = self._monkeyCommand("getvar build.version.release", retry=0)[1]
                 if len(_ping) > 0:
-                    self._monkeySocket.settimeout(5.0)
                     return True
             except Exception, e:
                 _, monkeyOutput, _ = self._runAdb(["shell", "cat /sdcard/fmbtandroid.monkey.outerr"])
