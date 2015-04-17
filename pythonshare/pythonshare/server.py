@@ -249,8 +249,14 @@ def _remote_close(ns):
 def _connection_lost(conn_id, *closables):
     if closables:
         pythonshare._close(*closables)
-    for ns in _g_namespace_users[conn_id]:
-        _g_local_namespaces[ns]["pythonshare_ns"].call_on_disconnect(conn_id)
+    try:
+        for ns in _g_namespace_users[conn_id]:
+            try:
+                _g_local_namespaces[ns]["pythonshare_ns"].call_on_disconnect(conn_id)
+            except KeyError:
+                pass
+    except KeyError:
+        pass
 
 def _serve_connection(conn, conn_opts):
     global _g_async_rv_counter
