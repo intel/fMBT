@@ -68,6 +68,9 @@ Options when connected:
           Evaluate python-expression in ns. Print return
           value to standard output.
 
+  -i, --interact
+          Open interactive console for running code in ns.
+
   -D, --disconnect
           Disconnect from the pythonshare-server.
 
@@ -81,9 +84,12 @@ Example:
 """
 
 import pythonshare
+import code
 import cPickle
 import getopt
+import parser
 import sys
+import traceback
 
 opt_output_file = sys.stdout
 
@@ -101,15 +107,71 @@ formatter_raw    = lambda o: o
 formatter_pickle = lambda o: cPickle.dumps(o)
 formatter_print  = lambda o: str(o) + "\n"
 
+def _pythonCode(code):
+    try:
+        parser.expr(code)
+        return "expression"
+    except SyntaxError:
+        try:
+            parser.suite(code.encode("utf8"))
+            return "suite"
+        except SyntaxError:
+            return None
+
+class PythonshareConsole(code.InteractiveConsole):
+    def __init__(self, *args, **kwargs):
+        self._conn = kwargs.pop("conn")
+        self._ns = kwargs.pop("namespace")
+        code.InteractiveConsole.__init__(self, *args, **kwargs)
+        self._codelines = ""
+
+    def runsource(self, source, *args):
+        self._codelines = source
+        try:
+            need_more = code.InteractiveConsole.runsource(self, source, *args)
+        except:
+            self._codelines = ""
+            raise
+        return need_more
+
+    def runcode(self, code):
+        source = self._codelines
+        self._codelines = ""
+        code_type = _pythonCode(source)
+        try:
+            if code_type == "expression":
+                print self._conn.eval_in(self._ns, source)
+            elif code_type == "suite":
+                self._conn.exec_in(self._ns, source)
+            else:
+                return
+        except pythonshare.PythonShareError, e:
+            tb_lines = traceback.format_exc().splitlines()
+            try:
+                i = tb_lines.index("RemoteEvalError: Traceback (most recent call last):")
+                print tb_lines[i]
+            except ValueError:
+                try:
+                    i = tb_lines.index("RemoteExecError: Traceback (most recent call last):")
+                    print tb_lines[i]
+                except ValueError:
+                    print "i=-2"
+                    i = -2
+            print "\n".join(tb_lines[i+3:])
+
+    def showsyntaxerror(self, *args):
+        self._codelines = ""
+        return code.InteractiveConsole.showsyntaxerror(self, *args)
+
 if __name__ == "__main__":
     opts, remainder = getopt.gnu_getopt(
-        sys.argv[1:], "C:DAhSs:Pp:n:c:e:r:o:f:",
+        sys.argv[1:], "C:DAhSs:Pp:n:c:e:r:o:f:i",
         ["connect=", "disconnect",
          "async", "sync", "poll",
          "help", "server=", "port=",
          "password=", "password-file=",
          "namespace=", "code=", "eval=", "read=",
-         "output=", "format="])
+         "output=", "format=", "interact"])
     opt_server = "localhost"
     opt_port = pythonshare.default_port
     opt_namespace = "pythonshare-client.default"
@@ -170,6 +232,13 @@ if __name__ == "__main__":
             except pythonshare.PythonShareError, e:
                 print type(e)
                 print e
+        elif opt in ["-i", "--interact"]:
+            if conn == None:
+                conn = pythonshare.connection("socket://%s:%s" %
+                                              (opt_server, opt_port),
+                                              password=opt_password)
+            console = PythonshareConsole(conn=conn, namespace=opt_namespace)
+            console.interact()
         elif opt in ["-r", "--read"]:
             try:
                 try:
