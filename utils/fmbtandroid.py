@@ -196,6 +196,9 @@ ROTATION_270 = 3
 ROTATIONS = [ROTATION_0, ROTATION_90, ROTATION_180, ROTATION_270]
 ROTATION_DEGS = [0, 90, 180, 270]
 
+_LONG_TIMEOUT = 3600 # 1 hour
+_SHORT_TIMEOUT = 60 # 1 minute
+
 # See imagemagick convert parameters.
 fmbtgti._OCRPREPROCESS =  [
     '-sharpen 5 -filter Mitchell %(zoom)s -sharpen 5 -level 60%%,60%%,3.0 -sharpen 5',
@@ -1970,7 +1973,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
     def _cat(self, remoteFilename):
         fd, filename = tempfile.mkstemp("fmbtandroid-cat-")
         os.close(fd)
-        self._runAdb(["pull", remoteFilename, filename], 0)
+        self._runAdb(["pull", remoteFilename, filename], 0, timeout=_LONG_TIMEOUT)
         contents = file(filename).read()
         os.remove(filename)
         return contents
@@ -2016,7 +2019,10 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
     def _runSetupCmd(self, cmd, expectedExitStatus = 0):
         _adapterLog('setting up connections: "%s"' % (cmd,))
         try:
-            self._runAdb(cmd, expectedExitStatus)
+            if expectedExitStatus == None: # execute asynchronously
+                self._runAdb(cmd, expectedExitStatus)
+            else: # command is expected to exit
+                self._runAdb(cmd, expectedExitStatus, timeout=_SHORT_TIMEOUT)
         except (FMBTAndroidRunError, AndroidDeviceNotFound), e:
             _adapterLog("connection setup problem: %s" % (e,))
             return False
@@ -2024,25 +2030,29 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
 
     def _detectFeatures(self):
         # check supported features
-        outputLines = self._runAdb(["shell", "getprop", "ro.build.version.release"])[1].splitlines()
+        outputLines = self._runAdb(["shell", "getprop", "ro.build.version.release"],
+                                   timeout=_SHORT_TIMEOUT)[1].splitlines()
         if len(outputLines) >= 1:
             self._platformVersion = outputLines[0].strip().split("=")[-1]
         else:
             self._platformVersion = "N/A"
 
-        outputLines = self._runAdb(["shell", "id"])[1].splitlines()
+        outputLines = self._runAdb(["shell", "id"],
+                                   timeout=_SHORT_TIMEOUT)[1].splitlines()
         if len(outputLines) == 1 and "uid=0" in outputLines[0]:
             self._shellUid0 = True
         else:
             self._shellUid0 = False
 
-        outputLines = self._runAdb(["shell", "su", "root", "id"])[1].splitlines()
+        outputLines = self._runAdb(["shell", "su", "root", "id"],
+                                   timeout=_SHORT_TIMEOUT)[1].splitlines()
         if len(outputLines) == 1 and "uid=0" in outputLines[0]:
             self._shellSupportsSu = True
         else:
             self._shellSupportsSu = False
 
-        outputLines = self._runAdb(["shell", "tar"])[1].splitlines()
+        outputLines = self._runAdb(["shell", "tar"],
+                                   timeout=_SHORT_TIMEOUT)[1].splitlines()
         if len(outputLines) == 1 and "bin" in outputLines[0]:
             self._shellSupportsTar = False
         else:
@@ -2087,7 +2097,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
                 if len(_ping) > 0:
                     return True
             except Exception, e:
-                _, monkeyOutput, _ = self._runAdb(["shell", "cat /sdcard/fmbtandroid.monkey.outerr"])
+                _, monkeyOutput, _ = self._runAdb(["shell", "cat /sdcard/fmbtandroid.monkey.outerr"],
+                                                  timeout=_SHORT_TIMEOUT)
                 if "Error: Unknown option:" in monkeyOutput:
                     uo = [l for l in monkeyOutput.splitlines() if "Error: Unknown option:" in l][0].split(":")[-1].strip()
                     _adapterLog('detected an unknown option for monkey: "%s". Disabling it.' % (uo,))
@@ -2154,7 +2165,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         if iv != None:
             cmd.extend(["--iv", iv])
         cmd.append(filename)
-        status, output, error = self._runAdb(cmd, [0, 1])
+        status, output, error = self._runAdb(cmd, [0, 1], timeout=_LONG_TIMEOUT)
         if "Success" in output:
             return True
         else:
@@ -2165,7 +2176,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         if keepData:
             cmd.append("-k")
         cmd.append(apkname)
-        status, output, error = self._runAdb(cmd)
+        status, output, error = self._runAdb(cmd, timeout=_LONG_TIMEOUT)
         if "Success" in output:
             return True
         else:
@@ -2173,9 +2184,11 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
 
     def reboot(self, reconnect, firstBootAfterFlashing, timeout):
         if firstBootAfterFlashing:
-            self._runAdb("root")
+            self._runAdb("root", timeout=_SHORT_TIMEOUT)
             time.sleep(2)
-            self._runAdb(["shell", "rm", "/data/data/com.android.launcher/shared_prefs/com.android.launcher2.prefs.xml"])
+            self._runAdb(["shell", "rm",
+                          "/data/data/com.android.launcher/shared_prefs/com.android.launcher2.prefs.xml"],
+                         timeout=_SHORT_TIMEOUT)
 
         self._runAdb("reboot")
         _adapterLog("rebooting " + self._serialNumber)
@@ -2209,7 +2222,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             return None
 
     def recvScreenSize(self):
-        _, output, _ = self._runAdb(["shell", "dumpsys", "display"], 0)
+        _, output, _ = self._runAdb(["shell", "dumpsys", "display"], 0,
+                                    timeout=_SHORT_TIMEOUT)
         try:
             # parse default display properties
             ddName, ddWidth, ddHeight, ddWdpi, ddHdpi = re.findall(
@@ -2222,7 +2236,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         return int(ddWidth), int(ddHeight)
 
     def recvDefaultViewportSize(self):
-        _, output, _ = self._runAdb(["shell", "dumpsys", "display"], 0)
+        _, output, _ = self._runAdb(["shell", "dumpsys", "display"], 0,
+                                    timeout=_SHORT_TIMEOUT)
         try:
             w, h = re.findall("mDefaultViewport=DisplayViewport\{.*deviceWidth=([0-9]*), deviceHeight=([0-9]*)\}", output)[0]
             width = int(w)
@@ -2234,7 +2249,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         return width, height
 
     def recvCurrentDisplayOrientation(self):
-        _, output, _ = self._runAdb(["shell", "dumpsys", "display"], 0)
+        _, output, _ = self._runAdb(["shell", "dumpsys", "display"], 0,
+                                    timeout=_SHORT_TIMEOUT)
         s = re.findall("mCurrentOrientation=([0-9])", output)
         if s:
             return int(s[0])
@@ -2242,7 +2258,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             return None
 
     def recvDisplayPowered(self):
-        _, output, _ = self._runAdb(["shell", "dumpsys", "power"], 0)
+        _, output, _ = self._runAdb(["shell", "dumpsys", "power"], 0,
+                                    timeout=_SHORT_TIMEOUT)
         s = re.findall("Display Power: state=(OFF|ON)", output)
         if s:
             return s[0] == "ON"
@@ -2250,7 +2267,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             return None
 
     def recvShowingLockscreen(self):
-        _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0)
+        _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0,
+                                    timeout=_SHORT_TIMEOUT)
         s = re.findall("mShowingLockscreen=(true|false)", output)
         if s:
             if s[0] == "true":
@@ -2261,7 +2279,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             return None
 
     def recvLastAccelerometer(self):
-        _, output, _ = self._runAdb(["shell", "dumpsys", "sensorservice"], 0)
+        _, output, _ = self._runAdb(["shell", "dumpsys", "sensorservice"], 0,
+                                    timeout=_SHORT_TIMEOUT)
         s = re.findall("3-axis Accelerometer.*last=<([- .0-9]*),([- .0-9]*),([- .0-9]*)>", output)
         try:
             rv = tuple([float(d) for d in s[0]])
@@ -2288,7 +2307,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             self._runAdb(["shell", "content", "insert",
                           "--uri", "content://settings/system",
                           "--bind", "name:s:accelerometer_rotation",
-                          "--bind", "value:" + sendValue])
+                          "--bind", "value:" + sendValue],
+                         timeout=_SHORT_TIMEOUT)
         except Exception:
             return False
         return True
@@ -2297,7 +2317,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         try:
             _, output, _ = self._runAdb(
                 ["shell", "content", "query",
-                 "--uri", "content://settings/system/accelerometer_rotation"])
+                 "--uri", "content://settings/system/accelerometer_rotation"],
+                timeout=_SHORT_TIMEOUT)
             s = re.findall("value=(.*)", output)[0]
             return int(s) == 1 # True if accelerometer_rotation is enabled
         except Exception:
@@ -2305,7 +2326,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
 
     def sendDeviceLog(self, msg, priority, tag):
         cmd = ["shell", "log", "-p", priority, "-t", tag, msg]
-        status, out, err = self._runAdb(cmd, [0, 124], timeout=10)
+        status, out, err = self._runAdb(cmd, [0, 124], timeout=_SHORT_TIMEOUT)
         if status == 124:
             errormsg = "log timeout: %s" % (["adb"] + cmd)
             _adapterLog(errormsg)
@@ -2322,7 +2343,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             self._runAdb(["shell", "content", "insert",
                           "--uri", "content://settings/system",
                           "--bind", "name:s:user_rotation",
-                          "--bind", "value:" + sendValue])
+                          "--bind", "value:" + sendValue],
+                         timeout=_SHORT_TIMEOUT)
         except Exception:
             return False
         return True
@@ -2331,14 +2353,16 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         try:
             _, output, _ = self._runAdb(
                 ["shell", "content", "query",
-                 "--uri", "content://settings/system/user_rotation"])
+                 "--uri", "content://settings/system/user_rotation"],
+                timeout=_SHORT_TIMEOUT)
             s = re.findall("value=(.*)", output)[0]
             return int(s)
         except Exception:
             return None
 
     def recvStatusBarVisible(self):
-        _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0)
+        _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0,
+                                    timeout=_SHORT_TIMEOUT)
         s = re.findall("BarController.StatusBar\r\n\s*mState=(.*)\r", output)
         if "WINDOW_STATE_SHOWING" in s:
             return True
@@ -2346,7 +2370,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             return False
 
     def recvNavigationBarVisible(self):
-        _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0)
+        _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0,
+                                    timeout=_SHORT_TIMEOUT)
         s = re.findall("BarController.NavigationBar\r\n\s*mState=(.*)\r", output)
         if "WINDOW_STATE_SHOWING" in s:
             return True
@@ -2354,7 +2379,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             return False
 
     def recvTopAppWindow(self):
-        _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0)
+        _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0,
+                                    timeout=_SHORT_TIMEOUT)
         if self._platformVersion >= "4.2":
             s = re.findall("mCurrentFocus=Window\{(#?[0-9A-Fa-f]{4,16})( [^ ]*)? (?P<winName>[^}]*)\}", output)
         else:
@@ -2378,7 +2404,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
 
     def recvTopWindowStack(self):
         rv = None
-        _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0)
+        _, output, _ = self._runAdb(["shell", "dumpsys", "window"], 0,
+                                    timeout=_SHORT_TIMEOUT)
         # Find out top window id.
         s = re.findall("mTopFullscreenOpaqueWindowState=Window\{(?P<winId>[0-9A-Fa-f]*) ", output)
         if s:
@@ -2415,7 +2442,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         _x1, _y1 = self._screenToDisplay(x1, y1)
         _x2, _y2 = self._screenToDisplay(x2, y2)
         self._runAdb(["shell", "input", "swipe",
-                      str(_x1), str(_y1), str(_x2), str(_y2)])
+                      str(_x1), str(_y1), str(_x2), str(_y2)],
+                     timeout=_SHORT_TIMEOUT)
         return True
 
     def sendTap(self, xCoord, yCoord):
@@ -2612,7 +2640,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             errmsg = "screenshot timeout: command='adb %s' status=%s, stdout=%s, stderr=%s" % (
                 " ".join(cmd), status, out, err)
         else:
-            status, out, err = self._runAdb(['pull', remotefile, filename], [0, 1, 124])
+            status, out, err = self._runAdb(['pull', remotefile, filename], [0, 1, 124],
+                                            timeout=_screenshotTimeout)
             if status == 124:
                 errmsg = "screenshot timeout: command='adb %s' status=%s, stdout=%s, stderr=%s" % (
                     " ".join(cmd), status, out, err)
@@ -2622,7 +2651,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             _adapterLog(errmsg)
             raise FMBTAndroidError(errmsg)
 
-        status, _, _ = self._runAdb(['shell', 'rm', remotefile], 0)
+        status, _, _ = self._runAdb(['shell', 'rm', remotefile], 0,
+                                    timeout=_SHORT_TIMEOUT)
 
         if os.path.getsize(filename) == 0:
             _adapterLog("received screenshot of size 0")
@@ -2645,7 +2675,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         remotename = '/sdcard/' + os.path.basename(filename)
         os.write(fd, shellCommand + "\n")
         os.close(fd)
-        self._runAdb(["push", filename, remotename], 0)
+        self._runAdb(["push", filename, remotename], 0, timeout=_SHORT_TIMEOUT)
         os.remove(filename)
         cmd = "source %s >%s.out 2>%s.err; echo $? > %s.status" % ((remotename,)*4)
         if self._shellSupportsTar:
@@ -2673,7 +2703,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             stderr = self._cat(remotename + ".err")
             try: exitstatus = int(self._cat(remotename + ".status"))
             except: exitstatus = None
-            self._runAdb(["shell", "rm -f "+remotename+"*"])
+            self._runAdb(["shell", "rm -f "+remotename+"*"], timeout=_SHORT_TIMEOUT)
         return exitstatus, stdout, stderr
 
     def recvViewData(self, retry=3):
