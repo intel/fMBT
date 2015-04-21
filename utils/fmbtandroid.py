@@ -2304,7 +2304,12 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             return None
 
     def sendDeviceLog(self, msg, priority, tag):
-        self._runAdb(["shell", "log", "-p", priority, "-t", tag, msg])
+        cmd = ["shell", "log", "-p", priority, "-t", tag, msg]
+        status, out, err = self._runAdb(cmd, [0, 124], timeout=10)
+        if status == 124:
+            errormsg = "log timeout: %s" % (["adb"] + cmd)
+            _adapterLog(errormsg)
+            raise FMBTAndroidError(errormsg)
         return True
 
     def sendUserRotation(self, rotation):
