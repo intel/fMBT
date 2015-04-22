@@ -41,7 +41,9 @@ General options:
 
   -p, --port=number
           Listen to TCP/IP port number. Only local connections to this
-          port are allowed by default. The default port is 8089.
+          port are allowed by default. The default port is 8089. If
+          "stdin" is given, the server will handle stdin/out as a client
+          client connection.
 
   --password=password
           Require password from clients. The password can be plain text,
