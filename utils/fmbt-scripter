@@ -224,6 +224,18 @@ def gestureToGti(gestureEventList):
 ########################################################################
 # GUI
 
+class EventFilterMenuOnRightClick(QtCore.QObject):
+    def __init__(self, parent, menu):
+        QtCore.QObject.__init__(self, parent)
+        self.menu = menu
+    def eventFilter(self, _, event):
+        if (event.type() == QtCore.QEvent.MouseButtonPress and
+            event.button() == 2):
+            self.menu.exec_(event.globalPos())
+            return True
+        else:
+            return False
+
 class MyScaleEvents(QtCore.QObject):
     """
     Catch scaling events: Ctrl++, Ctrl+-, Ctrl+wheel. Change
@@ -814,6 +826,17 @@ class MainWindow(QtGui.QMainWindow):
             checkable = True)
 
         self.screenshotButtonRefresh.clicked.connect(self.updateScreenshot)
+        self.refreshContextMenu = QtGui.QMenu(self.screenshotButtonRefresh)
+        self.refreshContextMenu.addAction("No auto-update",
+                                          lambda: self.autoRefreshScreenshot(""))
+        self.refreshContextMenu.addAction("Auto update after every eval",
+                                          lambda: self.autoRefreshScreenshot("(eval)"))
+        self.refreshContextMenu.addAction("Auto update every 5 seconds",
+                                          lambda: self.autoRefreshScreenshot("(5 s)"))
+        self.screenshotButtonRefresh.installEventFilter(
+            EventFilterMenuOnRightClick(self.screenshotButtonRefresh,
+                                        self.refreshContextMenu))
+
         self.screenshotButtonsL.addWidget(self.screenshotButtonRefresh)
 
         self.screenshotButtonNext = QtGui.QPushButton(
@@ -1110,8 +1133,11 @@ class MainWindow(QtGui.QMainWindow):
     def scheduleUpdateScreenshot(self, seconds):
         if not self._updateScreenshotScheduled:
             QtCore.QTimer.singleShot(int(seconds * 1000),
-                                     lambda: self.updateScreenshot(False))
+                                     lambda: self.updateScreenshot(False, scheduled=True))
             self._updateScreenshotScheduled = True
+
+    def disableScheduledUpdateScreenshot(self):
+        self._updateScreenshotScheduled = False
 
     def rec(self):
         # switch on/off recording in device, if supported
@@ -1383,7 +1409,7 @@ class MainWindow(QtGui.QMainWindow):
         if runButton != None:
             runButton.setChecked(True)
         if autoUpdate == None:
-            autoUpdate = self.screenshotAutoRefresh.isChecked()
+            autoUpdate = (self.screenshotButtonRefresh.text() == "(eval)")
         code = ""
         if lineCount == None or lineCount == 1:
             autoSelected = True
@@ -1749,11 +1775,21 @@ class MainWindow(QtGui.QMainWindow):
         else:
             log("not selecting bitmaps automatically when recording")
 
-    def autoRefreshScreenshot(self):
-        if self.screenshotAutoRefresh.isChecked():
-            self.screenshotButtonRefresh.setText("(auto)")
+    def autoRefreshScreenshot(self, choice=None):
+        self.disableScheduledUpdateScreenshot()
+        if choice == None:
+            if self.screenshotAutoRefresh.isChecked():
+                self.screenshotButtonRefresh.setText("(eval)")
+            else:
+                self.screenshotButtonRefresh.setText("")
         else:
-            self.screenshotButtonRefresh.setText("")
+            if choice == "":
+                self.screenshotAutoRefresh.setChecked(False)
+            else:
+                self.screenshotAutoRefresh.setChecked(True)
+                self.screenshotButtonRefresh.setText(choice)
+                if self.screenshotButtonRefresh.text() == "(5 s)":
+                    self.scheduleUpdateScreenshot(5)
 
     def findNextBitmap(self):
         cursor = self.editor.textCursor()
@@ -1958,8 +1994,13 @@ class MainWindow(QtGui.QMainWindow):
     def _popTextEditorFocus(self):
         self._focusStack.pop().setFocus()
 
-    def updateScreenshot(self, recordable=True):
-        self._updateScreenshotScheduled = False
+    def updateScreenshot(self, recordable=True, scheduled=False):
+        if scheduled:
+            if not self._updateScreenshotScheduled:
+                return
+            else:
+                self._updateScreenshotScheduled = False
+
         self._pushTextEditorFocus()
         if not self._sut:
             self._findSutVariable()
@@ -1990,6 +2031,8 @@ class MainWindow(QtGui.QMainWindow):
                 if failed:
                     log("refreshScreenshot() returned None")
                     self.screenshotButtonRefresh.setChecked(False)
+                if self.screenshotButtonRefresh.text() == "(5 s)":
+                    self.scheduleUpdateScreenshot(5)
         self._popTextEditorFocus()
 
     def updateScreenshotView(self):
