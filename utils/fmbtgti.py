@@ -136,12 +136,6 @@ _g_forcedLocExt = ".fmbtoir.loc"
 class _USE_DEFAULTS:
     pass
 
-class fmbtlogger():
-    def write(self,msg):
-        fmbt.fmbtlograw(msg)
-    def flush(self):
-        pass
-
 def _fmbtLog(msg):
     fmbt.fmbtlog("fmbtgti: %s" % (msg,))
 
