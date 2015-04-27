@@ -222,11 +222,11 @@ else:
 def _run(command, expectedExitStatus = None, timeout=None):
     if type(command) == str or os.name == "nt":
         if timeout != None and os.name != "nt":
-            command = "timeout %s %s" % (timeout, command)
+            command = "timeout -k 1 %s %s" % (timeout, command)
         shell=True
     else:
         if timeout != None:
-            command = ["timeout", str(timeout)] + command
+            command = ["timeout", "-k", "1", str(timeout)] + command
         shell=False
     try:
         p = subprocess.Popen(command, shell=shell,
@@ -2198,7 +2198,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             endTime = time.time() + timeout
             status, _, _ = self._runAdb("wait-for-device", expectedExitStatus=None, timeout=timeout)
             if status != 0:
-                raise AndroidDeviceNotFound('"timeout %s adb wait-for-device" status %s' % (timeout, status))
+                raise AndroidDeviceNotFound('"timeout -k 1 %s adb wait-for-device" status %s' % (timeout, status))
             self._detectFeatures()
             while time.time() < endTime:
                 try:
