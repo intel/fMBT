@@ -1,8 +1,27 @@
-fmbt (0.22-0.rc0) unstable; urgency=low
+fmbt (0.22-1) unstable; urgency=low
 
-  * Development version.
+  * pythonshare:
+    - pythonshare-client gives interactive Python prompt to pythonshare
+      servers (-i, --interact).
+    - New methods eval_() and exec_() in pythonshare.client.Connection.
+  * fmbtandroid:
+    - New methods for reading display rotation settings
+      (userRotation() and accelerometerRotation()).
+    - New method for writing to the log on a device (logcat): deviceLog().
+    - Device and adb hangs do not hang test scripts: timeouts added.
+    - Improved connecting to devices with very slowly responding monkey.
+  * fmbt-scripter:
+    - Added auto-scroll checkbox.
+    - Added timer-based automated screenshot refresh.
+  * AAL/Python:
+    - Enable writing raw strings (without escaping) directly to fMBT log:
+      fmbt.fmbtlograw().
+  * Bug fixes:
+    - Tag coverage inside usecase read initial tags before adapter_init.
+    - Improved pythonshare pickling error handling.
+    - Wrong fmbt.testStep() values when adapter blocks had raised exceptions.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 30 Mar 2015 09:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 27 Apr 2015 14:42:00 +0300
 
 fmbt (0.21-1) unstable; urgency=low
 
