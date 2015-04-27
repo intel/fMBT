@@ -144,10 +144,9 @@ class AALModel:
             raise IndexError('Cannot execute action %s adapter code' % (i,))
         if self._all_types[i-1] == "input":
             try:
-                fmbt._g_actionName = self._all_names[i-1]
                 fmbt._g_testStep += 1
+                fmbt._g_actionName = self._all_names[i-1]
                 rv = self.call(self._all_adapters[i-1], adapter_call_arguments)
-                fmbt._g_testStep -= 1
                 if rv == None: return i
                 else: return rv
             except Exception, exc:
@@ -155,6 +154,8 @@ class AALModel:
                     return self.call_exception_handler('adapter_exception_handler', self._all_names[i-1], exc)
                 else:
                     raise
+            finally:
+                fmbt._g_testStep -= 1
         else:
             self._log("AAL model: adapter_execute for an output action in AAL." +
                       "This should take place in observe().\n")
@@ -289,6 +290,7 @@ class AALModel:
                 if self._all_types[index] != "output": continue
                 fmbt._g_actionName = self._all_names[index]
                 try:
+                    fmbt._g_testStep += 1
                     output_action = self.call(adapter)
                 except Exception, exc:
                     if 'adapter_exception_handler' in self._variables:
@@ -298,6 +300,8 @@ class AALModel:
                             pass_through_rv = [False])
                     else:
                         raise
+                finally:
+                    fmbt._g_testStep -= 1
                 observed_action = None
                 if type(output_action) == str:
                     observed_action = self._all_names.index(output_action) + 1
