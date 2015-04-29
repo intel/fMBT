@@ -29,9 +29,9 @@ make
 sudo make install
 
 Known issue with Fedora and Arch Linux: By default "make install"
-installs Python libraries into a directory that is not in the default
-PYTHONPATH. Add it to the path:
-    export PYTHONPATH=$PYTHONPATH:/usr/local/lib/python2.7/site-packages
+installs Python libraries into directories that are not in the default
+PYTHONPATH. Add them to the path:
+    export PYTHONPATH=$PYTHONPATH:/usr/local/lib/python2.7/site-packages:/usr/local/lib64/python2.7/site-packages
 
 Windows users:
 
