@@ -27,11 +27,71 @@
 
 #include "helper.hh"
 
-End_condition::End_condition(Conf* _conf,
+End_condition::End_condition(Conf* _conf,Counter _counter,
 			     Verdict::Verdict v, const std::string& p)
-  : verdict(v), param(p),
-    param_float(-1.0), param_long(-1), param_time(-1),notify_step(-1)
+  : verdict(v),counter(_counter), param(p), param_float(-1.0),
+    param_long(-1), param_time(-1),notify_step(-1),conf(_conf)
 {
+}
+
+std::string End_condition::stringify() {
+  if (!status) return Writable::stringify();
+  std::string ret;
+
+  switch (verdict) {
+  case Verdict::PASS:
+    ret="pass";
+    break;
+  case Verdict::FAIL:
+    ret="fail";
+    break;
+  case Verdict::INCONCLUSIVE:
+    ret="inconc";
+    break;
+  case Verdict::W_ERROR:
+    ret="error";
+    break;
+  default:
+    break;
+  }
+
+  std::string name;
+  switch(counter) {
+  case STEPS:
+    name="steps";
+    break;
+  case COVERAGE:
+    name="coverage";
+    break;
+  case STATETAG:
+    name="tag";
+    break;
+  case DURATION:
+    name="duration";
+    break;
+  case NOPROGRESS:
+    name="noprogress";
+    break;
+  case DEADLOCK:
+    name="deadlock";
+    break;
+  case TAGVERIFY:
+    name="failing_tag";
+    break;
+  case ACTION:
+    name="ACTION";
+  case STATUS:
+    name="STATUS";
+  default:
+    return "";
+  }
+
+  if (param!="") {
+    ret=ret+"\t= "+name+"("+param+")";
+  } else {
+    ret=ret+"\t= "+name;
+  }
+  return ret;
 }
 
 End_condition::~End_condition()
@@ -65,9 +125,75 @@ End_condition* new_end_condition(Verdict::Verdict v,const std::string& s,Conf* c
   return ret;
 }
 
+extern int date_node_size;
+
+#include "dparse.h"
+
+extern "C" {
+  extern D_ParserTables parser_tables_date;
+}
+
+extern int d_verbose_level;
+
+#include "date_node.h"
+
+// We are leaking GTimeZone?
+
+End_condition_duration::End_condition_duration
+(Conf* _conf,Verdict::Verdict v, const std::string& p):
+  End_condition(_conf,DURATION,v,p) {
+  er="time limit reached";
+  status=true;
+  param_time = -1;
+
+  D_Parser *parser = new_D_Parser(&parser_tables_date, date_node_size);
+  parser->save_parse_tree=true;
+  D_ParseNode *node=dparse(parser,(char*)p.c_str(),std::strlen(p.c_str()));
+  GTimeVal tv;
+
+  if (!node) {
+    status=false;
+    errormsg="Something wrong with date '"+p+"'";
+    return;
+  }
+
+  date_node* unode = (date_node*) &node->user;
+
+  if (parser->syntax_errors) {
+    parser->free_node_fn(node);
+    status=false;
+    errormsg="Something wrong with date '"+p+"'";
+    return;
+  }
+
+  if (unode->date) {
+    if (g_date_time_to_timeval(unode->date,&tv)) {
+      param_time = tv.tv_sec;
+      param_long = tv.tv_usec;
+      struct timeval ttv;
+      gettime(&ttv);
+      _conf->log.debug("Until %i,current %i",param_time,ttv.tv_sec);
+    } else {
+      status=false;
+      errormsg="Something wrong with date '"+p+"'";
+    }
+    g_date_time_unref(unode->date);
+  } else {
+    status=false;
+    errormsg="Something wrong with date '"+p+"'";
+  }
+
+  if (unode->zone) {
+    g_time_zone_unref(unode->zone);
+  }
+
+  free_D_ParseNode(parser,node);
+  free_D_Parser(parser);
+}
+
+
 End_condition_coverage::End_condition_coverage(Conf* _conf,Verdict::Verdict v, const std::string& p):
-  End_condition(_conf,v,p) {
-  counter = COVERAGE;
+  End_condition(_conf,COVERAGE,v,p) {
   if (param.empty()) {
     er="coverage reached";
   } else {

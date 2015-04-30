@@ -50,65 +50,11 @@ public:
     DUMMY
   } Counter;
 
-  End_condition(Conf* _conf,Verdict::Verdict v, const std::string& p);
+  End_condition(Conf* _conf,Counter _counter,
+		Verdict::Verdict v, const std::string& p);
   virtual ~End_condition();
 
-  virtual std::string stringify() {
-    if (!status) return Writable::stringify();
-    std::string ret;
-    switch (verdict) {
-    case Verdict::PASS:
-      ret="pass";
-      break;
-    case Verdict::FAIL:
-      ret="fail";
-      break;
-    case Verdict::INCONCLUSIVE:
-      ret="inconc";
-      break;
-    case Verdict::W_ERROR:
-      ret="error";
-      break;
-    default:
-      break;
-    }
-    std::string name;
-    switch(counter) {
-    case STEPS:
-      name="steps";
-      break;
-    case COVERAGE:
-      name="coverage";
-      break;
-    case STATETAG:
-      name="tag";
-      break;
-    case DURATION:
-      name="duration";
-      break;
-    case NOPROGRESS:
-      name="noprogress";
-      break;
-    case DEADLOCK:
-      name="deadlock";
-      break;
-    case TAGVERIFY:
-      name="failing_tag";
-      break;
-    case ACTION:
-      return "ACTION";
-    case STATUS:
-      return "STATUS";
-    default:
-      return "";
-    }
-    if (param!="") {
-      ret=ret+"\t=\t"+name+"("+param+")";
-    } else {
-      ret=ret+"\t=\t"+name;
-    }
-    return ret;
-  }
+  virtual std::string stringify();
 
   virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags)=0;
   virtual const std::string& end_reason() {
@@ -125,6 +71,8 @@ public:
 
   std::string er;
   int  notify_step;
+  
+  Conf* conf;
 };
 
 #include "conf.hh"
@@ -132,8 +80,7 @@ public:
 class End_condition_steps: public End_condition {
 public:
   End_condition_steps(Conf* _conf,Verdict::Verdict v, const std::string& p):
-    End_condition(_conf,v,p) {
-    counter = STEPS;
+    End_condition(_conf,STEPS,v,p) {
     er="step limit reached";
     char* endp;
 
@@ -143,7 +90,8 @@ public:
       errormsg=param+" not a valid step limit requirement";
       return;
     }
-    if (param_long>=0 && endp[0]==0) {
+
+    if (param_long>=0 && (endp==NULL || endp[0]==0)) {
       status = true;
     } else {
       errormsg=param+" is not a valid step count";
@@ -160,8 +108,7 @@ public:
 class End_condition_tag: public End_condition {
 public:
   End_condition_tag(Conf* _conf,Verdict::Verdict v, const std::string& p):
-    End_condition(_conf,v,p) {
-    counter = STATETAG;
+    End_condition(_conf,STATETAG,v,p) {
     er="tag reached";
     status = true;
   }
@@ -171,49 +118,7 @@ public:
 
 class End_condition_duration: public End_condition {
 public:
-  End_condition_duration(Conf* _conf,Verdict::Verdict v, const std::string& p):
-    End_condition(_conf,v,p) {
-    counter = DURATION;
-    er="time limit reached";
-    status=true;
-    param_time = -1;
-#ifndef DROI
-    char* out = NULL;
-    int stat;
-    std::string ss = "date --date='" + param + "' +%s.%N";
-
-    if (g_spawn_command_line_sync(ss.c_str(), &out, NULL, &stat, NULL)) {
-      if (!stat) {
-	// Store seconds to param_time and microseconds to param_long
-	param_time = atoi(out);
-	param_long = (strtod(out, NULL) - param_time) * 1000000;
-	status = true;
-      } else {
-	errormsg = "Parsing 'duration' parameter '" + param + "' failed.";
-	errormsg += " Date returned an error when executing '" + ss + "'";
-	status = false;
-      }
-    } else {
-      errormsg = "Parsing 'duration' parameter '" + param + "' failed, could not execute '";
-      errormsg += ss + "'";
-      status = false;
-    }
-    if (out) {
-      g_free(out);
-    }
-#else
-    char* endp;
-    long r = strtol(param.c_str(), &endp, 10);
-    if (*endp == 0) {
-      param_time = r;
-      status = true;
-    } else {
-      // Error on str?
-      errormsg = "Parsing duration '" + param + "' failed.";
-      status = false;
-    }
-#endif
-  }
+  End_condition_duration(Conf* _conf,Verdict::Verdict v, const std::string& p);
   virtual ~End_condition_duration() {}
   virtual bool match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags);
 };
@@ -222,8 +127,7 @@ public:
 class End_condition_noprogress: public End_condition {
 public:
   End_condition_noprogress(Conf* _conf,Verdict::Verdict v, const std::string& p):
-    End_condition(_conf,v,p) {
-    counter = NOPROGRESS;
+    End_condition(_conf,NOPROGRESS,v,p) {
     er="no progress limit reached";
     param_long = atol(param.c_str());
     status = true;
@@ -240,8 +144,7 @@ public:
 class End_condition_deadlock: public End_condition {
 public:
   End_condition_deadlock(Conf* _conf,Verdict::Verdict v, const std::string& p):
-    End_condition(_conf,v,p) {
-    counter = DEADLOCK;
+    End_condition(_conf,DEADLOCK,v,p) {
     er="deadlock reached";
     status = true;
   }
@@ -258,8 +161,7 @@ public:
 class End_status_error: public End_condition {
 public:
   End_status_error(Conf* _conf,Verdict::Verdict v, const std::string& p):
-    End_condition(_conf,v,p) {
-    counter = STATUS;
+    End_condition(_conf,STATUS,v,p) {
     status = true;
   }
 
@@ -270,8 +172,7 @@ public:
 class End_condition_action: public End_condition {
 public:
   End_condition_action(Conf* _conf,Verdict::Verdict v, const std::string& p):
-    End_condition(_conf,v,p) {
-    counter = ACTION;
+    End_condition(_conf,ACTION,v,p) {
     er="executed break action";
     status = true;
   }
@@ -318,8 +219,7 @@ public:
 class End_condition_dummy: public End_condition {
 public:
   End_condition_dummy(Conf* _conf,Verdict::Verdict v, const std::string& p):
-    End_condition(_conf,v,p) {
-    counter = DUMMY;
+    End_condition(_conf,DUMMY,v,p),c(NULL) {
     status = true;
   }
 
@@ -336,8 +236,7 @@ public:
 class End_condition_tagverify: public End_condition {
 public:
   End_condition_tagverify(Conf* _conf,Verdict::Verdict v, const std::string& p):
-    End_condition(_conf,v,p) {
-    counter = TAGVERIFY;
+    End_condition(_conf,TAGVERIFY,v,p) {
     status = true;
   }
   bool evaluate_filter(std::vector<std::string>& tags);

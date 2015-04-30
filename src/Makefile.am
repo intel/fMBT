@@ -18,11 +18,11 @@ include Sources.mk
 
 VPATH ?= .
 
-noinst_HEADERS = windows_helper.cc aalang.hh aalang_cpp.hh aalang_java.hh aalang_py.hh adapter_rly08btech.hh adapter_dlopen.hh adapter_dummy.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_timer.hh adapter_v4l2.hh alg_bdfs.hh conf.hh coverage.hh coverage_proxy.hh coverage_exec_filter.hh coverage_join.hh coverage_include.hh coverage_mapper.hh coverage_market.hh coverage_of.hh coverage_prop.hh coverage_report.hh coverage_tema_seq.hh coverage_tree.hh end_condition.hh helper.hh heuristic_proxy.hh heuristic_include.hh heuristic_greedy.hh heuristic.hh heuristic_minerror.hh heuristic_mrandom.hh heuristic_random.hh history.hh history_glob.hh history_log.hh history_multi.hh history_remote.hh log_null.hh lts.hh lts_remote.hh lts_trace.hh lts_xrules.hh model.hh model_remote.hh null.hh of.hh of_csv.hh of_html.hh of_null.hh policy.hh rules.hh test_engine.hh xrules_remote.hh model_yes.hh aal_remote.hh coverage_uniq.hh coverage_set.hh heuristic_weight.hh coverage_avoid.hh coverage_trace.hh coverage_min.hh coverage_const.hh alphabet_impl.hh endhook.hh coverage_paths.hh model_filter.hh coverage_include.hh remote.hh coverage_end_condition.hh coverage_if.hh coverage_shared.hh coverage_short.hh coverage_notice.hh coverage_report_filter.hh coverage_restart.hh aalang_tag.hh aalang_action.hh model_cshared.hh coverage_nohistory.hh random.hh random_c.hh random_intel_hw.hh random_devrandom.hh random_supported.hh function.hh function_pid.hh function_const.hh function_time.hh function_ustime.hh function_supported.hh heuristic_coverage_random.hh coverage_random.hh proxy.hh learn_action.hh learning.hh learn_proxy.hh learn_time.hh error.hh function_random.hh learn_function.hh
+noinst_HEADERS = windows_helper.cc aalang.hh aalang_cpp.hh aalang_java.hh aalang_py.hh adapter_rly08btech.hh adapter_dlopen.hh adapter_dummy.hh adapter_mapper.hh adapter_model.hh adapter_remote.hh adapter_timer.hh adapter_v4l2.hh alg_bdfs.hh conf.hh coverage.hh coverage_proxy.hh coverage_exec_filter.hh coverage_join.hh coverage_include.hh coverage_mapper.hh coverage_market.hh coverage_of.hh coverage_prop.hh coverage_report.hh coverage_tema_seq.hh coverage_tree.hh end_condition.hh helper.hh heuristic_proxy.hh heuristic_include.hh heuristic_greedy.hh heuristic.hh heuristic_minerror.hh heuristic_mrandom.hh heuristic_random.hh history.hh history_glob.hh history_log.hh history_multi.hh history_remote.hh log_null.hh lts.hh lts_remote.hh lts_trace.hh lts_xrules.hh model.hh model_remote.hh null.hh of.hh of_csv.hh of_html.hh of_null.hh policy.hh rules.hh test_engine.hh xrules_remote.hh model_yes.hh aal_remote.hh coverage_uniq.hh coverage_set.hh heuristic_weight.hh coverage_avoid.hh coverage_trace.hh coverage_min.hh coverage_const.hh alphabet_impl.hh endhook.hh coverage_paths.hh model_filter.hh coverage_include.hh remote.hh coverage_end_condition.hh coverage_if.hh coverage_shared.hh coverage_short.hh coverage_notice.hh coverage_report_filter.hh coverage_restart.hh aalang_tag.hh aalang_action.hh model_cshared.hh coverage_nohistory.hh random.hh random_c.hh random_intel_hw.hh random_devrandom.hh random_supported.hh function.hh function_pid.hh function_const.hh function_time.hh function_ustime.hh function_supported.hh heuristic_coverage_random.hh coverage_random.hh proxy.hh learn_action.hh learning.hh learn_proxy.hh learn_time.hh error.hh function_random.hh learn_function.hh date_node.h
 
 pkginclude_HEADERS = aal.hh adapter.hh alphabet.hh awrapper.hh factory.hh helper.hh log.hh model.hh mwrapper.hh params.hh reffable.hh verdict.hh writable.hh
 
-noinst_HEADERS += conf.g lts.g mrules.g covlang.g xrules.g lang.g uconf.g filter.g weight.g set.g paths.g
+noinst_HEADERS += conf.g lts.g mrules.g covlang.g xrules.g lang.g uconf.g filter.g weight.g set.g paths.g date.g
 
 noinst_HEADERS += Android.mk Application.mk
 if RDRND
@@ -101,6 +101,9 @@ set.g.d_parser.cc: set.g d/libdparse.a
 
 paths.g.d_parser.cc: paths.g d/libdparse.a
 	d/make_dparser -o paths.g.d_parser.cc -i paths $(VPATH)/paths.g
+
+date.g.d_parser.cc: date.g d/libdparse.a
+	d/make_dparser -o date.g.d_parser.cc -i date $(VPATH)/date.g
 
 clean-local:
 	(cd d; make clean)
