@@ -1077,6 +1077,11 @@ class MainWindow(QtGui.QMainWindow):
                                                    checkable=True)
         screenshotMenu.addAction(self.screenshotAutoRefresh)
         self.screenshotAutoRefresh.changed.connect(self.autoRefreshScreenshot)
+        self.screenshotStayAwake = QtGui.QAction("&Stay awake",
+                                                 screenshotMenu,
+                                                 checkable=True)
+        screenshotMenu.addAction(self.screenshotStayAwake)
+        self.screenshotStayAwake.changed.connect(self.stayAwake)
 
         helpMenu = QtGui.QMenu("&Help", self)
         self.menuBar().addMenu(helpMenu)
@@ -1791,6 +1796,13 @@ class MainWindow(QtGui.QMainWindow):
                 if self.screenshotButtonRefresh.text() == "(5 s)":
                     self.scheduleUpdateScreenshot(5)
 
+    def stayAwake(self):
+        if self.screenshotStayAwake.isChecked():
+            self._fmbtEval('%s.shell("svc power stayon true")' % (self._sut,))
+        else:
+            self._fmbtEval('%s.shell("svc power stayon false")' % (self._sut,))
+
+
     def findNextBitmap(self):
         cursor = self.editor.textCursor()
         c = self.editor.toPlainText()[cursor.position():]
@@ -2049,12 +2061,15 @@ class MainWindow(QtGui.QMainWindow):
         if isinstance(sutObj, fmbtandroid.Device):
             self.sutButtonsAndroid.setVisible(True)
             self.sutButtonsTizen.setVisible(False)
+            self.screenshotStayAwake.setVisible(True)
         elif isinstance(sutObj, fmbttizen.Device):
             self.sutButtonsAndroid.setVisible(False)
             self.sutButtonsTizen.setVisible(True)
+            self.screenshotStayAwake.setVisible(False)
         else:
             self.sutButtonsAndroid.setVisible(False)
             self.sutButtonsTizen.setVisible(False)
+            self.screenshotStayAwake.setVisible(False)
         self._popTextEditorFocus()
 
     def addAPICall(self, call, cursorOffset=0):
