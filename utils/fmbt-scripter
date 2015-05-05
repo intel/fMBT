@@ -816,6 +816,7 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotButtonPrev = QtGui.QPushButton(
             self.screenshotButtons,
             icon = _app.style().standardIcon(QtGui.QStyle.SP_ArrowLeft))
+        self.screenshotButtonPrev.setToolTip("Previous screenshot")
         self.screenshotButtonsL.addWidget(self.screenshotButtonPrev)
         self.screenshotButtonPrev.clicked.connect(
             lambda: self.screenshotSet(self.screenshotImageIndex-1))
@@ -824,6 +825,8 @@ class MainWindow(QtGui.QMainWindow):
             self.screenshotButtons,
             icon = _app.style().standardIcon(QtGui.QStyle.SP_BrowserReload),
             checkable = True)
+        self.screenshotButtonRefresh.setToolTip(
+            "Refresh screenshot, right-click for auto options")
 
         self.screenshotButtonRefresh.clicked.connect(self.updateScreenshot)
         self.refreshContextMenu = QtGui.QMenu(self.screenshotButtonRefresh)
@@ -842,6 +845,7 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotButtonNext = QtGui.QPushButton(
             self.screenshotButtons,
             icon = _app.style().standardIcon(QtGui.QStyle.SP_ArrowRight))
+        self.screenshotButtonNext.setToolTip("Next screenshot")
         self.screenshotButtonNext.clicked.connect(
             lambda: self.screenshotSet(self.screenshotImageIndex+1))
 
@@ -850,11 +854,15 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotButtonControl = QtGui.QPushButton(self.screenshotButtons,
                                                         text="C&ontrol",
                                                         checkable = True)
+        self.screenshotButtonControl.setToolTip(
+            "Send UI events on screenshot to target")
         self.screenshotButtonControl.clicked.connect(self.controlDevice)
         self.screenshotButtonsL.addWidget(self.screenshotButtonControl)
         self.screenshotButtonSelect = QtGui.QPushButton(self.screenshotButtons,
                                                          text="Select/View",
                                                          checkable = True)
+        self.screenshotButtonSelect.setToolTip(
+            "Select reference images or UI components from the screenshot")
         self.screenshotButtonSelect.clicked.connect(self.selectBitmap)
         self.screenshotButtonsL.addWidget(self.screenshotButtonSelect)
         self.screenshotWidgetsLayout.addWidget(self.screenshotButtons)
@@ -945,13 +953,19 @@ class MainWindow(QtGui.QMainWindow):
         self.editorButtons.setLayout(self.editorButtonsLayout)
 
         self.editorButtonRec = QtGui.QPushButton("Re&c", checkable=True)
+        self.editorButtonRec.setToolTip(
+            "Record UI events on screenshot to Python script")
         self.editorButtonRec.clicked.connect(self.rec)
         self.editorButtonRunSingle = QtGui.QPushButton("Run &line",
                                                        checkable=True)
+        self.editorButtonRunSingle.setToolTip(
+            "Run Python line under the text cursor")
         self.editorButtonRunSingle.clicked.connect(
             lambda: self.runLines(1, self.editorButtonRunSingle))
         self.editorButtonRunSelection = QtGui.QPushButton("Run selectio&n",
                                                           checkable=True)
+        self.editorButtonRunSelection.setToolTip(
+            "Run selected Python lines")
         self.editorButtonRunSelection.clicked.connect(
             lambda: self.runLines("selection", self.editorButtonRunSelection))
         self.editorButtonsLayout.addWidget(self.editorButtonRec)
