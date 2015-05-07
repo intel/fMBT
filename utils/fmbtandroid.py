@@ -1804,14 +1804,20 @@ class View(object):
         c = lambda item: item._rawProps.find(s) != -1
         return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
 
-    def findItemsByPos(self, (x, y), count=-1, searchRootItem=None, searchItems=None, onScreen=False):
+    def findItemsByPos(self, pos, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
         """
         Returns list of ViewItems whose bounding box contains the position.
+
+        Parameters:
+          pos (pair of floats (0.0..0.1) or integers (x, y)):
+                  coordinates that fall in the bounding box of found items.
+
+          other parameters: refer to findItems documentation.
 
         Items are listed in ascending order based on area. They may
         or may not be from the same branch in the widget hierarchy.
         """
-        x, y = self._intCoords((x, y))
+        x, y = self._intCoords(pos)
         c = lambda item: (item.bbox()[0] <= x <= item.bbox()[2] and item.bbox()[1] <= y <= item.bbox()[3])
         items = self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
         # sort from smallest to greatest area
