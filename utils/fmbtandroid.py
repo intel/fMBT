@@ -2064,7 +2064,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         for c in setupCommands:
             self._runSetupCmd(c)
 
-    def _resetMonkey(self, timeout=3, pollDelay=.25):
+    def _resetMonkey(self, timeout=12, pollDelay=.25):
         tryKillingMonkeyOnFailure = 1
         failureCountSinceKill = 0
         endTime = time.time() + timeout
@@ -2107,14 +2107,16 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
                     except ValueError:
                         pass
                     continue
+                elif "Error binding to network socket" in monkeyOutput:
+                    _adapterLog('monkey network socket binding failed, killing old monkey')
+                    self.pkill("monkey")
+                    time.sleep(pollDelay)
+                    continue
                 _adapterLog("monkey connection failed, output: %s" % (monkeyOutput,))
                 failureCountSinceKill += 1
             time.sleep(pollDelay)
             if failureCountSinceKill > 2 and tryKillingMonkeyOnFailure > 0:
-                if self._shellSupportsSu:
-                    self._runSetupCmd(["shell", "su", "root", "pkill", "monkey"])
-                else:
-                    self._runSetupCmd(["shell", "pkill", "monkey"])
+                self.pkill("monkey")
                 tryKillingMonkeyOnFailure -= 1
                 failureCountSinceKill = 0
                 time.sleep(pollDelay)
@@ -2178,6 +2180,31 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         cmd.append(apkname)
         status, output, error = self._runAdb(cmd, timeout=_LONG_TIMEOUT)
         if "Success" in output:
+            return True
+        else:
+            return False
+
+    def pkill(self, pattern, signal=15, exact=False):
+        """send signal to all processes where process name contains pattern"""
+        _, ps, _ = self._runAdb(["shell", "ps"], timeout=_SHORT_TIMEOUT)
+        if self._shellSupportsSu:
+            shell_kill = ["shell", "su", "root", "kill"]
+        else:
+            shell_kill = ["shell", "kill"]
+        pids = []
+        for line in [l.strip() for l in ps.splitlines()]:
+            fields = line.split()
+            if len(fields) > 7:
+                if exact:
+                    if pattern == fields[7]:
+                        pids.append(fields[1])
+                else:
+                    if pattern in " ".join(fields[7:]):
+                        pids.append(fields[1])
+        if pids:
+            _adapterLog(str(shell_kill + ["-" + str(signal)] + pids))
+            self._runAdb(shell_kill + ["-" + str(signal)] + pids,
+                         timeout=_SHORT_TIMEOUT)
             return True
         else:
             return False
