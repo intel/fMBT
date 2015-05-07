@@ -1712,7 +1712,31 @@ class View(object):
             i.id(), i.className(), t, i.bbox(), i.visibleBranch())
     def filename(self):
         return self._rawDumpFilename
+
     def findItems(self, comparator, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
+        """
+        Returns list of ViewItems to which comparator returns True.
+
+        Parameters:
+          comparator (function that takes one parameter (ViewItem))
+                  returns True for all accepted items.
+
+          count (integer, optional):
+                  maximum number of items to be returned.
+                  The default is -1 (unlimited).
+
+          searchRootItem (ViewItem, optional):
+                  search only among items that are children of
+                  searchRootItem. The default is None (search from all).
+
+          searchItems (list of ViewItems, optional):
+                  search only among given items. The default is None,
+                  (search from all).
+
+          onScreen (boolean, optional):
+                  search only among items that are on screen. The
+                  default is False.
+        """
         foundItems = []
         if count == 0: return foundItems
         if searchRootItem != None:
@@ -1791,6 +1815,29 @@ class View(object):
         c = lambda item: (item.bbox()[0] <= x <= item.bbox()[2] and item.bbox()[1] <= y <= item.bbox()[3])
         items = self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
         # sort from smallest to greatest area
+        area_items = [((i.bbox()[2] - i.bbox()[0]) * (i.bbox()[3] - i.bbox()[1]), i) for i in items]
+        return [i for _, i in sorted(area_items)]
+
+    def findItemsInRegion(self, bbox, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
+        """
+        Returns list of ViewItems whose bounding box is within the region.
+
+        Parameters:
+
+          bbox (four-tuple of floats (0.0..1.0) or integers):
+                  bounding box that specifies search region
+                  (left, top, right, bottom).
+
+          other parameters: refer to findItems documentation.
+
+        Returned items are listed in ascending order based on area.
+        """
+        left, top = self._intCoords((bbox[0], bbox[1]))
+        right, bottom = self._intCoords((bbox[2], bbox[3]))
+        c = lambda item: (left <= item.bbox()[0] <= item.bbox()[2] <= right and
+                          top <= item.bbox()[1] <= item.bbox()[3] <= bottom)
+        items = self.findItems(c, count=count, searchRootItem=searchRootItem,
+                               searchItems=searchItems, onScreen=onScreen)
         area_items = [((i.bbox()[2] - i.bbox()[0]) * (i.bbox()[3] - i.bbox()[1]), i) for i in items]
         return [i for _, i in sorted(area_items)]
 
