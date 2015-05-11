@@ -1857,6 +1857,11 @@ class View(object):
         """
         Process the raw dump data and create a tree of ViewItems
         """
+        if not isinstance(dump, unicode):
+            try:
+                dump = unicode(dump, "utf-8")
+            except UnicodeDecodeError, e:
+                self._errors.append((0, 0, "converting to unicode failed: %s" % (e,)))
         # This code originates from tema-android-adapter-3.2,
         # AndroidAdapter/guireader.py.
         self._viewItems = []
