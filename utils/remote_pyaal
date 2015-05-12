@@ -559,6 +559,11 @@ if __name__ == "__main__":
 
     aal_filename = remainder[0]
 
+    if not os.access(aal_filename, os.R_OK):
+        errmsg = 'file "%s" not readable' % (aal_filename,)
+        fmbtstderr(errmsg)
+        error(errmsg)
+
     if aal_filename.endswith(".aal"):
         cmd = ["fmbt-aalc", "-l", "python"] + opt_ppflags + [ aal_filename ]
 	subout = subprocess.PIPE
