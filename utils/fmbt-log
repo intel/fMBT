@@ -152,6 +152,12 @@ def remove_preceding_timestamp_formatter(s):
     return s[m.end():]
 remove_preceding_timestamp_formatter_re=re.compile('[0-9]+\.[0-9]{4} ')
 
+def formatTimeDelta(s):
+    fmt = _g_time_delta_format
+    if "%s" in fmt:
+        fmt = fmt.replace("%s", str(int(float(s))))
+    return fmbt.formatTime(fmt, datetime.datetime.utcfromtimestamp(float(s)))
+
 _g_time_format = None
 _g_time_formatter = lambda s: str(identity_formatter(s))
 _g_time_delta_format = None
@@ -365,7 +371,7 @@ if __name__ == '__main__':
             _g_time_formatter = lambda s: fmbt.formatTime(_g_time_format,datetime.datetime.fromtimestamp(float(s)))
         elif opt in ['-T', '--time-delta-format']:
             _g_time_delta_format = arg
-            _g_time_delta_formatter = lambda s: fmbt.formatTime(_g_time_delta_format,datetime.datetime.utcfromtimestamp(float(s)))
+            _g_time_delta_formatter = lambda s: formatTimeDelta(s)
         elif opt in ['-o', '--output'] and not arg in ['', '-']:
             output_file_obj = file(arg, 'w')
 

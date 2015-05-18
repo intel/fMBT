@@ -1712,7 +1712,31 @@ class View(object):
             i.id(), i.className(), t, i.bbox(), i.visibleBranch())
     def filename(self):
         return self._rawDumpFilename
+
     def findItems(self, comparator, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
+        """
+        Returns list of ViewItems to which comparator returns True.
+
+        Parameters:
+          comparator (function that takes one parameter (ViewItem))
+                  returns True for all accepted items.
+
+          count (integer, optional):
+                  maximum number of items to be returned.
+                  The default is -1 (unlimited).
+
+          searchRootItem (ViewItem, optional):
+                  search only among items that are children of
+                  searchRootItem. The default is None (search from all).
+
+          searchItems (list of ViewItems, optional):
+                  search only among given items. The default is None,
+                  (search from all).
+
+          onScreen (boolean, optional):
+                  search only among items that are on screen. The
+                  default is False.
+        """
         foundItems = []
         if count == 0: return foundItems
         if searchRootItem != None:
@@ -1780,17 +1804,46 @@ class View(object):
         c = lambda item: item._rawProps.find(s) != -1
         return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
 
-    def findItemsByPos(self, (x, y), count=-1, searchRootItem=None, searchItems=None, onScreen=False):
+    def findItemsByPos(self, pos, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
         """
         Returns list of ViewItems whose bounding box contains the position.
+
+        Parameters:
+          pos (pair of floats (0.0..0.1) or integers (x, y)):
+                  coordinates that fall in the bounding box of found items.
+
+          other parameters: refer to findItems documentation.
 
         Items are listed in ascending order based on area. They may
         or may not be from the same branch in the widget hierarchy.
         """
-        x, y = self._intCoords((x, y))
+        x, y = self._intCoords(pos)
         c = lambda item: (item.bbox()[0] <= x <= item.bbox()[2] and item.bbox()[1] <= y <= item.bbox()[3])
         items = self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
         # sort from smallest to greatest area
+        area_items = [((i.bbox()[2] - i.bbox()[0]) * (i.bbox()[3] - i.bbox()[1]), i) for i in items]
+        return [i for _, i in sorted(area_items)]
+
+    def findItemsInRegion(self, bbox, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
+        """
+        Returns list of ViewItems whose bounding box is within the region.
+
+        Parameters:
+
+          bbox (four-tuple of floats (0.0..1.0) or integers):
+                  bounding box that specifies search region
+                  (left, top, right, bottom).
+
+          other parameters: refer to findItems documentation.
+
+        Returned items are listed in ascending order based on area.
+        """
+        left, top = self._intCoords((bbox[0], bbox[1]))
+        right, bottom = self._intCoords((bbox[2], bbox[3]))
+        c = lambda item: (left <= item.bbox()[0] <= item.bbox()[2] <= right and
+                          top <= item.bbox()[1] <= item.bbox()[3] <= bottom)
+        items = self.findItems(c, count=count, searchRootItem=searchRootItem,
+                               searchItems=searchItems, onScreen=onScreen)
         area_items = [((i.bbox()[2] - i.bbox()[0]) * (i.bbox()[3] - i.bbox()[1]), i) for i in items]
         return [i for _, i in sorted(area_items)]
 
@@ -1804,6 +1857,11 @@ class View(object):
         """
         Process the raw dump data and create a tree of ViewItems
         """
+        if not isinstance(dump, unicode):
+            try:
+                dump = unicode(dump, "utf-8")
+            except UnicodeDecodeError, e:
+                self._errors.append((0, 0, "converting to unicode failed: %s" % (e,)))
         # This code originates from tema-android-adapter-3.2,
         # AndroidAdapter/guireader.py.
         self._viewItems = []
@@ -2064,7 +2122,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         for c in setupCommands:
             self._runSetupCmd(c)
 
-    def _resetMonkey(self, timeout=3, pollDelay=.25):
+    def _resetMonkey(self, timeout=12, pollDelay=.25):
         tryKillingMonkeyOnFailure = 1
         failureCountSinceKill = 0
         endTime = time.time() + timeout
@@ -2107,14 +2165,16 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
                     except ValueError:
                         pass
                     continue
+                elif "Error binding to network socket" in monkeyOutput:
+                    _adapterLog('monkey network socket binding failed, killing old monkey')
+                    self.pkill("monkey")
+                    time.sleep(pollDelay)
+                    continue
                 _adapterLog("monkey connection failed, output: %s" % (monkeyOutput,))
                 failureCountSinceKill += 1
             time.sleep(pollDelay)
             if failureCountSinceKill > 2 and tryKillingMonkeyOnFailure > 0:
-                if self._shellSupportsSu:
-                    self._runSetupCmd(["shell", "su", "root", "pkill", "monkey"])
-                else:
-                    self._runSetupCmd(["shell", "pkill", "monkey"])
+                self.pkill("monkey")
                 tryKillingMonkeyOnFailure -= 1
                 failureCountSinceKill = 0
                 time.sleep(pollDelay)
@@ -2178,6 +2238,31 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         cmd.append(apkname)
         status, output, error = self._runAdb(cmd, timeout=_LONG_TIMEOUT)
         if "Success" in output:
+            return True
+        else:
+            return False
+
+    def pkill(self, pattern, signal=15, exact=False):
+        """send signal to all processes where process name contains pattern"""
+        _, ps, _ = self._runAdb(["shell", "ps"], timeout=_SHORT_TIMEOUT)
+        if self._shellSupportsSu:
+            shell_kill = ["shell", "su", "root", "kill"]
+        else:
+            shell_kill = ["shell", "kill"]
+        pids = []
+        for line in [l.strip() for l in ps.splitlines()]:
+            fields = line.split()
+            if len(fields) > 7:
+                if exact:
+                    if pattern == fields[7]:
+                        pids.append(fields[1])
+                else:
+                    if pattern in " ".join(fields[7:]):
+                        pids.append(fields[1])
+        if pids:
+            _adapterLog(str(shell_kill + ["-" + str(signal)] + pids))
+            self._runAdb(shell_kill + ["-" + str(signal)] + pids,
+                         timeout=_SHORT_TIMEOUT)
             return True
         else:
             return False

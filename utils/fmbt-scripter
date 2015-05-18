@@ -412,8 +412,11 @@ class MyScaleEvents(QtCore.QObject):
     def showScreenshotTooltip(self, event):
         # tooltip on screenshot view
         x, y = self.posToAbs(event.pos)
+        xRel, yRel = self.posToRel(event.pos)
         self.mainwindow._screenshotCursorX = int(x)
         self.mainwindow._screenshotCursorY = int(y)
+        self.mainwindow._screenshotCursorXRel = "%.2f" % (xRel,)
+        self.mainwindow._screenshotCursorYRel = "%.2f" % (yRel,)
         self.mainwindow.editorCursorPositionChanged()
 
 def _scalableEditor(mainwindow, parent, font, EditorClass = QtGui.QTextEdit):
@@ -750,6 +753,8 @@ class MainWindow(QtGui.QMainWindow):
         self._screenshotSaveDir = ""
         self._screenshotCursorX = -1
         self._screenshotCursorY = -1
+        self._screenshotCursorXRel = None
+        self._screenshotCursorYRel = None
         self._scriptFilename = None
         self._updateNextScreenshotFromFiles = []
         self._updateScreenshotScheduled = False
@@ -816,6 +821,7 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotButtonPrev = QtGui.QPushButton(
             self.screenshotButtons,
             icon = _app.style().standardIcon(QtGui.QStyle.SP_ArrowLeft))
+        self.screenshotButtonPrev.setToolTip("Previous screenshot")
         self.screenshotButtonsL.addWidget(self.screenshotButtonPrev)
         self.screenshotButtonPrev.clicked.connect(
             lambda: self.screenshotSet(self.screenshotImageIndex-1))
@@ -824,6 +830,8 @@ class MainWindow(QtGui.QMainWindow):
             self.screenshotButtons,
             icon = _app.style().standardIcon(QtGui.QStyle.SP_BrowserReload),
             checkable = True)
+        self.screenshotButtonRefresh.setToolTip(
+            "Refresh screenshot, right-click for auto options")
 
         self.screenshotButtonRefresh.clicked.connect(self.updateScreenshot)
         self.refreshContextMenu = QtGui.QMenu(self.screenshotButtonRefresh)
@@ -842,6 +850,7 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotButtonNext = QtGui.QPushButton(
             self.screenshotButtons,
             icon = _app.style().standardIcon(QtGui.QStyle.SP_ArrowRight))
+        self.screenshotButtonNext.setToolTip("Next screenshot")
         self.screenshotButtonNext.clicked.connect(
             lambda: self.screenshotSet(self.screenshotImageIndex+1))
 
@@ -850,11 +859,15 @@ class MainWindow(QtGui.QMainWindow):
         self.screenshotButtonControl = QtGui.QPushButton(self.screenshotButtons,
                                                         text="C&ontrol",
                                                         checkable = True)
+        self.screenshotButtonControl.setToolTip(
+            "Send UI events on screenshot to target")
         self.screenshotButtonControl.clicked.connect(self.controlDevice)
         self.screenshotButtonsL.addWidget(self.screenshotButtonControl)
         self.screenshotButtonSelect = QtGui.QPushButton(self.screenshotButtons,
                                                          text="Select/View",
                                                          checkable = True)
+        self.screenshotButtonSelect.setToolTip(
+            "Select reference images or UI components from the screenshot")
         self.screenshotButtonSelect.clicked.connect(self.selectBitmap)
         self.screenshotButtonsL.addWidget(self.screenshotButtonSelect)
         self.screenshotWidgetsLayout.addWidget(self.screenshotButtons)
@@ -945,13 +958,19 @@ class MainWindow(QtGui.QMainWindow):
         self.editorButtons.setLayout(self.editorButtonsLayout)
 
         self.editorButtonRec = QtGui.QPushButton("Re&c", checkable=True)
+        self.editorButtonRec.setToolTip(
+            "Record UI events on screenshot to Python script")
         self.editorButtonRec.clicked.connect(self.rec)
         self.editorButtonRunSingle = QtGui.QPushButton("Run &line",
                                                        checkable=True)
+        self.editorButtonRunSingle.setToolTip(
+            "Run Python line under the text cursor")
         self.editorButtonRunSingle.clicked.connect(
             lambda: self.runLines(1, self.editorButtonRunSingle))
         self.editorButtonRunSelection = QtGui.QPushButton("Run selectio&n",
                                                           checkable=True)
+        self.editorButtonRunSelection.setToolTip(
+            "Run selected Python lines")
         self.editorButtonRunSelection.clicked.connect(
             lambda: self.runLines("selection", self.editorButtonRunSelection))
         self.editorButtonsLayout.addWidget(self.editorButtonRec)
@@ -1077,6 +1096,11 @@ class MainWindow(QtGui.QMainWindow):
                                                    checkable=True)
         screenshotMenu.addAction(self.screenshotAutoRefresh)
         self.screenshotAutoRefresh.changed.connect(self.autoRefreshScreenshot)
+        self.screenshotStayAwake = QtGui.QAction("&Stay awake",
+                                                 screenshotMenu,
+                                                 checkable=True)
+        screenshotMenu.addAction(self.screenshotStayAwake)
+        self.screenshotStayAwake.changed.connect(self.stayAwake)
 
         helpMenu = QtGui.QMenu("&Help", self)
         self.menuBar().addMenu(helpMenu)
@@ -1791,6 +1815,13 @@ class MainWindow(QtGui.QMainWindow):
                 if self.screenshotButtonRefresh.text() == "(5 s)":
                     self.scheduleUpdateScreenshot(5)
 
+    def stayAwake(self):
+        if self.screenshotStayAwake.isChecked():
+            self._fmbtEval('%s.shell("svc power stayon true")' % (self._sut,))
+        else:
+            self._fmbtEval('%s.shell("svc power stayon false")' % (self._sut,))
+
+
     def findNextBitmap(self):
         cursor = self.editor.textCursor()
         c = self.editor.toPlainText()[cursor.position():]
@@ -2049,12 +2080,15 @@ class MainWindow(QtGui.QMainWindow):
         if isinstance(sutObj, fmbtandroid.Device):
             self.sutButtonsAndroid.setVisible(True)
             self.sutButtonsTizen.setVisible(False)
+            self.screenshotStayAwake.setVisible(True)
         elif isinstance(sutObj, fmbttizen.Device):
             self.sutButtonsAndroid.setVisible(False)
             self.sutButtonsTizen.setVisible(True)
+            self.screenshotStayAwake.setVisible(False)
         else:
             self.sutButtonsAndroid.setVisible(False)
             self.sutButtonsTizen.setVisible(False)
+            self.screenshotStayAwake.setVisible(False)
         self._popTextEditorFocus()
 
     def addAPICall(self, call, cursorOffset=0):
@@ -2242,12 +2276,14 @@ class MainWindow(QtGui.QMainWindow):
             self._editorIndentLineCalls = None
             self.highlightActiveBitmap()
         cursor = self.editor.textCursor()
-        cursorPosString = "%s, line: %s col: %s; screen: (%s, %s)" % (
+        cursorPosString = "%s, line: %s col: %s; screen: (%s, %s) (%s, %s)" % (
             self._scriptFilename,
             cursor.blockNumber() + 1,
             cursor.positionInBlock() + 1,
             int(self._screenshotCursorX),
             int(self._screenshotCursorY),
+            self._screenshotCursorXRel,
+            self._screenshotCursorYRel,
         )
         self.status.setText(cursorPosString)
 
