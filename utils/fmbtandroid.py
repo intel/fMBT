@@ -1642,7 +1642,7 @@ class ViewItem(fmbtgti.GUIItem):
             '\n\t\t'.join(['"%s": %s' % (key, p[key]) for key in sorted(p.keys())]))
     def __str__(self):
         if "text:mText" in self._p:
-            text = ", text='%s'" % (self.text(),)
+            text = ", text=%s" % (repr(self.text()),)
         else:
             text = ""
         return ("ViewItem(className='%s', id=%s, bbox=%s%s)"  % (
