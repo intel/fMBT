@@ -127,9 +127,12 @@ def setAdapterLogTimeFormat(strftime_format):
 
 def formatAdapterLogMessage(msg, fmt="%s %s\n"):
     """
-    Return timestamped adapter log message
+    Return timestamped adapter log message as a string (not unicode)
     """
-    return fmt % (formatTime(_g_fmbt_adapterlogtimeformat), msg)
+    s = fmt % (formatTime(_g_fmbt_adapterlogtimeformat), msg)
+    if type(s) == unicode:
+        s = s.encode("utf8")
+    return s
 
 def getActionName():
     """deprecated, use actionName()"""
