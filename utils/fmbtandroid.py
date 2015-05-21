@@ -850,9 +850,9 @@ class Device(fmbtgti.GUITestInterface):
         """
         Returns the platform version of the device.
         """
-        if self._conn:
-            return self._conn._platformVersion
-        else:
+        try:
+            return self.existingConnection().recvPlatformVersion()
+        except:
             return "nosoftware"
 
     def pressAppSwitch(self, **pressKeyKwArgs):
@@ -2266,6 +2266,9 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             return True
         else:
             return False
+
+    def recvPlatformVersion(self):
+        return self._platformVersion
 
     def reboot(self, reconnect, firstBootAfterFlashing, timeout):
         if firstBootAfterFlashing:
