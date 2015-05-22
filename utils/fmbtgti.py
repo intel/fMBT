@@ -237,6 +237,11 @@ class _Bbox(ctypes.Structure):
                 ("bottom", ctypes.c_int32),
                 ("error", ctypes.c_int32)]
 
+class _Rgb888(ctypes.Structure):
+    _fields_ = [("red", ctypes.c_uint8),
+                ("green", ctypes.c_uint8),
+                ("blue", ctypes.c_uint8)]
+
 _libpath = ["", ".",
             os.path.dirname(os.path.abspath(__file__)),
             distutils.sysconfig.get_python_lib(plat_specific=1)]
@@ -247,6 +252,7 @@ for _dirname in _libpath:
     try:
         eye4graphics = ctypes.CDLL(os.path.join(_dirname , "eye4graphics"+_suffix))
         struct_bbox = _Bbox(0, 0, 0, 0, 0)
+        eye4graphics.findNextColor.restype = ctypes.c_int
         eye4graphics.findNextHighErrorBlock.argtypes = [
             ctypes.c_void_p,
             ctypes.c_void_p,
@@ -2691,6 +2697,81 @@ class Screenshot(object):
         else:
             raise RuntimeError('Trying to use OIR on "%s" without OIR engine.' % (self.filename(),))
 
+    def findItemsByColor(self, rgb888, colorMatch=1.0, limit=1, area=None, invertMatch=False):
+        """
+        Return list of items that match given color.
+
+        Parameters:
+
+          rgb888 (integer triplet (red, green, blue)):
+                  color to be searched for.
+
+          colorMatch (optional, float):
+                  required color matching accuracy. The default is 1.0
+                  (exact match).
+
+          limit (optional, integer):
+                  max number of matching items to be returned.
+                  The default is 1.
+
+          area ((left, top, right, bottom), optional):
+                  subregion in the screenshot from which items will be
+                  searched for. The default is (0.0, 0.0, 1.0, 1.0), that
+                  is whole screen.
+
+          invertMatch (optional, boolean):
+                  if True, search for items *not* matching the color.
+                  The default is False.
+        """
+        self._notifyOirEngine()
+        if (self.filename() in getattr(self._oirEngine, "_openedImages", {})):
+            # if possible, use already opened image object
+            image = self._oirEngine._openedImages[self.filename()]
+            closeImage = False
+        else:
+            image = _e4gOpenImage(self.filename())
+            closeImage = True
+        bbox = _Bbox(0, 0, 0, 0, 0)
+        color = _Rgb888(*rgb888)
+        ssSize = self.size()
+        if area == None:
+            area = (0.0, 0.0, 1.0, 1.0)
+        leftTopRightBottomZero = (_intCoords((area[0], area[1]), ssSize) +
+                                  _intCoords((area[2], area[3]), ssSize) +
+                                  (0,))
+        areaBbox = _Bbox(*leftTopRightBottomZero)
+        foundItems = []
+        try:
+            while limit != 0:
+                found = eye4graphics.findNextColor(
+                    ctypes.byref(bbox),
+                    ctypes.c_void_p(image),
+                    ctypes.byref(color),
+                    ctypes.c_double(colorMatch),
+                    ctypes.c_double(1.0), # opacityLimit
+                    ctypes.c_int(invertMatch),
+                    ctypes.byref(areaBbox))
+                if found != 1:
+                    break
+                foundColor = int(bbox.error)
+                foundRgb = (foundColor >> 16 & 0xff,
+                            foundColor >> 8 & 0xff,
+                            foundColor & 0xff)
+                if invertMatch:
+                    comp = "!="
+                else:
+                    comp = "=="
+                foundItems.append(
+                    GUIItem("RGB#%.2x%.2x%.2x%s%.2x%.2x%.2x (%s)" %
+                            (rgb888 + (comp,) + foundRgb + (colorMatch,)),
+                            (bbox.left, bbox.top, bbox.right, bbox.bottom),
+                            self))
+                limit -= 1
+        finally:
+            if closeImage:
+                eye4graphics.closeImage(image)
+        return foundItems
+
     def findItemsByOcr(self, text, **ocrEngineArgs):
         if self._ocrEngine != None:
             self._notifyOcrEngine()
@@ -2723,6 +2804,39 @@ class Screenshot(object):
         finally:
             eye4graphics.closeImage(image)
         return foundItems
+
+    def getColor(self, (x, y)):
+        """
+        Return pixel color at coordinates
+
+        Parameters:
+
+          (x, y) (pair of integers or floats):
+                  coordinates in the image.
+
+        Returns tuple of integers: (red, green, blue).
+        """
+        self._notifyOirEngine()
+        xsize, ysize = self.size()
+        x, y = _intCoords((x, y), (xsize, ysize))
+        if not (0 <= x < xsize and 0 <= y < ysize):
+            raise ValueError("invalid coordinates (%s, %s)" % (x, y))
+        if (self.filename() in getattr(self._oirEngine, "_openedImages", {})):
+            # if possible, use already opened image object
+            image = self._oirEngine._openedImages[self.filename()]
+            closeImage = False
+        else:
+            image = _e4gOpenImage(self.filename())
+            closeImage = True
+        color = _Rgb888(0, 0, 0)
+        v = eye4graphics.rgb888at(ctypes.byref(color),
+                                  ctypes.c_void_p(image),
+                                  ctypes.c_int(x),
+                                  ctypes.c_int(y))
+        if v == 0:
+            return (int(color.red), int(color.green), int(color.blue))
+        else:
+            return None
 
     def ocrItems(self, **ocrArgs):
         """

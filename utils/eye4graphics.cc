@@ -510,6 +510,73 @@ int findSingleIcon(BoundingBox* bbox,
     return retval;
 }
 
+int rgb888at(rgb888* color,
+             void* image,
+             const int x,
+             const int y)
+{
+    Image* im = static_cast<Image*>(image);
+    const PixelPacket* hay_pixel_p = getPixels(im, x, y, x, y);
+    color->red = hay_pixel_p->red;
+    color->green = hay_pixel_p->green;
+    color->blue = hay_pixel_p->blue;
+    return 0;
+}
+
+int findNextColor(BoundingBox* bbox,
+                  void* image,
+                  const rgb888* color,
+                  const double colorMatch,
+                  const double opacityLimit,
+                  const int invertMatch,
+                  const BoundingBox* searchArea)
+{
+    PixelPacket needle;
+    Image* im = static_cast<Image*>(image);
+    int xsize = im->columns;
+    int ysize = im->rows;
+    const PixelPacket* hay_pixel_p = getPixels(im, 0, 0, xsize, ysize);
+
+    int startX = searchArea->left > bbox->left ? searchArea->left : bbox->left + 1;
+    int startY = searchArea->top > bbox->top ? searchArea->top : bbox->top;
+
+    bbox->left   = -1;
+    bbox->top    = -1;
+    bbox->right  = -1;
+    bbox->bottom = -1;
+    bbox->error  = -1;
+
+    const int colorDiff = 256 - (256 * colorMatch);
+
+    const unsigned char skipTransparency = 255 * opacityLimit;
+
+    needle.red = color->red;
+    needle.green = color->green;
+    needle.blue = color->blue;
+
+    for (int y = startY; y < searchArea->bottom; y++) {
+        for (int x = startX; x < searchArea->right; x++) {
+            const PixelPacket hay_pixel = *(hay_pixel_p + y * xsize + x);
+            const bool match = same_color(
+                &needle, &hay_pixel,
+                colorDiff, skipTransparency);
+            if ((!invertMatch && match) || (invertMatch && !match)) {
+                bbox->left = x;
+                bbox->right = x;
+                bbox->top = y;
+                bbox->bottom = y;
+                bbox->error = (((hay_pixel.red & 0xff) << 16) +
+                               ((hay_pixel.green & 0xff) << 8) +
+                               (hay_pixel.blue & 0xff));
+                return 1;
+            }
+        }
+        if (bbox->error == 0) break;
+        startX = searchArea->left;
+    }
+    return 0;
+}
+
 int findNextIcon(BoundingBox* bbox,
                  void* image,
                  void* icon,
