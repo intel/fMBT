@@ -2731,7 +2731,7 @@ class Screenshot(object):
         else:
             image = _e4gOpenImage(self.filename())
             closeImage = True
-        bbox = _Bbox(0, 0, 0, 0, 0)
+        bbox = _Bbox(-1, 0, 0, 0, 0)
         color = _Rgb888(*rgb888)
         ssSize = self.size()
         if area == None:
