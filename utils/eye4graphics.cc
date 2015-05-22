@@ -516,7 +516,7 @@ int rgb888at(rgb888* color,
              const int y)
 {
     Image* im = static_cast<Image*>(image);
-    const PixelPacket* hay_pixel_p = getPixels(im, x, y, x, y);
+    const PixelPacket* hay_pixel_p = getPixels(im, x, y, 1, 1);
     color->red = hay_pixel_p->red;
     color->green = hay_pixel_p->green;
     color->blue = hay_pixel_p->blue;

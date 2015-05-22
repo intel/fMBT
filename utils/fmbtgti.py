@@ -2828,15 +2828,19 @@ class Screenshot(object):
         else:
             image = _e4gOpenImage(self.filename())
             closeImage = True
-        color = _Rgb888(0, 0, 0)
-        v = eye4graphics.rgb888at(ctypes.byref(color),
-                                  ctypes.c_void_p(image),
-                                  ctypes.c_int(x),
-                                  ctypes.c_int(y))
-        if v == 0:
-            return (int(color.red), int(color.green), int(color.blue))
-        else:
-            return None
+        try:
+            color = _Rgb888(0, 0, 0)
+            v = eye4graphics.rgb888at(ctypes.byref(color),
+                                      ctypes.c_void_p(image),
+                                      ctypes.c_int(x),
+                                      ctypes.c_int(y))
+            if v == 0:
+                return (int(color.red), int(color.green), int(color.blue))
+            else:
+                return None
+        finally:
+            if closeImage:
+                eye4graphics.closeImage(image)
 
     def ocrItems(self, **ocrArgs):
         """
