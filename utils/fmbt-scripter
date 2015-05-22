@@ -1827,11 +1827,11 @@ class MainWindow(QtGui.QMainWindow):
                     self.scheduleUpdateScreenshot(5)
 
     def stayAwake(self):
-        if self.screenshotStayAwake.isChecked():
-            self._fmbtEval('%s.shell("svc power stayon true")' % (self._sut,))
-        else:
-            self._fmbtEval('%s.shell("svc power stayon false")' % (self._sut,))
-
+        if self.screenshotStayAwake.isVisible():
+            if self.screenshotStayAwake.isChecked():
+                self._fmbtEval('%s.shell("svc power stayon true")' % (self._sut,))
+            else:
+                self._fmbtEval('%s.shell("svc power stayon false")' % (self._sut,))
 
     def findNextBitmap(self):
         cursor = self.editor.textCursor()
