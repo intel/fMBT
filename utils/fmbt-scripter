@@ -417,6 +417,16 @@ class MyScaleEvents(QtCore.QObject):
         self.mainwindow._screenshotCursorY = int(y)
         self.mainwindow._screenshotCursorXRel = "%.2f" % (xRel,)
         self.mainwindow._screenshotCursorYRel = "%.2f" % (yRel,)
+        try:
+            self.mainwindow._screenshotCursorRGB = (
+                self.mainwindow._fmbtEval(
+                    "%s.screenshot().getColor((%s, %s))" % (
+                        self.mainwindow._sut,
+                        self.mainwindow._screenshotCursorX,
+                        self.mainwindow._screenshotCursorY),
+                    silent=True)[0])
+        except:
+            self.mainwindow._screenshotCursorRGB = "N/A"
         self.mainwindow.editorCursorPositionChanged()
 
 def _scalableEditor(mainwindow, parent, font, EditorClass = QtGui.QTextEdit):
@@ -753,8 +763,9 @@ class MainWindow(QtGui.QMainWindow):
         self._screenshotSaveDir = ""
         self._screenshotCursorX = -1
         self._screenshotCursorY = -1
-        self._screenshotCursorXRel = None
-        self._screenshotCursorYRel = None
+        self._screenshotCursorXRel = "N/A"
+        self._screenshotCursorYRel = "N/A"
+        self._screenshotCursorRGB = "N/A"
         self._scriptFilename = None
         self._updateNextScreenshotFromFiles = []
         self._updateScreenshotScheduled = False
@@ -2276,7 +2287,7 @@ class MainWindow(QtGui.QMainWindow):
             self._editorIndentLineCalls = None
             self.highlightActiveBitmap()
         cursor = self.editor.textCursor()
-        cursorPosString = "%s, line: %s col: %s; screen: (%s, %s) (%s, %s)" % (
+        cursorPosString = "%s line %s col %s; xy: (%s, %s) (%s, %s) rgb: %s" % (
             self._scriptFilename,
             cursor.blockNumber() + 1,
             cursor.positionInBlock() + 1,
@@ -2284,6 +2295,7 @@ class MainWindow(QtGui.QMainWindow):
             int(self._screenshotCursorY),
             self._screenshotCursorXRel,
             self._screenshotCursorYRel,
+            self._screenshotCursorRGB,
         )
         self.status.setText(cursorPosString)
 
