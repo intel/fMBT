@@ -63,11 +63,20 @@ time: spec { $$=$0; } | items {
 
 timezone: 'TZ' '=' "[a-zA-Z0-9]*" {
             char* tmp_str=strndup($n2.start_loc.s,$n2.end-$n2.start_loc.s);
-            //printf("Timezone %s\n",tmp_str);
             $$.zone=g_time_zone_new(tmp_str);
-            //printf("Zone at %p\n",$$.zone);
             free(tmp_str);
           };
+
+timezone_suffix: ("[+-][0-9][0-9]:[0-9][0-9]"|
+                  "[+-][0-9][0-9][0-9][0-9]"|
+                  "[+-][0-9][0-9]")
+        {
+            char* tmp_str=strndup($n0.start_loc.s,$n0.end-$n0.start_loc.s);
+            $$.zone=g_time_zone_new(tmp_str);
+            free(tmp_str);
+        } | {
+            $$.zone=g_time_zone_new_local();
+        } ;
 
 // The easy case first :)
 spec: '@' int {
@@ -218,21 +227,34 @@ item: iso_8601_datetime { $$ = $0; } |
       rel               { $$ = $0; } ;
 
 iso_8601_datetime:
-    iso_8601_date 'T' iso_8601_time { $$.date = g_date_time_new_local(
-                $0.year,$0.month,$0.day,$2.hour,$2.min,$2.sec); 
-            if (!$$.date) { 
-                _parser->syntax_errors++;
-                return 0;
-            } } |
-    timezone iso_8601_date 'T' iso_8601_time { $$.date = g_date_time_new($0.zone,
-                $1.year,$1.month,$1.day,$3.hour,$3.min,$3.sec); 
+    iso_8601_date ('T'|) iso_8601_time timezone_suffix { $$.date = g_date_time_new($3.zone,
+                $0.year,$0.month,$0.day,$2.hour,$2.min,$2.sec);
             if (!$$.date) {
                 _parser->syntax_errors++;
                 return 0;
-            } } ;
+            } } |
+    timezone iso_8601_date ('T'|) iso_8601_time { $$.date = g_date_time_new($0.zone,
+                $1.year,$1.month,$1.day,$3.hour,$3.min,$3.sec);
+            if (!$$.date) {
+                _parser->syntax_errors++;
+                return 0;
+            } } |
+        iso_8601_date timezone_suffix { $$.date = g_date_time_new($1.zone,
+                $0.year,$0.month,$0.day,0,0,0);
+            if (!$$.date) {
+                _parser->syntax_errors++;
+                return 0;
+            } } |
+    timezone iso_8601_date { $$.date = g_date_time_new($0.zone,
+                $1.year,$1.month,$1.day,0,0,0);
+            if (!$$.date) {
+                _parser->syntax_errors++;
+                return 0;
+            }
+        } ;
 
 iso_8601_date:
-    uint sint sint { $$ = _date_node($0.i,$1.i,$2.i,0,0,0); };
+    uint '-' uint '-' uint { $$ = _date_node($0.i,$2.i,$4.i,0,0,0); };
 
 iso_8601_time:
        int                  { $$=_date_node(0,0,0,$0.i,0,0); }
@@ -280,14 +302,13 @@ rel_daymonth: prefix daymonth {
             $$.sec  *= $0.i;
         };
 
-rel_spec: 'year' { $$ = _date_node(1,0,0,0,0,0); } |
-         'month' { $$ = _date_node(0,1,0,0,0,0); } |
-         'week'  { $$ = _date_node(0,0,7,0,0,0); } |
-         'day'   { $$ = _date_node(0,0,1,0,0,0); } |
-         'hour'  { $$ = _date_node(0,0,0,1,0,0); } |
-         'min'   { $$ = _date_node(0,0,0,0,1,0); } |
-         'sec'   { $$ = _date_node(0,0,0,0,0,1); } ;
-//         's'     { $$ = _date_node(0,0,0,0,0,1); } ;
+rel_spec:('year'|'years')                   { $$ = _date_node(1,0,0,0,0,0); } |
+        ('month'|'months')                  { $$ = _date_node(0,1,0,0,0,0); } |
+        ('week'|'weeks')                    { $$ = _date_node(0,0,7,0,0,0); } |
+        ('day'|'days')                      { $$ = _date_node(0,0,1,0,0,0); } |
+        ('hour'|'hours')                    { $$ = _date_node(0,0,0,1,0,0); } |
+        ('min'|'minute'|'minutes')          { $$ = _date_node(0,0,0,0,1,0); } |
+        ('sec'|'secs'|'second'|'seconds')   { $$ = _date_node(0,0,0,0,0,1); } ;
 
 int_or_prefix: int { $$.i=$0.i; } | prefix { $$.i=$0.i; };
 
