@@ -1,8 +1,23 @@
-fmbt (0.23-0.rc0) unstable; urgency=low
+fmbt (0.23-1) unstable; urgency=low
 
-  * Development version.
+  * fmbt-scripter:
+    - Added "Screenshot / Stay awake" option for Android targets.
+    - Added tooltips to buttons.
+    - Show mouse cursor's relative coordinates on screenshot.
+    - Show RGB color at mouse cursor on screenshot.
+  * fmbtandroid:
+    - Added unicode support for refreshView().
+    - Added optional timeout parameter to device.shell() and shellSOE().
+    - Added device.connection().pkill(), works on images without pkill.
+    - Added device.view() methods findItemsInRegion() and findItemsByPos().
+  * fmbtandroid/chromiumos/rdp/tizen/vnc/windows/x11:
+    - Added device.screenshot() methods findItemsByColor() and getColor().
+  * Bug fixes:
+    - Memory leaks.
+    - Use correct parser struct sizes on many sublanguages.
+    - Other minor fixes.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 28 Apr 2015 11:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 26 May 2015 14:42:00 +0300
 
 fmbt (0.22-1) unstable; urgency=low
 
