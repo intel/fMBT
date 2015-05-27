@@ -47,14 +47,15 @@ def _formatKwArgs(kwargs):
     l = []
     for key in sorted(kwargs):
         v = kwargs[key]
-        if type(v) == str: l.append("%s=%s" % (key, repr(v)))
+        if type(v) == str or type(v) == unicode:
+            l.append("%s=%s" % (key, repr(v)))
         else: l.append("%s=%s" % (key, str(v)))
     return l
 
 def _formatCall(fmt, func, args, kwargs):
     arglist = []
     for a in args:
-        if type(a) == str: arglist.append(repr(a))
+        if type(a) == str or type(a) == unicode: arglist.append(repr(a))
         else: arglist.append(str(a))
     values = {
         "func": func.__name__,
@@ -64,7 +65,8 @@ def _formatCall(fmt, func, args, kwargs):
     return fmt % values
 
 def _formatRetunValue(fmt, retval):
-    if type(retval) == str: values={'value': repr(retval)}
+    if type(retval) == str or type(retval) == unicode:
+        values={'value': repr(retval)}
     else: values={'value': str(retval)}
     return fmt % values
 

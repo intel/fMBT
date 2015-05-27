@@ -850,9 +850,9 @@ class Device(fmbtgti.GUITestInterface):
         """
         Returns the platform version of the device.
         """
-        if self._conn:
-            return self._conn._platformVersion
-        else:
+        try:
+            return self.existingConnection().recvPlatformVersion()
+        except:
             return "nosoftware"
 
     def pressAppSwitch(self, **pressKeyKwArgs):
@@ -1205,30 +1205,53 @@ class Device(fmbtgti.GUITestInterface):
         else:
             return False
 
-    def shell(self, shellCommand):
+    def shell(self, shellCommand, timeout=None):
         """
         Execute shellCommand in adb shell.
 
-        shellCommand is a string (arguments separated by whitespace).
+        Parameters:
 
-        Returns output of "adb shell" command.
+          shellCommand (string):
+                  command to be executed in adb shell.
+                  Arguments separated by whitespace.
+
+          timeout (optional, integer):
+                  time in seconds after which the command
+                  will timeout. The default is None (no timeout).
+
+        Returns output of "adb shell" command, or None if timed out.
 
         If you wish to receive exitstatus or standard output and error
         separated from shellCommand, refer to shellSOE().
         """
-        return self.existingConnection()._runAdb(["shell", shellCommand])[1]
+        try:
+            output = self.existingConnection()._runAdb(
+                ["shell", shellCommand],
+                timeout=timeout)[1]
+        except FMBTAndroidRunError:
+            output = None
+        return output
 
-    def shellSOE(self, shellCommand):
+    def shellSOE(self, shellCommand, timeout=None):
         """
         Execute shellCommand in adb shell.
 
-        shellCommand is a string (arguments separated by whitespace).
+        Parameters:
 
-        Returns tuple (exitStatus, standardOutput, standardError).
+          shellCommand (string):
+                  command to be executed in adb shell.
+                  Arguments separated by whitespace.
+
+          timeout (optional, integer):
+                  time in seconds after which the command
+                  will timeout. The default is None (no timeout).
+
+        Returns tuple (exitStatus, standardOutput, standardError)
+        or (None, None, None) if timed out.
 
         Requires tar and uuencode to be available on the device.
         """
-        return self.existingConnection().shellSOE(shellCommand)
+        return self.existingConnection().shellSOE(shellCommand, timeout)
 
     def smsNumber(self, number, message):
         """
@@ -1642,7 +1665,7 @@ class ViewItem(fmbtgti.GUIItem):
             '\n\t\t'.join(['"%s": %s' % (key, p[key]) for key in sorted(p.keys())]))
     def __str__(self):
         if "text:mText" in self._p:
-            text = ", text='%s'" % (self.text(),)
+            text = ", text=%s" % (repr(self.text()),)
         else:
             text = ""
         return ("ViewItem(className='%s', id=%s, bbox=%s%s)"  % (
@@ -2267,6 +2290,9 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         else:
             return False
 
+    def recvPlatformVersion(self):
+        return self._platformVersion
+
     def reboot(self, reconnect, firstBootAfterFlashing, timeout):
         if firstBootAfterFlashing:
             self._runAdb("root", timeout=_SHORT_TIMEOUT)
@@ -2755,7 +2781,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
     def setDisplayToScreenCoords(self, displayToScreenFunction):
         self._displayToScreen = displayToScreenFunction
 
-    def shellSOE(self, shellCommand):
+    def shellSOE(self, shellCommand, timeout=None):
         fd, filename = tempfile.mkstemp(prefix="fmbtandroid-shellcmd-")
         remotename = '/sdcard/' + os.path.basename(filename)
         os.write(fd, shellCommand + "\n")
@@ -2769,26 +2795,40 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             # print uuencoded package and remove remote temp files
             cmd += "; cd %s; tar czf - %s.out %s.err %s.status | uuencode %s.tar.gz; rm -f %s*" % (
                 (os.path.dirname(remotename),) + ((os.path.basename(remotename),) * 5))
-            status, output, error = self._runAdb(["shell", cmd], 0)
-            file(filename, "w").write(output)
-            uu.decode(filename, out_file=filename + ".tar.gz")
-            import tarfile
-            tar = tarfile.open(filename + ".tar.gz")
-            basename = os.path.basename(filename)
-            stdout = tar.extractfile(basename + ".out").read()
-            stderr = tar.extractfile(basename + ".err").read()
-            try: exitstatus = int(tar.extractfile(basename + ".status").read())
-            except: exitstatus = None
-            os.remove(filename)
-            os.remove(filename + ".tar.gz")
+            try:
+                status, output, error = self._runAdb(
+                    ["shell", cmd], 0, timeout=timeout)
+            except FMBTAndroidRunError:
+                status, output, error = None, None, None
+            if status != None:
+                file(filename, "w").write(output)
+                uu.decode(filename, out_file=filename + ".tar.gz")
+                import tarfile
+                tar = tarfile.open(filename + ".tar.gz")
+                basename = os.path.basename(filename)
+                stdout = tar.extractfile(basename + ".out").read()
+                stderr = tar.extractfile(basename + ".err").read()
+                try: exitstatus = int(tar.extractfile(basename + ".status").read())
+                except: exitstatus = None
+                os.remove(filename)
+                os.remove(filename + ".tar.gz")
+            else:
+                exitstatus, stdout, stderr = None, None, None
         else:
             # need to pull files one by one, slow.
-            self._runAdb(["shell", cmd], 0)
-            stdout = self._cat(remotename + ".out")
-            stderr = self._cat(remotename + ".err")
-            try: exitstatus = int(self._cat(remotename + ".status"))
-            except: exitstatus = None
-            self._runAdb(["shell", "rm -f "+remotename+"*"], timeout=_SHORT_TIMEOUT)
+            try:
+                status, output, error = self._runAdb(
+                    ["shell", cmd], 0, timeout=timeout)
+            except FMBTAndroidRunError:
+                status, output, error = None, None, None
+            if status != None:
+                stdout = self._cat(remotename + ".out")
+                stderr = self._cat(remotename + ".err")
+                try: exitstatus = int(self._cat(remotename + ".status"))
+                except: exitstatus = None
+                self._runAdb(["shell", "rm -f "+remotename+"*"], timeout=_SHORT_TIMEOUT)
+            else:
+                exitstatus, stdout, stderr = None, None, None
         return exitstatus, stdout, stderr
 
     def recvViewData(self, retry=3):

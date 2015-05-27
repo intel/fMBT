@@ -64,7 +64,7 @@ teststep "eye4graphics: bitmap self-comparison"
 import fmbtgti
 ti=fmbtgti.GUITestInterface()
 ti.refreshScreenshot("screenshot2-icon.png")
-print ti.verifyBitmap("screenshot2-icon.png")' 2>&1 | grep -q True && {
+print ti.verifyBitmap("screenshot2-icon.png")' 2>&1 | tee $LOGFILE | grep -q True && {
     testpassed
 } ) || testfailed
 

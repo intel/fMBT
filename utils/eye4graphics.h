@@ -43,6 +43,55 @@ extern "C" {
         int32_t error;
     } BoundingBox;
 
+    typedef struct _rgb888 {
+        unsigned char red, green, blue;
+    } rgb888;
+
+    /*
+     * rgb888at - read color value at coordinates
+     *
+     * Parameters:
+     *   - color (out)  - out: pixel color value
+     *   - image        - opened image
+     *   - x, y         - coordinates
+     */
+
+    EXPORT
+    int rgb888at(rgb888* color,
+                 void* image,
+                 const int x,
+                 const int y);
+
+    /*
+     * findNextColor
+     *
+     * Parameters:
+     *   - bbox (in/out)- in: bounding box of previously found pixel
+     *                    out: bounding box of next pixel
+     *   - image        - opened image
+     *   - color        - color to be searched for.
+     *   - colorMatch   - 0.0 - 1.0, required color match.
+     *   - opacityLimit - skip comparing pixels with opacity < opacityLimit
+     *                    0.0 (default) compares all pixels without reading
+     *                    opacity values.
+     *   - invertMatch  - if non-zero, find a pixel that does not match the
+     *                    color.
+     *   - searchArea   - bounding box of area in the imagefile to be searched.
+     *
+     * Return value:
+     *    0: not found
+     *    1: found
+     */
+
+    EXPORT
+    int findNextColor(BoundingBox* bbox,
+                      void* image,
+                      const rgb888* color,
+                      const double colorMatch,
+                      const double opacityLimit,
+                      const int invertMatch,
+                      const BoundingBox* searchArea);
+
     /*
      * findSingleIcon
      *
