@@ -118,14 +118,15 @@ _log.last_flush = time.time()
 def fmbtlog(msg, flush=True):
     current_time = time.time()
     timestamped = "fmbtmagicl%.4f %s" % (current_time, msg)
-    sys.stdout.write(urllib.quote(timestamped)+"\n")
+    sys.stdout.write(urllib.quote(timestamped.encode("utf-8"))+"\n")
 
 def fmbtlograw(msg, flush=True):
-    sys.stdout.write(urllib.quote("fmbtmagicL %s" % (msg))+"\n")
+    to_fmbt = "fmbtmagicL %s" % (msg,)
+    sys.stdout.write(urllib.quote(to_fmbt.encode("utf-8")) + "\n")
 
 def fmbtstderr(msg):
-    to_fmbt = urllib.quote("fmbtmagice%s" % (msg,)) + '\n'
-    sys.stdout.write(to_fmbt)
+    to_fmbt = "fmbtmagice%s" % (msg,)
+    sys.stdout.write(urllib.quote(to_fmbt.encode("utf-8")) + "\n")
     _log(msg)
 
 fmbt.fmbtlog = fmbtlog
