@@ -170,6 +170,9 @@ End_condition_duration::End_condition_duration
     if (g_date_time_to_timeval(unode->date,&tv)) {
       param_time = tv.tv_sec;
       param_long = tv.tv_usec;
+
+      _conf->log.print("<end_time time=\"%i.%06i\"/>\n",param_time,param_long);
+
       struct timeval ttv;
       gettime(&ttv);
       _conf->log.debug("Until %i,current %i",param_time,ttv.tv_sec);
@@ -232,7 +235,7 @@ bool End_condition_tag::match(int step_count,int state, int action,int last_step
 }
 
 bool End_condition_duration::match(int step_count,int state, int action,int last_step_cov_growth,Heuristic& heuristic,std::vector<int>& mismatch_tags) {
-  if (Adapter::current_time.tv_sec > param_time + 1 ||
+  if (Adapter::current_time.tv_sec > param_time ||
       (Adapter::current_time.tv_sec == param_time
        && Adapter::current_time.tv_usec >= param_long)
       ) return true;
