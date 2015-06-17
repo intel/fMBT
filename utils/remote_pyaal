@@ -77,6 +77,7 @@ Options:
 
 import sys
 import os
+import copy
 import getopt
 import subprocess
 import inspect
@@ -408,11 +409,11 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]),
                 tags[t] = []
             tags[t].append(new_lsts_state_num)
 
+    aal.push()
     generation_discontinued_tag = "AAL-depth:%s" % (depth,)
 
     new_lsts = lsts.writer()
     actionnames = ["tau"] + aal.getActionNames()
-    # actionname2int = dict([(action, num) for num, action in enumerate(actionnames)])
     transitions = [[]]
     tags = {generation_discontinued_tag: []}
     tagnames = aal.getSPNames()
@@ -427,7 +428,9 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]),
     current_tags = aal.getprops()
     initial_state_hidden = tagfilter(aal.state(discard_variables, include_variables), current_tags)
     initial_state_real = aal.state()
-    unhandled_states = {initial_state_real: []} # state to shortest path from istate
+    # unhandled states is a list of
+    # (state-string, state-obj, len(shortest path from the initial state))
+    unhandled_states = [(initial_state_real, aal.state_obj(), 0)]
     found_states_real = {initial_state_real: initial_state_hidden} # real to hidden states
     lsts_states = {initial_state_hidden: 0} # state to LSTS state number
     states = 1
@@ -439,24 +442,22 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]),
         update_generated_tags(aal, include_variables, generated_tagnames, tags, 0)
 
     while unhandled_states:
-        source_state, path = unhandled_states.popitem()
+        source_state, source_state_obj, source_state_depth = unhandled_states.pop()
         source_lsts_state = lsts_states[found_states_real[source_state]]
 
-        if len(path) >= depth:
+        if source_state_depth >= depth:
             if not source_lsts_state in tags[generation_discontinued_tag]:
                 tags[generation_discontinued_tag].append(lsts_states[found_states_real[source_state]])
             continue
 
-        aal.push()
-        for action in path:
-            aal.model_execute(action)
-
+        aal.set_state_obj(source_state_obj)
         for action in aal.getActions():
-            aal.push()
+            aal.set_state_obj(copy.deepcopy(source_state_obj))
             aal.model_execute(action)
             current_tags = aal.getprops()
             next_state_real = aal.state()
             next_state_hidden = tagfilter(aal.state(discard_variables, include_variables) ,current_tags)
+            next_state_obj = aal.state_obj()
             # new state?
             if not next_state_hidden in lsts_states:
                 transitions.append([])
@@ -465,7 +466,8 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]),
                 if include_variables:
                     update_generated_tags(aal, include_variables, generated_tagnames, tags, new_lsts_state_num)
             if not next_state_real in found_states_real:
-                unhandled_states[next_state_real] = path + [action]
+                unhandled_states.append(
+                    (next_state_real, next_state_obj, source_state_depth + 1))
                 found_states_real[next_state_real] = next_state_hidden
                 next_lsts_state_num = lsts_states[next_state_hidden]
                 for tag in current_tags:
@@ -474,8 +476,6 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]),
                         tags[tagname].append(next_lsts_state_num)
             if (lsts_states[next_state_hidden],action) not in transitions[source_lsts_state]:
                 transitions[source_lsts_state].append((lsts_states[next_state_hidden],action))
-            aal.pop()
-        aal.pop()
 
     new_lsts.set_actionnames(actionnames)
     new_lsts.set_transitions(transitions)
@@ -484,6 +484,7 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]),
     if include_generation_discontinued_tag:
         stateprop_order.append(generation_discontinued_tag)
     new_lsts.write(output_fileobj, stateprop_order=stateprop_order)
+    aal.pop()
 
 if __name__ == "__main__":
     # Default values for commandline arguments

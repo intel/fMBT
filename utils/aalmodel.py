@@ -230,7 +230,17 @@ class AALModel:
     def getSPNames(self):
         return self._all_tagnames
 
-    def push(self):
+    def push(self, obj=None):
+        """
+        Push current state (or optional parameter obj) to the stack.
+
+        See also: pop(), state_obj().
+        """
+        if obj != None:
+            self._stack.append(obj[0])
+            self._stack_executed_actions.append(obj[1])
+            self._enabled_actions_stack.append(obj[2])
+            return
         # initial state must reset all variables.
         # automatic push saves only their states
         stack_element = {}
@@ -243,6 +253,12 @@ class AALModel:
         self._enabled_actions_stack.append(set(self._enabled_actions_stack[-1]))
 
     def pop(self):
+        """
+        Pop the topmost state in the stack and start using it as the
+        current state.
+
+        See also: push()
+        """
         stack_element = self._stack.pop()
         self._stack_executed_actions.pop()
         for varname in stack_element:
@@ -251,6 +267,30 @@ class AALModel:
         if self._has_serial:
             self._set_all_class("guard_next_block", "serial", stack_element["!serial_abn"])
         self._enabled_actions_stack.pop()
+
+    def stack_top(self):
+        return self._stack[-1], self._stack_executed_actions[-1], self._enabled_actions_stack[-1]
+
+    def stack_discard(self):
+        self._stack.pop()
+        self._stack_executed_actions.pop()
+        self._enabled_actions_stack.pop()
+
+    def state_obj(self):
+        """
+        Return current state as a Python object
+        """
+        self.push()
+        obj = self.stack_top()
+        self.stack_discard()
+        return obj
+
+    def set_state_obj(self, obj):
+        """
+        Set obj as current state. See also state_obj().
+        """
+        self.push(obj)
+        self.pop()
 
     def state(self, discard_variables = set([]), include_variables=None):
         """
