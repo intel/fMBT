@@ -17,21 +17,23 @@
  *
  */
 
-#ifndef __verdict_hh__
-#define __verdict_hh__
-
-#include <string>
+#include "verdict.hh"
 
 namespace Verdict {
 
-    typedef enum { UNDEFINED = -1,
-                   FAIL = 0,
-                   PASS,
-                   INCONCLUSIVE,
-		   NOTIFY,
-                   W_ERROR } Verdict;
+  Verdict new_verdict(const std::string v) {
 
-  Verdict new_verdict(const std::string v);
+    if (v=="pass")
+      return PASS;
+    if (v=="fail")
+      return FAIL;
+    if (v=="inconclusive")
+      return INCONCLUSIVE;
+    if (v=="error")
+      return W_ERROR;
+
+    return UNDEFINED;
+
+  }
+
 }
-
-#endif
