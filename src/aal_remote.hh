@@ -64,12 +64,6 @@ public:
 private:
   void handle_stderr();
 
-  /*
-  FILE* d_stdin;
-  FILE* d_stdout;
-  FILE* d_stderr;
-  */
-
   GIOChannel* d_stdin;
   GIOChannel* d_stdout;
   GIOChannel* d_stderr;
