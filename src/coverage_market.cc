@@ -142,11 +142,11 @@ extern D_ParserTables parser_tables_covlang;
 }
 
 extern Coverage_Market* cobj;
-
+extern int cnode_size;
 void Coverage_Market::add_requirement(std::string& req)
 {
   cobj=this;
-  D_Parser *p = new_D_Parser(&parser_tables_covlang, 32);
+  D_Parser *p = new_D_Parser(&parser_tables_covlang, cnode_size);
   D_ParseNode* ret=dparse(p,(char*)req.c_str(),req.length());
   status&=p->syntax_errors==0;
 
