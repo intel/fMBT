@@ -106,6 +106,8 @@ std::string to_string(const int cnt,const int* t,
 		      const std::vector<std::string>& st);
 std::string to_string(const struct timeval&t,bool minutes=false);
 std::string to_string(Verdict::Verdict verdict);
+std::string to_string(const std::vector<std::string>&,const std::string separator=" ",
+		      const std::string prefix="",const std::string suffix="");
 
 Verdict::Verdict from_string(const std::string& s);
 
