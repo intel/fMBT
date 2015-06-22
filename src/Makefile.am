@@ -2,9 +2,9 @@ if ANDROID
 bin_PROGRAMS = fmbt_droid
 endif
 if MINGW
-bin_PROGRAMS = fmbt fmbt-aalc fmbt-aalp
+bin_PROGRAMS = fmbt fmbt-aalc fmbt-aalp remote_aal_loader
 else
-bin_PROGRAMS = fmbt remote_adapter_loader fmbt-aalc fmbt-aalp fmbt-ucheck fmbt-log2lsts
+bin_PROGRAMS = fmbt remote_adapter_loader fmbt-aalc fmbt-aalp fmbt-ucheck fmbt-log2lsts remote_aal_loader
 endif
 
 FMBTBUILDINFOCFLAGS=-DFMBTBUILDINFO='"@FMBTBUILDINFO@"'
@@ -35,20 +35,24 @@ fmbt_droid_CPPFLAGS            = -Wall -pedantic -fPIC -I d -I `pwd` -DDROI $(FM
 remote_adapter_loader_CPPFLAGS = -Wall -pedantic -I d -DDROI $(FMBTBUILDINFOCFLAGS) $(GLIB_CFLAGS)
 fmbt_aalc_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) -DINCDIR=\"${pkgincludedir}\" $(FMBTBUILDINFOCFLAGS)
 fmbt_aalp_CPPFLAGS	       = $(FMBTBUILDINFOCFLAGS) $(GLIB_CFLAGS)
+remote_aal_loader_CPPFLAGS     = -O0 -fPIC $(FMBTBUILDINFOCFLAGS) $(GLIB_CFLAGS) -I ./d
 fmbt_log2lsts_CPPFLAGS	       = -Wall -pedantic -fPIC -I d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) $(XML2_CFLAGS) $(FMBTBUILDINFOCFLAGS)
 
 fmbt_LDFLAGS                   = -g $(JVMLDFLAGS) $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E $(DLINK_OBJ)
 fmbt_ucheck_LDFLAGS            = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E $(DLINK_OBJ)
 fmbt_droid_LDFLAGS             = -Wl,-E $(DLINK_OBJ)
-remote_adapter_loader_LDFLAGS  = -g $(DLINK_OBJ) $(GLIB_LIBS)
+remote_adapter_loader_LDFLAGS  = -g $(GLIB_LIBS) $(GOBJECT_LIBS) -Wl,-E $(DLINK_OBJ)
 fmbt_aalc_LDFLAGS	       = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) -lboost_regex -Wl,-E $(DLINK_OBJ)
 fmbt_aalp_LDFLAGS	       = -g $(GLIB_LIBS) -lboost_regex $(DLINK_OBJ)
+remote_aal_loader_LDFLAGS      = -g $(GLIB_LIBS) $(GOBJECT_LIBS) -lboost_regex -Wl,-E $(DLINK_OBJ)
+#-g $(GLIB_LIBS) -lboost_regex $(DLINK_OBJ)
 fmbt_log2lsts_LDFLAGS 	       = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E $(DLINK_OBJ)
 
 fmbt_LDADD                     = d/libdparse.a
 fmbt_ucheck_LDADD              = d/libdparse.a
 fmbt_droid_LDADD               = d/libdparse.a
-remote_adapter_loader_LDADD    = d/libdparse.a -lrt
+remote_adapter_loader_LDADD    = d/libdparse.a
+remote_aal_loader_LDADD        = d/libdparse.a
 fmbt_aalc_LDADD                = d/libdparse.a
 fmbt_log2lsts_LDADD   	       = d/libdparse.a
 
