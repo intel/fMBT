@@ -119,6 +119,8 @@ public:
   unit_tag* req_rx_tag(const std::string &tag,char op='e');
   unit_tag* req_rx_tag(const char m,const std::string &tag,int count=1,bool exactly=false);
 
+  unit_tag* each_tag(unsigned count,std::vector<std::string>* tagnamelist);
+
   void add_unit(unit* u) {
     Units.push_back(u);
   }

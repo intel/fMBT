@@ -142,11 +142,11 @@ extern D_ParserTables parser_tables_covlang;
 }
 
 extern Coverage_Market* cobj;
-
+extern int cnode_size;
 void Coverage_Market::add_requirement(std::string& req)
 {
   cobj=this;
-  D_Parser *p = new_D_Parser(&parser_tables_covlang, 32);
+  D_Parser *p = new_D_Parser(&parser_tables_covlang, cnode_size);
   D_ParseNode* ret=dparse(p,(char*)req.c_str(),req.length());
   status&=p->syntax_errors==0;
 
@@ -194,6 +194,53 @@ void taghelper(const char op,int depth,
       uset[i].second=false;
     }
   }
+}
+
+Coverage_Market::unit_tag* Coverage_Market::each_tag(unsigned count,std::vector<std::string>* tagnamelist)
+{
+  Coverage_Market::unit_tag* ret=NULL;
+  std::vector<std::vector<int> > tags;
+
+  if (!status) {
+    goto error;
+  }
+
+  if (count==0) {
+    status=false;
+    errormsg="set size too small in ["+to_string(count)+" "+to_string(*tagnamelist," ","\"","\"")+"]";
+  }
+
+  if (tagnamelist->size()<count) {
+    status=false;
+    errormsg="less tags ("+to_string((unsigned)tagnamelist->size())+") than required count ("+to_string(count)+")";
+    goto error;
+  }
+
+  tags.resize(tagnamelist->size());
+  for(unsigned i=0;i<tagnamelist->size();i++) {
+    regexpmatch((*tagnamelist)[i], model->getSPNames(),tags[i],false,1,1);
+    if (tags[i].empty()) {
+      status=false;
+      errormsg="Tag regexp \""+tagnamelist->at(i)+"\" from ["+
+	to_string(count)+" "+to_string(*tagnamelist," ","\"","\"")+
+	"] doesn't match";
+      goto error;
+    }
+  }
+
+  for(unsigned i=0;i<tagnamelist->size()-count+1;i++) {
+    
+  }
+
+ out:
+  delete tagnamelist;
+  return ret;
+
+ error:
+  if (ret)
+    delete ret;
+  ret=new Coverage_Market::unit_tagleaf(0);
+  goto out;
 }
 
 Coverage_Market::unit_tag* Coverage_Market::req_rx_tag(const char m,const std::string &tag,int count,bool exactly)
