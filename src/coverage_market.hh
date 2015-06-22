@@ -121,6 +121,12 @@ public:
 
   unit_tag* each_tag(unsigned count,std::vector<std::string>* tagnamelist);
 
+  unit_tag* each_helper(std::vector<std::vector<int> >& tags,
+			int pos,
+			int need_skip,
+			int count,
+			unit_tag* left);
+
   void add_unit(unit* u) {
     Units.push_back(u);
   }
