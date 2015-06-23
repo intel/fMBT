@@ -220,7 +220,7 @@ Coverage_Market::each_helper(std::vector<std::vector<int> >& tags,
 
       t=each_helper(tags,pos+1,need_skip,count-1,t);
       if (ret) {
-	ret=new Coverage_Market::unit_tagand(ret,t);
+	ret=new Coverage_Market::unit_tagelist('&',t,ret);
       } else {
 	ret=t;
       }
