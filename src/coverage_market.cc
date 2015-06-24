@@ -229,7 +229,7 @@ Coverage_Market::each_helper(std::vector<std::vector<int> >& tags,
   return ret;
 }
 
-Coverage_Market::unit_tag* Coverage_Market::each_tag(unsigned count,std::vector<std::string>* tagnamelist)
+Coverage_Market::unit_tag* Coverage_Market::each_tag(unsigned min,std::vector<std::string>* tagnamelist,unsigned max)
 {
   Coverage_Market::unit_tag* ret=NULL;
   std::vector<std::vector<int> > tags;
@@ -238,14 +238,19 @@ Coverage_Market::unit_tag* Coverage_Market::each_tag(unsigned count,std::vector<
     goto error;
   }
 
-  if (count==0) {
+  if (min>max) {
     status=false;
-    errormsg="set size too small in ["+to_string(count)+" "+to_string(*tagnamelist," ","\"","\"")+"]";
+    errormsg="Minimum value ("+to_string(min)+") smaller than maximum value("+to_string(max)+")";
   }
 
-  if (tagnamelist->size()<count) {
+  if (min==0) {
     status=false;
-    errormsg="less tags ("+to_string((unsigned)tagnamelist->size())+") than required count ("+to_string(count)+")";
+    errormsg="set size too small in ["+to_string(min)+":"+to_string(max)+" "+to_string(*tagnamelist," x ","\"","\"")+"]";
+  }
+
+  if (tagnamelist->size()<max) {
+    status=false;
+    errormsg="less tags ("+to_string((unsigned)tagnamelist->size())+") than required max ("+to_string(max)+")";
     goto error;
   }
 
@@ -255,13 +260,19 @@ Coverage_Market::unit_tag* Coverage_Market::each_tag(unsigned count,std::vector<
     if (tags[i].empty()) {
       status=false;
       errormsg="Tag regexp \""+tagnamelist->at(i)+"\" from ["+
-	to_string(count)+" "+to_string(*tagnamelist," ","\"","\"")+
+	to_string(min)+":"+to_string(max)+" "+to_string(*tagnamelist," x ","\"","\"")+
 	"] doesn't match";
       goto error;
     }
   }
 
-  ret = each_helper(tags,0,tagnamelist->size()-count,count,NULL);
+  for(unsigned i=min;i<=max;i++) {
+    if (ret) {
+      ret=new Coverage_Market::unit_tagelist('&',ret,each_helper(tags,0,tagnamelist->size()-min,min,NULL));
+    } else {
+      ret=each_helper(tags,0,tagnamelist->size()-min,min,NULL);
+    }
+  }
 
  out:
   delete tagnamelist;
