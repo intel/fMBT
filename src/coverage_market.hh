@@ -119,7 +119,7 @@ public:
   unit_tag* req_rx_tag(const std::string &tag,char op='e');
   unit_tag* req_rx_tag(const char m,const std::string &tag,int count=1,bool exactly=false);
 
-  unit_tag* each_tag(unsigned count,std::vector<std::string>* tagnamelist);
+  unit_tag* each_tag(unsigned count,std::vector<std::string>* tagnamelist,unsigned max);
 
   unit_tag* each_helper(std::vector<std::vector<int> >& tags,
 			int pos,
