@@ -197,10 +197,10 @@ void taghelper(const char op,int depth,
 }
 
 Coverage_Market::unit_tag*
-Coverage_Market::each_helper(std::vector<std::vector<int> >& tags,
-			     int pos,
-			     int need_skip,
-			     int count,
+Coverage_Market::each_helper(const std::vector<std::vector<int> >& tags,
+			     const int pos,
+			     const int need_skip,
+			     const int count,
 			     Coverage_Market::unit_tag* left)
 {
   Coverage_Market::unit_tag* ret=NULL;
@@ -211,19 +211,22 @@ Coverage_Market::each_helper(std::vector<std::vector<int> >& tags,
   if (need_skip)
     ret = each_helper(tags,pos+1,need_skip-1,count,left);
 
-  if (count) {
-    for(unsigned i=0;i<tags[pos].size();i++) {
-      Coverage_Market::unit_tag* t=new Coverage_Market::unit_tagleaf(tags[pos][i]);
-      if (left) {
-	t=new Coverage_Market::unit_tagand((Coverage_Market::unit_tag*)(left->clone()),t);
-      }
+  for(unsigned i=0;i<tags[pos].size();i++) {
+    Coverage_Market::unit_tag* t=new Coverage_Market::unit_tagleaf(tags[pos][i]);
+    if (left) {
+      t=new Coverage_Market::unit_tagand((Coverage_Market::unit_tag*)(left->clone()),t);
+    }
 
-      t=each_helper(tags,pos+1,need_skip,count-1,t);
-      if (ret) {
-	ret=new Coverage_Market::unit_tagelist('&',t,ret);
-      } else {
-	ret=t;
-      }
+    Coverage_Market::unit_tag* tmp=each_helper(tags,pos+1,need_skip,count-1,t);
+    if (tmp!=t) {
+      delete t;
+      t=tmp;
+    }
+
+    if (ret) {
+      ret=new Coverage_Market::unit_tagelist('&',t,ret);
+    } else {
+      ret=t;
     }
   }
   return ret;
