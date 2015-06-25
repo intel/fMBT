@@ -35,7 +35,7 @@ fmbt_droid_CPPFLAGS            = -Wall -pedantic -fPIC -I d -I `pwd` -DDROI $(FM
 remote_adapter_loader_CPPFLAGS = -Wall -pedantic -I d -DDROI $(FMBTBUILDINFOCFLAGS) $(GLIB_CFLAGS)
 fmbt_aalc_CPPFLAGS	       = -Wall -pedantic -fPIC -I ./d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) -DINCDIR=\"${pkgincludedir}\" $(FMBTBUILDINFOCFLAGS)
 fmbt_aalp_CPPFLAGS	       = $(FMBTBUILDINFOCFLAGS) $(GLIB_CFLAGS)
-remote_aal_loader_CPPFLAGS     = -O0 -fPIC $(FMBTBUILDINFOCFLAGS) $(GLIB_CFLAGS) -I ./d
+remote_aal_loader_CPPFLAGS     = -fPIC $(FMBTBUILDINFOCFLAGS) $(GLIB_CFLAGS) -I ./d
 fmbt_log2lsts_CPPFLAGS	       = -Wall -pedantic -fPIC -I d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) $(XML2_CFLAGS) $(FMBTBUILDINFOCFLAGS)
 
 fmbt_LDFLAGS                   = -g $(JVMLDFLAGS) $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E $(DLINK_OBJ)
