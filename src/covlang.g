@@ -173,10 +173,13 @@ Cartesian:
         Cartesian 'x' tagname {
             $$.tagnamelist = $0.tagnamelist;
             $$.tagnamelist->push_back(*$2.str);
+            delete $2.str;
         } | tagname 'x' tagname {
             $$.tagnamelist = new std::vector<std::string>;
             $$.tagnamelist->push_back(*$0.str);
             $$.tagnamelist->push_back(*$2.str);
+            delete $0.str;
+            delete $2.str;
         } ;
 
 tag_expr_list: tag_expr { $$.tag = $0.tag; }

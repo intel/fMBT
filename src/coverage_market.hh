@@ -121,10 +121,10 @@ public:
 
   unit_tag* each_tag(unsigned count,std::vector<std::string>* tagnamelist,unsigned max);
 
-  unit_tag* each_helper(std::vector<std::vector<int> >& tags,
-			int pos,
-			int need_skip,
-			int count,
+  unit_tag* each_helper(const std::vector<std::vector<int> >& tags,
+			const int pos,
+			const int need_skip,
+			const int count,
 			unit_tag* left);
 
   void add_unit(unit* u) {
@@ -571,6 +571,13 @@ public:
 	units[i]->execute(prev,action,next);
       }
     }
+
+    virtual void set_instance(int instance,int current_instance, bool force=false) {
+      for(size_t i=0;i<units.size();i++) {
+	units[i]->set_instance(instance,current_instance,force);
+      }
+    }
+
     std::vector<unit*> units;
 
   protected:
@@ -798,10 +805,6 @@ public:
     virtual ~unit_manyand() {
     }
 
-    virtual void set_instance(int instance,int current_instance, bool force=false) {
-      // not implemented..
-    }
-
     virtual void update() {
       units[0]->update();
       value=units[0]->get_value();
@@ -829,10 +832,6 @@ public:
     }
     unit_manyor() {}
     virtual ~unit_manyor() {
-    }
-
-    virtual void set_instance(int instance,int current_instance, bool force=false) {
-      // not implemented..
     }
 
     virtual void update() {
@@ -1132,7 +1131,6 @@ public:
     unit_tag(const unit_tag&obj):unit(obj),left_side(obj.left_side) {
     }
     bool left_side;
-
   };
 
   class unit_tagelist: public unit_tag {
