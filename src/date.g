@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string>
 #include <string.h>
+#include "helper.hh" /* mingw needs strndup */
 
 #include "date_node.h"
 
@@ -98,7 +99,7 @@ items: { $$ = _date_node(); $$.rel=true; } | timezone { $$.zone=$0.zone; $$.rel=
             } else {
                 $$.zone=$0.zone;
             }
-            if (!$1.rel && $0.date) { 
+            if (!$1.rel && $0.date) {
                 _parser->syntax_errors++;
                 return 0;
            }
@@ -213,14 +214,14 @@ set_clock: iso_8601_time {
         } |
         iso_8601_time 'am' {
             $$=$0;
-            //printf("AM hour %i ,min %i,sec %i\n",$$.hour,$$.min,$$.sec); 
+            //printf("AM hour %i ,min %i,sec %i\n",$$.hour,$$.min,$$.sec);
         } |
         iso_8601_time 'pm' {
             $$=$0;
             if ($$.hour<12) {
                 $$.hour+=12;
-            } 
-            //printf("PM hour %i ,min %i,sec %i\n",$$.hour,$$.min,$$.sec); 
+            }
+            //printf("PM hour %i ,min %i,sec %i\n",$$.hour,$$.min,$$.sec);
       } ;
 
 item: iso_8601_datetime { $$ = $0; } |
