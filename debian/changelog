@@ -1,8 +1,16 @@
-fmbt (0.24-0.rc0) unstable; urgency=low
+fmbt (0.24-1) unstable; urgency=low
 
-  * Development version.
+  * Coverage:
+    - usecases allow covering actions in given tag combinations.
+  * AAL/Python:
+    - improved visualization and test generation from non-deterministic models.
+    - (fmbt)log supports unicode characters.
+  * Windows support:
+    - the "duration" end condition works on Windows.
+  * Fixed build issue with gcc 5.1.0.
+  * Fixed visualizing models with "&" in a tag name.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 29 May 2015 13:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 29 Jun 2015 13:42:00 +0300
 
 fmbt (0.23-1) unstable; urgency=low
 
