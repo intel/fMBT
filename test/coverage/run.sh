@@ -203,7 +203,6 @@ EOF
 done
 testpassed
 
-
 teststep "coverage walks between tags"
 cat > walks.conf <<EOF
 model     = "aal_remote(remote_pyaal -l twocounters.aal.log 'twocounters.aal')"
@@ -428,6 +427,15 @@ if [ $(fmbt-log -f '$ax\nTAGS: $tg' < usecase-tags-exactly.log | grep -B 1 i:sto
     echo "failed because expected 3 unique tag combinations" >> $LOGFILE
     testfailed
 fi
+# check cartesian product of tags
+(cat usecase-tags.conf.in; echo 'coverage=usecase("i:stop.*" ["hear-game" x "hear-(alert|music)"])') > usecase-tags-cartesian.conf
+for expected_line in '0.500000 i:stop-alert "hear-game; hear-music"' '1.000000 i:stop-music "hear-alert; hear-game"'; do
+    if ! fmbt usecase-tags-cartesian.conf 2>>$LOGFILE | fmbt-log -f '$sc $as "$tg"' | grep -q "$expected_line"; then
+        fmbt usecase-tags-cartesian.conf 2>>$LOGFILE | fmbt-log -f '$sc $as "$tg"' >> $LOGFILE
+        echo "failed because cannot find expected line '$expected_line'" >> $LOGFILE
+        testfailed
+    fi
+done
 testpassed
 
 teststep "coverage usecase, all/any/random..."
