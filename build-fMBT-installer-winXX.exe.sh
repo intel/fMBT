@@ -12,7 +12,7 @@ fi
 BUILD_OUTPUT="build-win$XX/fMBT-installer-win$XX.exe"
 
 if [ -z "$WINDOWS_DEPENDENCY_MIRROR" ]; then
-    IMAGEMAGICK_URL=ftp://ftp.fifi.org/pub/ImageMagick/ImageMagick-6.9.0-0.7z
+    IMAGEMAGICK_URL=ftp://ftp.sunet.se/pub/multimedia/graphics/ImageMagick/ImageMagick-6.9.0-0.7z
     GRAPHVIZ_URL=http://www.graphviz.org/pub/graphviz/stable/windows/graphviz-2.38.msi
     PYTHON32_URL=https://www.python.org/ftp/python/2.7.8/python-2.7.8.msi
     PYTHON64_URL=https://www.python.org/ftp/python/2.7.8/python-2.7.8.amd64.msi
@@ -60,7 +60,8 @@ cd build-win$XX
         if [ -z "$(find . -name convert.exe)" ]; then
             wget -nc $IMAGEMAGICK_URL
             7za x *.7z || { echo extracting ImageMagick failed; exit 1; }
-            cd $(basename *.7z .7z)
+            im_dir=$(find . -maxdepth 1 -type d -name 'ImageMagick*')
+            cd "$im_dir"
                 mingw$XX-configure --with-x=no && make && $SUDO make install
 	    cd ..
 	fi
