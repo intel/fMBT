@@ -1,8 +1,8 @@
-fmbt (0.25-0.rc0) unstable; urgency=low
+fmbt (0.24.1-1.rc0) unstable; urgency=low
 
-  * Development version.
+  * Bug fix release, fix Windows build.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 29 Jun 2015 15:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Thu, 2 Jul 2015 11:42:00 +0300
 
 fmbt (0.24-1) unstable; urgency=low
 
