@@ -1,5 +1,5 @@
 AC_INIT([fmbt], [0.25-0.rc0], [antti.kervinen@intel.com])
-AM_INIT_AUTOMAKE([foreign -Wall -Werror])
+AM_INIT_AUTOMAKE([foreign -Wall -Wno-portability -Werror])
 
 AC_CONFIG_MACRO_DIR([m4])
 m4_pattern_allow([AM_PROG_AR])
