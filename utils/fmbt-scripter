@@ -434,6 +434,7 @@ def _scalableEditor(mainwindow, parent, font, EditorClass = QtGui.QTextEdit):
     editor.setUndoRedoEnabled(True)
     editor.setLineWrapMode(editor.NoWrap)
     editor.setFont(font)
+    editor.setAcceptRichText(False)
     editor._scaleevents = MyScaleEvents(mainwindow, editor, 0.1, 2.0)
     editor.wheel_scale = 1.0
     editor.wheel_scale_changed = lambda: (
