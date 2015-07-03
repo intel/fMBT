@@ -2719,7 +2719,17 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
                 raise FMBTAndroidError(msg)
             os.unlink(filename + ".raw")
 
-            width, height, fmt = struct.unpack("<LLL", data[:12])
+            if len(data) == 0:
+                msg = "Raw screenshot size 0 bytes"
+                _adapterLog(msg)
+                raise FMBTAndroidError(msg)
+            try:
+                width, height, fmt = struct.unpack("<LLL", data[:12])
+            except struct.error, e:
+                msg = ("error unpacking screenshot data (%s bytes): %s" %
+                       (len(data), e))
+                _adapterLog(msg)
+                raise FMBTAndroidError(msg)
             if isinstance(self._screencapFormat, tuple):
                 depth, colorspace = self._screencapFormat
             elif fmt == 1:

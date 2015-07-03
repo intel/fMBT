@@ -766,6 +766,7 @@ class MainWindow(QtGui.QMainWindow):
         self._screenshotCursorXRel = "N/A"
         self._screenshotCursorYRel = "N/A"
         self._screenshotCursorRGB = "N/A"
+        self._screenshotErrorFilename = None
         self._scriptFilename = None
         self._updateNextScreenshotFromFiles = []
         self._updateScreenshotScheduled = False
@@ -1924,6 +1925,22 @@ class MainWindow(QtGui.QMainWindow):
         self._fmbtExec('%s.refreshScreenshot(r"%s")' %
                        (self._sut, filename), silent=silent)
 
+    def screenshotShowError(self):
+        if not self._screenshotErrorFilename:
+            # try to guess screenshot dimensions
+            result = self._fmbtEval("%s.screenSize()" %
+                                    (self._sut,), silent=True, updateScreenshot=False)[0]
+            self._screenshotErrorFilename = os.path.join(
+                self._fmbtEval("%s.screenshotDir()" %
+                               (self._sut,), silent=True, updateScreenshot=False)[0],
+                "screenshot-error.png")
+            fmbtgti._convert(
+                "-size",
+                ["%sx%s" % result, "-background", "black", "-fill", "lightgreen",
+                 "-pointsize", "18", "label:fmbt-scripter: cannot read screenshot"],
+                self._screenshotErrorFilename)
+        self.screenshotFromFile(self._screenshotErrorFilename)
+
     def screenshotLatestFilename(self):
         latest = None
         if not self._sut:
@@ -2064,14 +2081,15 @@ class MainWindow(QtGui.QMainWindow):
             else:
                 if recordable and self.editorButtonRec.isChecked():
                     self.addAPICall("refreshScreenshot()\n")
-                _, exc = self._fmbtExec(
+                _, exc_screenshot = self._fmbtExec(
                     '%s.refreshScreenshot()' %
                     (self._sut,))
                 failed, exc = self._fmbtEval(
                     "%s.screenshot() == None" % (self._sut,),
                     silent=True)
-                if failed:
+                if failed or exc_screenshot:
                     log("refreshScreenshot() returned None")
+                    self.screenshotShowError()
                     self.screenshotButtonRefresh.setChecked(False)
                 if self.screenshotButtonRefresh.text() == "(5 s)":
                     self.scheduleUpdateScreenshot(5)
