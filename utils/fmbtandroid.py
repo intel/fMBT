@@ -489,8 +489,12 @@ class Device(fmbtgti.GUITestInterface):
         self.androidUser     = self._conf.value("environment", "AndroidUser")
         self.voiceMailNumber = self._conf.value("environment", "VoiceMailNumber")
 
-        if self._conn: hw = self._conn.recvVariable("build.device")
-        else: hw = "nohardware"
+        if self._conn:
+            hw = self._conn.recvVariable("build.device")
+            self._screenSize = self._conn.recvScreenSize()
+        else:
+            hw = "nohardware"
+            self._screenSize = None
         self.hardware        = self._conf.value("general", "hardware", hw)
         self.setBitmapPath(self._conf.value("paths", "bitmapPath", ""), self._fmbtAndroidHomeDir)
         self.setScreenshotDir(self._conf.value("paths", "screenshotDir", self._fmbtAndroidHomeDir + os.sep + "screenshots"))
@@ -1004,7 +1008,13 @@ class Device(fmbtgti.GUITestInterface):
                 drot = self.displayRotation()
                 if drot != None:
                     return self.refreshScreenshot(forcedScreenshot, rotate=-drot)
-        return fmbtgti.GUITestInterface.refreshScreenshot(self, forcedScreenshot, rotate)
+        rv = fmbtgti.GUITestInterface.refreshScreenshot(self, forcedScreenshot, rotate)
+        if rv:
+            if not forcedScreenshot:
+                self._screenSize = self.existingConnection().recvScreenSize()
+            else:
+                self._screenSize = self.screenshot().size()
+        return rv
     refreshScreenshot.__doc__ = fmbtgti.GUITestInterface.refreshScreenshot.__doc__
 
     def refreshView(self, forcedView=None):
@@ -1061,6 +1071,7 @@ class Device(fmbtgti.GUITestInterface):
             else:
                 # successfully parsed or parsed with errors but no more retries
                 self._lastView = view
+                self._screenSize = self.existingConnection().recvScreenSize()
                 return view
 
     def screenLocked(self):
@@ -1071,6 +1082,13 @@ class Device(fmbtgti.GUITestInterface):
             return self._conn.recvShowingLockscreen()
         else:
             return None
+
+    def screenSize(self):
+        if self._screenSize:
+            return self._screenSize
+        else:
+            self._screenSize = fmbtgti.GUITestInterface.screenSize(self)
+            return self._screenSize
 
     def setAccelerometer(self, abc):
         """
@@ -2344,6 +2362,10 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             _adapterLog('recvScreenSize: cannot read size from "%s"' %
                         (output,))
             raise FMBTAndroidError('cannot read screen size from dumpsys')
+        vpWidth, vpHeight = self.recvDefaultViewportSize()
+        if ((vpWidth > vpHeight) and (ddWidth < ddHeight) or
+            (vpWidth < vpHeight) and (ddWidth > ddHeight)):
+            ddWidth, ddHeight = ddHeight, ddWidth
         return int(ddWidth), int(ddHeight)
 
     def recvDefaultViewportSize(self):
