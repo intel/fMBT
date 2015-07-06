@@ -1014,6 +1014,8 @@ class Device(fmbtgti.GUITestInterface):
                 self._screenSize = self.existingConnection().recvScreenSize()
             else:
                 self._screenSize = self.screenshot().size()
+        else:
+            self._screenSize = self.existingConnection().recvScreenSize()
         return rv
     refreshScreenshot.__doc__ = fmbtgti.GUITestInterface.refreshScreenshot.__doc__
 
