@@ -1958,6 +1958,10 @@ class MainWindow(QtGui.QMainWindow):
         self._highlightingBitmap = None
         self.screenshotImage = QtGui.QImage()
         self.screenshotImage.load(self._screenshotFilenames[index])
+        if (self.screenshotImage.format() == QtGui.QImage.Format_Mono or
+            self.screenshotImage.format() == QtGui.QImage.Format.Format_Indexed8):
+            self.screenshotImage = self.screenshotImage.convertToFormat(
+                QtGui.QImage.Format_RGB32)
         if index == len(self._screenshotFilenames) - 1:
             self.screenshotButtonNext.setEnabled(False)
         else:
