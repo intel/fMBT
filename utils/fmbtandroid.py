@@ -2746,7 +2746,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             if len(data) == 0:
                 msg = "Raw screenshot size 0 bytes"
                 _adapterLog(msg)
-                raise FMBTAndroidError(msg)
+                # This is not an error, it's ok to DRM to prevent a screenshot
+                return False
             try:
                 width, height, fmt = struct.unpack("<LLL", data[:12])
             except struct.error, e:

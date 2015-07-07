@@ -1927,17 +1927,17 @@ class MainWindow(QtGui.QMainWindow):
                        (self._sut, filename), silent=silent)
 
     def screenshotShowError(self):
-        if not self._screenshotErrorFilename:
-            # try to guess screenshot dimensions
-            result = self._fmbtEval("%s.screenSize()" %
-                                    (self._sut,), silent=True, updateScreenshot=False)[0]
+        screenSize = self._fmbtEval("%s.screenSize()" %
+                                (self._sut,), silent=True, updateScreenshot=False)[0]
+        if (not self._screenshotErrorFilename or
+            not ("%sx%s" % screenSize) in self._screenshotErrorFilename):
             self._screenshotErrorFilename = os.path.join(
                 self._fmbtEval("%s.screenshotDir()" %
                                (self._sut,), silent=True, updateScreenshot=False)[0],
-                "screenshot-error.png")
+                "screenshot-error-%sx%s.png" % screenSize)
             fmbtgti._convert(
                 "-size",
-                ["%sx%s" % result, "-background", "black", "-fill", "lightgreen",
+                ["%sx%s" % screenSize, "-background", "black", "-fill", "lightgreen",
                  "-pointsize", "18", "label:fmbt-scripter: cannot read screenshot"],
                 self._screenshotErrorFilename)
         self.screenshotFromFile(self._screenshotErrorFilename)
