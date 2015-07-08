@@ -2744,8 +2744,9 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
                 raise FMBTAndroidError(msg)
             os.unlink(filename + ".raw")
 
-            if len(data) == 0:
-                msg = "Raw screenshot size 0 bytes"
+            if len(data) < 256:
+                msg = "Too small screenshot: %s bytes, skip unpack." % (
+                    len(data),)
                 _adapterLog(msg)
                 # This is not an error, it's ok to DRM to prevent a screenshot
                 return False
