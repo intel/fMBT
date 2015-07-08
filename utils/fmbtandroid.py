@@ -2360,6 +2360,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             ddName, ddWidth, ddHeight, ddWdpi, ddHdpi = re.findall(
                 r'DisplayDeviceInfo\{[^,]*"([^"]*)"[:,] ([0-9]*) x ([0-9]*),.*, ([0-9.]*) x ([0-9.]*) dpi,.*FLAG_DEFAULT_DISPLAY.*\}',
                 output)[0]
+            ddWidth, ddHeight = int(ddWidth), int(ddHeight)
         except (IndexError, ValueError), e:
             _adapterLog('recvScreenSize: cannot read size from "%s"' %
                         (output,))
