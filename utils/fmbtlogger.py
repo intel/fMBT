@@ -283,11 +283,11 @@ def _logCalls(orig_self, report, logDepth_):
     """
     class localVars: pass
     localVars.logDepth = logDepth_
-    localVars.testStep = -1
+    localVars.testStep = (-1, None)
     localVars.actionName = None
     def logMethodCall(func, throughInstance = None):
         def fmbtlogger_wrap(*args, **kwargs):
-            currentTestStep = fmbt.getTestStep()
+            currentTestStep = (fmbt.getTestStep(), fmbt.getActionName())
             if localVars.testStep != currentTestStep:
                 if localVars.actionName not in [None, "undefined"]:
                     report.end(localVars.actionName)
