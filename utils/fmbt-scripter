@@ -2038,7 +2038,7 @@ class MainWindow(QtGui.QMainWindow):
                     len(value) == len([i for i in value if isinstance(i, fmbtgti.GUIItem)])):
                     for i in value:
                         self.drawRect(*(i.bbox()), onOrig=False)
-            text = "%s == %s" % (varname, str(value)[:128])
+            text = "%s == %s" % (varname, repr(value)[:128])
         return text
 
     def _findSutVariable(self):
