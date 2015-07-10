@@ -1332,6 +1332,39 @@ class Device(fmbtgti.GUITestInterface):
                 self._supportsView = False
         return self._supportsView
 
+    def swipeText(self, text, direction, partial=False, **swipeKwArgs):
+        """
+        Find an item with given text from the latest view, and swipe it.
+
+        Parameters:
+
+          text (string):
+                  text to be swiped.
+
+          direction (string or integer):
+                  refer to swipe documentation
+
+          distance (float, optional):
+                  refer to swipe documentation
+
+          partial (boolean, optional):
+                  refer to verifyText documentation. The default is
+                  False.
+
+          startPos
+                  refer to swipeItem documentation.
+
+          delayBeforeMoves, delayBetweenMoves, delayAfterMoves,
+          movePoints
+                  refer to drag documentation.
+
+        Returns True if successful, otherwise False.
+        """
+        assert self._lastView != None, "View required."
+        items = self._lastView.findItemsByText(text, partial=partial, count=1, onScreen=True)
+        if len(items) == 0: return False
+        return self.swipeItem(items[0], direction, **swipeKwArgs)
+
     def systemProperty(self, propertyName):
         """
         Returns Android Monkey Device properties, such as
