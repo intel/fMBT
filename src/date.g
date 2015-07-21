@@ -24,6 +24,7 @@
 #include <string>
 #include <string.h>
 
+#include "helper.hh"
 #include "date_node.h"
 
 int date_node_size = sizeof (date_node);
