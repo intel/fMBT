@@ -1492,11 +1492,13 @@ build_paths(ZNode *z, VecVecZNode *paths, int nchildren_to_go) {
 
 static void
 free_paths(VecVecZNode *paths) {
-  int i;  
+  int i;
   vec_free(&path1);
   for (i = 0; i < paths->n; i++) {
-    vec_free(paths->v[i]);
-    FREE(paths->v[i]);
+    if (paths->v[i]!=&path1) {
+      vec_free(paths->v[i]);
+      FREE(paths->v[i]);
+    }
   }
   vec_free(paths);
 }
