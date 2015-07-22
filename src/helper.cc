@@ -989,10 +989,16 @@ void gettime(struct timeval *tv)
   tv->tv_usec=tp.tv_nsec/1000;
 #endif
 #else
-  FILETIME ft; /*time since 1 Jan 1601 in 100ns units */
-  GetSystemTimeAsFileTime( &ft );
-  tv->tv_sec = (ft.dwHighDateTime-(116444736000000000LL))/10000000LL ;
-  tv->tv_usec  = (ft.dwLowDateTime/10LL) % 1000000LL ;
+  union {
+    FILETIME ft; /*time since 1 Jan 1601 in 100ns units */
+    guint64 time64;
+  } _time;
+  GetSystemTimeAsFileTime( &_time.ft );
+
+  _time.time64 -= 116444736000000000LL;
+  _time.time64 /= 10LL;
+  tv->tv_sec = _time.time64/1000000LL;
+  tv->tv_usec= _time.time64 % 1000000LL;
 #endif
 }
 
