@@ -53,11 +53,9 @@ void aal::log(const char* format, ...)
   va_start(ap, format);
   if (g_vasprintf(&pre_msg,format,ap)>0) {
     char* msg=escape_string(pre_msg);
-    _log.print("<aal type=\"user\" msg=\"");
-    _log.print("%s",msg);
+    _log.print("<aal type=\"user\" msg=\"%s\">\n",msg);
     std::free(pre_msg);
     escape_free(msg);
-    _log.print("\">\n");
   }
 
   va_end(ap);
