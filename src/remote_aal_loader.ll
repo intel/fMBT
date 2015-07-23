@@ -12,7 +12,7 @@ public:
 	virtual  aal* load(std::string& name,Log&);
 };
 
-//Log_aalremote lokki;
+Log_aalremote lokki;
 
 aal* Aal;
 std::vector<int> act_vect;
@@ -45,7 +45,7 @@ void print_int_vec(int rv,std::vector<int>&t)
 void print_string(const std::string& str) {
      std::string s(str);
      escape_string(s);
-     fprintf(stdout,"fmbtmagic%s\n",str.c_str());
+     fprintf(stdout,"fmbtmagic %s\n",str.c_str());
 }
 
 void print_vec(const std::vector<std::string>& vec)
@@ -124,7 +124,6 @@ std::vector<int> act;
 
 ^"m"[0-9]* {
 	   int action=atoi(yytext+1);
-	   printf("executing %i\n",action);
 	   print_int(Aal->model_execute(action));
 }
 
@@ -165,6 +164,7 @@ std::vector<int> act;
 	if (Aal) {
 	   Aal->adapter_exit(Verdict::W_ERROR,"");
 	}
+	return -1;
 }
 
 %%
@@ -174,17 +174,12 @@ int main(int argc,char** argv)
 
   if (argc != 2)
     return 1;
-    /*
-    error(1, 0, "Invalid arguments.\n"
-          "Usage: remote_aal_loader name");
-*/
-  Log_null l; // Incorrect log. We need log, which writes to main fmbt
-	      // log. This is a temporary 'sollution'
+
   std::string name(argv[1]);
 
   aal_loader loader;
 
-  Aal=loader.load(name,l);
+  Aal=loader.load(name,lokki);
 
   if (Aal==NULL)
     return -1;
@@ -193,7 +188,10 @@ int main(int argc,char** argv)
   print_string("");
   print_vec(Aal->getSPNames());
   print_string("");
+  fflush(stdout);
 
+  yyin = stdin;
+  yy_set_interactive(true);
   yylex();
   yylex_destroy();
 
