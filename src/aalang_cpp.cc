@@ -488,7 +488,11 @@ std::string aalang_cpp::stringify()
       "\t\ttags.push_back("+to_string(i)+");\n"
       "\t}\n";
   }
-  s=s+"\t*props = &tags[0];\n"
+  s=s+"\tif (tags.empty()) {\n"
+    "\t\t*props = NULL;\n"
+    "\t} else {\n"
+    "\t\t*props = &tags[0];\n"
+    "\t}\n"
     "\treturn tags.size();\n"
     "}\n"
     "};\n";
