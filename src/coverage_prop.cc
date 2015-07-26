@@ -58,7 +58,6 @@ bool Coverage_Prop::execute(int action)
 {
   int* pro;
   int cnt=model->getprops(&pro);
-  int already_seen=0;
 
   for(int i=0;i<cnt;i++) {
     if (prop_included[pro[i]] && !data[pro[i]]) {
