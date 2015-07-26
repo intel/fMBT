@@ -133,7 +133,6 @@ void Adapter_remote::execute(std::vector<int>& action)
   char* s = NULL;
   size_t si = 0;
   int e;
-  char* read_buf=NULL;
 
   fprintf(d_stdin, "%i\n", action[0]);
 

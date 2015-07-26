@@ -80,8 +80,10 @@ std::string End_condition::stringify() {
     break;
   case ACTION:
     name="ACTION";
+    break;
   case STATUS:
     name="STATUS";
+    break;
   default:
     return "";
   }
