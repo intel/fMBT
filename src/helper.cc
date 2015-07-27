@@ -491,6 +491,20 @@ void print_vector(std::vector<std::string>& s,const char* prefix,int add)
   }
 }
 
+std::string to_string(const std::vector<std::string>& st,
+		      const std::string separator,
+		      const std::string prefix,const std::string suffix)
+{
+  std::stringstream ss;
+  for(unsigned i=0;i<st.size();i++) {
+    if (i) {
+      ss << separator;
+    }
+    ss << prefix << st[i] << suffix;
+  }
+  return ss.str();
+}
+
 std::string to_string(const float f)
 {
   std::stringstream ss;

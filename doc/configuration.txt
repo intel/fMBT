@@ -451,6 +451,17 @@ Available types & parameters:
                   from "music", "alarm" and "phone" (representing
                   sound types being played in the background).
 
+                  Cross product of tag sets defines tag combinations
+                  that should be covered.
+
+                  Example:
+
+                    usecase("i:connect headset" ["music" x "alarm|phone"])
+
+                  coverage reaches 1.0 when "i:connect headset" has
+                  been executed so that tag pairs ("music", "alarm") and
+                  ("music", "phone") are enabled at the target state.
+
                 - expressions in parenthesis.
 
                 - <number> * <expression>, meaning that <expression>

@@ -27,6 +27,7 @@ typedef struct _node {
   Coverage_Market::unit* u;
   Coverage_Market::unit_tag* tag;
   int i;
+  std::vector<std::string>* tagnamelist;
 } cnode;
 #define D_ParseNode_User cnode
 int cnode_size = sizeof(cnode);
@@ -158,8 +159,33 @@ exactly: { $$.type=0; } |
         'exactly' { $$.type=1; }
     ;
 
-// Dummy implementation...
+tagnamelist: tagname {
+            $$.tagnamelist = new std::vector<std::string>;
+            $$.tagnamelist->push_back(*$0.str);
+            delete $0.str;
+        } | tagnamelist tagname {
+            $$.tagnamelist = $0.tagnamelist;
+            $$.tagnamelist->push_back(*$1.str);
+            delete $1.str;
+        } ;
+
+Cartesian:
+        Cartesian 'x' tagname {
+            $$.tagnamelist = $0.tagnamelist;
+            $$.tagnamelist->push_back(*$2.str);
+            delete $2.str;
+        } | tagname 'x' tagname {
+            $$.tagnamelist = new std::vector<std::string>;
+            $$.tagnamelist->push_back(*$0.str);
+            $$.tagnamelist->push_back(*$2.str);
+            delete $0.str;
+            delete $2.str;
+        } ;
+
 tag_expr_list: tag_expr { $$.tag = $0.tag; }
+    | Cartesian { $$.tag = cobj->each_tag($0.tagnamelist->size(),$0.tagnamelist,$0.tagnamelist->size()); }
+    | 'every' count Cartesian { $$.tag = cobj->each_tag($1.i,$2.tagnamelist,$1.i); }
+    | 'every' count ':' count Cartesian { $$.tag = cobj->each_tag($1.i,$4.tagnamelist,$3.i); }
     | exactly 'every' count tagname { $$.tag = cobj->req_rx_tag('a',*$3.str,$2.i,$0.type); delete $3.str; }
     | ('e' | 'E' | 'any' ) tagname { $$.tag = cobj->req_rx_tag('e',*$1.str); delete $1.str; }
     | tag_expr '|' tag_expr_list {

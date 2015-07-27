@@ -44,7 +44,7 @@ dist_noinst_SCRIPTS +=		\
 # end of modules
 
 utils_installer: $(dist_noinst_SCRIPTS)
-	cp $? . || true
+	cp $(addprefix $(VPATH)/,$(dist_noinst_SCRIPTS)) . || true
 	touch $@
 
 if MINGW

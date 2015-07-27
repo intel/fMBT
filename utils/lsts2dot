@@ -196,7 +196,7 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
                     erase_all_actions.add(actionindex)
 
     for propname in l.get_stateprops():
-        prettyname = "[%s]" % (propname.replace('"','\\"'),)
+        prettyname = "[%s]" % (propname.replace('"','\\"').replace('&','&amp;',),)
         for state in l.get_stateprops()[propname]:
             if state in state2props:
                 state2props[state].append(prettyname)

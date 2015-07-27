@@ -434,6 +434,7 @@ def _scalableEditor(mainwindow, parent, font, EditorClass = QtGui.QTextEdit):
     editor.setUndoRedoEnabled(True)
     editor.setLineWrapMode(editor.NoWrap)
     editor.setFont(font)
+    editor.setAcceptRichText(False)
     editor._scaleevents = MyScaleEvents(mainwindow, editor, 0.1, 2.0)
     editor.wheel_scale = 1.0
     editor.wheel_scale_changed = lambda: (
@@ -766,6 +767,7 @@ class MainWindow(QtGui.QMainWindow):
         self._screenshotCursorXRel = "N/A"
         self._screenshotCursorYRel = "N/A"
         self._screenshotCursorRGB = "N/A"
+        self._screenshotErrorFilename = None
         self._scriptFilename = None
         self._updateNextScreenshotFromFiles = []
         self._updateScreenshotScheduled = False
@@ -1924,6 +1926,22 @@ class MainWindow(QtGui.QMainWindow):
         self._fmbtExec('%s.refreshScreenshot(r"%s")' %
                        (self._sut, filename), silent=silent)
 
+    def screenshotShowError(self):
+        screenSize = self._fmbtEval("%s.screenSize()" %
+                                (self._sut,), silent=True, updateScreenshot=False)[0]
+        if (not self._screenshotErrorFilename or
+            not ("%sx%s" % screenSize) in self._screenshotErrorFilename):
+            self._screenshotErrorFilename = os.path.join(
+                self._fmbtEval("%s.screenshotDir()" %
+                               (self._sut,), silent=True, updateScreenshot=False)[0],
+                "screenshot-error-%sx%s.png" % screenSize)
+            fmbtgti._convert(
+                "-size",
+                ["%sx%s" % screenSize, "-background", "black", "-fill", "lightgreen",
+                 "-pointsize", "18", "label:fmbt-scripter: cannot read screenshot"],
+                self._screenshotErrorFilename)
+        self.screenshotFromFile(self._screenshotErrorFilename)
+
     def screenshotLatestFilename(self):
         latest = None
         if not self._sut:
@@ -1940,6 +1958,10 @@ class MainWindow(QtGui.QMainWindow):
         self._highlightingBitmap = None
         self.screenshotImage = QtGui.QImage()
         self.screenshotImage.load(self._screenshotFilenames[index])
+        if (self.screenshotImage.format() == QtGui.QImage.Format_Mono or
+            self.screenshotImage.format() == QtGui.QImage.Format.Format_Indexed8):
+            self.screenshotImage = self.screenshotImage.convertToFormat(
+                QtGui.QImage.Format_RGB32)
         if index == len(self._screenshotFilenames) - 1:
             self.screenshotButtonNext.setEnabled(False)
         else:
@@ -2016,7 +2038,7 @@ class MainWindow(QtGui.QMainWindow):
                     len(value) == len([i for i in value if isinstance(i, fmbtgti.GUIItem)])):
                     for i in value:
                         self.drawRect(*(i.bbox()), onOrig=False)
-            text = "%s == %s" % (varname, str(value)[:128])
+            text = "%s == %s" % (varname, repr(value)[:128])
         return text
 
     def _findSutVariable(self):
@@ -2064,14 +2086,15 @@ class MainWindow(QtGui.QMainWindow):
             else:
                 if recordable and self.editorButtonRec.isChecked():
                     self.addAPICall("refreshScreenshot()\n")
-                _, exc = self._fmbtExec(
+                _, exc_screenshot = self._fmbtExec(
                     '%s.refreshScreenshot()' %
                     (self._sut,))
                 failed, exc = self._fmbtEval(
                     "%s.screenshot() == None" % (self._sut,),
                     silent=True)
-                if failed:
+                if failed or exc_screenshot:
                     log("refreshScreenshot() returned None")
+                    self.screenshotShowError()
                     self.screenshotButtonRefresh.setChecked(False)
                 if self.screenshotButtonRefresh.text() == "(5 s)":
                     self.scheduleUpdateScreenshot(5)

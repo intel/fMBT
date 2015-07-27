@@ -142,11 +142,11 @@ extern D_ParserTables parser_tables_covlang;
 }
 
 extern Coverage_Market* cobj;
-
+extern int cnode_size;
 void Coverage_Market::add_requirement(std::string& req)
 {
   cobj=this;
-  D_Parser *p = new_D_Parser(&parser_tables_covlang, 32);
+  D_Parser *p = new_D_Parser(&parser_tables_covlang, cnode_size);
   D_ParseNode* ret=dparse(p,(char*)req.c_str(),req.length());
   status&=p->syntax_errors==0;
 
@@ -194,6 +194,98 @@ void taghelper(const char op,int depth,
       uset[i].second=false;
     }
   }
+}
+
+Coverage_Market::unit_tag*
+Coverage_Market::each_helper(const std::vector<std::vector<int> >& tags,
+			     const int pos,
+			     const int need_skip,
+			     const int count,
+			     Coverage_Market::unit_tag* left)
+{
+  Coverage_Market::unit_tag* ret=NULL;
+
+  if (count==0)
+    return left;
+
+  if (need_skip)
+    ret = each_helper(tags,pos+1,need_skip-1,count,left);
+
+  for(unsigned i=0;i<tags[pos].size();i++) {
+    Coverage_Market::unit_tag* t=new Coverage_Market::unit_tagleaf(tags[pos][i]);
+    if (left) {
+      t=new Coverage_Market::unit_tagand((Coverage_Market::unit_tag*)(left->clone()),t);
+    }
+
+    Coverage_Market::unit_tag* tmp=each_helper(tags,pos+1,need_skip,count-1,t);
+    if (tmp!=t) {
+      delete t;
+      t=tmp;
+    }
+
+    if (ret) {
+      ret=new Coverage_Market::unit_tagelist('&',t,ret);
+    } else {
+      ret=t;
+    }
+  }
+  return ret;
+}
+
+Coverage_Market::unit_tag* Coverage_Market::each_tag(unsigned min,std::vector<std::string>* tagnamelist,unsigned max)
+{
+  Coverage_Market::unit_tag* ret=NULL;
+  std::vector<std::vector<int> > tags;
+
+  if (!status) {
+    goto error;
+  }
+
+  if (min>max) {
+    status=false;
+    errormsg="Minimum value ("+to_string(min)+") smaller than maximum value("+to_string(max)+")";
+  }
+
+  if (min==0) {
+    status=false;
+    errormsg="set size too small in ["+to_string(min)+":"+to_string(max)+" "+to_string(*tagnamelist," x ","\"","\"")+"]";
+  }
+
+  if (tagnamelist->size()<max) {
+    status=false;
+    errormsg="less tags ("+to_string((unsigned)tagnamelist->size())+") than required max ("+to_string(max)+")";
+    goto error;
+  }
+
+  tags.resize(tagnamelist->size());
+  for(unsigned i=0;i<tagnamelist->size();i++) {
+    regexpmatch((*tagnamelist)[i], model->getSPNames(),tags[i],false,1,1);
+    if (tags[i].empty()) {
+      status=false;
+      errormsg="Tag regexp \""+tagnamelist->at(i)+"\" from ["+
+	to_string(min)+":"+to_string(max)+" "+to_string(*tagnamelist," x ","\"","\"")+
+	"] doesn't match";
+      goto error;
+    }
+  }
+
+  for(unsigned i=min;i<=max;i++) {
+    if (ret) {
+      ret=new Coverage_Market::unit_tagelist('&',ret,each_helper(tags,0,tagnamelist->size()-min,min,NULL));
+    } else {
+      ret=each_helper(tags,0,tagnamelist->size()-min,min,NULL);
+    }
+  }
+
+ out:
+  delete tagnamelist;
+  return ret;
+
+ error:
+  if (ret)
+    delete ret;
+  ret=new Coverage_Market::unit_tagleaf(0);
+  goto out;
 }
 
 Coverage_Market::unit_tag* Coverage_Market::req_rx_tag(const char m,const std::string &tag,int count,bool exactly)

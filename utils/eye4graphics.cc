@@ -568,9 +568,9 @@ int findNextColor(BoundingBox* bbox,
                 bbox->right = x;
                 bbox->top = y;
                 bbox->bottom = y;
-                bbox->error = (((hay_pixel.red & 0xff) << 16) +
-                               ((hay_pixel.green & 0xff) << 8) +
-                               (hay_pixel.blue & 0xff));
+                bbox->error = ((((int) hay_pixel.red & 0xff) << 16) +
+                               (((int) hay_pixel.green & 0xff) << 8) +
+                               ((int) hay_pixel.blue & 0xff));
                 return 1;
             }
         }

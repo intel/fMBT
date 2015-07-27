@@ -190,6 +190,7 @@ def _convert(srcFile, convertArgs, dstFile):
     if isinstance(convertArgs, basestring):
         convertArgs = shlex.split(convertArgs)
     if (os.access(dstFile, os.R_OK) and
+        os.access(srcFile, os.R_OK) and
         os.stat(srcFile).st_mtime < os.stat(dstFile).st_mtime):
         return # cached file is up-to-date
     subprocess.call([fmbt_config.imagemagick_convert, srcFile] + convertArgs + [dstFile])
@@ -1795,9 +1796,15 @@ class GUITestInterface(object):
             self._screenSize = self._lastScreenshot.size()
         if self._screenSize == None:
             if self._lastScreenshot == None:
-                self.refreshScreenshot()
-                self._screenSize = self._lastScreenshot.size()
-                self._lastScreenshot = None
+                try:
+                    if self.refreshScreenshot():
+                        self._screenSize = self._lastScreenshot.size()
+                        self._lastScreenshot = None
+                except Exception:
+                    pass
+                if (self._screenSize == None and
+                    hasattr(self.existingConnection(), "recvScreenSize")):
+                    self._screenSize = self.existingConnection().recvScreenSize()
             else:
                 self._screenSize = self._lastScreenshot.size()
         return self._screenSize
