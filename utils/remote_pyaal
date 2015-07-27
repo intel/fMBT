@@ -563,17 +563,18 @@ if __name__ == "__main__":
 
     if aal_filename.endswith(".aal"):
         cmd = ["fmbt-aalc", "-l", "python"] + opt_ppflags + [ aal_filename ]
-	subout = subprocess.PIPE
-	p = subprocess.Popen(cmd,shell=False, stdout=subout,stderr=subout)
-	aal_code = p.stdout.read()
-	status = p.wait()
+        subout = subprocess.PIPE
+        p = subprocess.Popen(cmd,shell=False, stdout=subout,stderr=subout)
+        aal_code = p.stdout.read()
+        status = p.wait()
         if status != 0:
             if not os.access(aal_filename, os.R_OK):
                 errmsg = 'Is file "%s" readable?' % (aal_filename,)
                 fmbtstderr(errmsg)
-            fmbtstderr("AAL to Python conversion failed:\n%s" % (aal_code,))
+            error_msg = p.stderr.read()
+            fmbtstderr("AAL to Python conversion failed:\n%s" % (aal_code+error_code))
             error("converting aal to python with command\n" +
-                  "    %s\nfailed. status=%s" % (cmd, status))
+                  "    %s\nfailed. status=%s\n%s\n" % (cmd, status,error_code))
     else:
         try:
             aal_code = file(aal_filename).read()
