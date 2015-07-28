@@ -213,21 +213,24 @@ def _logFailedCommand(source, command, exitstatus, stdout, stderr):
                 (source, command, stdout, stderr, exitstatus))
 
 if os.name == "nt":
+    import distutils.spawn
     _g_closeFds = False
-    _g_adbExecutable = "adb.exe"
+    _g_useShell = False
+    _g_adbExecutable = distutils.spawn.find_executable("adb")
 else:
     _g_closeFds = True
+    _g_useShell = False
     _g_adbExecutable = "adb"
 
-def _run(command, expectedExitStatus = None, timeout=None):
-    if type(command) == str or os.name == "nt":
+def _run(command, expectedExitStatus=None, timeout=None):
+    if type(command) == str:
         if timeout != None and os.name != "nt":
             command = "timeout -k 1 %s %s" % (timeout, command)
-        shell=True
+        shell = True
     else:
-        if timeout != None:
+        if timeout != None and os.name != "nt":
             command = ["timeout", "-k", "1", str(timeout)] + command
-        shell=False
+        shell = _g_useShell
     try:
         p = subprocess.Popen(command, shell=shell,
                              stdout=subprocess.PIPE,
@@ -2121,7 +2124,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             adbPortArgs = ["-P", str(self._adbPort)]
         else:
             adbPortArgs = []
-        command = ["adb", "-s", self._serialNumber] + adbPortArgs
+        command = [_g_adbExecutable, "-s", self._serialNumber] + adbPortArgs
         if type(adbCommand) == list or type(adbCommand) == tuple:
             command.extend(adbCommand)
         else:

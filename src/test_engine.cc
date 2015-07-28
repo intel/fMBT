@@ -184,7 +184,9 @@ void Test_engine::verify_tags(const std::vector<std::string>& tnames)
   }
 
   cnt=t.size();
-  tags=&t[0];
+  if (!t.empty()) {
+    tags=&t[0];
+  }
 
   if (cnt) {
     adapter.check_tags(tags,cnt,mismatch_tags);
