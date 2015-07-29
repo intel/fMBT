@@ -89,12 +89,14 @@ def connection(hostspec, password=None, namespace=None):
             else:
                 password = userinfo
 
-        return client.Connection(host, int(port), password=password, **kwargs)
+        rv = client.Connection(host, int(port), password=password, **kwargs)
     elif scheme == "shell":
         p = subprocess.Popen(hostspec[len("shell://"):],
                              shell=True,
                              stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE)
-        return client.Connection(p.stdout, p.stdin, **kwargs)
+        rv = client.Connection(p.stdout, p.stdin, **kwargs)
     else:
         raise ValueError('invalid URI "%s"' % (hostspec,))
+    rv.hostspec = hostspec
+    return rv

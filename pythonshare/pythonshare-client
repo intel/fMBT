@@ -123,6 +123,8 @@ class PythonshareConsole(code.InteractiveConsole):
         self._conn = kwargs.pop("conn")
         self._ns = kwargs.pop("namespace")
         code.InteractiveConsole.__init__(self, *args, **kwargs)
+        self.__class__.__name__ = "pythonshare namespace %s at %s" % (
+            self._ns, getattr(self._conn, "hostspec", "N/A"))
         self._codelines = ""
 
     def runsource(self, source, *args):
