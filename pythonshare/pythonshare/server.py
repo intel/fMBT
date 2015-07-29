@@ -80,6 +80,18 @@ class Pythonshare_ns(object):
         self._on_disconnect = []
         self._on_delete = []
 
+    def local_nss(self):
+        """
+        List local namespaces
+        """
+        return _g_local_namespaces.keys()
+
+    def remote_nss(self):
+        """
+        List remote namespaces
+        """
+        return _g_remote_namespaces.keys()
+
     def on_disconnect(self):
         """
         Return codes that will be executed when a client has disconnected.
@@ -203,6 +215,9 @@ def _register_exported_namespace(ns, conn):
 def _local_execute(exec_msg, conn_id=None):
     global _g_executing_pythonshare_conn_id
     ns = exec_msg.namespace
+    if not ns in _g_local_namespaces:
+        code_exc = expr_exc = "no local namespace %s" % (ns,)
+        return messages.Exec_rv(code_exc, expr_exc, None)
     if conn_id:
         if not conn_id in _g_namespace_users:
             _g_namespace_users[conn_id] = set([ns])
@@ -296,6 +311,8 @@ def _serve_connection(conn, conn_opts):
     else:
        auth_ok = True # no password required
 
+    whitelist_local = conn_opts.get("whitelist_local", None)
+
     while auth_ok:
         try:
             obj = cPickle.load(from_client)
@@ -337,7 +354,8 @@ def _serve_connection(conn, conn_opts):
                     _remote_close(ns)
                     break
             else: # execute in local namespace
-                _init_local_namespace(ns)
+                if whitelist_local == None or ns in whitelist_local:
+                    _init_local_namespace(ns)
                 if obj.async:
                     # asynchronous execution, return handle (Async_rv)
                     _g_async_rv_counter += 1
