@@ -1,5 +1,5 @@
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2013, Intel Corporation.
+# Copyright (c) 2013-2015, Intel Corporation.
 #
 # Author: antti.kervinen@intel.com
 #
@@ -55,10 +55,14 @@ def _close(*args):
             except (socket.error, IOError):
                 pass
 
-def connection(hostspec, password=None):
+def connection(hostspec, password=None, namespace=None):
     if not "://" in hostspec:
         hostspec = "socket://" + hostspec
     scheme, netloc, _, _, _ = _urlparse.urlsplit(hostspec)
+
+    kwargs = {}
+    if namespace != None:
+        kwargs["namespace"] = namespace
 
     if scheme == "socket":
         # Parse URL
@@ -85,12 +89,12 @@ def connection(hostspec, password=None):
             else:
                 password = userinfo
 
-        return client.Connection(host, int(port), password=password)
+        return client.Connection(host, int(port), password=password, **kwargs)
     elif scheme == "shell":
         p = subprocess.Popen(hostspec[len("shell://"):],
                              shell=True,
                              stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE)
-        return client.Connection(p.stdout, p.stdin)
+        return client.Connection(p.stdout, p.stdin, **kwargs)
     else:
         raise ValueError('invalid URI "%s"' % (hostspec,))
