@@ -55,13 +55,15 @@ extern "C" {
 extern D_ParserTables parser_tables_lang;
 }
 
+GMainLoop *mainloop=NULL;
+
 void process_end_callback(GPid pid,
                          gint status,
                          gpointer user_data)
 {
   int* _status=(int*)user_data;
   *_status=status;
-  g_main_loop_quit(NULL);
+  g_main_loop_quit(mainloop);
 }
 
 void print_usage()
@@ -79,6 +81,7 @@ void print_usage()
 
 std::vector<std::string> prep;
 std::string pstr;
+std::string opt_arg;
 extern std::string result;
 extern aalang* obj;
 
@@ -123,7 +126,7 @@ int main(int argc,char** argv) {
     {0, 0, 0, 0}
   };
 
-  while ((c = getopt_long (argc, argv, "B:b:hco:D:Vl:I:", long_opts, NULL)) != -1) {
+  while ((c = getopt_long (argc, argv, "B:b:hco:D:Vl:I:O:", long_opts, NULL)) != -1) {
     switch (c)
       {
       case 'I': {
@@ -170,6 +173,9 @@ int main(int argc,char** argv) {
         compile_command=optarg;
         compile_command+=" ";
         break;
+      case 'O':
+        opt_arg=opt_arg+" "+optarg;
+	break;
       case 'c':
         lib=true;
         break;
@@ -241,7 +247,7 @@ int main(int argc,char** argv) {
     gchar **argv=NULL;
     GError *gerr=NULL;
 
-    compile_command+=pstr;
+    compile_command+=pstr+opt_arg;
 
     if (!g_shell_parse_argv(compile_command.c_str(),
                             &argc,&argv,&gerr) || argv==NULL)
@@ -269,10 +275,12 @@ int main(int argc,char** argv) {
     close(_stdin);
 
     {
-      int status;
+      int status=-1;
       g_child_watch_add(pid,process_end_callback,
                        &status);
-      g_main_loop_run(NULL);
+
+      mainloop=g_main_loop_new (NULL,false);
+      g_main_loop_run(mainloop);
 
       if (status!=0) {
         error(1,0,"compiling failed.");
