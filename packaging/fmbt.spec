@@ -273,6 +273,7 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 
 %files adapters-remote
 %defattr(-, root, root, -)
+%{_bindir}/remote_aal_loader
 %{_bindir}/remote_adapter_loader
 %{_bindir}/remote_exec.sh
 %{_bindir}/remote_pyaal

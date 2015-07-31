@@ -1,3 +1,4 @@
+usr/bin/remote_aal_loader
 usr/bin/remote_adapter_loader
 usr/bin/remote_exec.sh
 usr/bin/remote_pyaal
