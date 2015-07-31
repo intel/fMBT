@@ -1,8 +1,26 @@
-fmbt (0.25-0.rc1) unstable; urgency=low
+fmbt (0.25-1) unstable; urgency=low
 
-  * Development version.
+  * AAL/Python:
+    - fmbt shows AAL errors from remote_pyaal/fmbt-aalc/aalp.
+  * Building:
+    - Improved Clang support.
+  * fmbtandroid:
+    - Added swipeText().
+    - Improved handling of failed screenshots.
+    - screenSize detects orientation changes.
+    - Sscreen orientation is detected on every refreshScreenshot/View.
+    - Improved locating adb.exe on some Windows environments.
+  * fmbt-scripter:
+    - Fixed painting on monochrome and grayscale screenshots.
+    - Shows blank screen if fetching a screenshot fails.
+  * pythonshare:
+    - Added listing local and remote namespaces (--ls-local|remote).
+    - connection(..., namespace=...) sets default namespace for eval_/exec_.
+  * Windows:
+    - Fixed the "duration" end condition.
+  * Many bug fixes.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 3 Jul 2015 10:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 31 Jul 2015 15:42:00 +0300
 
 fmbt (0.24.1-1.rc0) unstable; urgency=low
 
