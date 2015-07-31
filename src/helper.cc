@@ -823,23 +823,26 @@ ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,GIOChan
 	log_redirect = true;
       } else {
 	if (magic && strncmp(*lineptr,"fmbtmagic",9)==0) {
-	  const int magic_length = 10;
-	  if (*(*lineptr + magic_length-1) == 'l' || *(*lineptr + magic_length-1) == 'L' || *(*lineptr + magic_length-1) == 'e') {
+	  int magic_length = 9;
+	  if (*(*lineptr + magic_length) == 'l' || *(*lineptr + magic_length) == 'L' || *(*lineptr + magic_length) == 'e') {
 	    // remote log messages must be url encoded when sent through
 	    // the remote adapter protocol
 	    *(*lineptr + ret) = '\0';
-	    if (*(*lineptr + magic_length-1) == 'L') {
-	      log.print("%s",unescape_string(*lineptr + magic_length));
+	    if (*(*lineptr + magic_length) == 'L') {
+	      log.print("%s",unescape_string(*lineptr + magic_length+1));
 	    } else {
 	      log.print("<remote msg=\"%s\"/>\n",*lineptr+magic_length);
-	      if (*(*lineptr + magic_length-1) == 'e')
-		fprintf(stderr, "%s\n", unescape_string(*lineptr+magic_length));
+	      if (*(*lineptr + magic_length) == 'e')
+		fprintf(stderr, "%s\n", unescape_string(*lineptr+magic_length+1));
 	    }
 	    g_free(*lineptr);
 	    *lineptr = NULL;
 	    log_redirect = true;
 	  } else {
 	    // Remove magic
+	    if (*(*lineptr+magic_length) == ' ') {
+	      magic_length++;
+	    }
 	    ret -= magic_length;
 	    memmove(*lineptr,*lineptr + magic_length,ret);
 	    (*lineptr)[ret] = '\0';
@@ -1003,10 +1006,16 @@ void gettime(struct timeval *tv)
   tv->tv_usec=tp.tv_nsec/1000;
 #endif
 #else
-  FILETIME ft; /*time since 1 Jan 1601 in 100ns units */
-  GetSystemTimeAsFileTime( &ft );
-  tv->tv_sec = (ft.dwHighDateTime-(116444736000000000LL))/10000000LL ;
-  tv->tv_usec  = (ft.dwLowDateTime/10LL) % 1000000LL ;
+  union {
+    FILETIME ft; /*time since 1 Jan 1601 in 100ns units */
+    guint64 time64;
+  } _time;
+  GetSystemTimeAsFileTime( &_time.ft );
+
+  _time.time64 -= 116444736000000000LL;
+  _time.time64 /= 10LL;
+  tv->tv_sec = _time.time64/1000000LL;
+  tv->tv_usec= _time.time64 % 1000000LL;
 #endif
 }
 

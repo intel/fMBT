@@ -24,7 +24,6 @@
 #include <string>
 #include <string.h>
 #include "helper.hh" /* mingw needs strndup */
-
 #include "date_node.h"
 
 int date_node_size = sizeof (date_node);
@@ -214,14 +213,12 @@ set_clock: iso_8601_time {
         } |
         iso_8601_time 'am' {
             $$=$0;
-            //printf("AM hour %i ,min %i,sec %i\n",$$.hour,$$.min,$$.sec);
         } |
         iso_8601_time 'pm' {
             $$=$0;
             if ($$.hour<12) {
                 $$.hour+=12;
-            }
-            //printf("PM hour %i ,min %i,sec %i\n",$$.hour,$$.min,$$.sec);
+            } 
       } ;
 
 item: iso_8601_datetime { $$ = $0; } |

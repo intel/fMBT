@@ -16,22 +16,26 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+#ifndef __log_aalremote_h__
+#define __log_aalremote_h__
 
-#ifndef __verdict_hh__
-#define __verdict_hh__
+#include "log.hh"
 
-#include <string>
+class Log_aalremote: public Log {
+public:
+  virtual ~Log_aalremote() {}
+protected:
+  virtual void write(const char* msg,FILE* f) {
+    char* _msg=escape_string(msg);
+    fprintf(stdout,"fmbtmagicL%s\n",_msg);
+    escape_free(_msg);
+  }
 
-namespace Verdict {
-
-    typedef enum { UNDEFINED = -1,
-                   FAIL = 0,
-                   PASS,
-                   INCONCLUSIVE,
-		   NOTIFY,
-                   W_ERROR } Verdict;
-
-  Verdict new_verdict(const std::string v);
-}
+  virtual void write(const char* msg) {
+    char* _msg=escape_string(msg);
+    fprintf(stdout,"fmbtmagicL%s\n",_msg);
+    escape_free(_msg);
+  }
+};
 
 #endif
