@@ -569,12 +569,12 @@ if __name__ == "__main__":
         status = p.wait()
         if status != 0:
             if not os.access(aal_filename, os.R_OK):
-                errmsg = 'Is file "%s" readable?' % (aal_filename,)
-                fmbtstderr(errmsg)
-            error_msg = p.stderr.read()
-            fmbtstderr("AAL to Python conversion failed:\n%s" % (aal_code+error_code))
-            error("converting aal to python with command\n" +
-                  "    %s\nfailed. status=%s\n%s\n" % (cmd, status,error_code))
+                errmsg = 'is file "%s" readable?' % (aal_filename,)
+            else:
+                errmsg = ("converting aal to python with command\n    %s\n"
+                          "failed. status=%s\n%s\n" % (cmd, status, p.stderr.read()))
+            fmbtstderr(errmsg)
+            error(errmsg)
     else:
         try:
             aal_code = file(aal_filename).read()

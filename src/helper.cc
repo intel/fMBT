@@ -804,7 +804,7 @@ ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,GIOChan
 	// magic for fmbt remote configuration.
 	char* conf_str=*lineptr+strlen("fmbt_call ");
 	std::string ret_str;
-	
+
 	if (!callback_proxy.call(conf_str,ret_str)) {
 	  // no such call?
 	  log.debug("fmbt_call 0\n");
@@ -817,7 +817,7 @@ ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,GIOChan
 	  fprintf(magic,"fmbt_call 1%s\n",ret_str.c_str());
 	  g_io_channel_flush(magic,NULL);
 	}
-	
+
 	g_free(*lineptr);
 	*lineptr = NULL;
 	log_redirect = true;
@@ -831,7 +831,7 @@ ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,GIOChan
 	    if (*(*lineptr + magic_length) == 'L') {
 	      log.print("%s",unescape_string(*lineptr + magic_length+1));
 	    } else {
-	      log.print("<remote msg=\"%s\"/>\n",*lineptr+magic_length);
+	      log.print("<remote msg=\"%s\"/>\n",*lineptr+magic_length+1);
 	      if (*(*lineptr + magic_length) == 'e')
 		fprintf(stderr, "%s\n", unescape_string(*lineptr+magic_length+1));
 	    }
