@@ -315,7 +315,7 @@ char* readfile(const char* filename,const char* preprocess,int& status)
 
   }
   if (err) {
-    free(err);
+    g_free(err);
   }
   return out;
  }
