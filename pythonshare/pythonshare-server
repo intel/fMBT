@@ -76,6 +76,9 @@ Options for namespaces:
   -i, --init=python-code
           Execute python-code in namespace ns.
 
+  -w, --whitelist-local=ns[,ns...]
+          Whitelist local namespaces. Other than mentioned local
+          namespaces will not be registered.
 """
 
 import pythonshare
@@ -122,10 +125,11 @@ def _parse_password(password_spec):
 if __name__ == "__main__":
     try:
         opts, remainder = getopt.gnu_getopt(
-            sys.argv[1:], "dD:hp:n:E:I:i:l:",
+            sys.argv[1:], "dD:hp:n:E:I:i:l:w:",
             ["debug", "debug-stdout=", "help", "port=", "log=",
              "namespace=", "init=", "export-to=", "import-from=",
-             "password=", "password-file=", "interface="])
+             "password=", "password-file=", "interface=",
+             "whitelist-local="])
     except getopt.GetoptError, e:
         error(e)
 
@@ -161,6 +165,9 @@ if __name__ == "__main__":
             if opt_namespace == None:
                 error('undefined namespace for init, give --namespace first')
             opt_init_import_export.append(["init", opt_namespace, arg])
+        elif opt in ["-w", "--whitelist-local"]:
+            opt_conn_opts["whitelist_local"] = [
+                ns.strip() for ns in arg.split(",")]
         elif opt in ["-l", "--log"]:
             try:
                 log_file = file(arg, "w")

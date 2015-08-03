@@ -1,5 +1,5 @@
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2013, Intel Corporation.
+# Copyright (c) 2013-2015, Intel Corporation.
 #
 # Author: antti.kervinen@intel.com
 #

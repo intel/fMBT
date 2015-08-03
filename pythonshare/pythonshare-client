@@ -71,6 +71,12 @@ Options when connected:
   -i, --interact
           Open interactive console for running code in ns.
 
+   --ls-local
+          List local namespaces
+
+   --ls-remote
+          List remote namespaces
+
   -D, --disconnect
           Disconnect from the pythonshare-server.
 
@@ -123,6 +129,8 @@ class PythonshareConsole(code.InteractiveConsole):
         self._conn = kwargs.pop("conn")
         self._ns = kwargs.pop("namespace")
         code.InteractiveConsole.__init__(self, *args, **kwargs)
+        self.__class__.__name__ = "pythonshare namespace %s at %s" % (
+            self._ns, getattr(self._conn, "hostspec", "N/A"))
         self._codelines = ""
 
     def runsource(self, source, *args):
@@ -164,14 +172,18 @@ class PythonshareConsole(code.InteractiveConsole):
         return code.InteractiveConsole.showsyntaxerror(self, *args)
 
 if __name__ == "__main__":
-    opts, remainder = getopt.gnu_getopt(
-        sys.argv[1:], "C:DAhSs:Pp:n:c:e:r:o:f:i",
-        ["connect=", "disconnect",
-         "async", "sync", "poll",
-         "help", "server=", "port=",
-         "password=", "password-file=",
-         "namespace=", "code=", "eval=", "read=",
-         "output=", "format=", "interact"])
+    try:
+        opts, remainder = getopt.gnu_getopt(
+            sys.argv[1:], "C:DAhSs:Pp:n:c:e:r:o:f:i",
+            ["connect=", "disconnect",
+             "async", "sync", "poll",
+             "help", "server=", "port=",
+             "password=", "password-file=",
+             "namespace=", "code=", "eval=", "read=",
+             "output=", "format=", "interact",
+             "ls-local", "ls-remote"])
+    except getopt.GetoptError, e:
+        error(str(e))
     opt_server = "localhost"
     opt_port = pythonshare.default_port
     opt_namespace = "pythonshare-client.default"
@@ -239,6 +251,16 @@ if __name__ == "__main__":
                                               password=opt_password)
             console = PythonshareConsole(conn=conn, namespace=opt_namespace)
             console.interact()
+        elif opt in ["--ls-local"]:
+            if conn == None:
+                error("cannot list namespaces - not connected")
+            local_nss = conn.eval_("pythonshare_ns.local_nss()")
+            print "\n".join(local_nss)
+        elif opt in ["--ls-remote"]:
+            if conn == None:
+                error("cannot list namespaces - not connected")
+            remote_nss = conn.eval_("pythonshare_ns.remote_nss()")
+            print "\n".join(remote_nss)
         elif opt in ["-r", "--read"]:
             try:
                 try:

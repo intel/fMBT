@@ -1,6 +1,6 @@
 Name:           fmbt
-Version:        0.25
-Release:        0.rc1.<CI_CNT>.<B_CNT>
+Version:        0.26
+Release:        0.rc0.<CI_CNT>.<B_CNT>
 Summary:        free Model-Based Testing tool
 
 License:        LGPL
@@ -273,6 +273,7 @@ rm -f $RPM_BUILD_ROOT/%{_libdir}/python*/site-packages/eye4graphics.la
 
 %files adapters-remote
 %defattr(-, root, root, -)
+%{_bindir}/remote_aal_loader
 %{_bindir}/remote_adapter_loader
 %{_bindir}/remote_exec.sh
 %{_bindir}/remote_pyaal
