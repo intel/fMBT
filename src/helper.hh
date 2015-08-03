@@ -37,7 +37,9 @@ int vasprintf(char **strp, const char *fmt, va_list ap);
 
 }
 
+#ifndef rand_r
 int rand_r(unsigned int *seedp);
+#endif
 
 # define timeradd(a, b, result)                                               \
   do {                                                                        \
