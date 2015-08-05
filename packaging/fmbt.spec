@@ -7,6 +7,7 @@ License:        LGPL
 URL:            https://github.com/01org/fMBT
 Source:		%{name}_%{version}.tar.gz
 
+AutoReqProv:    no
 BuildRequires:  gcc-c++
 BuildRequires:  glib2-devel
 BuildRequires:  boost-devel
