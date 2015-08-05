@@ -22,6 +22,7 @@
 
 /* This algorithm is mentioned in the ISO C standard, here extended
    for 32 bits.  */
+#ifndef rand_r
 int
 rand_r (unsigned int *seed)
 {
@@ -46,3 +47,4 @@ rand_r (unsigned int *seed)
 
   return result;
 }
+#endif
