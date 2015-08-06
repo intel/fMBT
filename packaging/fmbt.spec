@@ -217,6 +217,7 @@ Meta package for installing all fMBT packages
 ./autogen.sh
 
 %build
+export PATH=/usr/bin:$PATH
 %configure
 make %{?_smp_mflags}
 
