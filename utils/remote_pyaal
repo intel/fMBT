@@ -119,7 +119,9 @@ _log.last_flush = time.time()
 def fmbtlog(msg, flush=True):
     current_time = time.time()
     timestamped = "fmbtmagicl%.4f %s" % (current_time, msg)
-    sys.stdout.write(urllib.quote(timestamped.encode("utf-8"))+"\n")
+    if isinstance(timestamped, unicode):
+        timestamped = timestamped.encode("utf-8")
+    sys.stdout.write(urllib.quote(timestamped)+"\n")
 
 def fmbtlograw(msg, flush=True):
     to_fmbt = "fmbtmagicL %s" % (msg,)

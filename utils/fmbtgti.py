@@ -2943,7 +2943,7 @@ class _VisualLog:
         device.drag = self.dragLogger(device.drag)
         device.visualLog = self.messageLogger(device.visualLog)
         attrs = ['callContact', 'callNumber', 'close',
-                 'loadConfig', 'platformVersion',
+                 'install', 'loadConfig', 'platformVersion',
                  'pressAppSwitch', 'pressBack', 'pressHome',
                  'pressKey', 'pressMenu', 'pressPower',
                  'pressVolumeUp', 'pressVolumeDown',
@@ -2953,6 +2953,7 @@ class _VisualLog:
                  'systemProperty',
                  'tapBitmap', 'tapId', 'tapItem', 'tapOcrText',
                  'tapText', 'topApp', 'topWindow', 'type',
+                 'uninstall',
                  'verifyOcrText', 'verifyText', 'verifyBitmap',
                  'waitAnyBitmap', 'waitBitmap', 'waitOcrText',
                  'waitScreenUpdated', 'waitText']
