@@ -167,6 +167,7 @@ appsButtonClass = BubbleTextView
 window = Launcher
 '''
 
+import base64
 import commands
 import gzip
 import math
@@ -2195,6 +2196,20 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         else:
             self._shellSupportsTar = True
 
+        outputLines = self._runAdb(["shell", "echo -n foo | toybox base64"],
+                                   timeout=_SHORT_TIMEOUT)[1].splitlines()
+        if len(outputLines) == 1 and "Zm9v" in outputLines[0]:
+            self._shellSupportsToyboxBase64 = True
+        else:
+            self._shellSupportsToyboxBase64 = False
+
+        outputLines = self._runAdb(["shell", "echo -n foo | uuencode -"],
+                                   timeout=_SHORT_TIMEOUT)[1].splitlines()
+        if len(outputLines) > 0 and "begin" in outputLines[0]:
+            self._shellSupportsUuencode = True
+        else:
+            self._shellSupportsUuencode = False
+
     def _resetWindow(self):
         setupCommands = [["shell", "service" , "call", "window", "1", "i32", "4939"],
                          ["forward", "tcp:"+str(self._windowPortForward), "tcp:4939"]]
@@ -2862,20 +2877,33 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         self._runAdb(["push", filename, remotename], 0, timeout=_SHORT_TIMEOUT)
         os.remove(filename)
         cmd = "source %s >%s.out 2>%s.err; echo $? > %s.status" % ((remotename,)*4)
-        if self._shellSupportsTar:
+        if self._shellSupportsTar and (self._shellSupportsUuencode or
+                                       self._shellSupportsToyboxBase64):
             # do everything we can in one command to minimise adb
             # commands: execute command, record results, package,
-            # print uuencoded package and remove remote temp files
-            cmd += "; cd %s; tar czf - %s.out %s.err %s.status | uuencode %s.tar.gz; rm -f %s*" % (
-                (os.path.dirname(remotename),) + ((os.path.basename(remotename),) * 5))
+            # print encoded package and remove remote temp files
+            if self._shellSupportsUuencode:
+                encodeCommand = "uuencode %s.tar.gz" % (os.path.basename(remotename),)
+            else:
+                encodeCommand = "toybox base64"
+            cmd += ("; cd %(dir)s; "
+                    "tar czf - %(rem)s.out %(rem)s.err %(rem)s.status | "
+                    "%(enc)s; rm -f %(rem)s*" %
+                    {"dir": os.path.dirname(remotename),
+                     "rem": os.path.basename(remotename),
+                     "enc": encodeCommand})
             try:
                 status, output, error = self._runAdb(
                     ["shell", cmd], 0, timeout=timeout)
             except FMBTAndroidRunError:
                 status, output, error = None, None, None
             if status != None:
-                file(filename, "w").write(output)
-                uu.decode(filename, out_file=filename + ".tar.gz")
+                if self._shellSupportsUuencode:
+                    file(filename, "w").write(output)
+                    uu.decode(filename, out_file=filename + ".tar.gz")
+                else:
+                    file(filename + ".tar.gz", "w").write(
+                        base64.b64decode(output))
                 import tarfile
                 tar = tarfile.open(filename + ".tar.gz")
                 basename = os.path.basename(filename)
@@ -2883,7 +2911,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
                 stderr = tar.extractfile(basename + ".err").read()
                 try: exitstatus = int(tar.extractfile(basename + ".status").read())
                 except: exitstatus = None
-                os.remove(filename)
+                if self._shellSupportsUuencode:
+                    os.remove(filename)
                 os.remove(filename + ".tar.gz")
             else:
                 exitstatus, stdout, stderr = None, None, None
