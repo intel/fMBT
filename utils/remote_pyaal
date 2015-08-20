@@ -92,7 +92,7 @@ import StringIO
 
 sys.path.append(os.getcwd())
 
-opt_debug = False
+opt_debug = 0
 opt_profile = None
 filter_tags = []
 log_filename = None
@@ -176,7 +176,11 @@ def put_list(list_of_integers):
     sys.stdout.flush()
 
 def put_lts(lts_string):
-    if opt_debug: _log("sending lts")
+    if opt_debug:
+        if opt_debug == 1:
+            _log("sending lts (add another --debug to see it)")
+        elif opt_debug > 1:
+            _log("sending lts\n%s\n" % (lts_string,))
     sys.stdout.write("fmbtmagic %s\n%s" % (len(lts_string), lts_string))
     sys.stdout.flush()
 
@@ -514,7 +518,7 @@ if __name__ == "__main__":
         if opt in ["-T"]:
             opt_lsts_hide_tags.append(arg)
         elif opt in ["-d", "--debug"]:
-            opt_debug = True
+            opt_debug += 1
         elif opt in ["-c"]:
             opt_c_exec_statements.append(arg)
         elif opt in ["-D"]:
