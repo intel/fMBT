@@ -448,7 +448,7 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]),
         update_generated_tags(aal, include_variables, generated_tagnames, tags, 0)
 
     while unhandled_states:
-        source_state, source_state_obj, source_state_depth = unhandled_states.pop()
+        source_state, source_state_obj, source_state_depth = unhandled_states.pop(0)
         source_lsts_state = lsts_states[found_states_real[source_state]]
 
         if source_state_depth >= depth:
