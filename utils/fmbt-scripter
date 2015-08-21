@@ -1929,7 +1929,7 @@ class MainWindow(QtGui.QMainWindow):
     def screenshotShowError(self):
         screenSize = self._fmbtEval("%s.screenSize()" %
                                 (self._sut,), silent=True, updateScreenshot=False)[0]
-        if (not self._screenshotErrorFilename or
+        if screenSize and (not self._screenshotErrorFilename or
             not ("%sx%s" % screenSize) in self._screenshotErrorFilename):
             self._screenshotErrorFilename = os.path.join(
                 self._fmbtEval("%s.screenshotDir()" %
