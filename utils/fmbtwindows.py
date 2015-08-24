@@ -65,7 +65,7 @@ def _run(command, expectedExitStatus=None):
     """
     Execute command in child process, return status, stdout, stderr.
     """
-    if type(command) == str or os.name == "nt":
+    if type(command) == str:
         shell = True
     else:
         shell = False
