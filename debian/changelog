@@ -1,8 +1,19 @@
-fmbt (0.26-0.rc1) unstable; urgency=low
+fmbt (0.26-1) unstable; urgency=low
 
-  * Development version.
+  * fmbtandroid:
+    - Supports Android Marshmallow.
+  * fmbt-scripter:
+    - Skip showing failed screenshots when screensize is not available.
+  * Test generation:
+    - Fixed AAL-to-statespace conversion bug introduced in 0.24. The
+      bug could cause unoptimal tests and stuttering in generated
+      tests when using deep lookahead heuristics.
+  * fmbtwindows:
+    - Fixed screenshots on some Windows environments (IMconvert.exe error).
+  * Enabled building Windows installer on Fedora 21 and 22, too.
+  * Bug fixes.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 3 Aug 2015 11:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 25 Aug 2015 09:42:00 +0300
 
 fmbt (0.25-1) unstable; urgency=low
 
