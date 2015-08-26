@@ -6,6 +6,9 @@ import fmbt
 
 SILENCE = -3
 
+_g_immutable_types = set(
+    [str, int, long, float, bool, type(None), tuple])
+
 def setCodeFileLine(c, filename, lineno, funcname=None):
     if funcname == None:
         funcname = c.co_name
@@ -247,7 +250,11 @@ class AALModel:
         # automatic push saves only their states
         stack_element = {}
         for varname in self._push_variables:
-            stack_element[varname] = copy.deepcopy(self._variables[varname])
+            val = self._variables[varname]
+            if type(val) in _g_immutable_types:
+                stack_element[varname] = val
+            else:
+                stack_element[varname] = copy.deepcopy(val)
         if self._has_serial:
             stack_element["!serial_abn"] = copy.deepcopy(self._get_all("guard_next_block", "serial"))
         self._stack.append(stack_element)
