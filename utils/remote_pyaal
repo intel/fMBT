@@ -330,10 +330,8 @@ class RemoteAALBridge:
                 lsts_depth = int(cmd[3:])
                 outfilestring = StringIO.StringIO()
                 try:
-                    self._aal.push()
                     aal2lsts(self._aal, outfilestring, lsts_depth,
                              include_generation_discontinued_tag = False)
-                    self._aal.pop()
                 except Exception, e:
                     report_simulation_error(self._aal)
                     fmbtstderr('Error on simulation %s: %s\n%s' % (type(e).__name__, e, format_pythonaalexception()))
@@ -391,14 +389,14 @@ def report_simulation_error(aal):
             executed_actions.extend(l)
         fmbtstderr("Error after simulated execution:\n    %s" % ('\n    '.join(executed_actions)))
 
-def tagfilter(state,tags):
+def tagfilter(state, tags):
     global filter_tags
     for tag in filter_tags:
         if tag in tags:
             return tag
     return state
 
-def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]),
+def aal2lsts(aal, output_fileobj, depth=5, discard_variables=None,
              include_variables=None, include_generation_discontinued_tag=True,_filter_tags=[]):
     global filter_tags
     try:
@@ -458,11 +456,14 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=set([]),
 
         aal.set_state_obj(source_state_obj)
         for action in aal.getActions():
-            aal.set_state_obj(copy.deepcopy(source_state_obj))
+            aal.set_state_obj(aal.state_obj_copy(source_state_obj))
             aal.model_execute(action)
             current_tags = aal.getprops()
             next_state_real = aal.state()
-            next_state_hidden = tagfilter(aal.state(discard_variables, include_variables) ,current_tags)
+            if discard_variables or include_variables:
+                next_state_hidden = tagfilter(aal.state(discard_variables, include_variables), current_tags)
+            else:
+                next_state_hidden = tagfilter(next_state_real, current_tags)
             next_state_obj = aal.state_obj()
             # new state?
             if not next_state_hidden in lsts_states:

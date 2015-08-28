@@ -19,6 +19,7 @@ def setCodeFileLine(c, filename, lineno, funcname=None):
 
 class AALModel:
     def __init__(self, model_globals):
+        self._aal_block_name = {} # guard|body|adapter name -> tag/action name
         self._all_guards = self._get_all("guard", "action")
         self._all_bodies = self._get_all("body", "action")
         self._all_adapters = self._get_all("adapter", "action")
@@ -49,7 +50,17 @@ class AALModel:
         plist = []
         i = 1
         while 1:
-            try: plist.append(getattr(self, itemtype + str(i) + property_name))
+            try:
+                obj = getattr(self, itemtype + str(i) + property_name)
+                if (property_name in ["guard", "body", "adapter"] and
+                    itemtype in ["action", "tag"]):
+                    self._aal_block_name[itemtype + str(i) + property_name] \
+                        = getattr(self, itemtype + str(i) + "name")
+                elif itemtype == "serial":
+                    self._aal_block_name["serial" + str(i) + "guard"] \
+                        = getattr(self, "serial" + str(i) + "name")
+
+                plist.append(obj)
             except: return plist
             i += 1
 
@@ -67,15 +78,13 @@ class AALModel:
     def call(self, func, call_arguments = ()):
         guard_list = None
         try:
-            func_name = func.__name__
-            if func_name.endswith("guard"):
-                guard_list = self._variables['guard_list']
-                guard_list.append(
-                    getattr(self, func_name.replace("guard", "name"), ""))
             fmbt._g_simulated_actions = self._stack_executed_actions
-            if hasattr(func,"requires"):
-                for prerequire in func.requires:
-                    if not self.call(getattr(self,prerequire)):
+            func_name = func.__name__
+            if func_name[-1] == "d": # faster than func_name.endswith("guard")
+                guard_list = self._variables['guard_list']
+                guard_list.append(self._aal_block_name[func_name])
+                for prerequisite in func.requires:
+                    if not self.call(getattr(self, prerequisite)):
                         return False
             args = []
             for arg in call_arguments:
@@ -84,14 +93,16 @@ class AALModel:
                 else:
                     args.append(eval(arg, self._variables))
             self._variables['args'] = args
-            return eval(func.func_code, self._variables)
+            rv = eval(func.func_code, self._variables)
+            if guard_list:
+                guard_list.pop()
+            return rv
         except Exception, e:
             self._log("Exception %s in %s: %s" % (e.__class__, func.func_name, e))
             self._log(traceback.format_exc())
-            raise
-        finally:
-            if guard_list != None:
+            if guard_list:
                 guard_list.pop()
+            raise
 
     def call_exception_handler(self, handler_name, action_name, exc, pass_through_rv=[]):
         rv = self._variables[handler_name](action_name, exc)
@@ -294,6 +305,27 @@ class AALModel:
         self.stack_discard()
         return obj
 
+    def state_obj_copy(self, obj=None):
+        """
+        Return copy of a state_obj.
+        Faster than copy.deepcopy(self.state_obj())
+        """
+        if obj == None:
+            obj = self.state_obj()
+        stack_top, stack_executed_top, stack_enabled_top = obj
+        copy_stack_top = {}
+        for varname in self._push_variables:
+            val = stack_top[varname]
+            if type(val) in _g_immutable_types:
+                copy_stack_top[varname] = val
+            else:
+                copy_stack_top[varname] = copy.deepcopy(val)
+        if self._has_serial:
+            copy_stack_top["!serial_abn"] = copy.deepcopy(stack_top["!serial_abn"])
+        copy_stack_executed_top = list(stack_executed_top)
+        copy_stack_enabled_top = set(stack_enabled_top)
+        return copy_stack_top, copy_stack_executed_top, copy_stack_enabled_top
+
     def set_state_obj(self, obj):
         """
         Set obj as current state. See also state_obj().
@@ -301,7 +333,7 @@ class AALModel:
         self.push(obj)
         self.pop()
 
-    def state(self, discard_variables = set([]), include_variables=None):
+    def state(self, discard_variables=None, include_variables=None):
         """
         Return the current state of the model as a string.
         By comparing strings one can check if the state is already seen.
@@ -309,11 +341,11 @@ class AALModel:
         rv_list = []
         for varname in self._push_variables:
             if ((include_variables and not varname in include_variables) or
-                (varname in discard_variables)):
+                (discard_variables and varname in discard_variables)):
                 continue
-            rv_list.append("%s = %s" % (varname, repr(self._variables[varname])))
+            rv_list.append(varname + " = " + repr(self._variables[varname]))
         if self._has_serial:
-            rv_list.append("!serial = %s" % (self._get_all("guard_next_block", "serial"),))
+            rv_list.append("!serial = " + str(self._get_all("guard_next_block", "serial")))
         return '\n'.join(rv_list)
 
     def observe(self, block):
