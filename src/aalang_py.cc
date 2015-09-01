@@ -360,6 +360,7 @@ void aalang_py::parallel(bool start,std::list<std::string>* __params) {
       "    def " + serialN("guard") + "():\n"
       "        return guard_list[-2] in " + serialN("guard", true) +
       "_next_block\n"
+      "    " + serialN("guard") + ".requires = []\n"
       "    " + serialN("guard") + ".blocks = []\n"
       "    " + serialN("guard") + "_next_block = set()\n"
       "    def " + serialN("step") + "(self, upper):\n"
@@ -429,6 +430,7 @@ void aalang_py::serial(bool start,std::list<std::string>* __params) {
       "    def " + serialN("guard") + "():\n"
       "        return " + serialN("guard", true) +
       "_next_block[-1] == guard_list[-2]\n"
+      "    " + serialN("guard") + ".requires = []\n"
       "    " + serialN("guard") + ".blocks = []\n"
       "    " + serialN("guard") + "_next_block = []\n"
       "    def " + serialN("step") + "(self, upper):\n"
