@@ -104,7 +104,15 @@ class VNCConnection(fmbtgti.GUITestConnection):
             reactor.callInThread(_continuousIncrementalUpdateWatch, self.client, self)
         # todo: detect failed connection and
         # raise VNCConnectionError(...)
-        self.client.start()
+        if hasattr(self.client, "start"):
+            self.client.start()
+        else:
+            import threading
+            self.client.thread = threading.Thread(
+                target=reactor.run, name='Twisted',
+                kwargs={'installSignalHandlers': False})
+            self.client.thread.daemon = True
+            self.client.thread.start()
 
     def init(self):
         return True
