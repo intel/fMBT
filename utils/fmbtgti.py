@@ -3071,7 +3071,7 @@ class _VisualLog:
         t = datetime.datetime.now()
         callHtml = '''\n
             <ul class="depth_%s" id="ul_%s">\n\t<li>%s<div class="call"><a title="%s:%s">%s%s</a></div>
-             %s''' % (stackSize, t, self.htmlTimestamp(t), cgi.escape(callerFilename), callerLineno, cgi.escape(callee), cgi.escape(str(calleeArgs)), imgHtml)
+             %s''' % (stackSize, self.epochTimestamp(t), self.htmlTimestamp(t), cgi.escape(callerFilename), callerLineno, cgi.escape(callee), cgi.escape(str(calleeArgs)), imgHtml)
         self.write(callHtml)
         self._callStack.append(callee)
         return (self.timestamp(t), callerFilename, callerLineno)
