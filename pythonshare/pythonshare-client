@@ -33,7 +33,7 @@ Options:
           when connected will be executed on this connection.
 
   -n, --namespace=ns
-          Set namespace to be used in for code/eval.
+          Set namespace to be used in for code/eval/interact/drop.
 
   -A, --async
           Following python-code executions and evaluations
@@ -71,11 +71,14 @@ Options when connected:
   -i, --interact
           Open interactive console for running code in ns.
 
-   --ls-local
+  --ls-local
           List local namespaces
 
-   --ls-remote
+  --ls-remote
           List remote namespaces
+
+  --drop
+          Drop namespace ns from the server.
 
   -D, --disconnect
           Disconnect from the pythonshare-server.
@@ -181,7 +184,7 @@ if __name__ == "__main__":
              "password=", "password-file=",
              "namespace=", "code=", "eval=", "read=",
              "output=", "format=", "interact",
-             "ls-local", "ls-remote"])
+             "ls-local", "ls-remote", "drop"])
     except getopt.GetoptError, e:
         error(str(e))
     opt_server = "localhost"
@@ -261,6 +264,16 @@ if __name__ == "__main__":
                 error("cannot list namespaces - not connected")
             remote_nss = conn.eval_("pythonshare_ns.remote_nss()")
             print "\n".join(remote_nss)
+        elif opt in ["--drop"]:
+            if conn == None:
+                error("cannot drop namespace - not connected")
+            if not opt_namespace:
+                error("cannot drop undefined namespace, use -ns")
+            try:
+                conn.drop_ns(opt_namespace)
+            except Exception, e:
+                error("cannot drop namespace: %s" % (
+                    str(e).strip().splitlines()[-1].split(":")[-1].strip(),))
         elif opt in ["-r", "--read"]:
             try:
                 try:

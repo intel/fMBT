@@ -72,35 +72,35 @@ def exception2string(exc_info):
     return ''.join(traceback.format_exception(*exc_info))
 
 class Pythonshare_ns(object):
-    """
-    Pythonshare services inside a namespace
+    """Pythonshare services inside a namespace
     """
     def __init__(self, ns):
         self.ns = ns
         self._on_disconnect = []
-        self._on_delete = []
+        self._on_drop = []
 
     def local_nss(self):
-        """
-        List local namespaces
+        """List local namespaces
         """
         return _g_local_namespaces.keys()
 
     def remote_nss(self):
-        """
-        List remote namespaces
+        """List remote namespaces
         """
         return _g_remote_namespaces.keys()
 
     def on_disconnect(self):
-        """
-        Return codes that will be executed when a client has disconnected.
+        """Return codes that will be executed when a client has disconnected.
         """
         return self._on_disconnect
 
-    def exec_on_disconnect(self, code, any_connection=False):
+    def on_drop(self):
+        """Return codes that will be executed when the namespace is dropped.
         """
-        Add code that will be executed when client has disconnected.
+        return self._on_drop
+
+    def exec_on_disconnect(self, code, any_connection=False):
+        """Add code that will be executed when client has disconnected.
         """
         if not any_connection:
             conn_id = _g_executing_pythonshare_conn_id
@@ -108,11 +108,19 @@ class Pythonshare_ns(object):
             conn_id = None
         self._on_disconnect.append((conn_id, code))
 
-    def set_on_disconnect(self, list_of_code):
+    def exec_on_drop(self, code):
+        """Add code that will be executed when namespace is dropped.
         """
-        Replace all "on disconnect" codes with new list of codes.
+        self._on_drop.append(code)
+
+    def set_on_disconnect(self, list_of_code):
+        """Replace all "on disconnect" codes with new list of codes.
         """
         self._on_disconnect = list_of_code
+
+    def set_on_drop(self, list_of_code):
+        """Replace all "on drop" codes with new list of codes."""
+        self._on_drop = list_of_code
 
     def call_on_disconnect(self, conn_id):
         for setter_conn_id, code in self._on_disconnect:
@@ -126,9 +134,17 @@ class Pythonshare_ns(object):
                 if setter_conn_id == conn_id:
                     self._on_disconnect.remove((conn_id, code))
 
+    def call_on_drop(self):
+        for code in self._on_drop:
+            exec_msg = messages.Exec(self.ns, code, None)
+            if opt_debug:
+                daemon_log("on drop: %s" % (exec_msg,))
+            rv = _local_execute(exec_msg)
+            if opt_debug:
+                daemon_log("on drop rv: %s" % (rv,))
+
     def read_rv(self, async_rv):
-        """
-        Return and remove asynchronous return value.
+        """Return and remove asynchronous return value.
         """
         if self.ns != async_rv.ns:
             raise ValueError("Namespace mismatch")
@@ -143,8 +159,7 @@ class Pythonshare_ns(object):
                              % (async_rv.rvid,))
 
     def poll_rvs(self):
-        """
-        Returns list of Async_rv instances that are ready for reading.
+        """Returns list of Async_rv instances that are ready for reading.
         """
         rv = []
         for rvid, value in _g_async_rvs[self.ns].iteritems():
@@ -198,6 +213,20 @@ def _init_local_namespace(ns, init_code=None, force=False):
         except Exception, e:
             daemon_log('namespace "%s" init error in <string>:\n%s\n\n%s' % (
                 ns, code2string(init_code), exception2string(sys.exc_info())))
+
+def _drop_local_namespace(ns):
+    daemon_log('drop local namespace "%s"' % (ns,))
+    _g_local_namespaces[ns]["pythonshare_ns"].call_on_drop()
+    del _g_local_namespaces[ns]
+    del _g_local_namespace_locks[ns]
+    del _g_async_rvs[ns]
+    # send notification to all connections in _g_namespace_exports[ns]?
+
+def _drop_remote_namespace(ns):
+    daemon_log('drop remote namespace "%s"' % (ns,))
+    ns_obj = _g_remote_namespaces[ns]
+    del _g_remote_namespaces[ns]
+    # send notification to all connections in _g_namespace_exports[ns]?
 
 def _init_remote_namespace(ns, conn, to_remote, from_remote):
     if ns in _g_remote_namespaces:
@@ -331,6 +360,22 @@ def _serve_connection(conn, conn_opts):
                 # used by other threads, this thread stops here.
                 return
             except Exception, e:
+                cPickle.dump(messages.Ns_rv(False, exception2string(sys.exc_info())), to_client)
+                to_client.flush()
+
+        elif isinstance(obj, messages.Drop_ns):
+            try:
+                if obj.ns in _g_local_namespaces:
+                    _drop_local_namespace(obj.ns)
+                elif obj.ns in _g_remote_namespaces:
+                    _drop_remote_namespace(obj.ns)
+                else:
+                    raise ValueError('Unknown namespace "%s"' % (obj.ns,))
+                cPickle.dump(messages.Ns_rv(True), to_client)
+                to_client.flush()
+            except Exception, e:
+                if opt_debug:
+                    daemon_log("namespace drop error: %s" % (e,))
                 cPickle.dump(messages.Ns_rv(False, exception2string(sys.exc_info())), to_client)
                 to_client.flush()
 

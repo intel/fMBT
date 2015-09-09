@@ -27,7 +27,7 @@ import socket
 import cPickle
 
 import pythonshare
-from pythonshare.messages import Exec, Exec_rv, Async_rv, Register_ns, Request_ns, Ns_rv
+from pythonshare.messages import Exec, Exec_rv, Async_rv, Register_ns, Request_ns, Drop_ns, Ns_rv
 
 class Connection(object):
     """Connection to a Pythonshare server.
@@ -235,6 +235,25 @@ class Connection(object):
         """
         """
         cPickle.dump(Request_ns(namespace), self._to_server)
+        self._to_server.flush()
+        rv = cPickle.load(self._from_server)
+        if isinstance(rv, Ns_rv) and rv.status:
+            return True
+        else:
+            raise pythonshare.PythonShareError(rv.errormsg)
+
+    def drop_ns(self, namespace):
+        """Delete namespace from the remote peer
+
+        Parameters:
+
+          namespace (string)
+                  Namespace to be dropped, can be local or
+                  remote to server.
+
+        Returns True on success or raises an exception.
+        """
+        cPickle.dump(Drop_ns(namespace), self._to_server)
         self._to_server.flush()
         rv = cPickle.load(self._from_server)
         if isinstance(rv, Ns_rv) and rv.status:
