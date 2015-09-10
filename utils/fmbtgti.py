@@ -2927,6 +2927,7 @@ class _VisualLog:
         self._formattedOutFilename = self._outFilename
         self._bytesToFile = 0
         self._testStep = -1
+        self._previousTs = -1
         self._actionName = None
         self._callStack = []
         self._highlightCounter = 0
@@ -2970,8 +2971,7 @@ class _VisualLog:
             html = []
             if self._bytesToFile > 0:
                 for c in xrange(len(self._callStack)):
-                    html.append('</table></tr>') # end call
-                html.append('</table></div></td></tr></table></ul>') # end step
+                    html.append('') # end call
                 html.append('</body></html>') # end html
                 self.write('\n'.join(html))
             if (self._formattedOutFilename and
@@ -3006,7 +3006,7 @@ class _VisualLog:
     def htmlTimestamp(self, t=None):
         if t == None:
             t = datetime.datetime.now()
-        retval = '<div class="time" id="%s"><a id="time%s">%s</a></div>' % (
+        retval = '<div class="time" id="t_%s"><a id="time%s">%s</a></div>' % (
             self.epochTimestamp(t), self.epochTimestamp(t), self.timestamp(t))
         return retval
 
@@ -3026,18 +3026,25 @@ class _VisualLog:
     def logBlock(self):
         ts = fmbt.getTestStep()
         an = fmbt.getActionName()
+        inactiveOutputHtml = ""
+        #If the test step number has not changed,
+        #the previous block was an "inactive" output action.
+        if self._testStep == ts:
+            inactiveOutputHtml = ' after_inactive_action'
         if ts == -1 or an == "undefined":
             an = self._userFunction
             ts = self._userCallCount
         if self._testStep != ts or self._actionName != an:
             if self._blockId != 0:
                 # new top level log entry
-                self.write('</table></div></td></tr></table></ul>')
+                self.write('</div></li></ul>')
                 # if log splitting is in use, this is a good place to
                 # start logging into next file
                 self.logFileSplit()
-            actionHtml = '''\n\n<ul><li><table><tr><td>%s</td><td><div class="step"><a id="blockId%s" href="javascript:showHide('S%s')">%s. %s</a></div><div class="funccalls" id="S%s"><table>\n''' % (
-                self.htmlTimestamp(), self._blockId, self._blockId, ts, cgi.escape(an), self._blockId)
+            actionHtml = '''\n<ul><li>%s
+                <div class="step%s" ><a id="blockId%s" href="javascript:showHide('S%s')"> %s. %s</a></div>\n
+                <div class="funccalls" id="S%s">''' % (self.htmlTimestamp(), inactiveOutputHtml, self._blockId,
+                self._blockId, ts, cgi.escape(an), self._blockId)
             self.write(actionHtml)
             self._testStep = ts
             self._actionName = an
@@ -3054,18 +3061,17 @@ class _VisualLog:
         callerFrame = inspect.currentframe().f_back.f_back
         callerFilename = callerFrame.f_code.co_filename
         callerLineno = callerFrame.f_lineno
-        if len(self._callStack) == 0 and (self._userFunction == '<module>' or not self._userFrameId in [(id(se[0]), getattr(se[0].f_back, "f_lasti", None)) for se in inspect.stack()]):
+        stackSize = len(self._callStack)
+        if stackSize == 0 and (self._userFunction == '<module>' or not self._userFrameId in [(id(se[0]), getattr(se[0].f_back, "f_lasti", None)) for se in inspect.stack()]):
             self._userFunction = callerFrame.f_code.co_name
             self._userCallCount += 1
             self._userFrameId = (id(callerFrame), getattr(callerFrame.f_back, "f_lasti", None))
         self.logBlock()
         imgHtml = self.imgToHtml(img, width, imgTip, "call:%s" % (callee,))
         t = datetime.datetime.now()
-        callHtml = '''
-             <tr><td></td><td><table><tr>
-                 <td>%s</td><td><a title="%s:%s"><div class="call">%s%s</div></a></td>
-             </tr>
-             %s''' % (self.htmlTimestamp(t), cgi.escape(callerFilename), callerLineno, cgi.escape(callee), cgi.escape(str(calleeArgs)), imgHtml)
+        callHtml = '''\n
+            <ul class="depth_%s" id="ul_%s">\n\t<li>%s<div class="call"><a title="%s:%s">%s%s</a></div>
+             %s''' % (stackSize, self.epochTimestamp(t), self.htmlTimestamp(t), cgi.escape(callerFilename), callerLineno, cgi.escape(callee), cgi.escape(str(calleeArgs)), imgHtml)
         self.write(callHtml)
         self._callStack.append(callee)
         return (self.timestamp(t), callerFilename, callerLineno)
@@ -3073,21 +3079,25 @@ class _VisualLog:
     def logReturn(self, retval, img=None, width="", imgTip="", tip=""):
         imgHtml = self.imgToHtml(img, width, imgTip, "return:%s" % (self._callStack[-1],))
         self._callStack.pop()
-        returnHtml = '''
-             <tr>
-                 <td>%s</td><td><div class="returnvalue"><a title="%s">== %s</a></div></td>
-             </tr>%s
-             </table></tr>\n''' % (self.htmlTimestamp(), tip, cgi.escape(str(retval)), imgHtml)
+        retvalClass = retval
+        formattedRetval = str(retval)
+        if isinstance(retval, basestring):
+            formattedRetval = repr(retval)
+
+        if retval != True and retval != False:
+            retvalClass = None
+
+        returnHtml = '''\n
+             \n<li>%s<div class="returnvalue"><a title="%s" class="%s">== %s</a></div>%s</li>\n</ul>\n
+             ''' % (self.htmlTimestamp(), "returned from: " + tip + "()", retvalClass, cgi.escape(formattedRetval), imgHtml)
         self.write(returnHtml)
 
     def logException(self):
         einfo = sys.exc_info()
         self._callStack.pop()
-        excHtml = '''
-             <tr>
-                 <td>%s</td><td><div class="exception"><a title="%s">!! %s</a></div></td>
-             </tr>
-             </table></tr>\n''' % (self.htmlTimestamp(), cgi.escape(traceback.format_exception(*einfo)[-2].replace('"','').strip()), cgi.escape(str(traceback.format_exception_only(einfo[0], einfo[1])[0])))
+        excHtml = '''<li>%s<div class="exception"><a title="%s">!! %s</a></div></li></ul>\n'''  % (
+            self.htmlTimestamp(), cgi.escape(traceback.format_exception(*einfo)[-2].replace('"','').strip()),
+            cgi.escape(str(traceback.format_exception_only(einfo[0], einfo[1])[0])))
         self.write(excHtml)
 
     def logMessage(self, msg):
@@ -3096,32 +3106,165 @@ class _VisualLog:
         callerLineno = callerFrame.f_lineno
         self.logBlock()
         t = datetime.datetime.now()
-        msgHtml = '''
-            <tr><td></td><td><table>
-                <tr><td>%s</td><td><a title="%s:%s"><div class="message">%s</div></a></td></tr>
-            </table></td></tr>\n''' % (self.htmlTimestamp(t), cgi.escape(callerFilename), callerLineno, cgi.escape(msg))
+        msgHtml = '''<ul><li>%s<a title="%s:%s"><div class="message">%s</div></a></li></ul>\n''' % (
+            self.htmlTimestamp(t), cgi.escape(callerFilename), callerLineno, cgi.escape(msg))
         self.write(msgHtml)
 
     def logHeader(self):
-        self.write('''
-            <!DOCTYPE html><html>
-            <head><meta charset="utf-8"><title>fmbtandroid visual log</title>
-            <SCRIPT><!--
-            function showHide(eid){
-                if (document.getElementById(eid).style.display != 'inline'){
-                    document.getElementById(eid).style.display = 'inline';
-                } else {
-                    document.getElementById(eid).style.display = 'none';
-                }
-            }
-            // --></SCRIPT>
-            <style>
-                td { vertical-align: top }
-                ul { list-style-type: none }
-                .funccalls { display: none }
-            </style>
-            </head><body>
-            ''')
+        self.write(r'''
+<!DOCTYPE html><html>
+<head><meta charset="utf-8"><title>fmbtandroid visual log</title>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script>
+
+
+function showHide(eid){
+   if (document.getElementById(eid).style.display != 'inline-block'){
+      document.getElementById(eid).style.display = 'inline-block';
+   } else {
+      document.getElementById(eid).style.display = 'none';
+   }
+}
+
+function hideChildLists(eid) {
+   var jqelement = $("#"+eid);
+   jqelement.find("ul[class^=depth_]").each(function(index, element) {
+      var element_depth = parseInt(element.className.replace("depth_", ""));
+
+      var parentFunctionCallElement = $(element).closest("ul.depth_" + (element_depth-1).toString()).find("li > div.call > a").first();
+      //If the function has a parent function call
+      if (parentFunctionCallElement.length > 0){
+         parentFunctionCallElement.css("color", "blue");
+         parentFunctionCallElement.on("click", function(event) {
+            $(event.currentTarget).parent().parent().find("ul.depth_" + (element_depth).toString()).toggle();
+         });
+         $(parentFunctionCallElement).parent().parent().find("ul.depth_" + (element_depth).toString()).hide();
+      }
+   });
+}
+
+function formatInactiveOutputActions(){
+   var stepElements = $("div.step");
+   for (var i=0; i < stepElements.length; i++){
+      if(i>0 && $(stepElements[i]).hasClass("after_inactive_action")) {
+         $(stepElements[i-1]).find("a").css("color", "gray");
+         $(stepElements[i-1]).find("a").prepend("[Not&nbsp;triggered]");
+      }
+   }
+}
+
+function tidyReturnValues(){
+   $("div.returnvalue").each(function(key, val){
+
+      //Format filenames and view dumps
+      if ($(val).text().indexOf("filename=\"/") > -1 || $(val).text().indexOf("dump=\"/") > 0){
+         var longfilename = $(val).text();
+         var shortfilename = longfilename.replace(/(\/.*\/)(.*\.(png|view))/g, "\<span class=\"path\"\>$1\<\/span\>$2");
+         $(val).html(shortfilename + "<span class=\"path_expand\">[Toggle&nbsp;path]</span>");
+      }
+      else if ( $(val).text().indexOf('\\n') > -1 || $(val).text().indexOf(', ') > -1) {
+         var formattedHtml = "<span class='formatted_returnvalue'>" + $(val).html() + "</span>";
+         //Line breaks and commas => <br/>
+         formattedHtml = formattedHtml.replace(/\\r/g, "");
+         formattedHtml = formattedHtml.replace(/\\n[^']/g, "\<br\/\>&nbsp;&nbsp;&nbsp;&nbsp;");
+         formattedHtml = formattedHtml.replace(/\)\), /g, "\)\),\<br\/\>&nbsp;&nbsp;&nbsp;&nbsp;");
+         if (formattedHtml.indexOf("))") == -1){
+            formattedHtml = formattedHtml.replace(/, /g, ", \<br\/\>&nbsp;&nbsp;&nbsp;&nbsp;");
+         }
+         $(val).html("<span class='unformatted_returnvalue'>" + $(val).html() + "</span>" + formattedHtml);
+      }
+   });
+   $(".unformatted_returnvalue").on("click", function(event) {
+      toggleSingleElement(event, ".unformatted_returnvalue");
+      toggleSingleElement(event, ".formatted_returnvalue");
+   });
+   $(".formatted_returnvalue").on("click", function(event) {
+      toggleSingleElement(event, ".unformatted_returnvalue");
+      toggleSingleElement(event, ".formatted_returnvalue");
+   });
+   $(".formatted_returnvalue").hide();
+}
+
+function initialize(){
+   $(".funccalls").each(function(index, element){
+      hideChildLists(element.id);
+   });
+   tidyReturnValues();
+   formatInactiveOutputActions();
+   $("body").prepend("<p id='path_toggle'></p>");
+   $("body").prepend("<p id='help'><span style='color: blue'>Blue</span> and <span style='color: gray'>gray</span> items are clickable.</p>");
+
+   $("#path_toggle").on("click", function(event) {
+      togglePaths();
+   });
+   $(".path_expand").on("click", function(event) {
+      toggleSingleElement(event, ".path");
+   });
+   $("#br_toggle").on("click", function(event) {
+      toggleFormattedRetval(event);
+   });
+   //Hide paths by default
+   togglePaths();
+}
+
+function toggleSingleElement(event, selector) {
+   $(event.currentTarget).parent().find(selector).toggle();
+}
+
+function togglePaths(){
+   $(".path").toggle();
+   if ($(".path").css("display") != 'none'){
+      $("#path_toggle").text("Path shortening is OFF globally. ");
+   }
+   else {
+      $("#path_toggle").text("Path shortening is ON globally.");
+   }
+}
+
+if(window.jQuery)
+{
+   $( document ).ready(function() {
+      initialize();
+   });
+}
+else {
+   console.log("Could not load jQuery. Showing the log as static html.");
+}
+
+
+</script>
+<style>
+   body {   font-family: "Courier New", Courier, monospace; }
+   .time {
+      width: 200px;
+      display: inline-block;
+      height: 100%;
+      vertical-align: top;
+   }
+   .spacer{
+      display: block;
+      padding-left: 200px;
+   }
+   ul {
+      list-style-type: none;
+      padding-left: 150px;
+   }
+   ul li div.time, ul li div.returnvalue {
+      display: inline-block;
+      max-width:75%;
+   }
+   ul li div.step {   display: block;        }
+   ul li div      {   display: inline-block; }
+   .path_expand, #path_toggle {   color: blue;  }
+   .True       {   color: green; }
+   .False      {   color: red;   }
+   .funccalls  { display: none   }
+   .unformatted_returnvalue   {   color: gray;  }
+   .formatted_returnvalue     {   color: gray;  }
+</style>
+</head><body>
+            '''
+        )
 
     def doCallLogException(self, origMethod, args, kwargs):
         try: return origMethod(*args, **kwargs)
@@ -3261,7 +3404,7 @@ class _VisualLog:
 
         if isinstance(img, Screenshot):
             imgHtmlName = self.relFilePath(img.filename(), self._outFileObj)
-            imgHtml = '<tr><td></td><td><img %stitle="%s" src="%s" width="%s" alt="%s" /></td></tr>' % (
+            imgHtml = '\n<div class="spacer"><img %stitle="%s" src="%s" width="%s" alt="%s" /></div>' % (
                 imgClassAttr,
                 "%s refreshScreenshot() at %s:%s" % img._logCallReturnValue,
                 imgHtmlName,
@@ -3274,11 +3417,11 @@ class _VisualLog:
             else:
                 imgTip = 'title="%s"' % (imgTip,)
             imgHtmlName = self.relFilePath(img, self._outFileObj)
-            imgHtml = '<tr><td></td><td><img %s%s src="%s" %s alt="%s" /></td></tr>' % (
+            imgHtml = '<div class="spacer"><img %s%s src="%s" %s alt="%s" /></div>' % (
                 imgClassAttr, imgTip, imgHtmlName, width, imgHtmlName)
         else:
             imgHtml = ""
-        return imgHtml
+        return "\n" + imgHtml + "\n"
 
     def highlightFilename(self, screenshotFilename):
         self._highlightCounter += 1

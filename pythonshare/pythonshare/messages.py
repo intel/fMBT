@@ -73,6 +73,13 @@ class Register_ns(object):
         return 'Register_ns(ns="%s")' % (
             self.ns,)
 
+class Drop_ns(object):
+    def __init__(self, ns):
+        self.ns = ns
+    def __str__(self):
+        return 'Drop_ns(ns="%s")' % (
+            self.ns,)
+
 class Request_ns(object):
     def __init__(self, ns):
         self.ns = ns
