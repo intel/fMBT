@@ -42,6 +42,8 @@ opt_debug_stdout_limit = 240
 opt_log_fd = None
 opt_allow_new_namespaces = True
 
+_g_wake_server_function = None
+
 def timestamp():
     if on_windows:
         rv = "%.6f" % (
@@ -194,6 +196,7 @@ _g_namespace_exports = {}
 _g_local_namespace_locks = {}
 _g_async_rvs = {}
 _g_async_rv_counter = 0
+_g_server_shutdown = False
 
 def _init_local_namespace(ns, init_code=None, force=False):
     if not ns in _g_local_namespaces:
@@ -304,6 +307,7 @@ def _connection_lost(conn_id, *closables):
 
 def _serve_connection(conn, conn_opts):
     global _g_async_rv_counter
+    global _g_server_shutdown
     if isinstance(conn, client.Connection):
         to_client = conn._to_server
         from_client = conn._from_server
@@ -420,6 +424,13 @@ def _serve_connection(conn, conn_opts):
                 exec_rv.expr_rv = messages.Unpicklable(exec_rv.expr_rv)
                 cPickle.dump(exec_rv, to_client)
             to_client.flush()
+
+        elif isinstance(obj, messages.Server_ctl):
+            if obj.command == "die":
+                _g_server_shutdown = True
+                if _g_wake_server_function:
+                    _g_wake_server_function()
+                break
         else:
             daemon_log("unknown message type: %s in %s" % (type(obj), obj))
             cPickle.dump(messages.Auth_rv(False), to_client)
@@ -432,6 +443,7 @@ def _serve_connection(conn, conn_opts):
 def start_server(host, port,
                  ns_init_import_export=[],
                  conn_opts={}):
+    global _g_wake_server_function
     daemon_log("pid: %s" % (os.getpid(),))
 
     # Initialise, import and export namespaces
@@ -465,6 +477,12 @@ def start_server(host, port,
         daemon_log("listen: %s:%s" % (host, port))
 
     if isinstance(port, int):
+        def wake_server_function():
+            ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            ss.connect((host, port))
+            ss.close()
+        _g_wake_server_function = wake_server_function
+
         # Start listening to the port
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if not on_windows:
@@ -473,11 +491,18 @@ def start_server(host, port,
         s.listen(4)
         while 1:
             conn, _ = s.accept()
+            if _g_server_shutdown:
+                daemon_log("shutting down.")
+                break
             thread.start_new_thread(_serve_connection, (conn, conn_opts))
     elif port == "stdin":
         opt_debug_stdout_limit = 0
         conn = client.Connection(sys.stdin, sys.stdout)
         _serve_connection(conn, conn_opts)
+    for ns in sorted(_g_remote_namespaces.keys()):
+        _drop_remote_namespace(ns)
+    for ns in sorted(_g_local_namespaces.keys()):
+        _drop_local_namespace(ns)
 
 def start_daemon(host="localhost", port=8089, debug=False,
                  log_fd=None, ns_init_import_export=[], conn_opts={},

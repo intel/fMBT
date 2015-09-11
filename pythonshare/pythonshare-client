@@ -83,6 +83,9 @@ Options when connected:
   -D, --disconnect
           Disconnect from the pythonshare-server.
 
+  -k, --kill
+          Shutdown pythonshare-server.
+
   -P, --poll
           Poll which asynchronously return values are available for
           reading.
@@ -177,14 +180,14 @@ class PythonshareConsole(code.InteractiveConsole):
 if __name__ == "__main__":
     try:
         opts, remainder = getopt.gnu_getopt(
-            sys.argv[1:], "C:DAhSs:Pp:n:c:e:r:o:f:i",
+            sys.argv[1:], "C:DAhSs:Pp:n:c:e:r:o:f:ik",
             ["connect=", "disconnect",
              "async", "sync", "poll",
              "help", "server=", "port=",
              "password=", "password-file=",
              "namespace=", "code=", "eval=", "read=",
              "output=", "format=", "interact",
-             "ls-local", "ls-remote", "drop"])
+             "ls-local", "ls-remote", "drop", "kill"])
     except getopt.GetoptError, e:
         error(str(e))
     opt_server = "localhost"
@@ -274,6 +277,13 @@ if __name__ == "__main__":
             except Exception, e:
                 error("cannot drop namespace: %s" % (
                     str(e).strip().splitlines()[-1].split(":")[-1].strip(),))
+        elif opt in ["-k", "--kill"]:
+            if conn == None:
+                error("cannot kill server - not connected")
+            try:
+                conn.kill_server()
+            except Exception, e:
+                error("error on kill: %s" % (e,))
         elif opt in ["-r", "--read"]:
             try:
                 try:
