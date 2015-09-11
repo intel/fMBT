@@ -75,7 +75,7 @@ class Connection(object):
                   the default namespace that is used on eval_() and exec_().
                   The default is "default".
         """
-        self._ns = namespace
+        self.set_namespace(namespace)
 
         if isinstance(host_or_from_server, str) and isinstance(port_or_to_server, int):
             host = host_or_from_server
@@ -290,6 +290,14 @@ class Connection(object):
         cPickle.dump(Server_ctl("die"), self._to_server)
         self._to_server.flush()
         return True
+
+    def namespace(self):
+        """Return default namespace"""
+        return self._ns
+
+    def set_namespace(self, ns):
+        """Set new default namespace"""
+        self._ns = ns
 
     def getpeername(self):
         if self._s:
