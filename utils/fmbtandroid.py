@@ -183,6 +183,8 @@ import tempfile
 import time
 import uu
 
+import xml.etree.ElementTree
+
 import fmbt
 import fmbtgti
 try:
@@ -348,6 +350,7 @@ class Device(fmbtgti.GUITestInterface):
     _PARSE_VIEW_RETRY_LIMIT = 10
     def __init__(self, deviceName=None, iniFile=None, connect=True,
                  monkeyOptions=[], adbPort=None, adbForwardPort=None,
+                 uiautomatorDump=False,
                  **kwargs):
         """
         Connect to given device, or the first not-connected Android
@@ -403,6 +406,10 @@ class Device(fmbtgti.GUITestInterface):
                   Example: rotateScreenshot=-90. The default is "auto".
                   If "auto" is given, rotate automatically to compensate
                   current display rotation.
+
+          uiautomatorDump (boolean, optional)
+                  If True, use "uiautomator dump" as refreshView() backend.
+                  Otherwise window service dump is used. The default is False.
         """
 
         if kwargs.get("rotateScreenshot", "auto") == "auto":
@@ -427,6 +434,7 @@ class Device(fmbtgti.GUITestInterface):
         self._supportsView = None
         self._monkeyOptions = monkeyOptions
         self._lastConnectionSettings = {}
+        self._uiautomatorDump = uiautomatorDump
 
         self._conf = Ini()
 
@@ -1023,7 +1031,7 @@ class Device(fmbtgti.GUITestInterface):
         return rv
     refreshScreenshot.__doc__ = fmbtgti.GUITestInterface.refreshScreenshot.__doc__
 
-    def refreshView(self, forcedView=None):
+    def refreshView(self, forcedView=None, uiautomatorDump=None):
         """
         (Re)reads view items on display and updates the latest View
         object.
@@ -1033,6 +1041,10 @@ class Device(fmbtgti.GUITestInterface):
           forcedView (View or filename, optional):
                 use given View object or view file instead of reading
                 items from the device.
+
+          uiautomatorDump (boolean, optional):
+                use uiautomator to read view dump from the device.
+                If not given, uiautomatorDump() default will be used.
 
         Returns created View object.
         """
@@ -1057,7 +1069,10 @@ class Device(fmbtgti.GUITestInterface):
 
         retryCount = 0
         while True:
-            dump = self.existingConnection().recvViewData()
+            if uiautomatorDump == True or (uiautomatorDump == None and self.uiautomatorDump()):
+                dump = self.existingConnection().recvUiautomatorDump()
+            else:
+                dump = self.existingConnection().recvViewData()
             if dump != None:
                 viewDir = os.path.dirname(self._newScreenshotFilepath())
                 view = View(viewDir, self.serialNumber, dump, displayToScreen, self.itemOnScreen, self.intCoords)
@@ -1194,6 +1209,18 @@ class Device(fmbtgti.GUITestInterface):
         self.existingConnection().setDisplayToScreenCoords(
             lambda x, y: (x * screenWidth / width,
                           y * screenHeight / height))
+
+    def setUiautomatorDump(self, uiautomatorDump):
+        """
+        Enable or disable using uiautomator on refreshView()
+
+        Parameters:
+
+          uiautomatorDump (boolean):
+                  If True, uiautomator will be used on refreshView()
+                  by default.
+        """
+        self._uiautomatorDump = uiautomatorDump
 
     def setUserRotation(self, rotation):
         """
@@ -1445,6 +1472,12 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self.existingConnection().recvTopWindowStack()
 
+    def uiautomatorDump(self):
+        """
+        Returns whether or not uiautomator is used for refreshView()
+        """
+        return self._uiautomatorDump
+
     def uninstall(self, apkname, keepData=False):
         """
         Uninstall a package from the device.
@@ -1662,6 +1695,7 @@ class ViewItem(fmbtgti.GUIItem):
     """
     ViewItem holds the information of a single GUI element.
     """
+    _boundsRegEx = re.compile(r'\[([0-9]+),([0-9]+)\]\[([0-9]+),([0-9]+)\]')
     def __init__(self, className, code, indent, properties, parent, rawProps, dumpFilename, displayToScreen):
         self._p = properties
         self._parent = parent
@@ -1670,18 +1704,42 @@ class ViewItem(fmbtgti.GUIItem):
         self._indent = indent
         self._children = []
         self._parentsVisible = True
+        if "resource-id" in self._p:
+            self._id = self._p["resource-id"].split(":", 1)[-1]
+        else:
+            self._id = self.property("mID")
         self._rawProps = ""
-        if not "scrolling:mScrollX" in self._p:
-            self._p["scrolling:mScrollX"] = 0
-            self._p["scrolling:mScrollY"] = 0
+        if not "bounds" in self._p:
+            if not "scrolling:mScrollX" in self._p:
+                self._p["scrolling:mScrollX"] = 0
+                self._p["scrolling:mScrollY"] = 0
+            self._visible = self._p.get("getVisibility()", "") == "VISIBLE"
+            if "text:mText" in self._p:
+                self._text = self._p["text:mText"]
+            else:
+                self._text = None
+        else:
+            self._visible = True
+            self._text = self._p["text"]
         fmbtgti.GUIItem.__init__(self, className, self._calculateBbox(displayToScreen), dumpFilename)
     def addChild(self, child):
         child._parentsVisible = self.visibleBranch()
         self._children.append(child)
     def _calculateBbox(self, displayToScreen):
-        if "layout:getLocationOnScreen_x()" in self._p:
+        if "bounds" in self._p:
+            try:
+                left, top, right, bottom = [
+                    int(v) for v in
+                    ViewItem._boundsRegEx.findall(self._p["bounds"])[0]]
+            except IndexError:
+                raise ValueError('invalid bounds "%s"' % (self._p["bounds"],))
+            width = right - left
+            height = bottom - top
+        elif "layout:getLocationOnScreen_x()" in self._p:
             left = int(self._p["layout:getLocationOnScreen_x()"])
             top = int(self._p["layout:getLocationOnScreen_y()"])
+            height = int(self._p["layout:getHeight()"])
+            width = int(self._p["layout:getWidth()"])
         elif "layout:mLeft" in self._p:
             left = int(self._p["layout:mLeft"])
             top = int(self._p["layout:mTop"])
@@ -1691,10 +1749,10 @@ class ViewItem(fmbtgti.GUIItem):
                 left += int(pp["layout:mLeft"]) - int(pp["scrolling:mScrollX"])
                 top += int(pp["layout:mTop"]) - int(pp["scrolling:mScrollY"])
                 parent = parent._parent
+            height = int(self._p["layout:getHeight()"])
+            width = int(self._p["layout:getWidth()"])
         else:
             raise ValueError("bounding box not found, layout fields missing")
-        height = int(self._p["layout:getHeight()"])
-        width = int(self._p["layout:getWidth()"])
         screenLeft, screenTop = displayToScreen(left, top)
         screenRight, screenBottom = displayToScreen(left + width, top + height)
         return (screenLeft, screenTop, screenRight, screenBottom)
@@ -1702,7 +1760,7 @@ class ViewItem(fmbtgti.GUIItem):
     def className(self):  return self._className
     def code(self):       return self._code
     def indent(self):     return self._indent
-    def id(self):         return self.property("mID")
+    def id(self):         return self._id
     def parent(self):     return self._parent
     def properties(self): return self._p
     def property(self, propertyName):
@@ -1711,9 +1769,15 @@ class ViewItem(fmbtgti.GUIItem):
         """Returns True if this item and all items containing this are visible
         up to the root node"""
         return self._parentsVisible and self.visible()
-    def text(self):       return self.property("text:mText")
+    def text(self):
+        return self._text
+    def content_desc(self):
+        if "content-desc" in self._p:
+            return self._p["content-desc"]
+        else:
+            return None
     def visible(self):
-        return self._p.get("getVisibility()", "") == "VISIBLE"
+        return self._visible
     def dump(self):
         p = self._p
         return ("ViewItem(\n\tchildren = %d\n\tclassName = '%s'\n\tcode = '%s'\n\t" +
@@ -1721,12 +1785,14 @@ class ViewItem(fmbtgti.GUIItem):
             len(self._children), self._className, self._code, self._indent,
             '\n\t\t'.join(['"%s": %s' % (key, p[key]) for key in sorted(p.keys())]))
     def __str__(self):
-        if "text:mText" in self._p:
+        if self.text():
             text = ", text=%s" % (repr(self.text()),)
         else:
             text = ""
-        return ("ViewItem(className='%s', id=%s, bbox=%s%s)"  % (
-                self._className, self.id(), self.bbox(), text))
+        if "content-desc" in self._p and self._p["content-desc"]:
+            text += ", content_desc=%s" % (repr(self.content_desc(),))
+        return ("ViewItem(className=%s, id=%s, bbox=%s%s)"  % (
+                repr(self._className), repr(self.id()), self.bbox(), text))
 
 class View(object):
     """
@@ -1755,7 +1821,10 @@ class View(object):
             intCoords = lambda x, y: (int(x), int(y))
         self._intCoords = intCoords
         try:
-            self._parseDump(dump, self._rawDumpFilename, displayToScreen)
+            if dump.startswith("<?xm"):
+                self._parseUIAutomatorDump(dump, self._rawDumpFilename, displayToScreen)
+            else:
+                self._parseDump(dump, self._rawDumpFilename, displayToScreen)
         except Exception, e:
             self._errors.append((-1, "", "Parser error"))
 
@@ -1848,18 +1917,16 @@ class View(object):
         Returns list of ViewItems with given text.
         """
         if partial:
-            c = lambda item: (
-                item.properties().get("text:mText", "").find(text) != -1 )
+            c = lambda item: item.text().find(text) != -1 if item.text() != None else False
         else:
-            c = lambda item: (
-                item.properties().get("text:mText", None) == text )
+            c = lambda item: item.text() == text
         return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
 
     def findItemsById(self, id, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
         """
         Returns list of ViewItems with given id.
         """
-        c = lambda item: item.properties().get("mID", "") == id
+        c = lambda item: item.id() == id
         return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
 
     def findItemsByClass(self, className, partial=True, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
@@ -1876,6 +1943,17 @@ class View(object):
         """
         idOk = self.findItemsById(id, count=-1, searchRootItem=searchRootItem, onScreen=onScreen)
         return self.findItemsByClass(className, partial=partial, count=count, searchItems=idOk, onScreen=onScreen)
+
+    def findItemsByContentDesc(self, content_desc, partial=False, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
+        """
+        Returns list of ViewItems with given content-desc.
+        Works on uiautomatorDumps only.
+        """
+        if partial:
+            c = lambda item: item.content_desc().find(content_desc) != -1
+        else:
+            c = lambda item: item.content_desc() == content_desc
+        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
 
     def findItemsByRawProps(self, s, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
         """
@@ -1933,9 +2011,43 @@ class View(object):
         """
         shutil.copy(self._rawDumpFilename, fileOrDirName)
 
+    def _parseUIAutomatorDump(self, dump, rawDumpFilename, displayToScreen):
+        """
+        Process XML output from "uiautomator dump" and create
+        a tree of ViewItems.
+        """
+        def add_elt(elt, parent, indent, results):
+            if ("resource-id" in elt.attrib and
+                "bounds" in elt.attrib):
+                try:
+                    vi = ViewItem(elt.attrib["class"],
+                                  elt.attrib["resource-id"].split(":", 1)[-1],
+                                  indent,
+                                  elt.attrib,
+                                  parent,
+                                  "",
+                                  self._rawDumpFilename,
+                                  displayToScreen)
+                    results.append(vi)
+                    if parent:
+                        parent.addChild(self._viewItems[-1])
+                except Exception, e:
+                    adapterlog("parseUIAutomatorDump error: %s" % (e,))
+                    vi = parent
+            else:
+                vi = parent
+            for child in elt.getchildren():
+                add_elt(child, vi, indent + 1, results)
+        self._viewItems = []
+        tree = xml.etree.ElementTree.parse(rawDumpFilename)
+        root = tree.getroot()
+        add_elt(root, None, 0, self._viewItems)
+        return self._viewItems
+
     def _parseDump(self, dump, rawDumpFilename, displayToScreen):
         """
-        Process the raw dump data and create a tree of ViewItems
+        Process the raw window service dump data and create a tree of
+        ViewItems.
         """
         if not isinstance(dump, unicode):
             try:
@@ -2932,6 +3044,19 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             else:
                 exitstatus, stdout, stderr = None, None, None
         return exitstatus, stdout, stderr
+
+    def recvUiautomatorDump(self):
+        remote_filename = "/sdcard/fmbtandroid-v.xml"
+        self.pkill("monkey")
+        status, out, err = self.shellSOE(
+            "rm -f %s && uiautomator dump %s >/dev/null && cat %s" %
+            (remote_filename, remote_filename, remote_filename))
+        if status == 0:
+            return out
+        else:
+            _adapterLog("error on uiautomator dump. status, out, err = %s" %
+                        (repr((status, out, err)),))
+            return None
 
     def recvViewData(self, retry=3):
         _dataBufferLen = 4096 * 16
