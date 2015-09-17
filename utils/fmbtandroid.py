@@ -1364,8 +1364,14 @@ class Device(fmbtgti.GUITestInterface):
         """
         if self._supportsView == None:
             try:
-                self.existingConnection().recvViewData()
-                self._supportsView = True
+                if self.uiautomatorDump():
+                    if self.existingConnection().recvUiautomatorDump():
+                        self._supportsView = True
+                    else:
+                        self._supportsView = False
+                else:
+                    self.existingConnection().recvViewData()
+                    self._supportsView = True
             except AndroidConnectionError:
                 self._supportsView = False
         return self._supportsView
