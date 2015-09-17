@@ -409,7 +409,9 @@ class Device(fmbtgti.GUITestInterface):
 
           uiautomatorDump (boolean, optional)
                   If True, use "uiautomator dump" as refreshView() backend.
-                  Otherwise window service dump is used. The default is False.
+                  Otherwise window service dump is used.
+                  Set uiautomatorDump=True to test devices that are not rooted.
+                  The default is False.
         """
 
         if kwargs.get("rotateScreenshot", "auto") == "auto":
@@ -1072,7 +1074,11 @@ class Device(fmbtgti.GUITestInterface):
             if uiautomatorDump == True or (uiautomatorDump == None and self.uiautomatorDump()):
                 dump = self.existingConnection().recvUiautomatorDump()
             else:
-                dump = self.existingConnection().recvViewData()
+                try:
+                    dump = self.existingConnection().recvViewData()
+                except AndroidConnectionError:
+                    self._lastView = None
+                    raise
             if dump != None:
                 viewDir = os.path.dirname(self._newScreenshotFilepath())
                 view = View(viewDir, self.serialNumber, dump, displayToScreen, self.itemOnScreen, self.intCoords)
@@ -1088,6 +1094,7 @@ class Device(fmbtgti.GUITestInterface):
                     retryCount += 1
                     time.sleep(0.2) # sleep before retry
                 else:
+                    self._lastView = None
                     raise AndroidConnectionError("Cannot read window dump")
             else:
                 # successfully parsed or parsed with errors but no more retries
