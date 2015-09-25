@@ -3029,7 +3029,7 @@ class _VisualLog:
         inactiveOutputHtml = ""
         #If the test step number has not changed,
         #the previous block was an "inactive" output action.
-        if self._testStep == ts:
+        if self._testStep == ts and not an[:4] in ["tag:", "AAL:"]:
             inactiveOutputHtml = ' after_inactive_action'
         if ts == -1 or an == "undefined":
             an = self._userFunction
