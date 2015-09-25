@@ -1,8 +1,24 @@
-fmbt (0.27-0.rc0) unstable; urgency=low
+fmbt (0.27-1) unstable; urgency=low
 
-  * Development version.
+  * fmbtandroid/chromiumos/rdp/tizen/vnc/windows/x11:
+    - Many visual log usability improvements: expandable depth levels,
+      short/fullpath filenames, highlighting polled/triggered outputs...
+  * fmbtandroid:
+    - Supports both uiautomator (NEW) and window service dumps
+      as refreshView() backends. See refreshView() and setUiautomatorDump().
+    - Debug builds or rooted devices are no more required for tapText(),
+      swipeText(), etc. when using the uiautomator backend.
+  * fmbtvnc:
+    - Support latest vncdotool (v0.9) as backend.
+  * test generation:
+    - lookahead performance boost when generating tests from AAL/Python.
+  * pythonshare:
+    - Support default namespace in connspec: connect to host:port/namespace.
+    - pythonshare-client can --kill the server (Python: conn.kill_server())
+    - pythonshare-client can --drop a namespace from the server (Python:
+      conn.drop_ns(namespace))
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 28 Aug 2015 09:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 25 Sep 2015 10:42:00 +0300
 
 fmbt (0.26-1) unstable; urgency=low
 
