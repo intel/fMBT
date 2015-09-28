@@ -94,3 +94,10 @@ class Ns_rv(object):
     def __str__(self):
         return 'Ns_rv(status="%s", errormsg="%s")' % (
             self.status, errormsg)
+
+class Server_ctl(object):
+    def __init__(self, command):
+        self.command = command
+    def __str__(self):
+        return 'Server_ctl(command="%s")' % (
+            self.command,)

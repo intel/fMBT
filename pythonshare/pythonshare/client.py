@@ -27,7 +27,9 @@ import socket
 import cPickle
 
 import pythonshare
-from pythonshare.messages import Exec, Exec_rv, Async_rv, Register_ns, Request_ns, Drop_ns, Ns_rv
+from pythonshare.messages import \
+    Exec, Exec_rv, Async_rv, Register_ns,\
+    Request_ns, Drop_ns, Ns_rv, Server_ctl
 
 class Connection(object):
     """Connection to a Pythonshare server.
@@ -73,7 +75,7 @@ class Connection(object):
                   the default namespace that is used on eval_() and exec_().
                   The default is "default".
         """
-        self._ns = namespace
+        self.set_namespace(namespace)
 
         if isinstance(host_or_from_server, str) and isinstance(port_or_to_server, int):
             host = host_or_from_server
@@ -282,6 +284,20 @@ class Connection(object):
 
     def close(self):
         pythonshare._close(self._to_server, self._from_server, self._s)
+
+    def kill_server(self):
+        """Send server shutdown message"""
+        cPickle.dump(Server_ctl("die"), self._to_server)
+        self._to_server.flush()
+        return True
+
+    def namespace(self):
+        """Return default namespace"""
+        return self._ns
+
+    def set_namespace(self, ns):
+        """Set new default namespace"""
+        self._ns = ns
 
     def getpeername(self):
         if self._s:

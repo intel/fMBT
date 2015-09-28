@@ -56,9 +56,30 @@ def _close(*args):
                 pass
 
 def connection(hostspec, password=None, namespace=None):
+    """Returns Connection to pythonshare server at hostspec.
+
+    Parameters:
+
+      hostspec (string):
+              Syntax:
+              [socket://][PASSWORD@]HOST[:PORT][/NAMESPACE]
+              shell://[SHELLCOMMAND]
+              The default scheme is socket. Examples:
+              hostname equals socket://hostname:8089
+              host:port equals socket://host:port
+              host/namespace equals socket://host:8089/namespace
+
+      password (string, optional):
+              use password to log in to the server. Overrides
+              hostspec password.
+
+      namespace (string, optional):
+              send code to the namespace on server by default.
+              Overrides hostspec namespace.
+    """
     if not "://" in hostspec:
         hostspec = "socket://" + hostspec
-    scheme, netloc, _, _, _ = _urlparse.urlsplit(hostspec)
+    scheme, netloc, path, _, _ = _urlparse.urlsplit(hostspec)
 
     kwargs = {}
     if namespace != None:
@@ -88,6 +109,9 @@ def connection(hostspec, password=None, namespace=None):
                 password = userinfo_password
             else:
                 password = userinfo
+
+        if not "namespace" in kwargs and path.replace("/", "", 1):
+            kwargs["namespace"] = path.replace("/", "", 1)
 
         rv = client.Connection(host, int(port), password=password, **kwargs)
     elif scheme == "shell":

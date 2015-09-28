@@ -83,6 +83,9 @@ Options when connected:
   -D, --disconnect
           Disconnect from the pythonshare-server.
 
+  -k, --kill
+          Shutdown pythonshare-server.
+
   -P, --poll
           Poll which asynchronously return values are available for
           reading.
@@ -130,7 +133,9 @@ def _pythonCode(code):
 class PythonshareConsole(code.InteractiveConsole):
     def __init__(self, *args, **kwargs):
         self._conn = kwargs.pop("conn")
-        self._ns = kwargs.pop("namespace")
+        self._ns = kwargs.pop("namespace", None)
+        if self._ns == None:
+            self._ns = conn.namespace()
         code.InteractiveConsole.__init__(self, *args, **kwargs)
         self.__class__.__name__ = "pythonshare namespace %s at %s" % (
             self._ns, getattr(self._conn, "hostspec", "N/A"))
@@ -177,19 +182,19 @@ class PythonshareConsole(code.InteractiveConsole):
 if __name__ == "__main__":
     try:
         opts, remainder = getopt.gnu_getopt(
-            sys.argv[1:], "C:DAhSs:Pp:n:c:e:r:o:f:i",
+            sys.argv[1:], "C:DAhSs:Pp:n:c:e:r:o:f:ik",
             ["connect=", "disconnect",
              "async", "sync", "poll",
              "help", "server=", "port=",
              "password=", "password-file=",
              "namespace=", "code=", "eval=", "read=",
              "output=", "format=", "interact",
-             "ls-local", "ls-remote", "drop"])
+             "ls-local", "ls-remote", "drop", "kill"])
     except getopt.GetoptError, e:
         error(str(e))
     opt_server = "localhost"
     opt_port = pythonshare.default_port
-    opt_namespace = "pythonshare-client.default"
+    opt_namespace = None
     opt_async = False
     opt_formatter = formatter_str
     opt_password = None
@@ -232,7 +237,9 @@ if __name__ == "__main__":
                                               (opt_server, opt_port),
                                               password=opt_password)
             try:
-                conn.exec_in(opt_namespace, arg, async=opt_async)
+                if opt_namespace:
+                    conn.set_namespace(opt_namespace)
+                conn.exec_(arg, async=opt_async)
             except pythonshare.PythonShareError, e:
                 print type(e)
                 print e
@@ -242,8 +249,10 @@ if __name__ == "__main__":
                                               (opt_server, opt_port),
                                               password=opt_password)
             try:
+                if opt_namespace:
+                    conn.set_namespace(opt_namespace)
                 output(opt_formatter(
-                    conn.eval_in(opt_namespace, arg, async=opt_async)))
+                    conn.eval_(arg, async=opt_async)))
             except pythonshare.PythonShareError, e:
                 print type(e)
                 print e
@@ -268,15 +277,24 @@ if __name__ == "__main__":
             if conn == None:
                 error("cannot drop namespace - not connected")
             if not opt_namespace:
-                error("cannot drop undefined namespace, use -ns")
+                opt_namespace = conn.namespace()
             try:
                 conn.drop_ns(opt_namespace)
             except Exception, e:
                 error("cannot drop namespace: %s" % (
                     str(e).strip().splitlines()[-1].split(":")[-1].strip(),))
+        elif opt in ["-k", "--kill"]:
+            if conn == None:
+                error("cannot kill server - not connected")
+            try:
+                conn.kill_server()
+            except Exception, e:
+                error("error on kill: %s" % (e,))
         elif opt in ["-r", "--read"]:
             try:
                 try:
+                    if not opt_namespace:
+                        opt_namespace = conn.namespace()
                     index = int(arg)
                     # arg is an index to the list of poll_rvs
                     l = conn.poll_rvs(opt_namespace)
@@ -291,6 +309,8 @@ if __name__ == "__main__":
         elif opt in ["-S", "--sync"]:
             opt_async = False
         elif opt in ["-P", "--poll"]:
+            if not opt_namespace:
+                opt_namespace = conn.namespace()
             async_rvs = conn.poll_rvs(opt_namespace)
             print "\n".join([str(arv) for arv in async_rvs])
         elif opt in ["-o", "--output"]:

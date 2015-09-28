@@ -48,6 +48,7 @@ Options:
           $sT - time delta of test step from the start (see option "-T")
           $tb - tags before executing the test step
           $tg - tags after executing the test step
+          $tm - tags recognized by the model
           $tv - test verdict: pass or fail
           $tr - reason for the verdict
           $tt - total test runtime [s]
