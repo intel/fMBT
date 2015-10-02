@@ -3189,6 +3189,15 @@ function initialize(){
    $(".funccalls").each(function(index, element){
       hideChildLists(element.id);
    });
+   $("img").each(function(index, element){
+      if (element.dataset.hasOwnProperty("imgage")) {
+         console.log("Ping");
+         if (Math.round(10*element.dataset.imgage)/10 > 0.3) {
+            $(element).parent().append("<p class=\"age\">Screenshot age: " +
+               Math.round(100*element.dataset.imgage)/100 + "s</p>");
+         }
+      }
+   });
    tidyReturnValues();
    formatInactiveOutputActions();
    $("body").prepend("<p id='path_toggle'></p>");
@@ -3261,6 +3270,23 @@ else {
    .funccalls  { display: none   }
    .unformatted_returnvalue   {   color: gray;  }
    .formatted_returnvalue     {   color: gray;  }
+   img:hover {
+        -moz-transform: scale(3);
+        -webkit-transform: scale(3);
+        -o-transform: scale(3);
+        -ms-transform: scale(3);
+        transform: scale(3);
+        transition: transform 0.3s;
+        z-index: 100;
+    }
+    .age {
+        position: relative;
+        background-color: black;
+        top: -80px;
+        left: 20px;
+        width: 180px;
+        color: red;
+    }
 </style>
 </head><body>
             '''
@@ -3403,25 +3429,35 @@ else {
         else: imgClassAttr = ""
 
         if isinstance(img, Screenshot):
+            #We must use the original screenshot modification time
+            imgAge = time.time() - os.stat(self.unHighlightFilename(img.filename())).st_mtime
             imgHtmlName = self.relFilePath(img.filename(), self._outFileObj)
-            imgHtml = '\n<div class="spacer"><img %stitle="%s" src="%s" width="%s" alt="%s" /></div>' % (
+            imgHtml = '\n<div class="spacer"><img %s title="%s" src="%s" width="%s" alt="%s" data-imgage="%s"/></div>' % (
                 imgClassAttr,
                 "%s refreshScreenshot() at %s:%s" % img._logCallReturnValue,
-                imgHtmlName,
-                self._screenshotWidth,
-                imgHtmlName)
+                imgHtmlName, self._screenshotWidth, imgHtmlName, imgAge)
         elif img:
+            #We must use the original screenshot modification time
+            imgAge = time.time() - os.stat(self.unHighlightFilename(img)).st_mtime
             if width: width = 'width="%s"' % (width,)
             if type(imgTip) == tuple and len(imgTip) == 3:
                 imgTip = 'title="%s refreshScreenshot() at %s:%s"' % imgTip
             else:
                 imgTip = 'title="%s"' % (imgTip,)
             imgHtmlName = self.relFilePath(img, self._outFileObj)
-            imgHtml = '<div class="spacer"><img %s%s src="%s" %s alt="%s" /></div>' % (
-                imgClassAttr, imgTip, imgHtmlName, width, imgHtmlName)
+            imgHtml = '<div class="spacer"><img %s%s src="%s" %s alt="%s" data-imgage="%s"/></div>' % (
+                imgClassAttr, imgTip, imgHtmlName, width, imgHtmlName, imgAge)
         else:
             imgHtml = ""
         return "\n" + imgHtml + "\n"
+
+    def unHighlightFilename(self, screenshotFilename):
+        '''Get the filename of the original screenshot based on
+        the name of a highlighted screenshot.'''
+        if self._highlightCounter > 0:
+            return re.match('(.*)\.\d{5}\.png', screenshotFilename).group(1)
+        else:
+            return screenshotFilename
 
     def highlightFilename(self, screenshotFilename):
         self._highlightCounter += 1
