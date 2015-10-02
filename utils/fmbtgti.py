@@ -3427,18 +3427,24 @@ else {
     def imgToHtml(self, img, width="", imgTip="", imgClass=""):
         if imgClass: imgClassAttr = 'class="%s" ' % (imgClass,)
         else: imgClassAttr = ""
-
+        imgAge = 0
         if isinstance(img, Screenshot):
             #We must use the original screenshot modification time
-            imgAge = time.time() - os.stat(self.unHighlightFilename(img.filename())).st_mtime
+            try:
+                imgAge = time.time() - os.stat(self.unHighlightFilename(img.filename())).st_mtime
+            except:
+                #The file returned by unHighlightFilename did not exist.
+                pass
             imgHtmlName = self.relFilePath(img.filename(), self._outFileObj)
             imgHtml = '\n<div class="spacer"><img %s title="%s" src="%s" width="%s" alt="%s" data-imgage="%s"/></div>' % (
                 imgClassAttr,
                 "%s refreshScreenshot() at %s:%s" % img._logCallReturnValue,
                 imgHtmlName, self._screenshotWidth, imgHtmlName, imgAge)
         elif img:
-            #We must use the original screenshot modification time
-            imgAge = time.time() - os.stat(self.unHighlightFilename(img)).st_mtime
+            try:
+                imgAge = time.time() - os.stat(self.unHighlightFilename(img)).st_mtime
+            except:
+                pass
             if width: width = 'width="%s"' % (width,)
             if type(imgTip) == tuple and len(imgTip) == 3:
                 imgTip = 'title="%s refreshScreenshot() at %s:%s"' % imgTip
