@@ -3191,7 +3191,6 @@ function initialize(){
    });
    $("img").each(function(index, element){
       if (element.dataset.hasOwnProperty("imgage")) {
-         console.log("Ping");
          if (Math.round(10*element.dataset.imgage)/10 > 0.3) {
             $(element).parent().append("<p class=\"age\">Screenshot age: " +
                Math.round(100*element.dataset.imgage)/100 + "s</p>");
@@ -3461,7 +3460,10 @@ else {
         '''Get the filename of the original screenshot based on
         the name of a highlighted screenshot.'''
         if self._highlightCounter > 0:
-            return re.match('(.*)\.\d{5}\.png', screenshotFilename).group(1)
+            try:
+                return re.match('(.*)\.\d{5}\.png', screenshotFilename).group(1)
+            except:
+                return screenshotFilename
         else:
             return screenshotFilename
 
