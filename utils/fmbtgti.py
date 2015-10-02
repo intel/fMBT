@@ -3191,7 +3191,6 @@ function initialize(){
    });
    $("img").each(function(index, element){
       if (element.dataset.hasOwnProperty("imgage")) {
-         console.log("Ping");
          if (Math.round(10*element.dataset.imgage)/10 > 0.3) {
             $(element).parent().append("<p class=\"age\">Screenshot age: " +
                Math.round(100*element.dataset.imgage)/100 + "s</p>");
