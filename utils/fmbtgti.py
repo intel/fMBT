@@ -3428,6 +3428,7 @@ else {
         if imgClass: imgClassAttr = 'class="%s" ' % (imgClass,)
         else: imgClassAttr = ""
         imgAge = 0
+        imgAgeAttr = ""
         if isinstance(img, Screenshot):
             #We must use the original screenshot modification time
             try:
@@ -3435,11 +3436,13 @@ else {
             except:
                 #The file returned by unHighlightFilename did not exist.
                 pass
+            if imgAge > 0:
+                imgAgeAttr = ' data-imgage="%s"' % (imgAge,)
             imgHtmlName = self.relFilePath(img.filename(), self._outFileObj)
-            imgHtml = '\n<div class="spacer"><img %s title="%s" src="%s" width="%s" alt="%s" data-imgage="%s"/></div>' % (
+            imgHtml = '\n<div class="spacer"><img %s title="%s" src="%s" width="%s" alt="%s"%s/></div>' % (
                 imgClassAttr,
                 "%s refreshScreenshot() at %s:%s" % img._logCallReturnValue,
-                imgHtmlName, self._screenshotWidth, imgHtmlName, imgAge)
+                imgHtmlName, self._screenshotWidth, imgHtmlName, imgAgeAttr)
         elif img:
             try:
                 imgAge = time.time() - os.stat(self.unHighlightFilename(img)).st_mtime
@@ -3448,11 +3451,13 @@ else {
             if width: width = 'width="%s"' % (width,)
             if type(imgTip) == tuple and len(imgTip) == 3:
                 imgTip = 'title="%s refreshScreenshot() at %s:%s"' % imgTip
+                if imgAge > 0:
+                    imgAgeAttr = ' data-imgage="%s"' % (imgAge,)
             else:
                 imgTip = 'title="%s"' % (imgTip,)
             imgHtmlName = self.relFilePath(img, self._outFileObj)
-            imgHtml = '<div class="spacer"><img %s%s src="%s" %s alt="%s" data-imgage="%s"/></div>' % (
-                imgClassAttr, imgTip, imgHtmlName, width, imgHtmlName, imgAge)
+            imgHtml = '<div class="spacer"><img %s%s src="%s" %s alt="%s"%s/></div>' % (
+                imgClassAttr, imgTip, imgHtmlName, width, imgHtmlName, imgAgeAttr)
         else:
             imgHtml = ""
         return "\n" + imgHtml + "\n"
