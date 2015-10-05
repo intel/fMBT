@@ -3114,9 +3114,7 @@ class _VisualLog:
         self.write(r'''
 <!DOCTYPE html><html>
 <head><meta charset="utf-8"><title>fmbtandroid visual log</title>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 <script>
-
 
 function showHide(eid){
    if (document.getElementById(eid).style.display != 'inline-block'){
@@ -3229,17 +3227,6 @@ function togglePaths(){
    }
 }
 
-if(window.jQuery)
-{
-   $( document ).ready(function() {
-      initialize();
-   });
-}
-else {
-   console.log("Could not load jQuery. Showing the log as static html.");
-}
-
-
 </script>
 <style>
    body {   font-family: "Courier New", Courier, monospace; }
@@ -3289,6 +3276,30 @@ else {
     }
 </style>
 </head><body>
+
+<script>
+
+function initializejQuery(callback) {
+   var script = document.createElement("script");
+   script.src = "https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js";
+   document.body.appendChild(script);
+   var interval = setInterval(function() {
+      if (window.jQuery) {
+         console.log("jquery loaded");
+         callback();
+         clearInterval(interval);
+      }
+   }, 100); //Check every 100ms if jquery has loaded.
+}
+
+initializejQuery(function() {
+   $( document ).ready(function() {
+      initialize();
+      console.log("Document initialized");
+   });
+});
+
+</script>
             '''
         )
 
