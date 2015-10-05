@@ -3135,7 +3135,7 @@ function hideChildLists(eid) {
       //If the function has a parent function call
       if (parentFunctionCallElement.length > 0){
          parentFunctionCallElement.css("color", "blue");
-         parentFunctionCallElement.on("click", function(event) {
+         parentFunctionCallElement.unbind("click").bind("click", function(event) {
             $(event.currentTarget).parent().parent().find("ul.depth_" + (element_depth).toString()).toggle();
          });
          $(parentFunctionCallElement).parent().parent().find("ul.depth_" + (element_depth).toString()).hide();
@@ -3285,6 +3285,7 @@ else {
         left: 20px;
         width: 180px;
         color: red;
+        z-index: 0;
     }
 </style>
 </head><body>
