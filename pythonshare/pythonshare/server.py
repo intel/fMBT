@@ -456,10 +456,16 @@ def start_server(host, port,
 
         elif task == "export":
             _init_local_namespace(ns, None, force=True)
-            c = pythonshare.connection(arg)
+            daemon_log('exporting "%s" to %s' % (ns, arg))
+            try:
+                c = pythonshare.connection(arg)
+            except Exception, e:
+                daemon_log('connecting to %s failed: %s' % (arg, e))
+                return
             if c.export_ns(ns):
                 _register_exported_namespace(ns, c)
-                thread.start_new_thread(_serve_connection, (c, {"kill-server-on-close": True}))
+                thread.start_new_thread(
+                    _serve_connection, (c, {"kill-server-on-close": True}))
             else:
                 raise ValueError('Export namespace "%s" to "%s" failed'
                                  % (ns, arg))
