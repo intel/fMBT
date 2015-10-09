@@ -3114,9 +3114,7 @@ class _VisualLog:
         self.write(r'''
 <!DOCTYPE html><html>
 <head><meta charset="utf-8"><title>fmbtandroid visual log</title>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 <script>
-
 
 function showHide(eid){
    if (document.getElementById(eid).style.display != 'inline-block'){
@@ -3135,7 +3133,7 @@ function hideChildLists(eid) {
       //If the function has a parent function call
       if (parentFunctionCallElement.length > 0){
          parentFunctionCallElement.css("color", "blue");
-         parentFunctionCallElement.on("click", function(event) {
+         parentFunctionCallElement.unbind("click").bind("click", function(event) {
             $(event.currentTarget).parent().parent().find("ul.depth_" + (element_depth).toString()).toggle();
          });
          $(parentFunctionCallElement).parent().parent().find("ul.depth_" + (element_depth).toString()).hide();
@@ -3189,6 +3187,14 @@ function initialize(){
    $(".funccalls").each(function(index, element){
       hideChildLists(element.id);
    });
+   $("img").each(function(index, element){
+      if (element.dataset.hasOwnProperty("imgage")) {
+         if (Math.round(10*element.dataset.imgage)/10 > 0.3) {
+            $(element).parent().append("<p class=\"age\">Screenshot age: " +
+               Math.round(100*element.dataset.imgage)/100 + "s</p>");
+         }
+      }
+   });
    tidyReturnValues();
    formatInactiveOutputActions();
    $("body").prepend("<p id='path_toggle'></p>");
@@ -3221,17 +3227,6 @@ function togglePaths(){
    }
 }
 
-if(window.jQuery)
-{
-   $( document ).ready(function() {
-      initialize();
-   });
-}
-else {
-   console.log("Could not load jQuery. Showing the log as static html.");
-}
-
-
 </script>
 <style>
    body {   font-family: "Courier New", Courier, monospace; }
@@ -3261,8 +3256,50 @@ else {
    .funccalls  { display: none   }
    .unformatted_returnvalue   {   color: gray;  }
    .formatted_returnvalue     {   color: gray;  }
+   img:hover {
+        -moz-transform: scale(3);
+        -webkit-transform: scale(3);
+        -o-transform: scale(3);
+        -ms-transform: scale(3);
+        transform: scale(3);
+        transition: transform 0.3s;
+        z-index: 100;
+    }
+    .age {
+        position: relative;
+        background-color: black;
+        top: -80px;
+        left: 20px;
+        width: 180px;
+        color: red;
+        z-index: 0;
+    }
 </style>
 </head><body>
+
+<script>
+
+function initializejQuery(callback) {
+   var script = document.createElement("script");
+   script.src = "https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js";
+   document.body.appendChild(script);
+   var interval = setInterval(function() {
+      if (window.jQuery) {
+         console.log("jquery loaded");
+         callback();
+         clearInterval(interval);
+      }
+   }, 100); //Check every 100ms if jquery has loaded.
+}
+
+initializejQuery(function() {
+   $( document ).ready(function() {
+      initialize();
+      console.log("Document initialized");
+   });
+});
+
+</script>
             '''
         )
 
@@ -3401,27 +3438,51 @@ else {
     def imgToHtml(self, img, width="", imgTip="", imgClass=""):
         if imgClass: imgClassAttr = 'class="%s" ' % (imgClass,)
         else: imgClassAttr = ""
-
+        imgAge = 0
+        imgAgeAttr = ""
         if isinstance(img, Screenshot):
+            #We must use the original screenshot modification time
+            try:
+                imgAge = time.time() - os.stat(self.unHighlightFilename(img.filename())).st_mtime
+            except:
+                #The file returned by unHighlightFilename did not exist.
+                pass
+            if imgAge > 0:
+                imgAgeAttr = ' data-imgage="%s"' % (imgAge,)
             imgHtmlName = self.relFilePath(img.filename(), self._outFileObj)
-            imgHtml = '\n<div class="spacer"><img %stitle="%s" src="%s" width="%s" alt="%s" /></div>' % (
+            imgHtml = '\n<div class="spacer"><img %s title="%s" src="%s" width="%s" alt="%s"%s/></div>' % (
                 imgClassAttr,
                 "%s refreshScreenshot() at %s:%s" % img._logCallReturnValue,
-                imgHtmlName,
-                self._screenshotWidth,
-                imgHtmlName)
+                imgHtmlName, self._screenshotWidth, imgHtmlName, imgAgeAttr)
         elif img:
+            try:
+                imgAge = time.time() - os.stat(self.unHighlightFilename(img)).st_mtime
+            except:
+                pass
             if width: width = 'width="%s"' % (width,)
             if type(imgTip) == tuple and len(imgTip) == 3:
                 imgTip = 'title="%s refreshScreenshot() at %s:%s"' % imgTip
+                if imgAge > 0:
+                    imgAgeAttr = ' data-imgage="%s"' % (imgAge,)
             else:
                 imgTip = 'title="%s"' % (imgTip,)
             imgHtmlName = self.relFilePath(img, self._outFileObj)
-            imgHtml = '<div class="spacer"><img %s%s src="%s" %s alt="%s" /></div>' % (
-                imgClassAttr, imgTip, imgHtmlName, width, imgHtmlName)
+            imgHtml = '<div class="spacer"><img %s%s src="%s" %s alt="%s"%s/></div>' % (
+                imgClassAttr, imgTip, imgHtmlName, width, imgHtmlName, imgAgeAttr)
         else:
             imgHtml = ""
         return "\n" + imgHtml + "\n"
+
+    def unHighlightFilename(self, screenshotFilename):
+        '''Get the filename of the original screenshot based on
+        the name of a highlighted screenshot.'''
+        if self._highlightCounter > 0:
+            try:
+                return re.match('(.*)\.\d{5}\.png', screenshotFilename).group(1)
+            except:
+                return screenshotFilename
+        else:
+            return screenshotFilename
 
     def highlightFilename(self, screenshotFilename):
         self._highlightCounter += 1

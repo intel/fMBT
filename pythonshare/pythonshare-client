@@ -225,7 +225,10 @@ if __name__ == "__main__":
                 error('error reading password file "%s": %s' % (arg, err))
         elif opt in ["-C", "--connect"]:
             hostspec = arg
-            conn = pythonshare.connection(arg, password=opt_password)
+            try:
+                conn = pythonshare.connection(hostspec, password=opt_password)
+            except pythonshare.socket.error, e:
+                error('cannot connect to "%s": %s' % (hostspec, e))
         elif opt in ["-D", "--disconnect"]:
             conn.close()
             conn = None

@@ -290,9 +290,6 @@ def _remote_execute(ns, exec_msg):
     rns.to_remote.flush()
     return cPickle.load(rns.from_remote)
 
-def _remote_close(ns):
-    del _g_remote_namespaces[ns]
-
 def _connection_lost(conn_id, *closables):
     if closables:
         pythonshare._close(*closables)
@@ -319,6 +316,7 @@ def _serve_connection(conn, conn_opts):
     conn_id = "%s-%s" % (timestamp(), id(conn))
     auth_ok = False
     passwords = [k for k in conn_opts.keys() if k.startswith("password.")]
+    kill_server_on_close = conn_opts.get("kill-server-on-close", False)
     if passwords:
         # password authentication is required for this connection
         received_password = cPickle.load(from_client)
@@ -400,7 +398,8 @@ def _serve_connection(conn, conn_opts):
                 try:
                     exec_rv = _remote_execute(ns, obj)
                 except EOFError: # connection lost
-                    _remote_close(ns)
+                    daemon_log('connection lost to "%s"' % (ns,))
+                    _drop_remote_namespace(ns)
                     break
             else: # execute in local namespace
                 if whitelist_local == None or ns in whitelist_local:
@@ -439,6 +438,10 @@ def _serve_connection(conn, conn_opts):
     if opt_debug:
         daemon_log("disconnected %s:%s" % conn.getpeername())
     _connection_lost(conn_id, to_client, from_client, conn)
+    if kill_server_on_close:
+        _g_server_shutdown = True
+        if _g_wake_server_function:
+            _g_wake_server_function()
 
 def start_server(host, port,
                  ns_init_import_export=[],
@@ -453,10 +456,16 @@ def start_server(host, port,
 
         elif task == "export":
             _init_local_namespace(ns, None, force=True)
-            c = pythonshare.connection(arg)
+            daemon_log('exporting "%s" to %s' % (ns, arg))
+            try:
+                c = pythonshare.connection(arg)
+            except Exception, e:
+                daemon_log('connecting to %s failed: %s' % (arg, e))
+                return
             if c.export_ns(ns):
                 _register_exported_namespace(ns, c)
-                thread.start_new_thread(_serve_connection, (c, {}))
+                thread.start_new_thread(
+                    _serve_connection, (c, {"kill-server-on-close": True}))
             else:
                 raise ValueError('Export namespace "%s" to "%s" failed'
                                  % (ns, arg))

@@ -418,7 +418,7 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=None,
     def update_generated_tags(aal, include_variables,
                               generated_tagnames, tags, new_lsts_state_num):
         for v in include_variables:
-            t = "var:%s = %s" % (v, str(aal._variables[v])[:42])
+            t = "var:%s = %s" % (v, repr(aal._variables[v])[:42])
             if not t in generated_tagnames:
                 generated_tagnames.add(t)
                 tags[t] = []
