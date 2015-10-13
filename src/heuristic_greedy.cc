@@ -150,10 +150,11 @@ int Heuristic_greedy::getIAction()
   memcpy(input_actions, actions, input_action_count * sizeof(int));
   int retval = -42;
 
-  log.debug("greedy getIAction %i", input_action_count);
-
-  for(int u = 0; u < input_action_count; u++) {
-    log.debug("iaction %i %i", u, input_actions[u]);
+  if (log.is_debug()) {
+    log.debug("greedy getIAction %i", input_action_count);
+    for(int u = 0; u < input_action_count; u++) {
+      log.debug("iaction %i %i", u, input_actions[u]);
+    }
   }
 
   if (input_action_count == 0) {
