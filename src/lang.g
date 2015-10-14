@@ -224,49 +224,49 @@ act: ( 'action' astr | 'input' istr | 'output' ostr ) {
 
 ab: (header|guard|body|adapter|tag|act|parser)*;
 
-astr:   string          {
-            if (obj->check_name($0.str,$n0.start_loc.pathname,$n0.start_loc.line)) {
-                raise_name_error($n0.start_loc,(Parser*)_parser,$0.str);
+astr:   comment* string comment* {
+            if (obj->check_name($1.str,$n1.start_loc.pathname,$n1.start_loc.line)) {
+                raise_name_error($n1.start_loc,(Parser*)_parser,$1.str);
             }
-            obj->set_name($0.str,true);
+            obj->set_name($1.str,true);
         } |
-        astr ',' string {
-            if (obj->check_name($2.str,$n2.start_loc.pathname,$n2.start_loc.line)) {
-                raise_name_error($n2.start_loc,(Parser*)_parser,$2.str);
+        astr ',' comment* string comment* {
+            if (obj->check_name($3.str,$n3.start_loc.pathname,$n3.start_loc.line)) {
+                raise_name_error($n3.start_loc,(Parser*)_parser,$3.str);
             }
-            obj->set_name($2.str);
+            obj->set_name($3.str);
         } ;
 
-istr:   string          {
-            std::string* tmp=new std::string("i:" + *$0.str);
-            delete $0.str;
-            if (obj->check_name(tmp,$n0.start_loc.pathname,$n0.start_loc.line)) {
-                raise_name_error($n0.start_loc,(Parser*)_parser,tmp);
+istr:   comment* string comment* {
+            std::string* tmp=new std::string("i:" + *$1.str);
+            delete $1.str;
+            if (obj->check_name(tmp,$n1.start_loc.pathname,$n1.start_loc.line)) {
+                raise_name_error($n1.start_loc,(Parser*)_parser,tmp);
             }
             obj->set_name(tmp,true,aalang::IACT);
         } |
-        istr ',' string {
-            std::string* tmp=new std::string("i:" + *$2.str);
-            delete $2.str;
-            if (obj->check_name(tmp,$n2.start_loc.pathname,$n2.start_loc.line)) {
-                raise_name_error($n2.start_loc,(Parser*)_parser,tmp);
+        istr ',' comment* string comment* {
+            std::string* tmp=new std::string("i:" + *$3.str);
+            delete $3.str;
+            if (obj->check_name(tmp,$n3.start_loc.pathname,$n3.start_loc.line)) {
+                raise_name_error($n3.start_loc,(Parser*)_parser,tmp);
             }
             obj->set_name(tmp,false,aalang::IACT);
         } ;
 
-ostr:   string          {
-            std::string* tmp=new std::string("o:" + *$0.str);
-            delete $0.str;
-            if (obj->check_name(tmp,$n0.start_loc.pathname,$n0.start_loc.line)) {
-                raise_name_error($n0.start_loc,(Parser*)_parser,tmp);
+ostr:   comment* string comment* {
+            std::string* tmp=new std::string("o:" + *$1.str);
+            delete $1.str;
+            if (obj->check_name(tmp,$n1.start_loc.pathname,$n1.start_loc.line)) {
+                raise_name_error($n1.start_loc,(Parser*)_parser,tmp);
             }
             obj->set_name(tmp,true,aalang::OBSERVE);
         } |
-        ostr ',' string {
-            std::string* tmp=new std::string("o:" + *$2.str);
-            delete $2.str;
-            if (obj->check_name(tmp,$n2.start_loc.pathname,$n2.start_loc.line)) {
-                raise_name_error($n2.start_loc,(Parser*)_parser,tmp);
+        ostr ',' comment* string comment* {
+            std::string* tmp=new std::string("o:" + *$3.str);
+            delete $3.str;
+            if (obj->check_name(tmp,$n3.start_loc.pathname,$n3.start_loc.line)) {
+                raise_name_error($n3.start_loc,(Parser*)_parser,tmp);
             }
             obj->set_name(tmp,false,aalang::OBSERVE);
         } ;
