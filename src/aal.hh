@@ -106,6 +106,10 @@ public:
 
   static std::map<std::string,aal*>* storage;
 
+  virtual int lts_save_state(bool reset) {
+    return -1;
+  }
+
 protected:
   int refcount;
   std::vector<int> actions;
