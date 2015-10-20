@@ -75,7 +75,7 @@ class AALModel:
                 return
             i += 1
 
-    def call(self, func, call_arguments = ()):
+    def call(self, func, call_arguments=None):
         guard_list = None
         try:
             fmbt._g_simulated_actions = self._stack_executed_actions
@@ -86,13 +86,16 @@ class AALModel:
                 for prerequisite in func.requires:
                     if not self.call(getattr(self, prerequisite)):
                         return False
-            args = []
-            for arg in call_arguments:
-                if arg == '':
-                    args.append('')
-                else:
-                    args.append(eval(arg, self._variables))
-            self._variables['args'] = args
+            if call_arguments:
+                args = []
+                for arg in call_arguments:
+                    if arg == '':
+                        args.append('')
+                    else:
+                        args.append(eval(arg, self._variables))
+                self._variables['args'] = args
+            else:
+                self._variables['args'] = []
             rv = eval(func.func_code, self._variables)
             if guard_list:
                 guard_list.pop()
