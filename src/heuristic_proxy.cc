@@ -21,7 +21,7 @@
 
 Heuristic* Heuristic_proxy::old_heuristic=NULL;
 
-Heuristic* heuristic_proxy_creator (Log& log, std::string params = "")
+Heuristic* heuristic_proxy_creator (Log& log, std::string params = "",void* p=NULL)
 {
   return Heuristic_proxy::old_heuristic;
 }
@@ -35,6 +35,6 @@ Heuristic_proxy::Heuristic_proxy(Log& l,Heuristic* _h,const std::string& _n):
 
   old_heuristic=h;
 
-  HeuristicFactory::add_factory("old",heuristic_proxy_creator);
+  HeuristicFactory::add_factory("old",heuristic_proxy_creator,NULL);
 }
 

@@ -40,6 +40,7 @@ Function_Supported::Function_Supported(const std::string& param) {
   if (r==NULL) {
     status=false;
   }
+  prefer = r->prefer;
 }
 
 Function_Supported::~Function_Supported()

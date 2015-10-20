@@ -335,7 +335,13 @@ double AlgPathToAdaptiveCoverage::_path_to_best_evaluation
 
     std::vector<int> action_candidates;
     if (m_function) {
-      int base=m_function->val();
+      int base;
+      if (m_function->prefer==Function::FLOAT) {
+	int exp;
+	base=frexp(m_function->fval(),&exp)*input_action_count;
+      } else {
+	base=m_function->val()%input_action_count;
+      }
       for (int i = 0; i < input_action_count; i++)
 	action_candidates.push_back(input_actions[(base+i)%input_action_count]);
     } else {
@@ -452,7 +458,13 @@ double AlgBDFS::_path_to_best_evaluation(Model& model, std::vector<int>& path, i
 
     std::vector<int> action_candidates;
     if (m_function) {
-      int base=m_function->val();
+      int base;
+      if (m_function->prefer==Function::FLOAT) {
+	int exp;
+	base=frexp(m_function->fval(),&exp)*input_action_count;
+      } else {
+	base=m_function->val()%input_action_count;
+      }
       for (int i = 0; i < input_action_count; i++)
 	action_candidates.push_back(input_actions[(base+i)%input_action_count]);
     } else {

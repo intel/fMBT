@@ -26,7 +26,6 @@
 #include <string.h>
 
 namespace {
-
   std::vector<void*> libs;
 
   void libs_atexit() {
@@ -35,7 +34,7 @@ namespace {
     }
   }
 
-  Adapter* lib_creator(Log& l, std::string params) {
+  Adapter* lib_creator(Log& l, std::string params,void*) {
     Adapter* m;
     std::vector<std::string> s;
 

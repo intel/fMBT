@@ -28,17 +28,17 @@ Coverage* CoverageFactory::create(Log& log, std::string name,
 {
   if (!creators) return NULL;
 
-  std::map<std::string, creator>::iterator i = (*creators).find(name);
+  std::map<std::string, std::pair<creator,void*> >::iterator i = (*creators).find(name);
 
   if (i!=(*creators).end()) {
-    return (i->second)(log, params);
+    return (i->second.first)(log, params,i->second.second);
   } else {
     char* endp;
     float val=strtof(name.c_str(),&endp);
     if (*endp==0 && (val>=0.0 || std::isnan(val))) {
       i=(*creators).find("const");
       if (i!=(*creators).end()) {
-	return (i->second)(log,name);
+	return (i->second.first)(log,name,i->second.second);
       }
     }
   }

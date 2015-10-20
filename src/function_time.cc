@@ -21,6 +21,7 @@
 #include "function_time.hh"
 
 Function_time::Function_time(const std::string& param) {
+  prefer=CARE;
 }
 
 #include <time.h>

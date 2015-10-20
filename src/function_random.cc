@@ -35,6 +35,7 @@ Function_random::Function_random(const std::string& param) {
     status=r->status;
     errormsg=r->errormsg;
   }
+  prefer=FLOAT;
 }
 
 Function_random::~Function_random() {
