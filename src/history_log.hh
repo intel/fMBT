@@ -34,7 +34,8 @@ public:
   virtual Alphabet* set_coverage(Coverage*,Alphabet* alpha,Learning* learn=NULL);
 
 protected:
-  int alphabet_done;
+  bool alphabet_started;
+  bool alphabet_done;
   char* act;
   char* tag;
   void processNode(xmlTextReaderPtr reader);

@@ -95,8 +95,8 @@ int main(int argc,char * const argv[])
     }
     case 'C': {
       /* For debugging. print coverage modules */
-      std::map<std::string, CoverageFactory::creator>::iterator i;
-      std::map<std::string, CoverageFactory::creator>::iterator e;
+      std::map<std::string, std::pair<CoverageFactory::creator,void*> >::iterator i;
+      std::map<std::string, std::pair<CoverageFactory::creator,void*> >::iterator e;
       if (CoverageFactory::creators) {
 	i=CoverageFactory::creators->begin();
 	e=CoverageFactory::creators->end();
@@ -111,8 +111,8 @@ int main(int argc,char * const argv[])
 
     case 'H': {
       /* For debugging. print heuristic modules */
-      std::map<std::string, HeuristicFactory::creator>::iterator i;
-      std::map<std::string, HeuristicFactory::creator>::iterator e;
+      std::map<std::string, std::pair<HeuristicFactory::creator,void*> >::iterator i;
+      std::map<std::string, std::pair<HeuristicFactory::creator,void*> >::iterator e;
       if (HeuristicFactory::creators) {
 	i=HeuristicFactory::creators->begin();
 	e=HeuristicFactory::creators->end();
@@ -128,8 +128,8 @@ int main(int argc,char * const argv[])
 
     case 'A': {
       /* For debugging. print adapter modules */
-      std::map<std::string, AdapterFactory::creator>::iterator i;
-      std::map<std::string, AdapterFactory::creator>::iterator e;
+      std::map<std::string, std::pair<AdapterFactory::creator,void*> >::iterator i;
+      std::map<std::string, std::pair<AdapterFactory::creator,void*> >::iterator e;
       if (AdapterFactory::creators) {
 	i=AdapterFactory::creators->begin();
 	e=AdapterFactory::creators->end();
@@ -143,8 +143,8 @@ int main(int argc,char * const argv[])
       break;
     case 'M': {
       /* For debugging. print model modules */
-      std::map<std::string, ModelFactory::creator>::iterator i;
-      std::map<std::string, ModelFactory::creator>::iterator e;
+      std::map<std::string, std::pair<ModelFactory::creator,void*> >::iterator i;
+      std::map<std::string, std::pair<ModelFactory::creator,void*> >::iterator e;
       if (ModelFactory::creators) {
 	i=ModelFactory::creators->begin();
 	e=ModelFactory::creators->end();

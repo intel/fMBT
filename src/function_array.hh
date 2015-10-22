@@ -17,40 +17,29 @@
  *
  */
 
-#define _FUNCTION_INTERNAL_
-#include "random.hh"
-#include "function_random.hh"
+#ifndef __FUNCTION_array_HH__
+#include "function.hh"
 
-Function_random::Function_random(const std::string& param) {
+#include <vector>
 
-  if (param!="") {
-    r=new_random(param);
-  } else {
-    r=Random::default_random();
+class Function_array: public Function {
+public:
+  Function_array(const std::string& param);
+  Function_array(std::vector<Function*>,Function*);
+  virtual ~Function_array() {
+    if (index) {
+      delete index;
+      index=NULL;
+    }
   }
-  if (!r) {
-    status=false;
-    errormsg="Can't create random!";
-  } else {
-    status=r->status;
-    errormsg=r->errormsg;
-  }
-  prefer=FLOAT;
-}
-
-Function_random::~Function_random() {
-  r->unref();
-  r=NULL;
-}
+  virtual signed long val();
+  virtual double fval();
+  inline int ind();
+  std::vector<Function*> array;
+  Function* index;
+  bool float_index;
+  bool modulo;
+};
 
 
-double Function_random::fval() {
-  return r->drand48();
-}
-
-signed long Function_random::val() {
-  return r->rand();
-}
-
-
-FACTORY_DEFAULT_CREATOR(Function, Function_random, "random")
+#endif /* __FUNCTION_array_HH__ */

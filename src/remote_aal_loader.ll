@@ -11,11 +11,114 @@ class aal_loader {
 public:
 	virtual  aal* load(std::string& name,Log&);
 };
+void print_lts(const std::string& str);
 
 Log_aalremote lokki;
 
 aal* Aal;
 std::vector<int> act_vect;
+bool nomagic=false;
+int state_cnt=0;
+// Map source to map which maps action to destination state
+std::map<int,std::map<int,int> > lts;
+// map[state][prop]
+std::map<int,std::set<int> > props;
+void lts_generator(int depth,int current_state)
+{
+  if (depth==0)
+    return;
+
+  int* v;
+  int len;
+  len=Aal->getActions(&v);
+  if (len==0)
+    return;
+  std::vector<int> actions(v,v+len);
+
+  for(int i=0;i<len;i++) {
+    Aal->push();
+    Aal->model_execute(actions[i]);
+    Aal->push();
+    int dest_state = Aal->lts_save_state(false);
+    if (dest_state>state_cnt)
+      state_cnt=dest_state;
+    Aal->pop();
+    lts[current_state][actions[i]]=dest_state;
+    lts_generator(depth-1,dest_state);
+    Aal->pop();
+  }  
+}
+
+void generate_lts(int initial_state,int depth)
+{
+    std::vector<std::string> anames=Aal->getActionNames();
+    std::vector<std::string> spnames=Aal->getSPNames();
+    int transition_cnt=0;
+
+    // We could generate lts!
+    // Let's try that. Now we have saved our 'initial' state.
+    lts_generator(depth,initial_state); // Hardcoded lts depth :)
+
+    std::map<int,std::map<int,int> >::iterator i1;
+    std::map<int,int>               ::iterator i2;
+    for(i1=lts.begin();i1!=lts.end();i1++) {
+      transition_cnt+=i1->second.size();
+    }
+
+    std::ostringstream t(std::ios::out | std::ios::binary);
+
+    t << "Begin Lsts\nBegin Header\n";
+    t << "State_cnt = "      << state_cnt      << std::endl;
+    t << "Action_cnt = "     << anames.size()-1 << std::endl;
+    t << "Transition_cnt = " << transition_cnt << std::endl;
+    if (spnames.size()>1) {
+      t << "State_prop_cnt = " << spnames.size()-1 << std::endl;
+    }
+    
+    t << "Initial_states = " << initial_state;
+    t << ";\nEnd Header\n";
+    
+    t << "Begin Action_names\n";
+    for(int i=1;i<anames.size();i++) {
+      t << i << " = \"" << anames[i] << "\"\n";      
+    }
+    t << "End Action_names\n";
+
+    if (spnames.size()>1) {
+      t << "Begin State_props" << std::endl;
+
+      for(int i=1;i<spnames.size();i++) {
+        t << "\"" << spnames[i] << "\" : ";
+	bool c;
+	for(std::set<int>::iterator j=props[i+1].begin();
+	    j!=props[i+1].end();j++) {
+	  if (c) {
+	    t << ", ";
+	  }
+	  t << *j;
+	  c=true;
+	}
+	t << ";" << std::endl;
+      }
+      t << "End State_props" << std::endl;
+    }
+
+    t << "Begin Transitions\n";
+    for(i1=lts.begin();i1!=lts.end();i1++) {
+      t << " " << i1->first << ":";
+      for(i2=i1->second.begin();i2!=i1->second.end();i2++) {
+	t << " " << i2->second << "," << i2->first;
+      }
+      t << ";" << std::endl;	
+    }
+    t << "End Transitions\n";
+
+    t << "End Lsts\n";
+    lts.clear();
+    props.clear();    
+    print_lts(t.str());
+}
+ 
 void print_int(int i)
 {
 	fprintf(stdout,"fmbtmagic %i\n",i);
@@ -41,6 +144,16 @@ void print_int_vec(int rv,std::vector<int>&t)
 	fprintf(stdout,"\n");
 	fflush(stdout);
 }
+
+void print_lts(const std::string& str) {
+        if (nomagic) {
+	        fprintf(stdout,"%s\n",str.c_str());
+	} else {
+	        fprintf(stdout,"fmbtmagic %i\n%s",str.size(),str.c_str());
+		fflush(stdout);
+	}
+}
+ 
 
 void print_string(const std::string& str) {
      std::string s(str);
@@ -106,9 +219,26 @@ std::vector<int> act;
       BEGIN AE;
 }
 
-^"lts" {
-       print_int(-1);
+^"lts"[0-9]* {
+  Aal->push();
+  int initial_state=Aal->lts_save_state(true);
+  if (initial_state==0) {
+    initial_state=Aal->lts_save_state(false);
+    state_cnt=initial_state;
+    if (initial_state>0) {
+      generate_lts(initial_state,atoi(yytext+3));
+      Aal->lts_save_state(true);
+      Aal->pop();
+    } else {
+      print_int(-1);
       // Not supported
+      Aal->pop();
+    }
+  } else {
+    print_int(-1);
+    // Not supported
+    Aal->pop();
+  }
 }
 
 ^"ap" {
@@ -171,8 +301,8 @@ std::vector<int> act;
 
 int main(int argc,char** argv)
 {
-
-  if (argc != 2)
+  
+  if (argc != 2 && argc != 3)
     return 1;
 
   std::string name(argv[1]);
@@ -182,19 +312,36 @@ int main(int argc,char** argv)
   Aal=loader.load(name,lokki);
 
   if (Aal==NULL)
-    return -1;
+    return 2;
 
-  print_vec(Aal->getActionNames());
-  print_string("");
-  print_vec(Aal->getSPNames());
-  print_string("");
-  fflush(stdout);
+  if (argc==3) {
+    nomagic=true;
+    Aal->reset();
 
-  yyin = stdin;
-  yy_set_interactive(true);
-  yylex();
-  yylex_destroy();
-
+    Aal->push();
+    int initial_state=Aal->lts_save_state(true);
+    if (initial_state!=0) {
+      return 3;
+    }
+    initial_state=Aal->lts_save_state(false);
+    if (initial_state>0) {
+      state_cnt=initial_state;
+      generate_lts(initial_state,atoi(argv[2]));
+    } else {
+      return 4;
+    }
+  } else {
+    print_vec(Aal->getActionNames());
+    print_string("");
+    print_vec(Aal->getSPNames());
+    print_string("");
+    fflush(stdout);
+    
+    yyin = stdin;
+    yy_set_interactive(true);
+    yylex();
+    yylex_destroy();
+  }
   return 0;
 }
 

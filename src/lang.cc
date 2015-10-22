@@ -55,15 +55,23 @@ extern "C" {
 extern D_ParserTables parser_tables_lang;
 }
 
-GMainLoop *mainloop=NULL;
+struct callback_data {
+  GMainLoop* mainloop;
+  gint status;
+  guint id;
+};
 
 void process_end_callback(GPid pid,
                          gint status,
                          gpointer user_data)
 {
-  int* _status=(int*)user_data;
-  *_status=status;
-  g_main_loop_quit(mainloop);
+  struct callback_data* gdata=(struct callback_data*)user_data;
+  if (gdata) {
+    gdata->status=status;
+    g_main_loop_quit(gdata->mainloop);
+  }
+  g_spawn_close_pid(pid);
+  g_source_remove(gdata->id);
 }
 
 void print_usage()
@@ -241,7 +249,7 @@ int main(int argc,char** argv) {
   delete obj;
 
   if (lib) {
-    int _stdin;
+    int _stdin=-1;
     GPid pid;
     int argc;
     gchar **argv=NULL;
@@ -261,10 +269,10 @@ int main(int argc,char** argv) {
 
     for(int i=0;i<argc;i++) {
       if (argv[i]) {
-        free(argv[i]);
+        g_free(argv[i]);
       }
     }
-    free(argv);
+    g_free(argv);
 
     unsigned int pos=0;
     unsigned int wrote=0;
@@ -275,16 +283,19 @@ int main(int argc,char** argv) {
     close(_stdin);
 
     {
-      int status=-1;
-      g_child_watch_add(pid,process_end_callback,
-                       &status);
+      struct callback_data gdata;
+      gdata.mainloop=g_main_loop_new (NULL,false);
 
-      mainloop=g_main_loop_new (NULL,false);
-      g_main_loop_run(mainloop);
+      gdata.id=g_child_watch_add(pid,process_end_callback,
+				 &gdata);
 
-      if (status!=0) {
+      g_main_loop_run(gdata.mainloop);
+
+      if (gdata.status!=0) {
         error(1,0,"compiling failed.");
       }
+
+      g_main_loop_unref(gdata.mainloop);
     }
   } else {
     fprintf(outputfile,"%s",result.c_str());

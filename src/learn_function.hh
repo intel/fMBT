@@ -45,7 +45,7 @@ class Learn_action_function: public Learn_action {
 public:
   Learn_action_function(Log&l,std::string&s);
   virtual ~Learn_action_function() { }
-  virtual void suggest(int action) {}
+  virtual void suggest(int action);
   virtual void execute(int action) {}
   virtual float getF(int action);
   virtual float getC(int sug,int exe);
@@ -55,6 +55,8 @@ public:
   }
 protected:
   Function* f;
+  std::vector<int> pos;
+  int index_action;
+  int learn_as_function;
 };
-
 #endif

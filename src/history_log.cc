@@ -45,7 +45,7 @@ void History_log::handle_time(xmlTextReaderPtr reader) {
 }
 
 History_log::History_log(Log& l, std::string params) :
-  History(l,params), alphabet_done(false), act(NULL), tag(NULL), c(NULL), a(NULL), myes(NULL), learn(NULL), ada(NULL)
+  History(l,params),alphabet_started(false), alphabet_done(false), act(NULL), tag(NULL), c(NULL), a(NULL), myes(NULL), learn(NULL), ada(NULL)
 {
   std::vector<std::string> prm;
   commalist(params,prm);
@@ -107,7 +107,7 @@ void History_log::processNode(xmlTextReaderPtr reader)
   if (name==NULL) return;
 
   if (xmlTextReaderDepth(reader)>2) {
-    if (!alphabet_done) {
+    if (alphabet_started && !alphabet_done) {
       alphabet_done=true;
       if (model_from_log) {
 	log.ref();
@@ -122,6 +122,7 @@ void History_log::processNode(xmlTextReaderPtr reader)
     if ((xmlTextReaderDepth(reader)==2) &&
 	(strcmp((const char*)name,"action_name")==0)) {
       char* aname=unescape_string((char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"name"));
+      alphabet_started=true;
       if (aname!=NULL) {
 	anames.push_back(aname);
 	free(aname);
@@ -132,6 +133,7 @@ void History_log::processNode(xmlTextReaderPtr reader)
     if ((xmlTextReaderDepth(reader)==2) &&
 	(strcmp((const char*)name,"tag_name")==0)) {
       char* tname=unescape_string((char*)xmlTextReaderGetAttribute(reader,(xmlChar*)"name"));
+      alphabet_started=true;
       if (tname!=NULL) {
 	tnames.push_back(tname);
 	free(tname);

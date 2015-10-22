@@ -25,6 +25,7 @@
 #include "heuristic_proxy.hh"
 #include "coverage_proxy.hh"
 #include "learn_proxy.hh"
+#include "config.h"
 
 #ifndef DROI
 #include <glib.h>
@@ -75,6 +76,9 @@ Conf::Conf(Log& l, bool debug_enabled)
   set_model_callbacks.push_back(NULL);
   log.ref();
   log.push("fmbt_log");
+  log.push("version");
+  log.print("%s\n",VERSION FMBTBUILDINFO);
+  log.pop();
   log.set_debug(debug_enabled);
 
   End_condition *ec = new End_status_error(this,Verdict::W_ERROR,"");

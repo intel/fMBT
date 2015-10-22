@@ -194,6 +194,14 @@ def get():
     if opt_debug: _log("received: '%s'" % (cmd,))
     return cmd
 
+def log_version():
+    try:
+        import fmbt_config
+        fmbtlograw("<remote_pyaal_version>" + fmbt_config.fmbt_version +
+                   fmbt_config.fmbt_build_info+"</remote_pyaal_version>\n")
+    except:
+        fmbtlograw("<remote_pyaal_version>N/A</remote_pyaal_version>\n")
+
 class RemoteAALBridge:
     def __init__(self, aal):
         self._aal = aal
@@ -210,6 +218,9 @@ class RemoteAALBridge:
         for name in tag_names:
             put(name)
         put("")
+
+        # Write version information
+        log_version()
 
         # protocol loop
         adapter_call_arguments = []

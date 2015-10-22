@@ -72,19 +72,19 @@ class MODULETYPE;                                                      \
                                                                        \
 namespace MODULETYPE##Factory {                                        \
                                                                        \
-    typedef MODULETYPE*(*creator)(FACTORY_CREATOR_PARAMS);             \
+    typedef MODULETYPE*(*creator)(FACTORY_CREATOR_PARAMS,void*);       \
                                                                        \
     extern MODULETYPE* create(FACTORY_CREATE_PARAMS);                  \
                                                                        \
-    extern void add_factory(std::string name, creator c);              \
+    extern void add_factory(std::string name, creator c,void* p);      \
                                                                        \
     extern void remove_factory(std::string name);                      \
                                                                        \
-    extern std::map<std::string, creator>* creators;                   \
+    extern std::map<std::string, std::pair<creator, void*> >* creators;\
                                                                        \
     struct Register {                                                  \
-        Register(std::string _name, creator c):name(_name) {	       \
-            add_factory(name, c);                                      \
+      Register(std::string _name, creator c,void* p=NULL):name(_name) {\
+	  add_factory(name, c, p);				       \
         }                                                              \
         ~Register() {						       \
 	    remove_factory(name);				       \
@@ -94,16 +94,16 @@ namespace MODULETYPE##Factory {                                        \
 }
 
 #define FACTORY_CREATORS(MODULETYPE)                                   \
-std::map<std::string, MODULETYPE##Factory::creator>*                   \
+  std::map<std::string, std::pair<MODULETYPE##Factory::creator,void*> >*\
     MODULETYPE##Factory::creators = 0;                                 
 
 #define FACTORY_ADD_FACTORY(MODULETYPE)                                \
-void MODULETYPE##Factory::add_factory(std::string name, creator c)     \
+void MODULETYPE##Factory::add_factory(std::string name, creator c,void* p=NULL) \
 {                                                                      \
   if (!creators) {                                                     \
-    creators = new std::map<std::string, MODULETYPE##Factory::creator>;\
+    creators = new std::map<std::string, std::pair<MODULETYPE##Factory::creator, void*> >; \
   }                                                                    \
-  (*creators)[name] = c;                                               \
+  (*creators)[name] = std::pair<MODULETYPE##Factory::creator, void*>(c,p); \
 }                                                                      \
                                                                        \
 void MODULETYPE##Factory::remove_factory(std::string name)             \
@@ -124,9 +124,9 @@ MODULETYPE* MODULETYPE##Factory::create(                               \
 {                                                                      \
   if (!creators) return NULL;                                          \
                                                                        \
-  std::map<std::string, creator>::iterator i = (*creators).find(name); \
+  std::map<std::string, std::pair<creator,void*> >::iterator i = (*creators).find(name); \
                                                                        \
-  if (i!=creators->end()) return (i->second)(FACTORY_CREATOR_PARAMS2); \
+  if (i!=creators->end()) return (i->second.first)(FACTORY_CREATOR_PARAMS2,i->second.second); \
                                                                        \
   return NULL;                                                         \
 }
@@ -142,9 +142,9 @@ FACTORY_CREATE(MODULETYPE)
 
 #define FACTORY_DEFAULT_CREATOR(MODULETYPE, CLASSNAME, ID)	       \
 namespace {                                                            \
-  MODULETYPE* UNIQUENAME(creator_func) (FACTORY_CREATOR_PARAMS FACTORY_CREATE_DEFAULT_PARAMS) \
+  MODULETYPE* UNIQUENAME(creator_func) (FACTORY_CREATOR_PARAMS FACTORY_CREATE_DEFAULT_PARAMS, void* p=NULL) \
   {                                                                    \
-    return new CLASSNAME(FACTORY_CREATOR_PARAMS2);                     \
+    return new CLASSNAME(FACTORY_CREATOR_PARAMS2);		       \
   }                                                                    \
   static MODULETYPE##Factory::Register UNIQUENAME(me)(ID, UNIQUENAME(creator_func)); \
 }

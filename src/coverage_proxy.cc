@@ -22,7 +22,7 @@
 
 Coverage* Coverage_proxy::old_coverage=NULL;
 
-Coverage* coverage_proxy_creator (Log& log, std::string params = "")
+Coverage* coverage_proxy_creator (Log& log, std::string params = "",void* p=NULL)
 {
   return Coverage_proxy::old_coverage;
 }
@@ -38,7 +38,7 @@ Coverage_proxy::Coverage_proxy(Log& l,Coverage* _c,const std::string& _n):
 
   old_coverage=c;
 
-  CoverageFactory::add_factory("old",coverage_proxy_creator);
+  CoverageFactory::add_factory("old",coverage_proxy_creator,NULL);
 }
 
 
