@@ -219,8 +219,8 @@ int Heuristic_greedy::getIAction()
       std::reverse(m_path.begin(), m_path.end());
       std::vector<int> tmp_path = m_path;
 
-      double current_score=my_coverage->getCoverage();
-      double score;
+      volatile double current_score=my_coverage->getCoverage();
+      volatile double score;
       AlgPathToBestCoverage* alg;
 
       /* Spend more time for better coverage */
@@ -242,16 +242,16 @@ int Heuristic_greedy::getIAction()
 	  goto done;
 	}
 	if (score<=current_score) {
-	  log.print("<No improvement at depth %i/>\n",m_search_depth->val());
+	  log.debug("lookahead No improvement at depth %i",m_search_depth->val());
 	}
       } while (const_index && score<=current_score && (const_index->stored_val++)<array_size);
       delete alg;
 
       end_condition=(score<=current_score);
       if (const_index) {
-	log.print("<depth %i/>\n",m_search_depth->val());
-	// Next time try a bit smaller value
-	const_index->stored_val--;
+	log.debug("lookahead depth %i",m_search_depth->val());
+	// Next time start over.
+	const_index->stored_val=0;
 	if (const_index->stored_val<0) {
 	  const_index->stored_val=0;
 	}
