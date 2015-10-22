@@ -22,7 +22,7 @@
 #include "helper.hh"
 
 Function_array::Function_array(std::vector<Function*> _array,Function* _index): 
-  array(_array),index(_index)
+  array(_array),index(_index),float_index(false),modulo(false)
 {
 
 }
