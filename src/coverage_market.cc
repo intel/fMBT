@@ -349,7 +349,7 @@ Coverage_Market::unit_tag* Coverage_Market::req_rx_tag(const std::string &tag,ch
   if (tags.empty()) {
     errormsg = "No tags matching \"" + tag + "\"";
     status = false;
-    return NULL;
+    return new Coverage_Market::unit_tagleaf(0);
   }
 
   Coverage_Market::unit_tag* u=new Coverage_Market::unit_tagleaf(tags[0]);
@@ -381,7 +381,7 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const std::st
      r(andom): randomly choose an action from set of actions
   */
   if (!status) {
-    return NULL;
+    return new Coverage_Market::unit_leaf(0);
   }
   Coverage_Market::unit* u=NULL;
 
@@ -392,7 +392,7 @@ Coverage_Market::unit* Coverage_Market::req_rx_action(const char m,const std::st
     if (actions.empty()) {
       errormsg = "No actions matching \"" + action + "\"";
       status = false;
-      return NULL;
+      return new Coverage_Market::unit_leaf(0);
     }
     if (prev_tag||next_tag) {
       if (!prev_tag) {
