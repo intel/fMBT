@@ -894,6 +894,95 @@ Keyboard shortcuts:<br>
     def _aal2pyCmdline(self,aal_ppflags):
         return ["fmbt-aalc", "-l", "python"] + aal_ppflags + ["-o", self._aalcFileName, self._modelFileName]
 
+    def _saveandvalidate_cpp(self):
+        self._aalcFileName = _g_tempdir + os.sep + self._AALNAME() + ".so"
+        self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
+        # fmbt-aalc parameters
+        aal2lib_cmd = [ "fmbt-aalc" ] + self._CPP_FLAGS() + [ "-c", "-o", self._aalcFileName, self._modelFileName ]
+        status, output = self.runcmd(aal2lib_cmd)
+        if status == 0:
+            [show_vars, hide_vars], preview_depth, _, _, _, _, _, _, collapse = self.aalPreviewArguments()
+            aal2lsts_cmd = ["remote_aal_loader","lib("+self._AALNAME()+","+ self._aalcFileName+")",str(preview_depth)]
+            stat,(out,err) = self.runcmd(aal2lsts_cmd,{ "LD_LIBRARY_PATH" : _g_tempdir } )
+            if stat == 0:
+                file(self._lstsFileName,"w").write(out)
+                return 0
+            else:
+                self.showError("remote_aal_loader failure: %s:%s" % (out,err) )
+                return 1
+        else:
+            self.showError("compiler error: %s" % output)
+            return 1
+
+    def _saveandvalidate_py(self):
+        self._aalcFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".py"
+        self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
+
+        # Pick up preprocessor arguments from remote_pyaal command line
+        aal_ppflags, aal_modelflags = self._remote_pyaalCmdlineArgs()
+        aal2py_cmd = self._aal2pyCmdline(aal_ppflags)
+
+        print "saveandvalidate_py"
+
+        executed_program = "fmbt-aalc"
+        validation_exitstatus, output = self.runcmd(aal2py_cmd)
+        if validation_exitstatus == 0:
+            global model_tags
+            aal2tag_cmd = ["fmbt-aalc"] + aal_ppflags + [self._modelFileName, "-l", "tag"]
+            tags_exitstatus, tags_output = self.runcmd(aal2tag_cmd)
+            if tags_exitstatus == 0:
+                model_tags = []
+                for tag in tags_output[0].split('\n'):
+                    if tag:
+                        model_tags.append(tag)
+                show_hide_args = []
+                collapse = []
+                [show_vars, hide_vars], preview_depth, _, _, _, _, _, _, collapse = self.aalPreviewArguments()
+
+                for v in show_vars: show_hide_args.extend(["-S", v])
+                for v in hide_vars: show_hide_args.extend(["-H", v])
+                for index, value in enumerate(aal_modelflags):
+                    if value.startswith("-c"):
+                        show_hide_args.append(value)
+                        if (index + 1 < len(aal_modelflags) and
+                            value == "-c"):
+                            show_hide_args.append(aal_modelflags[index+1])
+
+                for tag in collapse:
+                    show_hide_args.extend(["-T", tag])
+
+                for tag in self._tagfilter.keys():
+                    if self._tagfilter[tag].isChecked():
+                        show_hide_args.extend(["-T", tag])
+
+                py2lsts_cmd = []
+                if self._menuOptionCFFD.isChecked():
+                    # This CFFD-minimizing pipe does not work in Windows
+                    py2lsts_cmd = "remote_pyaal -o - %s %s --lsts-depth %s '%s'|tvt.CFFD_normalize - -|fmbt-gt -i - -o '%s'" % (aal_ppflags, show_hide_args, preview_depth, self._aalcFileName, self._lstsFileName)
+                else:
+                    # py2lsts_cmd = "remote_pyaal %s -o '%s'%s --lsts-depth %s '%s'" % (aal_ppflags, self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
+                    py2lsts_cmd = ["remote_pyaal"] + aal_ppflags + ["-o", self._lstsFileName] + show_hide_args + ["--lsts-depth", str(preview_depth), self._aalcFileName]
+                    validation_exitstatus, output = self.runcmd(py2lsts_cmd)
+                    if validation_exitstatus != 0:
+                        self.showError(output[1])
+            else: # fmbt-aalc returned an error
+                self.showError(output[1])
+        return validation_exitstatus
+
+    def _saveandvalidate_gt(self):
+        self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
+        gt2lsts_cmd = ""
+        if self._modelSpec().startswith("lsts_remote"):
+            try: gt2lsts_cmd = re.findall("lsts_remote[ ]*\((.*)\)", self._modelSpec())[0]
+            except: gt2lsts_cmd = ""
+        if gt2lsts_cmd == "":
+            gt2lsts_cmd = ["fmbt-gt", "-f", self._modelFileName, "-o", self._lstsFileName]
+        executed_program = gt2lsts_cmd
+        validation_exitstatus, output = self.runcmd(gt2lsts_cmd)
+        if validation_exitstatus != 0:
+            self.showError(output[1])
+        return validation_exitstatus
+
     def saveAndValidateModel(self):
         """
         Save unsaved contents, convert gt to lsts if possible.
@@ -905,88 +994,12 @@ Keyboard shortcuts:<br>
                 uFile(filename, "w").write(
                     _deleteTrailingWhitespace(self._modelEditorFiles[filename][1]))
         if self._editingAAL(): # validate AAL
-            if self._editingAALCPP():
-                # doesn't work with windows.
-                self._aalcFileName = _g_tempdir + os.sep + self._AALNAME() + ".so"
-                self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
-                # fmbt-aalc parameters
-                aal2lib_cmd = [ "fmbt-aalc" ] + self._CPP_FLAGS() + [ "-c", "-o", self._aalcFileName, self._modelFileName ]
-                status, output = self.runcmd(aal2lib_cmd)
-                if status == 0:
-                    [show_vars, hide_vars], preview_depth, _, _, _, _, _, _, collapse = self.aalPreviewArguments()
-                    aal2lsts_cmd = ["remote_aal_loader","lib("+self._AALNAME()+","+ self._aalcFileName+")",str(preview_depth)]
-                    stat,(out,err) = self.runcmd(aal2lsts_cmd,{ "LD_LIBRARY_PATH" : _g_tempdir } )
-                    if stat == 0:
-                        file(self._lstsFileName,"w").write(out)
-                        validation_exitstatus = 0
-                    else:
-                        self.showError("remote_aal_loader failure: %s:%s" % (out,err) )
-                        validation_exitstatus = 1
-                else:
-                    self.showError("compiler error: %s" % output)
-                    validation_exitstatus = 1
+            if self._editingAALCPP():  # doesn't work with windows.
+                validation_exitstatus = self._saveandvalidate_cpp()
             else:
-                self._aalcFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".py"
-                self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
-
-                # Pick up preprocessor arguments from remote_pyaal command line
-                aal_ppflags, aal_modelflags = self._remote_pyaalCmdlineArgs()
-                aal2py_cmd = self._aal2pyCmdline(aal_ppflags)
-
-                executed_program = "fmbt-aalc"
-                validation_exitstatus, output = self.runcmd(aal2py_cmd)
-                if validation_exitstatus == 0:
-                    global model_tags
-                    aal2tag_cmd = ["fmbt-aalc"] + aal_ppflags + [self._modelFileName, "-l", "tag"]
-                    tags_exitstatus, tags_output = self.runcmd(aal2tag_cmd)
-                    if tags_exitstatus == 0:
-                        model_tags = []
-                        for tag in tags_output[0].split('\n'):
-                            if tag:
-                                model_tags.append(tag)
-                    show_hide_args = []
-                    collapse = []
-                    [show_vars, hide_vars], preview_depth, _, _, _, _, _, _, collapse = self.aalPreviewArguments()
-
-                    for v in show_vars: show_hide_args.extend(["-S", v])
-                    for v in hide_vars: show_hide_args.extend(["-H", v])
-                    for index, value in enumerate(aal_modelflags):
-                        if value.startswith("-c"):
-                            show_hide_args.append(value)
-                            if (index + 1 < len(aal_modelflags) and
-                                value == "-c"):
-                                show_hide_args.append(aal_modelflags[index+1])
-
-                    for tag in collapse:
-                        show_hide_args.extend(["-T", tag])
-
-                    for tag in self._tagfilter.keys():
-                        if self._tagfilter[tag].isChecked():
-                            show_hide_args.extend(["-T", tag])
-                    py2lsts_cmd = []
-                    if self._menuOptionCFFD.isChecked():
-                        # This CFFD-minimizing pipe does not work in Windows
-                        py2lsts_cmd = "remote_pyaal -o - %s %s --lsts-depth %s '%s'|tvt.CFFD_normalize - -|fmbt-gt -i - -o '%s'" % (aal_ppflags, show_hide_args, preview_depth, self._aalcFileName, self._lstsFileName)
-                    else:
-                        # py2lsts_cmd = "remote_pyaal %s -o '%s'%s --lsts-depth %s '%s'" % (aal_ppflags, self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
-                        py2lsts_cmd = ["remote_pyaal"] + aal_ppflags + ["-o", self._lstsFileName] + show_hide_args + ["--lsts-depth", str(preview_depth), self._aalcFileName]
-                        validation_exitstatus, output = self.runcmd(py2lsts_cmd)
-                        if validation_exitstatus != 0:
-                            self.showError(output[1])
-                        else: # fmbt-aalc returned an error
-                            self.showError(output[1])
+                validation_exitstatus = self._saveandvalidate_py()
         elif self._editingGT(): # validate GT
-            self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
-            gt2lsts_cmd = ""
-            if self._modelSpec().startswith("lsts_remote"):
-                try: gt2lsts_cmd = re.findall("lsts_remote[ ]*\((.*)\)", self._modelSpec())[0]
-                except: gt2lsts_cmd = ""
-            if gt2lsts_cmd == "":
-                gt2lsts_cmd = ["fmbt-gt", "-f", self._modelFileName, "-o", self._lstsFileName]
-            executed_program = gt2lsts_cmd
-            validation_exitstatus, output = self.runcmd(gt2lsts_cmd)
-            if validation_exitstatus != 0:
-                self.showError(output[1])
+            validaton_exitstatus = self._saveandvalidate_gt()
         else: # validate LSTS (missing)
             self._lstsFileName = self._modelFileName
             validation_exitstatus = 0
