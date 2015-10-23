@@ -853,22 +853,23 @@ Keyboard shortcuts:<br>
             if self._editingAALCPP():
                 # doesn't work with windows.
                 self._aalcFileName = _g_tempdir + os.sep + self._AALNAME() + ".so"
-
                 self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
-
                 # fmbt-aalc parameters
                 aal2lib_cmd = [ "fmbt-aalc" ] + self._CPP_FLAGS() + [ "-c", "-o", self._aalcFileName, self._modelFileName ]
                 status, output = self.runcmd(aal2lib_cmd)
                 if status == 0:
                     [show_vars, hide_vars], preview_depth, _, _, _, _, _, _, collapse = self.aalPreviewArguments()
-                    aal2lsts_cmd = ["remote_aal_loader","lib(" + self._aalcFileName + ")" ,str(preview_depth)]
+                    aal2lsts_cmd = ["remote_aal_loader","lib("+self._AALNAME()+","+ self._aalcFileName+")",str(preview_depth)]
                     stat,(out,err) = self.runcmd(aal2lsts_cmd,{ "LD_LIBRARY_PATH" : _g_tempdir } )
                     if stat == 0:
-                        file(self._lstsFileName).write(out)
+                        file(self._lstsFileName,"w").write(out)
+                        validation_exitstatus = 0
                     else:
                         self.showError("remote_aal_loader failure: %s:%s" % (out,err) )
+                        validation_exitstatus = 1
                 else:
                     self.showError("compiler error: %s" % output)
+                    validation_exitstatus = 1
             else:
                 self._aalcFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".py"
                 self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
@@ -1085,8 +1086,11 @@ Keyboard shortcuts:<br>
         if self._editingLSTS():
             modelspec="lsts(%s)" % (self._lstsFileName,)
         elif self._editingAAL():
-            modelspec='aal_remote(remote_pyaal -l "%s.log" "%s")' % (
-                (self._modelFileName, self._modelFileName))
+            if self._editingAALCPP():
+                modelspec='lib('+self._AALNAME()+")"
+            else:
+                modelspec='aal_remote(remote_pyaal -l "%s.log" "%s")' % (
+                    (self._modelFileName, self._modelFileName))
         else:
             modelspec='lsts_remote(fmbt-gt -f "%s")' % (self._modelFileName,)
         return modelspec
@@ -1133,7 +1137,11 @@ on_inconc = exit(2)
             self._test_ok = False
             return
         self._logFileName = _g_tempdir + os.sep + os.path.basename(self._confFileName) + ".log"
-        cmd = ["fmbt", "-l", self._logFileName, "-o", "adapter=dummy", self._confFileName]
+        if self._editingAALCPP():
+            cmd = ["fmbt", "-l", self._logFileName, "-o", "adapter=dummy", "-o",
+                   "model="+"lib("+self._AALNAME()+","+ self._aalcFileName+")", self._confFileName]
+        else:
+            cmd = ["fmbt", "-l", self._logFileName, "-o", "adapter=dummy", self._confFileName]
         self._fMBTRunning = True
         fmbt_exitstatus, output = self.runcmd(cmd)
         self._fMBTRunning = False
