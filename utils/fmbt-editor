@@ -894,9 +894,20 @@ Keyboard shortcuts:<br>
     def _aal2pyCmdline(self,aal_ppflags):
         return ["fmbt-aalc", "-l", "python"] + aal_ppflags + ["-o", self._aalcFileName, self._modelFileName]
 
+    def _update_aal_tags(self, aalc_command):
+        global model_tags
+        aal2tag_cmd = aalc_command + [self._modelFileName, "-l", "tag"]
+        tags_exitstatus, tags_output = self.runcmd(aal2tag_cmd)
+        if tags_exitstatus == 0:
+            model_tags = []
+            for tag in tags_output[0].split('\n'):
+                if tag:
+                    model_tags.append(tag)
+
     def _saveandvalidate_cpp(self):
         self._aalcFileName = _g_tempdir + os.sep + self._AALNAME() + ".so"
         self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
+        self._update_aal_tags(["fmbt-aalc" , self._modelFileName])
         # fmbt-aalc parameters
         aal2lib_cmd = [ "fmbt-aalc" ] + self._CPP_FLAGS() + [ "-c", "-o", self._aalcFileName, self._modelFileName ]
         status, output = self.runcmd(aal2lib_cmd)
@@ -921,8 +932,6 @@ Keyboard shortcuts:<br>
         # Pick up preprocessor arguments from remote_pyaal command line
         aal_ppflags, aal_modelflags = self._remote_pyaalCmdlineArgs()
         aal2py_cmd = self._aal2pyCmdline(aal_ppflags)
-
-        print "saveandvalidate_py"
 
         executed_program = "fmbt-aalc"
         validation_exitstatus, output = self.runcmd(aal2py_cmd)
