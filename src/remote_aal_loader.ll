@@ -25,6 +25,13 @@ std::map<int,std::map<int,int> > lts;
 std::map<int,std::set<int> > props;
 void lts_generator(int depth,int current_state)
 {
+  int* current_props;
+  int prop_len = Aal->getprops(&current_props);
+
+  for(int i=0;i<prop_len;i++) {
+    props[current_props[i]].insert(current_state);
+  }
+
   if (depth==0)
     return;
 
@@ -90,10 +97,10 @@ void generate_lts(int initial_state,int depth)
       for(int i=1;i<spnames.size();i++) {
         t << "\"" << spnames[i] << "\" : ";
 	bool c;
-	for(std::set<int>::iterator j=props[i+1].begin();
-	    j!=props[i+1].end();j++) {
+	for(std::set<int>::iterator j=props[i].begin();
+	    j!=props[i].end();j++) {
 	  if (c) {
-	    t << ", ";
+	    t << " ";
 	  }
 	  t << *j;
 	  c=true;

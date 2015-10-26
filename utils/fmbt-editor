@@ -159,6 +159,13 @@ GT_HIDESTATES = re.compile('[ #]preview-hide-states:((unvisited)|(orphaned)|,| )
 GT_IMAGEPATHRE = re.compile('[ #]preview-image-path:(.*)')
 
 GT_DEPTHRE = re.compile('[ #]preview-depth:(.*)')
+GT_LANGUAGE = re.compile('language\s"([^{]*)"\s*{')
+GT_AALNAME = re.compile('aal\s"([^"]*)"\s*{')
+
+GT_CXX_FLAGS = re.compile('[ #]preview-cxx-flags:(.*)')
+
+_cpp_sources = ["c++","cxx","cpp","cc"]
+
 
 PP_INCLUDEFILE = r = re.compile('^\s*\^include\s*"([^"]*)"\s*$', re.MULTILINE)
 
@@ -494,21 +501,76 @@ Keyboard shortcuts:<br>
         self.refreshImages()
 
     def newFileAAL(self, path=None):
-        self.editor.setPlainText('language "python" {}\n'
-                                 '\n'
-                                 '# preview-hide-vars: \n'
-                                 '# preview-depth: 5\n'
-                                 'variables {\n'
-                                 '    varname1, varname2\n'
-                                 '}\n'
-                                 'initial_state {\n'
-                                 '    varname1 = 42        # comment1\n'
-                                 '    varname2 = \'hello\' # comment2\n'
-                                 '}\n'
-                                 'input "test step 1" {\n'
-                                 '    guard { return varname1 == 42 }\n'
-                                 '    body  { varname2 = \'bye\' }\n'
-                                 '}\n')
+        if path and (path.endswith(".cc.aal") or
+                     path.endswith(".cxx.aal") or
+                     path.endswith(".cpp.aal")):
+            self.editor.setPlainText('aal "'+path.split('.')[0]+'" {\n'
+                                     'language "c++" {\n'
+                                     '#include <stack>\n'
+                                     '#include <map>\n'
+                                     '}\n'
+                                     'variables {\n'
+                                     'int varname1;\n'
+                                     'int varname2;\n'
+                                     'struct variable_save_struct {\n'
+                                     '  int varname1;\n'
+                                     '  int varname2;\n'
+                                     '  bool operator<( const variable_save_struct & n ) const {\n' 
+                                     '    if (this->varname1 < n.varname1) { return true; }\n'
+                                     '    if (this->varname2 < n.varname2) { return true; }\n'
+                                     '    return false;\n'
+                                     '  }\n'
+                                     '};\n'
+                                     'std::stack<struct variable_save_struct> variable_save;\n'
+                                     'std::map<struct variable_save_struct,int> lts_state;\n'
+                                     'public:\n'
+                                     'virtual int lts_save_state(bool reset) {\n'
+                                     '  if (reset) {\n'
+                                     '    lts_state.clear();\n'
+                                     '    return 0;\n'
+                                     '  }\n'
+                                     '  std::pair<std::map<struct variable_save_struct,int>::iterator,bool> ret =\n'
+                                     '  lts_state.insert(std::pair<struct variable_save_struct,int>(variable_save.top(),lts_state.size()+1));\n'
+                                     '  return ret.first->second;\n'
+                                     '}\n'
+                                     'private:\n'
+                                     '}\n'
+                                     '\n'
+                                     'initial_state {\n'
+                                     '  varname1 = 42;\n'
+                                     '  varname2 = 386;\n'
+                                     '}\n'
+                                     'push {\n'
+                                     '  variable_save.push({varname1,varname2});\n'
+                                     '}\n'
+                                     '\n'
+                                     'pop {\n'
+                                     '  varname1 = variable_save.top().varname1;\n'
+                                     '  varname2 = variable_save.top().varname2;\n'
+                                     '  variable_save.pop();\n'
+                                     '}\n'
+                                     '\n'
+                                     'input "test step 1" {\n'
+                                     '    guard { return varname1 == 42; }\n'
+                                     '    body  { varname2 = 0xc64; }\n'
+                                     '}\n'
+                                     '}\n')
+        else:
+            self.editor.setPlainText('language "python" {}\n'
+                                     '\n'
+                                     '# preview-hide-vars: \n'
+                                     '# preview-depth: 5\n'
+                                     'variables {\n'
+                                     '    varname1, varname2\n'
+                                     '}\n'
+                                     'initial_state {\n'
+                                     '    varname1 = 42        # comment1\n'
+                                     '    varname2 = \'hello\' # comment2\n'
+                                     '}\n'
+                                     'input "test step 1" {\n'
+                                     '    guard { return varname1 == 42 }\n'
+                                     '    body  { varname2 = \'bye\' }\n'
+                                     '}\n')
         for _ in xrange(5):
             self.editor.moveCursor(QtGui.QTextCursor.Down)
         for _ in xrange(4):
@@ -625,11 +687,14 @@ Keyboard shortcuts:<br>
                 self._set_confFileName(path)
                 self.refreshImages()
 
-    def runcmd(self, cmd):
+    def runcmd(self, cmd, env=None):
         print cmd
         if type(cmd) == "str": shell=True
         else: shell=False
-        p = subprocess.Popen(cmd, shell=shell, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        run_env = os.environ
+        if env != None:
+            run_env.update(env)
+        p = subprocess.Popen(cmd, env=run_env, shell=shell, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         try: msg_stdout = p.stdout.read()
         except: msg_stdout = ""
         try: msg_stderr = p.stderr.read()
@@ -643,6 +708,30 @@ Keyboard shortcuts:<br>
 
     def _editingAAL(self):
         return self._modelFileName.endswith(".aal")
+
+    def _editingAALCPP(self):
+        lang = GT_LANGUAGE.findall(self._modelSources())
+        if lang:
+            if lang[0] in _cpp_sources:
+                return True
+
+        return False
+
+    def _CPP_FLAGS(self):
+        flags = GT_CXX_FLAGS.findall(self._modelSources())
+        ret = []
+        for a in flags:
+            for b in shlex.split(a):
+                ret = ret + ["-O", b ]
+
+        return ret
+
+    def _AALNAME(self):
+        names = GT_AALNAME.findall(self._modelSources())
+        if names:
+            return names[0]
+
+        return ""
 
     def _editingGT(self):
         return not self._editingLSTS() and not self._editingAAL()
@@ -805,35 +894,56 @@ Keyboard shortcuts:<br>
     def _aal2pyCmdline(self,aal_ppflags):
         return ["fmbt-aalc", "-l", "python"] + aal_ppflags + ["-o", self._aalcFileName, self._modelFileName]
 
-    def saveAndValidateModel(self):
-        """
-        Save unsaved contents, convert gt to lsts if possible.
-        Update self._model_ok (false iff conversion fails).
-        """
-        self.storeModelEditorActiveFile()
-        if not self._previewOnlyMode:
-            for filename in self._modelEditorFiles:
-                uFile(filename, "w").write(
-                    _deleteTrailingWhitespace(self._modelEditorFiles[filename][1]))
-        if self._editingAAL(): # validate AAL
-            self._aalcFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".py"
-            self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
+    def _update_aal_tags(self, aalc_command):
+        global model_tags
+        aal2tag_cmd = aalc_command + [self._modelFileName, "-l", "tag"]
+        tags_exitstatus, tags_output = self.runcmd(aal2tag_cmd)
+        if tags_exitstatus == 0:
+            model_tags = []
+            for tag in tags_output[0].split('\n'):
+                if tag:
+                    model_tags.append(tag)
 
-            # Pick up preprocessor arguments from remote_pyaal command line
-            aal_ppflags, aal_modelflags = self._remote_pyaalCmdlineArgs()
-            aal2py_cmd = self._aal2pyCmdline(aal_ppflags)
+    def _saveandvalidate_cpp(self):
+        self._aalcFileName = _g_tempdir + os.sep + self._AALNAME() + ".so"
+        self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
+        self._update_aal_tags(["fmbt-aalc" , self._modelFileName])
+        # fmbt-aalc parameters
+        aal2lib_cmd = [ "fmbt-aalc" ] + self._CPP_FLAGS() + [ "-c", "-o", self._aalcFileName, self._modelFileName ]
+        status, output = self.runcmd(aal2lib_cmd)
+        if status == 0:
+            [show_vars, hide_vars], preview_depth, _, _, _, _, _, _, collapse = self.aalPreviewArguments()
+            aal2lsts_cmd = ["remote_aal_loader","lib("+self._AALNAME()+","+ self._aalcFileName+")",str(preview_depth)]
+            stat,(out,err) = self.runcmd(aal2lsts_cmd,{ "LD_LIBRARY_PATH" : _g_tempdir } )
+            if stat == 0:
+                file(self._lstsFileName,"w").write(out)
+                return 0
+            else:
+                self.showError("remote_aal_loader failure: %s:%s" % (out,err) )
+                return 1
+        else:
+            self.showError("compiler error: %s" % output)
+            return 1
 
-            executed_program = "fmbt-aalc"
-            validation_exitstatus, output = self.runcmd(aal2py_cmd)
-            if validation_exitstatus == 0:
-                global model_tags
-                aal2tag_cmd = ["fmbt-aalc"] + aal_ppflags + [self._modelFileName, "-l", "tag"]
-                tags_exitstatus, tags_output = self.runcmd(aal2tag_cmd)
-                if tags_exitstatus == 0:
-                    model_tags = []
-                    for tag in tags_output[0].split('\n'):
-                        if tag:
-                            model_tags.append(tag)
+    def _saveandvalidate_py(self):
+        self._aalcFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".py"
+        self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
+
+        # Pick up preprocessor arguments from remote_pyaal command line
+        aal_ppflags, aal_modelflags = self._remote_pyaalCmdlineArgs()
+        aal2py_cmd = self._aal2pyCmdline(aal_ppflags)
+
+        executed_program = "fmbt-aalc"
+        validation_exitstatus, output = self.runcmd(aal2py_cmd)
+        if validation_exitstatus == 0:
+            global model_tags
+            aal2tag_cmd = ["fmbt-aalc"] + aal_ppflags + [self._modelFileName, "-l", "tag"]
+            tags_exitstatus, tags_output = self.runcmd(aal2tag_cmd)
+            if tags_exitstatus == 0:
+                model_tags = []
+                for tag in tags_output[0].split('\n'):
+                    if tag:
+                        model_tags.append(tag)
                 show_hide_args = []
                 collapse = []
                 [show_vars, hide_vars], preview_depth, _, _, _, _, _, _, collapse = self.aalPreviewArguments()
@@ -853,6 +963,7 @@ Keyboard shortcuts:<br>
                 for tag in self._tagfilter.keys():
                     if self._tagfilter[tag].isChecked():
                         show_hide_args.extend(["-T", tag])
+
                 py2lsts_cmd = []
                 if self._menuOptionCFFD.isChecked():
                     # This CFFD-minimizing pipe does not work in Windows
@@ -860,23 +971,44 @@ Keyboard shortcuts:<br>
                 else:
                     # py2lsts_cmd = "remote_pyaal %s -o '%s'%s --lsts-depth %s '%s'" % (aal_ppflags, self._lstsFileName, show_hide_args, preview_depth, self._aalcFileName)
                     py2lsts_cmd = ["remote_pyaal"] + aal_ppflags + ["-o", self._lstsFileName] + show_hide_args + ["--lsts-depth", str(preview_depth), self._aalcFileName]
-                validation_exitstatus, output = self.runcmd(py2lsts_cmd)
-                if validation_exitstatus != 0:
-                    self.showError(output[1])
+                    validation_exitstatus, output = self.runcmd(py2lsts_cmd)
+                    if validation_exitstatus != 0:
+                        self.showError(output[1])
             else: # fmbt-aalc returned an error
                 self.showError(output[1])
+        return validation_exitstatus
+
+    def _saveandvalidate_gt(self):
+        self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
+        gt2lsts_cmd = ""
+        if self._modelSpec().startswith("lsts_remote"):
+            try: gt2lsts_cmd = re.findall("lsts_remote[ ]*\((.*)\)", self._modelSpec())[0]
+            except: gt2lsts_cmd = ""
+        if gt2lsts_cmd == "":
+            gt2lsts_cmd = ["fmbt-gt", "-f", self._modelFileName, "-o", self._lstsFileName]
+        executed_program = gt2lsts_cmd
+        validation_exitstatus, output = self.runcmd(gt2lsts_cmd)
+        if validation_exitstatus != 0:
+            self.showError(output[1])
+        return validation_exitstatus
+
+    def saveAndValidateModel(self):
+        """
+        Save unsaved contents, convert gt to lsts if possible.
+        Update self._model_ok (false iff conversion fails).
+        """
+        self.storeModelEditorActiveFile()
+        if not self._previewOnlyMode:
+            for filename in self._modelEditorFiles:
+                uFile(filename, "w").write(
+                    _deleteTrailingWhitespace(self._modelEditorFiles[filename][1]))
+        if self._editingAAL(): # validate AAL
+            if self._editingAALCPP():  # doesn't work with windows.
+                validation_exitstatus = self._saveandvalidate_cpp()
+            else:
+                validation_exitstatus = self._saveandvalidate_py()
         elif self._editingGT(): # validate GT
-            self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
-            gt2lsts_cmd = ""
-            if self._modelSpec().startswith("lsts_remote"):
-                try: gt2lsts_cmd = re.findall("lsts_remote[ ]*\((.*)\)", self._modelSpec())[0]
-                except: gt2lsts_cmd = ""
-            if gt2lsts_cmd == "":
-                gt2lsts_cmd = ["fmbt-gt", "-f", self._modelFileName, "-o", self._lstsFileName]
-            executed_program = gt2lsts_cmd
-            validation_exitstatus, output = self.runcmd(gt2lsts_cmd)
-            if validation_exitstatus != 0:
-                self.showError(output[1])
+            validaton_exitstatus = self._saveandvalidate_gt()
         else: # validate LSTS (missing)
             self._lstsFileName = self._modelFileName
             validation_exitstatus = 0
@@ -1031,8 +1163,11 @@ Keyboard shortcuts:<br>
         if self._editingLSTS():
             modelspec="lsts(%s)" % (self._lstsFileName,)
         elif self._editingAAL():
-            modelspec='aal_remote(remote_pyaal -l "%s.log" "%s")' % (
-                (self._modelFileName, self._modelFileName))
+            if self._editingAALCPP():
+                modelspec='lib('+self._AALNAME()+")"
+            else:
+                modelspec='aal_remote(remote_pyaal -l "%s.log" "%s")' % (
+                    (self._modelFileName, self._modelFileName))
         else:
             modelspec='lsts_remote(fmbt-gt -f "%s")' % (self._modelFileName,)
         return modelspec
@@ -1079,7 +1214,11 @@ on_inconc = exit(2)
             self._test_ok = False
             return
         self._logFileName = _g_tempdir + os.sep + os.path.basename(self._confFileName) + ".log"
-        cmd = ["fmbt", "-l", self._logFileName, "-o", "adapter=dummy", self._confFileName]
+        if self._editingAALCPP():
+            cmd = ["fmbt", "-l", self._logFileName, "-o", "adapter=dummy", "-o",
+                   "model="+"lib("+self._AALNAME()+","+ self._aalcFileName+")", self._confFileName]
+        else:
+            cmd = ["fmbt", "-l", self._logFileName, "-o", "adapter=dummy", self._confFileName]
         self._fMBTRunning = True
         fmbt_exitstatus, output = self.runcmd(cmd)
         self._fMBTRunning = False
