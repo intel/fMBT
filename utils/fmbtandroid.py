@@ -1438,7 +1438,7 @@ class Device(fmbtgti.GUITestInterface):
                   refer to verifyText documentation. The default is
                   False.
 
-          tapPos (pair of floats (x, y)):
+          tapPos (pair of floats (x, y), optional):
                   refer to tapItem documentation.
 
           long, hold, count, delayBetweenTaps (optional):
@@ -1448,6 +1448,34 @@ class Device(fmbtgti.GUITestInterface):
         """
         assert self._lastView != None, "View required."
         items = self._lastView.findItemsByText(text, partial=partial, count=1, onScreen=True)
+        if len(items) == 0: return False
+        return self.tapItem(items[0], **tapKwArgs)
+
+    def tapContentDesc(self, contentDesc, **tapKwArgs):
+        """
+        Find an item with given content description, and tap it.
+
+        Parameters:
+
+          contentDesc (string):
+                  content description of the item to be tapped.
+
+          tapPos (pair of floats (x, y), optional):
+                  refer to tapItem documentation.
+
+          long, hold, count, delayBetweenTaps (optional):
+                  refer to tap documentation.
+
+        Returns True if successful, otherwise False.
+
+        Note: Requires that the latest refreshView used the uiautomator
+        backend for fetching the view data. Example:
+
+        d.refreshView(uiautomatorDump=True)
+        d.tapContentDesc("Apps")
+        """
+        assert self._lastView != None, "View required."
+        items = self._lastView.findItemsByContentDesc(contentDesc)
         if len(items) == 0: return False
         return self.tapItem(items[0], **tapKwArgs)
 
