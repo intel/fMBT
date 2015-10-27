@@ -1,8 +1,27 @@
-fmbt (0.28-0.rc0) unstable; urgency=low
+fmbt (0.28-1) unstable; urgency=low
 
-  * Development version.
+  * fmbtandroid:
+    - Added tapContentDesc().
+  * Visual log improved on fmbtandroid/chromiumos/rdp/tizen/vnc/windows/x11:
+    - Screenshot age is shown.
+    - Screenshots are zoomed on hover.
+  * fmbt-editor:
+    - AAL/C++ visualization support.
+  * fmbt-scripter:
+    - Both 'im.png' and "im.png" recognized as image filenames.
+    - "# scripter-connect:" lines are runnable with Run line.
+  * Test generation:
+    - lookahead generator supports variable search depth MIN:MAX.
+      (If coverage does not increase with MIN steps, it will try MIN+1...MAX.)
+    - lookahead on AAL/Python performance can be increased with
+      remote_pyaal parameter --accel-drop-outputs when executing
+      outputs is not necessary for wanted coverage.
+    - AAL/Python performance improvements.
+  * Pythonshare:
+    - Namespace exporting server dies on target server connection lost.
+  * Bug fixes, improved logging, parallel building with dpkg-buildpackage -j.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 28 Sep 2015 08:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 27 Oct 2015 13:42:00 +0300
 
 fmbt (0.27-1) unstable; urgency=low
 
