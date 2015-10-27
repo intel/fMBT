@@ -1450,13 +1450,10 @@ class MainWindow(QtGui.QMainWindow):
         code = ""
         if lineCount == None or lineCount == 1:
             autoSelected = True
-            if code.startswith("#"): # skip comment lines
+            code = self.selectPythonStatement(highlight=False)
+            if not _pythonCode(code):
+                log("this block is not valid Python code:\n" + code)
                 code = ""
-            else: # if needed, take also next lines
-                code = self.selectPythonStatement(highlight=False)
-                if not _pythonCode(code):
-                    log("this block is not valid Python code:\n" + code)
-                    code = ""
         elif lineCount == "selection":
             autoSelected = False
             code = "\n" + self.editor.textCursor().selectedText()
@@ -1465,6 +1462,23 @@ class MainWindow(QtGui.QMainWindow):
         else:
             self._popTextEditorFocus()
             raise NotImplementedError
+
+        # Handle comment lines:
+        # Make "scripter-connect: "-lines executable,
+        # drop "coding:" lines to avoid syntax errors.
+        code_lines = []
+        for line in code.splitlines():
+            if line.lstrip().startswith("#"):
+                if "scripter-connect:" in line:
+                    code_lines.append(
+                        line.split("scripter-connect:", 1)[-1].lstrip())
+                elif "coding:" in line:
+                    code_lines.append("")
+                else:
+                    code_lines.append(line)
+            else:
+                code_lines.append(line)
+        code = "\n".join(code_lines)
 
         if not code == "":
             self.runStatement(code, autoUpdate=autoUpdate, visual=True)
