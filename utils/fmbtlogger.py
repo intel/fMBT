@@ -331,4 +331,6 @@ def _logCalls(orig_self, report, logDepth_):
                 return attr
         def __setattr__(self, attr, value):
             setattr(orig_self, attr, value)
+        def __delattr__(self, attr):
+            delattr(orig_self, attr)
     return _detectCalls()
