@@ -1133,8 +1133,15 @@ class MainWindow(QtGui.QMainWindow):
         pos = cursor.positionInBlock()
         cursor.select(QtGui.QTextCursor.LineUnderCursor)
         l = cursor.selectedText()
-        start = l.rfind('"', 0, pos-1)
-        end = l.find('"', pos-1)
+        start_dblquote = l.rfind('"', 0, pos-1)
+        start_quote = l.rfind("'", 0, pos-1)
+        if start_dblquote > start_quote:
+            start = start_dblquote
+            ending_quote = '"'
+        else:
+            start = start_quote
+            ending_quote = "'"
+        end = l.find(ending_quote, pos-1)
         if -1 < start < end:
             quotedString = l[start+1:end]
             if quotedString.lower().rsplit(".")[-1] in ["png", "jpg"]:
@@ -1852,7 +1859,7 @@ class MainWindow(QtGui.QMainWindow):
     def findNextBitmap(self):
         cursor = self.editor.textCursor()
         c = self.editor.toPlainText()[cursor.position():]
-        searchMatch = re.search(r'"[^"]*\.png"', c)
+        searchMatch = re.search(r'"[^"]*\.png"|\'[^\']*\.png\'', c)
         if searchMatch:
             cursor.movePosition(QtGui.QTextCursor.Right,
                                 QtGui.QTextCursor.MoveAnchor,
@@ -1862,7 +1869,7 @@ class MainWindow(QtGui.QMainWindow):
     def findPrevBitmap(self):
         cursor = self.editor.textCursor()
         c = self.editor.toPlainText()[cursor.position()-2::-1]
-        searchMatch = re.search(r'"gnp\.[^"]*"', c)
+        searchMatch = re.search(r'"gnp\.[^"]*"|\'gnp\.[^\']*\'', c)
         if searchMatch:
             cursor.movePosition(QtGui.QTextCursor.Left,
                                 QtGui.QTextCursor.MoveAnchor,
@@ -2809,7 +2816,7 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
         bitmapFilenameFormat.setForeground(QtCore.Qt.darkGreen)
         bitmapFilenameFormat.setFontWeight(QtGui.QFont.Bold)
         self.highlightingRules.append(
-            (QtCore.QRegExp(r"\"[^\"]*\.[pP][nN][gG]\""),
+            (QtCore.QRegExp(r"\"[^\"]*\.[pP][nN][gG]\"|'[^']*\.[pP][nN][gG]'"),
              bitmapFilenameFormat))
 
         singleLineCommentFormat = QtGui.QTextCharFormat()
