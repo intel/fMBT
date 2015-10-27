@@ -206,12 +206,23 @@ Available types & parameters:
 
         lookahead[(depth[, offset])]
 
-                if depth is given, lookahead will simulate execution
-                of all possible paths of length <depth>. It will
-                choose the first action of a path that results in the
-                best coverage. If depth is not given, lookahead will
-                make the decision based on names of enabled actions in
-                the current state without simulation.
+                If depth is not given, lookahead will make the
+                decision based on names of enabled actions in the
+                current state without simulation.
+
+                If depth is a positive number, lookahead will simulate
+                execution of all possible paths of length <depth>. It
+                will choose the first action of a path that results in
+                the best coverage. Suffix "b" enables "burst mode" in
+                which the found path will be tested before searching a
+                new path. Without the burst mode new path is
+                calculated on every step (slower to generate but
+                resulting test has less steps).
+
+                If depth is of the form MIN:MAX, lookahead will first
+                search from all paths of MIN steps, and if that is not
+                enough to increase coverage, then search from paths of
+                MIN+1 up to MAX steps.
 
                 If offset is not given, lookahead will choose the same
                 action on every test run. It is likely to choose
