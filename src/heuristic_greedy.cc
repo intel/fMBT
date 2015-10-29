@@ -126,6 +126,10 @@ Heuristic_greedy::~Heuristic_greedy()
   if (randomise_function) {
     delete randomise_function;
   }
+
+  if (m_search_depth) {
+    delete m_search_depth;
+  }
 }
 
 bool Heuristic_greedy::execute(int action)
