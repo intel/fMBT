@@ -33,7 +33,7 @@ Function_Supported::Function_Supported(const std::string& param) {
 	delete r;
 	r=NULL;
       } else {
-	return;
+	break;
       }
     }
   }

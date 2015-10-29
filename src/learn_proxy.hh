@@ -28,7 +28,16 @@
 class Learn_proxy: public Learning {
 public:
   Learn_proxy(Log&l);
-  virtual ~Learn_proxy() { }
+  virtual ~Learn_proxy() {
+    if (lt) {
+      delete lt;
+      lt=NULL;
+    }
+    if (la) {
+      delete la;
+      la=NULL;
+    }
+  }
   virtual void suggest(int action);
   virtual void execute(int action);
   virtual float getE(int action);

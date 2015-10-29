@@ -41,10 +41,7 @@ public:
   virtual void suggest(int action);
   virtual void execute(int action);
   virtual float getE(int action);
-  virtual void setAlphabet(Alphabet* a) {
-    Learning::setAlphabet(a);
-    time_map.resize(alphabet->getActionNames().size()+1, NAN);
-  }
+  virtual void setAlphabet(Alphabet*);
 protected:
   Function* learning_multiplier;
   Function* default_value;

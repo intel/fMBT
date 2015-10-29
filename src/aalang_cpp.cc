@@ -40,7 +40,7 @@ std::string to_call(std::list<std::string>& l) {
   return ret;
 }
 
-aalang_cpp::aalang_cpp(): aalang(),action_cnt(1), tag_cnt(1), name_cnt(0),
+aalang_cpp::aalang_cpp(): aalang(),action_cnt(1), tag_cnt(0), name_cnt(0),
 			  istate(NULL),ainit(NULL), aexit(NULL), name(NULL),
 			  tag(false),outters(0),current_outter(-1),current_inner(0)
 {
@@ -53,6 +53,7 @@ aalang_cpp::aalang_cpp(): aalang(),action_cnt(1), tag_cnt(1), name_cnt(0),
   amap.push_back(0);
   tmap.push_back(0);
   anames.push_back(default_body);
+  tnames.push_back(default_body);
 }
 
 aalang_cpp::~aalang_cpp()
@@ -102,7 +103,7 @@ void aalang_cpp::set_name(std::string* name,bool first,ANAMETYPE t)
   } else {
     std::string tmp=guard_call_construct.back();
     guard_call_construct.pop_back();
-    guard_call_construct.push_back("action"+to_string(action_cnt)+"_guard(action_names["+to_string(action_cnt+name_cnt) +"])");    
+    guard_call_construct.push_back("action"+to_string(action_cnt)+"_guard(action_names["+to_string(action_cnt+name_cnt) +"])");
     action_guard_call.push_back(to_call(guard_call_construct));
     guard_call_construct.pop_back();
     guard_call_construct.push_back(tmp);
@@ -243,24 +244,33 @@ void aalang_cpp::set_pop(std::string* p,const char* file,int line,int col)
 
 void aalang_cpp::set_tagname(std::string* name,bool first)
 {
+  tag=true;
   if (first) {
+    tstack.push_back(tag);
     name_cnt_stack.push_back(tag_cnt);
     name_cnt_stack.push_back(name_cnt);
     name_cnt=0;
-    tstack.push_back(tag);
-    tag_cnt=tname.size();
+    tag_cnt=tnames.size();
   }
 
   if (name_cnt==0) {
     guard_call_construct.push_back("tag"+to_string(tag_cnt)+"_guard(tag_names["+to_string(tag_cnt)+"])");
     tag_guard_call.push_back(to_call(guard_call_construct));
+  } else {
+    std::string tmp=guard_call_construct.back();
+    guard_call_construct.pop_back();
+    guard_call_construct.push_back("tag"+to_string(tag_cnt)+"_guard(tag_names["+to_string(tag_cnt+name_cnt) +"])");    
+    tag_guard_call.push_back(to_call(guard_call_construct));
+    guard_call_construct.pop_back();
+    guard_call_construct.push_back(tmp);
   }
-  s+="\n//tag"+to_string(tag_cnt)+": \""+*name+"\"\n";
+
+  tnames.push_back(*name);
   tname.back().push_back(*name);
-  delete name;
   tmap.push_back(tag_cnt);
+  s+="\n//tag"+to_string((int)tnames.size()-1)+": \""+*name+"\"\n";
   name_cnt++;
-  tag=true;
+  delete name;
 }
 
 void aalang_cpp::next_tag()
@@ -269,13 +279,11 @@ void aalang_cpp::next_tag()
   tname.push_back(t);
   tag_cnt+=name_cnt;
   name_cnt=0;
-  tag=tstack.back();
-  tstack.pop_back();
   guard_call_construct.pop_back();
   name_cnt=name_cnt_stack.back();
-  name_cnt_stack.pop_back();
   tag_cnt=name_cnt_stack.back();
-  name_cnt_stack.pop_back();  
+  name_cnt_stack.pop_back();
+  name_cnt_stack.pop_back();
 }
 
 void aalang_cpp::set_guard(std::string* gua,const char* file,int line,int col)
@@ -343,15 +351,15 @@ void aalang_cpp::next_action()
   tstack.pop_back();
   guard_call_construct.pop_back();
   name_cnt=name_cnt_stack.back();
-  name_cnt_stack.pop_back();
   action_cnt=name_cnt_stack.back();
+  name_cnt_stack.pop_back();
   name_cnt_stack.pop_back();  
 }
 
 std::string aalang_cpp::stringify()
 {
   action_cnt=anames.size();
-  tag_cnt=tname.size();
+  tag_cnt=tnames.size();
   s=s+
     "\npublic:\n"
     "\tvirtual ~_gen_"+*name+"() {}\n"
@@ -469,9 +477,10 @@ std::string aalang_cpp::stringify()
     if (tag_adapter[i]) {
 
       std::string tnr=to_string(i);
+      std::string tag_adapter_number=to_string(tmap[i]);
       s=s+"if (std::find(tag.begin(),tag.end(),"+tnr+")!=tag.end()) {\n"
 	"// Tag"+tnr+" adapter\n"+
-	"if (!tag"+tnr+"_adapter(tag_names["+tnr+"])) {\n"+
+	"if (!tag"+tag_adapter_number+"_adapter(tag_names["+tnr+"])) {\n"+
 	"  t.push_back("+tnr+");\n"+
 	"}\n"+
 	"}\n";
@@ -483,8 +492,8 @@ std::string aalang_cpp::stringify()
   s=s+"virtual int getprops(int** props) {\n"
     "\ttags.clear();\n";
 
-  for(int i=1;i<tag_cnt;i++) {
-    s+="\tif ( " + tag_guard_call[tmap[i]-1] + ") {\n"
+  for(int i=0;i<tag_cnt-1;i++) {
+    s+="\tif ( " + tag_guard_call[i] + ") {\n"
       "\t\ttags.push_back("+to_string(i)+");\n"
       "\t}\n";
   }

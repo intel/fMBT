@@ -16,6 +16,8 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+#define _ISOC99_SOURCE 1
+#include <math.h>
 
 #include "learn_time.hh"
 #include "helper.hh"
@@ -32,20 +34,32 @@ Learn_time::Learn_time(Log&l,std::string s): Learning(l),learning_multiplier(NUL
 
   switch (fa.size()) {
   case 2:
-    default_value=new_function(fa[1]);
-    if (!default_value) {
-      status=false;
-      errormsg="Can't create function \""+fa[1]+"\"";
-      break;
+    if (fa[1]!="") {
+      default_value=new_function(fa[1]);
+      if (!default_value) {
+	status=false;
+	errormsg="Can't create function \""+fa[1]+"\"";
+	break;
+      } else {
+	if (!default_value->status) {
+	  status=false;
+	  errormsg = "Error in default value \"" +fa[1]+ "\" " + default_value->errormsg;
+	}
+      }
     }
-
   case 1:
-    learning_multiplier=new_function(fa[0]);
-    if (!learning_multiplier) {
-      status=false;
-      errormsg="Can't create function \""+fa[0]+"\"";
+    if (fa[0]!="") {
+      learning_multiplier=new_function(fa[0]);
+      if (!learning_multiplier) {
+	status=false;
+	errormsg="Can't create function \""+fa[0]+"\"";
+      } else {
+	if (!learning_multiplier->status) {
+	  status=false;
+	  errormsg = "Error in learning multiplier \""+ fa[0]+ "\" " +learning_multiplier->errormsg;
+	}
+      }
     }
-
   case 0:
     break;
 
@@ -76,6 +90,11 @@ float Learn_time::getE(int action) {
   return retval;
 }
 
+void Learn_time::setAlphabet(Alphabet* a) {
+  Learning::setAlphabet(a);
+  time_map.resize(alphabet->getActionNames().size(),NAN);
+}
+
 void Learn_time::execute(int action) {
   struct timeval duration;
   if (suggested) {
@@ -85,6 +104,11 @@ void Learn_time::execute(int action) {
   }
   timersub(&Adapter::current_time,&last_time,&duration);
   _duration = (duration.tv_sec+duration.tv_usec/1000000.0);
+
+  if (action>=time_map.size()) {
+    abort();
+  }
+
   if (std::isnan(time_map[action])) {
     time_map[action] = _duration;
   } else {

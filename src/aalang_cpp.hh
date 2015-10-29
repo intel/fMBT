@@ -58,6 +58,7 @@ private:
 
 protected:
   std::vector<std::string> anames;
+  std::vector<std::string> tnames;
   std::list<std::vector<std::string> > aname;
   std::list<std::vector<std::string> > tname;
   std::list<std::string> guard_call_construct;
