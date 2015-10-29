@@ -477,9 +477,10 @@ std::string aalang_cpp::stringify()
     if (tag_adapter[i]) {
 
       std::string tnr=to_string(i);
+      std::string tag_adapter_number=to_string(tmap[i]);
       s=s+"if (std::find(tag.begin(),tag.end(),"+tnr+")!=tag.end()) {\n"
 	"// Tag"+tnr+" adapter\n"+
-	"if (!tag"+tnr+"_adapter(tag_names["+tnr+"])) {\n"+
+	"if (!tag"+tag_adapter_number+"_adapter(tag_names["+tnr+"])) {\n"+
 	"  t.push_back("+tnr+");\n"+
 	"}\n"+
 	"}\n";
@@ -492,7 +493,6 @@ std::string aalang_cpp::stringify()
     "\ttags.clear();\n";
 
   for(int i=0;i<tag_cnt-1;i++) {
-    s+="// i== " + to_string(i) + "   tmap[i] == " + to_string(tmap[i]) + "\n";
     s+="\tif ( " + tag_guard_call[i] + ") {\n"
       "\t\ttags.push_back("+to_string(i)+");\n"
       "\t}\n";
