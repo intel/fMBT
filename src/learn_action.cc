@@ -32,16 +32,22 @@ bool Learn_action::add_action(std::string&s) {
   std::vector<int> result;
   for(unsigned i=0;i<alist.size();i+=2) {
     std::string action_name=alist[i].substr(1,alist[i].size()-2);
-    std::string param;
+    std::string param("0.5");
 
     if (i+1<alist.size()) {
       param=alist[i+1];
     }
 
     Function* learning_multiplier = new_function(param);
-    if (learning_multiplier==NULL) {
-      learning_multiplier=new_function("0.5");
+
+    if (!learning_multiplier) {
+      status=false;
+      errormsg="Can't create function \""+param+"\"";
+    } else {
+      status=learning_multiplier->status;
+      errormsg=learning_multiplier->errormsg;
     }
+    
     // function should be reffable...
     //learning_multiplier->ref();
     regexpmatch(action_name,names,result,true,1);
