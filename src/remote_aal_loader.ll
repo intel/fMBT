@@ -1,11 +1,14 @@
 %{
-
+#include <set>
+#include <vector>
+#include <map>
+#include <sstream>
+#define DROI
 #include "log_null.hh"
 #include "aal.hh"
 #include "config.h"
 #include "log_aalremote.hh"
 #include "verdict.hh"
-#include "helper.hh"
 
 class aal_loader {
 public:
@@ -156,7 +159,7 @@ void print_lts(const std::string& str) {
         if (nomagic) {
 	        fprintf(stdout,"%s\n",str.c_str());
 	} else {
-	        fprintf(stdout,"fmbtmagic %i\n%s",str.size(),str.c_str());
+	        fprintf(stdout,"fmbtmagic %i\n%s",(int)str.size(),str.c_str());
 		fflush(stdout);
 	}
 }
