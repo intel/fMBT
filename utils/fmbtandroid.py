@@ -1572,7 +1572,48 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self._lastView
 
-    def waitText(self, text, partial=False, **waitKwArgs):
+    def waitAnyText(self, listOfTexts, partial=False, uiautomatorDump=False, **waitKwArgs):
+        """
+        Wait until any of texts is on the screen.
+
+        Parameters:
+
+          listOfTexts (list of string):
+                  texts to be waited for.
+
+          partial (boolean, optional):
+                refer to verifyText. The default is False.
+
+          uiautomatorDump (boolean, optional):
+                use uiautomator to read view dump from the device.
+                If not given, uiautomatorDump() default will be used.
+
+          waitTime, pollDelay, beforeRefresh, afterRefresh (optional):
+                  refer to wait documentation.
+
+        Returns list of texts that appear in the first refreshed view
+        that contains at least one of the texts. If none of the texts
+        appear within the time limit, returns empty list.
+
+        If any of texts is not found from the latest refreshed
+        view, waitAnyText will update the view in pollDelay interval until
+        waitTime is exceeded.
+        """
+        if listOfTexts == []: return []
+        if not self._lastView: self.refreshView(uiautomatorDump=uiautomatorDump)
+        waitArgs, rest = fmbtgti._takeWaitArgs(waitKwArgs)
+        foundTexts = []
+        def observe():
+            for text in listOfTexts:
+                if self.verifyText(text, partial=partial):
+                    foundTexts.append(text)
+            return foundTexts != []
+        self.wait(
+            lambda: self.refreshView(uiautomatorDump=uiautomatorDump),
+            observe, **waitArgs)
+        return foundTexts
+
+    def waitText(self, text, *waitAnyTextArgs, **waitAnyTextKwArgs):
         """
         Wait until text appears in any view item.
 
@@ -1584,17 +1625,21 @@ class Device(fmbtgti.GUITestInterface):
           partial (boolean, optional):
                 refer to verifyText. The default is False.
 
+          uiautomatorDump (boolean, optional):
+                use uiautomator to read view dump from the device.
+                If not given, uiautomatorDump() default will be used.
+
           waitTime, pollDelay, beforeRefresh, afterRefresh (optional):
                 refer to wait documentation.
 
         Returns True if text appeared within given time limit,
         otherwise False.
 
-        Updates the last view.
+        Updates the last view if the text is not found in the latest view
+        and waitTime > 0.
         """
-        return self.wait(self.refreshView,
-                         self.verifyText, (text,), {'partial': partial},
-                         **waitKwArgs)
+        return self.waitAnyText(
+            [text], *waitAnyTextArgs, **waitAnyTextKwArgs) != []
 
     def wake(self):
         """
