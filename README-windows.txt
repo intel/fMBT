@@ -21,7 +21,14 @@ Install
 Build
 -----
 
-* Run on Fedora 20:
+fMBT includes a script that builds Windows installer on Fedora
+(build-fMBT-installer-winXX.exe.sh), and another script that builds
+the installer inside Docker Fedora container on any Linux
+(docker/build_fmbt_windows_docker.sh).
+
+* Alternative 1, for Fedora users, build fMBT installer on host:
+
+  Run
 
   ./build-fMBT-installer-winXX.exe.sh 32
   or
@@ -32,6 +39,14 @@ Build
   build-win32/fMBT-installer-win32.exe
   or
   build-win64/fMBT-installer-win64.exe.
+
+* Alternative 2, for any Linux user, build fMBT installer in Docker:
+
+  Install Docker and run:
+
+  cd docker; ./build_fmbt_windows_docker.sh 32
+  or
+  cd docker; ./build_fmbt_windows_docker.sh 64
 
 
 Status
