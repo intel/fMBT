@@ -532,8 +532,8 @@ class WindowsConnection(fmbtgti.GUITestConnection):
     def __init__(self, connspec, password):
         fmbtgti.GUITestConnection.__init__(self)
         self._screenshotSize = (None, None) # autodetect
-        self._agent_ns = "fmbtwindows-agent"
         self._agent = pythonshare.connection(connspec, password=password)
+        self._agent_ns = self._agent.namespace()
         agentFilename = os.path.join(
             os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))),
             "fmbtwindows_agent.py")
