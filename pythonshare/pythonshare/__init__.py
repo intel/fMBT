@@ -55,7 +55,7 @@ def _close(*args):
             except (socket.error, IOError):
                 pass
 
-def connection(hostspec, password=None, namespace=None):
+def connect(hostspec, password=None, namespace=None):
     """Returns Connection to pythonshare server at hostspec.
 
     Parameters:
@@ -124,3 +124,7 @@ def connection(hostspec, password=None, namespace=None):
         raise ValueError('invalid URI "%s"' % (hostspec,))
     rv.hostspec = hostspec
     return rv
+
+def connection(*args, **kwargs):
+    """DEPRECATED, use connect instead."""
+    return connect(*args, **kwargs)
