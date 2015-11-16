@@ -732,13 +732,22 @@ def dumpWidgets():
     wt = widgetList(hwnd)
     _dumpTree(0, hwnd, wt)
 
+def _check_output(*args, **kwargs):
+    """subprocess.check_output, for Python 2.6 compatibility"""
+    p = subprocess.Popen(*args, stdout=subprocess.PIPE, **kwargs)
+    out, err = p.communicate()
+    exitstatus = p.poll()
+    if exitstatus:
+        raise subprocess.CalledProcessError(exitstatus, args[0])
+    return out
+
 def shell(command):
     if isinstance(command, list):
         useShell = False
     else:
         useShell = True
     try:
-        output = subprocess.check_output(command, shell=useShell)
+        output = _check_output(command, shell=useShell)
     except subprocess.CalledProcessError, e:
         if hasattr(e, "output"):
             output = e.output

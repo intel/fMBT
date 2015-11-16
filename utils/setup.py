@@ -5,6 +5,15 @@ import os
 import subprocess
 import sys
 
+def check_output(*args):
+    """subprocess.check_output, for Python 2.6 compatibility"""
+    p = subprocess.Popen(*args, stdout=subprocess.PIPE)
+    out, err = p.communicate()
+    exitstatus = p.poll()
+    if exitstatus:
+        raise subprocess.CalledProcessError(exitstatus, args[0])
+    return out
+
 def pkg_config(package):
     if os.name == "nt":
         if package == "MagickCore":
@@ -43,7 +52,7 @@ def pkg_config(package):
             sys.exit(1)
     else:
         _pkg_config = os.getenv("PKG_CONFIG","pkg-config")
-        o = subprocess.check_output([_pkg_config, "--libs", "--cflags", package])
+        o = check_output([_pkg_config, "--libs", "--cflags", package])
         ext_args = {"libraries": [], "library_dirs": [], "include_dirs": [], "extra_compile_args": []}
         for arg in o.split():
             if arg.startswith("-L"):

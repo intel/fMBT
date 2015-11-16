@@ -881,8 +881,7 @@ class TizenDeviceConnection(fmbtgti.GUITestConnection):
 
     def recvSerialNumber(self):
         try:
-            o = subprocess.check_output(["sdb", "get-serialno"],
-                                        shell=(os.name=="nt"))
+            s, o, e = _run(["sdb", "get-serialno"], expectedExitStatus=[0])
         except OSError, e:
             raise OSError('Executing "sdb get-serialno" failed (%s). Check that sdb from Tizen SDK is installed.' % (e,))
         return o.splitlines()[-1]
