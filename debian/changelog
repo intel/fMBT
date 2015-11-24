@@ -1,8 +1,13 @@
-fmbt (0.29-0.rc0) unstable; urgency=low
+fmbt (0.29-1) unstable; urgency=low
 
-  * Development version.
+  * AAL/C++: support for tags with many names.
+  * Windows installer can be built on any Linux with Docker.
+  * fmbtwindows: pythonshare namespace supported in connspec.
+  * fmbtandroid: added waitAnyText().
+  * Pythonshare: renamed connection() -> connect().
+  * Bug fixes: Python 2.6 compatibilty, memory leaks, learning.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 29 Oct 2015 14:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 24 Nov 2015 14:42:00 +0300
 
 fmbt (0.28-1) unstable; urgency=low
 
