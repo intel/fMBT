@@ -1,3 +1,9 @@
+fmbt (0.30-0.rc0) unstable; urgency=low
+
+  * Development version.
+
+ -- Antti Kervinen <antti.kervinen@intel.com>  Thu, 26 Nov 2015 09:42:00 +0300
+
 fmbt (0.29-1) unstable; urgency=low
 
   * AAL/C++: support for tags with many names.
