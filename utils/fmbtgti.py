@@ -2867,7 +2867,38 @@ class Screenshot(object):
         return foundItems
 
     def save(self, fileOrDirName):
+        """
+        Save screenshot to given file or directory.
+
+        Parameters:
+
+          fileOrDirName (string):
+                  name of the destination file or directory.
+        """
         shutil.copy(self._filename, fileOrDirName)
+
+    def crop(self, area):
+        """
+        Return cropped copy of the screenshot.
+
+        Parameters:
+          area (left, top, right, bottom):
+                  coordinates for cropping.
+
+        Does not change original screenshot, does not update
+        the latest screenshot returned by screenshot().
+
+        Example: save cropped screenshot (topmost 5 % of the screen)
+          sut.screenshot().crop((0.0, 0.0, 1.0, 0.05)).save("top-bar.png")
+        """
+        left, top, right, bottom = area
+        x1, y1 = _intCoords((left, top), self.size())
+        x2, y2 = _intCoords((right, bottom), self.size())
+        cropCoords = "%sx%s+%s+%s" % (x2-x1, y2-y1, x1, y1)
+        croppedFilename = self._filename + "-crop_%s.png" % (cropCoords,)
+        _convert(self._filename, ["-crop", cropCoords], croppedFilename)
+        return Screenshot(croppedFilename, self._paths, self._ocrEngine,
+                          self._oirEngine, self._screenshotRefCount)
 
     def ocrEngine(self):
         return self._ocrEngine
