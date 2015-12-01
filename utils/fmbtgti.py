@@ -2900,6 +2900,24 @@ class Screenshot(object):
         return Screenshot(croppedFilename, self._paths, self._ocrEngine,
                           self._oirEngine, self._screenshotRefCount)
 
+    def flop(self):
+        """
+        Return horizontally flopped copy of the screenshot.
+        """
+        resultFilename = self._filename + "-flop.png"
+        _convert(self._filename, ["-flop"], resultFilename)
+        return Screenshot(resultFilename, self._paths, self._ocrEngine,
+                          self._oirEngine, self._screenshotRefCount)
+
+    def flip(self):
+        """
+        Return vertically flipped copy of the screenshot.
+        """
+        resultFilename = self._filename + "-flip.png"
+        _convert(self._filename, ["-flip"], resultFilename)
+        return Screenshot(resultFilename, self._paths, self._ocrEngine,
+                          self._oirEngine, self._screenshotRefCount)
+
     def ocrEngine(self):
         return self._ocrEngine
 
