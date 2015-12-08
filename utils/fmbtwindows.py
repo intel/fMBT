@@ -39,6 +39,7 @@ d = fmbtwindows.Device("IP-ADDRESS-OF-THE-DEVICE", password="xxxxxxxx")
 """
 
 import ast
+import base64
 import fmbt
 import fmbt_config
 import fmbtgti
@@ -310,6 +311,23 @@ class Device(fmbtgti.GUITestInterface):
         """
         return sorted(_g_keyNames)
 
+    def putFile(self, localFilename, remoteFilepath):
+        """
+        Send local file to the device
+
+        Parameters:
+
+          localFilename (string):
+                  file to be sent.
+
+          remoteFilepath (string):
+                  destination on the device. If destination is an
+                  existing directory, the file will be saved to the
+                  directory with its original name. Otherwise the file
+                  will be saved with remoteFilepath as new name.
+        """
+        return self._conn.sendFile(localFilename, remoteFilepath)
+
     def refreshView(self, window=None, forcedView=None):
         """
         (Re)reads widgets on the top window and updates the latest view.
@@ -567,6 +585,14 @@ class WindowsConnection(fmbtgti.GUITestConnection):
             return True
         else:
             return data
+
+    def sendFile(self, localFilename, remoteFilepath):
+        data = file(localFilename).read()
+        rv = self.evalPython('saveFile(%s, %s, base64.b64decode(%s))' %
+                             (repr(os.path.basename(localFilename)),
+                              repr(remoteFilepath),
+                              repr(base64.b64encode(data))))
+        return rv
 
     def recvMatchingPaths(self, pathnamePattern):
         return self._agent.eval_in(self._agent_ns,

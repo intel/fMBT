@@ -14,6 +14,7 @@
 # this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
+import base64
 import ctypes
 import ctypes.wintypes
 import glob
@@ -755,6 +756,14 @@ def shell(command):
         else:
             output = None
     return output
+
+def saveFile(srcFilename, destFilepath, data):
+    if os.path.isdir(destFilepath):
+        destFilename = os.path.join(destFilepath, srcFilename)
+    else:
+        destFilename = destFilepath
+    file(destFilename, "wb").write(data)
+    return True
 
 def _exitStatusWriter(process, statusFile, filesToBeCleaned):
     statusFile.write(str(process.wait()))
