@@ -1743,8 +1743,14 @@ class GUITestInterface(object):
                     # Some methods have been wrapped by visual
                     # log. Break reference cycles to let gc collect
                     # them.
-                    del obj.findItemsByBitmap
-                    del obj.findItemsByOcr
+                    try:
+                        del obj.findItemsByBitmap
+                    except:
+                        pass
+                    try:
+                        del obj.findItemsByOcr
+                    except:
+                        pass
         del gc.garbage[:]
         gc.collect()
 
