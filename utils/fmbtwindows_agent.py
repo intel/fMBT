@@ -23,6 +23,7 @@ import string
 import struct
 import subprocess
 import sys
+import tempfile
 import thread
 import time
 import zlib
@@ -755,15 +756,28 @@ def shell(command):
             output = None
     return output
 
-def _exitStatusWriter(process, statusFile):
+def _exitStatusWriter(process, statusFile, filesToBeCleaned):
     statusFile.write(str(process.wait()))
     statusFile.close()
+    for f in filesToBeCleaned:
+        try: os.remove(f)
+        except: pass
 
 def shellSOE(command, asyncStatus=None, asyncOut=None, asyncError=None):
+    filesToBeCleaned = []
     if isinstance(command, list):
         useShell = False
     else:
-        useShell = True
+        if len(command.splitlines()) > 1:
+            # multiline command, write a BAT and run it
+            fd, filename = tempfile.mkstemp(prefix="fmbtwindows-shellcmd-", suffix=".bat")
+            os.write(fd, command)
+            os.close(fd)
+            command = [filename]
+            filesToBeCleaned.append(filename)
+            useShell = False
+        else:
+            useShell = True
 
     if (asyncStatus, asyncOut, asyncError) != (None, None, None):
         # asynchronous execution
@@ -780,7 +794,7 @@ def shellSOE(command, asyncStatus=None, asyncOut=None, asyncError=None):
                              stdin = file(os.devnull),
                              stdout = oFile,
                              stderr = eFile)
-        thread.start_new_thread(_exitStatusWriter, (p, sFile))
+        thread.start_new_thread(_exitStatusWriter, (p, sFile, filesToBeCleaned))
         return (None, None, None)
 
     # synchronous execution
@@ -793,6 +807,9 @@ def shellSOE(command, asyncStatus=None, asyncOut=None, asyncError=None):
         status = p.returncode
     except OSError:
         status, out, err = None, None, None
+    for f in filesToBeCleaned:
+        try: os.remove(f)
+        except: pass
     return status, out, err
 
 def topWindow():

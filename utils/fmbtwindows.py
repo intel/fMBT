@@ -416,15 +416,19 @@ class Device(fmbtgti.GUITestInterface):
 
     def shellSOE(self, command, asyncStatus=None, asyncOut=None, asyncError=None):
         """
-        Execute command in Windows.
+        Execute command on Windows.
 
         Parameters:
 
           command (string or list of strings):
-                  command to be executed. Will be forwarded directly
-                  to subprocess.check_output.  If command is a string,
-                  then it will be executed in subshell, otherwise without
-                  shell.
+                  command to be executed. If command is a list of
+                  string, it will be executed without shell
+                  (subprocess.check_output with shell=False).
+                  If command is a single-line string, it will be
+                  executed in shell (subprocess.check_output with
+                  shell=True).
+                  If command is a multiline string, it will be written
+                  to a BAT file and executed as a script.
 
           asyncStatus (string or None)
                   filename (on device) to which the status of
