@@ -684,7 +684,7 @@ class WindowsConnection(fmbtgti.GUITestConnection):
         return self._agent.eval_in(self._agent_ns, code)
 
     def recvFile(self, remoteFilename, localFilename=None):
-        data = self._agent.eval_in(self._agent_ns, "file(%s).read()" % (repr(remoteFilename),))
+        data = self._agent.eval_in(self._agent_ns, "file(%s, 'rb').read()" % (repr(remoteFilename),))
         if localFilename:
             file(localFilename, "wb").write(data)
             return True
