@@ -44,6 +44,7 @@ import fmbt
 import fmbt_config
 import fmbtgti
 import inspect
+import math
 import os
 import pythonshare
 import subprocess
@@ -310,6 +311,110 @@ class Device(fmbtgti.GUITestInterface):
         Returns list of key names recognized by pressKey
         """
         return sorted(_g_keyNames)
+
+    def pinch(self, (x, y), startDistance, endDistance,
+              finger1Dir=90, finger2Dir=270, movePoints=20,
+              duration=0.75):
+        """
+        Pinch (open or close) on coordinates (x, y).
+
+        Parameters:
+          x, y (integer):
+                  the central point of the gesture. Values in range
+                  [0.0, 1.0] are scaled to full screen width and
+                  height.
+
+          startDistance, endDistance (float):
+                  distance from both finger tips to the central point
+                  of the gesture, at the start and at the end of the
+                  gesture. Values in range [0.0, 1.0] are scaled up to
+                  the distance from the coordinates to the edge of the
+                  screen. Both finger tips will reach an edge if
+                  distance is 1.0.
+
+          finger1Dir, finger2Dir (integer, optional):
+                  directions for finger tip movements, in range [0,
+                  360]. 0 is to the east, 90 to the north, etc. The
+                  defaults are 90 and 270.
+
+          movePoints (integer, optional):
+                  number of points to which finger tips are moved
+                  after laying them to the initial positions. The
+                  default is 20.
+
+          duration (float, optional):
+                  duration of the gesture in seconds, the default is 0.75.
+        """
+        screenWidth, screenHeight = self.screenSize()
+        screenDiagonal = math.sqrt(screenWidth**2 + screenHeight**2)
+
+        if x == None: x = 0.5
+        if y == None: y = 0.5
+
+        x, y = self.intCoords((x, y))
+
+        if type(startDistance) == float and 0.0 <= startDistance <= 1.0:
+            startDistanceInPixels = (startDistance *
+                                     max(fmbtgti._edgeDistanceInDirection((x, y), self.screenSize(), finger1Dir),
+                                         fmbtgti._edgeDistanceInDirection((x, y), self.screenSize(), finger2Dir)))
+        else: startDistanceInPixels = int(startDistance)
+
+        if type(endDistance) == float and 0.0 <= endDistance <= 1.0:
+            endDistanceInPixels = (endDistance *
+                                   max(fmbtgti._edgeDistanceInDirection((x, y), self.screenSize(), finger1Dir),
+                                       fmbtgti._edgeDistanceInDirection((x, y), self.screenSize(), finger2Dir)))
+        else: endDistanceInPixels = int(endDistance)
+
+        finger1startX = int(x + math.cos(math.radians(finger1Dir)) * startDistanceInPixels)
+        finger1startY = int(y - math.sin(math.radians(finger1Dir)) * startDistanceInPixels)
+        finger1endX = int(x + math.cos(math.radians(finger1Dir)) * endDistanceInPixels)
+        finger1endY = int(y - math.sin(math.radians(finger1Dir)) * endDistanceInPixels)
+
+        finger2startX = int(x + math.cos(math.radians(finger2Dir)) * startDistanceInPixels)
+        finger2startY = int(y - math.sin(math.radians(finger2Dir)) * startDistanceInPixels)
+        finger2endX = int(x + math.cos(math.radians(finger2Dir)) * endDistanceInPixels)
+        finger2endY = int(y - math.sin(math.radians(finger2Dir)) * endDistanceInPixels)
+
+        self.existingConnection().sendPinch(
+            (finger1startX, finger1startY), (finger1endX, finger1endY),
+            (finger2startX, finger2startY), (finger2endX, finger2endY),
+            movePoints, duration)
+        return True
+
+    def pinchOpen(self, (x, y) = (0.5, 0.5), startDistance=0.1, endDistance=0.5, **pinchKwArgs):
+        """
+        Make the open pinch gesture.
+
+        Parameters:
+          x, y (integer, optional):
+                  the central point of the gesture, the default is in
+                  the middle of the screen.
+
+          startDistance, endDistance (float, optional):
+                  refer to pinch documentation. The default is 0.1 and
+                  0.5.
+
+          for the rest of the parameters, refer to pinch documentation.
+        """
+        return self.pinch((x, y), startDistance, endDistance, **pinchKwArgs)
+
+    def pinchClose(self, (x, y) = (0.5, 0.5), startDistance=0.5, endDistance=0.1, **pinchKwArgs):
+        """
+        Make the close pinch gesture.
+
+        Parameters:
+          x, y (integer, optional):
+                  the central point of the gesture, the default is in
+                  the middle of the screen.
+
+          startDistance, endDistance (float, optional):
+                  refer to pinch documentation. The default is 0.5 and
+                  0.1.
+
+          rest of the parameters: refer to pinch documentation.
+        """
+        return self.pinch((x, y), startDistance, endDistance, **pinchKwArgs)
+
 
     def putFile(self, localFilename, remoteFilepath):
         """
@@ -738,6 +843,10 @@ class WindowsConnection(fmbtgti.GUITestConnection):
         else:
             command = "sendMouseUp(%s, %s, %s)" % (x, y, button)
         self._agent.eval_in(self._agent_ns, command)
+        return True
+
+    def sendPinch(self, *args):
+        self.evalPython("touchPinch%s" % (args,))
         return True
 
     def setScreenToDisplayCoords(self, screenToDisplayFunction):
