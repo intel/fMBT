@@ -178,6 +178,10 @@ class View(object):
                 self._viewItems[itemId] = ViewItem(
                     self, itemId, parentId, className, text, bbox, dumpFilename)
 
+    def _intCoords(self, *args):
+        # TODO: relative coordinates like (0.5, 0.9)
+        return [int(c) for c in args[0]]
+
     def rootItem(self):
         return self._viewItems[self._itemTree["root"][0][0]]
 
@@ -236,6 +240,26 @@ class View(object):
         else:
             c = lambda item: (className == item._className)
         return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
+
+    def findItemsByPos(self, pos, count=-1, searchRootItem=None, searchItems=None, onScreen=None):
+        """
+        Returns list of ViewItems whose bounding box contains the position.
+
+        Parameters:
+          pos (pair of floats (0.0..0.1) or integers (x, y)):
+                  coordinates that fall in the bounding box of found items.
+
+          other parameters: refer to findItems documentation.
+
+        Items are listed in ascending order based on area. They may
+        or may not be from the same branch in the widget hierarchy.
+        """
+        x, y = self._intCoords(pos)
+        c = lambda item: (item.bbox()[0] <= x <= item.bbox()[2] and item.bbox()[1] <= y <= item.bbox()[3])
+        items = self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
+        # sort from smallest to greatest area
+        area_items = [((i.bbox()[2] - i.bbox()[0]) * (i.bbox()[3] - i.bbox()[1]), i) for i in items]
+        return [i for _, i in sorted(area_items)]
 
 
 class Device(fmbtgti.GUITestInterface):
