@@ -132,6 +132,10 @@ def _pythonCode(code):
 
 class PythonshareConsole(code.InteractiveConsole):
     def __init__(self, *args, **kwargs):
+        try:
+            import readline
+        except:
+            pass
         self._conn = kwargs.pop("conn")
         self._ns = kwargs.pop("namespace", None)
         if self._ns == None:
