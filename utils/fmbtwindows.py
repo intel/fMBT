@@ -47,6 +47,7 @@ import inspect
 import math
 import os
 import pythonshare
+import shutil
 import subprocess
 import zlib
 
@@ -260,6 +261,12 @@ class View(object):
         # sort from smallest to greatest area
         area_items = [((i.bbox()[2] - i.bbox()[0]) * (i.bbox()[3] - i.bbox()[1]), i) for i in items]
         return [i for _, i in sorted(area_items)]
+
+    def save(self, fileOrDirName):
+        """
+        Save view dump to a file.
+        """
+        shutil.copy(self._dumpFilename, fileOrDirName)
 
 
 class Device(fmbtgti.GUITestInterface):
