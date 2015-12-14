@@ -654,6 +654,24 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self._conn.recvTopWindowProperties()
 
+    def verifyText(self, text, partial=False):
+        """
+        Verify that the last view has at least one item with given
+        text.
+
+        Parameters:
+
+          text (string):
+                  text to be searched for in items.
+
+          partial (boolean, optional):
+                  if True, match items if item text contains given
+                  text, otherwise match only if item text is equal to
+                  the given text. The default is False (exact match).
+        """
+        assert self._lastView != None, "View required."
+        return self._lastView.findItemsByText(text, partial=partial, count=1) != []
+
     def windowList(self):
         """
         Return list of properties of windows (dictionaries)
