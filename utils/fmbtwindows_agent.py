@@ -800,6 +800,61 @@ def dumpWidgets():
     wt = widgetList(hwnd)
     _dumpTree(0, hwnd, wt)
 
+def _dumpUiAutomationElements(window):
+    powershellCode = r"""
+$assemblies = ('System', 'UIAutomationTypes', 'UIAutomationClient')
+
+$source = @'
+using System;
+using System.Windows.Automation;
+
+namespace FmbtWindows {
+    public class DumpUI {
+        /* https://msdn.microsoft.com/en-us/library/system.windows.automation.treewalker.rawviewwalker(v=vs.110).aspx */
+        private static void DumpElement(AutomationElement rootElement, int depth=0)
+        {
+            string indent = new string(' ', depth * 4);
+            Console.WriteLine(indent + "hash=" + rootElement.GetHashCode().ToString());
+            foreach (AutomationProperty p in rootElement.GetSupportedProperties())
+            {
+                string propertyName = p.ProgrammaticName.Substring(p.ProgrammaticName.IndexOf(".")+1);
+                if (propertyName.EndsWith("Property"))
+                    propertyName = propertyName.Substring(0, propertyName.LastIndexOf("Property"));
+                Console.WriteLine(indent + propertyName + "=" + rootElement.GetCurrentPropertyValue(p));
+            }
+
+            AutomationElement elementNode = TreeWalker.ControlViewWalker.GetFirstChild(rootElement);
+
+            while (elementNode != null)
+            {
+                DumpElement(elementNode, depth+1);
+                elementNode = TreeWalker.ControlViewWalker.GetNextSibling(elementNode);
+            }
+        }
+
+        public static void DumpWindow(Int32 arg) {
+            IntPtr hwnd = new IntPtr(arg);
+            FmbtWindows.DumpUI.DumpElement(AutomationElement.FromHandle(hwnd));
+        }
+    }
+}
+'@
+
+Add-Type -ReferencedAssemblies $assemblies -TypeDefinition $source -Language CSharp
+
+"dump-start"
+[FmbtWindows.DumpUI]::DumpWindow(%s)
+"dump-end"
+""" % (window,)
+    fd, filename = tempfile.mkstemp(prefix="fmbtwindows-dumpwindow-", suffix=".ps1")
+    try:
+        os.write(fd, powershellCode)
+        os.close(fd)
+        run_script = ["powershell.exe", "-ExecutionPolicy", "Unrestricted", filename]
+        return _check_output(run_script)
+    finally:
+        os.remove(filename)
+
 def _check_output(*args, **kwargs):
     """subprocess.check_output, for Python 2.6 compatibility"""
     p = subprocess.Popen(*args, stdout=subprocess.PIPE, **kwargs)
