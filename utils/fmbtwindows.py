@@ -214,8 +214,12 @@ class View(object):
             self._viewSource = "uiautomation"
             for elt in itemTree:
                 bboxString = elt.get("BoundingRectangle", "0;0;0;0")
+                if ";" in bboxString:
+                    bboxSeparator = ";"
+                else:
+                    bboxSeparator = ","
                 try:
-                    bbox = [int(coord) for coord in bboxString.split(";")]
+                    bbox = [int(coord) for coord in bboxString.split(bboxSeparator)]
                     bbox[2] = bbox[0] + bbox[2] # width to right
                     bbox[3] = bbox[1] + bbox[3] # height to bottom
                 except Exception, e:
