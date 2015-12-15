@@ -800,7 +800,9 @@ def dumpWidgets():
     wt = widgetList(hwnd)
     _dumpTree(0, hwnd, wt)
 
-def _dumpUiAutomationElements(window):
+def dumpUIAutomationElements(window=None):
+    if window == None:
+        window = topWindow()
     powershellCode = r"""
 $assemblies = ('System', 'UIAutomationTypes', 'UIAutomationClient')
 
@@ -809,32 +811,30 @@ using System;
 using System.Windows.Automation;
 
 namespace FmbtWindows {
-    public class DumpUI {
-        /* https://msdn.microsoft.com/en-us/library/system.windows.automation.treewalker.rawviewwalker(v=vs.110).aspx */
-        private static void DumpElement(AutomationElement rootElement, int depth=0)
-        {
-            string indent = new string(' ', depth * 4);
-            Console.WriteLine(indent + "hash=" + rootElement.GetHashCode().ToString());
-            foreach (AutomationProperty p in rootElement.GetSupportedProperties())
-            {
-                string propertyName = p.ProgrammaticName.Substring(p.ProgrammaticName.IndexOf(".")+1);
-                if (propertyName.EndsWith("Property"))
-                    propertyName = propertyName.Substring(0, propertyName.LastIndexOf("Property"));
-                Console.WriteLine(indent + propertyName + "=" + rootElement.GetCurrentPropertyValue(p));
+    public class UI {
+        public static void DumpElement(AutomationElement elt, Int32 parent=0) {
+            Int32 eltHash = elt.GetHashCode();
+            Console.WriteLine("");
+            Console.WriteLine("hash=" + eltHash);
+            Console.WriteLine("parent=" + parent.ToString());
+            foreach (AutomationProperty p in elt.GetSupportedProperties()) {
+                string pName = p.ProgrammaticName.Substring(p.ProgrammaticName.IndexOf(".")+1);
+                if (pName.EndsWith("Property"))
+                    pName = pName.Substring(0, pName.LastIndexOf("Property"));
+                Console.WriteLine(pName + "=" + elt.GetCurrentPropertyValue(p));
             }
 
-            AutomationElement elementNode = TreeWalker.ControlViewWalker.GetFirstChild(rootElement);
+            AutomationElement eltChild = TreeWalker.%(walker)sViewWalker.GetFirstChild(elt);
 
-            while (elementNode != null)
-            {
-                DumpElement(elementNode, depth+1);
-                elementNode = TreeWalker.ControlViewWalker.GetNextSibling(elementNode);
+            while (eltChild != null) {
+                DumpElement(eltChild, eltHash);
+                eltChild = TreeWalker.%(walker)sViewWalker.GetNextSibling(eltChild);
             }
         }
 
-        public static void DumpWindow(Int32 arg) {
+        public static void DumpWindow(UInt32 arg) {
             IntPtr hwnd = new IntPtr(arg);
-            FmbtWindows.DumpUI.DumpElement(AutomationElement.FromHandle(hwnd));
+            DumpElement(AutomationElement.FromHandle(hwnd));
         }
     }
 }
@@ -842,10 +842,9 @@ namespace FmbtWindows {
 
 Add-Type -ReferencedAssemblies $assemblies -TypeDefinition $source -Language CSharp
 
-"dump-start"
-[FmbtWindows.DumpUI]::DumpWindow(%s)
-"dump-end"
-""" % (window,)
+[FmbtWindows.UI]::DumpWindow(%(window)s)
+""" % {"window": window, "walker": "Raw"}
+    # walker is Raw, Control or Content
     fd, filename = tempfile.mkstemp(prefix="fmbtwindows-dumpwindow-", suffix=".ps1")
     try:
         os.write(fd, powershellCode)

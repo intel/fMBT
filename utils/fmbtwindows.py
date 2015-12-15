@@ -133,6 +133,8 @@ _g_keyNames = [
     "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
     "U", "V", "W", "X", "Y", "Z"]
 
+_g_viewSources = ["enumchildwindows", "uiautomation"]
+
 # ShowWindow showCmd
 SW_HIDE          = 0
 SW_NORMAL        = 1
@@ -153,17 +155,41 @@ _g_showCmds = [
     "SW_DEFAULT", "SW_FORCEMINIMIZE"]
 
 class ViewItem(fmbtgti.GUIItem):
-    def __init__(self, view, itemId, parentId, className, text, bbox, dumpFilename):
+    def __init__(self, view, itemId, parentId, className, text, bbox, dumpFilename,
+                 rawProperties=None):
         self._view = view
         self._itemId = itemId
         self._parentId = parentId
         self._className = className
         self._text = text
+        self._properties = rawProperties # dictionary or None
         fmbtgti.GUIItem.__init__(self, self._className, bbox, dumpFilename)
 
     def children(self):
-        return [self._view._viewItems[winfo[0]]
-                for winfo in self._view._itemTree[self._itemId]]
+        if self._view._viewSource == "enumchildwindows":
+            return [self._view._viewItems[winfo[0]]
+                    for winfo in self._view._itemTree[self._itemId]]
+        else:
+            items = self._view._viewItems
+            return [items[itemHash]
+                    for itemHash in items
+                    if items[itemHash]._parentId == self._itemId]
+
+    def parent(self):
+        return self._parentId
+
+    def id(self):
+        return self._itemId
+
+    def properties(self):
+        return self._properties
+
+    def dumpProperties(self):
+        rv = []
+        if self._properties:
+            for key in sorted(self._properties.keys()):
+                rv.append("%s=%s" % (key, self._properties[key]))
+        return "\n".join(rv)
 
     def __str__(self):
         return "ViewItem(%s)" % (self._view._dumpItem(self),)
@@ -173,18 +199,52 @@ class View(object):
         self._dumpFilename = dumpFilename
         self._itemTree = itemTree
         self._viewItems = {}
-        for itemId, winfoList in itemTree.iteritems():
-            for winfo in winfoList:
-                itemId, parentId, className, text, bbox = winfo
-                self._viewItems[itemId] = ViewItem(
-                    self, itemId, parentId, className, text, bbox, dumpFilename)
+        if isinstance(itemTree, dict):
+            # data from enumchildwindows:
+            self._viewSource = "enumchildwindows"
+            for itemId, winfoList in itemTree.iteritems():
+                for winfo in winfoList:
+                    itemId, parentId, className, text, bbox = winfo
+                    self._viewItems[itemId] = ViewItem(
+                        self, itemId, parentId, className, text, bbox, dumpFilename)
+            self._rootItem = self._viewItems[self._itemTree["root"][0][0]]
+        elif isinstance(itemTree, list):
+            # data from uiautomation
+            # list of dictionaries, each of which contains properties of an item
+            self._viewSource = "uiautomation"
+            for elt in itemTree:
+                bboxString = elt.get("BoundingRectangle", "0;0;0;0")
+                try:
+                    bbox = [int(coord) for coord in bboxString.split(";")]
+                    bbox[2] = bbox[0] + bbox[2] # width to right
+                    bbox[3] = bbox[1] + bbox[3] # height to bottom
+                except Exception, e:
+                    bbox = [0, 0, 0, 0]
+                text = elt.get("Value", "")
+                if text == "":
+                    text = elt.get("Name", "")
+                vi = ViewItem(
+                    self, int(elt["hash"]), int(elt["parent"]),
+                    elt.get("ClassName", ""),
+                    text,
+                    bbox,
+                    dumpFilename,
+                    elt)
+                self._viewItems[elt["hash"]] = vi
+                if vi.parent() == 0:
+                    self._rootItem = vi
+            if not self._rootItem:
+                raise ValueError("no root item in view data")
 
     def _intCoords(self, *args):
         # TODO: relative coordinates like (0.5, 0.9)
         return [int(c) for c in args[0]]
 
+    def filename(self):
+        return self._dumpFilename
+
     def rootItem(self):
-        return self._viewItems[self._itemTree["root"][0][0]]
+        return self._rootItem
 
     def _dumpItem(self, viewItem):
         return "id=%s cls=%s text=%s bbox=%s" % (
@@ -242,6 +302,28 @@ class View(object):
             c = lambda item: (className == item._className)
         return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
 
+    def findItemsByProperties(self, properties, count=-1, searchRootItem=None, searchItems=None):
+        """
+        Returns ViewItems where every property matches given properties
+
+        Parameters:
+          properties (dictionary):
+                  names and required values of properties
+
+        Example:
+          view.findItemsByProperties({"Value": "HELLO", "Name": "File name:"})
+
+        See also:
+          viewitem.dumpProperties()
+
+        Notes:
+          - requires uiautomation (refreshView(viewSource="uiautomation"))
+          - all names and values are strings
+        """
+        c = lambda item: 0 == len([key for key in properties
+                                   if properties[key] != item.properties().get(key, None)])
+        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
+
     def findItemsByPos(self, pos, count=-1, searchRootItem=None, searchItems=None, onScreen=None):
         """
         Returns list of ViewItems whose bounding box contains the position.
@@ -297,6 +379,7 @@ class Device(fmbtgti.GUITestInterface):
         instance.
         """
         fmbtgti.GUITestInterface.__init__(self, **kwargs)
+        self._viewSource = _g_viewSources[0]
         self.setConnection(WindowsConnection(connspec, password))
 
     def existingView(self):
@@ -464,7 +547,7 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self._conn.sendFile(localFilename, remoteFilepath)
 
-    def refreshView(self, window=None, forcedView=None):
+    def refreshView(self, window=None, forcedView=None, viewSource=None):
         """
         (Re)reads widgets on the top window and updates the latest view.
 
@@ -477,8 +560,20 @@ class Device(fmbtgti.GUITestInterface):
                   use given View object or view file instead of reading the
                   items from the device.
 
+          viewSource (string, optional):
+                  source of UI information. Supported sources are:
+                  "uiautomation" the UIAutomation framework.
+                  "enumchildwindows" less data
+                  but does not require UIAutomation.
+                  The default is "enumchildwindows".
+                  See also setViewSource().
+
         Returns View object.
         """
+        if viewSource == None:
+            viewSource = self._viewSource
+        if not viewSource in _g_viewSources:
+            raise ValueError('invalid view source "%s"' % (viewSource,))
         if forcedView != None:
             if isinstance(forcedView, View):
                 self._lastView = forcedView
@@ -491,7 +586,10 @@ class Device(fmbtgti.GUITestInterface):
             if self.screenshotSubdir() == None:
                 self.setScreenshotSubdir(self._screenshotSubdirDefault)
             viewFilename = self._newScreenshotFilepath()[:-3] + "view"
-            viewData = self._conn.recvViewData(window)
+            if viewSource == "enumchildwindows":
+                viewData = self._conn.recvViewData(window)
+            else:
+                viewData = self._conn.recvViewUIAutomation(window)
             file(viewFilename, "w").write(repr(viewData))
             self._lastView = View(viewFilename, viewData)
         return self._lastView
@@ -547,6 +645,25 @@ class Device(fmbtgti.GUITestInterface):
                   width and height of screenshot.
         """
         self._conn.setScreenshotSize(size)
+
+    def setViewSource(self, source):
+        """
+        Set default view source for refreshView()
+
+        Parameters:
+
+          source (string):
+                  default source, "enumchildwindow" or "uiautomation".
+
+        Returns None.
+
+        See also refreshView(), viewSource().
+        """
+        if not source in _g_viewSources:
+            raise ValueError(
+                'invalid view source "%s", expected one of: "%s"' %
+                (source, '", "'.join(_g_viewSources)))
+        self._viewSource = source
 
     def shell(self, command):
         """
@@ -679,6 +796,14 @@ class Device(fmbtgti.GUITestInterface):
         assert self._lastView != None, "View required."
         return self._lastView.findItemsByText(text, partial=partial, count=1) != []
 
+    def viewSource(self):
+        """
+        Returns curent default view source.
+
+        See also refreshView(), setViewSource().
+        """
+        return self._viewSource
+
     def windowList(self):
         """
         Return list of properties of windows (dictionaries)
@@ -796,6 +921,26 @@ class WindowsConnection(fmbtgti.GUITestConnection):
                 raise ValueError('no window with title "%s"' % (window,))
         else:
             raise ValueError('illegal window "%s", expected integer or string (hWnd or title)' % (window,))
+        return rv
+
+    def recvViewUIAutomation(self, window=None):
+        """returns list of dictionaries, each of which contains properties of
+        an item"""
+        dump = self.evalPython("dumpUIAutomationElements(%s)" % (repr(window),))
+        rv = []
+        prop_data = {}
+        for prop_line in dump.splitlines():
+            prop_clean = prop_line.strip()
+            if not "=" in prop_clean:
+                continue
+            prop_name, prop_value = prop_clean.split("=", 1)
+            if prop_name == "hash":
+                if prop_data:
+                    rv.append(prop_data)
+                    prop_data = {}
+            prop_data[prop_name] = prop_value
+        if prop_data:
+            rv.append(prop_data)
         return rv
 
     def recvWindowList(self):
