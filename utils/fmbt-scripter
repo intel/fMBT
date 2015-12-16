@@ -279,7 +279,7 @@ class MyScaleEvents(QtCore.QObject):
             elif (event.key() == QtCore.Qt.Key_Down and
                   event.modifiers() == QtCore.Qt.ControlModifier):
                 return self.mainwindow.consoleKeyDownPressed()
-        if self.mainwindow._selectingBitmap:
+        if self.mainwindow._selectingBitmap and event.type() != QtCore.QEvent.ToolTip:
             return self.eventToSelect(event)
         else:
             return self.eventToAPI(event)
