@@ -821,7 +821,8 @@ namespace FmbtWindows {
                 string pName = p.ProgrammaticName.Substring(p.ProgrammaticName.IndexOf(".")+1);
                 if (pName.EndsWith("Property"))
                     pName = pName.Substring(0, pName.LastIndexOf("Property"));
-                Console.WriteLine(pName + "=" + elt.GetCurrentPropertyValue(p));
+                string pValue = "" + elt.GetCurrentPropertyValue(p);
+                Console.WriteLine(pName + "=" + pValue.Replace("\\", "\\\\").Replace("\r\n", "\\r\\n"));
             }
 
             AutomationElement eltChild = TreeWalker.%(walker)sViewWalker.GetFirstChild(elt);
@@ -844,7 +845,7 @@ Add-Type -ReferencedAssemblies $assemblies -TypeDefinition $source -Language CSh
 
 [FmbtWindows.UI]::DumpWindow(%(window)s)
 """ % {"window": window, "walker": "Raw"}
-    # walker is Raw, Control or Content
+    # walker is "Raw", "Control" or "Content"
     fd, filename = tempfile.mkstemp(prefix="fmbtwindows-dumpwindow-", suffix=".ps1")
     try:
         os.write(fd, powershellCode)
