@@ -2048,18 +2048,30 @@ class MainWindow(QtGui.QMainWindow):
 
     def variablePresentation(self, varname):
         self.drawRect(0, 0, 0, 0, clear=True)
+        text = None
         if varname == None or not varname in self._fmbtEnv:
             text = ""
         else:
             value = self._fmbtEnv[varname]
             if isinstance(value, fmbtgti.GUIItem):
                 self.drawRect(*(value.bbox()))
+                if hasattr(value, "dumpProperties"):
+                    text = value.dumpProperties()
+                    dumper = "dumpProperties"
+                elif hasattr(value, "dump"):
+                    text = value.dump()
+                    dumper = "dump"
+                if text != None:
+                    if len(text.splitlines()) > 42:
+                        text = "\n".join(text.splitlines()[:42] +
+                                         ["...see %s.%s() for more" % (varname, dumper)])
             elif isinstance(value, list) or isinstance(value, set) or isinstance(value, tuple):
                 if (len(value) < 1024 and # do not draw too many rectangles
                     len(value) == len([i for i in value if isinstance(i, fmbtgti.GUIItem)])):
                     for i in value:
                         self.drawRect(*(i.bbox()), onOrig=False)
-            text = "%s == %s" % (varname, repr(value)[:128])
+            if text == None:
+                text = "%s == %s" % (varname, repr(value)[:128])
         return text
 
     def _findSutVariable(self):
