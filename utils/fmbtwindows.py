@@ -184,6 +184,9 @@ class ViewItem(fmbtgti.GUIItem):
     def properties(self):
         return self._properties
 
+    def text(self):
+        return self._text
+
     def dumpProperties(self):
         rv = []
         if self._properties:
@@ -304,6 +307,10 @@ class View(object):
             c = lambda item: (className in item._className)
         else:
             c = lambda item: (className == item._className)
+        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
+
+    def findItemsById(self, itemId, count=-1, searchRootItem=None, searchItems=None):
+        c = lambda item: (itemId == item._itemId)
         return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
 
     def findItemsByProperties(self, properties, count=-1, searchRootItem=None, searchItems=None):
