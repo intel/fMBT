@@ -58,15 +58,20 @@ def _close(*args):
                 pass
 
 def _send(msg, destination):
-    with _send.lock:
+    if not destination in _send.locks:
+        _send.locks[destination] = thread.allocate_lock()
+    with _send.locks[destination]:
         cPickle.dump(msg, destination)
         destination.flush()
-_send.lock = thread.allocate_lock()
+_send.locks = {}
 
 def _recv(source):
-    with _recv.lock:
+    if not source in _recv.locks:
+        _recv.locks[source] = thread.allocate_lock()
+    with _recv.locks[source]:
         return cPickle.load(source)
-_recv.lock = thread.allocate_lock()
+_recv.locks = {}
+
 
 def connect(hostspec, password=None, namespace=None):
     """Returns Connection to pythonshare server at hostspec.
