@@ -24,7 +24,6 @@
 """
 
 import socket
-import cPickle
 
 import pythonshare
 from pythonshare.messages import \
@@ -93,9 +92,8 @@ class Connection(object):
 
         if password:
             # authenticate to server
-            cPickle.dump(password, self._to_server)
-            self._to_server.flush()
-            auth_rv = cPickle.load(self._from_server)
+            pythonshare._send(password, self._to_server)
+            auth_rv = pythonshare._recv(self._from_server)
             try:
                 auth_ok = auth_rv.success
             except AttributeError:
@@ -151,9 +149,8 @@ class Connection(object):
 
         """
         try:
-            cPickle.dump(Exec(namespace, code, expr, async=async, lock=lock), self._to_server)
-            self._to_server.flush()
-            return self.make_local(cPickle.load(self._from_server))
+            pythonshare._send(Exec(namespace, code, expr, async=async, lock=lock), self._to_server)
+            return self.make_local(pythonshare._recv(self._from_server))
         except EOFError:
             raise pythonshare.PythonShareError(
                 'No connection to namespace "%s"' % (namespace,))
@@ -225,9 +222,8 @@ class Connection(object):
         peer. (The remote peer accesses registered namespace through
         this connection object.)
         """
-        cPickle.dump(Register_ns(namespace), self._to_server)
-        self._to_server.flush()
-        rv = cPickle.load(self._from_server)
+        pythonshare._send(Register_ns(namespace), self._to_server)
+        rv = pythonshare._recv(self._from_server)
         if isinstance(rv, Ns_rv) and rv.status:
             return True
         else:
@@ -236,9 +232,8 @@ class Connection(object):
     def import_ns(self, namespace):
         """
         """
-        cPickle.dump(Request_ns(namespace), self._to_server)
-        self._to_server.flush()
-        rv = cPickle.load(self._from_server)
+        pythonshare._send(Request_ns(namespace), self._to_server)
+        rv = pythonshare._recv(self._from_server)
         if isinstance(rv, Ns_rv) and rv.status:
             return True
         else:
@@ -255,9 +250,8 @@ class Connection(object):
 
         Returns True on success or raises an exception.
         """
-        cPickle.dump(Drop_ns(namespace), self._to_server)
-        self._to_server.flush()
-        rv = cPickle.load(self._from_server)
+        pythonshare._send(Drop_ns(namespace), self._to_server)
+        rv = pythonshare._recv(self._from_server)
         if isinstance(rv, Ns_rv) and rv.status:
             return True
         else:
@@ -287,8 +281,7 @@ class Connection(object):
 
     def kill_server(self):
         """Send server shutdown message"""
-        cPickle.dump(Server_ctl("die"), self._to_server)
-        self._to_server.flush()
+        pythonshare._send(Server_ctl("die"), self._to_server)
         return True
 
     def namespace(self):

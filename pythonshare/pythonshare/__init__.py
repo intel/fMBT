@@ -17,11 +17,13 @@
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
 import client
+import cPickle
 import server
 import messages
 import socket
 import subprocess
 import urlparse as _urlparse
+import thread
 
 from messages import Exec, Exec_rv
 
@@ -54,6 +56,17 @@ def _close(*args):
                 a.close()
             except (socket.error, IOError):
                 pass
+
+def _send(msg, destination):
+    with _send.lock:
+        cPickle.dump(msg, destination)
+        destination.flush()
+_send.lock = thread.allocate_lock()
+
+def _recv(source):
+    with _recv.lock:
+        return cPickle.load(source)
+_recv.lock = thread.allocate_lock()
 
 def connect(hostspec, password=None, namespace=None):
     """Returns Connection to pythonshare server at hostspec.

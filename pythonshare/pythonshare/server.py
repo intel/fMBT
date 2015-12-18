@@ -26,7 +26,6 @@ import platform
 import socket
 import sys
 import tempfile
-import cPickle
 import thread
 import traceback
 import urlparse
@@ -286,9 +285,8 @@ def _local_async_execute(async_rv, exec_msg):
 
 def _remote_execute(ns, exec_msg):
     rns = _g_remote_namespaces[ns]
-    cPickle.dump(exec_msg, rns.to_remote)
-    rns.to_remote.flush()
-    return cPickle.load(rns.from_remote)
+    pythonshare._send(exec_msg, rns.to_remote)
+    return pythonshare._recv(rns.from_remote)
 
 def _connection_lost(conn_id, *closables):
     if closables:
@@ -319,7 +317,7 @@ def _serve_connection(conn, conn_opts):
     kill_server_on_close = conn_opts.get("kill-server-on-close", False)
     if passwords:
         # password authentication is required for this connection
-        received_password = cPickle.load(from_client)
+        received_password = pythonshare._recv(from_client)
         for password_type in passwords:
             algorithm = password_type.split(".")[1]
             if type(received_password) == str:
@@ -331,14 +329,13 @@ def _serve_connection(conn, conn_opts):
                       conn_opts[password_type]):
                     auth_ok = True
         if auth_ok:
-            cPickle.dump(messages.Auth_rv(True), to_client)
+            pythonshare._send(messages.Auth_rv(True), to_client)
             if opt_debug:
                 daemon_log("%s:%s authentication ok" % conn.getpeername())
         else:
-            cPickle.dump(messages.Auth_rv(False), to_client)
+            pythonshare._send(messages.Auth_rv(False), to_client)
             if opt_debug:
                 daemon_log("%s:%s authentication failed" % conn.getpeername())
-        to_client.flush()
     else:
        auth_ok = True # no password required
 
@@ -346,7 +343,7 @@ def _serve_connection(conn, conn_opts):
 
     while auth_ok:
         try:
-            obj = cPickle.load(from_client)
+            obj = pythonshare._recv(from_client)
             if opt_debug:
                 daemon_log("%s:%s => %s" % (conn.getpeername() + (obj,)))
         except EOFError:
@@ -355,15 +352,13 @@ def _serve_connection(conn, conn_opts):
         if isinstance(obj, messages.Register_ns):
             try:
                 _init_remote_namespace(obj.ns, conn, to_client, from_client)
-                cPickle.dump(messages.Ns_rv(True), to_client)
-                to_client.flush()
+                pythonshare._send(messages.Ns_rv(True), to_client)
                 # from this point on, this connection is reserved for
                 # sending remote namespace traffic. The connection will be
                 # used by other threads, this thread stops here.
                 return
             except Exception, e:
-                cPickle.dump(messages.Ns_rv(False, exception2string(sys.exc_info())), to_client)
-                to_client.flush()
+                pythonshare._send(messages.Ns_rv(False, exception2string(sys.exc_info())), to_client)
 
         elif isinstance(obj, messages.Drop_ns):
             try:
@@ -373,21 +368,18 @@ def _serve_connection(conn, conn_opts):
                     _drop_remote_namespace(obj.ns)
                 else:
                     raise ValueError('Unknown namespace "%s"' % (obj.ns,))
-                cPickle.dump(messages.Ns_rv(True), to_client)
-                to_client.flush()
+                pythonshare._send(messages.Ns_rv(True), to_client)
             except Exception, e:
                 if opt_debug:
                     daemon_log("namespace drop error: %s" % (e,))
-                cPickle.dump(messages.Ns_rv(False, exception2string(sys.exc_info())), to_client)
-                to_client.flush()
+                pythonshare._send(messages.Ns_rv(False, exception2string(sys.exc_info())), to_client)
 
         elif isinstance(obj, messages.Request_ns):
             ns = obj.ns
             if (ns in _g_remote_namespaces or
                 ns in _g_local_namespaces):
                 _register_exported_namespace(ns, conn)
-                cPickle.dump(messages.Ns_rv(True), to_client)
-                to_client.flush()
+                pythonshare._send(messages.Ns_rv(True), to_client)
                 # from this point on, this connection is reserved for
                 # receiving executions on requested namespace. This
                 # thread starts serving the connection.
@@ -418,11 +410,10 @@ def _serve_connection(conn, conn_opts):
             if opt_debug:
                 daemon_log("%s:%s <= %s" % (conn.getpeername() + (exec_rv,)))
             try:
-                cPickle.dump(exec_rv, to_client)
+                pythonshare._send(exec_rv, to_client)
             except (TypeError, ValueError, cPickle.PicklingError): # pickling rv fails
                 exec_rv.expr_rv = messages.Unpicklable(exec_rv.expr_rv)
-                cPickle.dump(exec_rv, to_client)
-            to_client.flush()
+                pythonshare._send(exec_rv, to_client)
 
         elif isinstance(obj, messages.Server_ctl):
             if obj.command == "die":
@@ -432,8 +423,7 @@ def _serve_connection(conn, conn_opts):
                 break
         else:
             daemon_log("unknown message type: %s in %s" % (type(obj), obj))
-            cPickle.dump(messages.Auth_rv(False), to_client)
-            to_client.flush()
+            pythonshare._send(messages.Auth_rv(False), to_client)
             auth_ok = False
     if opt_debug:
         daemon_log("disconnected %s:%s" % conn.getpeername())
