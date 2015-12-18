@@ -309,8 +309,12 @@ def _serve_connection(conn, conn_opts):
     else: # conn is a connected socket
         to_client = conn.makefile("w")
         from_client = conn.makefile("r")
+    try:
+        peername = conn.getpeername()
+    except socket.error:
+        peername = ("unknown", "?")
     if opt_debug:
-        daemon_log("connected %s:%s" % conn.getpeername())
+        daemon_log("connected %s:%s" % peername)
     conn_id = "%s-%s" % (timestamp(), id(conn))
     auth_ok = False
     passwords = [k for k in conn_opts.keys() if k.startswith("password.")]
@@ -328,14 +332,18 @@ def _serve_connection(conn, conn_opts):
                       getattr(hashlib, algorithm)(received_password).hexdigest() ==
                       conn_opts[password_type]):
                     auth_ok = True
-        if auth_ok:
-            pythonshare._send(messages.Auth_rv(True), to_client)
-            if opt_debug:
-                daemon_log("%s:%s authentication ok" % conn.getpeername())
-        else:
-            pythonshare._send(messages.Auth_rv(False), to_client)
-            if opt_debug:
-                daemon_log("%s:%s authentication failed" % conn.getpeername())
+        try:
+            if auth_ok:
+                pythonshare._send(messages.Auth_rv(True), to_client)
+                if opt_debug:
+                    daemon_log("%s:%s authentication ok" % peername)
+            else:
+                pythonshare._send(messages.Auth_rv(False), to_client)
+                if opt_debug:
+                    daemon_log("%s:%s authentication failed" % peername)
+        except socket.error:
+            daemon_log("authentication failed due to socket error")
+            auth_ok = False
     else:
        auth_ok = True # no password required
 
@@ -345,7 +353,7 @@ def _serve_connection(conn, conn_opts):
         try:
             obj = pythonshare._recv(from_client)
             if opt_debug:
-                daemon_log("%s:%s => %s" % (conn.getpeername() + (obj,)))
+                daemon_log("%s:%s => %s" % (peername + (obj,)))
         except EOFError:
             break
 
@@ -408,7 +416,7 @@ def _serve_connection(conn, conn_opts):
                     # synchronous execution, return true return value
                     exec_rv = _local_execute(obj, conn_id)
             if opt_debug:
-                daemon_log("%s:%s <= %s" % (conn.getpeername() + (exec_rv,)))
+                daemon_log("%s:%s <= %s" % (peername + (exec_rv,)))
             try:
                 pythonshare._send(exec_rv, to_client)
             except (TypeError, ValueError, cPickle.PicklingError): # pickling rv fails
@@ -426,7 +434,7 @@ def _serve_connection(conn, conn_opts):
             pythonshare._send(messages.Auth_rv(False), to_client)
             auth_ok = False
     if opt_debug:
-        daemon_log("disconnected %s:%s" % conn.getpeername())
+        daemon_log("disconnected %s:%s" % peername)
     _connection_lost(conn_id, to_client, from_client, conn)
     if kill_server_on_close:
         _g_server_shutdown = True

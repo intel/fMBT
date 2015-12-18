@@ -51,6 +51,10 @@ class InProgress(AsyncStatus):
 # Misc helpers for client and server
 def _close(*args):
     for a in args:
+        if a in _send.locks:
+            del _send.locks[a]
+        if a in _recv.locks:
+            del _recv.locks[a]
         if a:
             try:
                 a.close()
