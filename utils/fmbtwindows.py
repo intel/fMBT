@@ -391,7 +391,10 @@ class Device(fmbtgti.GUITestInterface):
         """
         fmbtgti.GUITestInterface.__init__(self, **kwargs)
         self._viewSource = _g_viewSources[0]
-        self.setConnection(WindowsConnection(connspec, password))
+        self._connspec = connspec
+        self._password = password
+        self.setConnection(WindowsConnection(
+            self._connspec, self._password))
 
     def existingView(self):
         if self._lastView:
@@ -557,6 +560,21 @@ class Device(fmbtgti.GUITestInterface):
                   will be saved with remoteFilepath as new name.
         """
         return self._conn.sendFile(localFilename, remoteFilepath)
+
+    def reconnect(self):
+        """
+        Close connections to the device and reconnect.
+        """
+        self.setConnection(None)
+        import gc
+        gc.collect()
+        try:
+            self.setConnection(WindowsConnection(
+                self._connspec, self._password))
+            return True
+        except Exception, e:
+            _adapterLog("reconnect failed: %s" % (e,))
+            return False
 
     def refreshView(self, window=None, forcedView=None, viewSource=None):
         """
