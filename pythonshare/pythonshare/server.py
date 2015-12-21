@@ -397,7 +397,7 @@ def _serve_connection(conn, conn_opts):
             if ns in _g_remote_namespaces: # execute in remote namespace
                 try:
                     exec_rv = _remote_execute(ns, obj)
-                except EOFError: # connection lost
+                except (EOFError, socket.error): # connection lost
                     daemon_log('connection lost to "%s"' % (ns,))
                     _drop_remote_namespace(ns)
                     break
