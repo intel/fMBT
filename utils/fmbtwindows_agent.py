@@ -14,6 +14,7 @@
 # this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
+import __builtin__
 import base64
 import ctypes
 import ctypes.wintypes
@@ -560,7 +561,7 @@ def Hardware(message, parameter=0):
 UPPER = frozenset('~!@#$%^&*()_+QWERTYUIOP{}|ASDFGHJKL:"ZXCVBNM<>?')
 LOWER = frozenset("`1234567890-=qwertyuiop[]\\asdfghjkl;'zxcvbnm,./")
 ORDER = string.ascii_letters + string.digits + ' \b\r\t'
-ALTER = dict(zip('!@#$%^&*()', '1234567890'))
+ALTER = dict(__builtin__.zip('!@#$%^&*()', '1234567890'))
 OTHER = {'`': VK_OEM_3,
          '~': VK_OEM_3,
          '-': VK_OEM_MINUS,
