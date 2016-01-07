@@ -39,6 +39,7 @@ NULL = ctypes.c_void_p(0)
 
 try:
     libpng = ctypes.CDLL("libpng12.so.0")
+    PNG_LIBPNG_VERSION_STRING = ctypes.c_char_p("1.2")
 except OSError, e:
     try:
         libpng = ctypes.CDLL("libpng16.so.16")
