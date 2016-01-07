@@ -390,7 +390,7 @@ class Device(fmbtgti.GUITestInterface):
         instance.
         """
         fmbtgti.GUITestInterface.__init__(self, **kwargs)
-        self._viewSource = _g_viewSources[0]
+        self._viewSource = _g_viewSources[1]
         self._connspec = connspec
         self._password = password
         self.setConnection(WindowsConnection(
