@@ -917,9 +917,9 @@ def shellSOE(command, asyncStatus=None, asyncOut=None, asyncError=None):
             asyncOut = os.devnull
         if not asyncError or asyncError == True:
             asyncError = os.devnull
-        sFile = file(asyncStatus, "w")
-        oFile = file(asyncOut, "w")
-        eFile = file(asyncError, "w")
+        sFile = file(os.path.expandvars(asyncStatus), "w")
+        oFile = file(os.path.expandvars(asyncOut), "w")
+        eFile = file(os.path.expandvars(asyncError), "w")
         p = subprocess.Popen(command, shell=useShell,
                              stdin = file(os.devnull),
                              stdout = oFile,

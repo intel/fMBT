@@ -730,22 +730,28 @@ class Device(fmbtgti.GUITestInterface):
                   If command is a multiline string, it will be written
                   to a BAT file and executed as a script.
 
-          asyncStatus (string or None)
+          asyncStatus (string, True or None)
                   filename (on device) to which the status of
                   asynchronously executed shellCommand will be
-                  written. The default is None, that is, command will
-                  be run synchronously, and status will be returned in
+                  written. If True, the command will be executed
+                  asynchronously but exit status will not be
+                  saved. The default is None, that is, command will be
+                  run synchronously, and status will be returned in
                   the tuple.
 
-          asyncOut (string or None)
+          asyncOut (string, True or None)
                   filename (on device) to which the standard output of
                   asynchronously executed shellCommand will be
-                  written. The default is None.
+                  written. If True, the command will be executed
+                  asynchronously but output will not saved. The
+                  default is None.
 
-          asyncError (string or None)
+          asyncError (string, True or None)
                   filename (on device) to which the standard error of
                   asynchronously executed shellCommand will be
-                  written. The default is None.
+                  written. If True, the command will be executed
+                  asynchronously but standard error will not be
+                  saved. The default is None.
 
         Returns triplet: exit status, standard output and standard error
         from the command.
