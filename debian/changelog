@@ -1,8 +1,34 @@
-fmbt (0.30-0.rc0) unstable; urgency=low
+fmbt (0.30-1) unstable; urgency=low
 
-  * Development version.
+  * fmbtwindows:
+    - Added multitouch gestures: Device.pinch(), pinchOpen(), pinchClose().
+    - shellSOE() supports multiline commands.
+    - shellSOE() async files support variables (asyncOut="%TEMP%\out.txt").
+    - Added UIAutomation view source, refreshView() uses it by default.
+    - Added Device.reconnect().
+    - Added Device.verifyText().
+    - Added Device.putFile().
+    - Added Device.setViewSource(), viewSource(), refreshView(viewSource=X).
+    - Added View.findItemsById(), findItemsByProperties(), filename(), save().
+    - Added ViewItem.parent(), id(), text(), properties(), dumpProperties().
+    - Support for multiline strings as view item data.
+  * fmbtandroid/chromiumos/tizen/vnc/windows/x11:
+    - Added Screenshot.crop(), flip() and flop().
+  * fmbtpng: updated to work with latest Debian libpng builds.
+  * pythonshare:
+    - Interactive client (pythonshare-client -i) uses readline.
+    - Improved socket error handling on server.
+    - Fixed mutual exclusion issue on server with concurrent clients.
+  * fmbt-scripter:
+    - Added view item properties to tooltips.
+    - Fixed variable data on tooltips with Select/View pressed down.
+    - Select/View works with fmbtwindows similarly to fmbtandroid.
+  * API break: Old test scripts that use fmbtwindows.Device.refresView()
+    need an update: call device.setViewSource("enumchildwindows")
+    before running the first refreshView(). New refreshView() gives much
+    more detailed data from new UIAutomation backend.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Thu, 26 Nov 2015 09:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Thu, 7 Jan 2016 14:42:00 +0300
 
 fmbt (0.29-1) unstable; urgency=low
 
