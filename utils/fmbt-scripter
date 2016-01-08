@@ -249,6 +249,7 @@ class MyScaleEvents(QtCore.QObject):
         self.attrowner  = attrowner
         self.mainwindow = mainwindow
         self.visibleTip = None
+        self.highlightedItems = []
         self.selTop, self.selLeft = None, None
     def changeScale(self, coefficient):
         self.attrowner.wheel_scale *= coefficient
@@ -286,6 +287,7 @@ class MyScaleEvents(QtCore.QObject):
     def eventToSelect(self, event):
         w = self.mainwindow
         if event.type() == QtCore.QEvent.MouseButtonPress:
+            self.highlightedItems = []
             w.drawRect(0, 0, 0, 0, clear=True)
             if w._selectingBitmap.startswith("fmbt-scripter://view-item-at-pos"):
                 view_supported, _ = w._fmbtEval("hasattr(%s, 'view')" % (w._sut,), silent=True)
@@ -305,6 +307,7 @@ class MyScaleEvents(QtCore.QObject):
                     for index, i in enumerate(reversed(items)):
                         w.drawRect(*i.bbox(), onOrig=False)
                         msgs.append(str(i))
+                    self.highlightedItems = items
                     log("\n".join(msgs))
             else:
                 self.selLeft, self.selTop = self.posToAbs(event.pos)
@@ -411,7 +414,15 @@ class MyScaleEvents(QtCore.QObject):
         return False
     def showScreenshotTooltip(self, event):
         # tooltip on screenshot view
+        QtGui.QToolTip.hideText()
         x, y = self.posToAbs(event.pos)
+        if hasattr(self, "highlightedItems"):
+            for item in self.highlightedItems:
+                if (item.bbox()[0] <= x <= item.bbox()[2] and
+                    item.bbox()[1] <= y <= item.bbox()[3]):
+                    if hasattr(item, "dumpProperties") and item.dumpProperties():
+                        QtGui.QToolTip.showText(event.globalPos(), item.dumpProperties())
+                        break
         xRel, yRel = self.posToRel(event.pos)
         self.mainwindow._screenshotCursorX = int(x)
         self.mainwindow._screenshotCursorY = int(y)

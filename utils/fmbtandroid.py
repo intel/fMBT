@@ -1870,6 +1870,12 @@ class ViewItem(fmbtgti.GUIItem):
                 "indent = %d\n\tproperties = {\n\t\t%s\n\t})") % (
             len(self._children), self._className, self._code, self._indent,
             '\n\t\t'.join(['"%s": %s' % (key, p[key]) for key in sorted(p.keys())]))
+    def dumpProperties(self):
+        rv = []
+        if self._p:
+            for key in [k for k in sorted(self._p.keys()) if not "layout:" in k and not "padding:" in k and not "drawing:" in k]: # sorted(self._p.keys()): # [k for k in sorted(self._p.keys()) if not ":" in k]:
+                rv.append("%s=%s" % (key, self._p[key]))
+        return "\n".join(rv)
     def __str__(self):
         if self.text():
             text = ", text=%s" % (repr(self.text()),)
