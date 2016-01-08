@@ -412,6 +412,7 @@ class Device(fmbtgti.GUITestInterface):
         """
         fmbtgti.GUITestInterface.__init__(self, **kwargs)
         self._viewSource = _g_viewSources[1]
+        self._viewItemProperties = None
         self._connspec = connspec
         self._password = password
         self.setConnection(WindowsConnection(
@@ -597,7 +598,7 @@ class Device(fmbtgti.GUITestInterface):
             _adapterLog("reconnect failed: %s" % (e,))
             return False
 
-    def refreshView(self, window=None, forcedView=None, viewSource=None, items=[]):
+    def refreshView(self, window=None, forcedView=None, viewSource=None, items=[], properties=None):
         """
         (Re)reads widgets on the top window and updates the latest view.
 
@@ -622,6 +623,12 @@ class Device(fmbtgti.GUITestInterface):
                   update only contents of these items in the view.
                   Works only for "uiautomation" view source.
 
+          properties (list of property names, optional):
+                  read only given properties from items, the default
+                  is to read all available properties.
+                  Works only for "uiautomation" view source.
+                  See also setViewSource().
+
         Returns View object.
         """
         if viewSource == None:
@@ -643,7 +650,9 @@ class Device(fmbtgti.GUITestInterface):
             if viewSource == "enumchildwindows":
                 viewData = self._conn.recvViewData(window)
             else:
-                viewData = self._conn.recvViewUIAutomation(window, items)
+                if properties == None:
+                    properties = self._viewItemProperties
+                viewData = self._conn.recvViewUIAutomation(window, items, properties)
             file(viewFilename, "w").write(repr(viewData))
             self._lastView = View(viewFilename, viewData)
         return self._lastView
@@ -700,7 +709,7 @@ class Device(fmbtgti.GUITestInterface):
         """
         self._conn.setScreenshotSize(size)
 
-    def setViewSource(self, source):
+    def setViewSource(self, source, properties=None):
         """
         Set default view source for refreshView()
 
@@ -708,6 +717,13 @@ class Device(fmbtgti.GUITestInterface):
 
           source (string):
                   default source, "enumchildwindow" or "uiautomation".
+
+          properties (string or list of strings, optional):
+                  set list of view item properties to be read.
+                  "all" reads all available properties for each item.
+                  "fast" reads a set of preselected properties.
+                  list of strings reads properties in the list.
+                  The default is "all".
 
         Returns None.
 
@@ -717,6 +733,23 @@ class Device(fmbtgti.GUITestInterface):
             raise ValueError(
                 'invalid view source "%s", expected one of: "%s"' %
                 (source, '", "'.join(_g_viewSources)))
+        if properties != None:
+            if properties == "all":
+                self._viewItemProperties = None
+            elif properties == "fast":
+                self._viewItemProperties = ["AutomationId",
+                                            "BoundingRectangle",
+                                            "ClassName",
+                                            "HelpText",
+                                            "ToggleState",
+                                            "Value",
+                                            "Minimum",
+                                            "Maximum",
+                                            "Name"]
+            elif isinstance(properties, list) or isinstance(properties, tuple):
+                self._viewItemProperties = list(properties)
+            else:
+                raise ValueError('invalid properties, expected "all", "fast" or a list')
         self._viewSource = source
 
     def shell(self, command):
@@ -983,17 +1016,29 @@ class WindowsConnection(fmbtgti.GUITestConnection):
             raise ValueError('illegal window "%s", expected integer or string (hWnd or title)' % (window,))
         return rv
 
-    def recvViewUIAutomation(self, window=None, items=[]):
+    def recvViewUIAutomation(self, window=None, items=[], properties=None):
         """returns list of dictionaries, each of which contains properties of
         an item"""
+        if properties == None:
+            properties = []
+        else:
+            # make sure certain properties are always included
+            propertySet = set(properties)
+            for must_be in ["BoundingRectangle"]:
+                propertySet.add(must_be)
+            properties = list(propertySet)
         dumps = []
         if items:
             for item in items:
-                dumps.append(self.evalPython("dumpUIAutomationElements(%s, %s)" % (
-                    repr(window), repr([str(item.id()) for item in item.branch()]))))
+                dumps.append(self.evalPython("dumpUIAutomationElements(%s, %s, %s)" % (
+                    repr(window),
+                    repr([str(item.id()) for item in item.branch()]),
+                    repr(properties))))
         else:
-            dumps.append(self.evalPython("dumpUIAutomationElements(%s, %s)" % (
-                    repr(window), repr([]))))
+            dumps.append(self.evalPython("dumpUIAutomationElements(%s, %s, %s)" % (
+                repr(window),
+                repr([]),
+                repr(properties))))
         rv = []
         prop_data = {}
         for dump in dumps:
