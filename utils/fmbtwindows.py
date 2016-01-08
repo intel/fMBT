@@ -162,7 +162,10 @@ class ViewItem(fmbtgti.GUIItem):
         self._parentId = parentId
         self._className = className
         self._text = text
-        self._properties = rawProperties # dictionary or None
+        if rawProperties:
+            self._properties = rawProperties
+        else:
+            self._properties = {}
         fmbtgti.GUIItem.__init__(self, self._className, bbox, dumpFilename)
 
     def children(self):
@@ -310,7 +313,7 @@ class View(object):
         return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
 
     def findItemsById(self, itemId, count=-1, searchRootItem=None, searchItems=None):
-        c = lambda item: (itemId == item._itemId)
+        c = lambda item: (itemId == item._itemId or itemId == item.properties().get("AutomationId", None))
         return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
 
     def findItemsByProperties(self, properties, count=-1, searchRootItem=None, searchItems=None):
