@@ -168,6 +168,24 @@ class ViewItem(fmbtgti.GUIItem):
             self._properties = {}
         fmbtgti.GUIItem.__init__(self, self._className, bbox, dumpFilename)
 
+    def branch(self):
+        """Returns list of view items from the root down to this item
+
+        Note: works only for UIAutomation backend"""
+        if not self._view._viewSource == "uiautomation":
+            raise NotImplementedError(
+                "branch() works only for uiautomation at the moment")
+        rv = []
+        itemId = self._itemId
+        while itemId:
+            rv.append(self._view._viewItems[itemId])
+            if itemId in self._view._viewItems:
+                itemId = self._view._viewItems[itemId]._parentId
+            else:
+                itemId = None
+        rv.reverse()
+        return rv
+
     def children(self):
         if self._view._viewSource == "enumchildwindows":
             return [self._view._viewItems[winfo[0]]
@@ -240,7 +258,7 @@ class View(object):
                     bbox,
                     dumpFilename,
                     elt)
-                self._viewItems[elt["hash"]] = vi
+                self._viewItems[int(elt["hash"])] = vi
                 if vi.parent() == 0:
                     self._rootItem = vi
             if not self._rootItem:
@@ -579,7 +597,7 @@ class Device(fmbtgti.GUITestInterface):
             _adapterLog("reconnect failed: %s" % (e,))
             return False
 
-    def refreshView(self, window=None, forcedView=None, viewSource=None):
+    def refreshView(self, window=None, forcedView=None, viewSource=None, items=[]):
         """
         (Re)reads widgets on the top window and updates the latest view.
 
@@ -597,8 +615,12 @@ class Device(fmbtgti.GUITestInterface):
                   "uiautomation" the UIAutomation framework.
                   "enumchildwindows" less data
                   but does not require UIAutomation.
-                  The default is "enumchildwindows".
+                  The default is "uiautomation".
                   See also setViewSource().
+
+          items (list of view items, optional):
+                  update only contents of these items in the view.
+                  Works only for "uiautomation" view source.
 
         Returns View object.
         """
@@ -621,7 +643,7 @@ class Device(fmbtgti.GUITestInterface):
             if viewSource == "enumchildwindows":
                 viewData = self._conn.recvViewData(window)
             else:
-                viewData = self._conn.recvViewUIAutomation(window)
+                viewData = self._conn.recvViewUIAutomation(window, items)
             file(viewFilename, "w").write(repr(viewData))
             self._lastView = View(viewFilename, viewData)
         return self._lastView
@@ -961,21 +983,29 @@ class WindowsConnection(fmbtgti.GUITestConnection):
             raise ValueError('illegal window "%s", expected integer or string (hWnd or title)' % (window,))
         return rv
 
-    def recvViewUIAutomation(self, window=None):
+    def recvViewUIAutomation(self, window=None, items=[]):
         """returns list of dictionaries, each of which contains properties of
         an item"""
-        dump = self.evalPython("dumpUIAutomationElements(%s)" % (repr(window),))
+        dumps = []
+        if items:
+            for item in items:
+                dumps.append(self.evalPython("dumpUIAutomationElements(%s, %s)" % (
+                    repr(window), repr([str(item.id()) for item in item.branch()]))))
+        else:
+            dumps.append(self.evalPython("dumpUIAutomationElements(%s, %s)" % (
+                    repr(window), repr([]))))
         rv = []
         prop_data = {}
-        for prop_line in dump.splitlines():
-            if not "=" in prop_line:
-                continue
-            prop_name, prop_value = prop_line.split("=", 1)
-            if prop_name == "hash":
-                if prop_data:
-                    rv.append(prop_data)
-                    prop_data = {}
-            prop_data[prop_name] = prop_value.replace(r"\r\n", "\n").replace(r"\\", "\\")
+        for dump in dumps:
+            for prop_line in dump.splitlines():
+                if not "=" in prop_line:
+                    continue
+                prop_name, prop_value = prop_line.split("=", 1)
+                if prop_name == "hash":
+                    if prop_data:
+                        rv.append(prop_data)
+                        prop_data = {}
+                prop_data[prop_name] = prop_value.replace(r"\r\n", "\n").replace(r"\\", "\\")
         if prop_data:
             rv.append(prop_data)
         return rv

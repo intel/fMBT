@@ -801,7 +801,7 @@ def dumpWidgets():
     wt = widgetList(hwnd)
     _dumpTree(0, hwnd, wt)
 
-def dumpUIAutomationElements(window=None):
+def dumpUIAutomationElements(window=None, fromPath=[]):
     if window == None:
         window = topWindow()
     powershellCode = r"""
@@ -813,8 +813,13 @@ using System.Windows.Automation;
 
 namespace FmbtWindows {
     public class UI {
-        public static void DumpElement(AutomationElement elt, Int32 parent=0) {
+        public static void DumpElement(AutomationElement elt, int depth, Int32 parent, int[] fromPath) {
+            string pValue;
             Int32 eltHash = elt.GetHashCode();
+            if (fromPath.Length > depth) {
+                if (fromPath[depth] != eltHash)
+                    return;
+            }
             Console.WriteLine("");
             Console.WriteLine("hash=" + eltHash);
             Console.WriteLine("parent=" + parent.ToString());
@@ -822,21 +827,22 @@ namespace FmbtWindows {
                 string pName = p.ProgrammaticName.Substring(p.ProgrammaticName.IndexOf(".")+1);
                 if (pName.EndsWith("Property"))
                     pName = pName.Substring(0, pName.LastIndexOf("Property"));
-                string pValue = "" + elt.GetCurrentPropertyValue(p);
+                pValue = "" + elt.GetCurrentPropertyValue(p);
                 Console.WriteLine(pName + "=" + pValue.Replace("\\", "\\\\").Replace("\r\n", "\\r\\n"));
             }
 
             AutomationElement eltChild = TreeWalker.%(walker)sViewWalker.GetFirstChild(elt);
 
             while (eltChild != null) {
-                DumpElement(eltChild, eltHash);
+                DumpElement(eltChild, depth+1, eltHash, fromPath);
                 eltChild = TreeWalker.%(walker)sViewWalker.GetNextSibling(eltChild);
             }
         }
 
-        public static void DumpWindow(UInt32 arg) {
+        public static void DumpWindow(UInt32 arg, string fromPathString) {
             IntPtr hwnd = new IntPtr(arg);
-            DumpElement(AutomationElement.FromHandle(hwnd));
+            int[] fromPath = Array.ConvertAll(fromPathString.Split(','), int.Parse);
+            DumpElement(AutomationElement.FromHandle(hwnd), 1, 0, fromPath);
         }
     }
 }
@@ -844,8 +850,8 @@ namespace FmbtWindows {
 
 Add-Type -ReferencedAssemblies $assemblies -TypeDefinition $source -Language CSharp
 
-[FmbtWindows.UI]::DumpWindow(%(window)s)
-""" % {"window": window, "walker": "Raw"}
+[FmbtWindows.UI]::DumpWindow(%(window)s, "%(fromPath)s")
+""" % {"window": window, "walker": "Raw", "fromPath": ",".join(["-1"] + fromPath)}
     # walker is "Raw", "Control" or "Content"
     fd, filename = tempfile.mkstemp(prefix="fmbtwindows-dumpwindow-", suffix=".ps1")
     try:
