@@ -801,9 +801,9 @@ def dumpWidgets():
     wt = widgetList(hwnd)
     _dumpTree(0, hwnd, wt)
 
-def dumpUIAutomationElements(window=None, fromPath=[], properties=[]):
-    if window == None:
-        window = topWindow()
+def launchUIAutomationServer():
+    fromPath=[]
+    properties=[]
     powershellCode = r"""
 $assemblies = ('System', 'UIAutomationTypes', 'UIAutomationClient')
 
@@ -811,41 +811,65 @@ $source = @'
 using System;
 using System.Windows.Automation;
 using System.Linq;
+using System.IO;
+using System.IO.Pipes;
 
 namespace FmbtWindows {
     public class UI {
-        public static void DumpElement(AutomationElement elt, int depth, Int32 parent, int[] fromPath, string[] properties) {
+        public static void DumpElement(AutomationElement elt, int depth, Int32 parent, int[] fromPath, string[] properties, StreamWriter outStream) {
             string pValue;
             Int32 eltHash = elt.GetHashCode();
             if (fromPath.Length > depth) {
                 if (fromPath[depth] != eltHash)
                     return;
             }
-            Console.WriteLine("");
-            Console.WriteLine("hash=" + eltHash);
-            Console.WriteLine("parent=" + parent.ToString());
+            outStream.WriteLine("");
+            outStream.WriteLine("hash=" + eltHash);
+            outStream.WriteLine("parent=" + parent.ToString());
             foreach (AutomationProperty p in elt.GetSupportedProperties()) {
                 string pName = p.ProgrammaticName.Substring(p.ProgrammaticName.IndexOf(".")+1);
                 if (pName.EndsWith("Property"))
                     pName = pName.Substring(0, pName.LastIndexOf("Property"));
                 if (properties.Length == 1 || (properties.Length > 1 && properties.Contains(pName))) {
                     pValue = "" + elt.GetCurrentPropertyValue(p);
-                    Console.WriteLine(pName + "=" + pValue.Replace("\\", "\\\\").Replace("\r\n", "\\r\\n"));
+                    outStream.WriteLine(pName + "=" + pValue.Replace("\\", "\\\\").Replace("\r\n", "\\r\\n"));
                 }
             }
 
-            AutomationElement eltChild = TreeWalker.%(walker)sViewWalker.GetFirstChild(elt);
+            AutomationElement eltChild = TreeWalker.RawViewWalker.GetFirstChild(elt);
 
             while (eltChild != null) {
-                DumpElement(eltChild, depth+1, eltHash, fromPath, properties);
-                eltChild = TreeWalker.%(walker)sViewWalker.GetNextSibling(eltChild);
+                DumpElement(eltChild, depth+1, eltHash, fromPath, properties, outStream);
+                eltChild = TreeWalker.RawViewWalker.GetNextSibling(eltChild);
             }
         }
 
-        public static void DumpWindow(UInt32 arg, string fromPathString, string properties) {
+        public static void DumpWindow(UInt32 arg, string fromPathString, string properties, StreamWriter outStream) {
             IntPtr hwnd = new IntPtr(arg);
             int[] fromPath = Array.ConvertAll(fromPathString.Split(','), int.Parse);
-            DumpElement(AutomationElement.FromHandle(hwnd), 1, 0, fromPath, properties.Split(','));
+            DumpElement(AutomationElement.FromHandle(hwnd), 1, 0, fromPath, properties.Split(','), outStream);
+        }
+
+        public static void RunServer() {
+            while (true) {
+                NamedPipeServerStream pipeServer = new NamedPipeServerStream("fmbtwindows_uiautomation", PipeDirection.InOut);
+                pipeServer.WaitForConnection();
+                StreamReader sr = new StreamReader(pipeServer);
+
+                // read call parameters
+                UInt32 hwnd = UInt32.Parse(sr.ReadLine());
+                string fromPath = sr.ReadLine();
+                string properties = sr.ReadLine();
+
+                StreamWriter sw = new StreamWriter(pipeServer);
+                DumpWindow(hwnd, fromPath, properties, sw);
+
+                sw.WriteLine("end-of-dump-window");
+                sw.Flush();
+                sw.Close();
+                sr.Close();
+                pipeServer.Close();
+            }
         }
     }
 }
@@ -853,20 +877,42 @@ namespace FmbtWindows {
 
 Add-Type -ReferencedAssemblies $assemblies -TypeDefinition $source -Language CSharp
 
-[FmbtWindows.UI]::DumpWindow(%(window)s, "%(fromPath)s", "%(properties)s")
-""" % {"window": window,
-       "walker": "Raw",
-       "fromPath": ",".join(["-1"] + fromPath),
-       "properties": ",".join(["nonemptylist"] + properties)}
-    # walker is "Raw", "Control" or "Content"
+[FmbtWindows.UI]::RunServer()
+"""
     fd, filename = tempfile.mkstemp(prefix="fmbtwindows-dumpwindow-", suffix=".ps1")
     try:
         os.write(fd, powershellCode)
         os.close(fd)
         run_script = ["powershell.exe", "-ExecutionPolicy", "Unrestricted", filename]
-        return _check_output(run_script)
-    finally:
-        os.remove(filename)
+        server_process = subprocess.Popen(run_script)
+    except:
+        raise
+
+def dumpUIAutomationElements(window=None, fromPath=[], properties=[]):
+    if window == None:
+        window = topWindow()
+    f = None
+    serverLaunched = False
+    endTime = time.time() + 30
+    while f == None:
+        try:
+            f = open(r"\\.\pipe\fmbtwindows_uiautomation", "r+")
+            break
+        except IOError:
+            if not serverLaunched:
+                launchUIAutomationServer()
+                serverLaunched = True
+            time.sleep(0.5)
+            if time.time() > endTime:
+                raise Exception("dump timed out: cannot connect to uiautomation server")
+    f.write("%s\n%s\n%s\n" % (
+        window,
+        ",".join(["-1"] + fromPath),
+        ",".join(["nonemptylist"] + properties)))
+    f.flush()
+    rv = f.read()
+    f.close()
+    return rv
 
 def _check_output(*args, **kwargs):
     """subprocess.check_output, for Python 2.6 compatibility"""
