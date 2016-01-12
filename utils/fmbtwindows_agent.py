@@ -15,6 +15,7 @@
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
 import __builtin__
+import atexit
 import base64
 import ctypes
 import ctypes.wintypes
@@ -35,6 +36,15 @@ try:
                # are installed in DUT
 except:
     pass
+
+_g_rmAtExit = []
+def cleanUp():
+    for filename in _g_rmAtExit:
+        try:
+            os.remove(filename)
+        except:
+            pass
+atexit.register(cleanUp)
 
 _mouse_input_area = (1920, 1080)
 _HTTPServerProcess = None
@@ -880,6 +890,7 @@ Add-Type -ReferencedAssemblies $assemblies -TypeDefinition $source -Language CSh
 [FmbtWindows.UI]::RunServer()
 """
     fd, filename = tempfile.mkstemp(prefix="fmbtwindows-dumpwindow-", suffix=".ps1")
+    _g_rmAtExit.append(filename)
     try:
         os.write(fd, powershellCode)
         os.close(fd)
