@@ -271,7 +271,10 @@ def _local_execute(exec_msg, conn_id=None):
         finally:
             _g_executing_pythonshare_conn_id = None
             if exec_msg.lock:
-                _g_local_namespace_locks[ns].release()
+                try:
+                    _g_local_namespace_locks[ns].release()
+                except thread.error:
+                    pass # already unlocked namespace
     else:
         code_exc = expr_exc = 'locking namespace "%s" failed' % (ns,)
     if isinstance(expr_rv, pythonshare.messages.Exec_rv):
@@ -425,10 +428,55 @@ def _serve_connection(conn, conn_opts):
 
         elif isinstance(obj, messages.Server_ctl):
             if obj.command == "die":
-                _g_server_shutdown = True
-                if _g_wake_server_function:
-                    _g_wake_server_function()
-                break
+                ns = obj.args[0]
+                if ns in _g_remote_namespaces:
+                    try:
+                        rv = _remote_execute(ns, obj)
+                        if opt_debug:
+                            daemon_log("%s:%s <= %s" % (peername + (rv,)))
+                        pythonshare._send(rv, to_client)
+                    except (EOFError, socket.error): # connection lost
+                        daemon_log('connection lost to "%s"' % (ns,))
+                        _drop_remote_namespace(ns)
+                        break
+                else:
+                    _g_server_shutdown = True
+                    server_ctl_rv = messages.Server_ctl_rv(0, "shutting down")
+                    pythonshare._send(server_ctl_rv, to_client)
+                    if _g_wake_server_function:
+                        _g_wake_server_function()
+                    break
+            elif obj.command == "unlock":
+                try:
+                    ns = obj.args[0]
+                    if ns in _g_remote_namespaces:
+                        try:
+                            rv = _remote_execute(ns, obj)
+                        except (EOFError, socket.error): # connection lost
+                            daemon_log('connection lost to "%s"' % (ns,))
+                            _drop_remote_namespace(ns)
+                            break
+                    elif ns in _g_local_namespace_locks:
+                        try:
+                            _g_local_namespace_locks[ns].release()
+                            server_ctl_rv = messages.Server_ctl_rv(
+                                0, "%s unlocked" % (repr(ns),))
+                        except thread.error, e:
+                            server_ctl_rv = messages.Server_ctl_rv(
+                                1, "%s already unlocked" %
+                                (repr(ns),))
+                    elif ns in _g_local_namespaces:
+                        server_ctl_rv = messages.Server_ctl_rv(
+                            2, "namespace %s is not locked" % (repr(ns),))
+                    else:
+                        server_ctl_rv = messages.Server_ctl_rv(
+                            -1, "unknown namespace %s" % (repr(ns),))
+                    if opt_debug:
+                        daemon_log("%s:%s <= %s" % (peername + (server_ctl_rv,)))
+                    pythonshare._send(server_ctl_rv, to_client)
+                except Exception, e:
+                    if opt_debug:
+                        daemon_log("Exception in handling %s: %s" % (obj, e))
         else:
             daemon_log("unknown message type: %s in %s" % (type(obj), obj))
             pythonshare._send(messages.Auth_rv(False), to_client)

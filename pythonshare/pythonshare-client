@@ -80,6 +80,9 @@ Options when connected:
   --drop
           Drop namespace ns from the server.
 
+  --unlock
+          Unlock locked ns on the server.
+
   -D, --disconnect
           Disconnect from the pythonshare-server.
 
@@ -193,7 +196,7 @@ if __name__ == "__main__":
              "password=", "password-file=",
              "namespace=", "code=", "eval=", "read=",
              "output=", "format=", "interact",
-             "ls-local", "ls-remote", "drop", "kill"])
+             "ls-local", "ls-remote", "drop", "unlock", "kill"])
     except getopt.GetoptError, e:
         error(str(e))
     opt_server = "localhost"
@@ -290,11 +293,23 @@ if __name__ == "__main__":
             except Exception, e:
                 error("cannot drop namespace: %s" % (
                     str(e).strip().splitlines()[-1].split(":")[-1].strip(),))
+        elif opt in ["--unlock"]:
+            if conn == None:
+                error("cannot unlock namespace - not connected")
+            if not opt_namespace:
+                opt_namespace = conn.namespace()
+            try:
+                conn.unlock_ns(opt_namespace)
+            except Exception, e:
+                error("cannot unlock namespace: %s" % (
+                    str(e).strip().splitlines()[-1].split(":")[-1].strip(),))
         elif opt in ["-k", "--kill"]:
             if conn == None:
                 error("cannot kill server - not connected")
+            if not opt_namespace:
+                opt_namespace = conn.namespace()
             try:
-                conn.kill_server()
+                conn.kill_server(opt_namespace)
             except Exception, e:
                 error("error on kill: %s" % (e,))
         elif opt in ["-r", "--read"]:
