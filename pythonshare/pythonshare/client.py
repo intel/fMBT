@@ -148,6 +148,8 @@ class Connection(object):
         an exception in remote end, respectively.
 
         """
+        if namespace == None:
+            namespace = self.namespace()
         try:
             pythonshare._send(Exec(namespace, code, expr, async=async, lock=lock), self._to_server)
             return self.make_local(pythonshare._recv(self._from_server))
@@ -275,13 +277,14 @@ class Connection(object):
         else:
             raise pythonshare.PythonShareError(rv.message)
 
-    def poll_rvs(self, namespace):
+    def poll_rvs(self, namespace=None):
         """Poll available async return values from namespace.
 
         Parameters:
 
-          namespace (string)
+          namespace (string, optional)
                   namespace from which return values are queried.
+                  The default is returned by namespace().
 
         Example:
 
@@ -297,8 +300,10 @@ class Connection(object):
     def close(self):
         pythonshare._close(self._to_server, self._from_server, self._s)
 
-    def kill_server(self, namespace):
+    def kill_server(self, namespace=None):
         """Send server shutdown message"""
+        if namespace == None:
+            namespace = self.namespace()
         pythonshare._send(Server_ctl("die", namespace), self._to_server)
         return True
 
