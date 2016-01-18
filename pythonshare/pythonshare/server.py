@@ -29,8 +29,9 @@ import tempfile
 import thread
 import traceback
 import urlparse
-
 import pythonshare
+import Queue
+
 messages = pythonshare.messages
 client = pythonshare.client
 
@@ -72,6 +73,10 @@ def code2string(code):
 
 def exception2string(exc_info):
     return ''.join(traceback.format_exception(*exc_info))
+
+def _store_return_value(func, queue):
+    while True:
+        queue.put(func())
 
 class Pythonshare_ns(object):
     """Pythonshare services inside a namespace
@@ -535,16 +540,10 @@ def start_server(host, port,
 
     if isinstance(port, int):
         def wake_server_function():
-            ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            ss.connect((host, port))
-            _g_waker_lock.acquire() # lock
-            _g_waker_lock.acquire() # wait until server unlocks
-            try:
-                ss.close()
-            except socket.error:
-                pass
+            _g_waker_lock.release() # wake up server
         _g_wake_server_function = wake_server_function
         _g_waker_lock = thread.allocate_lock()
+        _g_waker_lock.acquire() # unlocked
 
         # Start listening to the port
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -554,15 +553,25 @@ def start_server(host, port,
             pass
         s.bind((host, port))
         s.listen(4)
+        event_queue = Queue.Queue()
+        thread.start_new_thread(_store_return_value, (s.accept, event_queue))
+        thread.start_new_thread(_store_return_value, (_g_waker_lock.acquire, event_queue))
+        if not sys.stdin.closed:
+            daemon_log("listening to stdin")
+            thread.start_new_thread(_store_return_value, (sys.stdin.readline, event_queue))
         while 1:
-            conn, _ = s.accept()
-            if _g_server_shutdown:
+            event = event_queue.get()
+            if isinstance(event, tuple):
+                # returned from s.accept
+                conn, _ = event
+                thread.start_new_thread(_serve_connection, (conn, conn_opts))
+            elif event == True:
+                # returned from _g_waker_lock.acquire
                 daemon_log("shutting down.")
-                pythonshare._close(conn)
-                if _g_waker_lock and _g_waker_lock.locked():
-                    _g_waker_lock.release()
                 break
-            thread.start_new_thread(_serve_connection, (conn, conn_opts))
+            else:
+                # returned from sys.stdin.readline
+                pass
     elif port == "stdin":
         opt_debug_stdout_limit = 0
         conn = client.Connection(sys.stdin, sys.stdout)
