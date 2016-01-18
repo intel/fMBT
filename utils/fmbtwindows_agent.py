@@ -39,8 +39,20 @@ except:
 
 try:
     import _winreg
+    _REG_types = {
+        0: "REG_NONE",
+        1: "REG_SZ",
+        2: "REG_EXPAND_SZ",
+        3: "REG_BINARY",
+        4: "REG_DWORD",
+        5: "REG_DWORD_BIG_ENDIAN",
+        6: "REG_LINK",
+        7: "REG_MULTI_SZ",
+        8: "REG_RESOURCE_LIST",
+    }
 except:
     _winreg = None
+    _REG_types = {}
 
 _g_rmAtExit = []
 def cleanUp():
@@ -954,7 +966,7 @@ def getRegistry(key, value_name):
     regKey = _openRegistryKey(key, _winreg.KEY_QUERY_VALUE)
     value, value_type = _winreg.QueryValueEx(regKey, value_name)
     _winreg.CloseKey(regKey)
-    return value, value_type
+    return value, _REG_types.get(value_type, None)
 
 def _check_output(*args, **kwargs):
     """subprocess.check_output, for Python 2.6 compatibility"""
