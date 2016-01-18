@@ -42,6 +42,7 @@ opt_log_fd = None
 opt_allow_new_namespaces = True
 
 _g_wake_server_function = None
+_g_waker_lock = None
 
 def timestamp():
     if on_windows:
@@ -493,6 +494,7 @@ def start_server(host, port,
                  ns_init_import_export=[],
                  conn_opts={}):
     global _g_wake_server_function
+    global _g_waker_lock
     daemon_log("pid: %s" % (os.getpid(),))
 
     # Initialise, import and export namespaces
@@ -535,8 +537,14 @@ def start_server(host, port,
         def wake_server_function():
             ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             ss.connect((host, port))
-            ss.close()
+            _g_waker_lock.acquire() # lock
+            _g_waker_lock.acquire() # wait until server unlocks
+            try:
+                ss.close()
+            except socket.error:
+                pass
         _g_wake_server_function = wake_server_function
+        _g_waker_lock = thread.allocate_lock()
 
         # Start listening to the port
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -550,6 +558,9 @@ def start_server(host, port,
             conn, _ = s.accept()
             if _g_server_shutdown:
                 daemon_log("shutting down.")
+                pythonshare._close(conn)
+                if _g_waker_lock and _g_waker_lock.locked():
+                    _g_waker_lock.release()
                 break
             thread.start_new_thread(_serve_connection, (conn, conn_opts))
     elif port == "stdin":
