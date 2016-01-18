@@ -697,6 +697,59 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self.existingConnection().sendSetForegroundWindow(window)
 
+    def setRegistry(self, key, value_name, value_type, value):
+        """
+        Set Windows registry value.
+
+        Parameters:
+
+          key (string):
+                  full key name.
+
+          value_name (string):
+                  name of the value to be set.
+
+          value_type (string):
+                  REG_BINARY, REG_DWORD, REG_DWORD_LITTLE_ENDIAN,
+                  REG_DWORD_BIG_ENDIAN, REG_EXPAND_SZ, REG_LINK,
+                  REG_MULTI_SZ, REG_NONE, REG_RESOURCE_LIST or REG_SZ.
+
+          value (string):
+                  string that specifies the new value.
+
+
+        Example:
+          setRegistry(r"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet"
+                       "\Control\Session Manager\Environment",
+                       "PATH", "REG_EXPAND_SZ", r"C:\MyExecutables")
+
+        Returns True on success.
+        """
+        return self.existingConnection().evalPython(
+            "setRegistry(%s,%s,%s,%s)" % (repr(key), repr(value_name),
+                                          repr(value_type), repr(value)))
+
+    def getRegistry(self, key, value_name):
+        """
+        Return Windows registry value and type
+
+        Parameters:
+
+          key (string):
+                  full key name.
+
+          value_name (string):
+                  name of the value to be read.
+
+        Returns a pair (value, value_type)
+
+        Example:
+          getRegistry(r"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet"
+                       "\Control\Session Manager\Environment", "PATH")
+        """
+        return self.existingConnection().evalPython(
+            "getRegistry(%s,%s)" % (repr(key), repr(value_name)))
+
     def setScreenshotSize(self, size):
         """
         Force screenshots from device to use given resolution.

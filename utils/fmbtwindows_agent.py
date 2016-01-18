@@ -37,6 +37,11 @@ try:
 except:
     pass
 
+try:
+    import _winreg
+except:
+    _winreg = None
+
 _g_rmAtExit = []
 def cleanUp():
     for filename in _g_rmAtExit:
@@ -924,6 +929,34 @@ def dumpUIAutomationElements(window=None, fromPath=[], properties=[]):
     rv = f.read()
     f.close()
     return rv
+
+def _openRegistryKey(key, accessRights):
+    firstKey = key.split("\\", 1)[0].split("/", 1)[0]
+    subKey = key[len(firstKey) + 1:]
+    HKEY = getattr(_winreg, firstKey, None)
+    if not firstKey.startswith("HKEY_") or HKEY == None:
+        raise ValueError("invalid HKEY_* at the beginning of the key %s" % (repr(key),))
+    regKey = _winreg.OpenKey(HKEY, subKey, 0, accessRights)
+    return regKey
+
+def setRegistry(key, value_name, value_type, value, notify=False):
+    if not _winreg:
+        return False
+    REG_type = getattr(_winreg, value_type, None)
+    if not value_type.startswith("REG_") or REG_type == None:
+        raise ValueError("invalid value type (REG_*): %s" % (repr(value_type),))
+    regKey = _openRegistryKey(key, _winreg.KEY_SET_VALUE)
+    _winreg.SetValueEx(regKey, value_name, 0, REG_type, value)
+    _winreg.CloseKey(regKey)
+    if notify:
+        ctypes.windll.user32.SendMessageW(0xffff, 0x001a, 0, u"Environment")
+    return True
+
+def getRegistry(key, value_name):
+    regKey = _openRegistryKey(key, _winreg.KEY_QUERY_VALUE)
+    value, value_type = _winreg.QueryValueEx(regKey, value_name)
+    _winreg.CloseKey(regKey)
+    return value, value_type
 
 def _check_output(*args, **kwargs):
     """subprocess.check_output, for Python 2.6 compatibility"""
