@@ -948,8 +948,6 @@ def setRegistry(key, value_name, value_type, value, notify=False):
     regKey = _openRegistryKey(key, _winreg.KEY_SET_VALUE)
     _winreg.SetValueEx(regKey, value_name, 0, REG_type, value)
     _winreg.CloseKey(regKey)
-    if notify:
-        ctypes.windll.user32.SendMessageW(0xffff, 0x001a, 0, u"Environment")
     return True
 
 def getRegistry(key, value_name):
