@@ -943,7 +943,7 @@ def dumpUIAutomationElements(window=None, fromPath=[], properties=[]):
     return rv
 
 def _openRegistryKey(key, accessRights):
-    firstKey = key.split("\\", 1)[0].split("/", 1)[0]
+    firstKey = key.split("\\", 1)[0]
     subKey = key[len(firstKey) + 1:]
     HKEY = getattr(_winreg, firstKey, None)
     if not firstKey.startswith("HKEY_") or HKEY == None:
@@ -952,6 +952,7 @@ def _openRegistryKey(key, accessRights):
     return regKey
 
 def setRegistry(key, valueName, value, valueType=None):
+    key = key.replace("/", "\\")
     if not _winreg:
         return False
     if valueType == None:
@@ -971,6 +972,7 @@ def setRegistry(key, valueName, value, valueType=None):
     return True
 
 def getRegistry(key, valueName):
+    key = key.replace("/", "\\")
     regKey = _openRegistryKey(key, _winreg.KEY_QUERY_VALUE)
     value, valueType = _winreg.QueryValueEx(regKey, valueName)
     _winreg.CloseKey(regKey)
