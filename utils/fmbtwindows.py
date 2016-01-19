@@ -697,7 +697,7 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self.existingConnection().sendSetForegroundWindow(window)
 
-    def setRegistry(self, key, value_name, value_type, value):
+    def setRegistry(self, key, valueName, value, valueType=None):
         """
         Set Windows registry value.
 
@@ -706,30 +706,31 @@ class Device(fmbtgti.GUITestInterface):
           key (string):
                   full key name.
 
-          value_name (string):
+          valueName (string):
                   name of the value to be set.
-
-          value_type (string):
-                  REG_BINARY, REG_DWORD, REG_DWORD_LITTLE_ENDIAN,
-                  REG_DWORD_BIG_ENDIAN, REG_EXPAND_SZ, REG_LINK,
-                  REG_MULTI_SZ, REG_NONE, REG_RESOURCE_LIST or REG_SZ.
 
           value (string):
                   string that specifies the new value.
 
+          valueType (string, optional for str and int values):
+                  REG_BINARY, REG_DWORD, REG_DWORD_LITTLE_ENDIAN,
+                  REG_DWORD_BIG_ENDIAN, REG_EXPAND_SZ, REG_LINK,
+                  REG_MULTI_SZ, REG_NONE, REG_RESOURCE_LIST or REG_SZ.
+                  Default types for storing str and int values
+                  are REG_SZ and REG_DWORD.
 
         Example:
           setRegistry(r"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet"
                        "\Control\Session Manager\Environment",
-                       "PATH", "REG_EXPAND_SZ", r"C:\MyExecutables")
+                       "PATH", r"C:\MyExecutables", "REG_EXPAND_SZ")
 
         Returns True on success.
         """
         return self.existingConnection().evalPython(
-            "setRegistry(%s,%s,%s,%s)" % (repr(key), repr(value_name),
-                                          repr(value_type), repr(value)))
+            "setRegistry(%s,%s,%s,%s)" % (repr(key), repr(valueName),
+                                          repr(value), repr(valueType)))
 
-    def getRegistry(self, key, value_name):
+    def getRegistry(self, key, valueName):
         """
         Return Windows registry value and type
 
@@ -738,17 +739,17 @@ class Device(fmbtgti.GUITestInterface):
           key (string):
                   full key name.
 
-          value_name (string):
+          valueName (string):
                   name of the value to be read.
 
-        Returns a pair (value, value_type)
+        Returns a pair (value, valueType)
 
         Example:
           getRegistry(r"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet"
                        "\Control\Session Manager\Environment", "PATH")
         """
         return self.existingConnection().evalPython(
-            "getRegistry(%s,%s)" % (repr(key), repr(value_name)))
+            "getRegistry(%s,%s)" % (repr(key), repr(valueName)))
 
     def setScreenshotSize(self, size):
         """

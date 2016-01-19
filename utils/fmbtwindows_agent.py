@@ -951,22 +951,30 @@ def _openRegistryKey(key, accessRights):
     regKey = _winreg.OpenKey(HKEY, subKey, 0, accessRights)
     return regKey
 
-def setRegistry(key, value_name, value_type, value, notify=False):
+def setRegistry(key, valueName, value, valueType=None):
     if not _winreg:
         return False
-    REG_type = getattr(_winreg, value_type, None)
-    if not value_type.startswith("REG_") or REG_type == None:
-        raise ValueError("invalid value type (REG_*): %s" % (repr(value_type),))
+    if valueType == None:
+        if isinstance(value, basestring):
+            valueType = "REG_SZ"
+        elif isinstance(value, int) or isinstance(value, long):
+            valueType = "REG_DWORD"
+        else:
+            raise TypeError("valueType must be specified for value of %s" %
+                            (type(value),))
+    REG_type = getattr(_winreg, valueType, None)
+    if not valueType.startswith("REG_") or REG_type == None:
+        raise ValueError("invalid value type (REG_*): %s" % (repr(valueType),))
     regKey = _openRegistryKey(key, _winreg.KEY_SET_VALUE)
-    _winreg.SetValueEx(regKey, value_name, 0, REG_type, value)
+    _winreg.SetValueEx(regKey, valueName, 0, REG_type, value)
     _winreg.CloseKey(regKey)
     return True
 
-def getRegistry(key, value_name):
+def getRegistry(key, valueName):
     regKey = _openRegistryKey(key, _winreg.KEY_QUERY_VALUE)
-    value, value_type = _winreg.QueryValueEx(regKey, value_name)
+    value, valueType = _winreg.QueryValueEx(regKey, valueName)
     _winreg.CloseKey(regKey)
-    return value, _REG_types.get(value_type, None)
+    return value, _REG_types.get(valueType, None)
 
 def _check_output(*args, **kwargs):
     """subprocess.check_output, for Python 2.6 compatibility"""
