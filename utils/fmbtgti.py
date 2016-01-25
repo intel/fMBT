@@ -203,9 +203,13 @@ def _intCoords((x, y), (width, height)):
     if 0 <= y <= 1 and type(y) == float: y = y * height
     return (int(round(x)), int(round(y)))
 
-def _boxOnRegion((x1, y1, x2, y2), (minX, minY, maxX, maxY)):
-    return (x1 < x2 and ((minX <= x1 <= maxX) or (minX <= x2 <= maxX)) and
-            y1 < y2 and ((minY <= y1 <= maxY) or (minY <= y2 <= maxY)))
+def _boxOnRegion((x1, y1, x2, y2), (minX, minY, maxX, maxY), partial=True):
+    if partial:
+        return (x1 < x2 and ((minX <= x1 <= maxX) or (minX <= x2 <= maxX)) and
+                y1 < y2 and ((minY <= y1 <= maxY) or (minY <= y2 <= maxY)))
+    else:
+        return (x1 < x2 and ((minX <= x1 <= maxX) and (minX <= x2 <= maxX)) and
+                y1 < y2 and ((minY <= y1 <= maxY) and (minY <= y2 <= maxY)))
 
 def _edgeDistanceInDirection((x, y), (width, height), direction):
     x, y = _intCoords((x, y), (width, height))

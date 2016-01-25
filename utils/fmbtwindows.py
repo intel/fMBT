@@ -456,6 +456,36 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self._conn.recvMatchingPaths(pathnamePattern)
 
+    def itemOnScreen(self, guiItem, relation="touch"):
+        """
+        Returns True if bbox of guiItem is non-empty and on the screen
+
+        Parameters:
+
+          relation (string, optional):
+                  One of the following:
+                  - "overlap": item intersects the screen and the window.
+                  - "touch": mid point (the default touch point) of the item
+                             is within the screen and the window.
+                  - "within": the screen and the window includes the item.
+                  The default is "touch".
+        """
+        if relation == "touch":
+            itemBox = (guiItem.coords()[0], guiItem.coords()[1],
+                       guiItem.coords()[0] + 1, guiItem.coords()[1] + 1)
+            partial = True
+        elif relation == "overlap":
+            itemBox = guiItem.bbox()
+            partial = True
+        elif relation == "within":
+            itemBox = guiItem.bbox()
+            partial = False
+        else:
+            raise ValueError('invalid itemOnScreen relation: "%s"' % (relation,))
+        maxX, maxY = self.screenSize()
+        return (fmbtgti._boxOnRegion(itemBox, (0, 0, maxX, maxY), partial=partial) and
+                fmbtgti._boxOnRegion(itemBox, self.topWindowProperties()['bbox'], partial=partial))
+
     def keyNames(self):
         """
         Returns list of key names recognized by pressKey
