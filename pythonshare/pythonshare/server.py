@@ -51,7 +51,7 @@ _g_waker_lock = None
 def timestamp():
     if on_windows:
         rv = "%.6f" % (
-            (datetime.datetime.now() -
+            (datetime.datetime.utcnow() -
              datetime.datetime(1970, 1, 1)).total_seconds(),)
     else:
         rv = datetime.datetime.now().strftime("%s.%f")
