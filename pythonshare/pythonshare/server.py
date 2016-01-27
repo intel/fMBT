@@ -18,6 +18,9 @@
 
 # This library implements pythonshare server functionality.
 
+# pylint: disable=C0103,C0111,C0301,R0201,R0903,W0122,W0212,W0703
+
+import cPickle
 import datetime
 import getopt
 import hashlib
@@ -49,7 +52,7 @@ def timestamp():
     if on_windows:
         rv = "%.6f" % (
             (datetime.datetime.now() -
-             datetime.datetime(1970,1,1)).total_seconds(),)
+             datetime.datetime(1970, 1, 1)).total_seconds(),)
     else:
         rv = datetime.datetime.now().strftime("%s.%f")
     return rv
@@ -354,7 +357,7 @@ def _serve_connection(conn, conn_opts):
             daemon_log("authentication failed due to socket error")
             auth_ok = False
     else:
-       auth_ok = True # no password required
+        auth_ok = True # no password required
 
     whitelist_local = conn_opts.get("whitelist_local", None)
 
@@ -363,7 +366,7 @@ def _serve_connection(conn, conn_opts):
             obj = pythonshare._recv(from_client)
             if opt_debug:
                 daemon_log("%s:%s => %s" % (peername + (obj,)))
-        except EOFError:
+        except (EOFError, pythonshare.socket.error):
             break
 
         if isinstance(obj, messages.Register_ns):
@@ -559,6 +562,8 @@ def start_server(host, port,
         if not sys.stdin.closed:
             daemon_log("listening to stdin")
             thread.start_new_thread(_store_return_value, (sys.stdin.readline, event_queue))
+        else:
+            daemon_log("not listening stdin")
         while 1:
             event = event_queue.get()
             if isinstance(event, tuple):
