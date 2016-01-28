@@ -318,6 +318,17 @@ LONG = ctypes.c_long
 DWORD = ctypes.c_ulong
 ULONG_PTR = ctypes.POINTER(DWORD)
 WORD = ctypes.c_ushort
+SIZE_T = ctypes.c_size_t
+HANDLE = ctypes.c_void_p
+
+try:
+    # Location of GetProcessMemoryInfo depends on Windows version
+    GetProcessMemoryInfo = ctypes.windll.kernel32.GetProcessMemoryInfo
+except AttributeError:
+    GetProcessMemoryInfo = ctypes.windll.psapi.GetProcessMemoryInfo
+
+PROCESS_QUERY_INFORMATION = 0x400
+PROCESS_VM_READ = 0x10
 
 WM_GETTEXT = 0x000d
 
@@ -382,6 +393,22 @@ class POINTER_TOUCH_INFO(ctypes.Structure):
               ("rcContactRaw", ctypes.wintypes.RECT),
               ("orientation", ctypes.c_uint32),
               ("pressure", ctypes.c_uint32)]
+
+class _PROCESS_MEMORY_COUNTERS_EX(ctypes.Structure):
+    _fields_ = [("cb", DWORD),
+                ("PageFaultCount", DWORD),
+                ("PeakWorkingSetSize", SIZE_T),
+                ("WorkingSetSize", SIZE_T),
+                ("QuotaPeakPagedPoolUsage", SIZE_T),
+                ("QuotaPagedPoolUsage", SIZE_T),
+                ("QuotaPeakNonPagedPoolUsage", SIZE_T),
+                ("QuotaNonPagedPoolUsage", SIZE_T),
+                ("PagefileUsage", SIZE_T),
+                ("PeakPagefileUsage", SIZE_T),
+                ("PrivateUsage", SIZE_T)]
+
+_processMemoryCountersEx = _PROCESS_MEMORY_COUNTERS_EX()
+_filenameBufferW = ctypes.create_unicode_buffer(4096)
 
 # Initialize Pointer and Touch info
 
@@ -951,6 +978,32 @@ def _openRegistryKey(key, accessRights):
     regKey = _winreg.OpenKey(HKEY, subKey, 0, accessRights)
     return regKey
 
+def processStatus(pid):
+
+    hProcess = ctypes.windll.kernel32.OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, False, pid)
+
+    if hProcess == 0:
+        raise ValueError('no process with pid %s' % (pid,))
+
+    rv = {"pid": pid}
+
+    if GetProcessMemoryInfo(hProcess,
+                            ctypes.byref(_processMemoryCountersEx),
+                            ctypes.sizeof(_processMemoryCountersEx)) != 0:
+        for fieldName, fieldType in _processMemoryCountersEx._fields_:
+            if fieldName == "cb":
+                continue
+            rv[fieldName] = int(getattr(_processMemoryCountersEx, fieldName))
+
+    if ctypes.windll.psapi.GetProcessImageFileNameW(
+            hProcess,
+            ctypes.byref(_filenameBufferW),
+            ctypes.sizeof(_filenameBufferW)) != 0:
+        rv["ProcessImageFileName"] = _filenameBufferW.value
+
+    ctypes.windll.kernel32.CloseHandle( hProcess );
+    return rv
+
 def setRegistry(key, valueName, value, valueType=None):
     key = key.replace("/", "\\")
     if not _winreg:
@@ -1084,8 +1137,12 @@ def windowProperties(hwnd):
     r = ctypes.wintypes.RECT()
     ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(r))
 
+    pid = ctypes.c_uint(-1)
+    ctypes.windll.user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+
     props['title'] = titleBuf.value
     props['bbox'] = (r.left, r.top, r.right, r.bottom) # x1, y2, x2, y2
+    props['pid'] = int(pid.value)
     return props
 
 def launchHTTPD():

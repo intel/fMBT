@@ -781,6 +781,23 @@ class Device(fmbtgti.GUITestInterface):
         return self.existingConnection().evalPython(
             "getRegistry(%s,%s)" % (repr(key), repr(valueName)))
 
+    def processStatus(self, pid):
+        """
+        Return status of a process
+
+        Parameters:
+
+          pid (integer):
+                  Process ID of the process
+
+        Returns properties in a dictionary.
+
+        Example:
+          print "Memory usage:", processStatus(4242)["WorkingSetSize"]
+        """
+        return self.existingConnection().evalPython(
+            "processStatus(%s)" % (repr(pid),))
+
     def setScreenshotSize(self, size):
         """
         Force screenshots from device to use given resolution.
