@@ -407,8 +407,14 @@ class _PROCESS_MEMORY_COUNTERS_EX(ctypes.Structure):
                 ("PeakPagefileUsage", SIZE_T),
                 ("PrivateUsage", SIZE_T)]
 
+# Allocate memory only once for often needed out-parameters
+
 _processMemoryCountersEx = _PROCESS_MEMORY_COUNTERS_EX()
 _filenameBufferW = ctypes.create_unicode_buffer(4096)
+_creationTime = ctypes.wintypes.FILETIME()
+_exitTime = ctypes.wintypes.FILETIME()
+_kernelTime = ctypes.wintypes.FILETIME()
+_userTime = ctypes.wintypes.FILETIME()
 
 # Initialize Pointer and Touch info
 
@@ -979,7 +985,6 @@ def _openRegistryKey(key, accessRights):
     return regKey
 
 def processStatus(pid):
-
     hProcess = ctypes.windll.kernel32.OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, False, pid)
 
     if hProcess == 0:
@@ -1000,6 +1005,15 @@ def processStatus(pid):
             ctypes.byref(_filenameBufferW),
             ctypes.sizeof(_filenameBufferW)) != 0:
         rv["ProcessImageFileName"] = _filenameBufferW.value
+
+    if ctypes.windll.kernel32.GetProcessTimes(
+            hProcess,
+            ctypes.byref(_creationTime),
+            ctypes.byref(_exitTime),
+            ctypes.byref(_kernelTime),
+            ctypes.byref(_userTime)) != 0:
+        rv["UserTime"] = ((_userTime.dwHighDateTime << 32) + _userTime.dwLowDateTime) / 10000000.0
+        rv["KernelTime"] = ((_kernelTime.dwHighDateTime << 32) + _kernelTime.dwLowDateTime) / 10000000.0
 
     ctypes.windll.kernel32.CloseHandle( hProcess );
     return rv
