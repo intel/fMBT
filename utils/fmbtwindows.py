@@ -810,6 +810,23 @@ class Device(fmbtgti.GUITestInterface):
         """
         self._conn.setScreenshotSize(size)
 
+    def setTopWindow(self, window):
+        """
+        Set a window as a foreground window
+
+        Parameters:
+
+          window (title (string) or hwnd (integer):
+                  title or handle of the window to be raised
+                  foreground.
+
+        Returns True if the window was brought to the foreground,
+        otherwise False.
+
+        Notes: calls SetForegroundWindow in user32.dll.
+        """
+        return self.existingConnection().sendSetForegroundWindow(window)
+
     def setViewSource(self, source, properties=None):
         """
         Set default view source for refreshView()
@@ -966,6 +983,13 @@ class Device(fmbtgti.GUITestInterface):
         if len(items) == 0: return False
         return self.tapItem(items[0], **tapKwArgs)
 
+    def topWindow(self):
+        """
+        Returns a handle to the window.
+        """
+        return self.existingConnection().evalPython(
+            "ctypes.windll.user32.GetForegroundWindow()")
+
     def topWindowProperties(self):
         """
         Return properties of the top window as a dictionary
@@ -1007,6 +1031,18 @@ class Device(fmbtgti.GUITestInterface):
               print props["hwnd"], props["title"]
         """
         return self._conn.recvWindowList()
+
+    def windowProperties(self, window):
+        """
+        Returns properties of a window.
+
+        Parameters:
+          window (title (string) or hwnd (integer):
+                  The window whose properties will be returned.
+
+        Returns properties in a dictionary.
+        """
+        return self.existingConnection().recvWindowProperties(window)
 
     def launchHTTPD(self):
         """
@@ -1099,6 +1135,10 @@ class WindowsConnection(fmbtgti.GUITestConnection):
 
     def recvTopWindowProperties(self):
         return self.evalPython("topWindowProperties()")
+
+    def recvWindowProperties(self, window):
+        hwnd = self._window2hwnd(window)
+        return self.evalPython("windowProperties(%s)" % (hwnd,))
 
     def recvViewData(self, window=None):
         if window == None:
