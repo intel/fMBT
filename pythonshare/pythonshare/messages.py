@@ -25,6 +25,12 @@ class Unpicklable(object):
     def __str__(self):
         return 'Unpicklable("%s")' % (self._string,)
 
+class Unloadable(object):
+    def __init__(self, obj):
+        self._string = str(obj)
+    def __str__(self):
+        return 'Unloadable("%s")' % (self._string,)
+
 class Auth_rv(object):
     def __init__(self, success, errormsg=""):
         self.success = success

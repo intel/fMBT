@@ -73,7 +73,10 @@ def _recv(source):
     if not source in _recv.locks:
         _recv.locks[source] = thread.allocate_lock()
     with _recv.locks[source]:
-        return cPickle.load(source)
+        try:
+            return cPickle.load(source)
+        except ValueError, e:
+            return messages.Unloadable(e)
 _recv.locks = {}
 
 
