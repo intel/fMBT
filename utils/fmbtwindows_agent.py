@@ -1141,6 +1141,10 @@ def topWindowProperties():
         return None
     return windowProperties(hwnd)
 
+def setTopWindow(hwnd):
+    return (ctypes.windll.user32.SetForegroundWindow(hwnd) != 0 and
+            ctypes.windll.user32.BringWindowToTop(hwnd) != 0)
+
 def windowProperties(hwnd):
     props = {'hwnd': hwnd}
     titleLen = ctypes.windll.user32.GetWindowTextLengthW(hwnd)

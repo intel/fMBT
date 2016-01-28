@@ -812,7 +812,7 @@ class Device(fmbtgti.GUITestInterface):
 
     def setTopWindow(self, window):
         """
-        Set a window as a foreground window
+        Set a window as a foreground window and bring it to front.
 
         Parameters:
 
@@ -825,7 +825,7 @@ class Device(fmbtgti.GUITestInterface):
 
         Notes: calls SetForegroundWindow in user32.dll.
         """
-        return self.existingConnection().sendSetForegroundWindow(window)
+        return self.existingConnection().sendSetTopWindow(window)
 
     def setViewSource(self, source, properties=None):
         """
@@ -1215,6 +1215,11 @@ class WindowsConnection(fmbtgti.GUITestConnection):
     def sendSetForegroundWindow(self, window):
         hwnd = self._window2hwnd(window)
         return 0 != self.evalPython("ctypes.windll.user32.SetForegroundWindow(%s)" %
+                                    (repr(hwnd),))
+
+    def sendSetTopWindow(self, window):
+        hwnd = self._window2hwnd(window)
+        return 0 != self.evalPython("setTopWindow(%s)" %
                                     (repr(hwnd),))
 
     def sendShowWindow(self, window, showCmd):
