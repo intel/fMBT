@@ -420,6 +420,7 @@ _creationTime = ctypes.wintypes.FILETIME()
 _exitTime = ctypes.wintypes.FILETIME()
 _kernelTime = ctypes.wintypes.FILETIME()
 _userTime = ctypes.wintypes.FILETIME()
+_dword = DWORD(0)
 
 # Initialize Pointer and Touch info
 
@@ -1020,7 +1021,12 @@ def processStatus(pid):
         rv["UserTime"] = ((_userTime.dwHighDateTime << 32) + _userTime.dwLowDateTime) / 10000000.0
         rv["KernelTime"] = ((_kernelTime.dwHighDateTime << 32) + _kernelTime.dwLowDateTime) / 10000000.0
 
-    ctypes.windll.kernel32.CloseHandle( hProcess );
+    if ctypes.windll.kernel32.GetProcessHandleCount(
+            hProcess,
+            ctypes.byref(_dword)) != 0:
+        rv["HandleCount"] = int(_dword.value)
+
+    ctypes.windll.kernel32.CloseHandle(hProcess)
     return rv
 
 def setRegistry(key, valueName, value, valueType=None):
