@@ -314,6 +314,11 @@ KEY_X = 0x58
 KEY_Y = 0x59
 KEY_Z = 0x5A
 
+_g_showCmds = [
+    "SW_HIDE", "SW_NORMAL", "SW_MINIMIZED", "SW_MAXIMIZE", "SW_NOACTIVATE",
+    "SW_SHOW", "SW_MINIMIZE", "SW_MINNOACTIVE", "SW_SHOWNA", "SW_RESTORE",
+    "SW_DEFAULT", "SW_FORCEMINIMIZE"]
+
 LONG = ctypes.c_long
 DWORD = ctypes.c_ulong
 ULONG_PTR = ctypes.POINTER(DWORD)
@@ -1132,6 +1137,14 @@ def shellSOE(command, asyncStatus=None, asyncOut=None, asyncError=None):
         except: pass
     return status, out, err
 
+def showWindow(hwnd, showCmd):
+    if isinstance(showCmd, str) or isinstance(showCmd, unicode):
+        if showCmd in _g_showCmds:
+            showCmd = _g_showCmds.index(showCmd)
+        else:
+            raise ValueError('invalid showCmd: "%s"' % (showCmd,))
+    return 0 != ctypes.windll.user32.ShowWindow(hwnd, showCmd)
+
 def topWindow():
     return ctypes.windll.user32.GetForegroundWindow()
 
@@ -1142,6 +1155,12 @@ def topWindowProperties():
     return windowProperties(hwnd)
 
 def setTopWindow(hwnd):
+    status = windowStatus(hwnd)
+    if not status["visible"] or not status["foreground"]:
+        showWindow(hwnd, "SW_MINIMIZE")
+        showWindow(hwnd, "SW_RESTORE")
+    elif status["iconic"]:
+        showWindow(hwnd, "SW_RESTORE")
     return (ctypes.windll.user32.SetForegroundWindow(hwnd) != 0 and
             ctypes.windll.user32.BringWindowToTop(hwnd) != 0)
 
@@ -1162,6 +1181,17 @@ def windowProperties(hwnd):
     props['bbox'] = (r.left, r.top, r.right, r.bottom) # x1, y2, x2, y2
     props['pid'] = int(pid.value)
     return props
+
+def windowStatus(hwnd):
+    status = {
+        "enabled": ctypes.windll.user32.IsWindowEnabled(hwnd) != 0,
+        "iconic": ctypes.windll.user32.IsIconic(hwnd) != 0,
+        "zoomed": ctypes.windll.user32.IsZoomed(hwnd) != 0,
+        "visible": ctypes.windll.user32.IsWindowVisible(hwnd) != 0,
+        "hung": ctypes.windll.user32.IsHungAppWindow(hwnd) != 0,
+        "foreground": ctypes.windll.user32.GetForegroundWindow() == hwnd
+    }
+    return status
 
 def launchHTTPD():
     global _HTTPServerProcess

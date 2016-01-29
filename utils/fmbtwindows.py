@@ -149,11 +149,6 @@ SW_RESTORE       = 9
 SW_DEFAULT       = 10
 SW_FORCEMINIMIZE = 11
 
-_g_showCmds = [
-    "SW_HIDE", "SW_NORMAL", "SW_MINIMIZED", "SW_MAXIMIZE", "SW_NOACTIVATE",
-    "SW_SHOW", "SW_MINIMIZE", "SW_MINNOACTIVE", "SW_SHOWNA", "SW_RESTORE",
-    "SW_DEFAULT", "SW_FORCEMINIMIZE"]
-
 class ViewItem(fmbtgti.GUIItem):
     def __init__(self, view, itemId, parentId, className, text, bbox, dumpFilename,
                  rawProperties=None):
@@ -1044,6 +1039,18 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self.existingConnection().recvWindowProperties(window)
 
+    def windowStatus(self, window):
+        """
+        Returns status of a window.
+
+        Parameters:
+          window (title (string) or hwnd (integer):
+                  The window whose properties will be returned.
+
+        Returns status in a dictionary.
+        """
+        return self.existingConnection().recvWindowStatus(window)
+
     def launchHTTPD(self):
         """
         DEPRECATED, will be removed, do not use!
@@ -1140,6 +1147,10 @@ class WindowsConnection(fmbtgti.GUITestConnection):
         hwnd = self._window2hwnd(window)
         return self.evalPython("windowProperties(%s)" % (hwnd,))
 
+    def recvWindowStatus(self, window):
+        hwnd = self._window2hwnd(window)
+        return self.evalPython("windowStatus(%s)" % (hwnd,))
+
     def recvViewData(self, window=None):
         if window == None:
             rv = self.evalPython("topWindowWidgets()")
@@ -1224,13 +1235,7 @@ class WindowsConnection(fmbtgti.GUITestConnection):
 
     def sendShowWindow(self, window, showCmd):
         hwnd = self._window2hwnd(window)
-        if isinstance(showCmd, str) or isinstance(showCmd, unicode):
-            if showCmd in _g_showCmds:
-                showCmd = _g_showCmds.index(showCmd)
-            else:
-                raise ValueError('invalid showCmd: "%s"' % (showCmd,))
-        return 0 != self.evalPython("ctypes.windll.user32.ShowWindow(%s, %s)" %
-                                    (repr(hwnd), repr(showCmd)))
+        return self.evalPython("showWindow(%s, %s)" % (repr(hwnd), repr(showCmd)))
 
     def sendType(self, text):
         command = 'sendType(%s)' % (repr(text),)
