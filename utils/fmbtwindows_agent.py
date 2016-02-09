@@ -1029,6 +1029,28 @@ def processStatus(pid):
     ctypes.windll.kernel32.CloseHandle(hProcess)
     return rv
 
+def products(properties=("ProductName", "Publisher",
+                         "Version", "VersionString",
+                         "InstallDate", "InstallLocation",
+                         "InstallSource", "LocalPackage")):
+    retval = []
+    iProductIndex = 0
+    cchValueBuf = DWORD(0)
+    enumStatus = ctypes.windll.msi.MsiEnumProductsW(iProductIndex, _filenameBufferW)
+    while enumStatus == 0:
+        productCode = _filenameBufferW.value
+        productInfo = {"ProductCode": productCode}
+        for pname in properties:
+            cchValueBuf.value = ctypes.sizeof(_filenameBufferW)
+            if ctypes.windll.msi.MsiGetProductInfoW(
+                    productCode, unicode(pname), _filenameBufferW,
+                    ctypes.byref(cchValueBuf)) == 0:
+                productInfo[pname] = _filenameBufferW.value
+        retval.append(productInfo)
+        iProductIndex += 1
+        enumStatus = ctypes.windll.msi.MsiEnumProductsW(iProductIndex, _filenameBufferW)
+    return retval
+
 def setRegistry(key, valueName, value, valueType=None):
     key = key.replace("/", "\\")
     if not _winreg:

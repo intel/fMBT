@@ -793,6 +793,14 @@ class Device(fmbtgti.GUITestInterface):
         return self.existingConnection().evalPython(
             "processStatus(%s)" % (repr(pid),))
 
+    def products(self):
+        """
+        Return list of products installed or advertised in the system
+
+        Returns list of dictionaries, each containing properties of a product.
+        """
+        return self.existingConnection().evalPython("products()")
+
     def setScreenshotSize(self, size):
         """
         Force screenshots from device to use given resolution.
