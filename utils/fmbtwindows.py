@@ -1225,7 +1225,7 @@ class WindowsConnection(fmbtgti.GUITestConnection):
             if not hwndList:
                 raise ValueError('no window with title "%s"' % (title,))
             hwnd = hwndList[0]
-        elif isinstance(window, int):
+        elif isinstance(window, int) or isinstance(window, long):
             hwnd = window
         else:
             raise ValueError('invalid window "%s", string or integer expected' % (window,))
