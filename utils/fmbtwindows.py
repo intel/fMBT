@@ -481,6 +481,17 @@ class Device(fmbtgti.GUITestInterface):
         return (fmbtgti._boxOnRegion(itemBox, (0, 0, maxX, maxY), partial=partial) and
                 fmbtgti._boxOnRegion(itemBox, self.topWindowProperties()['bbox'], partial=partial))
 
+    def kill(self, pid):
+        """
+        Terminate process
+
+        Parameters:
+
+          pid (integer):
+                  ID of the process to be terminated.
+        """
+        return self.existingConnection().evalPython("kill(%s)" % (repr(pid),))
+
     def keyNames(self):
         """
         Returns list of key names recognized by pressKey

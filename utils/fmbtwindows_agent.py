@@ -22,6 +22,7 @@ import ctypes.wintypes
 import glob
 import os
 import Queue
+import signal
 import string
 import struct
 import subprocess
@@ -989,6 +990,10 @@ def _openRegistryKey(key, accessRights):
         raise ValueError("invalid HKEY_* at the beginning of the key %s" % (repr(key),))
     regKey = _winreg.OpenKey(HKEY, subKey, 0, accessRights)
     return regKey
+
+def kill(*pids):
+    for pid in pids:
+        os.kill(int(pid), signal.SIGTERM)
 
 def processList():
     retval = []
