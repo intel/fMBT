@@ -990,11 +990,36 @@ def _openRegistryKey(key, accessRights):
     regKey = _winreg.OpenKey(HKEY, subKey, 0, accessRights)
     return regKey
 
+def processList():
+    retval = []
+    MAX_NUMBER_OF_PROCESSES = 1024 * 64
+    processIds = (MAX_NUMBER_OF_PROCESSES * DWORD)()
+    bytesReturned = DWORD()
+    if ctypes.windll.psapi.EnumProcesses(processIds,
+                                         ctypes.sizeof(processIds),
+                                         ctypes.byref(bytesReturned)) != 0:
+        for procIndex in xrange(bytesReturned.value / ctypes.sizeof(DWORD)):
+            processId = processIds[procIndex]
+            hProcess = ctypes.windll.kernel32.OpenProcess(
+                PROCESS_QUERY_INFORMATION, False, processId)
+            if hProcess:
+                bytesReturned.value = ctypes.sizeof(_filenameBufferW)
+                if ctypes.windll.kernel32.QueryFullProcessImageNameW(
+                        hProcess,
+                        0, # Win32 path format
+                        ctypes.byref(_filenameBufferW),
+                        ctypes.byref(bytesReturned)) != 0:
+                    retval.append({
+                        "pid": int(processId),
+                        "ProcessImageFileName": _filenameBufferW.value})
+                ctypes.windll.kernel32.CloseHandle(hProcess)
+    return retval
+
 def processStatus(pid):
     hProcess = ctypes.windll.kernel32.OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, False, pid)
 
     if hProcess == 0:
-        raise ValueError('no process with pid %s' % (pid,))
+        raise ValueError('cannot get status of process %s' % (pid,))
 
     rv = {"pid": pid}
 
@@ -1006,10 +1031,13 @@ def processStatus(pid):
                 continue
             rv[fieldName] = int(getattr(_processMemoryCountersEx, fieldName))
 
-    if ctypes.windll.psapi.GetProcessImageFileNameW(
+    bytesReturned = DWORD()
+    bytesReturned.value = ctypes.sizeof(_filenameBufferW)
+    if ctypes.windll.kernel32.QueryFullProcessImageNameW(
             hProcess,
+            0, # Win32 path format
             ctypes.byref(_filenameBufferW),
-            ctypes.sizeof(_filenameBufferW)) != 0:
+            ctypes.byref(bytesReturned)) != 0:
         rv["ProcessImageFileName"] = _filenameBufferW.value
 
     if ctypes.windll.kernel32.GetProcessTimes(

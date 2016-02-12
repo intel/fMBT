@@ -776,6 +776,16 @@ class Device(fmbtgti.GUITestInterface):
         return self.existingConnection().evalPython(
             "getRegistry(%s,%s)" % (repr(key), repr(valueName)))
 
+    def processList(self):
+        """
+        Return list of processes running on the device.
+
+        Returns list of dictionaries with keys:
+          "pid": process ID, and
+          "ProcessImageFileName": full path to the executable in win32 format.
+        """
+        return self.existingConnection().evalPython("processList()")
+
     def processStatus(self, pid):
         """
         Return status of a process
