@@ -217,6 +217,7 @@ class View(object):
     def __init__(self, dumpFilename, itemTree):
         self._dumpFilename = dumpFilename
         self._itemTree = itemTree
+        self._rootItem = None
         self._viewItems = {}
         if isinstance(itemTree, dict):
             # data from enumchildwindows:
@@ -679,8 +680,11 @@ class Device(fmbtgti.GUITestInterface):
             if isinstance(forcedView, View):
                 self._lastView = forcedView
             elif type(forcedView) in [str, unicode]:
-                self._lastView = View(forcedView,
-                                      ast.literal_eval(file(forcedView).read()))
+                try:
+                    self._lastView = View(forcedView,
+                                          ast.literal_eval(file(forcedView).read()))
+                except Exception:
+                    self._lastView = None
         else:
             if self.screenshotDir() == None:
                 self.setScreenshotDir(self._screenshotDirDefault)
@@ -694,7 +698,10 @@ class Device(fmbtgti.GUITestInterface):
                     properties = self._viewItemProperties
                 viewData = self._conn.recvViewUIAutomation(window, items, properties)
             file(viewFilename, "w").write(repr(viewData))
-            self._lastView = View(viewFilename, viewData)
+            try:
+                self._lastView = View(viewFilename, viewData)
+            except Exception:
+                self._lastView = None
         return self._lastView
 
     def setDisplaySize(self, size):
