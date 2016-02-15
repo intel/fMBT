@@ -994,6 +994,7 @@ def _openRegistryKey(key, accessRights):
 def kill(*pids):
     for pid in pids:
         os.kill(int(pid), signal.SIGTERM)
+    return True
 
 def processList():
     retval = []
@@ -1223,7 +1224,8 @@ def setTopWindow(hwnd):
     elif status["iconic"]:
         showWindow(hwnd, "SW_RESTORE")
     return (ctypes.windll.user32.SetForegroundWindow(hwnd) != 0 and
-            ctypes.windll.user32.BringWindowToTop(hwnd) != 0)
+            ctypes.windll.user32.BringWindowToTop(hwnd) != 0 and
+            topWindow() == hwnd)
 
 def windowProperties(hwnd):
     props = {'hwnd': hwnd}

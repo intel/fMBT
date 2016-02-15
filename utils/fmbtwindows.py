@@ -490,7 +490,11 @@ class Device(fmbtgti.GUITestInterface):
           pid (integer):
                   ID of the process to be terminated.
         """
-        return self.existingConnection().evalPython("kill(%s)" % (repr(pid),))
+        try:
+            return self.existingConnection().evalPython(
+                "kill(%s)" % (repr(pid),))
+        except:
+            return False
 
     def keyNames(self):
         """
