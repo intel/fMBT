@@ -545,16 +545,20 @@ class Device(fmbtgti.GUITestInterface):
         x, y = self.intCoords((x, y))
 
         if type(startDistance) == float and 0.0 <= startDistance <= 1.0:
-            startDistanceInPixels = (startDistance *
-                                     max(fmbtgti._edgeDistanceInDirection((x, y), self.screenSize(), finger1Dir),
-                                         fmbtgti._edgeDistanceInDirection((x, y), self.screenSize(), finger2Dir)))
-        else: startDistanceInPixels = int(startDistance)
+            startDistanceInPixels = (
+                startDistance *
+                min(fmbtgti._edgeDistanceInDirection((x, y), self.screenSize(), finger1Dir),
+                    fmbtgti._edgeDistanceInDirection((x, y), self.screenSize(), finger2Dir)))
+        else:
+            startDistanceInPixels = int(startDistance)
 
         if type(endDistance) == float and 0.0 <= endDistance <= 1.0:
-            endDistanceInPixels = (endDistance *
-                                   max(fmbtgti._edgeDistanceInDirection((x, y), self.screenSize(), finger1Dir),
-                                       fmbtgti._edgeDistanceInDirection((x, y), self.screenSize(), finger2Dir)))
-        else: endDistanceInPixels = int(endDistance)
+            endDistanceInPixels = (
+                endDistance *
+                min(fmbtgti._edgeDistanceInDirection((x, y), self.screenSize(), finger1Dir),
+                    fmbtgti._edgeDistanceInDirection((x, y), self.screenSize(), finger2Dir)))
+        else:
+            endDistanceInPixels = int(endDistance)
 
         finger1startX = int(x + math.cos(math.radians(finger1Dir)) * startDistanceInPixels)
         finger1startY = int(y - math.sin(math.radians(finger1Dir)) * startDistanceInPixels)
