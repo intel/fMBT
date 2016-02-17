@@ -334,6 +334,7 @@ except AttributeError:
     GetProcessMemoryInfo = ctypes.windll.psapi.GetProcessMemoryInfo
 
 PROCESS_QUERY_INFORMATION = 0x400
+PROCESS_TERMINATE = 0x1
 PROCESS_VM_READ = 0x10
 
 WM_GETTEXT = 0x000d
@@ -992,9 +993,15 @@ def _openRegistryKey(key, accessRights):
     return regKey
 
 def kill(*pids):
+    rv = True
     for pid in pids:
-        os.kill(int(pid), signal.SIGTERM)
-    return True
+        handle = ctypes.windll.kernel32.OpenProcess(PROCESS_TERMINATE, False, pid)
+        if handle:
+            rv = rv and (ctypes.windll.kernel32.TerminateProcess(handle, -1) != 0)
+            ctypes.windll.kernel32.CloseHandle(handle)
+        else:
+            rv = False
+    return rv
 
 def processList():
     retval = []
