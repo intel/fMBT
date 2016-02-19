@@ -1341,6 +1341,23 @@ def screenshotTakerThread():
 
     takerFree(srcdc, memdc, bmp)
 
+def wmicGet(component, componentArgs=()):
+    cmd = (["wmic", component] +
+           list(componentArgs) +
+           ["get", "/format:textvaluelist"])
+    # Note: subprocess.check_output(
+    #     ["wmic", "datafile", "where", 'name=r"c:\\build.ini"', "get"])
+    # does not work, but it works when executed as a single string in shell.
+    s, o, e = shellSOE(" ".join(cmd))
+    rv = {}
+    for l in o.splitlines():
+        try:
+            key, value = l.split("=", 1)
+        except ValueError:
+            continue
+        rv[key] = value
+    return rv
+
 if not "_mouse_input_area" in globals():
     left = ctypes.windll.user32.GetSystemMetrics(SM_XVIRTUALSCREEN)
     right =ctypes.windll.user32.GetSystemMetrics(SM_CXVIRTUALSCREEN)

@@ -420,6 +420,20 @@ class Device(fmbtgti.GUITestInterface):
         else:
             raise FMBTWindowsError("view is not available. Missing refreshView()?")
 
+    def fileProperties(self, filepath):
+        """
+        Returns file properties as a dictionary.
+
+        Parameters:
+          filepath (string):
+                  full path to the file.
+        """
+        escapedFilename = filepath.replace('/', '\\').replace('\\', r'\\\\')
+        return self.existingConnection().evalPython(
+            '''wmicGet("datafile",'''
+            '''componentArgs=("where", 'name="%s"'))''' %
+            escapedFilename)
+
     def getFile(self, remoteFilename, localFilename=None):
         """
         Fetch file from the device.
@@ -502,6 +516,13 @@ class Device(fmbtgti.GUITestInterface):
         Returns list of key names recognized by pressKey
         """
         return sorted(_g_keyNames)
+
+    def osProperties(self):
+        """
+        Returns OS properties as a dictionary
+        """
+        return self.existingConnection().evalPython(
+            "wmicGet('os')")
 
     def pinch(self, (x, y), startDistance, endDistance,
               finger1Dir=90, finger2Dir=270, movePoints=20,
