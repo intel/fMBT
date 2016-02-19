@@ -1345,10 +1345,7 @@ def wmicGet(component, componentArgs=()):
     cmd = (["wmic", component] +
            list(componentArgs) +
            ["get", "/format:textvaluelist"])
-    # Note: subprocess.check_output(
-    #     ["wmic", "datafile", "where", 'name=r"c:\\build.ini"', "get"])
-    # does not work, but it works when executed as a single string in shell.
-    s, o, e = shellSOE(" ".join(cmd))
+    s, o, e = shellSOE(cmd)
     rv = {}
     for l in o.splitlines():
         try:

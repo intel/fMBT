@@ -431,7 +431,7 @@ class Device(fmbtgti.GUITestInterface):
         escapedFilename = filepath.replace('/', '\\').replace('\\', r'\\\\')
         return self.existingConnection().evalPython(
             '''wmicGet("datafile",'''
-            '''componentArgs=("where", 'name="%s"'))''' %
+            '''componentArgs=("where", "name='%s'"))''' %
             escapedFilename)
 
     def getFile(self, remoteFilename, localFilename=None):
