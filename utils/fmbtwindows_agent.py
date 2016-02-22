@@ -64,7 +64,6 @@ def cleanUp():
             pass
 atexit.register(cleanUp)
 
-_mouse_input_area = (1920, 1080)
 _HTTPServerProcess = None
 
 INPUT_MOUSE                 = 0
