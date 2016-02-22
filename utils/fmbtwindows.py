@@ -850,7 +850,7 @@ class Device(fmbtgti.GUITestInterface):
         return self.existingConnection().evalPython(
             "processStatus(%s)" % (repr(pid),))
 
-    def products(self):
+    def productList(self):
         """
         Return list of products installed or advertised in the system
 
