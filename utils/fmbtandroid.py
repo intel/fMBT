@@ -457,6 +457,7 @@ class Device(fmbtgti.GUITestInterface):
             if potentialDevices == []:
                 raise AndroidDeviceNotFound('No devices found with "%s"' % (_g_listDevicesCommand,))
 
+            errorMessages = []
             for deviceName in potentialDevices:
                 try:
                     self.setConnection(_AndroidDeviceConnection(
@@ -464,10 +465,12 @@ class Device(fmbtgti.GUITestInterface):
                     self._conf.set("general", "serial", self.serialNumber)
                     break
                 except AndroidConnectionError, e:
+                    errorMessages.append(str(e))
                     continue
             else:
-                raise AndroidConnectionError("Could not connect to device(s): %s." % (
-                        ", ".join(potentialDevices)))
+                raise AndroidConnectionError("Could not connect to device(s): %s. (%s)" % (
+                    ", ".join(potentialDevices),
+                    ", ".join(errorMessages)))
 
             # Found a device (deviceName).
             self._loadDeviceAndTestINIs(self._fmbtAndroidHomeDir, deviceName, iniFile)
@@ -2456,7 +2459,11 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             except Exception, e:
                 _, monkeyOutput, _ = self._runAdb(["shell", "cat /sdcard/fmbtandroid.monkey.outerr"],
                                                   timeout=_SHORT_TIMEOUT)
-                if "Error: Unknown option:" in monkeyOutput:
+                if "/sdcard/fmbtandroid.monkey.outerr: No such file or directory" in monkeyOutput:
+                    msg = 'cannot read/write /sdcard on device %s' % (self._serialNumber,)
+                    _adapterLog(msg)
+                    raise AndroidConnectionError(msg)
+                elif "Error: Unknown option:" in monkeyOutput:
                     uo = [l for l in monkeyOutput.splitlines() if "Error: Unknown option:" in l][0].split(":")[-1].strip()
                     _adapterLog('detected an unknown option for monkey: "%s". Disabling it.' % (uo,))
                     try:
