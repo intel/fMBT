@@ -327,7 +327,8 @@ def listSerialNumbers(adbPort=None):
     try: deviceLines = outputLines[outputLines.index("List of devices attached")+1:]
     except: deviceLines = []
 
-    deviceLines = [l for l in deviceLines if l.strip() != ""]
+    deviceLines = [l for l in deviceLines
+                   if l.strip() != "" and not l.startswith("*")]
 
     potentialDevices = [line.split()[0] for line in deviceLines]
 
