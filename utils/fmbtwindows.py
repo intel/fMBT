@@ -414,6 +414,19 @@ class Device(fmbtgti.GUITestInterface):
         self.setConnection(WindowsConnection(
             self._connspec, self._password))
 
+    def closeWindow(self, window):
+        """
+        Send WM_CLOSE to window
+
+        Parameters:
+
+          window (window title (string) or handle (integer)):
+                  window to which the command will be sent.
+
+        Returns True on success, otherwise False.
+        """
+        return self.existingConnection().sendCloseWindow(window)
+
     def existingView(self):
         if self._lastView:
             return self._lastView
@@ -1287,6 +1300,10 @@ class WindowsConnection(fmbtgti.GUITestConnection):
         else:
             raise ValueError('invalid window "%s", string or integer expected' % (window,))
         return hwnd
+
+    def sendCloseWindow(self, window):
+        hwnd = self._window2hwnd(window)
+        return self.evalPython("closeWindow(%s)" % (repr(hwnd),))
 
     def sendSetForegroundWindow(self, window):
         hwnd = self._window2hwnd(window)

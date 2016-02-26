@@ -337,6 +337,7 @@ PROCESS_TERMINATE = 0x1
 PROCESS_VM_READ = 0x10
 
 WM_GETTEXT = 0x000d
+WM_CLOSE = 0x0010
 
 # Structs for mouse and keyboard input
 
@@ -1261,6 +1262,9 @@ def windowStatus(hwnd):
         "foreground": ctypes.windll.user32.GetForegroundWindow() == hwnd
     }
     return status
+
+def closeWindow(hwnd):
+    return ctypes.windll.user32.PostMessageW(hwnd, WM_CLOSE, 0, 0) != 0
 
 def launchHTTPD():
     global _HTTPServerProcess
