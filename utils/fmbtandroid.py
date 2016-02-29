@@ -661,7 +661,7 @@ class Device(fmbtgti.GUITestInterface):
             delayBeforeMoves == None and
             delayAfterMoves == None and
             movePoints == None and
-            self.platformVersion() > "4.2"):
+            self.platformVersion() >= "4.3"):
             x1, y1 = self.intCoords((x1, y1))
             x2, y2 = self.intCoords((x2, y2))
             return self.existingConnection().sendSwipe(x1, y1, x2, y2)
