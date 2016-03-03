@@ -1380,7 +1380,8 @@ class WindowsConnection(fmbtgti.GUITestConnection):
         if button == None:
             command = "sendTouchUp(%s, %s)" % (x, y)
         else:
-            command = "sendMouseUp(%s, %s, %s)" % (x, y, button)
+            command = "(sendMouseMove(%s, %s, %s), sendMouseUp(%s))" % (
+                x, y, button, button)
         self._agent.eval_in(self._agent_ns, command)
         return True
 

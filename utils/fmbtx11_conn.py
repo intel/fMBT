@@ -227,7 +227,7 @@ class Display(object):
         libX11.XFlush(self._display)
         return True
 
-    def sendTouchMove(self, x, y):
+    def sendTouchMove(self, x, y, button=None):
         libXtst.XTestFakeMotionEvent(self._display, self._current_screen, int(x), int(y), _X_CurrentTime)
         libX11.XFlush(self._display)
         return True

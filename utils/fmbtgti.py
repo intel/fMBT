@@ -1431,39 +1431,51 @@ class GUITestInterface(object):
         """
         return self._conn
 
-    def drag(self, (x1, y1), (x2, y2), delayBetweenMoves=0.01, delayBeforeMoves=0, delayAfterMoves=0, movePoints=20):
+    def drag(self, (x1, y1), (x2, y2), delayBetweenMoves=0.01,
+             delayBeforeMoves=0, delayAfterMoves=0, movePoints=20,
+             button=_USE_DEFAULTS):
         """
         Touch the screen on coordinates (x1, y1), drag along straight
         line to coordinates (x2, y2), and raise fingertip.
 
-        coordinates (floats in range [0.0, 1.0] or integers):
-                floating point coordinates in range [0.0, 1.0] are
-                scaled to full screen width and height, others are
-                handled as absolute coordinate values.
+        Parameters:
 
-        delayBeforeMoves (float, optional):
-                seconds to wait after touching and before dragging.
-                If negative, starting touch event is not sent.
+          coordinates (floats in range [0.0, 1.0] or integers):
+                  floating point coordinates in range [0.0, 1.0] are
+                  scaled to full screen width and height, others are
+                  handled as absolute coordinate values.
 
-        delayBetweenMoves (float, optional):
-                seconds to wait when moving between points when
-                dragging.
+          delayBeforeMoves (float, optional):
+                  seconds to wait after touching and before dragging.
+                  If negative, starting touch event is not sent.
 
-        delayAfterMoves (float, optional):
-                seconds to wait after dragging, before raising
-                fingertip.
-                If negative, fingertip is not raised.
+          delayBetweenMoves (float, optional):
+                  seconds to wait when moving between points when
+                  dragging.
 
-        movePoints (integer, optional):
-                the number of intermediate move points between end
-                points of the line.
+          delayAfterMoves (float, optional):
+                  seconds to wait after dragging, before raising
+                  fingertip.
+                  If negative, fingertip is not raised.
+
+          movePoints (integer, optional):
+                  the number of intermediate move points between end
+                  points of the line.
+
+          button (integer, optional):
+                  send drag using given mouse button. The default is None.
 
         Returns True on success, False if sending input failed.
         """
         x1, y1 = self.intCoords((x1, y1))
         x2, y2 = self.intCoords((x2, y2))
+
+        extraArgs = {}
+        if button != _USE_DEFAULTS:
+            extraArgs["button"] = button
+
         if delayBeforeMoves >= 0:
-            if not self.existingConnection().sendTouchDown(x1, y1):
+            if not self.existingConnection().sendTouchDown(x1, y1, **extraArgs):
                 return False
         if delayBeforeMoves > 0:
             time.sleep(delayBeforeMoves)
@@ -1472,13 +1484,14 @@ class GUITestInterface(object):
         for i in xrange(0, movePoints):
             nx = x1 + int(round(((x2 - x1) / float(movePoints+1)) * (i+1)))
             ny = y1 + int(round(((y2 - y1) / float(movePoints+1)) * (i+1)))
-            if not self.existingConnection().sendTouchMove(nx, ny): return False
+            if not self.existingConnection().sendTouchMove(nx, ny, **extraArgs):
+                return False
             time.sleep(delayBetweenMoves)
         if delayAfterMoves > 0:
-            self.existingConnection().sendTouchMove(x2, y2)
+            self.existingConnection().sendTouchMove(x2, y2, **extraArgs)
             time.sleep(delayAfterMoves)
         if delayAfterMoves >= 0:
-            if self.existingConnection().sendTouchUp(x2, y2):
+            if self.existingConnection().sendTouchUp(x2, y2, **extraArgs):
                 return True
             else:
                 return False
