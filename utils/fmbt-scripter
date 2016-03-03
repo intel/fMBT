@@ -161,6 +161,7 @@ def gestureToGti(gestureEventList):
     xDistance = 0
     yDistance = 0
     if el[0].pos != None:
+        firstX, firstY = el[0].pos
         lastX, lastY = el[0].pos
         for e in el[1:]:
             xDistance += abs(lastX - e.pos[0])
@@ -183,10 +184,10 @@ def gestureToGti(gestureEventList):
             elif xDistance < 3 * locQuantum:
                 if el[-1].pos[1] < el[0].pos[1]:
                     direction = "north"
-                    sdist = yDistance + (1-el[0].pos[1])
+                    sdist = (firstY - lastY) / firstY
                 else:
                     direction = "south"
-                    sdist = yDistance + el[0].pos[1]
+                    sdist = (lastY - firstY) / (1.0 - firstY)
                 # only y axis changed, we've got a swipe
                 return '.swipe((%.2f, %.2f), "%s", distance=%.2f)' % (
                     quantL(el[0].pos) + (direction,) +
@@ -194,10 +195,10 @@ def gestureToGti(gestureEventList):
             elif yDistance < 3 * locQuantum:
                 if el[-1].pos[0] < el[0].pos[0]:
                     direction = "west"
-                    sdist = xDistance + (1-el[0].pos[0])
+                    sdist = (firstX - lastX) / firstX
                 else:
                     direction = "east"
-                    sdist = xDistance + el[0].pos[0]
+                    sdist = (lastX - firstX) / (1.0 - firstX)
                 # only y axis changed, we've got a swipe
                 return '.swipe((%.2f, %.2f), "%s", distance=%.2f)' % (
                     quantL(el[0].pos) + (direction,) +
