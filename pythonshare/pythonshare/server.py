@@ -235,8 +235,12 @@ def _drop_local_namespace(ns):
 
 def _drop_remote_namespace(ns):
     daemon_log('drop remote namespace "%s"' % (ns,))
-    ns_obj = _g_remote_namespaces[ns]
-    del _g_remote_namespaces[ns]
+    try:
+        rns = _g_remote_namespaces[ns]
+        del _g_remote_namespaces[ns]
+        rns.__del__()
+    except KeyError:
+        pass # already dropped
     # send notification to all connections in _g_namespace_exports[ns]?
 
 def _init_remote_namespace(ns, conn, to_remote, from_remote):
@@ -298,7 +302,13 @@ def _local_async_execute(async_rv, exec_msg):
 def _remote_execute(ns, exec_msg):
     rns = _g_remote_namespaces[ns]
     pythonshare._send(exec_msg, rns.to_remote)
-    return pythonshare._recv(rns.from_remote)
+    try:
+        return pythonshare._recv(rns.from_remote)
+    except AttributeError:
+        # If another thread closes the connection between send/recv,
+        # cPickle.load() may raise "'NoneType' has no attribute 'recv'".
+        # Make this look like EOF (connection lost)
+        raise EOFError()
 
 def _connection_lost(conn_id, *closables):
     if closables:
@@ -430,10 +440,16 @@ def _serve_connection(conn, conn_opts):
             if opt_debug:
                 daemon_log("%s:%s <= %s" % (peername + (exec_rv,)))
             try:
-                pythonshare._send(exec_rv, to_client)
+                try:
+                    pythonshare._send(exec_rv, to_client)
+                except (EOFError, socket.error):
+                    break
             except (TypeError, ValueError, cPickle.PicklingError): # pickling rv fails
                 exec_rv.expr_rv = messages.Unpicklable(exec_rv.expr_rv)
-                pythonshare._send(exec_rv, to_client)
+                try:
+                    pythonshare._send(exec_rv, to_client)
+                except (EOFError, socket.error):
+                    break
 
         elif isinstance(obj, messages.Server_ctl):
             if obj.command == "die":
