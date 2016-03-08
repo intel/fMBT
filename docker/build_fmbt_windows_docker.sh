@@ -11,7 +11,7 @@ else
 fi
 
 mkdir -p build-win$ARCH
-docker build -t fmbt_fedora .
+docker build --no-cache=true -t fmbt_fedora .
 docker run -i -v ${PWD}/build-win$ARCH:/build-win$ARCH fmbt_fedora sh << COMMANDS
 export http_proxy=$http_proxy
 export https_proxy=$https_proxy

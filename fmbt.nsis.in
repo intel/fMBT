@@ -57,10 +57,10 @@ Section -Prerequisites
   StrCpy $GNUPLOTDIR "$PROGRAMFILES\gnuplot\bin"
 
   SetOutPath $INSTDIR\Prerequisites
-  MessageBox MB_YESNO "Install Python 2.7.8?" /SD IDYES IDNO endPython
+  MessageBox MB_YESNO "Install Python 2.7.11?" /SD IDYES IDNO endPython
     SetCompress off
-    file "python-2.7.8@PYTHONPACKAGEARCH@.msi"
-    ExecWait '"msiexec" /i "$INSTDIR\Prerequisites\python-2.7.8@PYTHONPACKAGEARCH@.msi"'
+    file "python-2.7.11@PYTHONPACKAGEARCH@.msi"
+    ExecWait '"msiexec" /i "$INSTDIR\Prerequisites\python-2.7.11@PYTHONPACKAGEARCH@.msi"'
   endPython:
 
   MessageBox MB_YESNO "Install PySide?" /SD IDYES IDNO endPySide
