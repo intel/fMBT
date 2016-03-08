@@ -1295,10 +1295,12 @@ class WindowsConnection(fmbtgti.GUITestConnection):
             if not hwndList:
                 raise ValueError('no window with title "%s"' % (title,))
             hwnd = hwndList[0]
+        elif isinstance(window, dict) and "hwnd" in window:
+            hwnd = window["hwnd"]
         elif isinstance(window, int) or isinstance(window, long):
             hwnd = window
         else:
-            raise ValueError('invalid window "%s", string or integer expected' % (window,))
+            raise ValueError('invalid window "%s", string, integer or dict with "hwnd" key expected' % (window,))
         return hwnd
 
     def sendCloseWindow(self, window):
