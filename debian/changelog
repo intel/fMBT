@@ -1,8 +1,40 @@
-fmbt (0.31-0.rc1) unstable; urgency=low
+fmbt (0.31-1) unstable; urgency=low
 
-  * Development version.
+  * fmbtwindows:
+    - Faster refreshView() with partial update (see "items" parameter).
+    - Faster refreshView() with configurable item properties ("properties").
+    - Faster refreshView() with built-in UI automation server.
+    - Read/write registry values (Device.getRegistry, Device.setRegistry).
+    - Test if an item is on screen: Device.itemOnScreen(viewItem).
+    - Get information on processes running on the system:
+      Device.processList(), Device.processStatus(pid).
+    - Terminate processes: Device.kill(pid).
+    - Get information on installed software: Device.productList().
+    - Get information on system software: Device.osProperties().
+    - Get information on a file: Device.fileProperties(filename).
+    - Get information on a window: Device.windowProperties(window).
+    - Added Device.closeWindow().
+    - Get/set top window: Device.topWindow(), Device.setTopWindow().
+    - Fixed mouse emulation coordinates on non-full-HD resolutions.
+  * fmbtandroid:
+    - Added support for latest adb.
+    - Show error if /sdcard does not work.
+    - Fixed swipe() on Android 4.2.X.
+  * fmbtandroid/chromiumos/tizen/vnc/windows/x11:
+    - Swipe and drag gestures support using mouse and given button.
+    - Fixed swipe gesture going out-of-screen in some cases.
+    - Fixed issues on loading screenshots on Fedora 23.
+  * fmbt-scripter:
+    - Tooltips show view item properties in Select/View mode.
+    - Fixed generated swipe "distance" parameter on Rec and Control modes.
+  * pythonshare:
+    - A client can forcefully "--unlock" a namespace.
+    - A client can "--kill" a remote server through remote namespace.
+    - Fixed Python socket thread-safety issue on Windows.
+    - Faster server socket binding (reuse socket address).
+  * Many bug fixes.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 8 Jan 2016 09:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Thu, 10 Mar 2016 12:42:00 +0300
 
 fmbt (0.30-1) unstable; urgency=low
 
