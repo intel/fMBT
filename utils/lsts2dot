@@ -101,6 +101,8 @@ def colors(lsts_obj, testlog_fileobj):
     tr_colors = {}
     state_colors = {}
 
+    sugg_tr = None
+
     # simulate traces found in the log file in the lsts
     initial_state = int(lsts_obj.get_header().initial_states)
     current_state = initial_state
