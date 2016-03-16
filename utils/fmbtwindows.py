@@ -380,7 +380,8 @@ class View(object):
 
 
 class Device(fmbtgti.GUITestInterface):
-    def __init__(self, connspec, password=None, screenshotSize=(None, None), **kwargs):
+    def __init__(self, connspec, password=None, screenshotSize=(None, None),
+                 connect=True, **kwargs):
         """Connect to windows device under test.
 
         Parameters:
@@ -388,7 +389,7 @@ class Device(fmbtgti.GUITestInterface):
           connspec (string):
                   specification for connecting to a pythonshare
                   server that will run fmbtwindows-agent. The format is
-                  "socket://<host>[:<port>]".
+                  "[socket://][password@]<host>[:<port>]".
 
           password (optional, string or None):
                   authenticate to pythonshare server with given
@@ -398,6 +399,10 @@ class Device(fmbtgti.GUITestInterface):
                   rotate new screenshots by rotateScreenshot degrees.
                   Example: rotateScreenshot=-90. The default is 0 (no
                   rotation).
+
+          connect (boolean, optional):
+                  Immediately establish connection to the device. The
+                  default is True.
 
         To prepare a windows device for connection, launch there
 
@@ -411,8 +416,11 @@ class Device(fmbtgti.GUITestInterface):
         self._viewItemProperties = None
         self._connspec = connspec
         self._password = password
-        self.setConnection(WindowsConnection(
-            self._connspec, self._password))
+        if connect:
+            self.setConnection(WindowsConnection(
+                self._connspec, self._password))
+        else:
+            self.setConnection(None)
 
     def closeWindow(self, window):
         """
@@ -662,13 +670,29 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self._conn.sendFile(localFilename, remoteFilepath)
 
-    def reconnect(self):
+    def reconnect(self, connspec=None, password=None):
         """
         Close connections to the device and reconnect.
+
+        Parameters:
+
+          connspec (string, optional):
+                  Specification for new connection. The default is current
+                  connspec.
+
+          password (string, optional):
+                  Password for new connection. The default is current password.
         """
         self.setConnection(None)
         import gc
         gc.collect()
+        if connspec != None:
+            self._connspec = connspec
+        if password != None:
+            self._password = password
+        if self._connspec == None:
+            _adapterLog("reconnect failed: missing connspec")
+            return False
         try:
             self.setConnection(WindowsConnection(
                 self._connspec, self._password))
