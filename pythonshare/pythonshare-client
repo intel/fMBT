@@ -72,10 +72,14 @@ Options when connected:
           Open interactive console for running code in ns.
 
   --ls-local
-          List local namespaces
+          List local namespaces.
 
   --ls-remote
-          List remote namespaces
+          List remote namespaces.
+
+  --ns-type=ns
+          Returns type of a namespace ("local", "remote" or "" if it
+          does not exist).
 
   --drop
           Drop namespace ns from the server.
@@ -196,7 +200,8 @@ if __name__ == "__main__":
              "password=", "password-file=",
              "namespace=", "code=", "eval=", "read=",
              "output=", "format=", "interact",
-             "ls-local", "ls-remote", "drop", "unlock", "kill"])
+             "ls-local", "ls-remote", "ns-type=",
+             "drop", "unlock", "kill"])
     except getopt.GetoptError, e:
         error(str(e))
     opt_server = "localhost"
@@ -241,6 +246,8 @@ if __name__ == "__main__":
             conn = None
         elif opt in ["-n", "--namespace"]:
             opt_namespace = arg
+            if conn:
+                conn.set_namespace(opt_namespace)
         elif opt in ["-c", "--code"]:
             if conn == None:
                 conn = pythonshare.connection("socket://%s:%s" %
@@ -276,13 +283,19 @@ if __name__ == "__main__":
         elif opt in ["--ls-local"]:
             if conn == None:
                 error("cannot list namespaces - not connected")
-            local_nss = conn.eval_("pythonshare_ns.local_nss()")
+            local_nss = conn.ls_local()
             print "\n".join(local_nss)
         elif opt in ["--ls-remote"]:
             if conn == None:
                 error("cannot list namespaces - not connected")
-            remote_nss = conn.eval_("pythonshare_ns.remote_nss()")
+            remote_nss = conn.ls_remote()
             print "\n".join(remote_nss)
+        elif opt in ["--ns-type"]:
+            if conn == None:
+                error("cannot query namespace - not connected")
+            ns_type = conn.ns_type(arg)
+            if ns_type != None:
+                print ns_type
         elif opt in ["--drop"]:
             if conn == None:
                 error("cannot drop namespace - not connected")

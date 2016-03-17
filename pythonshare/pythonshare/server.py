@@ -89,6 +89,18 @@ class Pythonshare_ns(object):
         self._on_disconnect = []
         self._on_drop = []
 
+    def ns_type(self, ns):
+        """Query the type of a namespace.
+
+        Returns "local" or "remote" if namespace exists, otherwise None.
+        """
+        if ns in _g_local_namespaces:
+            return "local"
+        elif ns in _g_remote_namespaces:
+            return "remote"
+        else:
+            return None
+
     def local_nss(self):
         """List local namespaces
         """

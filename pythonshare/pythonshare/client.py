@@ -307,6 +307,17 @@ class Connection(object):
         pythonshare._send(Server_ctl("die", namespace), self._to_server)
         return True
 
+    def ls_local(self):
+        """List local namespaces on the server"""
+        return self.eval_("pythonshare_ns.local_nss()")
+
+    def ls_remote(self):
+        """List remote namespaces on the server"""
+        return self.eval_("pythonshare_ns.remote_nss()")
+
+    def ns_type(self, ns):
+        return self.eval_("pythonshare_ns.ns_type(%s)" % (repr(ns),))
+
     def namespace(self):
         """Return default namespace"""
         return self._ns
