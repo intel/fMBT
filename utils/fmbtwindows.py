@@ -242,8 +242,9 @@ class View(object):
                     bbox = [int(coord) for coord in bboxString.split(bboxSeparator)]
                     bbox[2] = bbox[0] + bbox[2] # width to right
                     bbox[3] = bbox[1] + bbox[3] # height to bottom
+                    bbox = tuple(bbox)
                 except Exception, e:
-                    bbox = [0, 0, 0, 0]
+                    bbox = (0, 0, 0, 0)
                 text = elt.get("Value", "")
                 if text == "":
                     text = elt.get("Name", "")
