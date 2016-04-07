@@ -128,6 +128,8 @@ def _fileToQueue(f, outQueue):
         line = f.readline()
     f.close()
 
+sortItems = fmbtgti.sortItems
+
 class Device(fmbtgti.GUITestInterface):
     def __init__(self, serialNumber=None, loginCommand=None,
                  debugAgentFile=None, keyboardDevice=None,

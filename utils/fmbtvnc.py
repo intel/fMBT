@@ -35,6 +35,8 @@ import string
 def _adapterLog(msg):
     fmbt.adapterlog("fmbtvnc %s" % (msg,))
 
+sortItems = fmbtgti.sortItems
+
 class Screen(fmbtgti.GUITestInterface):
     def __init__(self, hostspec, port=5900, password=None, **kwargs):
         """Parameters:

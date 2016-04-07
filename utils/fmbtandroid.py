@@ -309,6 +309,8 @@ _g_keyNames = set((
     "VOLUME_UP", "W", "WINDOW", "X", "Y", "YEN", "Z",
     "ZENKAKU_HANKAKU", "ZOOM_IN", "ZOOM_OUT"))
 
+sortItems = fmbtgti.sortItems
+
 _g_listDevicesCommand = [_g_adbExecutable, "devices"]
 def listSerialNumbers(adbPort=None):
     """

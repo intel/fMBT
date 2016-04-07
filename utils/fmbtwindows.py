@@ -149,6 +149,8 @@ SW_RESTORE       = 9
 SW_DEFAULT       = 10
 SW_FORCEMINIMIZE = 11
 
+sortItems = fmbtgti.sortItems
+
 class ViewItem(fmbtgti.GUIItem):
     def __init__(self, view, itemId, parentId, className, text, bbox, dumpFilename,
                  rawProperties=None):

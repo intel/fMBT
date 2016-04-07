@@ -42,6 +42,8 @@ def _run(command):
                                   close_fds=(os.name != "nt"))
     return exit_status
 
+sortItems = fmbtgti.sortItems
+
 class Screen(fmbtgti.GUITestInterface):
     def __init__(self, display="", **kwargs):
         """Parameters:

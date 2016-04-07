@@ -293,6 +293,32 @@ def _e4gImageIsBlank(filename):
     return rv
 ### end of binding to eye4graphics.so
 
+def sortItems(items, criteria):
+    """
+    Returns GUIItems sorted according to given criteria
+
+    Parameters:
+      items (list of GUIItems):
+              items to be sorted
+
+      criteria (string):
+              Supported values:
+              "topleft" - sort by top left coordinates of items
+              "area" - sort by areas of items
+    """
+    if criteria == "topleft":
+        top_left_items = [(i.bbox()[1], i.bbox()[0], i) for i in items]
+        top_left_items.sort()
+        return [tli[2] for tli in top_left_items]
+    elif criteria == "area":
+        area_items = [
+            ((i.bbox()[2] - i.bbox()[0]) * (i.bbox()[3] - i.bbox()[1]), i)
+            for i in items]
+        area_items.sort()
+        return [ai[1] for ai in area_items]
+    else:
+        raise ValueError('invalid sort criteria "%s"' % (criteria,))
+
 class GUITestConnection(object):
     """
     Implements GUI testing primitives needed by GUITestInterface.

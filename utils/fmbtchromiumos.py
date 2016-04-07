@@ -45,6 +45,8 @@ def _run(command, sendStdin=None):
     out, err = p.communicate()
     return p.returncode, out, err
 
+sortItems = fmbtgti.sortItems
+
 class Device(fmbtgti.GUITestInterface):
     def __init__(self, loginCommand, **kwargs):
         """Parameters:
