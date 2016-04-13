@@ -25,7 +25,8 @@ Adapters have two responsibilities in the fMBT tool:
 
 1. they read an input action suggested by the test generator, try to
    execute it, and finally report the result back to the generator in
-   the form of input actions.
+   the form of any (input or output) action, or a special "unknown
+   response" action.
 
 2. they make observations on SUT and the test environment, and report
    the results to the test generator in the form of output actions.
@@ -97,7 +98,7 @@ Adapter stack may contain the following building blocks.
   adapter. Child processes standard input, output and error are used
   for communication between adapter_remote and the remote adapter. For
   example, a test configuration file can contain specification:
-  
+
     adapter = "remote(ssh root@testhost /usr/local/bin/remote_python)"
 
 - adapter_mapper is a local adapter that forwards actions between the
@@ -244,7 +245,7 @@ The rules for executing actions and reporting the results are the
 following:
 
 - If an action does not include a top-level comparison, like
-  
+
   iRemoveDir("/var/run/lock/sut.lock")
 
   the expression is executed and execution of the action is reported
