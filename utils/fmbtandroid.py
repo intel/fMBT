@@ -1025,7 +1025,10 @@ class Device(fmbtgti.GUITestInterface):
             rotate = -ROTATION_DEGS[-rotate]
         elif rotate == None:
             if self._autoRotateScreenshot:
-                drot = self.displayRotation()
+                if not forcedScreenshot:
+                    drot = self.displayRotation()
+                else:
+                    drot = None
                 if drot != None:
                     return self.refreshScreenshot(forcedScreenshot, rotate=-drot)
         rv = fmbtgti.GUITestInterface.refreshScreenshot(self, forcedScreenshot, rotate)
