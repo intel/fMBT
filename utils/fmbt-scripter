@@ -785,7 +785,8 @@ class MainWindow(QtGui.QMainWindow):
         self._updateScreenshotScheduled = False
         self._fmbtEnv = {
             "pydoc": pydoc,
-            "time": time
+            "time": time,
+            "mon": MonitorDialog(self)
         }
         self._bitmapFileFormats = ["Portable network graphics (*.png)",
                                    "All files (*.*)"]
@@ -2878,6 +2879,69 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
         # format always something
         if not highlightedRegions:
             self.setFormat(0, len(text), self.normalFormat)
+
+class MonitorDialog(QtGui.QDialog):
+    """Dialog for user-defined, periodically updating monitors.
+
+    Example: evaluate in fmbt-scripter (for instance, use "Run line"):
+
+        mon.addTextMonitor(
+            onUpdate=lambda w: w.setText(str(time.time())),
+            onClick=lambda w: sys.stdout.write('hello\n'))
+        mon.show()
+    """
+    def __init__(self, *args):
+        QtGui.QDialog.__init__(self, *args)
+        self.layout = QtGui.QGridLayout(self)
+        self._monitors = []
+        self._nextLine = 0
+        self._update_interval_s = 1.0
+        self._scheduleMonitorUpdate()
+
+    def _scheduleMonitorUpdate(self):
+        QtCore.QTimer.singleShot(int(self._update_interval_s * 1000),
+                                 self.updateMonitors)
+
+    def addTextMonitor(self, text=None, onUpdate=None, onClick=None, pos=None):
+        """Add a monitor to the monitor dialog.
+
+        Parameters:
+          text (string, optional):
+                  label for the monitor. If not given, onUpdate(w) should set it.
+
+          onUpdate (function that takes one parameter, optional):
+                  This function will be called periodically with a widget
+                  that has setText() and text() methods.
+
+          onClick (function that takes one parameter, optional):
+                  This function will be called when user clicks the monitor widget.
+                  Parameter has setText() and text() methods.
+        """
+        button = QtGui.QPushButton("", self)
+        if text:
+            button.setText(text)
+        if onClick:
+            if onUpdate:
+                button.clicked.connect(lambda: (onClick(button), onUpdate(button)))
+            else:
+                button.clicked.connect(lambda: (onClick(button), ))
+        if pos == None:
+            pos = (self._nextLine, 0)
+        if pos[0] >= self._nextLine:
+            self._nextLine = pos[0] + 1
+        self.layout.addWidget(button, *pos)
+        if onUpdate:
+            onUpdate(button)
+        self._monitors.append((button, onUpdate, onClick))
+
+    def updateMonitors(self):
+        for widget, onUpdate, _ in self._monitors:
+            if onUpdate:
+                try:
+                    onUpdate(widget)
+                except:
+                    pass
+        self._scheduleMonitorUpdate()
 
 class FindDialog(QtGui.QDialog):
     # TODO: needs refactoring. This dialog is common to
