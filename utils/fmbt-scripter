@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2013, Intel Corporation.
+# Copyright (c) 2013-2016, Intel Corporation.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU Lesser General Public License,
@@ -743,6 +743,17 @@ class SettingsDialog(QtGui.QDialog):
                 str(self.pathsBitmapPath.text()).strip() +
                 ":" + os.path.relpath(str(d), os.getcwd()))
 
+class fmbtscripter:
+    """fmbt-scripter extension components
+
+    fmbtscripter.MonitorDialog:
+        A periodically updating interactive dialog. Example:
+        mon = fmbtscripter.MonitorDialog()
+        mon.addTextMonitor(onUpdate=lambda w: w.setText(str(time.time)))
+    """
+    def __init__(self):
+        self.MonitorDialog = MonitorDialog
+
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
@@ -786,7 +797,7 @@ class MainWindow(QtGui.QMainWindow):
         self._fmbtEnv = {
             "pydoc": pydoc,
             "time": time,
-            "mon": MonitorDialog(self)
+            "fmbtscripter": fmbtscripter()
         }
         self._bitmapFileFormats = ["Portable network graphics (*.png)",
                                    "All files (*.*)"]
@@ -2916,23 +2927,30 @@ class MonitorDialog(QtGui.QDialog):
           onClick (function that takes one parameter, optional):
                   This function will be called when user clicks the monitor widget.
                   Parameter has setText() and text() methods.
+
+          pos (integer pair (row, column), optional):
+                  Location of the monitor in the grid. The default is to
+                  add new monitors to the first column below existing monitors.
         """
-        button = QtGui.QPushButton("", self)
+        if onClick == None:
+            widget = QtGui.QLabel("", self)
+        else:
+            widget = QtGui.QPushButton("", self)
         if text:
-            button.setText(text)
+            widget.setText(text)
         if onClick:
             if onUpdate:
-                button.clicked.connect(lambda: (onClick(button), onUpdate(button)))
+                widget.clicked.connect(lambda: (onClick(widget), onUpdate(widget)))
             else:
-                button.clicked.connect(lambda: (onClick(button), ))
+                widget.clicked.connect(lambda: (onClick(widget), ))
         if pos == None:
             pos = (self._nextLine, 0)
         if pos[0] >= self._nextLine:
             self._nextLine = pos[0] + 1
-        self.layout.addWidget(button, *pos)
+        self.layout.addWidget(widget, *pos)
         if onUpdate:
-            onUpdate(button)
-        self._monitors.append((button, onUpdate, onClick))
+            onUpdate(widget)
+        self._monitors.append((widget, onUpdate, onClick))
 
     def updateMonitors(self):
         for widget, onUpdate, _ in self._monitors:
