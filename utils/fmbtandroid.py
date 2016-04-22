@@ -236,6 +236,7 @@ def _run(command, expectedExitStatus=None, timeout=None):
         shell = _g_useShell
     try:
         p = subprocess.Popen(command, shell=shell,
+                             stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE,
                              close_fds=_g_closeFds)
