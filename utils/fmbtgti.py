@@ -2755,7 +2755,8 @@ class Screenshot(object):
         else:
             raise RuntimeError('Trying to use OIR on "%s" without OIR engine.' % (self.filename(),))
 
-    def findItemsByColor(self, rgb888, colorMatch=1.0, limit=1, area=None, invertMatch=False):
+    def findItemsByColor(self, rgb888, colorMatch=1.0, limit=1, area=None,
+                         invertMatch=False, group=""):
         """
         Return list of items that match given color.
 
@@ -2780,6 +2781,11 @@ class Screenshot(object):
           invertMatch (optional, boolean):
                   if True, search for items *not* matching the color.
                   The default is False.
+
+          group (optional, string):
+                  group matching pixels to large items. Accepted
+                  values are "adjacent" (group pixels that are next to
+                  each other) and "" (no grouping). The default is "".
         """
         self._notifyOirEngine()
         if (self.filename() in getattr(self._oirEngine, "_openedImages", {})):
@@ -2799,6 +2805,7 @@ class Screenshot(object):
                                   (0,))
         areaBbox = _Bbox(*leftTopRightBottomZero)
         foundItems = []
+        coord2item = {} # (x, y) -> viewItem
         try:
             while limit != 0:
                 found = eye4graphics.findNextColor(
@@ -2819,11 +2826,50 @@ class Screenshot(object):
                     comp = "!="
                 else:
                     comp = "=="
-                foundItems.append(
-                    GUIItem("RGB#%.2x%.2x%.2x%s%.2x%.2x%.2x (%s)" %
-                            (rgb888 + (comp,) + foundRgb + (colorMatch,)),
-                            (bbox.left, bbox.top, bbox.right, bbox.bottom),
-                            self))
+                if not group:
+                    foundItems.append(
+                        GUIItem("RGB#%.2x%.2x%.2x%s%.2x%.2x%.2x (%s)" %
+                                (rgb888 + (comp,) + foundRgb + (colorMatch,)),
+                                (bbox.left, bbox.top, bbox.right, bbox.bottom),
+                                self))
+                elif group == "adjacent":
+                    x = bbox.left
+                    y = bbox.top
+                    itemA = None
+                    itemB = None
+                    if (x-1, y) in coord2item:
+                        # AAAx
+                        itemA = coord2item[(x-1, y)]
+                        if itemA._bbox[2] < x: # right < x
+                            itemA._bbox = (itemA._bbox[0], itemA._bbox[1], x, itemA._bbox[3])
+                        coord2item[(x, y)] = itemA
+                    if (x, y-1) in coord2item:
+                        # BBB
+                        # x
+                        itemB = coord2item[(x, y-1)]
+                        if itemB._bbox[3] < y: # bottom < y
+                            itemB._bbox = (itemB._bbox[0], itemB._bbox[1], itemB._bbox[2], y)
+                        coord2item[(x, y)] = itemB
+                        if itemA:
+                            #    BBB
+                            # AAAx
+                            if itemB != itemA:
+                                itemB._bbox = (min(itemA._bbox[0], itemB._bbox[0]),
+                                               min(itemA._bbox[1], itemB._bbox[1]),
+                                               max(itemA._bbox[2], itemB._bbox[2]),
+                                               max(itemA._bbox[3], itemB._bbox[3]))
+                                for ax in xrange(itemA._bbox[0], itemA._bbox[2]+1):
+                                    for ay in xrange(itemA._bbox[1], itemA._bbox[3]+1):
+                                        if coord2item.get((ax, ay), None) == itemA:
+                                            coord2item[(ax, ay)] = itemB
+                                foundItems.remove(itemA)
+                    if not itemA and not itemB:
+                        itemA = GUIItem("RGB#%.2x%.2x%.2x%s%.2x%.2x%.2x (%s)" %
+                                (rgb888 + (comp,) + foundRgb + (colorMatch,)),
+                                (bbox.left, bbox.top, bbox.right, bbox.bottom),
+                                self)
+                        foundItems.append(itemA)
+                        coord2item[(x, y)] = itemA
                 limit -= 1
         finally:
             if closeImage:
