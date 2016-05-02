@@ -2832,6 +2832,7 @@ class Screenshot(object):
                                 (rgb888 + (comp,) + foundRgb + (colorMatch,)),
                                 (bbox.left, bbox.top, bbox.right, bbox.bottom),
                                 self))
+                    limit -= 1
                 elif group == "adjacent":
                     x = bbox.left
                     y = bbox.top
@@ -2863,14 +2864,15 @@ class Screenshot(object):
                                         if coord2item.get((ax, ay), None) == itemA:
                                             coord2item[(ax, ay)] = itemB
                                 foundItems.remove(itemA)
+                                limit += 1
                     if not itemA and not itemB:
                         itemA = GUIItem("RGB#%.2x%.2x%.2x%s%.2x%.2x%.2x (%s)" %
                                 (rgb888 + (comp,) + foundRgb + (colorMatch,)),
                                 (bbox.left, bbox.top, bbox.right, bbox.bottom),
                                 self)
+                        limit -= 1
                         foundItems.append(itemA)
                         coord2item[(x, y)] = itemA
-                limit -= 1
         finally:
             if closeImage:
                 eye4graphics.closeImage(image)
