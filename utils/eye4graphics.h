@@ -159,6 +159,35 @@ extern "C" {
                      const int neeRectSize,
                      const int hayRectSize);
 
+    /*
+     * findNextDiff
+     *
+     * Parameters:
+     *   - bbox (out)   - bounding box of differing pixel
+     *   - imageA       - the first compared image
+     *   - imageB       - the second compared image
+     *   - colorMatch   - 0.0 - 1.0, required color match, the default is 1.0
+     *   - opacityLimit - skip comparing pixels with opacity < opacityLimit
+     *   - searchAreaA  - unused
+     *   - searchAreaB  - unused
+     *   - continueOpts - 0: fresh start, 1: continue from current bbox
+     *
+     * Return value:
+     *    1: a differing pixel found and stored to bbox
+     *    0: no differing pixels found
+     */
+    EXPORT
+    int findNextDiff(BoundingBox* bbox,
+                     void* imageA,
+                     void* imageB,
+                     const double colorMatch,
+                     const double opacityLimit,
+                     const BoundingBox* searchAreaA,
+                     const BoundingBox* searchAreaB,
+                     const int continueOpts);
+
+
+
     EXPORT
     int findNextHighErrorBlock(BoundingBox* bbox,
                                void* image,

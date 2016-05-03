@@ -640,6 +640,76 @@ int findNextIcon(BoundingBox* bbox,
     return retval;
 }
 
+int findNextDiff(BoundingBox* bbox,
+                 void* imageA,
+                 void* imageB,
+                 const double colorMatch,
+                 const double opacityLimit,
+                 const BoundingBox* searchAreaA,
+                 const BoundingBox* searchAreaB,
+                 const int continueOpts)
+{
+    const int colorDiff = 256 - (256 * colorMatch);
+    const unsigned char skipTransparency = 255 * opacityLimit;
+
+    Image* imA = static_cast<Image*>(imageA);
+    Image* imB = static_cast<Image*>(imageB);
+
+    int startX = 0;
+    int startY = 0;
+
+    int startXA = 0;
+    int startYA = 0;
+    int endXA = imA->columns;
+    int endYA = imA->rows;
+    int widthA = imA->columns;
+
+    int startXB = 0;
+    int startYB = 0;
+    int endXB = imB->columns;
+    int endYB = imB->rows;
+    int widthB = imB->columns;
+
+    int height = ((endYA-startYA) < (endYB-startYB) ?
+                  (endYA-startYA) :(endYB-startYB));
+    int width = ((endXA-startXA) < (endXB-startXB) ?
+                  (endXA-startXA) :(endXB-startXB));
+
+    if (continueOpts == 1) {
+        startX = bbox->left + 1;
+        startY = bbox->top;
+    } else {
+        bbox->left   = -1;
+        bbox->top    = -1;
+        bbox->right  = -1;
+        bbox->bottom = -1;
+    }
+    bbox->error  = -1;
+
+    const PixelPacket* pA = getPixels(imA, 0, 0, endXA, endYA);
+    const PixelPacket* pB = getPixels(imB, 0, 0, endXB, endYB);
+
+    for (int y = startY; y < height; ++y) {
+        for (int x = startX; x < width; ++x) {
+            const PixelPacket* pAxy = pA + (y+startYA)*widthA + x;
+            const PixelPacket* pBxy = pB + (y+startYB)*widthB + x;
+            if (!same_color(pAxy, pBxy, colorDiff, skipTransparency)) {
+                bbox->left = x;
+                bbox->top = y;
+                bbox->right = x;
+                bbox->bottom = y;
+                bbox->error = (
+                    ((unsigned char)abs(pAxy->red - pBxy->red) << 16) +
+                    ((unsigned char)abs(pAxy->green - pBxy->green) << 8) +
+                    ((unsigned char)abs(pAxy->blue - pBxy->blue)));
+                return 1;
+            }
+        }
+        startX = 0;
+    }
+    return 0;
+}
+
 int findNextHighErrorBlock(
     BoundingBox* bbox,
     void* image,

@@ -265,6 +265,16 @@ for _dirname in _libpath:
             ctypes.c_int,
             ctypes.c_double,
             ctypes.c_void_p]
+        eye4graphics.findNextDiff.restype = ctypes.c_int
+        eye4graphics.findNextDiff.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_double,
+            ctypes.c_double,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_int]
         eye4graphics.openImage.argtypes = [ctypes.c_char_p]
         eye4graphics.openImage.restype = ctypes.c_void_p
         eye4graphics.openedImageDimensions.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
@@ -2754,6 +2764,68 @@ class Screenshot(object):
 
         else:
             raise RuntimeError('Trying to use OIR on "%s" without OIR engine.' % (self.filename(),))
+
+    def findItemsByDiff(self, image, colorMatch=1.0, limit=1, area=None):
+        """
+        Return list of items that differ in this and the reference images
+
+        Parameters:
+
+          image (string):
+                  filename of reference image.
+
+          colorMatch (optional, float):
+                  required color matching accuracy. The default is 1.0
+                  (exact match)
+
+          limit (optional, integer):
+                  max number of matching items to be returned.
+                  The default is 1.
+        """
+        foundItems = []
+        closeImageA = False
+        closeImageB = False
+        self._notifyOirEngine()
+        try:
+            # Open imageA and imageB for comparison
+            if (self.filename() in getattr(self._oirEngine, "_openedImages", {})):
+                # if possible, use already opened image object
+                imageA = self._oirEngine._openedImages[self.filename()]
+            else:
+                imageA = _e4gOpenImage(self.filename())
+                closeImageA = True
+            imageB = _e4gOpenImage(image)
+            closeImageB = True
+
+            # Find differing pixels
+            bbox = _Bbox(-1, 0, 0, 0, 0)
+            while limit != 0:
+                found = eye4graphics.findNextDiff(
+                    ctypes.byref(bbox),
+                    ctypes.c_void_p(imageA),
+                    ctypes.c_void_p(imageB),
+                    ctypes.c_double(colorMatch),
+                    ctypes.c_double(1.0), # opacityLimit
+                    None, # searchAreaA
+                    None, # searchAreaB
+                    1)
+                if found != 1:
+                    break
+                rgbDiff = (bbox.error >> 16 & 0xff,
+                           bbox.error >> 8 & 0xff,
+                           bbox.error & 0xff)
+                foundItems.append(
+                    GUIItem("DIFF %s" %
+                            (rgbDiff,),
+                            (bbox.left, bbox.top, bbox.right, bbox.bottom),
+                            self))
+                limit -= 1
+        finally:
+            if closeImageA:
+                eye4graphics.closeImage(imageA)
+            if closeImageB:
+                eye4graphics.closeImage(imageB)
+        return foundItems
 
     def findItemsByColor(self, rgb888, colorMatch=1.0, limit=1, area=None,
                          invertMatch=False, group=""):
