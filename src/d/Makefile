@@ -150,7 +150,7 @@ version:
 	echo $(OS_TYPE) $(OS_VERSION)
 
 build%.o: %.c
-	gcc -c -o $@ $^
+	gcc -fPIC -c -o $@ $^
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $^
@@ -164,7 +164,7 @@ $(LIBDPARSE): $(LIB_OBJS)
 
 build$(LIBDPARSE): $(addprefix build,$(LIB_OBJS))
 	ar cruv $@ $^
-	ranlib $@ 
+	ranlib $@
 
 build$(LIBMKDPARSE): $(addprefix build,$(MK_LIB_OBJS))
 	ar cruv $@ $^
