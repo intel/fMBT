@@ -1,8 +1,28 @@
-fmbt (0.32-0.rc0) unstable; urgency=low
+fmbt (0.32-1) unstable; urgency=low
 
-  * Development version.
+  * fmbt-editor: visualization fixed on 0-step logs.
+  * fmbt-scripter:
+    - Test scripts can extend fmbt-scripter interface with live
+      monitor/button dialogs.
+  * fmbtgti:
+    - sortItems() function added for sorting GUIItem instances.
+    - Screenshot.findItemsByColor() supports grouping adjacent
+      matching pixels.
+    - Screenshot.findItemsByDiff() enables finding which pixels
+      differ in two screenshots.
+  * fmbtandroid:
+    - Support latest adb versions. Fixes issue with adb that reads
+      standard input.
+    - Device.refreshScreenshot() with forced screenshot file does
+      not require connection to a device.
+  * fmbtwindows:
+    - Can instantiate Device without connecting to target.
+    - ViewItem bounding box (bbox()) changed from list to tuple.
+  * pythonshare:
+    - Namespaces can be queried from the Python API:
+      Connection.ls_local(), ls_remote() and ns_type().
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 11 Mar 2016 10:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 5 May 2016 12:42:00 +0300
 
 fmbt (0.31-1) unstable; urgency=low
 
