@@ -1,3 +1,9 @@
+fmbt (0.33-0.rc0) unstable; urgency=low
+
+  * Development version.
+
+ -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 9 May 2016 09:42:00 +0300
+
 fmbt (0.32-1) unstable; urgency=low
 
   * fmbt-editor: visualization fixed on 0-step logs.
