@@ -49,6 +49,7 @@ import os
 import pythonshare
 import shutil
 import subprocess
+import time
 import zlib
 
 try:
@@ -417,6 +418,9 @@ class Device(fmbtgti.GUITestInterface):
         fmbtgti.GUITestInterface.__init__(self, **kwargs)
         self._viewSource = _g_viewSources[1]
         self._viewItemProperties = None
+        self._lastView = None
+        self._lastViewStats = {}
+        self._refreshViewRetryLimit = 1
         self._connspec = connspec
         self._password = password
         if connect:
@@ -742,31 +746,62 @@ class Device(fmbtgti.GUITestInterface):
         if not viewSource in _g_viewSources:
             raise ValueError('invalid view source "%s"' % (viewSource,))
         if forcedView != None:
+            retryCount = 0
+            startTime = time.time()
+            lastStartTime = startTime
+            viewFilename = forcedView
             if isinstance(forcedView, View):
                 self._lastView = forcedView
             elif type(forcedView) in [str, unicode]:
                 try:
                     self._lastView = View(forcedView,
-                                          ast.literal_eval(file(forcedView).read()))
+                                          ast.literal_eval(file(viewFilename).read()))
                 except Exception:
                     self._lastView = None
+            endTime = time.time()
         else:
             if self.screenshotDir() == None:
                 self.setScreenshotDir(self._screenshotDirDefault)
             if self.screenshotSubdir() == None:
                 self.setScreenshotSubdir(self._screenshotSubdirDefault)
             viewFilename = self._newScreenshotFilepath()[:-3] + "view"
-            if viewSource == "enumchildwindows":
-                viewData = self._conn.recvViewData(window)
-            else:
-                if properties == None:
-                    properties = self._viewItemProperties
-                viewData = self._conn.recvViewUIAutomation(window, items, properties)
-            file(viewFilename, "w").write(repr(viewData))
-            try:
-                self._lastView = View(viewFilename, viewData)
-            except Exception:
-                self._lastView = None
+            retryCount = 0
+            startTime = time.time()
+            lastStartTime = startTime
+            while True:
+                if viewSource == "enumchildwindows":
+                    viewData = self._conn.recvViewData(window)
+                else:
+                    if properties == None:
+                        properties = self._viewItemProperties
+                    viewData = self._conn.recvViewUIAutomation(
+                        window, items, properties)
+                file(viewFilename, "w").write(repr(viewData))
+                try:
+                    self._lastView = View(viewFilename, viewData)
+                    break
+                except Exception, e:
+                    self._lastView = None
+                    _adapterLog(
+                        "refreshView %s failed (%s), source=%s topWindow=%s" %
+                        (retryCount, e, repr(viewSource), self.topWindow()))
+                    retryCount += 1
+                    if retryCount < self._refreshViewRetryLimit:
+                        time.sleep(0.2)
+                    else:
+                        break
+                lastStartTime = time.time()
+            endTime = time.time()
+        self._lastViewStats = {
+            "retries": retryCount,
+            "timestamp": endTime,
+            "total time": endTime - startTime,
+            "last time": endTime - lastStartTime,
+            "filename": viewFilename,
+            "source": viewSource,
+            "forced": (forcedView != None),
+            "window": window,
+            "view": str(self._lastView)}
         return self._lastView
 
     def setDisplaySize(self, size):
@@ -1257,6 +1292,7 @@ class WindowsConnection(fmbtgti.GUITestConnection):
         return self.evalPython("windowStatus(%s)" % (hwnd,))
 
     def recvViewData(self, window=None):
+        rv = None
         if window == None:
             rv = self.evalPython("topWindowWidgets()")
         elif isinstance(window, int):
@@ -1320,7 +1356,7 @@ class WindowsConnection(fmbtgti.GUITestConnection):
             windowList = self.recvWindowList()
             hwndList = [w["hwnd"] for w in windowList if w["title"] == window]
             if not hwndList:
-                raise ValueError('no window with title "%s"' % (title,))
+                raise ValueError('no window with title "%s"' % (window,))
             hwnd = hwndList[0]
         elif isinstance(window, dict) and "hwnd" in window:
             hwnd = window["hwnd"]
