@@ -792,6 +792,9 @@ class Device(fmbtgti.GUITestInterface):
                         break
                 lastStartTime = time.time()
             endTime = time.time()
+        itemCount = -1
+        if self._lastView:
+            itemCount = len(self._lastView._viewItems)
         self._lastViewStats = {
             "retries": retryCount,
             "timestamp": endTime,
@@ -801,7 +804,8 @@ class Device(fmbtgti.GUITestInterface):
             "source": viewSource,
             "forced": (forcedView != None),
             "window": window,
-            "view": str(self._lastView)}
+            "view": str(self._lastView),
+            "item count": itemCount}
         return self._lastView
 
     def setDisplaySize(self, size):
@@ -1205,6 +1209,9 @@ class Device(fmbtgti.GUITestInterface):
 
     def view(self):
         return self._lastView
+
+    def viewStats(self):
+        return self._lastViewStats
 
 class WindowsConnection(fmbtgti.GUITestConnection):
     def __init__(self, connspec, password):
