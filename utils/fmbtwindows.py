@@ -217,11 +217,15 @@ class ViewItem(fmbtgti.GUIItem):
         return "ViewItem(%s)" % (self._view._dumpItem(self),)
 
 class View(object):
-    def __init__(self, dumpFilename, itemTree):
+    def __init__(self, dumpFilename, itemTree, itemOnScreen=None):
         self._dumpFilename = dumpFilename
         self._itemTree = itemTree
         self._rootItem = None
         self._viewItems = {}
+        if itemOnScreen == None:
+            self._itemOnScreen = lambda item: True
+        else:
+            self._itemOnScreen = itemOnScreen
         if isinstance(itemTree, dict):
             # data from enumchildwindows:
             self._viewSource = "enumchildwindows"
@@ -296,45 +300,46 @@ class View(object):
     def __str__(self):
         return "View(%s, %s items)" % (repr(self._dumpFilename), len(self._viewItems))
 
-    def findItems(self, comparator, count=-1, searchRootItem=None, searchItems=None):
+    def findItems(self, comparator, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
         foundItems = []
         if count == 0: return foundItems
         if searchRootItem != None:
-            if comparator(searchRootItem):
+            if comparator(searchRootItem) and (
+                    not onScreen or (self._itemOnScreen(searchRootItem))):
                 foundItems.append(searchRootItem)
             for c in searchRootItem.children():
-                foundItems.extend(self.findItems(comparator, count=count-len(foundItems), searchRootItem=c))
+                foundItems.extend(self.findItems(comparator, count=count-len(foundItems), searchRootItem=c, onScreen=onScreen))
         else:
             if searchItems:
                 domain = iter(searchItems)
             else:
                 domain = self._viewItems.itervalues
             for i in domain():
-                if comparator(i):
+                if comparator(i) and (not onScreen or (self._itemOnScreen(i))):
                     foundItems.append(i)
                     if count > 0 and len(foundItems) >= count:
                         break
         return foundItems
 
-    def findItemsByText(self, text, partial=False, count=-1, searchRootItem=None, searchItems=None):
+    def findItemsByText(self, text, partial=False, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
         if partial:
             c = lambda item: (text in item._text)
         else:
             c = lambda item: (text == item._text)
-        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
+        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
 
-    def findItemsByClass(self, className, partial=False, count=-1, searchRootItem=None, searchItems=None):
+    def findItemsByClass(self, className, partial=False, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
         if partial:
             c = lambda item: (className in item._className)
         else:
             c = lambda item: (className == item._className)
-        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
+        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
 
-    def findItemsById(self, itemId, count=-1, searchRootItem=None, searchItems=None):
+    def findItemsById(self, itemId, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
         c = lambda item: (itemId == item._itemId or itemId == item.properties().get("AutomationId", None))
-        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
+        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
 
-    def findItemsByProperties(self, properties, count=-1, searchRootItem=None, searchItems=None):
+    def findItemsByProperties(self, properties, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
         """
         Returns ViewItems where every property matches given properties
 
@@ -354,9 +359,9 @@ class View(object):
         """
         c = lambda item: 0 == len([key for key in properties
                                    if properties[key] != item.properties().get(key, None)])
-        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
+        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
 
-    def findItemsByPos(self, pos, count=-1, searchRootItem=None, searchItems=None, onScreen=None):
+    def findItemsByPos(self, pos, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
         """
         Returns list of ViewItems whose bounding box contains the position.
 
@@ -371,7 +376,7 @@ class View(object):
         """
         x, y = self._intCoords(pos)
         c = lambda item: (item.bbox()[0] <= x <= item.bbox()[2] and item.bbox()[1] <= y <= item.bbox()[3])
-        items = self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems)
+        items = self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
         # sort from smallest to greatest area
         area_items = [((i.bbox()[2] - i.bbox()[0]) * (i.bbox()[3] - i.bbox()[1]), i) for i in items]
         return [i for _, i in sorted(area_items)]
@@ -494,7 +499,7 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self._conn.recvMatchingPaths(pathnamePattern)
 
-    def itemOnScreen(self, guiItem, relation="touch"):
+    def itemOnScreen(self, guiItem, relation="touch", topWindowBbox=None):
         """
         Returns True if bbox of guiItem is non-empty and on the screen
 
@@ -508,7 +513,12 @@ class Device(fmbtgti.GUITestInterface):
                   - "within": the screen and the window includes the item.
                   The default is "touch".
         """
+        if guiItem.properties().get("IsOffscreen", False) == "True":
+            return False
         if relation == "touch":
+            x1, y1, x2, y2 = guiItem.bbox()
+            if x1 == x2 or y1 == y2:
+                return False # a dimension is missing => empty item
             itemBox = (guiItem.coords()[0], guiItem.coords()[1],
                        guiItem.coords()[0] + 1, guiItem.coords()[1] + 1)
             partial = True
@@ -521,8 +531,13 @@ class Device(fmbtgti.GUITestInterface):
         else:
             raise ValueError('invalid itemOnScreen relation: "%s"' % (relation,))
         maxX, maxY = self.screenSize()
+        if topWindowBbox == None:
+            try:
+                topWindowBbox = self.topWindowProperties()['bbox']
+            except TypeError:
+                topWindowBbox = (0, 0, maxX, maxY)
         return (fmbtgti._boxOnRegion(itemBox, (0, 0, maxX, maxY), partial=partial) and
-                fmbtgti._boxOnRegion(itemBox, self.topWindowProperties()['bbox'], partial=partial))
+                fmbtgti._boxOnRegion(itemBox, topWindowBbox, partial=partial))
 
     def kill(self, pid):
         """
@@ -754,8 +769,7 @@ class Device(fmbtgti.GUITestInterface):
                 self._lastView = forcedView
             elif type(forcedView) in [str, unicode]:
                 try:
-                    self._lastView = View(forcedView,
-                                          ast.literal_eval(file(viewFilename).read()))
+                    self._lastView = View(forcedView, ast.literal_eval(file(viewFilename).read()))
                 except Exception:
                     self._lastView = None
             endTime = time.time()
@@ -769,6 +783,10 @@ class Device(fmbtgti.GUITestInterface):
             startTime = time.time()
             lastStartTime = startTime
             while True:
+                try:
+                    topWindowBbox = self.topWindowProperties()['bbox']
+                except TypeError:
+                    topWindowBbox = None # top window unavailable
                 if viewSource == "enumchildwindows":
                     viewData = self._conn.recvViewData(window)
                 else:
@@ -778,7 +796,9 @@ class Device(fmbtgti.GUITestInterface):
                         window, items, properties)
                 file(viewFilename, "w").write(repr(viewData))
                 try:
-                    self._lastView = View(viewFilename, viewData)
+                    self._lastView = View(
+                        viewFilename, viewData,
+                        itemOnScreen=lambda i: self.itemOnScreen(i, topWindowBbox=topWindowBbox))
                     break
                 except Exception, e:
                     self._lastView = None
@@ -1118,7 +1138,7 @@ class Device(fmbtgti.GUITestInterface):
 
         Returns True if successful, otherwise False.
         """
-        items = self.existingView().findItemsByText(text, partial=partial, count=1)
+        items = self.existingView().findItemsByText(text, partial=partial, count=1, onScreen=True)
         if len(items) == 0: return False
         return self.tapItem(items[0], **tapKwArgs)
 
@@ -1151,7 +1171,7 @@ class Device(fmbtgti.GUITestInterface):
                   the given text. The default is False (exact match).
         """
         assert self._lastView != None, "View required."
-        return self._lastView.findItemsByText(text, partial=partial, count=1) != []
+        return self._lastView.findItemsByText(text, partial=partial, count=1, onScreen=True) != []
 
     def viewSource(self):
         """
