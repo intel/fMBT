@@ -118,7 +118,8 @@ def _pythonCode(code):
         try:
             parser.suite(code.encode("utf8"))
             return "suite"
-        except SyntaxError:
+        except SyntaxError, e:
+            _pythonCode.lastError = e
             return None
 
 ########################################################################
@@ -1483,7 +1484,9 @@ class MainWindow(QtGui.QMainWindow):
             autoSelected = True
             code = self.selectPythonStatement(highlight=False)
             if not _pythonCode(code):
-                log("this block is not valid Python code:\n" + code)
+                log("Syntax error in Python code block:\n" +
+                    str(_pythonCode.lastError) + "\n" +
+                    code.splitlines()[_pythonCode.lastError.lineno-1])
                 code = ""
         elif lineCount == "selection":
             autoSelected = False
