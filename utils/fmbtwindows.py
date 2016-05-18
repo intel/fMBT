@@ -197,6 +197,12 @@ class ViewItem(fmbtgti.GUIItem):
     def parent(self):
         return self._parentId
 
+    def parentItem(self):
+        try:
+            return self._view._viewItems[self._parentId]
+        except KeyError:
+            return None
+
     def id(self):
         return self._itemId
 
