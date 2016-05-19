@@ -505,6 +505,12 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self._conn.recvMatchingPaths(pathnamePattern)
 
+    def getClipboard(self):
+        """
+        Returns clipboard contents in text format.
+        """
+        return self.existingConnection().evalPython("getClipboardText()")
+
     def itemOnScreen(self, guiItem, relation="touch", topWindowBbox=None):
         """
         Returns True if bbox of guiItem is non-empty and on the screen

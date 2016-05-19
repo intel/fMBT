@@ -1119,6 +1119,25 @@ def getRegistry(key, valueName):
     _winreg.CloseKey(regKey)
     return value, _REG_types.get(valueType, None)
 
+def getClipboardText():
+    CF_TEXT = 1
+    CF_UNICODETEXT = 13
+    if ctypes.windll.user32.IsClipboardFormatAvailable(CF_TEXT) == 0:
+        return None
+    if ctypes.windll.user32.OpenClipboard(0) == 0:
+        raise Exception("error in opening clipboard")
+    handle = ctypes.windll.user32.GetClipboardData(CF_TEXT)
+    if handle != 0:
+        string_p = ctypes.windll.kernel32.GlobalLock(handle)
+        try:
+            rv = ctypes.string_at(string_p)
+        finally:
+            ctypes.windll.kernel32.GlobalUnlock(handle)
+    else:
+        rv = None
+    ctypes.windll.user32.CloseClipboard()
+    return rv
+
 def _check_output(*args, **kwargs):
     """subprocess.check_output, for Python 2.6 compatibility"""
     p = subprocess.Popen(*args, stdout=subprocess.PIPE, **kwargs)
