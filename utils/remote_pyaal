@@ -284,12 +284,16 @@ class RemoteAALBridge:
                 # If the adapter of a tag does not return "True" or
                 # None, report the number of the first failing tag.
                 failing_tags = []
+                # Tags must not change model state
+                _state_before_tag = self._aal.state()
                 for tag_number in [int(n) for n in cmd[3:].strip().split()]:
                     try:
                         rv = self._aal.tag_execute(tag_number)
                         if not (rv or rv == None):
                             fmbtstderr('adapter() of tag "%s" returned %s' % (tag_names[tag_number-1], rv))
                             failing_tags.append(tag_number)
+                        if self._aal.state() != _state_before_tag:
+                            raise Exception('model state changed by tag adapter')
                     except Exception, e:
                         if isinstance(e, AssertionError): msg = "Assertion failure"
                         else: msg = "Error"
