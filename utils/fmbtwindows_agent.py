@@ -339,6 +339,14 @@ PROCESS_VM_READ = 0x10
 WM_GETTEXT = 0x000d
 WM_CLOSE = 0x0010
 
+CF_TEXT = 1
+CF_UNICODETEXT = 13
+
+
+GMEM_FIXED = 0x0000
+GMEM_MOVEABLE = 0x0002
+GMEM_ZEROINIT = 0x0040
+
 # Structs for mouse and keyboard input
 
 class MOUSEINPUT(ctypes.Structure):
@@ -1120,8 +1128,6 @@ def getRegistry(key, valueName):
     return value, _REG_types.get(valueType, None)
 
 def getClipboardText():
-    CF_TEXT = 1
-    CF_UNICODETEXT = 13
     if ctypes.windll.user32.IsClipboardFormatAvailable(CF_TEXT) == 0:
         return None
     if ctypes.windll.user32.OpenClipboard(0) == 0:
@@ -1137,6 +1143,25 @@ def getClipboardText():
         rv = None
     ctypes.windll.user32.CloseClipboard()
     return rv
+
+def setClipboardText(text):
+    ctypes.windll.user32.EmptyClipboard()
+    if ctypes.windll.user32.OpenClipboard(0) == 0:
+        raise Exception("error in opening clipboard")
+    handle = ctypes.windll.kernel32.GlobalAlloc(GMEM_MOVEABLE, len(text)+1)
+    if handle == 0:
+        ctypes.windll.user32.CloseClipboard()
+        raise Exception("error in allocating global memory for text")
+    string_p = ctypes.windll.kernel32.GlobalLock(handle)
+    if string_p == 0:
+        ctypes.windll.user32.CloseClipboard()
+        raise Exception("error in locking global memory block")
+    try:
+        ctypes.memmove(string_p, text, len(text))
+    finally:
+        ctypes.windll.kernel32.GlobalUnlock(handle)
+    ctypes.windll.user32.SetClipboardData(CF_TEXT, handle)
+    ctypes.windll.user32.CloseClipboard()
 
 def _check_output(*args, **kwargs):
     """subprocess.check_output, for Python 2.6 compatibility"""

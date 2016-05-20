@@ -508,6 +508,8 @@ class Device(fmbtgti.GUITestInterface):
     def getClipboard(self):
         """
         Returns clipboard contents in text format.
+
+        See also: setClipboard()
         """
         return self.existingConnection().evalPython("getClipboardText()")
 
@@ -839,6 +841,22 @@ class Device(fmbtgti.GUITestInterface):
             "view": str(self._lastView),
             "item count": itemCount}
         return self._lastView
+
+    def setClipboard(self, data):
+        """
+        Set text on clipboard
+
+        Parameters:
+
+          data (string):
+                  data to be set on the clipboard.
+
+        Note: any type of data on clipboard will be emptied.
+
+        See also: getClipboard()
+        """
+        return self.existingConnection().evalPython(
+            "setClipboardText(%s)" % (repr(data),))
 
     def setDisplaySize(self, size):
         """
