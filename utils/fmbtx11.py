@@ -1,5 +1,5 @@
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2013, Intel Corporation.
+# Copyright (c) 2013-2016, Intel Corporation.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU Lesser General Public License,
@@ -44,6 +44,215 @@ def _run(command):
 
 sortItems = fmbtgti.sortItems
 
+class ViewItem(fmbtgti.GUIItem):
+    def __init__(self, view, itemId, parentId, className, text, bbox,
+                 dumpFilename, rawProperties=None):
+        self._view = view
+        self._itemId = itemId
+        self._parentId = parentId
+        self._className = className
+        self._text = text
+        if rawProperties:
+            self._properties = rawProperties
+        else:
+            self._properties = {}
+        fmbtgti.GUIItem.__init__(self, self._className, bbox, dumpFilename)
+
+    def branch(self):
+        """Returns list of view items from the root down to this item"""
+        rv = []
+        itemId = self._itemId
+        while itemId:
+            rv.append(self._view._viewItems[itemId])
+            if itemId in self._view._viewItems:
+                itemId = self._view._viewItems[itemId]._parentId
+            else:
+                itemId = None
+        rv.reverse()
+        return rv
+
+    def children(self):
+        items = self._view._viewItems
+        return [items[itemId]
+                for itemId in items
+                if items[itemId]._parentId == self._itemId]
+
+    def parent(self):
+        return self._parentId
+
+    def parentItem(self):
+        try:
+            return self._view._viewItems[self._parentId]
+        except KeyError:
+            return None
+
+    def id(self):
+        return self._itemId
+
+    def properties(self):
+        return self._properties
+
+    def text(self):
+        return self._text
+
+    def dumpProperties(self):
+        rv = []
+        if self._properties:
+            for key in sorted(self._properties.keys()):
+                rv.append("%s=%s" % (key, self._properties[key]))
+        return "\n".join(rv)
+
+    def __str__(self):
+        return "ViewItem(%s)" % (self._view._dumpItem(self),)
+
+
+class View(object):
+    def __init__(self, dumpFilename, itemTree, itemOnScreen=None):
+        self._dumpFilename = dumpFilename
+        self._itemTree = itemTree
+        self._rootItem = None
+        self._viewItems = {}
+        if itemOnScreen == None:
+            self._itemOnScreen = lambda item: True
+        else:
+            self._itemOnScreen = itemOnScreen
+        self._viewSource = "atspi"
+        for item in itemTree:
+            className = item.get("class", "")
+            text = item.get("text", "")
+            if text == "":
+                text = item.get("name", "")
+            if text == "":
+                text = className
+            vi = ViewItem(
+                self, item["id"], item["parent"],
+                className,
+                text,
+                item["bbox"],
+                dumpFilename,
+                item)
+            self._viewItems[item["id"]] = vi
+            if vi.parent() == None:
+                self._rootItem = vi
+        if not self._rootItem:
+            raise ValueError("no root item in view data")
+
+    def _intCoords(self, *args):
+        # TODO: relative coordinates like (0.5, 0.9)
+        return [int(c) for c in args[0]]
+
+    def filename(self):
+        return self._dumpFilename
+
+    def rootItem(self):
+        return self._rootItem
+
+    def _dumpItem(self, viewItem):
+        return "id=%s cls=%s text=%s bbox=%s" % (
+            viewItem._itemId, repr(viewItem._className), repr(viewItem._text),
+            viewItem._bbox)
+
+    def _dumpTree(self, rootItem, depth=0):
+        l = ["%s%s" % (" " * (depth * 4), self._dumpItem(rootItem))]
+        for child in rootItem.children():
+            l.extend(self._dumpTree(child, depth+1))
+        return l
+
+    def dumpTree(self, rootItem=None):
+        """
+        Returns item tree as a string
+        """
+        if rootItem == None:
+            rootItem = self.rootItem()
+        return "\n".join(self._dumpTree(rootItem))
+
+    def __str__(self):
+        return "View(%s, %s items)" % (repr(self._dumpFilename), len(self._viewItems))
+
+    def findItems(self, comparator, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
+        foundItems = []
+        if count == 0: return foundItems
+        if searchRootItem != None:
+            if comparator(searchRootItem) and (
+                    not onScreen or (self._itemOnScreen(searchRootItem))):
+                foundItems.append(searchRootItem)
+            for c in searchRootItem.children():
+                foundItems.extend(self.findItems(comparator, count=count-len(foundItems), searchRootItem=c, onScreen=onScreen))
+        else:
+            if searchItems:
+                domain = iter(searchItems)
+            else:
+                domain = self._viewItems.itervalues
+            for i in domain():
+                if comparator(i) and (not onScreen or (self._itemOnScreen(i))):
+                    foundItems.append(i)
+                    if count > 0 and len(foundItems) >= count:
+                        break
+        return foundItems
+
+    def findItemsByText(self, text, partial=False, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
+        if partial:
+            c = lambda item: (text in item._text)
+        else:
+            c = lambda item: (text == item._text)
+        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
+
+    def findItemsByClass(self, className, partial=False, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
+        if partial:
+            c = lambda item: (className in item._className)
+        else:
+            c = lambda item: (className == item._className)
+        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
+
+    def findItemsById(self, itemId, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
+        c = lambda item: (itemId == item._itemId or itemId == item.properties().get("AutomationId", None))
+        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
+
+    def findItemsByProperties(self, properties, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
+        """
+        Returns ViewItems where every property matches given properties
+
+        Parameters:
+          properties (dictionary):
+                  names and required values of properties
+
+        Example:
+          view.findItemsByProperties({"Value": "HELLO", "Name": "File name:"})
+
+        See also:
+          viewitem.dumpProperties()
+        """
+        c = lambda item: 0 == len([key for key in properties
+                                   if properties[key] != item.properties().get(key, None)])
+        return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
+
+    def findItemsByPos(self, pos, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
+        """
+        Returns list of ViewItems whose bounding box contains the position.
+
+        Parameters:
+          pos (pair of floats (0.0..0.1) or integers (x, y)):
+                  coordinates that fall in the bounding box of found items.
+
+          other parameters: refer to findItems documentation.
+
+        Items are listed in ascending order based on area. They may
+        or may not be from the same branch in the widget hierarchy.
+        """
+        x, y = self._intCoords(pos)
+        c = lambda item: (item.bbox()[0] <= x <= item.bbox()[2] and item.bbox()[1] <= y <= item.bbox()[3])
+        items = self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
+        # sort from smallest to greatest area
+        area_items = [((i.bbox()[2] - i.bbox()[0]) * (i.bbox()[3] - i.bbox()[1]), i) for i in items]
+        return [i for _, i in sorted(area_items)]
+
+    def save(self, fileOrDirName):
+        """
+        Save view dump to a file.
+        """
+        shutil.copy(self._dumpFilename, fileOrDirName)
+
+
 class Screen(fmbtgti.GUITestInterface):
     def __init__(self, display="", **kwargs):
         """Parameters:
@@ -60,10 +269,89 @@ class Screen(fmbtgti.GUITestInterface):
                   rotation).
         """
         fmbtgti.GUITestInterface.__init__(self, **kwargs)
+        self._lastView = None
+        self._refreshViewDefaults = {}
         self.setConnection(X11Connection(display))
+
+    def existingView(self):
+        if self._lastView:
+            return self._lastView
+        else:
+            raise FMBTWindowsError("view is not available. Missing refreshView()?")
 
     def keyNames(self):
         return _keyNames[:]
+
+    def refreshView(self, window=None, forcedView=None, viewSource=None):
+        """Update toolkit data"""
+        self._lastView = None
+        if window == None:
+            window = self._refreshViewDefaults.get("window", None)
+        if viewSource == None:
+            viewSource = self._refreshViewDefaults.get("viewSource", "atspi")
+        if viewSource == "atspi":
+            foundItems = self.existingConnection().recvAtspiViewData(window)
+            viewFilename = self._newScreenshotFilepath()[:-3] + "view"
+            file(viewFilename, "w").write(repr(foundItems))
+            self._lastView = View(viewFilename, foundItems)
+        else:
+            raise ValueError('viewSource "%s" not supported' % (viewSource,))
+        return self._lastView
+
+    def refreshViewDefaults(self):
+        return self._refreshViewDefaults
+
+    def setRefreshViewDefaults(self, **kwargs):
+        """Set default arguments for refreshView() calls
+
+        Parameters:
+          **kwargs (keyword arguments)
+                  new default values for optional refreshView() parameters.
+        """
+        self._refreshViewDefaults = kwargs
+
+    def tapText(self, text, partial=False, **tapKwArgs):
+        """
+        Find an item with given text from the latest view, and tap it.
+
+        Parameters:
+
+          partial (boolean, optional):
+                  refer to verifyText documentation. The default is
+                  False.
+
+          tapPos (pair of floats (x, y)):
+                  refer to tapItem documentation.
+
+          button, long, hold, count, delayBetweenTaps (optional):
+                  refer to tap documentation.
+
+        Returns True if successful, otherwise False.
+        """
+        items = self.existingView().findItemsByText(text, partial=partial, count=1, onScreen=True)
+        if len(items) == 0: return False
+        return self.tapItem(items[0], **tapKwArgs)
+
+    def verifyText(self, text, partial=False):
+        """
+        Verify that the last view has at least one item with given
+        text.
+
+        Parameters:
+
+          text (string):
+                  text to be searched for in items.
+
+          partial (boolean, optional):
+                  if True, match items if item text contains given
+                  text, otherwise match only if item text is equal to
+                  the given text. The default is False (exact match).
+        """
+        assert self._lastView != None, "View required."
+        return self._lastView.findItemsByText(text, partial=partial, count=1, onScreen=True) != []
+
+    def view(self):
+        return self._lastView
 
 class X11Connection(fmbtx11_conn.Display):
     def __init__(self, display):
@@ -71,6 +359,9 @@ class X11Connection(fmbtx11_conn.Display):
 
     def target(self):
         return "X11"
+
+    def recvAtspiViewData(self, window):
+        return fmbtx11_conn.atspiViewData(window)
 
     def recvScreenshot(self, filename):
         # This is a hack to get this stack quickly testable,

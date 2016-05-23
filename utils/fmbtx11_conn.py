@@ -29,6 +29,14 @@ try:
 except ImportError:
     fmbtpng = None
 
+try:
+    import gi
+    gi.require_version('Atspi', '2.0')
+    import pyatspi
+    """gsettings set org.gnome.desktop.interface toolkit-accessibility true"""
+except ImportError:
+    pyatspi = None
+
 _g_current_user = getpass.getuser()
 
 libX11 = ctypes.CDLL("libX11.so.6")
@@ -333,5 +341,88 @@ def shellSOE(command, username, asyncStatus, asyncOut, asyncError, usePty):
         statusFile.close()
         out, err = None, None
     return True, (p.returncode, out, err)
+
+def atspiApplicationList():
+    if not pyatspi:
+        raise ValueError('required library missing: pyatspi')
+    rv = []
+    for app in pyatspi.Registry.getDesktop(0):
+        rv.append(app.name)
+    return rv
+
+def atspiAddItem(item, parent, foundItems):
+    """Adds an item to foundItems"""
+    itemId = repr(item)
+    rv = {
+        "id": itemId,
+        "parent": repr(parent) if parent != None else None,
+        "class": item.get_role_name(),
+        "name": item.get_name(),
+    }
+    try:
+        bbox = item.queryComponent().getExtents(pyatspi.DESKTOP_COORDS)
+        x, y, w, h = bbox
+        rv["bbox"] = (x, y, x+w, y+h)
+    except NotImplementedError:
+        rv["bbox"] = (-1, -1, -1, -1)
+    try:
+        rv["attributes"] = dict([a.split(':', 1) for a in item.getAttributes()])
+    except:
+        rv["attributes"] = None
+    rv["actions"] = []
+    try:
+        actions = item.queryAction()
+        for action in xrange(actions.nActions):
+            rv["actions"].append(actions.getName(action))
+    except NotImplementedError:
+        pass
+    rv["text"] = ""
+    try:
+        text = item.queryText()
+        try:
+            rv["text"] = text.getText(0, text.characterCount)
+        except Exception, e:
+            pass
+    except:
+        pass
+    foundItems.append(rv)
+
+def atspiScanItems(item, parent, foundItems):
+    """Scan items
+
+    Parameters:
+
+      item (atspi object):
+              item whose children will be scanned
+
+      parent (atspi object or None):
+              parent of the item (the first parameter)
+
+      foundItems (list, out parameter):
+              found items, including the item, will be appended
+              to this list.
+    """
+    atspiAddItem(item, parent, foundItems)
+    for child in item:
+        atspiScanItems(child, item, foundItems)
+
+def atspiViewData(window):
+    """Return view data on a window
+
+    Parameters:
+
+      window (string):
+              Name of the application.
+    """
+    if not pyatspi:
+        raise ValueError('required library missing: pyatspi')
+    for app in pyatspi.Registry.getDesktop(0):
+        if app.name == window:
+            break
+    else:
+        raise ValueError('cannot find window "%s"' % (window,))
+    foundItems = []
+    atspiScanItems(app, None, foundItems)
+    return foundItems
 
 class X11ConnectionError(Exception): pass
