@@ -1,5 +1,5 @@
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2014, Intel Corporation.
+# Copyright (c) 2014-2016, Intel Corporation.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU Lesser General Public License,
@@ -506,7 +506,6 @@ def _sendTouch(pointerFlags, errorWhen="doTouch", fingers=1):
         success = 1
 
     if (success == 0):
-        print "%s error: %s" % (errorWhen, ctypes.FormatError())
         return False
     else:
         return True
@@ -520,7 +519,6 @@ def _touchHold():
         touchInfoLock.acquire()
         try:
             if not (touchInfo.pointerInfo.pointerFlags & POINTER_FLAG_INCONTACT):
-                print "touch: no more contact"
                 break
 
             if not _sendTouch(POINTER_FLAG_UPDATE  |
@@ -864,18 +862,6 @@ def windowWidgets(hwnd):
     cb = EnumChildProc(enumChildProc)
     ctypes.windll.user32.EnumChildWindows(hwnd, cb, hwnd)
     return widgets
-
-def _dumpTree(depth, key, wt):
-    for hwnd, parent, cname, text, rect in wt[key]:
-        print "%s%s (%s) cls='%s' text='%s' rect=%s" % (
-            " " * (depth*4), hwnd, parent, cname, text, rect)
-        if hwnd in wt:
-            _dumpTree(depth + 1, hwnd, wt)
-
-def dumpWidgets():
-    hwnd = topWindow()
-    wt = widgetList(hwnd)
-    _dumpTree(0, hwnd, wt)
 
 def launchUIAutomationServer():
     fromPath=[]
@@ -1310,16 +1296,6 @@ def windowStatus(hwnd):
 def closeWindow(hwnd):
     return ctypes.windll.user32.PostMessageW(hwnd, WM_CLOSE, 0, 0) != 0
 
-def launchHTTPD():
-    global _HTTPServerProcess
-    _HTTPServerProcess = subprocess.Popen("python -m SimpleHTTPServer 8000")
-    return True
-
-def stopHTTPD():
-    print "stopping " + str(_HTTPServerProcess)
-    _HTTPServerProcess.terminate()
-    return True
-
 def screenshotTakerThread():
     # Screenshots must be taken in the same thread. If BitBlt is
     # called from different threads, screenshots are not update. On the
@@ -1375,8 +1351,6 @@ def screenshotTakerThread():
             _g_lastWidth = width
             _g_lastHeight = height
 
-        print "W x H ==", width, "X", height
-
         ctypes.windll.gdi32.SelectObject(memdc, bmp)
         ctypes.windll.gdi32.BitBlt(memdc, 0, 0, width, height, srcdc, left, top, SRCCOPY)
         got_bits = ctypes.windll.gdi32.GetDIBits(
@@ -1414,13 +1388,11 @@ if not "_mouse_input_area" in globals():
 if not "_g_touchInjenctionInitialized" in globals():
     try:
         if (ctypes.windll.user32.InitializeTouchInjection(2, 1) != 0):
-            print "Initialized Touch Injection"
             _g_touchInjenctionInitialized = True
         else:
-            print "InitializeTouchInjection failed"
+            pass
     except:
         _g_touchInjenctionInitialized = False
-        print "InitializeTouchInjection not supported"
 
 if not "_g_screenshotRequestQueue" in globals():
     # Initialize screenshot thread and communication channels
