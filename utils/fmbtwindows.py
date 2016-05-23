@@ -395,18 +395,20 @@ class View(object):
 
 
 class Device(fmbtgti.GUITestInterface):
-    def __init__(self, connspec, password=None, screenshotSize=(None, None),
+    def __init__(self, connspec=None, password=None, screenshotSize=(None, None),
                  connect=True, **kwargs):
         """Connect to windows device under test.
 
         Parameters:
 
-          connspec (string):
+          connspec (string or None, optional):
                   specification for connecting to a pythonshare
                   server that will run fmbtwindows-agent. The format is
-                  "[socket://][password@]<host>[:<port>]".
+                  "[socket://][password@]<host>[:<port>][/namespace]".
+                  The default is None: run the agent on host, do not
+                  connect to a pythonshare server (works only on Windows).
 
-          password (optional, string or None):
+          password (string or None, optional):
                   authenticate to pythonshare server with given
                   password. The default is None (no authentication).
 
@@ -1245,29 +1247,41 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self.existingConnection().recvWindowStatus(window)
 
-    def launchHTTPD(self):
-        """
-        DEPRECATED, will be removed, do not use!
-        """
-        return self._conn.evalPython("launchHTTPD()")
-
-    def stopHTTPD(self):
-        """
-        DEPRECATED, will be removed, do not use!
-        """
-        return self._conn.evalPython("stopHTTPD()")
-
     def view(self):
         return self._lastView
 
     def viewStats(self):
         return self._lastViewStats
 
+class _NoPythonshareConnection(object):
+    """Fake Pythonshare connection, evaluate everything locally"""
+    def __init__(self, namespace="default"):
+        self._namespaces = {}
+        self._ns = namespace
+
+    def exec_in(self, ns, code):
+        if not ns in self._namespaces:
+            self._namespaces[ns] = {}
+        exec code in self._namespaces[ns]
+
+    def eval_in(self, ns, expr):
+        if not ns in self._namespaces:
+            self._namespaces[ns] = {}
+        return eval(expr, self._namespaces[ns])
+
+    def namespace(self):
+        return self._ns
+
 class WindowsConnection(fmbtgti.GUITestConnection):
     def __init__(self, connspec, password):
         fmbtgti.GUITestConnection.__init__(self)
         self._screenshotSize = (None, None) # autodetect
-        self._agent = pythonshare.connection(connspec, password=password)
+        if connspec != None:
+            self._agent = pythonshare.connect(connspec, password=password)
+        else:
+            if os.name != "nt":
+                raise ValueError("connecting to host works only on Windows")
+            self._agent = _NoPythonshareConnection()
         self._agent_ns = self._agent.namespace()
         agentFilename = os.path.join(
             os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))),
