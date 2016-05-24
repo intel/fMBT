@@ -2563,10 +2563,13 @@ class MainWindow(QtGui.QMainWindow):
                 bgPen = QtGui.QPen(QtGui.QColor(0, 0, 0), 1)
                 fgPen = QtGui.QPen(QtGui.QColor(128, 255, 128), 1)
             painter.setPen(bgPen)
-            painter.drawRect(x-2, y-2, w+4, h+4)
-            painter.drawRect(x, y, w, h)
+            if x-2 >= 0 and y-2 >= 0:
+                painter.drawRect(x-2, y-2, w+4, h+4)
+            if x >= 0 and y >= 0:
+                painter.drawRect(x, y, w, h)
             painter.setPen(fgPen)
-            painter.drawRect(x-1, y-1, w+2, h+2)
+            if x-1 >= 0 and y-1 >= 0:
+                painter.drawRect(x-1, y-1, w+2, h+2)
         self.updateScreenshotView()
 
     def setScripterCode(self, codeLineRegex, codeLinePrefix, code):
