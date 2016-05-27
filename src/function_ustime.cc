@@ -28,7 +28,7 @@ Function_ustime::Function_ustime(const std::string& param) {
 signed long Function_ustime::val() {
   struct timeval tv;
   gettime(&tv);
-  return tv.tv_usec + tv.tv_usec*1000000;
+  return tv.tv_usec + tv.tv_sec*1000000;
 }
 
 double Function_ustime::fval() {
