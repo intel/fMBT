@@ -26,7 +26,6 @@ public:
   virtual ~Random_C() {}
   virtual unsigned long rand();
   virtual std::string stringify();
-  bool global;
   unsigned int seed;
   unsigned int initial_seed;
 };

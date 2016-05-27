@@ -1127,6 +1127,4 @@ int getint(GIOChannel* out,GIOChannel* in,Log& log,
   return ret;
 }
 
-#ifdef __MINGW32__
 #include "rand_r.c"
-#endif

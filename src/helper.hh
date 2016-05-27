@@ -30,16 +30,15 @@ typedef struct _GIOChannel GIOChannel;
 #include <boost/regex.hpp>
 #endif
 
+#define FMBT_RAND_MAX 2147483647
+int fmbt_rand_r(unsigned int *seedp);
+
 #ifdef __MINGW32__
 extern "C" {
 char *strndup(const char *s, size_t n);
 int vasprintf(char **strp, const char *fmt, va_list ap);
 
 }
-
-#ifndef rand_r
-int rand_r(unsigned int *seedp);
-#endif
 
 # define timeradd(a, b, result)                                               \
   do {                                                                        \

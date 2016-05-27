@@ -23,14 +23,11 @@
 #include <cstdlib>
 #include "helper.hh" // mingw....
 
-Random_C::Random_C(const std::string& param) {
-#ifdef __MINGW32__
-  max_val = 2147483647;
-#else
-  max_val = RAND_MAX;
-#endif
+Random_C::Random_C(const std::string& param):
+  seed(0), initial_seed(0)
+{
+  max_val = FMBT_RAND_MAX;
   if (param=="") {
-    global=true;
     single=true;
   } else {
     Function* f=new_function(param);
@@ -47,26 +44,19 @@ Random_C::Random_C(const std::string& param) {
     }
 
     initial_seed = seed = f->val();
-    global=false;
     delete f;
   }
 }
 
 std::string Random_C::stringify() {
   if (status) {
-    if (global)
-      return std::string("c");
     return std::string("c(")+to_string(initial_seed)+")";
   }
   return Random::stringify();
 }
 
-
 unsigned long Random_C::rand() {
-  if (global) {
-    return std::rand();
-  }
-  return rand_r(&seed);
+  return fmbt_rand_r(&seed);
 }
 
 FACTORY_DEFAULT_CREATOR(Random, Random_C, "C")
