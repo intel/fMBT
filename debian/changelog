@@ -1,8 +1,32 @@
-fmbt (0.33-0.rc0) unstable; urgency=low
+fmbt (0.33-1) unstable; urgency=low
 
-  * Development version.
+  * AAL/Python:
+    - Prevent tag adapter block from changing model state.
+  * fmbt-scripter:
+    - Improved syntax error message when running code blocks with Run line.
+    - Fix crashes caused by trying to draw rectangles around view
+      items that are not on screen.
+  * fmbtwindows:
+    - Device() can be instantiated without pythonshare hostspec. This will
+      connect to the host that executes the script. Works only on Windows.
+    - Device.getClipboard() and setClipboard(data) added to enable clipboard
+      usage on test scripts. Currently text data format is supported.
+    - Device.viewStats() added for statistics on the last refreshView() call.
+    - New boolean parameter onScreen added to View.findItemsBy* functions.
+      If onScreen=True, items that are definitely invisible for user will be
+      filtered out.
+    - ViewItem.parentItem() added for getting the parent item.
+    - Built-in retry added to refreshView() to improve robustness.
+  * fmbtx11:
+    - Device.refreshView() and setRefreshViewDefaults() added. This
+      experimental method supports currently one view source, "atspi", but
+      other view sources can be added later.
+  * Windows support:
+    - Fixed test generation hanging when falling back to random selection.
+    - Fixed reading user input in the interactive mode (fmbt -i).
+  * Minor fixes.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 9 May 2016 09:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Sun, 29 May 2016 12:42:00 +0300
 
 fmbt (0.32-1) unstable; urgency=low
 
