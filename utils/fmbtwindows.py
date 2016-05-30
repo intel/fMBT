@@ -698,7 +698,7 @@ class Device(fmbtgti.GUITestInterface):
 
     def putFile(self, localFilename, remoteFilepath):
         """
-        Send local file to the device
+        Send local file to the device.
 
         Parameters:
 
@@ -712,6 +712,18 @@ class Device(fmbtgti.GUITestInterface):
                   will be saved with remoteFilepath as new name.
         """
         return self._conn.sendFile(localFilename, remoteFilepath)
+
+    def rmFile(self, remoteFilepath):
+        """
+        Remove a file from the device.
+
+        Parameters:
+
+          remoteFilepath (string):
+                  file to be removed from the device.
+        """
+        return self.existingConnection().evalPython(
+            "os.remove(%s)" % (repr(remoteFilepath),))
 
     def reconnect(self, connspec=None, password=None):
         """
