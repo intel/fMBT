@@ -1013,9 +1013,12 @@ class Device(fmbtgti.GUITestInterface):
         Parameters:
 
           command (string):
-                  pycosh command to be executed.
-                  For information on pycosh commands, run
-                  echo help | python -m pycosh
+                  pycosh command to be executed. Pycosh implements
+                  stripped-down versions of zip, tar, find, md5sum, diff,
+                  grep, head, tail, curl,... the usual handy shell utils.
+                  For information on pycosh commands, try
+                  device.pycosh("help") or run in shell:
+                  echo help | python -m pycosh.
         """
         return self.existingConnection().pycosh(command)
 
