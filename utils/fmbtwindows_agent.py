@@ -347,6 +347,11 @@ GMEM_FIXED = 0x0000
 GMEM_MOVEABLE = 0x0002
 GMEM_ZEROINIT = 0x0040
 
+try:
+    _dpiAware = ctypes.windll.user32.SetProcessDPIAware()
+except Exception, e:
+    _dpiAware = e
+
 # Structs for mouse and keyboard input
 
 class MOUSEINPUT(ctypes.Structure):
