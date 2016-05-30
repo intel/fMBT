@@ -193,6 +193,7 @@ section "install"
 	file "utils/fmbtx11_conn.py"
 	file "utils/fmbtx11.py"
 	file "utils/lsts.py"
+	file "utils/pycosh.py"
 
 	setOutPath "$PYTHONDIR\Lib\pythonshare\"
 	file "pythonshare/__init__.py"
@@ -279,6 +280,7 @@ section "uninstall"
 	delete $INSTDIR\fmbtweb.py
 	delete $INSTDIR\fmbtx11.py
 	delete $INSTDIR\lsts.py
+	delete $INSTDIR\pycosh.py
 	delete $INSTDIR\fmbt-editor
 	delete $INSTDIR\fmbt-editor.exe
 

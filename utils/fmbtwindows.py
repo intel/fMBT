@@ -53,6 +53,11 @@ import time
 import zlib
 
 try:
+    import pycosh
+except ImportError:
+    pycosh = None
+
+try:
     import fmbtpng
 except ImportError:
     fmbtpng = None
@@ -989,6 +994,19 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self.existingConnection().evalPython("products()")
 
+    def pycosh(self, command):
+        """
+        Run command in pycosh shell on the device.
+
+        Parameters:
+
+          command (string):
+                  pycosh command to be executed.
+                  For information on pycosh commands, run
+                  echo help | python -m pycosh
+        """
+        return self.existingConnection().pycosh(command)
+
     def setScreenshotSize(self, size):
         """
         Force screenshots from device to use given resolution.
@@ -1276,6 +1294,7 @@ class WindowsConnection(fmbtgti.GUITestConnection):
     def __init__(self, connspec, password):
         fmbtgti.GUITestConnection.__init__(self)
         self._screenshotSize = (None, None) # autodetect
+        self._pycosh_sent_to_dut = False
         if connspec != None:
             self._agent = pythonshare.connect(connspec, password=password)
         else:
@@ -1289,6 +1308,13 @@ class WindowsConnection(fmbtgti.GUITestConnection):
         self._agent.exec_in(self._agent_ns, file(agentFilename).read())
         self.setScreenToDisplayCoords(lambda x, y: (x, y))
         self.setDisplayToScreenCoords(lambda x, y: (x, y))
+
+    def pycosh(self, command):
+        if not self._pycosh_sent_to_dut:
+            # upload pycosh module to DUT
+            self.execPython(file(inspect.getsourcefile(pycosh)).read())
+            self._pycosh_sent_to_dut = True
+        return self.evalPython("pycosh_eval(%s)" % (repr(command),))
 
     def setScreenshotSize(self, screenshotSize):
         self._screenshotSize = screenshotSize

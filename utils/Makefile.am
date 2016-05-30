@@ -40,7 +40,8 @@ dist_noinst_SCRIPTS +=		\
 	fmbtwindows_agent.py	\
 	fmbtx11.py		\
 	fmbtx11_conn.py		\
-	lsts.py
+	lsts.py                 \
+	pycosh.py
 # end of modules
 
 utils_installer: $(dist_noinst_SCRIPTS)
