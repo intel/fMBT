@@ -175,6 +175,7 @@ class AALModel:
                     raise
             finally:
                 fmbt._g_testStep -= 1
+                fmbt._g_lastExecutedActionName = fmbt._g_actionName
         else:
             self._log("AAL model: adapter_execute for an output action in AAL." +
                       "This should take place in observe().\n")
@@ -398,6 +399,7 @@ class AALModel:
                     self._log('observe: action "%s" adapter() returned %s. Reporting "%s"' % (
                             self._all_names[index], output_action,
                             self._all_names[observed_action-1]))
+                    fmbt._g_lastExecutedActionName = self._all_names[observed_action-1]
                     return [observed_action]
             if block:
                 if not start_time: start_time = time.time()

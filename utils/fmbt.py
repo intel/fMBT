@@ -36,6 +36,7 @@ import urllib
 
 _g_fmbt_adapterlogtimeformat="%s.%f"
 _g_actionName = "undefined"
+_g_lastExecutedActionName = "undefined"
 _g_testStep = -1
 _g_simulated_actions = []
 
@@ -143,6 +144,14 @@ def actionName():
     Return the name of currently executed action (input or output).
     """
     return _g_actionName
+
+def lastExecutedActionName():
+    """
+    Return the name of the previously executed action.
+
+    Counts only really executed actions, not simulated.
+    """
+    return _g_lastExecutedActionName
 
 def getTestStep():
     """deprecated, use testStep()"""
