@@ -75,10 +75,11 @@ def _recv(source):
     with _recv.locks[source]:
         try:
             return cPickle.load(source)
-        except ValueError, e:
-            return messages.Unloadable(e)
+        except (ValueError, cPickle.UnpicklingError), e:
+            return messages.Unloadable(str(e))
+        except Exception, e:
+            return messages.Unloadable("load error %s: %s" % (type(e).__name__, e))
 _recv.locks = {}
-
 
 def connect(hostspec, password=None, namespace=None):
     """Returns Connection to pythonshare server at hostspec.
