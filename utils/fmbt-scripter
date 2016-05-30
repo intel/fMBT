@@ -1044,8 +1044,10 @@ class MainWindow(QtGui.QMainWindow):
             else:
                 self.console.append(msg)
             if self.consoleScrollCheck.isChecked():
-                sb = self.console.verticalScrollBar()
-                sb.setValue(sb.maximum())
+                vsb = self.console.verticalScrollBar()
+                vsb.setValue(vsb.maximum())
+                hsb = self.console.horizontalScrollBar()
+                hsb.setValue(hsb.minimum())
         _setGlobalLog(consoleLog)
 
         self.editorWidgetsLayout.addWidget(self.editorCombo)
