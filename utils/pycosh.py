@@ -658,7 +658,10 @@ def zip(zipfilename, *filenames):
     return ""
 
 def exit():
-    raise Exception("Close connection with Ctrl-D")
+    if os.name == "nt":
+        raise Exception("Close connection with Ctrl-Z + Return")
+    else:
+        raise Exception("Close connection with Ctrl-D")
 
 def pycosh_eval(cmdline):
     funccall = cmd2py(cmdline)
@@ -677,7 +680,7 @@ def _main():
         except IOError:
             pass
         atexit.register(readline.write_history_file, histfile)
-    except IOError:
+    except (ImportError, IOError):
         pass
 
     while True:
