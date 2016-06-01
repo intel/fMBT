@@ -303,14 +303,17 @@ class MyScaleEvents(QtCore.QObject):
                         w._fmbtEval("%s.refreshView()" % (w._sut,))
                         w._refreshedViewOnScreen = w._fmbtEval("%s.screenshot().filename()" %
                                                                (w._sut,), silent=True)[0]
-                    items, _ = w._fmbtEval("%s.view().findItemsByPos((%s, %s), onScreen=True)" %
-                                           ((w._sut,) + self.posToAbs(event.pos)))
-                    msgs = ["Items from large to small"]
-                    for index, i in enumerate(reversed(items)):
-                        w.drawRect(*i.bbox(), onOrig=False)
-                        msgs.append(str(i))
-                    self.highlightedItems = items
-                    log("\n".join(msgs))
+                    if w._fmbtEval("%s.view()" % (w._sut,))[0] == None:
+                        log("No view.")
+                    else:
+                        items, _ = w._fmbtEval("%s.view().findItemsByPos((%s, %s), onScreen=True)" %
+                                               ((w._sut,) + self.posToAbs(event.pos)))
+                        msgs = ["Items from large to small"]
+                        for index, i in enumerate(reversed(items)):
+                            w.drawRect(*i.bbox(), onOrig=False)
+                            msgs.append(str(i))
+                        self.highlightedItems = items
+                        log("\n".join(msgs))
             else:
                 self.selLeft, self.selTop = self.posToAbs(event.pos)
         elif event.type() == QtCore.QEvent.MouseMove:
