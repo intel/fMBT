@@ -883,8 +883,31 @@ using System.IO.Pipes;
 
 namespace FmbtWindows {
     public class UI {
-        public static void DumpElement(AutomationElement elt, int depth, Int32 parent, int[] fromPath, string[] properties, StreamWriter outStream) {
+        public static void DumpElement(AutomationElement elt, int depth, Int32 parent, int[] fromPath, string[] properties, int[] bbox, StreamWriter outStream) {
             string pValue;
+            string pName;
+            System.Windows.Automation.AutomationProperty[] supportedProps = elt.GetSupportedProperties();
+
+            // If location filtering is requested, skip element after reading only BoundingRectangle
+            if (bbox[0] > -1) {
+                foreach (AutomationProperty p in supportedProps) {
+                    pName = p.ProgrammaticName.Substring(p.ProgrammaticName.IndexOf(".")+1);
+                    if (pName == "BoundingRectangleProperty") {
+                        pValue = "" + elt.GetCurrentPropertyValue(p);
+                        if (pValue.Contains(";")) {
+                            int[] bRect = Array.ConvertAll(pValue.Split(';'), int.Parse);
+                            int eltLeft = bRect[0];
+                            int eltTop = bRect[1];
+                            int eltRight = bRect[0] + bRect[2];
+                            int eltBottom = bRect[1] + bRect[3];
+                            if (eltRight < bbox[0] || eltLeft > bbox[2] || eltBottom < bbox[1] || eltTop > bbox[3])
+                                return; // Skip this element and its descendants
+                        }
+                    }
+                }
+            }
+
+            // Print element properties
             Int32 eltHash = elt.GetHashCode();
             if (fromPath.Length > depth) {
                 if (fromPath[depth] != eltHash)
@@ -893,8 +916,9 @@ namespace FmbtWindows {
             outStream.WriteLine("");
             outStream.WriteLine("hash=" + eltHash);
             outStream.WriteLine("parent=" + parent.ToString());
-            foreach (AutomationProperty p in elt.GetSupportedProperties()) {
-                string pName = p.ProgrammaticName.Substring(p.ProgrammaticName.IndexOf(".")+1);
+
+            foreach (AutomationProperty p in supportedProps) {
+                pName = p.ProgrammaticName.Substring(p.ProgrammaticName.IndexOf(".")+1);
                 if (pName.EndsWith("Property"))
                     pName = pName.Substring(0, pName.LastIndexOf("Property"));
                 if (properties.Length == 1 || (properties.Length > 1 && properties.Contains(pName))) {
@@ -903,18 +927,20 @@ namespace FmbtWindows {
                 }
             }
 
+            // Print child elements
             AutomationElement eltChild = TreeWalker.RawViewWalker.GetFirstChild(elt);
 
             while (eltChild != null) {
-                DumpElement(eltChild, depth+1, eltHash, fromPath, properties, outStream);
+                DumpElement(eltChild, depth+1, eltHash, fromPath, properties, bbox, outStream);
                 eltChild = TreeWalker.RawViewWalker.GetNextSibling(eltChild);
             }
         }
 
-        public static void DumpWindow(UInt32 arg, string fromPathString, string properties, StreamWriter outStream) {
+        public static void DumpWindow(UInt32 arg, string fromPathString, string properties, string bboxString, StreamWriter outStream) {
             IntPtr hwnd = new IntPtr(arg);
             int[] fromPath = Array.ConvertAll(fromPathString.Split(','), int.Parse);
-            DumpElement(AutomationElement.FromHandle(hwnd), 1, 0, fromPath, properties.Split(','), outStream);
+            int[] bbox = Array.ConvertAll(bboxString.Split(','), int.Parse);
+            DumpElement(AutomationElement.FromHandle(hwnd), 1, 0, fromPath, properties.Split(','), bbox, outStream);
         }
 
         public static void RunServer() {
@@ -927,9 +953,10 @@ namespace FmbtWindows {
                 UInt32 hwnd = UInt32.Parse(sr.ReadLine());
                 string fromPath = sr.ReadLine();
                 string properties = sr.ReadLine();
+                string bboxString = sr.ReadLine();
 
                 StreamWriter sw = new StreamWriter(pipeServer);
-                DumpWindow(hwnd, fromPath, properties, sw);
+                DumpWindow(hwnd, fromPath, properties, bboxString, sw);
 
                 sw.WriteLine("end-of-dump-window");
                 sw.Flush();
@@ -956,7 +983,7 @@ Add-Type -ReferencedAssemblies $assemblies -TypeDefinition $source -Language CSh
     except:
         raise
 
-def dumpUIAutomationElements(window=None, fromPath=[], properties=[]):
+def dumpUIAutomationElements(window=None, fromPath=[], properties=[], area=None):
     if window == None:
         window = topWindow()
     f = None
@@ -973,10 +1000,15 @@ def dumpUIAutomationElements(window=None, fromPath=[], properties=[]):
             time.sleep(0.5)
             if time.time() > endTime:
                 raise Exception("dump timed out: cannot connect to uiautomation server")
-    f.write("%s\n%s\n%s\n" % (
+    if area == None:
+        areaBbox = (-1, -1, -1, -1)
+    else:
+        areaBbox = area
+    f.write("%s\n%s\n%s\n%s\n" % (
         window,
         ",".join(["-1"] + fromPath),
-        ",".join(["nonemptylist"] + properties)))
+        ",".join(["nonemptylist"] + properties),
+        ",".join([str(i) for i in areaBbox])))
     f.flush()
     rv = f.read()
     f.close()

@@ -756,7 +756,7 @@ class Device(fmbtgti.GUITestInterface):
             _adapterLog("reconnect failed: %s" % (e,))
             return False
 
-    def refreshView(self, window=None, forcedView=None, viewSource=None, items=[], properties=None):
+    def refreshView(self, window=None, forcedView=None, viewSource=None, items=[], properties=None, area=None):
         """
         (Re)reads widgets on the top window and updates the latest view.
 
@@ -786,6 +786,11 @@ class Device(fmbtgti.GUITestInterface):
                   is to read all available properties.
                   Works only for "uiautomation" view source.
                   See also setViewSource().
+
+          area ((left, top, right, bottom), optional):
+                  refresh only items that intersect the area.
+                  The default is None: locations do not affect refreshed
+                  items.
 
         Returns View object.
         """
@@ -820,13 +825,19 @@ class Device(fmbtgti.GUITestInterface):
                     topWindowBbox = self.topWindowProperties()['bbox']
                 except TypeError:
                     topWindowBbox = None # top window unavailable
+                if area:
+                    leftTopRightBottom = (
+                        self.intCoords((area[0], area[1])) +
+                        self.intCoords((area[2], area[3])))
+                else:
+                    leftTopRightBottom = None
                 if viewSource == "enumchildwindows":
                     viewData = self._conn.recvViewData(window)
                 else:
                     if properties == None:
                         properties = self._viewItemProperties
                     viewData = self._conn.recvViewUIAutomation(
-                        window, items, properties)
+                        window, items, properties, leftTopRightBottom)
                 file(viewFilename, "w").write(repr(viewData))
                 try:
                     self._lastView = View(
@@ -1421,7 +1432,7 @@ class WindowsConnection(fmbtgti.GUITestConnection):
             raise ValueError('illegal window "%s", expected integer or string (hWnd or title)' % (window,))
         return rv
 
-    def recvViewUIAutomation(self, window=None, items=[], properties=None):
+    def recvViewUIAutomation(self, window=None, items=[], properties=None, area=None):
         """returns list of dictionaries, each of which contains properties of
         an item"""
         if properties == None:
@@ -1435,15 +1446,17 @@ class WindowsConnection(fmbtgti.GUITestConnection):
         dumps = []
         if items:
             for item in items:
-                dumps.append(self.evalPython("dumpUIAutomationElements(%s, %s, %s)" % (
+                dumps.append(self.evalPython("dumpUIAutomationElements(%s, %s, %s, %s)" % (
                     repr(window),
                     repr([str(item.id()) for item in item.branch()]),
-                    repr(properties))))
+                    repr(properties),
+                    repr(area))))
         else:
-            dumps.append(self.evalPython("dumpUIAutomationElements(%s, %s, %s)" % (
+            dumps.append(self.evalPython("dumpUIAutomationElements(%s, %s, %s, %s)" % (
                 repr(window),
                 repr([]),
-                repr(properties))))
+                repr(properties),
+                repr(area))))
         rv = []
         prop_data = {}
         for dump in dumps:
