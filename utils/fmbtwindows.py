@@ -1435,6 +1435,10 @@ class WindowsConnection(fmbtgti.GUITestConnection):
     def recvViewUIAutomation(self, window=None, items=[], properties=None, area=None):
         """returns list of dictionaries, each of which contains properties of
         an item"""
+        if window != None:
+            hwnd = self._window2hwnd(window)
+        else:
+            hwnd = None
         if properties == None:
             properties = []
         else:
@@ -1447,13 +1451,13 @@ class WindowsConnection(fmbtgti.GUITestConnection):
         if items:
             for item in items:
                 dumps.append(self.evalPython("dumpUIAutomationElements(%s, %s, %s, %s)" % (
-                    repr(window),
+                    repr(hwnd),
                     repr([str(item.id()) for item in item.branch()]),
                     repr(properties),
                     repr(area))))
         else:
             dumps.append(self.evalPython("dumpUIAutomationElements(%s, %s, %s, %s)" % (
-                repr(window),
+                repr(hwnd),
                 repr([]),
                 repr(properties),
                 repr(area))))
