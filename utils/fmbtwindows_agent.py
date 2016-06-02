@@ -1168,7 +1168,6 @@ def getClipboardText():
     return rv
 
 def setClipboardText(text):
-    ctypes.windll.user32.EmptyClipboard()
     if ctypes.windll.user32.OpenClipboard(0) == 0:
         raise Exception("error in opening clipboard")
     handle = ctypes.windll.kernel32.GlobalAlloc(GMEM_MOVEABLE, len(text)+1)
@@ -1183,6 +1182,7 @@ def setClipboardText(text):
         ctypes.memmove(string_p, text, len(text))
     finally:
         ctypes.windll.kernel32.GlobalUnlock(handle)
+    ctypes.windll.user32.EmptyClipboard()
     ctypes.windll.user32.SetClipboardData(CF_TEXT, handle)
     ctypes.windll.user32.CloseClipboard()
 
