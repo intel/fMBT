@@ -296,14 +296,25 @@ class MyScaleEvents(QtCore.QObject):
                 if not view_supported:
                     log("Platform does not support view items.")
                 else:
-                    if w._refreshedViewOnScreen != w._fmbtEval("%s.screenshot().filename()" %
-                                                               (w._sut,), silent=True)[0]:
-                        log("Reading view items...", prompt=False)
-                        self.mainwindow.repaint()
-                        w._fmbtEval("%s.refreshView()" % (w._sut,))
-                        w._refreshedViewOnScreen = w._fmbtEval("%s.screenshot().filename()" %
-                                                               (w._sut,), silent=True)[0]
-                    if w._fmbtEval("%s.view()" % (w._sut,))[0] == None:
+                    screenshotFilename = w._fmbtEval("%s.screenshot().filename()" %
+                                                     (w._sut,), silent=True)[0]
+                    if (w._fmbtEval("%s.view()" % (w._sut,), silent=True)[0]):
+                        viewFilename = w._fmbtEval("%s.view().filename()" %
+                                                   (w._sut,), silent=True)[0]
+                    else:
+                        viewFilename = ""
+                    if w._refreshedViewOnScreen != screenshotFilename:
+
+                        if viewFilename > screenshotFilename:
+                            w._refreshedViewOnScreen = screenshotFilename
+                            log("Showing view data from %s" % (repr(viewFilename),))
+                        else:
+                            log("Screenshot is newer than view, reading view items...", prompt=False)
+                            self.mainwindow.repaint()
+                            w._fmbtEval("%s.refreshView()" % (w._sut,))
+                            w._refreshedViewOnScreen = w._fmbtEval("%s.screenshot().filename()" %
+                                                                   (w._sut,), silent=True)[0]
+                    if w._fmbtEval("%s.view()" % (w._sut,), silent=True)[0] == None:
                         log("No view.")
                     else:
                         items, _ = w._fmbtEval("%s.view().findItemsByPos((%s, %s), onScreen=True)" %
