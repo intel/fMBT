@@ -893,15 +893,21 @@ namespace FmbtWindows {
                 foreach (AutomationProperty p in supportedProps) {
                     pName = p.ProgrammaticName.Substring(p.ProgrammaticName.IndexOf(".")+1);
                     if (pName == "BoundingRectangleProperty") {
+                        int eltLeft, eltTop, eltRight, eltBottom;
                         pValue = "" + elt.GetCurrentPropertyValue(p);
                         if (pValue.Contains(";")) {
                             int[] bRect = Array.ConvertAll(pValue.Split(';'), int.Parse);
-                            int eltLeft = bRect[0];
-                            int eltTop = bRect[1];
-                            int eltRight = bRect[0] + bRect[2];
-                            int eltBottom = bRect[1] + bRect[3];
-                            if (eltRight < bbox[0] || eltLeft > bbox[2] || eltBottom < bbox[1] || eltTop > bbox[3])
-                                return; // Skip this element and its descendants
+                            eltLeft = bRect[0]; eltTop = bRect[1];
+                            eltRight = bRect[0] + bRect[2]; eltBottom = bRect[1] + bRect[3];
+                        } else if (pValue.Contains(",")) {
+                            int[] bRect = Array.ConvertAll(pValue.Split(','), int.Parse);
+                            eltLeft = bRect[0]; eltTop = bRect[1];
+                            eltRight = bRect[0] + bRect[2]; eltBottom = bRect[1] + bRect[3];
+                        } else {
+                            continue;
+                        }
+                        if (eltRight < bbox[0] || eltLeft > bbox[2] || eltBottom < bbox[1] || eltTop > bbox[3]) {
+                            return; // Skip this element and its descendants
                         }
                     }
                 }
