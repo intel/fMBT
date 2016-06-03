@@ -883,7 +883,7 @@ using System.IO.Pipes;
 
 namespace FmbtWindows {
     public class UI {
-        public static void DumpElement(AutomationElement elt, int depth, Int32 parent, int[] fromPath, string[] properties, int[] bbox, StreamWriter outStream) {
+        public static void DumpElement(AutomationElement elt, int depth, long parent, long[] fromPath, string[] properties, int[] bbox, StreamWriter outStream) {
             string pValue;
             string pName;
             System.Windows.Automation.AutomationProperty[] supportedProps = elt.GetSupportedProperties();
@@ -908,22 +908,24 @@ namespace FmbtWindows {
             }
 
             // Print element properties
-            Int32 eltHash = elt.GetHashCode();
+            long eltHash = elt.GetHashCode();
+            eltHash = (parent << 32) + eltHash;
             if (fromPath.Length > depth) {
                 if (fromPath[depth] != eltHash)
                     return;
             }
             outStream.WriteLine("");
-            outStream.WriteLine("hash=" + eltHash);
+            outStream.WriteLine("hash=" + eltHash.ToString());
             outStream.WriteLine("parent=" + parent.ToString());
 
             foreach (AutomationProperty p in supportedProps) {
                 pName = p.ProgrammaticName.Substring(p.ProgrammaticName.IndexOf(".")+1);
-                if (pName.EndsWith("Property"))
+                if (pName.EndsWith("Property")) {
                     pName = pName.Substring(0, pName.LastIndexOf("Property"));
-                if (properties.Length == 1 || (properties.Length > 1 && properties.Contains(pName))) {
-                    pValue = "" + elt.GetCurrentPropertyValue(p);
-                    outStream.WriteLine(pName + "=" + pValue.Replace("\\", "\\\\").Replace("\r\n", "\\r\\n"));
+                    if (properties.Length == 1 || (properties.Length > 1 && properties.Contains(pName))) {
+                        pValue = "" + elt.GetCurrentPropertyValue(p);
+                        outStream.WriteLine(pName + "=" + pValue.Replace("\\", "\\\\").Replace("\r\n", "\\r\\n"));
+                    }
                 }
             }
 
@@ -938,7 +940,7 @@ namespace FmbtWindows {
 
         public static void DumpWindow(UInt32 arg, string fromPathString, string properties, string bboxString, StreamWriter outStream) {
             IntPtr hwnd = new IntPtr(arg);
-            int[] fromPath = Array.ConvertAll(fromPathString.Split(','), int.Parse);
+            long[] fromPath = Array.ConvertAll(fromPathString.Split(','), long.Parse);
             int[] bbox = Array.ConvertAll(bboxString.Split(','), int.Parse);
             DumpElement(AutomationElement.FromHandle(hwnd), 1, 0, fromPath, properties.Split(','), bbox, outStream);
         }
