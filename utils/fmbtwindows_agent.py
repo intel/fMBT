@@ -883,7 +883,7 @@ using System.IO.Pipes;
 
 namespace FmbtWindows {
     public class UI {
-        public static void DumpElement(AutomationElement elt, int depth, long parent, long[] fromPath, string[] properties, int[] bbox, StreamWriter outStream) {
+        public static void DumpElement(AutomationElement elt, int depth, long parent, long[] fromPath, string[] properties, int[] bbox, TreeWalker walker, StreamWriter outStream) {
             string pValue;
             string pName;
             System.Windows.Automation.AutomationProperty[] supportedProps = elt.GetSupportedProperties();
@@ -930,19 +930,29 @@ namespace FmbtWindows {
             }
 
             // Print child elements
-            AutomationElement eltChild = TreeWalker.RawViewWalker.GetFirstChild(elt);
+            AutomationElement eltChild = walker.GetFirstChild(elt);
 
             while (eltChild != null) {
-                DumpElement(eltChild, depth+1, eltHash, fromPath, properties, bbox, outStream);
-                eltChild = TreeWalker.RawViewWalker.GetNextSibling(eltChild);
+                DumpElement(eltChild, depth+1, eltHash, fromPath, properties, bbox, walker, outStream);
+                eltChild = walker.GetNextSibling(eltChild);
             }
         }
 
-        public static void DumpWindow(UInt32 arg, string fromPathString, string properties, string bboxString, StreamWriter outStream) {
+        public static void DumpWindow(UInt32 arg, string fromPathString, string properties, string bboxString, string walkerString, StreamWriter outStream) {
             IntPtr hwnd = new IntPtr(arg);
             long[] fromPath = Array.ConvertAll(fromPathString.Split(','), long.Parse);
             int[] bbox = Array.ConvertAll(bboxString.Split(','), int.Parse);
-            DumpElement(AutomationElement.FromHandle(hwnd), 1, 0, fromPath, properties.Split(','), bbox, outStream);
+            TreeWalker walker;
+            if (walkerString == "raw") {
+                walker = TreeWalker.RawViewWalker;
+            } else if (walkerString == "control") {
+                walker = TreeWalker.ControlViewWalker;
+            } else if (walkerString == "content") {
+                walker = TreeWalker.ContentViewWalker;
+            } else {
+                return;
+            }
+            DumpElement(AutomationElement.FromHandle(hwnd), 1, 0, fromPath, properties.Split(','), bbox, walker, outStream);
         }
 
         public static void RunServer() {
@@ -956,9 +966,10 @@ namespace FmbtWindows {
                 string fromPath = sr.ReadLine();
                 string properties = sr.ReadLine();
                 string bboxString = sr.ReadLine();
+                string walkerString = sr.ReadLine();
 
                 StreamWriter sw = new StreamWriter(pipeServer);
-                DumpWindow(hwnd, fromPath, properties, bboxString, sw);
+                DumpWindow(hwnd, fromPath, properties, bboxString, walkerString, sw);
 
                 sw.WriteLine("end-of-dump-window");
                 sw.Flush();
@@ -985,7 +996,7 @@ Add-Type -ReferencedAssemblies $assemblies -TypeDefinition $source -Language CSh
     except:
         raise
 
-def dumpUIAutomationElements(window=None, fromPath=[], properties=[], area=None):
+def dumpUIAutomationElements(window=None, fromPath=[], properties=[], area=None, walker="raw"):
     if window == None:
         window = topWindow()
     f = None
@@ -1006,11 +1017,12 @@ def dumpUIAutomationElements(window=None, fromPath=[], properties=[], area=None)
         areaBbox = (-1, -1, -1, -1)
     else:
         areaBbox = area
-    f.write("%s\n%s\n%s\n%s\n" % (
+    f.write("%s\n%s\n%s\n%s\n%s\n" % (
         window,
         ",".join(["-1"] + fromPath),
         ",".join(["nonemptylist"] + properties),
-        ",".join([str(i) for i in areaBbox])))
+        ",".join([str(i) for i in areaBbox]),
+        walker))
     f.flush()
     rv = f.read()
     f.close()

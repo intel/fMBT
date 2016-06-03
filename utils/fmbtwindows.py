@@ -139,7 +139,9 @@ _g_keyNames = [
     "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
     "U", "V", "W", "X", "Y", "Z"]
 
-_g_viewSources = ["enumchildwindows", "uiautomation"]
+_g_viewSources = ["enumchildwindows", "uiautomation",
+                  "uiautomation/raw", "uiautomation/control",
+                  "uiautomation/content"]
 
 # ShowWindow showCmd
 SW_HIDE          = 0
@@ -175,7 +177,7 @@ class ViewItem(fmbtgti.GUIItem):
         """Returns list of view items from the root down to this item
 
         Note: works only for UIAutomation backend"""
-        if not self._view._viewSource == "uiautomation":
+        if not self._view._viewSource.startswith("uiautomation"):
             raise NotImplementedError(
                 "branch() works only for uiautomation at the moment")
         rv = []
@@ -190,7 +192,7 @@ class ViewItem(fmbtgti.GUIItem):
         return rv
 
     def children(self):
-        if self._view._viewSource == "enumchildwindows":
+        if self._view._viewSource.startswith("enumchildwindows"):
             return [self._view._viewItems[winfo[0]]
                     for winfo in self._view._itemTree[self._itemId]]
         else:
@@ -391,6 +393,12 @@ class View(object):
         # sort from smallest to greatest area
         area_items = [((i.bbox()[2] - i.bbox()[0]) * (i.bbox()[3] - i.bbox()[1]), i) for i in items]
         return [i for _, i in sorted(area_items)]
+
+    def items(self):
+        """
+        Returns list of all items in the view
+        """
+        return self._viewItems.values()
 
     def save(self, fileOrDirName):
         """
@@ -756,7 +764,8 @@ class Device(fmbtgti.GUITestInterface):
             _adapterLog("reconnect failed: %s" % (e,))
             return False
 
-    def refreshView(self, window=None, forcedView=None, viewSource=None, items=[], properties=None, area=None):
+    def refreshView(self, window=None, forcedView=None, viewSource=None,
+                    items=[], properties=None, area=None):
         """
         (Re)reads widgets on the top window and updates the latest view.
 
@@ -775,6 +784,9 @@ class Device(fmbtgti.GUITestInterface):
                   "enumchildwindows" less data
                   but does not require UIAutomation.
                   The default is "uiautomation".
+                  You can define TreeWalker used by "uiautomation" by defining
+                  viewSource as "uiautomation/raw", "uiautomation/control" or
+                  "uiautomation/content".
                   See also setViewSource().
 
           items (list of view items, optional):
@@ -834,10 +846,14 @@ class Device(fmbtgti.GUITestInterface):
                 if viewSource == "enumchildwindows":
                     viewData = self._conn.recvViewData(window)
                 else:
+                    if "/" in viewSource:
+                        walker = viewSource.split("/")[1]
+                    else:
+                        walker = "raw"
                     if properties == None:
                         properties = self._viewItemProperties
                     viewData = self._conn.recvViewUIAutomation(
-                        window, items, properties, leftTopRightBottom)
+                        window, items, properties, leftTopRightBottom, walker)
                 file(viewFilename, "w").write(repr(viewData))
                 try:
                     self._lastView = View(
@@ -1432,9 +1448,11 @@ class WindowsConnection(fmbtgti.GUITestConnection):
             raise ValueError('illegal window "%s", expected integer or string (hWnd or title)' % (window,))
         return rv
 
-    def recvViewUIAutomation(self, window=None, items=[], properties=None, area=None):
+    def recvViewUIAutomation(self, window=None, items=[], properties=None, area=None, walker="raw"):
         """returns list of dictionaries, each of which contains properties of
         an item"""
+        if not walker in ["raw", "control", "content"]:
+            raise ValueError('invalid walker %s' % (repr(walker),))
         if window != None:
             hwnd = self._window2hwnd(window)
         else:
@@ -1450,17 +1468,19 @@ class WindowsConnection(fmbtgti.GUITestConnection):
         dumps = []
         if items:
             for item in items:
-                dumps.append(self.evalPython("dumpUIAutomationElements(%s, %s, %s, %s)" % (
+                dumps.append(self.evalPython("dumpUIAutomationElements(%s, %s, %s, %s, %s)" % (
                     repr(hwnd),
                     repr([str(item.id()) for item in item.branch()]),
                     repr(properties),
-                    repr(area))))
+                    repr(area),
+                    repr(walker))))
         else:
-            dumps.append(self.evalPython("dumpUIAutomationElements(%s, %s, %s, %s)" % (
+            dumps.append(self.evalPython("dumpUIAutomationElements(%s, %s, %s, %s, %s)" % (
                 repr(hwnd),
                 repr([]),
                 repr(properties),
-                repr(area))))
+                repr(area),
+                repr(walker))))
         rv = []
         prop_data = {}
         for dump in dumps:
