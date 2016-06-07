@@ -442,8 +442,8 @@ class Device(fmbtgti.GUITestInterface):
         instance.
         """
         fmbtgti.GUITestInterface.__init__(self, **kwargs)
-        self._viewSource = _g_viewSources[1]
-        self._viewItemProperties = None
+        self._defaultViewSource = _g_viewSources[1]
+        self._refreshViewDefaults = kwargs
         self._lastView = None
         self._lastViewStats = {}
         self._refreshViewRetryLimit = 1
@@ -765,7 +765,7 @@ class Device(fmbtgti.GUITestInterface):
             return False
 
     def refreshView(self, window=None, forcedView=None, viewSource=None,
-                    items=[], properties=None, area=None):
+                    items=None, properties=None, area=None):
         """
         (Re)reads widgets on the top window and updates the latest view.
 
@@ -804,12 +804,25 @@ class Device(fmbtgti.GUITestInterface):
                   The default is None: locations do not affect refreshed
                   items.
 
+        See also setRefreshViewDefaults().
+
         Returns View object.
         """
+        if window == None:
+            window = self._refreshViewDefaults.get("window", None)
+        if forcedView == None:
+            forcedView = self._refreshViewDefaults.get("forcedView", None)
         if viewSource == None:
-            viewSource = self._viewSource
+            viewSource = self.viewSource()
         if not viewSource in _g_viewSources:
             raise ValueError('invalid view source "%s"' % (viewSource,))
+        if items == None:
+            items = self._refreshViewDefaults.get("items", [])
+        if properties == None:
+            properties = self._refreshViewDefaults.get("properties", None)
+        if area == None:
+            area = self._refreshViewDefaults.get("area", None)
+
         if forcedView != None:
             retryCount = 0
             startTime = time.time()
@@ -850,10 +863,28 @@ class Device(fmbtgti.GUITestInterface):
                         walker = viewSource.split("/")[1]
                     else:
                         walker = "raw"
-                    if properties == None:
-                        properties = self._viewItemProperties
+                    if properties != None:
+                        if properties == "all":
+                            viewItemProperties = None
+                        elif properties == "fast":
+                            viewItemProperties = ["AutomationId",
+                                                   "BoundingRectangle",
+                                                   "ClassName",
+                                                   "HelpText",
+                                                   "ToggleState",
+                                                   "Value",
+                                                   "Minimum",
+                                                   "Maximum",
+                                                   "Name"]
+                        elif isinstance(properties, list) or isinstance(properties, tuple):
+                            viewItemProperties = list(properties)
+                        else:
+                            raise ValueError('invalid properties argument, expected "all", '
+                                             '"fast" or a list')
+                    else:
+                        viewItemProperties = properties
                     viewData = self._conn.recvViewUIAutomation(
-                        window, items, properties, leftTopRightBottom, walker)
+                        window, items, viewItemProperties, leftTopRightBottom, walker)
                 file(viewFilename, "w").write(repr(viewData))
                 try:
                     self._lastView = View(
@@ -887,6 +918,13 @@ class Device(fmbtgti.GUITestInterface):
             "view": str(self._lastView),
             "item count": itemCount}
         return self._lastView
+
+    def refreshViewDefaults(self):
+        """Returns default arguments for refreshView() calls.
+
+        See also setRefreshViewDefaults().
+        """
+        return dict(self._refreshViewDefaults)
 
     def setClipboard(self, data):
         """
@@ -943,6 +981,25 @@ class Device(fmbtgti.GUITestInterface):
         Notes: calls SetForegroundWindow in user32.dll.
         """
         return self.existingConnection().sendSetForegroundWindow(window)
+
+    def setRefreshViewDefaults(self, **kwargs):
+        """Set new default arguments for refreshView() calls
+
+        Parameters:
+          **kwargs (keyword arguments)
+                  new default values for optional refreshView() parameters.
+
+        Note: default arguments are overridden by arguments given
+        directly in refreshView calls.
+
+        Note: setViewSource() can change the default arguments.
+
+        Example:
+          setRefreshViewDefaults(window="My app title",
+                                 viewSource="uiautomation/content")
+
+        """
+        self._refreshViewDefaults = kwargs
 
     def setRegistry(self, key, valueName, value, valueType=None):
         """
@@ -1085,7 +1142,9 @@ class Device(fmbtgti.GUITestInterface):
         Parameters:
 
           source (string):
-                  default source, "enumchildwindow" or "uiautomation".
+                  default source, "enumchildwindow" or "uiautomation",
+                  "uiautomation/raw", "uiautomation/control",
+                  "uiautomation/content".
 
           properties (string or list of strings, optional):
                   set list of view item properties to be read.
@@ -1096,30 +1155,15 @@ class Device(fmbtgti.GUITestInterface):
 
         Returns None.
 
-        See also refreshView(), viewSource().
+        See also refreshView(), viewSource(), refreshViewDefaults().
         """
         if not source in _g_viewSources:
             raise ValueError(
                 'invalid view source "%s", expected one of: "%s"' %
                 (source, '", "'.join(_g_viewSources)))
         if properties != None:
-            if properties == "all":
-                self._viewItemProperties = None
-            elif properties == "fast":
-                self._viewItemProperties = ["AutomationId",
-                                            "BoundingRectangle",
-                                            "ClassName",
-                                            "HelpText",
-                                            "ToggleState",
-                                            "Value",
-                                            "Minimum",
-                                            "Maximum",
-                                            "Name"]
-            elif isinstance(properties, list) or isinstance(properties, tuple):
-                self._viewItemProperties = list(properties)
-            else:
-                raise ValueError('invalid properties, expected "all", "fast" or a list')
-        self._viewSource = source
+            self._refreshViewDefaults["properties"] = properties
+        self._refreshViewDefaults["viewSource"] = source
 
     def shell(self, command):
         """
@@ -1267,11 +1311,12 @@ class Device(fmbtgti.GUITestInterface):
 
     def viewSource(self):
         """
-        Returns curent default view source.
+        Returns current default view source.
 
         See also refreshView(), setViewSource().
         """
-        return self._viewSource
+        return self._refreshViewDefaults.get(
+            "viewSource", self._defaultViewSource)
 
     def windowList(self):
         """
