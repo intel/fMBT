@@ -398,7 +398,7 @@ class View(object):
         """
         Returns list of all items in the view
         """
-        return self._viewItems.values()
+        return fmbtgti.sortItems(self._viewItems.values(), "topleft")
 
     def save(self, fileOrDirName):
         """
