@@ -1185,7 +1185,7 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self._conn.evalPython('shell(%s)' % (repr(command),))
 
-    def shellSOE(self, command, asyncStatus=None, asyncOut=None, asyncError=None):
+    def shellSOE(self, command, asyncStatus=None, asyncOut=None, asyncError=None, cwd=None):
         """
         Execute command on Windows.
 
@@ -1224,15 +1224,23 @@ class Device(fmbtgti.GUITestInterface):
                   asynchronously but standard error will not be
                   saved. The default is None.
 
+          cwd (string, optional)
+                  current working directory in which the command
+                  will be executed. If not given, the cwd defaults
+                  to the current working directory of the pythonshare
+                  server process on the device, or the cwd of the Python
+                  process if executed on host without pythonshare-server.
+
         Returns triplet: exit status, standard output and standard error
         from the command.
 
         If executing command fails, returns None, None, None.
         """
         return self._conn.evalPython(
-            'shellSOE(%s, asyncStatus=%s, asyncOut=%s, asyncError=%s)'
+            'shellSOE(%s, asyncStatus=%s, asyncOut=%s, asyncError=%s, cwd=%s)'
             % (repr(command),
-               repr(asyncStatus), repr(asyncOut), repr(asyncError)))
+               repr(asyncStatus), repr(asyncOut), repr(asyncError),
+               repr(cwd)))
 
     def showWindow(self, window, showCmd=SW_NORMAL):
         """

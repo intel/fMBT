@@ -1244,7 +1244,7 @@ def _exitStatusWriter(process, statusFile, filesToBeCleaned):
         try: os.remove(f)
         except: pass
 
-def shellSOE(command, asyncStatus=None, asyncOut=None, asyncError=None):
+def shellSOE(command, asyncStatus=None, asyncOut=None, asyncError=None, cwd=None):
     filesToBeCleaned = []
     if isinstance(command, list):
         useShell = False
@@ -1274,7 +1274,8 @@ def shellSOE(command, asyncStatus=None, asyncOut=None, asyncError=None):
         p = subprocess.Popen(command, shell=useShell,
                              stdin = file(os.devnull),
                              stdout = oFile,
-                             stderr = eFile)
+                             stderr = eFile,
+                             cwd = cwd)
         thread.start_new_thread(_exitStatusWriter, (p, sFile, filesToBeCleaned))
         return (None, None, None)
 
@@ -1283,7 +1284,8 @@ def shellSOE(command, asyncStatus=None, asyncOut=None, asyncError=None):
         p = subprocess.Popen(command, shell=useShell,
                              stdin = subprocess.PIPE,
                              stdout = subprocess.PIPE,
-                             stderr = subprocess.PIPE)
+                             stderr = subprocess.PIPE,
+                             cwd = cwd)
         out, err = p.communicate()
         status = p.returncode
     except OSError:
