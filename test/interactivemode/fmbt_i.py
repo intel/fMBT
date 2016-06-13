@@ -61,12 +61,12 @@ def _run_command(cmd, delay_before_output = ui_response_time):
 def iStartGoodFmbt():
     global fmbt
     global fmbt_output
-    fmbt = pexpect.spawn(FMBT_BINARY + ' -L' + FMBT_LOGFILE 
+    fmbt = pexpect.spawn(FMBT_BINARY + ' -L' + FMBT_LOGFILE
                          + ' -i test.conf')
     def output_reader():
         s = ""
         while 1:
-            try: s += fmbt.read_nonblocking(4096,0.1)
+            try: s += fmbt.read_nonblocking(4096, 0.5)
             except pexpect.TIMEOUT: break
             except pexpect.EOF: break
         return _output2list(s)
@@ -179,7 +179,7 @@ def iExecuteReadAllAtState():
     _run_command('oea0')
     _run_command('oem1')
     output = _run_command('s' + _find_action_cmd('s', 'iReadAllActionsInAdapter')[1:])
-    _validateExecOutput(output, "iReadAllActionsInAdapter", "[skipped]", "ok", 
+    _validateExecOutput(output, "iReadAllActionsInAdapter", "[skipped]", "ok",
                         ["s1:iStartGoodFmbt"])
     return True
 
