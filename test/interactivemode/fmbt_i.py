@@ -66,7 +66,7 @@ def iStartGoodFmbt():
     def output_reader():
         s = ""
         while 1:
-            try: s += fmbt.read_nonblocking(4096, 0.5)
+            try: s += fmbt.read_nonblocking(4096, 2.0)
             except pexpect.TIMEOUT: break
             except pexpect.EOF: break
         return _output2list(s)
