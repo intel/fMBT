@@ -528,7 +528,8 @@ def _serve_connection(conn, conn_opts):
 
 def start_server(host, port,
                  ns_init_import_export=[],
-                 conn_opts={}):
+                 conn_opts={},
+                 listen_stdin=True):
     global _g_wake_server_function
     global _g_waker_lock
     daemon_log("pid: %s" % (os.getpid(),))
@@ -587,7 +588,7 @@ def start_server(host, port,
         event_queue = Queue.Queue()
         thread.start_new_thread(_store_return_value, (s.accept, event_queue))
         thread.start_new_thread(_store_return_value, (_g_waker_lock.acquire, event_queue))
-        if not sys.stdin.closed:
+        if not sys.stdin.closed and listen_stdin:
             daemon_log("listening to stdin")
             thread.start_new_thread(_store_return_value, (sys.stdin.readline, event_queue))
         else:
@@ -623,6 +624,7 @@ def start_daemon(host="localhost", port=8089, debug=False,
     if debug_stdout_limit != None:
         opt_debug_stdout_limit = debug_stdout_limit
     if opt_debug == False and not on_windows and isinstance(port, int):
+        listen_stdin = False
         # The usual fork magic, cleaning up all connections to the parent process
         if os.fork() > 0:
             return
@@ -657,5 +659,7 @@ def start_daemon(host="localhost", port=8089, debug=False,
                     os.close(fd)
                 except OSError:
                     pass
+    else:
+        listen_stdin = True
 
-    start_server(host, port, ns_init_import_export, conn_opts)
+    start_server(host, port, ns_init_import_export, conn_opts, listen_stdin)
