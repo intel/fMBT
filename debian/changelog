@@ -1,8 +1,39 @@
-fmbt (0.34-0.rc2) unstable; urgency=low
+fmbt (0.34-1) unstable; urgency=low
 
-  * Development version.
+  * pycosh: introduced pico-sized pure-Python multiplatform shell.
+    - The shell brings tiny built-in implementations of the usual
+      goodies, including curl, find, diff, grep, head, kill, md5sum,
+      ps, sed, sort, tail, tar, unzip/zip and xxd.
+  * fmbtwindows:
+    - Device.pycosh() added for running pycosh commands on device.
+    - Device.rmFile() added for removing files on device.
+    - Device.shellSOE() has new cwd parameter for defining the current
+      working directory in which the command will be executed.
+    - Device.refreshView() has new area parameter. It often gives
+      significant performance boost.
+    - Device.refreshView() has new view sources: control and content
+      UIAutomation tree walkers. They run faster than the default raw walker.
+    - Device.refreshView() window parameter can be a title (new) or
+      a handle.
+    - Device.refreshView() properties can be "all" (new) and "fast" (new)
+      in addition to explicit list of properties.
+    - Device.setRefreshViewDefaults() added for setting default values
+      for all optional refreshView() parameters.
+    - Fixed Device.refreshScreenshot() on different DPIs.
+    - Fixed Device.setClipboard (properly clear existing clipboard data).
+    - Workaround UIAutomation element hash collisions on refreshView().
+  * AAL/Python:
+    - Added fmbt.lastExecutedActionName() for checking which action
+      was previously executed. Not counting simulated actions.
+  * fmbt-scripter:
+    - Pressing Select/View no more runs refreshView() if the latest
+      view is newer than the latest screenshot. This saves time and helps
+      inspecting UI elements found by refreshView() when called with
+      special parameters.
+    - Minor UI improvements.
+  * Bug fixes and UI improvements on fmbt-scripter.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 30 May 2016 10:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 8 Jul 2016 11:42:00 +0300
 
 fmbt (0.33-1) unstable; urgency=low
 
