@@ -1573,15 +1573,9 @@ class MainWindow(QtGui.QMainWindow):
 
     def newAndroid(self):
         try:
-            _, o, _ = fmbtandroid._run(["adb", "devices"], expectedExitStatus=0)
-        except fmbtandroid.FMBTAndroidRunError:
-            log("cannot connect to Android devices: adb not available")
-            return
-        outputLines = [l.strip() for l in o.splitlines() if l.strip() != ""]
-        try:
-            deviceLines = outputLines[
-                outputLines.index("List of devices attached")+1:]
-        except IndexError:
+            deviceLines = fmbtandroid.listSerialNumbers()
+        except fmbtandroid.FMBTAndroidError, e:
+            log(str(e))
             deviceLines = []
         serialNumber = ""
         if len(deviceLines) > 1:
