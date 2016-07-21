@@ -1,3 +1,9 @@
+fmbt (0.35-0.rc0) unstable; urgency=low
+
+  * Development version.
+
+ -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 21 Jul 2016 11:42:00 +0300
+
 fmbt (0.34-1) unstable; urgency=low
 
   * pycosh: introduced pico-sized pure-Python multiplatform shell.
