@@ -2644,7 +2644,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         _, output, _ = self._runAdb(["shell", "dumpsys", "display"], 0,
                                     timeout=_SHORT_TIMEOUT)
         try:
-            w, h = re.findall("mDefaultViewport=DisplayViewport\{.*deviceWidth=([0-9]*), deviceHeight=([0-9]*)\}", output)[0]
+            _, w, h = re.findall("mDefaultViewport(\[0\])?=DisplayViewport\{.*deviceWidth=([0-9]*), deviceHeight=([0-9]*)\}", output)[0]
             width = int(w)
             height = int(h)
         except (IndexError, ValueError), e:
