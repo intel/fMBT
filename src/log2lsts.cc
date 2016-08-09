@@ -142,7 +142,7 @@ void print_usage()
 	      "Usage: fmbt-log2lsts [options] logfile\n"
 	      "Options:\n"
 	      "    -e     add test verdict to the end state as state proposition\n"
-	      "    -V     print version ("VERSION FMBTBUILDINFO")\n"
+	      "    -V     print version (" VERSION FMBTBUILDINFO ")\n"
 	      "    -h     help\n"
 	      );
 }
@@ -183,7 +183,7 @@ int main(int argc,char * const argv[])
 	verd=true;
 	break;
       case 'V':
-	printf("Version: "VERSION FMBTBUILDINFO"\n");
+	printf("Version: " VERSION FMBTBUILDINFO "\n");
 	return 0;
 	break;
       case 'h':

@@ -56,7 +56,7 @@ void print_usage()
     "    -L<f>  append log to file f (default: standard output)\n"
     "    -l<f>  overwrite log to file f (default: standard output)\n"
     "    -q     quiet, do not print test verdict\n"
-    "    -V     print version ("VERSION FMBTBUILDINFO")\n"
+    "    -V     print version (" VERSION FMBTBUILDINFO ")\n"
     "    -o     configfile line\n"
     "    -C     print coverage modules.\n"
     );
@@ -86,7 +86,7 @@ int main(int argc,char * const argv[])
     switch (c)
     {
     case 'V':
-      printf("Version: "VERSION FMBTBUILDINFO"\n");
+      printf("Version: " VERSION FMBTBUILDINFO "\n");
       return 0;
       break;
     case 'o': {

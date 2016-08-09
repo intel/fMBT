@@ -85,7 +85,7 @@ int main(int argc,char * const argv[])
     switch (c)
     {
     case 'v':
-      printf("Version: "VERSION FMBTBUILDINFO"\n");
+      printf("Version: " VERSION FMBTBUILDINFO "\n");
       return 0;
       break;
     case 'u':
