@@ -199,6 +199,8 @@ ROTATION_270 = 3
 ROTATIONS = [ROTATION_0, ROTATION_90, ROTATION_180, ROTATION_270]
 ROTATION_DEGS = [0, 90, 180, 270]
 
+EXITSTATUS_ANY = range(256)
+
 _LONG_TIMEOUT = 3600 # 1 hour
 _SHORT_TIMEOUT = 60 # 1 minute
 
@@ -1295,6 +1297,7 @@ class Device(fmbtgti.GUITestInterface):
         try:
             output = self.existingConnection()._runAdb(
                 ["shell", shellCommand],
+                expectedExitStatus=EXITSTATUS_ANY,
                 timeout=timeout)[1]
         except FMBTAndroidRunError:
             output = None
@@ -2368,7 +2371,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         else:
             return False, data
 
-    def _runSetupCmd(self, cmd, expectedExitStatus = 0):
+    def _runSetupCmd(self, cmd, expectedExitStatus=0):
         _adapterLog('setting up connections: "%s"' % (cmd,))
         try:
             if expectedExitStatus == None: # execute asynchronously
@@ -2404,6 +2407,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             self._shellSupportsSu = False
 
         outputLines = self._runAdb(["shell", "tar"],
+                                   expectedExitStatus=EXITSTATUS_ANY,
                                    timeout=_SHORT_TIMEOUT)[1].splitlines()
         if len(outputLines) == 1 and "bin" in outputLines[0]:
             self._shellSupportsTar = False
@@ -2411,6 +2415,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             self._shellSupportsTar = True
 
         outputLines = self._runAdb(["shell", "echo -n foo | toybox base64"],
+                                   expectedExitStatus=EXITSTATUS_ANY,
                                    timeout=_SHORT_TIMEOUT)[1].splitlines()
         if len(outputLines) == 1 and "Zm9v" in outputLines[0]:
             self._shellSupportsToyboxBase64 = True
@@ -2418,6 +2423,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             self._shellSupportsToyboxBase64 = False
 
         outputLines = self._runAdb(["shell", "echo -n foo | uuencode -"],
+                                   expectedExitStatus=EXITSTATUS_ANY,
                                    timeout=_SHORT_TIMEOUT)[1].splitlines()
         if len(outputLines) > 0 and "begin" in outputLines[0]:
             self._shellSupportsUuencode = True
@@ -2464,6 +2470,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
                     return True
             except Exception, e:
                 _, monkeyOutput, _ = self._runAdb(["shell", "cat /sdcard/fmbtandroid.monkey.outerr"],
+                                                  expectedExitStatus=EXITSTATUS_ANY,
                                                   timeout=_SHORT_TIMEOUT)
                 if "/sdcard/fmbtandroid.monkey.outerr: No such file or directory" in monkeyOutput:
                     msg = 'cannot read/write /sdcard on device %s' % (self._serialNumber,)
@@ -2548,7 +2555,8 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         if keepData:
             cmd.append("-k")
         cmd.append(apkname)
-        status, output, error = self._runAdb(cmd, timeout=_LONG_TIMEOUT)
+        status, output, error = self._runAdb(
+            cmd, expectedExitStatus=EXITSTATUS_ANY, timeout=_LONG_TIMEOUT)
         if "Success" in output:
             return True
         else:
@@ -2574,6 +2582,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         if pids:
             _adapterLog(str(shell_kill + ["-" + str(signal)] + pids))
             self._runAdb(shell_kill + ["-" + str(signal)] + pids,
+                         expectedExitStatus=EXITSTATUS_ANY,
                          timeout=_SHORT_TIMEOUT)
             return True
         else:
@@ -2584,13 +2593,15 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
 
     def reboot(self, reconnect, firstBootAfterFlashing, timeout):
         if firstBootAfterFlashing:
-            self._runAdb("root", timeout=_SHORT_TIMEOUT)
+            self._runAdb("root", expectedExitStatus=EXITSTATUS_ANY,
+                         timeout=_SHORT_TIMEOUT)
             time.sleep(2)
             self._runAdb(["shell", "rm",
                           "/data/data/com.android.launcher/shared_prefs/com.android.launcher2.prefs.xml"],
+                         expectedExitStatus=EXITSTATUS_ANY,
                          timeout=_SHORT_TIMEOUT)
 
-        self._runAdb("reboot")
+        self._runAdb("reboot", expectedExitStatus=EXITSTATUS_ANY)
         _adapterLog("rebooting " + self._serialNumber)
 
         if reconnect:
@@ -2713,6 +2724,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
                           "--uri", "content://settings/system",
                           "--bind", "name:s:accelerometer_rotation",
                           "--bind", "value:" + sendValue],
+                         expectedExitStatus=0,
                          timeout=_SHORT_TIMEOUT)
         except Exception:
             return False
@@ -2834,7 +2846,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         cmd = ["shell", "echo \"" + monkey_script + "\" > " + remote_filename
                + "; monkey -f" + remote_filename + " 1 ; rm -f " +
                remote_filename]
-        self._runAdb(cmd)
+        self._runAdb(cmd, expectedExitStatus=EXITSTATUS_ANY)
 
     def sendMonkeyPinchZoom(self,
                   pt1XStart, pt1YStart, pt1XEnd, pt1YEnd,
@@ -2848,6 +2860,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         _x2, _y2 = self._screenToDisplay(x2, y2)
         self._runAdb(["shell", "input", "swipe",
                       str(_x1), str(_y1), str(_x2), str(_y2)],
+                     expectedExitStatus=EXITSTATUS_ANY,
                      timeout=_SHORT_TIMEOUT)
         return True
 
