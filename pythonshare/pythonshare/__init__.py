@@ -77,6 +77,8 @@ def _recv(source):
             return cPickle.load(source)
         except (ValueError, cPickle.UnpicklingError), e:
             return messages.Unloadable(str(e))
+        except EOFError:
+            raise
         except Exception, e:
             return messages.Unloadable("load error %s: %s" % (type(e).__name__, e))
 _recv.locks = {}
