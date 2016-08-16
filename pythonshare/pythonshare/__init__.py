@@ -65,7 +65,7 @@ def _send(msg, destination):
     if not destination in _send.locks:
         _send.locks[destination] = thread.allocate_lock()
     with _send.locks[destination]:
-        cPickle.dump(msg, destination)
+        cPickle.dump(msg, destination, 2)
         destination.flush()
 _send.locks = {}
 
