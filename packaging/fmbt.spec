@@ -1,6 +1,6 @@
 Name:           fmbt
 Version:        0.35
-Release:        0.rc2
+Release:        0.rc3
 Summary:        free Model-Based Testing tool
 
 License:        LGPL
