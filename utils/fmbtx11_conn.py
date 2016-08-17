@@ -284,6 +284,7 @@ class Display(object):
         return None # optimization not implemented
 
 def shellSOE(command, username, asyncStatus, asyncOut, asyncError, usePty):
+    """run command as user, return (success, (exit status, output, error))"""
     if not username:
         username = _g_current_user
     if username != _g_current_user:
@@ -294,6 +295,7 @@ def shellSOE(command, username, asyncStatus, asyncOut, asyncError, usePty):
         else:
             spawn_command = command
         command = '''python -c "import pty; pty.spawn(%s)" ''' % (repr(spawn_command),)
+    in_child_process = False
     if (asyncStatus, asyncOut, asyncError) != (None, None, None):
         # prepare for decoupled asynchronous execution
         if asyncStatus == None: asyncStatus = "/dev/null"
@@ -301,13 +303,14 @@ def shellSOE(command, username, asyncStatus, asyncOut, asyncError, usePty):
         if asyncError == None: asyncError = "/dev/null"
         try:
             stdinFile = file("/dev/null", "r")
-            stdoutFile = file(asyncOut, "a+")
-            stderrFile = file(asyncError, "a+", 0)
-            statusFile = file(asyncStatus, "a+")
+            stdoutFile = file(asyncOut, "w")
+            stderrFile = file(asyncError, "w", 0)
+            statusFile = file(asyncStatus, "w")
         except IOError, e:
             return False, (None, None, e)
         try:
-            if os.fork() > 0:
+            in_child_process = (os.fork() == 0)
+            if not in_child_process:
                 # parent returns after successful fork, there no
                 # direct visibility to async child process beyond this
                 # point.
@@ -317,6 +320,10 @@ def shellSOE(command, username, asyncStatus, asyncOut, asyncError, usePty):
                 statusFile.close()
                 return True, (0, None, None)
         except OSError, e:
+            if in_child_process:
+                statusFile.write(str(e) + "\n")
+                statusFile.close()
+                sys.exit(0)
             return False, (None, None, e)
         os.setsid()
     else:
@@ -331,6 +338,10 @@ def shellSOE(command, username, asyncStatus, asyncOut, asyncError, usePty):
                              stderr=stderrFile,
                              close_fds=True)
     except Exception, e:
+        if in_child_process:
+            statusFile.write("127\n")
+            statusFile.close()
+            sys.exit(0)
         return False, (None, None, e)
     if asyncStatus == None and asyncOut == None and asyncError == None:
         # synchronous execution, read stdout and stderr
@@ -340,6 +351,8 @@ def shellSOE(command, username, asyncStatus, asyncOut, asyncError, usePty):
         statusFile.write(str(p.wait()) + "\n")
         statusFile.close()
         out, err = None, None
+    if in_child_process:
+        sys.exit(0) # child process ends here, do not return to pythonshare-server
     return True, (p.returncode, out, err)
 
 def atspiApplicationList():
