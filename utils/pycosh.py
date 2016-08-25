@@ -352,6 +352,38 @@ def cat(*filenames):
     concatenate contents of listed files"""
     return "".join([file(f).read() for f in expand(*filenames).splitlines()])
 
+def df(*args):
+    """df [-h] DIRNAME
+    print [human readable] free space on DIRNAME"""
+    args, dirnames = _getopts(args, "-h")
+    if "-h" in args:
+        human_readable = True
+    else:
+        human_readable = False
+    try:
+        dirname = dirnames[0]
+    except IndexError:
+        raise Exception("directory name missing")
+    if os.name == "nt": # Windows
+        cfree = ctypes.c_ulonglong(0)
+        ctypes.windll.kernel32.GetDiskFreeSpaceExW(
+            ctypes.c_wchar_p(dirname), None, None,
+            ctypes.byref(cfree))
+        free = cfree.value
+    else:  # Posix
+        st = os.statvfs(dirname)
+        free = st.f_bavail * st.f_frsize
+    if human_readable:
+        scale = "BkMGTPEZY"
+        divisions = 0
+        while free >= 1000:
+            free = free / 1024.0
+            divisions += 1
+        retval = "%.1f%s" % (free, scale[divisions])
+    else:
+        retval = str(free)
+    return retval
+
 def md5sum(*filenames):
     """md5sum FILE...
     print MD5 (128-bit) checksums."""
