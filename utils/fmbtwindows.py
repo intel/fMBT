@@ -488,7 +488,7 @@ class Device(fmbtgti.GUITestInterface):
             '''componentArgs=("where", "name='%s'"))''' %
             escapedFilename)
 
-    def getFile(self, remoteFilename, localFilename=None):
+    def getFile(self, remoteFilename, localFilename=None, compress=False):
         """
         Fetch file from the device.
 
@@ -500,8 +500,13 @@ class Device(fmbtgti.GUITestInterface):
           localFilename (optional, string or None):
                   file to be saved to local filesystem. If None,
                   return contents of the file without saving them.
+
+          compress (optional, boolean or integer):
+                  if True, file contents will be compressed for the transfer.
+                  Integer (0-9) defines compression level. The default is
+                  False: transfer without compression.
         """
-        return self._conn.recvFile(remoteFilename, localFilename)
+        return self._conn.recvFile(remoteFilename, localFilename, compress)
 
     def getMatchingPaths(self, pathnamePattern):
         """
@@ -1426,8 +1431,21 @@ class WindowsConnection(fmbtgti.GUITestConnection):
     def evalPython(self, code):
         return self._agent.eval_in(self._agent_ns, code)
 
-    def recvFile(self, remoteFilename, localFilename=None):
-        data = self._agent.eval_in(self._agent_ns, "file(%s, 'rb').read()" % (repr(remoteFilename),))
+    def recvFile(self, remoteFilename, localFilename=None, compress=False):
+        if compress:
+            if isinstance(compress, int):
+                compressLevel = compress
+            else:
+                compressLevel = 3
+            data = self._agent.eval_in(
+                self._agent_ns,
+                "zlib.compress(file(%s, 'rb').read(), %s)" % (
+                    repr(remoteFilename), compressLevel))
+            data = zlib.decompress(data)
+        else:
+            data = self._agent.eval_in(
+                self._agent_ns,
+                "file(%s, 'rb').read()" % (repr(remoteFilename),))
         if localFilename:
             file(localFilename, "wb").write(data)
             return True
