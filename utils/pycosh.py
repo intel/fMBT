@@ -27,7 +27,6 @@
 
 import atexit
 import base64
-import ctypes
 import datetime
 import difflib
 import fnmatch
@@ -49,6 +48,9 @@ import time
 import types
 import urllib2
 import zipfile
+
+if os.name == "nt":
+    import ctypes
 
 _g_pipe_filename = "pycosh.pipe.%s" % (os.getpid(),)
 _g_pipe_has_data = False
@@ -111,8 +113,16 @@ def cmd2py(cmdline):
 def prompt():
     """prompt
     print prompt"""
-    return (getpass.getuser() + "@" +
-            socket.gethostname() + ":" +
+    try:
+        user = getpass.getuser()
+    except Exception:
+        user = ""
+    try:
+        hostname = socket.gethostname()
+    except Exception:
+        hostname = ""
+    return (user + "@" +
+            hostname + ":" +
             os.getcwd() + ": ")
 
 def cd(dirname):
