@@ -279,6 +279,12 @@ for _dirname in _libpath:
         eye4graphics.openImage.restype = ctypes.c_void_p
         eye4graphics.openedImageDimensions.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
         eye4graphics.closeImage.argtypes = [ctypes.c_void_p]
+        eye4graphics.rgb5652rgb.restype = ctypes.c_int
+        eye4graphics.rgb5652rgb.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_void_p]
         break
     except: pass
 else:

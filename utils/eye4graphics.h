@@ -249,6 +249,16 @@ extern "C" {
     EXPORT
     int rgbx2rgb(char* data, int width, int height);
 
+
+    /*
+     * rgb5652rgb - convert 16-bit RGB (5-6-5) to 24-bit RGB (8-8-8).
+     *
+     * Return value:
+     *    0: all pixels are black
+     *    > 0: there is at least one non-black pixel
+     */
+    int rgb5652rgb(unsigned short* data_in, int width, int height, char* data_out);
+
     /*
      * bgr2rgb - convert bitmap data BGR to RGB.
      *

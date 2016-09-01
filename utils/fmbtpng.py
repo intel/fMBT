@@ -125,12 +125,17 @@ def raw2png(data, width, height, depth=8, fmt="RGB"):
     else:
         buf = data.contents
 
-    buf_addr = ctypes.addressof(buf)
-
     fmt = fmt.upper()
     if fmt == "RGB":
         color_type = PNG_COLOR_TYPE_RGB
         bytes_per_pixel = (depth / 8) * 3
+    elif fmt == "RGB565":
+        color_type = PNG_COLOR_TYPE_RGB
+        bytes_per_pixel = 3
+        depth = 8
+        orig_buf = buf
+        buf = ctypes.create_string_buffer(width * height * bytes_per_pixel)
+        fmbtgti.eye4graphics.rgb5652rgb(orig_buf, width, height, buf)
     elif fmt == "RGBA":
         color_type = PNG_COLOR_TYPE_RGB_ALPHA
         bytes_per_pixel = (depth / 8) * 4
@@ -148,6 +153,8 @@ def raw2png(data, width, height, depth=8, fmt="RGB"):
         bytes_per_pixel = (depth / 8) * 3
     else:
         raise ValueError('Unsupported data format "%s", use "RGB" or "RGBA"')
+
+    buf_addr = ctypes.addressof(buf)
 
     libpng.png_set_IHDR(
         png_struct, info_struct, width, height, depth,

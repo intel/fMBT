@@ -870,6 +870,25 @@ int bgrx2rgb(char* data, int width, int height)
     return has_nonblack_pixels;
 }
 
+int rgb5652rgb(unsigned short* data_in, int width, int height, char* data_out)
+{
+    const unsigned short red_mask = 0xf800;
+    const unsigned short green_mask = 0x07e0;
+    const unsigned short blue_mask = 0x001f;
+    int has_nonblack_pixels = 0;
+    for (int i = 0; i < height * width; ++i) {
+        unsigned short data16 = data_in[i];
+        unsigned char red = (data16 & red_mask) >> 11;
+        unsigned char green = (data16 & green_mask) >> 5;
+        unsigned char blue = (data16 & blue_mask);
+        if (data16 != 0) has_nonblack_pixels = 1;
+        data_out[3*i] = red << 3;
+        data_out[3*i + 1] = green << 2;
+        data_out[3*i + 2] = blue << 3;
+    }
+    return has_nonblack_pixels;
+}
+
 int rgbx2rgb(char* data, int width, int height)
 {
     int has_nonblack_pixels = 0;

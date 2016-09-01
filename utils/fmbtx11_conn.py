@@ -273,7 +273,10 @@ class Display(object):
             compressed_image = rawfmbt_header + zlib.compress(rawfmbt_data, 3)
         elif fmt.upper() == "PNG" and fmbtpng != None:
             rawdata = ctypes.string_at(image.data, image.height * image.bytes_per_line)
-            compressed_image = fmbtpng.raw2png(rawdata, image.width, image.height, image.bits_per_pixel / 4, "BGR_")
+            if image.bits_per_pixel == 16:
+                compressed_image = fmbtpng.raw2png(rawdata, image.width, image.height, 5, "RGB565")
+            else:
+                compressed_image = fmbtpng.raw2png(rawdata, image.width, image.height, image.bits_per_pixel / 4, "BGR_")
         else:
             compressed_image = None
 
