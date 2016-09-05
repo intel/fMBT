@@ -634,11 +634,15 @@ def tar(*args):
     return "\n".join(rv)
 
 def unzip(*args):
-    """unzip [-l] PKG [FILE...]
-    extract everything or FILEs from PKG"""
-    opts, filenames = _getopts(args, "l")
+    """unzip [-l] [-d DEST] PKG [FILE...]
+    extract all or FILEs from PKG to DEST"""
+    opts, filenames = _getopts(args, "ld:")
     filenames = expand(*filenames, min=1).splitlines()
     rv = []
+    if "-d" in opts:
+        dest_dir = opts["-d"]
+    else:
+        dest_dir = os.getcwd()
     if "-l" in opts:
         # only list files in archive
         for filename in filenames:
@@ -652,10 +656,10 @@ def unzip(*args):
         zf = zipfile.ZipFile(pkg)
         if extract_files:
             for extract_file in extract_files:
-                zf.extract(extract_file)
+                zf.extract(extract_file,path=dest_dir)
                 rv.append(extract_file)
         else:
-            zf.extractall()
+            zf.extractall(path=dest_dir)
             rv.extend(zf.namelist())
     return "\n".join(rv)
 
