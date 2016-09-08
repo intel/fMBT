@@ -794,7 +794,7 @@ def sendMouseUp(button=1):
     return sendInput(event)
 
 def sendMouseMove(x, y, button=1):
-    flags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE
+    flags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE | MOUSEEVENTF_VIRTUALDESK
     x = x * 65535 /_mouse_input_area[0]
     y = y * 65535 /_mouse_input_area[1]
     event = Mouse(flags, x, y, 0)
