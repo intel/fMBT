@@ -1,8 +1,24 @@
-fmbt (0.35-0.rc3) unstable; urgency=low
+fmbt (0.35-1) unstable; urgency=low
 
-  * Development version.
+  * fmbtandroid:
+    - Support Android Nougat.
+    - Fix screen size issue on the latest Android 6.0.1.
+  * pythonshare:
+    - Use more efficient protocol on all transmissions. Makes fmbtwindows
+      and other pythonshare-based agents run faster.
+  * fmbtwindows:
+    - Device.getFile() parameter "compress" added, improves tranmission
+      speed if file data can be compressed.
+    - Support synthesizing mouse events on multiscreen setups.
+  * fmbtx11:
+    - Support screens with 16-bit color depth.
+    - Screen.shellSOE() async execution issue fixed.
+  * pycosh:
+    - df [-h] added, shows free disk space.
+    - unzip parameter "-d", sets destination directory.
+    - Runs also on hosts without user and/or hostname.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 21 Jul 2016 11:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Thu, 8 Sep 2016 09:42:00 +0300
 
 fmbt (0.34-1) unstable; urgency=low
 
