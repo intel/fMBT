@@ -72,6 +72,14 @@ def _getopts(args, shortopts, longopts=()):
         raise Exception("Options: -%s (%s)" % (shortopts, e))
     return dict(opts), remainder
 
+def _human_readable_size(size):
+    scale = "BkMGTPEZY"
+    divisions = 0
+    while size >= 1000:
+        size = size / 1024.0
+        divisions += 1
+    return "%.1f%s" % (size, scale[divisions])
+
 def _output(s):
     sys.stdout.write(s)
     sys.stdout.write("\n")
@@ -198,6 +206,33 @@ def diff(*args):
     # append endlines to lines where it is missing
     difflines = [l + ["", "\n"][l[-1] != "\n"] for l in udiff]
     return "".join(difflines)
+
+def du(*args):
+    """du [-h] FILE...
+    print [human readable] disk usage of FILEs"""
+    opts, filenames = _getopts(args, "h")
+    if "-h" in opts:
+        size_formatter = _human_readable_size
+    else:
+        size_formatter = lambda size: str(size)
+    filenames = expand(*filenames, accept_pipe=False, min=1).splitlines()
+    total_size = 0
+    retval = []
+    for direntry in filenames:
+        size = None
+        if os.path.isdir(direntry):
+            for root, dirs, filelist in os.walk(direntry):
+               for filename in filelist:
+                   fullname = os.path.join(root, filename)
+                   size = os.stat(fullname).st_size
+                   retval.append("%-8s %s" % (size_formatter(size), fullname))
+                   total_size += size
+        elif os.path.isfile(direntry):
+            size = os.stat(direntry).st_size
+            total_size += size
+            retval.append("%-8s %s" % (size_formatter(size), direntry))
+    retval.append(size_formatter(total_size))
+    return "\n".join(retval)
 
 def echo(*args):
     return " ".join(args)
@@ -384,12 +419,7 @@ def df(*args):
         st = os.statvfs(dirname)
         free = st.f_bavail * st.f_frsize
     if human_readable:
-        scale = "BkMGTPEZY"
-        divisions = 0
-        while free >= 1000:
-            free = free / 1024.0
-            divisions += 1
-        retval = "%.1f%s" % (free, scale[divisions])
+        retval = _human_readable_size(free)
     else:
         retval = str(free)
     return retval
