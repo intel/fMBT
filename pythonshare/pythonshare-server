@@ -28,10 +28,9 @@ General options:
           Start server in debug mode. Does not fork daemon, writes
           log to standard output.
 
-  -D, --debug-stdout=SIZE
+  -D, --debug-limit=SIZE
           Set maximum size (in characters) for debug messages that are
-          printed to standard output. -1 is unlimited, 0 disables
-          printing debug to standard output.
+          logged. -1 is unlimited. The default is 240.
 
   -h, --help
           Print help.
@@ -91,7 +90,7 @@ import os
 opt_bind_host = "127.0.0.1" # allow only local connections by default
 opt_bind_port = pythonshare.default_port
 opt_debug = False
-opt_debug_stdout_limit = None
+opt_debug_limit = None
 opt_log_fd = None
 opt_log_filename = None
 opt_namespace = None
@@ -126,7 +125,7 @@ if __name__ == "__main__":
     try:
         opts, remainder = getopt.gnu_getopt(
             sys.argv[1:], "dD:hp:n:E:I:i:l:w:",
-            ["debug", "debug-stdout=", "help", "port=", "log=",
+            ["debug", "debug-stdout=", "debug-limit=", "help", "port=", "log=",
              "namespace=", "init=", "export-to=", "import-from=",
              "password=", "password-file=", "interface=",
              "whitelist-local="])
@@ -139,11 +138,9 @@ if __name__ == "__main__":
     for opt, arg in opts:
         if opt in ["-d", "--debug"]:
             opt_debug = True
-            opt_log_fd, opt_log_filename = tempfile.mkstemp(
-                prefix="pythonshare.server.%s." % (os.getpid(),), text=True)
-        elif opt in ["-D", "--debug-stdout"]:
+        elif opt in ["-D", "--debug-stdout", "--debug-limit"]:
             try:
-                opt_debug_stdout_limit = int(arg)
+                opt_debug_limit = int(arg)
             except ValueError:
                 error('invalid debug message length: "%s"' % (arg,))
         elif opt in ["-h", "--help"]:
@@ -213,4 +210,4 @@ if __name__ == "__main__":
         log_fd = opt_log_fd,
         ns_init_import_export = opt_init_import_export,
         conn_opts = opt_conn_opts,
-        debug_stdout_limit = opt_debug_stdout_limit)
+        debug_limit = opt_debug_limit)
