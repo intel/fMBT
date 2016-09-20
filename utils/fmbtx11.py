@@ -299,6 +299,10 @@ class Screen(fmbtgti.GUITestInterface):
             viewSource = self._refreshViewDefaults.get("viewSource", "atspi")
         if viewSource == "atspi":
             foundItems = self.existingConnection().recvAtspiViewData(window)
+            if self.screenshotDir() == None:
+                self.setScreenshotDir(self._screenshotDirDefault)
+            if self.screenshotSubdir() == None:
+                self.setScreenshotSubdir(self._screenshotSubdirDefault)
             viewFilename = self._newScreenshotFilepath()[:-3] + "view"
             file(viewFilename, "w").write(repr(foundItems))
             self._lastView = View(viewFilename, foundItems)
