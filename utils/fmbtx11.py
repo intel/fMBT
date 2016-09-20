@@ -273,6 +273,14 @@ class Screen(fmbtgti.GUITestInterface):
         self._refreshViewDefaults = {}
         self.setConnection(X11Connection(display))
 
+    def atspiApplicationList(self):
+        """Returns list of running ATSPI applications.
+
+        refreshView with view source "atspi" works for these
+        applications.
+        """
+        return fmbtx11_conn.atspiApplicationList()
+
     def existingView(self):
         if self._lastView:
             return self._lastView
@@ -352,6 +360,16 @@ class Screen(fmbtgti.GUITestInterface):
 
     def view(self):
         return self._lastView
+
+    def windowList(self):
+        """
+        Return list of properties of windows (dictionaries)
+
+        Example: list window id's and names:
+          for props in screen.windowList():
+              print props["window"], props["name"]
+        """
+        return self.existingConnection().recvChildWindows(recursive=True)
 
 class X11Connection(fmbtx11_conn.Display):
     def __init__(self, display):

@@ -72,6 +72,8 @@ libX11.XDisplayKeycodes.argtypes = [
 
 libX11.XFlush.argtypes = [ctypes.c_void_p]
 
+libX11.XFree.argtypes = [ctypes.c_void_p]
+
 libX11.XGetGeometry.argtypes = [
     ctypes.c_void_p, ctypes.c_uint, # display, drawable
     ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, # root, x, y
@@ -98,6 +100,21 @@ libX11.XKeysymToKeycode.argtypes = [
 libX11.XRootWindow.argtypes = [
     ctypes.c_void_p, ctypes.c_int]
 libX11.XRootWindow.restype = ctypes.c_uint32
+
+libX11.XQueryTree.argtypes = [
+    ctypes.c_void_p, # display
+    ctypes.c_uint32, # window
+    ctypes.c_void_p, # root_return
+    ctypes.c_void_p, # parent_return
+    ctypes.c_void_p, # children_return
+    ctypes.c_void_p] # nchildren_return
+libX11.XQueryTree.restype = ctypes.c_int
+
+libX11.XFetchName.argtypes = [
+    ctypes.c_void_p, # display
+    ctypes.c_uint32, # window
+    ctypes.c_void_p] # window_name_return
+libX11.XFetchName.restype = ctypes.c_int
 
 libXtst.XTestFakeKeyEvent.argtypes = [
     ctypes.c_void_p, ctypes.c_uint, ctypes.c_int, ctypes.c_ulong]
@@ -257,6 +274,87 @@ class Display(object):
         for character in string:
             success = success and self.sendPress(character)
         return success
+
+    def recvWindowBbox(self, window, parentBbox=None):
+        rw = ctypes.c_uint32(0)
+        x = ctypes.c_int(0)
+        y = ctypes.c_int(0)
+        width = ctypes.c_uint(0)
+        height = ctypes.c_uint(0)
+        bwidth = ctypes.c_uint(0)
+        depth = ctypes.c_uint(0)
+        libX11.XGetGeometry(
+            self._display, window,
+            ctypes.byref(rw),
+            ctypes.byref(x), ctypes.byref(y),
+            ctypes.byref(width), ctypes.byref(height),
+            ctypes.byref(bwidth), ctypes.byref(depth))
+        if parentBbox == None:
+            parent = self.recvParentWindow(window)
+            if parent != 0:
+                parentBbox = self.recvWindowBbox(parent)
+            else:
+                parentBbox = (0, 0, 0, 0)
+        left = int(x.value + parentBbox[0])
+        top = int(y.value + parentBbox[1])
+        bbox = (left, top, int(left + width.value), int(top + height.value))
+        return bbox
+
+    def recvParentWindow(self, window):
+        root = ctypes.c_uint32(0)
+        parent = ctypes.c_uint32(0)
+        children = ctypes.POINTER(ctypes.c_uint32)()
+        nchildren = ctypes.c_int(0)
+        libX11.XQueryTree(self._display,
+                          window,
+                          ctypes.byref(root),
+                          ctypes.byref(parent),
+                          ctypes.byref(children),
+                          ctypes.byref(nchildren))
+        if children:
+            libX11.XFree(children)
+        return int(parent.value)
+
+    def recvChildWindows(self, window=None, recursive=True, parentBbox=None):
+        if window == None:
+            window = self._root_window
+        if parentBbox == None:
+            parentBbox = self.recvWindowBbox(window)
+        root = ctypes.c_uint32(0)
+        parent = ctypes.c_uint32(0)
+        children = ctypes.POINTER(ctypes.c_uint32)()
+        nchildren = ctypes.c_int(0)
+        libX11.XQueryTree(self._display,
+                          window,
+                          ctypes.byref(root),
+                          ctypes.byref(parent),
+                          ctypes.byref(children),
+                          ctypes.byref(nchildren))
+        windows = []
+        window_name = ctypes.c_char_p()
+        for c in xrange(nchildren.value):
+            if ctypes.sizeof(ctypes.c_void_p) == 4: # 32-bit
+                child = int(children[c])
+            else: # 64-bit
+                child = int(children[c*2])
+            libX11.XFetchName(self._display, child, ctypes.byref(window_name))
+            if window_name:
+                name = window_name
+            else:
+                name = None
+            bbox = self.recvWindowBbox(child, parentBbox=parentBbox)
+            window_dict = {
+                "window": child,
+                "parent": int(parent.value),
+                "name": window_name.value,
+                "bbox": bbox,
+            }
+            windows.append(window_dict)
+            libX11.XFree(window_name)
+            if recursive:
+                windows.extend(self.recvChildWindows(child, True, parentBbox=bbox))
+        libX11.XFree(children)
+        return windows
 
     def recvScreenshot(self, fmt="FMBTRAWX11"):
         image_p = libX11.XGetImage(self._display, self._root_window,
