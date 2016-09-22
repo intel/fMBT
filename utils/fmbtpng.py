@@ -37,19 +37,23 @@ PNG_TRANSFORM_IDENTITY = 0
 
 NULL = ctypes.c_void_p(0)
 
-try:
-    libpng = ctypes.CDLL("libpng12.so.0")
-    PNG_LIBPNG_VERSION_STRING = ctypes.c_char_p("1.2")
-except OSError, e:
+libpng = None
+for libpng_filename in ["libpng.so", "libpng12.so.0", "libpng15.so.15",
+                        "libpng16.so.16"]:
     try:
-        libpng = ctypes.CDLL("libpng16.so.16")
-        PNG_LIBPNG_VERSION_STRING = ctypes.c_char_p("1.6.8")
-    except OSError, e:
-        raise ImportError("loading libpng.so failed")
+        libpng = ctypes.CDLL(libpng_filename)
+        break
+    except OSError:
+        continue
+if libpng == None:
+    raise ImportError("loading libpng.so failed")
 
 libpng.png_create_write_struct.restype = ctypes.c_void_p
 libpng.png_create_write_struct.argtypes = [
     ctypes.c_char_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
+
+libpng.png_get_header_ver.restype = ctypes.c_char_p
+libpng.png_get_header_ver.argtypes = [ctypes.c_void_p]
 
 libpng.png_create_info_struct.restype = ctypes.c_void_p
 libpng.png_create_info_struct.argtypes = [ctypes.c_void_p]
@@ -70,6 +74,8 @@ libpng.png_set_IHDR.argtypes = [
 libpng.png_write_png.restype = None
 libpng.png_write_png.argtypes = [
     ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p]
+
+PNG_LIBPNG_VERSION_STRING = libpng.png_get_header_ver(None)
 
 def raw2png(data, width, height, depth=8, fmt="RGB"):
     """convert raw image into PNG
