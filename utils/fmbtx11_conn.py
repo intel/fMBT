@@ -490,6 +490,10 @@ def atspiAddItem(item, parent, foundItems):
         rv["attributes"] = dict([a.split(':', 1) for a in item.getAttributes()])
     except:
         rv["attributes"] = None
+    try:
+        rv["description"] = item.description
+    except:
+        rv["description"] = None
     rv["actions"] = []
     try:
         actions = item.queryAction()
