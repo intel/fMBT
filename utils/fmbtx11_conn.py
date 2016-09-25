@@ -470,9 +470,16 @@ def atspiAddItem(item, parent, foundItems):
     rv = {
         "id": itemId,
         "parent": repr(parent) if parent != None else None,
-        "class": item.get_role_name(),
-        "name": item.get_name(),
     }
+    try:
+        rv["role"] = item.get_role_name()
+    except:
+        rv["role"] = None
+    rv["class"] = rv["role"]
+    try:
+        rv["name"] = item.name
+    except:
+        rv["name"] = None
     try:
         bbox = item.queryComponent().getExtents(pyatspi.DESKTOP_COORDS)
         x, y, w, h = bbox

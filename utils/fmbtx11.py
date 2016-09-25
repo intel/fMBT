@@ -120,7 +120,7 @@ class View(object):
         for item in itemTree:
             className = item.get("class", "")
             text = item.get("text", "")
-            if text == "":
+            if text == "" or text == None:
                 text = item.get("name", "")
             if text == "":
                 text = className
@@ -192,7 +192,7 @@ class View(object):
 
     def findItemsByText(self, text, partial=False, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
         if partial:
-            c = lambda item: (text in item._text)
+            c = lambda item: (text in item._text or text in item.properties()["name"])
         else:
             c = lambda item: (text == item._text)
         return self.findItems(c, count=count, searchRootItem=searchRootItem, searchItems=searchItems, onScreen=onScreen)
@@ -287,6 +287,10 @@ class Screen(fmbtgti.GUITestInterface):
         else:
             raise FMBTWindowsError("view is not available. Missing refreshView()?")
 
+    def itemOnScreen(self, guiItem):
+        maxX, maxY = self.screenSize()
+        return fmbtgti._boxOnRegion(guiItem.bbox(), (0, 0, maxX, maxY))
+
     def keyNames(self):
         return _keyNames[:]
 
@@ -305,7 +309,9 @@ class Screen(fmbtgti.GUITestInterface):
                 self.setScreenshotSubdir(self._screenshotSubdirDefault)
             viewFilename = self._newScreenshotFilepath()[:-3] + "view"
             file(viewFilename, "w").write(repr(foundItems))
-            self._lastView = View(viewFilename, foundItems)
+            self._lastView = View(
+                viewFilename, foundItems,
+                itemOnScreen=lambda i: self.itemOnScreen(i))
         else:
             raise ValueError('viewSource "%s" not supported' % (viewSource,))
         return self._lastView
