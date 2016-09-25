@@ -246,6 +246,12 @@ class View(object):
         area_items = [((i.bbox()[2] - i.bbox()[0]) * (i.bbox()[3] - i.bbox()[1]), i) for i in items]
         return [i for _, i in sorted(area_items)]
 
+    def items(self):
+        """
+        Returns list of all items in the view
+        """
+        return fmbtgti.sortItems(self._viewItems.values(), "topleft")
+
     def save(self, fileOrDirName):
         """
         Save view dump to a file.
