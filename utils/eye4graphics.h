@@ -257,6 +257,7 @@ extern "C" {
      *    0: all pixels are black
      *    > 0: there is at least one non-black pixel
      */
+    EXPORT
     int rgb5652rgb(unsigned short* data_in, int width, int height, char* data_out);
 
     /*
