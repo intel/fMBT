@@ -1613,7 +1613,8 @@ class GUITestInterface(object):
             raise ConnectionError("not connected")
 
     def visualLog(self, *args):
-        """Writes parameters to the visual log, given that visual logging is
+        """
+        Writes parameters to the visual log, given that visual logging is
         enabled.
         """
         pass
@@ -1625,6 +1626,14 @@ class GUITestInterface(object):
         """
         width, height = self.screenSize()
         return _intCoords((x, y), (width, height))
+
+    def relCoords(self, (x, y)):
+        """
+        Convert coordinates (x, y) to relative coordinates in range [0.0, 1.0].
+        """
+        width, height = self.screenSize()
+        ix, iy = _intCoords((x, y), (width, height))
+        return (float(ix)/width, float(iy)/height)
 
     def itemOnScreen(self, guiItem):
         """
