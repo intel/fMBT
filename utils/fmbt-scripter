@@ -365,32 +365,6 @@ class MyScaleEvents(QtCore.QObject):
             coefficient = 1.0 + event.delta() / 1440.0
             self.changeScale(coefficient)
             return False
-        elif self.mainwindow.screenshotImageIndex == None:
-            return False
-        if event.type() == QtCore.QEvent.MouseMove:
-            if self.mainwindow.gestureStarted:
-                self.mainwindow.gestureEvents.append(
-                    GestureEvent("mousemove", None, self.posToRel(event.pos)))
-        elif event.type() == QtCore.QEvent.MouseButtonPress:
-            if not self.mainwindow.gestureStarted:
-                self.mainwindow.gestureStarted = True
-                self.mainwindow.gestureEvents = [
-                    GestureEvent("mousedown", 0, self.posToRel(event.pos))]
-        elif event.type() == QtCore.QEvent.MouseButtonRelease:
-            if self.mainwindow.gestureStarted:
-                self.mainwindow.gestureStarted = False
-                self.mainwindow.gestureEvents.append(
-                    GestureEvent("mouseup", 0, self.posToRel(event.pos)))
-                s = gestureToGti(self.mainwindow.gestureEvents)
-                cmd = self.mainwindow._sut + s
-                self.mainwindow.gestureEvents = []
-                if self.mainwindow.screenshotButtonControl.isChecked():
-                    debug("sending command %s" % (cmd,))
-                    self.mainwindow.runStatement(cmd)
-                else:
-                    debug("dropping command %s" % (cmd,))
-                if self.mainwindow.editorButtonRec.isChecked():
-                    self.mainwindow.insertRecordedCommand(cmd)
         elif event.type() == QtCore.QEvent.ToolTip:
             if not hasattr(self.attrowner, 'cursorForPosition'):
                 self.showScreenshotTooltip(event)
@@ -426,6 +400,33 @@ class MyScaleEvents(QtCore.QObject):
                                             '%s<br>not in bitmapPath' % (
                                                 filename,))
                 self.visibleTip = filepath
+        elif self.mainwindow.screenshotImageIndex == None:
+            return False
+        if event.type() == QtCore.QEvent.MouseMove:
+            if self.mainwindow.gestureStarted:
+                self.mainwindow.gestureEvents.append(
+                    GestureEvent("mousemove", None, self.posToRel(event.pos)))
+        elif event.type() == QtCore.QEvent.MouseButtonPress:
+            if not self.mainwindow.gestureStarted:
+                self.mainwindow.gestureStarted = True
+                self.mainwindow.gestureEvents = [
+                    GestureEvent("mousedown", 0, self.posToRel(event.pos))]
+        elif event.type() == QtCore.QEvent.MouseButtonRelease:
+            if self.mainwindow.gestureStarted:
+                self.mainwindow.gestureStarted = False
+                self.mainwindow.gestureEvents.append(
+                    GestureEvent("mouseup", 0, self.posToRel(event.pos)))
+                s = gestureToGti(self.mainwindow.gestureEvents)
+                cmd = self.mainwindow._sut + s
+                self.mainwindow.gestureEvents = []
+                if self.mainwindow.screenshotButtonControl.isChecked():
+                    debug("sending command %s" % (cmd,))
+                    self.mainwindow.runStatement(cmd)
+                else:
+                    debug("dropping command %s" % (cmd,))
+                if self.mainwindow.editorButtonRec.isChecked():
+                    self.mainwindow.insertRecordedCommand(cmd)
+
             return True
         return False
     def showScreenshotTooltip(self, event):
@@ -440,6 +441,9 @@ class MyScaleEvents(QtCore.QObject):
                         QtGui.QToolTip.showText(event.globalPos(), item.dumpProperties())
                         break
         xRel, yRel = self.posToRel(event.pos)
+        if xRel == None:
+            # cannot translate into image coordinates, do nothing
+            return
         self.mainwindow._screenshotCursorX = int(x)
         self.mainwindow._screenshotCursorY = int(y)
         self.mainwindow._screenshotCursorXRel = "%.2f" % (xRel,)
