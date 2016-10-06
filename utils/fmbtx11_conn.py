@@ -1,3 +1,5 @@
+# encoding: utf-8
+
 # fMBT, free Model Based Testing tool
 # Copyright (c) 2014, Intel Corporation.
 #
@@ -195,7 +197,9 @@ class Display(object):
             '*': "asterisk", '+': "plus", '-': "minus", '/': "slash",
             '.': "period", ',': "comma", ':': "colon", ';': "semicolon",
             '<': "less", '=': "equal", '>': "greater",
-            '?': "question", '@': "at"}
+            '?': "question", '@': "at",
+            u'å': "aring", u'ä': "adiaeresis", u'ö': "odiaeresis",
+            u'Å': "Aring", u'Ä': "Adiaeresis", u'Ö': "Odiaeresis"}
 
     def __del__(self):
         if self._display:
@@ -213,9 +217,13 @@ class Display(object):
         first = (keycode - self._cMinKeycode.value) * self._cKeysymsPerKeycode.value
 
         for modifier_index, modifier in enumerate([self._shiftModifier, None, None, self._level3Modifier]):
+            # see if a modifier is needed to produce a character
             if modifier == None: continue
             try:
-                if chr(self._keysyms[first + modifier_index + 1]) == origChar:
+                if isinstance(origChar, str) and chr(self._keysyms[first + modifier_index + 1]) == origChar:
+                    _modifiers.append(modifier)
+                    break
+                elif isinstance(origChar, unicode) and unichr(self._keysyms[first + modifier_index + 1]) == origChar:
                     _modifiers.append(modifier)
                     break
             except ValueError: pass
