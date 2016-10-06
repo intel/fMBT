@@ -811,6 +811,8 @@ class MainWindow(QtGui.QMainWindow):
         self._screenshotCursorRGB = "N/A"
         self._screenshotErrorFilename = None
         self._scriptFilename = None
+        self._scriptFileOnDiskContent = None # original content on disk
+        self._scriptFileOnDiskName = None # file being watched on disk
         self._updateNextScreenshotFromFiles = []
         self._updateScreenshotScheduled = False
         self._fmbtEnv = {
@@ -1568,10 +1570,52 @@ class MainWindow(QtGui.QMainWindow):
             self.scheduleUpdateScreenshot(1.0)
         return exc == None
 
+    def scriptFileOnDiskChanged(self, update=True):
+        """return True if script file has changed on disk"""
+        if not self._scriptFilename:
+            # script has no name
+            if update:
+                self._scriptFileOnDiskName = None
+                self._scriptFileOnDiskContent = None
+            return False
+        try:
+            onDiskContent = codecs.open(
+                self._scriptFilename, encoding="utf8").read()
+        except IOError:
+            return False
+        if self._scriptFileOnDiskName != self._scriptFilename:
+            # watching a file with old name, change watched name
+            if update:
+                self._scriptFileOnDiskName = self._scriptFilename
+                self._scriptFileOnDiskContent = onDiskContent
+            return False
+        elif self._scriptFileOnDiskContent == None:
+            # first time reading watched content
+            if update:
+                self._scriptFileOnDiskContent = onDiskContent
+            return False
+        elif self._scriptFileOnDiskContent == onDiskContent:
+            # no change
+            return False
+        else:
+            # file content has changed
+            if update:
+                self._scriptFileOnDiskContent = onDiskContent
+            return True
+
     def save(self):
+        if self.scriptFileOnDiskChanged():
+            reply = QtGui.QMessageBox.question(
+                _win, "fmbt-scripter",
+                '%s has changed on disk. Save changes?' % (
+                    self._scriptFilename,),
+                QtGui.QMessageBox.Save | QtGui.QMessageBox.Cancel)
+            if reply != QtGui.QMessageBox.Save:
+                return False
         if self._scriptFilename:
             codecs.open(self._scriptFilename, "w", encoding="utf8").write(
                 self.editor.toPlainText())
+            self.scriptFileOnDiskChanged(update=True)
         else:
             return self.saveAs()
 
@@ -1940,6 +1984,7 @@ class MainWindow(QtGui.QMainWindow):
         self.setScriptFilename(filepath)
         self.editor.setPlainText(
             codecs.open(self._scriptFilename, encoding="utf8").read())
+        self.scriptFileOnDiskChanged(update=True) # update file being watched
 
     def _fmbtExec(self, statement, silent=False):
         if not silent or opt_debug:
