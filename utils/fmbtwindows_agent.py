@@ -18,7 +18,10 @@ import __builtin__
 import atexit
 import base64
 import ctypes
-import ctypes.wintypes
+try:
+    import ctypes.wintypes
+except:
+    raise ImportError("fmbtwindows_agent runs only on Windows")
 import glob
 import os
 import Queue
@@ -475,6 +478,9 @@ touchInfo2.rcContact = ctypes.wintypes.RECT(
 touchInfo2.orientation = 90
 touchInfo2.pressure = 32000
 
+ctypes.windll.user32.VkKeyScanW.argtypes = [ctypes.c_wchar]
+ctypes.windll.user32.VkKeyScanW.restype = ctypes.c_short
+
 if not "touchInfoLock" in globals():
     touchInfoLock = thread.allocate_lock()
 
@@ -683,6 +689,12 @@ def keyboardStream(string):
         character = ALTER.get(character, character)
         if character in ORDER:
             code = ord(character.upper())
+        elif ctypes.windll.user32.VkKeyScanW(character) != -1:
+            code = ctypes.windll.user32.VkKeyScanW(character)
+            modifiers = (code & 0xff00) >> 8
+            if (modifiers & 1 and not shiftPressed) or (not modifiers & 1 and shiftPressed):
+                yield Keyboard(VK_SHIFT, shiftPressed and KEYEVENTF_KEYUP)
+                shiftPressed = not shiftPressed
         elif character in OTHER:
             code = OTHER[character]
         else:
