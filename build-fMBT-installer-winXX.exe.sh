@@ -21,6 +21,7 @@ if [ -z "$WINDOWS_DEPENDENCY_MIRROR" ]; then
     PYSIDE64_URL=http://ftp.vim.org/languages/qt/official_releases/pyside/PySide-1.2.2.win-amd64-py2.7.exe
     GNUPLOT_URL=http://sourceforge.net/projects/gnuplot/files/gnuplot/4.6.6/gp466-win32-setup.exe
     TESSERACT_URL=https://tesseract-ocr.googlecode.com/files/tesseract-ocr-setup-3.02.02.exe
+    TESSERACT_URL=https://sourceforge.net/projects/tesseract-ocr-alt/files/tesseract-ocr-setup-3.02.02.exe
 else
     IMAGEMAGICK_URL=$WINDOWS_DEPENDENCY_MIRROR/ImageMagick-6.9.0-0.tar.xz
     GRAPHVIZ_URL=$WINDOWS_DEPENDENCY_MIRROR/graphviz-2.38.msi
