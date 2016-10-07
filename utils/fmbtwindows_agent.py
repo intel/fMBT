@@ -646,7 +646,6 @@ def Hardware(message, parameter=0):
 UPPER = frozenset('~!@#$%^&*()_+QWERTYUIOP{}|ASDFGHJKL:"ZXCVBNM<>?')
 LOWER = frozenset("`1234567890-=qwertyuiop[]\\asdfghjkl;'zxcvbnm,./")
 ORDER = string.ascii_letters + string.digits + ' \b\r\t'
-ALTER = dict(__builtin__.zip('!@#$%^&*()', '1234567890'))
 OTHER = {'`': VK_OEM_3,
          '~': VK_OEM_3,
          '-': VK_OEM_MINUS,
@@ -686,15 +685,25 @@ def keyboardStream(string):
         if shiftPressed and character in LOWER or not shiftPressed and character in UPPER:
             yield Keyboard(VK_SHIFT, shiftPressed and KEYEVENTF_KEYUP)
             shiftPressed = not shiftPressed
-        character = ALTER.get(character, character)
-        if character in ORDER:
-            code = ord(character.upper())
-        elif ctypes.windll.user32.VkKeyScanW(character) != -1:
+        if ctypes.windll.user32.VkKeyScanW(character) != -1:
             code = ctypes.windll.user32.VkKeyScanW(character)
             modifiers = (code & 0xff00) >> 8
             if (modifiers & 1 and not shiftPressed) or (not modifiers & 1 and shiftPressed):
                 yield Keyboard(VK_SHIFT, shiftPressed and KEYEVENTF_KEYUP)
                 shiftPressed = not shiftPressed
+            if modifiers & 2:
+                yield Keyboard(VK_CONTROL)
+            if modifiers & 4:
+                yield Keyboard(VK_MENU)
+            yield Keyboard(code)
+            yield Keyboard(code, KEYEVENTF_KEYUP)
+            if modifiers & 4:
+                yield Keyboard(VK_MENU, KEYEVENTF_KEYUP)
+            if modifiers & 2:
+                yield Keyboard(VK_CONTROL, KEYEVENTF_KEYUP)
+            continue
+        elif character in ORDER:
+            code = ord(character.upper())
         elif character in OTHER:
             code = OTHER[character]
         else:
