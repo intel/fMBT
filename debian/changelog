@@ -1,8 +1,25 @@
-fmbt (0.36-0.rc0) unstable; urgency=low
+fmbt (0.36-1) unstable; urgency=low
 
-  * Development version.
+  * fmbtx11:
+    - Screen.refreshView() improved a lot.
+    - Screen.atspiApplicationList() added, lists applications from which
+      refreshView() can fetch accessibility data.
+    - Screen.windowList() added, lists X11 windows.
+    - More characters supported by Screen.type().
+  * pythonshare-server:
+    - Truncate debug data written to a log file with -D LENGTH.
+  * fmbt-scripter:
+    - Show variable values on tooltips also without screenshots.
+    - Ask user before saving a script if the file has changed on disk.
+  * fmbtwindows:
+    - Device.type() supports all characters on active keyboard layout.
+  * fmbtpng:
+    - improved compatibility with various libpng versions.
+  * pycosh:
+    - du [-h] added, shows disk usage
+  * Windows build script updated to use new Tesseract URL.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 9 Sep 2016 13:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 7 Oct 2016 14:42:00 +0300
 
 fmbt (0.35-1) unstable; urgency=low
 
