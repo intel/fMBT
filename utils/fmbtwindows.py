@@ -468,6 +468,28 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self.existingConnection().sendCloseWindow(window)
 
+    def errorReporting(self):
+        """
+        Returns Windows error reporting (WER) settings in a dictionary
+
+        See also: setErrorReporting()
+                  MSDN WER Settings.
+        """
+        supported_settings = ["DisableArchive",
+                              "Disabled",
+                              "DisableQueue",
+                              "DontShowUI",
+                              "DontSendAdditionalData",
+                              "LoggingDisabled",
+                              "MaxArchiveCount",
+                              "MaxQueueCount"]
+        settings = {}
+        for setting in supported_settings:
+            settings[setting] = self.getRegistry(
+                r"HKEY_CURRENT_USER\Software\Microsoft\Windows\Windows Error Reporting",
+                setting)[0]
+        return settings
+
     def existingView(self):
         if self._lastView:
             return self._lastView
@@ -946,6 +968,26 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self.existingConnection().evalPython(
             "setClipboardText(%s)" % (repr(data),))
+
+    def setErrorReporting(self, settings):
+        """
+        Modify Windows error reporting settings (WER)
+
+        Parameters:
+          settings (dictionary):
+                  WER settings and values to be set.
+
+        Example: disable showing interactive crash dialogs
+          setErrorReporting({"DontShowUI": 1})
+
+        See also: errorReporting(),
+                  MSDN WER Settings.
+        """
+        for setting in settings:
+            self.setRegistry(
+                r"HKEY_CURRENT_USER\Software\Microsoft\Windows\Windows Error Reporting",
+                setting, settings[setting])
+        return True
 
     def setDisplaySize(self, size):
         """
