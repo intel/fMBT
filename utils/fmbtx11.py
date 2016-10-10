@@ -16,6 +16,11 @@
 
 """
 This library implements fmbt GUITestInterface for X.
+
+Using Screen.refreshView() requires the pyatspi library and enabling
+accessilibity. For example:
+
+gsettings set org.gnome.desktop.interface toolkit-accessibility true
 """
 
 import fmbt_config

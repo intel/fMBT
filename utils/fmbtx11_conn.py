@@ -35,8 +35,7 @@ try:
     import gi
     gi.require_version('Atspi', '2.0')
     import pyatspi
-    """gsettings set org.gnome.desktop.interface toolkit-accessibility true"""
-except ImportError:
+except:
     pyatspi = None
 
 _g_current_user = getpass.getuser()
