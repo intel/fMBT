@@ -58,6 +58,13 @@ except:
     _winreg = None
     _REG_types = {}
 
+_g_archRegistryKeys = (0,)
+_g_arch = os.environ.get('PROCESSOR_ARCHITECTURE', '')
+_g_arch64 = os.environ.get('PROCESSOR_ARCHITEW6432', '')
+if _winreg:
+    if _g_arch.lower() == "x86" and "64" in _g_arch64:
+        _g_archRegistryKeys = (_winreg.KEY_WOW64_32KEY, _winreg.KEY_WOW64_64KEY)
+
 _g_rmAtExit = []
 def cleanUp():
     for filename in _g_rmAtExit:
@@ -1190,6 +1197,46 @@ def getRegistry(key, valueName):
     value, valueType = _winreg.QueryValueEx(regKey, valueName)
     _winreg.CloseKey(regKey)
     return value, _REG_types.get(valueType, None)
+
+def findRegistry(rootKey, key=None, valueName=None):
+    """returns first matching (key, valueName) pair in registry
+    if valueName is not searched for, value will be None"""
+    rootKey = rootKey.replace('/', '\\')
+    if key != None:
+        key = key.replace('/', '\\')
+
+    for archBits in _g_archRegistryKeys:
+        try:
+            root = _openRegistryKey(rootKey, _winreg.KEY_READ | archBits)
+        except OSError:
+            continue
+        try:
+            if valueName != None:
+                valueCount = _winreg.QueryInfoKey(root)[1]
+                for valueIndex in xrange(valueCount):
+                    _valueName, _valueData, _valueType = _winreg.EnumValue(root, valueIndex)
+                    if key == None:
+                        # Look for a valueName only
+                        if _valueName == valueName:
+                            return rootKey, _valueName
+                    else:
+                        # Look for key-valueName combination
+                        if _valueName == valueName and rootKey.endswith(key):
+                            return rootKey, _valueName
+            # Recursive step - look among subkeys
+            subkeyCount = _winreg.QueryInfoKey(root)[0]
+            for subkeyIndex in xrange(subkeyCount):
+                subkeyName = _winreg.EnumKey(root, subkeyIndex)
+                fullPathBackslash = rootKey + "\\" + subkeyName
+                if valueName == None:
+                    # Look for a key only
+                    if fullPathBackslash.endswith(key):
+                        return fullPathBackslash
+                subkeyMatch = findRegistry(fullPathBackslash, key, valueName)
+                if subkeyMatch:
+                    return subkeyMatch
+        finally:
+            _winreg.CloseKey(root)
 
 def getClipboardText():
     if ctypes.windll.user32.IsClipboardFormatAvailable(CF_TEXT) == 0:

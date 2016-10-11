@@ -1048,6 +1048,39 @@ class Device(fmbtgti.GUITestInterface):
         """
         self._refreshViewDefaults = kwargs
 
+    def findRegistry(self, rootKey, key=None, valueName=None):
+        """
+        Search for key and/or valueName from the registry.
+
+        Returns the first matching (fullKeyPath, valueName) pair found
+        under the rootKey.
+
+        Parameters:
+
+          rootKey (string):
+                  root key path for the search. Example:
+                  "HKEY_LOCAL_MACHINE".
+
+          key (string, optional):
+                  key name to be searched for under the rootKey.
+                  Can be a single key name or a combination like
+                  "Windows/CurrentVersion".
+                  If not given, valueName should be defined.
+
+          valueName (string, optional):
+                  value name to be searched for under the rootKey.
+                  If not given, key should be defined and
+                  returned valueName will be None.
+
+        Example:
+          findRegistry("HKEY_LOCAL_MACHINE", key="Windows")
+        """
+        if key == None and valueName == None:
+            raise ValueError("either key or valueName must be provided")
+        return self.existingConnection().evalPython(
+            'findRegistry(%s, key=%s, valueName=%s)' % (
+                repr(rootKey), repr(key), repr(valueName)))
+
     def setRegistry(self, key, valueName, value, valueType=None):
         """
         Set Windows registry value.
