@@ -3,12 +3,12 @@
 
 !define APPNAME "fMBT"
 !define COMPANYNAME "Intel"
-!define DESCRIPTION "Free Model-Based Testing tool automates both generating and executing tests."
+!define DESCRIPTION "free Model-Based Testing tool @FMBT_VERSION@@FMBTBUILDINFO@"
 
 # These three must be integers
 !define VERSIONMAJOR 0
-!define VERSIONMINOR 16
-!define VERSIONBUILD 1
+!define VERSIONMINOR 37
+!define VERSIONBUILD 0
 
 # These will be displayed by the "Click here for support information"
 # link in "Add/Remove Programs" It is possible to use "mailto:" links
