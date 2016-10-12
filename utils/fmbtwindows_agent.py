@@ -25,6 +25,7 @@ except:
 import glob
 import os
 import Queue
+import re
 import signal
 import string
 import struct
@@ -1071,6 +1072,20 @@ def _openRegistryKey(key, accessRights):
     regKey = _winreg.OpenKey(HKEY, subKey, 0, accessRights)
     return regKey
 
+def _openRegistryKeyAnyArch(key, accessRights):
+    regKey = None
+    regError = None
+    for archBits in _g_archRegistryKeys:
+        try:
+            regKey = _openRegistryKey(key, accessRights | archBits)
+            break
+        except OSError, e:
+            regError = e
+            continue
+    if regKey == None:
+        raise regError
+    return regKey
+
 def kill(*pids):
     rv = True
     for pid in pids:
@@ -1186,25 +1201,37 @@ def setRegistry(key, valueName, value, valueType=None):
     REG_type = getattr(_winreg, valueType, None)
     if not valueType.startswith("REG_") or REG_type == None:
         raise ValueError("invalid value type (REG_*): %s" % (repr(valueType),))
-    regKey = _openRegistryKey(key, _winreg.KEY_SET_VALUE)
-    _winreg.SetValueEx(regKey, valueName, 0, REG_type, value)
-    _winreg.CloseKey(regKey)
+    regKey = _openRegistryKeyAnyArch(key, _winreg.KEY_SET_VALUE)
+    try:
+        _winreg.SetValueEx(regKey, valueName, 0, REG_type, value)
+    finally:
+        _winreg.CloseKey(regKey)
     return True
 
 def getRegistry(key, valueName):
     key = key.replace("/", "\\")
-    regKey = _openRegistryKey(key, _winreg.KEY_QUERY_VALUE)
-    value, valueType = _winreg.QueryValueEx(regKey, valueName)
-    _winreg.CloseKey(regKey)
+    regKey = _openRegistryKeyAnyArch(key, _winreg.KEY_QUERY_VALUE)
+    try:
+        value, valueType = _winreg.QueryValueEx(regKey, valueName)
+    finally:
+        _winreg.CloseKey(regKey)
     return value, _REG_types.get(valueType, None)
 
-def findRegistry(rootKey, key=None, valueName=None):
-    """returns first matching (key, valueName) pair in registry
-    if valueName is not searched for, value will be None"""
+def findRegistry(rootKey, key=None, valueName=None, limit=None):
     rootKey = rootKey.replace('/', '\\')
     if key != None:
-        key = key.replace('/', '\\')
+        key = re.compile(key.replace('/', '\\'))
+    if valueName != None:
+        valueName = re.compile(valueName)
+    if limit == None:
+        limit = -1
+    resultList = []
+    _findRegistry(rootKey, key, valueName, limit, resultList)
+    return sorted(set(resultList))
 
+def _findRegistry(rootKey, key, valueName, limit, resultList):
+    """returns matching (key, valueName) pairs in registry
+    if valueName is not searched for, value will be None"""
     for archBits in _g_archRegistryKeys:
         try:
             root = _openRegistryKey(rootKey, _winreg.KEY_READ | archBits)
@@ -1217,24 +1244,31 @@ def findRegistry(rootKey, key=None, valueName=None):
                     _valueName, _valueData, _valueType = _winreg.EnumValue(root, valueIndex)
                     if key == None:
                         # Look for a valueName only
-                        if _valueName == valueName:
-                            return rootKey, _valueName
+                        if valueName.match(_valueName):
+                            resultList.append((rootKey, _valueName))
+                            if len(resultList) == limit:
+                                return
                     else:
                         # Look for key-valueName combination
-                        if _valueName == valueName and rootKey.endswith(key):
-                            return rootKey, _valueName
+                        if valueName.match(_valueName) and key.search(rootKey):
+                            resultList.append((rootKey, _valueName))
+                            if len(resultList) == limit:
+                                return
+            else:
+                # Look for a key only
+                if key.search(rootKey):
+                    resultList.append((rootKey, None))
+                    if len(resultList) == limit:
+                        return
+
             # Recursive step - look among subkeys
             subkeyCount = _winreg.QueryInfoKey(root)[0]
             for subkeyIndex in xrange(subkeyCount):
                 subkeyName = _winreg.EnumKey(root, subkeyIndex)
                 fullPathBackslash = rootKey + "\\" + subkeyName
-                if valueName == None:
-                    # Look for a key only
-                    if fullPathBackslash.endswith(key):
-                        return fullPathBackslash
-                subkeyMatch = findRegistry(fullPathBackslash, key, valueName)
-                if subkeyMatch:
-                    return subkeyMatch
+                _findRegistry(fullPathBackslash, key, valueName, limit, resultList)
+                if len(resultList) == limit:
+                    return
         finally:
             _winreg.CloseKey(root)
 

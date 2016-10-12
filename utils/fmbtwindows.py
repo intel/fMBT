@@ -1048,12 +1048,12 @@ class Device(fmbtgti.GUITestInterface):
         """
         self._refreshViewDefaults = kwargs
 
-    def findRegistry(self, rootKey, key=None, valueName=None):
-        """
-        Search for key and/or valueName from the registry.
+    def findRegistry(self, rootKey, key=None, valueName=None, limit=1):
+        """Search for key and/or valueName from the registry.
 
-        Returns the first matching (fullKeyPath, valueName) pair found
-        under the rootKey.
+        Returns a list of matching (fullKeyPath, valueName) pairs
+        found under the rootKey. The list has at most limit items, the
+        default is 1.
 
         Parameters:
 
@@ -1063,23 +1063,31 @@ class Device(fmbtgti.GUITestInterface):
 
           key (string, optional):
                   key name to be searched for under the rootKey.
-                  Can be a single key name or a combination like
-                  "Windows/CurrentVersion".
+                  The key is a regular expression that is searched for
+                  from full key path. Use "\\name$" to require exact
+                  match.
                   If not given, valueName should be defined.
 
           valueName (string, optional):
                   value name to be searched for under the rootKey.
+                  The value can be a regular expression.
                   If not given, key should be defined and
                   returned valueName will be None.
 
+          limit (integer, optional):
+                  maximum number of matches to be returned. The
+                  default is 1. limit=None returns all matching
+                  pairs.
+
         Example:
-          findRegistry("HKEY_LOCAL_MACHINE", key="Windows")
+          findRegistry("HKEY_LOCAL_MACHINE", key="\\Windows$")
+
         """
         if key == None and valueName == None:
             raise ValueError("either key or valueName must be provided")
         return self.existingConnection().evalPython(
-            'findRegistry(%s, key=%s, valueName=%s)' % (
-                repr(rootKey), repr(key), repr(valueName)))
+            'findRegistry(%s, key=%s, valueName=%s, limit=%s)' % (
+                repr(rootKey), repr(key), repr(valueName), repr(limit)))
 
     def setRegistry(self, key, valueName, value, valueType=None):
         """
