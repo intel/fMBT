@@ -1653,14 +1653,13 @@ class WindowsConnection(fmbtgti.GUITestConnection):
         rv = []
         prop_data = {}
         for dump in dumps:
-            for prop_line in dump.splitlines():
-                if not "=" in prop_line:
+            for prop_line in dump.split('\0'):
+                if "=" not in prop_line:
                     continue
                 prop_name, prop_value = prop_line.split("=", 1)
-                if prop_name == "hash":
-                    if prop_data:
-                        rv.append(prop_data)
-                        prop_data = {}
+                if prop_name == "hash" and prop_data:
+                    rv.append(prop_data)
+                    prop_data = {}
                 prop_data[prop_name] = prop_value.replace(r"\r\n", "\n").replace(r"\\", "\\")
         if prop_data:
             rv.append(prop_data)

@@ -949,9 +949,9 @@ namespace FmbtWindows {
                 if (fromPath[depth] != eltHash)
                     return;
             }
-            outStream.WriteLine("");
-            outStream.WriteLine("hash=" + eltHash.ToString());
-            outStream.WriteLine("parent=" + parent.ToString());
+            outStream.Write('\0');
+            outStream.Write("hash=" + eltHash.ToString() + '\0');
+            outStream.Write("parent=" + parent.ToString() + '\0');
 
             foreach (AutomationProperty p in supportedProps) {
                 pName = p.ProgrammaticName.Substring(p.ProgrammaticName.IndexOf(".")+1);
@@ -959,7 +959,7 @@ namespace FmbtWindows {
                     pName = pName.Substring(0, pName.LastIndexOf("Property"));
                     if (properties.Length == 1 || (properties.Length > 1 && properties.Contains(pName))) {
                         pValue = "" + elt.GetCurrentPropertyValue(p);
-                        outStream.WriteLine(pName + "=" + pValue.Replace("\\", "\\\\").Replace("\r\n", "\\r\\n"));
+                        outStream.Write(pName + "=" + pValue.Replace("\\", "\\\\").Replace("\r\n", "\\r\\n") + '\0');
                     }
                 }
             }
@@ -1006,7 +1006,7 @@ namespace FmbtWindows {
                 StreamWriter sw = new StreamWriter(pipeServer);
                 DumpWindow(hwnd, fromPath, properties, bboxString, walkerString, sw);
 
-                sw.WriteLine("end-of-dump-window");
+                sw.Write("end-of-dump-window");
                 sw.Flush();
                 sw.Close();
                 sr.Close();
