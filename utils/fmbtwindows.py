@@ -731,7 +731,7 @@ class Device(fmbtgti.GUITestInterface):
         return self.pinch((x, y), startDistance, endDistance, **pinchKwArgs)
 
 
-    def putFile(self, localFilename, remoteFilepath):
+    def putFile(self, localFilename, remoteFilepath, data=None):
         """
         Send local file to the device.
 
@@ -743,10 +743,20 @@ class Device(fmbtgti.GUITestInterface):
           remoteFilepath (string):
                   destination on the device. If destination is an
                   existing directory, the file will be saved to the
-                  directory with its original name. Otherwise the file
+                  directory with its original local name. Otherwise the file
                   will be saved with remoteFilepath as new name.
+
+          data (string, optional):
+                  data to be stored to remoteFilepath. The default is
+                  the data in the local file.
+
+        Example: Copy local /tmp/file.txt to c:/temp
+          putFile("/tmp/file.txt", "c:/temp/")
+
+        Example: Create new remote file
+          putFile(None, "c:/temp/file.txt", "remote file contents")
         """
-        return self._conn.sendFile(localFilename, remoteFilepath)
+        return self._conn.sendFile(localFilename, remoteFilepath, data)
 
     def rmFile(self, remoteFilepath):
         """
@@ -1535,10 +1545,15 @@ class WindowsConnection(fmbtgti.GUITestConnection):
         else:
             return data
 
-    def sendFile(self, localFilename, remoteFilepath):
-        data = file(localFilename).read()
+    def sendFile(self, localFilename, remoteFilepath, data=None):
+        if data == None:
+            data = file(localFilename).read()
+        if localFilename:
+            basename = os.path.basename(localFilename)
+        else:
+            basename = localFilename
         rv = self.evalPython('saveFile(%s, %s, base64.b64decode(%s))' %
-                             (repr(os.path.basename(localFilename)),
+                             (repr(basename),
                               repr(remoteFilepath),
                               repr(base64.b64encode(data))))
         return rv
