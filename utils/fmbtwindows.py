@@ -1559,8 +1559,17 @@ class WindowsConnection(fmbtgti.GUITestConnection):
         return rv
 
     def recvMatchingPaths(self, pathnamePattern):
-        return self._agent.eval_in(self._agent_ns,
-                                   "glob.glob(%s)" % (repr(pathnamePattern),))
+        filepaths = self._agent.eval_in(
+            self._agent_ns,
+            "glob.glob(%s)" % (repr(pathnamePattern),))
+        if "/" in pathnamePattern:
+            # Unix-style directory naming in input,
+            # stick with it and fix mixed / and \ that might
+            # come out from glob.glob.
+            return [p.replace('\\', '/') for p in filepaths]
+        else:
+            # use glob output as it is
+            return filepaths
 
     def recvScreenshot(self, filename, screenshotSize=(None, None)):
         ppmfilename = filename + ".ppm"
