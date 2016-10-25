@@ -49,6 +49,11 @@ import types
 import urllib2
 import zipfile
 
+try:
+    import pythonshare
+except ImportError:
+    pythonshare = None
+
 if os.name == "nt":
     import ctypes
 
@@ -513,6 +518,46 @@ def psh(*cmd):
     _, o, e = _shell_soe(
         ("powershell.exe",) + cmd)
     return o + e
+
+def psput(psconn, pattern):
+    """psput CONNSPEC FILE...
+    upload files to pythonshare server"""
+    if isinstance(psconn, pythonshare.client.Connection):
+        conn = psconn
+        close_connection = False
+    else:
+        conn = pythonshare.connect(psconn)
+        close_connection = True
+    conn.exec_("import base64")
+    rv = []
+    for filename in expand(pattern, accept_pipe=False).splitlines():
+        data = file(filename).read()
+        conn.eval_('file(%s, "wb").write(base64.b64decode(%s))' %
+                   (repr(os.path.basename(filename)),
+                    repr(base64.b64encode(data))))
+        rv.append(filename)
+    if close_connection:
+        conn.close()
+    return "\n".join(rv)
+
+def psget(psconn, pattern):
+    """psget CONNSPEC FILE...
+    download files from pythonshare server"""
+    if isinstance(psconn, pythonshare.client.Connection):
+        conn = psconn
+        close_connection = False
+    else:
+        conn = pythonshare.connect(psconn)
+        close_connection = True
+    conn.exec_("".join(inspect.getsourcelines(expand)[0]))
+    conn.exec_("import glob")
+    rv = []
+    for filename in conn.eval_('expand(%s, accept_pipe=False)' %
+                               repr(pattern)).splitlines():
+        file(os.path.basename(filename), "w").write(
+            conn.eval_("file(%s, 'rb').read()" % (repr(filename),)))
+        rv.append(filename)
+    return "\n".join(rv)
 
 def pwd():
     """pwd
