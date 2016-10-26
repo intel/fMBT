@@ -1426,22 +1426,24 @@ def setTopWindow(hwnd):
             topWindow() == hwnd)
 
 def windowProperties(hwnd):
-    props = {'hwnd': hwnd}
-    titleLen = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
-    titleLen = min(titleLen, 2047) # limit max length for safety
-    titleBuf = ctypes.create_unicode_buffer(titleLen + 1)
-    ctypes.windll.user32.GetWindowTextW(hwnd, titleBuf, titleLen + 1)
+    hwnd &= 0xffffffff
+    try:
+        titleLen = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
+        titleLen = min(titleLen, 2047) # limit max length for safety
+        titleBuf = ctypes.create_unicode_buffer(titleLen + 1)
+        ctypes.windll.user32.GetWindowTextW(hwnd, titleBuf, titleLen + 1)
 
-    r = ctypes.wintypes.RECT()
-    ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(r))
+        r = ctypes.wintypes.RECT()
+        ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(r))
 
-    pid = ctypes.c_uint(-1)
-    ctypes.windll.user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        pid = ctypes.c_uint(-1)
+        ctypes.windll.user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
 
-    props['title'] = titleBuf.value
-    props['bbox'] = (r.left, r.top, r.right, r.bottom) # x1, y2, x2, y2
-    props['pid'] = int(pid.value)
-    return props
+        return {'bbox': (r.left, r.top, r.right, r.bottom),  # x1, y1, x2, y2
+            'hwnd': hwnd, 'title': titleBuf.value, 'pid': int(pid.value)}
+    except ctypes.ArgumentError:
+        return {'bbox': (-1, -1, -1, -1,),
+            'hwnd': hwnd, 'title': '', 'pid': 0}
 
 def windowStatus(hwnd):
     status = {
