@@ -262,7 +262,10 @@ def expand(*filenames, **kwargs):
         for pattern in filenames:
             extends_to = glob.glob(pattern)
             if extends_to:
-                rv.extend(extends_to)
+                for filepath in extends_to:
+                    if "/" in filepath and "\\" in filepath:
+                        filepath = filepath.replace('\\', '/')
+                    rv.append(filepath)
             elif not must_exist:
                 rv.append(pattern)
     if not min_count <= len(rv):
