@@ -380,24 +380,29 @@ def mkdir(dirname):
     return ""
 
 def redir(dst_filename):
+    # redirect data from input pipe to a file
     src_filename = expand(accept_pipe=True)
     if src_filename:
         file(dst_filename, "wb").write(
             file(src_filename, "rb").read())
     return ""
 
+def rm(*args):
+    """rm [-r] FILE...
+    remove file"""
+    args, filenames = _getopts(args, "-r")
+    filenames = expand(*filenames, accept_pipe=False, min=1).splitlines()
+    for filename in filenames:
+        if "-r" in args:
+            shutil.rmtree(filename)
+        else:
+            os.remove(filename)
+    return ""
+
 def rmdir(dirname):
     """rmdir DIRNAME
     remove directory"""
     os.rmdir(dirname)
-    return ""
-
-def rm(*filenames):
-    """rm FILE...
-    remove file"""
-    filenames = expand(*filenames, accept_pipe=False, min=1).splitlines()
-    for filename in filenames:
-        os.remove(filename)
     return ""
 
 def cat(*filenames):
