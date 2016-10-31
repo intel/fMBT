@@ -522,6 +522,18 @@ def psh(*cmd):
         ("powershell.exe",) + cmd)
     return o + e
 
+_g_pspycosh_conn = None
+def pspycosh(psconn):
+    """pspycosh HOSTSPEC
+    open pycosh shell on a pythonshare server"""
+    global _g_pspycosh_conn
+    if isinstance(psconn, pythonshare.client.Connection):
+        _g_pspycosh_conn = psconn
+    else:
+        _g_pspycosh_conn = pythonshare.connect(psconn)
+    _g_pspycosh_conn.exec_(_g_pycosh_source)
+    return ""
+
 def psput(psconn, pattern):
     """psput CONNSPEC FILE...
     upload files to pythonshare server"""
@@ -788,6 +800,8 @@ def exit():
         raise Exception("Close connection with Ctrl-D")
 
 def pycosh_eval(cmdline):
+    if _g_pspycosh_conn:
+        return _g_pspycosh_conn.eval_("pycosh_eval(%s)" % (repr(cmdline,)))
     funccall = cmd2py(cmdline)
     try:
         retval = eval(funccall)
@@ -809,7 +823,7 @@ def _main():
 
     while True:
         try:
-            cmdline = raw_input(prompt())
+            cmdline = raw_input(pycosh_eval("prompt"))
         except EOFError:
             cmdline = None
 
@@ -825,4 +839,8 @@ def _main():
         _output(str(retval))
 
 if __name__ == "__main__":
+    _g_pycosh_source = open(__file__, "r").read()
+    _g_pycosh_source = "_g_pycosh_source = %s\n%s" % (repr(_g_pycosh_source), _g_pycosh_source)
     _main()
+else:
+    _g_pycosh_source = "_g_pycosh_source = %s\n%s" % (repr(_g_pycosh_source), _g_pycosh_source)
