@@ -838,9 +838,11 @@ def _main():
             retval = pycosh_eval(cmdline)
         _output(str(retval))
 
-if __name__ == "__main__":
+if "__file__" in globals() and __file__.endswith("pycosh.py"):
     _g_pycosh_source = open(__file__, "r").read()
+
+if "_g_pycosh_source" in globals():
     _g_pycosh_source = "_g_pycosh_source = %s\n%s" % (repr(_g_pycosh_source), _g_pycosh_source)
+
+if __name__ == "__main__":
     _main()
-else:
-    _g_pycosh_source = "_g_pycosh_source = %s\n%s" % (repr(_g_pycosh_source), _g_pycosh_source)
