@@ -1331,12 +1331,15 @@ def shell(command):
             output = None
     return output
 
-def saveFile(srcFilename, destFilepath, data):
+def saveFile(srcFilename, destFilepath, data, append=False):
     if os.path.isdir(destFilepath):
         destFilename = os.path.join(destFilepath, srcFilename)
     else:
         destFilename = destFilepath
-    file(destFilename, "wb").write(data)
+    if not append:
+        file(destFilename, "wb").write(data)
+    else:
+        file(destFilename, "ab").write(data)
     return True
 
 def _exitStatusWriter(process, statusFile, filesToBeCleaned):

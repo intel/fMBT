@@ -1546,16 +1546,32 @@ class WindowsConnection(fmbtgti.GUITestConnection):
             return data
 
     def sendFile(self, localFilename, remoteFilepath, data=None):
+        sendBlockMaxLen = 10 * 1024 * 1024 # Send at most 10 MB at a time
         if data == None:
             data = file(localFilename).read()
         if localFilename:
             basename = os.path.basename(localFilename)
         else:
             basename = localFilename
-        rv = self.evalPython('saveFile(%s, %s, base64.b64decode(%s))' %
-                             (repr(basename),
-                              repr(remoteFilepath),
-                              repr(base64.b64encode(data))))
+        if len(data) < sendBlockMaxLen:
+            rv = self.evalPython('saveFile(%s, %s, base64.b64decode(%s))' %
+                                 (repr(basename),
+                                  repr(remoteFilepath),
+                                  repr(base64.b64encode(data))))
+        else:
+            dataLen = len(data)
+            sendIndex = 0
+            while sendIndex < dataLen:
+                sendData = data[sendIndex:sendIndex + sendBlockMaxLen]
+                rv = self.evalPython(
+                    'saveFile(%s, %s, base64.b64decode(%s), append=%s)' %
+                    (repr(basename),
+                     repr(remoteFilepath),
+                     repr(base64.b64encode(sendData)),
+                     repr(sendIndex == 0)))
+                sendIndex += sendBlockMaxLen
+                if not rv:
+                    break
         return rv
 
     def recvMatchingPaths(self, pathnamePattern):
