@@ -1568,7 +1568,7 @@ class WindowsConnection(fmbtgti.GUITestConnection):
                     (repr(basename),
                      repr(remoteFilepath),
                      repr(base64.b64encode(sendData)),
-                     repr(sendIndex == 0)))
+                     repr(sendIndex != 0)))
                 sendIndex += sendBlockMaxLen
                 if not rv:
                     break
