@@ -1547,31 +1547,40 @@ class WindowsConnection(fmbtgti.GUITestConnection):
 
     def sendFile(self, localFilename, remoteFilepath, data=None):
         sendBlockMaxLen = 10 * 1024 * 1024 # Send at most 10 MB at a time
+        sendDataFromFile = False
         if data == None:
-            data = file(localFilename).read()
+            fileSize = os.stat(localFilename).st_size
+            if fileSize < sendBlockMaxLen:
+                data = open(localFilename, "rb").read()
+            else:
+                data = ""
+                dataFile = open(localFilename, "rb")
+                sendDataFromFile = True
         if localFilename:
             basename = os.path.basename(localFilename)
         else:
             basename = localFilename
-        if len(data) < sendBlockMaxLen:
-            rv = self.evalPython('saveFile(%s, %s, base64.b64decode(%s))' %
-                                 (repr(basename),
-                                  repr(remoteFilepath),
-                                  repr(base64.b64encode(data))))
+        if sendDataFromFile:
+            dataLen = fileSize
         else:
             dataLen = len(data)
-            sendIndex = 0
-            while sendIndex < dataLen:
+        sendIndex = 0
+        while sendIndex < dataLen or dataLen == 0:
+            if sendDataFromFile:
+                sendData = dataFile.read(sendBlockMaxLen)
+            else:
                 sendData = data[sendIndex:sendIndex + sendBlockMaxLen]
-                rv = self.evalPython(
-                    'saveFile(%s, %s, base64.b64decode(%s), append=%s)' %
-                    (repr(basename),
-                     repr(remoteFilepath),
-                     repr(base64.b64encode(sendData)),
-                     repr(sendIndex != 0)))
-                sendIndex += sendBlockMaxLen
-                if not rv:
-                    break
+            rv = self.evalPython(
+                'saveFile(%s, %s, base64.b64decode(%s), append=%s)' %
+                (repr(basename),
+                 repr(remoteFilepath),
+                 repr(base64.b64encode(sendData)),
+                 repr(sendIndex != 0)))
+            sendIndex += sendBlockMaxLen
+            if not rv or dataLen == 0:
+                break
+        if sendDataFromFile:
+            dataFile.close()
         return rv
 
     def recvMatchingPaths(self, pathnamePattern):
