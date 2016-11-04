@@ -303,6 +303,7 @@ class Screen(fmbtgti.GUITestInterface):
         return fmbtgti._boxOnRegion(guiItem.bbox(), (0, 0, maxX, maxY))
 
     def keyNames(self):
+        """Returns list of key names understood by pressKey"""
         return _keyNames[:]
 
     def refreshView(self, window=None, forcedView=None, viewSource=None):
