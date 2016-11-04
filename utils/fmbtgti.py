@@ -3193,7 +3193,21 @@ class _VisualLog:
                  'verifyOcrText', 'verifyText', 'verifyBitmap',
                  'waitAnyBitmap', 'waitBitmap', 'waitOcrText',
                  'waitScreenUpdated', 'waitText']
-        for a in attrs:
+
+        winattrs = ['closeWindow', 'errorReporting', 'existingView',
+                    'fileProperties', 'getMatchingPaths', 'getClipboard',
+                    'kill', 'osProperties', 'pinch', 'pinchOpen', 'pinchClose',
+                    'rmFile', 'reconnect', 'refreshViewDefaults',
+                    'setClipboard', 'setErrorReporting', 'setDisplaySize',
+                    'setForegroundWindow', 'setRefreshViewDefaults',
+                    'findRegistry', 'setRegistry', 'getRegistry',
+                    'productList', 'processStatus', 'pycosh',
+                    'setScreenshotSize', 'setTopWindow', 'setViewSource',
+                    'showWindow', 'topWindow', 'topWindowProperties',
+                    'viewSource', 'windowList', 'windowStatus',
+                    'viewStats']
+
+        for a in attrs + winattrs:
             if hasattr(device, a):
                 m = getattr(device, a)
                 setattr(device, m.func_name, self.genericLogger(m))
