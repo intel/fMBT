@@ -33,6 +33,7 @@ import subprocess
 import sys
 import tempfile
 import thread
+import threading
 import time
 import zlib
 
@@ -1349,7 +1350,8 @@ def _exitStatusWriter(process, statusFile, filesToBeCleaned):
         try: os.remove(f)
         except: pass
 
-def shellSOE(command, asyncStatus=None, asyncOut=None, asyncError=None, cwd=None):
+def shellSOE(command, asyncStatus=None, asyncOut=None, asyncError=None,
+             cwd=None, timeout=None):
     filesToBeCleaned = []
     if isinstance(command, list):
         useShell = False
@@ -1385,16 +1387,45 @@ def shellSOE(command, asyncStatus=None, asyncOut=None, asyncError=None, cwd=None
         return (None, None, None)
 
     # synchronous execution
+    p = None
     try:
         p = subprocess.Popen(command, shell=useShell,
                              stdin = subprocess.PIPE,
                              stdout = subprocess.PIPE,
                              stderr = subprocess.PIPE,
                              cwd = cwd)
-        out, err = p.communicate()
-        status = p.returncode
     except OSError:
         status, out, err = None, None, None
+    if p != None: # process successfully launched
+        if timeout == None:
+            # read out/err/status without timeout
+            out, err = p.communicate()
+            status = p.returncode
+        else:
+            # read out/err/status with timeout
+            out_err_queue = Queue.Queue()
+            status_queue = Queue.Queue()
+            def out_err_reader():
+                out_err_queue.put(p.communicate())
+                status_queue.put(p.returncode)
+            def terminate_p():
+                status_queue.put("TIMEOUT %s" % (p.pid,))
+                subprocess.Popen("taskkill /F /PID %s /T" % (p.pid,))
+                # Typically here p.communicate() will return, and
+                # thus out_err_reader produces out/err to the queue.
+                # However, if the process tree refuses to get killed in
+                # reasonable time, write (None, None) out/err queue from here
+                # allowing the shellSOE call to return.
+                time.sleep(0.5)
+                out_err_queue.put((None, None))
+            timer = threading.Timer(timeout, terminate_p)
+            thread.start_new_thread(out_err_reader, ())
+            try:
+                timer.start()
+                status = status_queue.get()
+                out, err = out_err_queue.get()
+            finally:
+                timer.cancel()
     for f in filesToBeCleaned:
         try: os.remove(f)
         except: pass

@@ -159,6 +159,32 @@ SW_FORCEMINIMIZE = 11
 
 sortItems = fmbtgti.sortItems
 
+class Timeout(object):
+    """Process status may be a Timeout instead of an integer
+
+    Prevent < > <= >= comparisons between numeric status
+    and Timeout because they might otherwise return True and
+    cause nasty bugs."""
+    def __init__(self, command=None, pid=None):
+        self._command = command
+        self._pid = pid
+    def __gt__(self, other):
+        raise TypeError("cannot compare %s '>' %s" % (Timeout, type(other),))
+    def __lt__(self, other):
+        raise TypeError("cannot compare %s '<' %s" % (Timeout, type(other),))
+    def __ge__(self, other):
+        raise TypeError("cannot compare %s '>=' %s" % (Timeout, type(other),))
+    def __le__(self, other):
+        raise TypeError("cannot compare %s '<=' %s" % (Timeout, type(other),))
+    def __repr__(self):
+        return "Timeout(%s, %s)" % (repr(self._command), repr(self._pid))
+    def command(self):
+        """Returns command that was timed out"""
+        return self._command
+    def pid(self):
+        """Return process id of timed out process"""
+        return self._pid
+
 class ViewItem(fmbtgti.GUIItem):
     def __init__(self, view, itemId, parentId, className, text, bbox, dumpFilename,
                  rawProperties=None):
@@ -1283,9 +1309,9 @@ class Device(fmbtgti.GUITestInterface):
         """
         return self._conn.evalPython('shell(%s)' % (repr(command),))
 
-    def shellSOE(self, command, asyncStatus=None, asyncOut=None, asyncError=None, cwd=None):
-        """
-        Execute command on Windows.
+    def shellSOE(self, command, asyncStatus=None, asyncOut=None,
+                 asyncError=None, cwd=None, timeout=None):
+        """Execute command on Windows.
 
         Parameters:
 
@@ -1329,16 +1355,36 @@ class Device(fmbtgti.GUITestInterface):
                   server process on the device, or the cwd of the Python
                   process if executed on host without pythonshare-server.
 
-        Returns triplet: exit status, standard output and standard error
-        from the command.
+          timeout (float, optional)
+                  forcefully kill child processes and return after
+                  given time (in seconds). If timed out, returned output
+                  and error strings contain what was printed until processes
+                  were killed. Returned status is a fmbtwindows.Timeout
+                  instance. Asynchronous executions cannot be timed out.
+                  The default is None (no timeout).
 
-        If executing command fails, returns None, None, None.
+        Returns triplet: exit status, standard output and standard error
+        (int, str, str) from the command.
+
+        If executing command fails, returns (None, None, None).
+
+        If execution is timed out, returns (fmbtwindows.Timeout, str, str)
+        or (fmbtwindows.Timeout, None, None) if outputs could not be read.
         """
-        return self._conn.evalPython(
-            'shellSOE(%s, asyncStatus=%s, asyncOut=%s, asyncError=%s, cwd=%s)'
+        if (timeout != None and
+            (asyncStatus, asyncOut, asyncError) != (None, None, None)):
+            raise NotImplementedError(
+                "timeout for asynchronous execution is not supported")
+        s, o, e = self._conn.evalPython(
+            'shellSOE(%s, asyncStatus=%s, asyncOut=%s, asyncError=%s, '
+            'cwd=%s, timeout=%s)'
             % (repr(command),
                repr(asyncStatus), repr(asyncOut), repr(asyncError),
-               repr(cwd)))
+               repr(cwd), repr(timeout)))
+        if isinstance(s, str) and s.startswith("TIMEOUT"):
+            s = Timeout(command=command[:1024*8],
+                        pid=int(s.split()[-1]))
+        return s, o, e
 
     def showWindow(self, window, showCmd=SW_NORMAL):
         """
