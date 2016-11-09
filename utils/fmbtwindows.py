@@ -260,6 +260,7 @@ class View(object):
         self._dumpFilename = dumpFilename
         self._itemTree = itemTree
         self._rootItem = None
+        self._rootItems = []
         self._viewItems = {}
         if itemOnScreen == None:
             self._itemOnScreen = lambda item: True
@@ -274,6 +275,7 @@ class View(object):
                     self._viewItems[itemId] = ViewItem(
                         self, itemId, parentId, className, text, bbox, dumpFilename)
             self._rootItem = self._viewItems[self._itemTree["root"][0][0]]
+            self._rootItems.append(self._rootItem)
         elif isinstance(itemTree, list):
             # data from uiautomation
             # list of dictionaries, each of which contains properties of an item
@@ -304,6 +306,7 @@ class View(object):
                 self._viewItems[int(elt["hash"])] = vi
                 if vi.parent() == 0:
                     self._rootItem = vi
+                    self._rootItems.append(vi)
             if not self._rootItem:
                 raise ValueError("no root item in view data")
 
@@ -318,23 +321,26 @@ class View(object):
         return self._rootItem
 
     def _dumpItem(self, viewItem):
-        return "id=%s cls=%s text=%s bbox=%s" % (
-            viewItem._itemId, repr(viewItem._className), repr(viewItem._text),
-            viewItem._bbox)
+        return "id=%s autid=%s cls=%s text=%r bbox=%s" % (
+            viewItem._itemId, viewItem._properties.get('AutomationId'),
+            viewItem._className, viewItem._text, viewItem._bbox)
 
-    def _dumpTree(self, rootItem, depth=0):
-        l = ["%s%s" % (" " * (depth * 4), self._dumpItem(rootItem))]
+    def _dumpTree(self, rootItem, indentation=''):
+        yield "%s|-- %s" % (indentation, self._dumpItem(rootItem))
+        indentation += '|   '
         for child in rootItem.children():
-            l.extend(self._dumpTree(child, depth+1))
-        return l
+            for dump in self._dumpTree(child, indentation):
+                yield dump
 
     def dumpTree(self, rootItem=None):
         """
         Returns item tree as a string
         """
-        if rootItem == None:
-            rootItem = self.rootItem()
-        return "\n".join(self._dumpTree(rootItem))
+        if rootItem:
+            return "\n".join(self._dumpTree(rootItem))
+        else:
+            rootsDumps = ("\n".join(self._dumpTree(rootItem)) for rootItem in self._rootItems)
+            return "\n".join(rootsDumps)
 
     def __str__(self):
         return "View(%s, %s items)" % (repr(self._dumpFilename), len(self._viewItems))
@@ -828,7 +834,8 @@ class Device(fmbtgti.GUITestInterface):
             return False
 
     def refreshView(self, window=None, forcedView=None, viewSource=None,
-                    items=None, properties=None, area=None):
+                    items=None, properties=None, area=None,
+                    filterType="none", filterCondition=""):
         """
         (Re)reads widgets on the top window and updates the latest view.
 
@@ -866,6 +873,39 @@ class Device(fmbtgti.GUITestInterface):
                   refresh only items that intersect the area.
                   The default is None: locations do not affect refreshed
                   items.
+
+          filterType (string, optional):
+                  specify how the widgets should be filtered.
+                  Supported values are:
+                  "none", which is the default, which means that all widgets
+                  will be retrieved.
+                  "first": only the first element which satisfy the condition
+                  defined by the filterCondition parameter is returned.
+                  "all": all elements which satisfy the condition defined by
+                  the filterCondition parameter are returned.
+                  "first" and "all" allow to specify an additional "+children"
+                  qualifier, which returns also all element's children.
+                  So, passing "first+children" as filterType, then the element
+                  all its children are returned, if the element (and only it)
+                  satisfy filterCondition.
+                  It's import to underline that the conditions defined by the
+                  items, properties, and area, parameters are still all
+                  applied on top of filterType and filterCondition.
+
+          filterCondition (string, optional):
+                  specify the condition for filtering the widgets.
+                  It only works if filterType is not "none".
+                  Currently only a basic filter conditions are supported, that
+                  allows to specify a property name, the == operator, and
+                  a double-quoted string with the value to be compared.
+                  Filter conditions can be chained together using the "and"
+                  operator; this allows more fine-grained filtering.
+                  For example:
+                      'ClassName == "ToolBar" and Name == "Explorer"'
+                  matches all widgets whose "ClassName" property is equal
+                  to "ToolBar" and the Name is "Explorer".
+                  The list of currently allowed properties is the following:
+                  AutomationId, ClassName, HelpText, LabeledBy, Name.
 
         See also setRefreshViewDefaults().
 
@@ -947,7 +987,8 @@ class Device(fmbtgti.GUITestInterface):
                     else:
                         viewItemProperties = properties
                     viewData = self._conn.recvViewUIAutomation(
-                        window, items, viewItemProperties, leftTopRightBottom, walker)
+                        window, items, viewItemProperties, leftTopRightBottom, walker,
+                        filterType, filterCondition)
                 file(viewFilename, "w").write(repr(viewData))
                 try:
                     self._lastView = View(
@@ -1697,52 +1738,56 @@ class WindowsConnection(fmbtgti.GUITestConnection):
             raise ValueError('illegal window "%s", expected integer or string (hWnd or title)' % (window,))
         return rv
 
-    def recvViewUIAutomation(self, window=None, items=[], properties=None, area=None, walker="raw"):
+    def recvViewUIAutomation(self, window=None, items=[], properties=None, area=None, walker="raw", filterType="none", filterCondition=""):
         """returns list of dictionaries, each of which contains properties of
         an item"""
         if not walker in ["raw", "control", "content"]:
-            raise ValueError('invalid walker %s' % (repr(walker),))
-        if window != None:
-            hwnd = self._window2hwnd(window)
-        else:
-            hwnd = None
-        if properties == None:
+            raise ValueError('invalid walker %r' % walker)
+        hwnd = self._window2hwnd(window) if window else None
+        if properties is None:
             properties = []
         else:
             # make sure certain properties are always included
-            propertySet = set(properties)
-            for must_be in ["BoundingRectangle"]:
-                propertySet.add(must_be)
-            properties = list(propertySet)
+            properties = list(frozenset(properties) | frozenset(["BoundingRectangle"]))
         dumps = []
         if items:
             for item in items:
-                dumps.append(self.evalPython("dumpUIAutomationElements(%s, %s, %s, %s, %s)" % (
-                    repr(hwnd),
-                    repr([str(item.id()) for item in item.branch()]),
-                    repr(properties),
-                    repr(area),
-                    repr(walker))))
+                dumps.append(self.evalPython("dumpUIAutomationElements(%r, %r, %r, %r, %r, %r, %r)" % (
+                    hwnd,
+                    [str(item.id()) for item in item.branch()],
+                    properties,
+                    area,
+                    walker,
+                    filterType,
+                    filterCondition)))
         else:
-            dumps.append(self.evalPython("dumpUIAutomationElements(%s, %s, %s, %s, %s)" % (
-                repr(hwnd),
-                repr([]),
-                repr(properties),
-                repr(area),
-                repr(walker))))
+            dumps.append(self.evalPython("dumpUIAutomationElements(%r, %r, %r, %r, %r, %r, %r)" % (
+                hwnd,
+                [],
+                properties,
+                area,
+                walker,
+                filterType,
+                filterCondition)))
+        error_message = ''
         rv = []
         prop_data = {}
         for dump in dumps:
-            for prop_line in dump.split('\0'):
-                if "=" not in prop_line:
+            for line in dump.split('\0'):
+                if line.startswith('!'):
+                    error_message = line[1:]
                     continue
-                prop_name, prop_value = prop_line.split("=", 1)
+                if "=" not in line:
+                    continue
+                prop_name, prop_value = line.split("=", 1)
                 if prop_name == "hash" and prop_data:
                     rv.append(prop_data)
                     prop_data = {}
                 prop_data[prop_name] = prop_value.replace(r"\r\n", "\n").replace(r"\\", "\\")
         if prop_data:
             rv.append(prop_data)
+        if error_message:
+            raise FMBTWindowsError("view is not available. An error happened while collecting UI elements with refreshView().\n%s" % error_message)
         return rv
 
     def recvWindowList(self):

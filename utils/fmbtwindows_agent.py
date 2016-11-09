@@ -906,37 +906,68 @@ $assemblies = ('System', 'UIAutomationTypes', 'UIAutomationClient')
 
 $source = @'
 using System;
-using System.Windows.Automation;
-using System.Linq;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipes;
+using System.Linq;
+using System.Windows.Automation;
 
-namespace FmbtWindows {
-    public class UI {
-        public static void DumpElement(AutomationElement elt, int depth, long parent, long[] fromPath, string[] properties, int[] bbox, TreeWalker walker, StreamWriter outStream) {
+namespace FmbtWindows
+{
+    public class UI
+    {
+        private static Dictionary<string, TreeWalker> stringToTreeWalker = new Dictionary<string, TreeWalker>  {
+            { "raw", TreeWalker.RawViewWalker },
+            { "control", TreeWalker.ControlViewWalker },
+            { "content", TreeWalker.ContentViewWalker },
+        };
+        private static Dictionary<string, AutomationProperty> stringToAutomationProperty = new Dictionary<string, AutomationProperty>  {
+            { "AutomationId", AutomationElement.AutomationIdProperty },
+            { "ClassName", AutomationElement.ClassNameProperty },
+            { "HelpText", AutomationElement.HelpTextProperty },
+            { "LabeledBy", AutomationElement.LabeledByProperty },
+            { "Name", AutomationElement.NameProperty },
+        };
+
+        private static int ReportFail(StreamWriter outStream, string message)
+        {
+            outStream.Write("\0!" + message + '\0');
+            return 0;
+        }
+
+        public static void DumpElement(AutomationElement elt, long eltHash, int depth, long parent, long[] fromPath, string[] properties, int[] bbox, StreamWriter outStream)
+        {
             string pValue;
             string pName;
-            System.Windows.Automation.AutomationProperty[] supportedProps = elt.GetSupportedProperties();
+            var supportedProps = elt.GetSupportedProperties();
 
             // If location filtering is requested, skip element after reading only BoundingRectangle
-            if (bbox[0] > -1) {
-                foreach (AutomationProperty p in supportedProps) {
-                    pName = p.ProgrammaticName.Substring(p.ProgrammaticName.IndexOf(".")+1);
-                    if (pName == "BoundingRectangleProperty") {
+            if (bbox[0] > -1)
+            {
+                foreach (var p in supportedProps)
+                {
+                    pName = p.ProgrammaticName.Substring(p.ProgrammaticName.IndexOf(".") + 1);
+                    if (pName == "BoundingRectangleProperty")
+                    {
                         int eltLeft, eltTop, eltRight, eltBottom;
                         pValue = "" + elt.GetCurrentPropertyValue(p);
-                        if (pValue.Contains(";")) {
-                            int[] bRect = Array.ConvertAll(pValue.Split(';'), int.Parse);
+                        if (pValue.Contains(";"))
+                        {
+                            var bRect = Array.ConvertAll(pValue.Split(';'), int.Parse);
                             eltLeft = bRect[0]; eltTop = bRect[1];
                             eltRight = bRect[0] + bRect[2]; eltBottom = bRect[1] + bRect[3];
-                        } else if (pValue.Contains(",")) {
-                            int[] bRect = Array.ConvertAll(pValue.Split(','), int.Parse);
+                        }
+                        else if (pValue.Contains(","))
+                        {
+                            var bRect = Array.ConvertAll(pValue.Split(','), int.Parse);
                             eltLeft = bRect[0]; eltTop = bRect[1];
                             eltRight = bRect[0] + bRect[2]; eltBottom = bRect[1] + bRect[3];
-                        } else {
+                        }
+                        else {
                             continue;
                         }
-                        if (eltRight < bbox[0] || eltLeft > bbox[2] || eltBottom < bbox[1] || eltTop > bbox[3]) {
+                        if (eltRight < bbox[0] || eltLeft > bbox[2] || eltBottom < bbox[1] || eltTop > bbox[3])
+                        {
                             return; // Skip this element and its descendants
                         }
                     }
@@ -944,73 +975,205 @@ namespace FmbtWindows {
             }
 
             // Print element properties
-            long eltHash = elt.GetHashCode();
-            eltHash = (parent << 32) + eltHash;
-            if (fromPath.Length > depth) {
-                if (fromPath[depth] != eltHash)
-                    return;
+            if (fromPath.Length > depth && fromPath[depth] != eltHash)
+            {
+                return;
             }
             outStream.Write('\0');
             outStream.Write("hash=" + eltHash.ToString() + '\0');
             outStream.Write("parent=" + parent.ToString() + '\0');
 
-            foreach (AutomationProperty p in supportedProps) {
-                pName = p.ProgrammaticName.Substring(p.ProgrammaticName.IndexOf(".")+1);
-                if (pName.EndsWith("Property")) {
+            foreach (var p in supportedProps)
+            {
+                pName = p.ProgrammaticName.Substring(p.ProgrammaticName.IndexOf(".") + 1);
+                if (pName.EndsWith("Property"))
+                {
                     pName = pName.Substring(0, pName.LastIndexOf("Property"));
-                    if (properties.Length == 1 || (properties.Length > 1 && properties.Contains(pName))) {
+                    if (properties.Length == 1 || (properties.Length > 1 && properties.Contains(pName)))
+                    {
                         pValue = "" + elt.GetCurrentPropertyValue(p);
                         outStream.Write(pName + "=" + pValue.Replace("\\", "\\\\").Replace("\r\n", "\\r\\n") + '\0');
                     }
                 }
             }
+        }
+
+        public static void DumpElement(AutomationElement elt, int depth, long parent, long[] fromPath, string[] properties, int[] bbox, TreeWalker walker, StreamWriter outStream)
+        {
+            long eltHash = elt.GetHashCode();
+            eltHash = (parent << 32) + eltHash;
+
+            DumpElement(elt, eltHash, depth, parent, fromPath, properties, bbox, outStream);
 
             // Print child elements
-            AutomationElement eltChild = walker.GetFirstChild(elt);
+            var eltChild = walker.GetFirstChild(elt);
 
-            while (eltChild != null) {
-                DumpElement(eltChild, depth+1, eltHash, fromPath, properties, bbox, walker, outStream);
+            while (eltChild != null)
+            {
+                DumpElement(eltChild, depth + 1, eltHash, fromPath, properties, bbox, walker, outStream);
                 eltChild = walker.GetNextSibling(eltChild);
             }
         }
 
-        public static void DumpWindow(UInt32 arg, string fromPathString, string properties, string bboxString, string walkerString, StreamWriter outStream) {
-            IntPtr hwnd = new IntPtr(arg);
-            long[] fromPath = Array.ConvertAll(fromPathString.Split(','), long.Parse);
-            int[] bbox = Array.ConvertAll(bboxString.Split(','), int.Parse);
+        public static int DumpWindow(UInt32 arg, string fromPathString, string properties, string bboxString, string walkerString, string filterTypeString, string filterConditionString, StreamWriter outStream)
+        {
+            var hwnd = new IntPtr(arg);
+            var fromPath = Array.ConvertAll(fromPathString.Split(','), long.Parse);
+            var bbox = Array.ConvertAll(bboxString.Split(','), int.Parse);
+
             TreeWalker walker;
-            if (walkerString == "raw") {
-                walker = TreeWalker.RawViewWalker;
-            } else if (walkerString == "control") {
-                walker = TreeWalker.ControlViewWalker;
-            } else if (walkerString == "content") {
-                walker = TreeWalker.ContentViewWalker;
-            } else {
-                return;
+            if (!stringToTreeWalker.TryGetValue(walkerString, out walker)) {
+                return ReportFail(outStream, "Unknown walker: " + walker);
             }
-            DumpElement(AutomationElement.FromHandle(hwnd), 1, 0, fromPath, properties.Split(','), bbox, walker, outStream);
+
+            var windowElement = AutomationElement.FromHandle(hwnd);
+            var splittedProperties = properties.Split(',');
+            if (filterTypeString == "none")
+            {
+                DumpElement(windowElement, 1, 0, fromPath, splittedProperties, bbox, walker, outStream);
+            }
+            else
+            {
+                Condition condition = null;
+                string lastOperator = "";
+                var lastPosition = 0;
+                while (lastPosition < filterConditionString.Length)
+                {
+                    if (filterConditionString[lastPosition] == ' ')
+                    {
+                        lastPosition++;
+                    }
+                    else if (filterConditionString.IndexOf("and ", lastPosition) == lastPosition)
+                    {
+                        lastOperator = "and";
+                        lastPosition += 4;
+                    }
+                    else {
+                        var position = filterConditionString.IndexOf("==", lastPosition);
+                        if (position < 0)
+                        {
+                            return ReportFail(outStream,
+                                String.Format("== operator not found (around position {0}) in the filter condition: {1}", lastPosition, filterConditionString));
+                        }
+                        var propName = filterConditionString.Substring(lastPosition, position - lastPosition).Trim();
+                        AutomationProperty propertyField;
+                        if (!stringToAutomationProperty.TryGetValue(propName, out propertyField))
+                        {
+                            return ReportFail(outStream,
+                                String.Format("Unknown property \"{0}\" (around position {1}) in the filter condition: {2}", propName, lastPosition, filterConditionString));
+                        }
+
+                        lastPosition = filterConditionString.IndexOf("\"", position + 2); ;  // Skip ==, search first "
+                        if (lastPosition < 0)
+                        {
+                            return ReportFail(outStream,
+                                String.Format("The value in the filter condition doesn't start with a double quote (around position {0}): {1}", position + 2, filterConditionString));
+                        }
+                        position = filterConditionString.IndexOf("\"", lastPosition + 1); ;  // Skip the first ", search second one
+                        if (position < 0)
+                        {
+                            return ReportFail(outStream,
+                                String.Format("The value in the filter condition doesn't end with a double quote (around position {0}): {1}", lastPosition + 1, filterConditionString));
+                        }
+                        var propValue = filterConditionString.Substring(lastPosition + 1, position - lastPosition - 1);  // Skip double quotes
+                        lastPosition = position + 1;
+
+                        var new_condition = new PropertyCondition(propertyField, propValue);
+                        if (lastOperator == "and")
+                        {
+                            lastOperator = "";
+                            condition = new AndCondition(condition, new_condition);
+                        }
+                        else
+                        {
+                            condition = new_condition;
+                        }
+                    }
+                }
+                if (condition == null)
+                {
+                    return ReportFail(outStream, "Invalid condition: " + filterConditionString);
+                }
+
+                AutomationElement finding = null;
+                AutomationElementCollection findings = null;
+                if (filterTypeString.StartsWith("all"))
+                {
+                    findings = windowElement.FindAll(TreeScope.Element | TreeScope.Descendants | TreeScope.Subtree, condition);
+                }
+                else if (filterTypeString.StartsWith("first"))
+                {
+                    finding = windowElement.FindFirst(TreeScope.Element | TreeScope.Descendants | TreeScope.Subtree, condition);
+                }
+                else
+                {
+                    return ReportFail(outStream, "Unknown filter type: " + filterTypeString);
+                }
+
+                if (finding != null)
+                {
+                    if (filterTypeString.Contains("children"))
+                    {
+                        DumpElement(finding, 1, 0, fromPath, splittedProperties, bbox, walker, outStream);
+                    }
+                    else
+                    {
+                        DumpElement(finding, finding.GetHashCode(), 1, 0, fromPath, splittedProperties, bbox, outStream);
+                    }
+                }
+                if (findings != null)
+                {
+                    if (filterTypeString.Contains("children"))
+                    {
+                        foreach (AutomationElement elt in findings)
+                        {
+                            DumpElement(elt, 1, 0, fromPath, splittedProperties, bbox, walker, outStream);
+                        }
+                    }
+                    else
+                    {
+                        foreach (AutomationElement elt in findings)
+                        {
+                            DumpElement(elt, elt.GetHashCode(), 1, 0, fromPath, splittedProperties, bbox, outStream);
+                        }
+                    }
+                }
+            }
+            return 0;
         }
 
-        public static void RunServer() {
-            while (true) {
-                NamedPipeServerStream pipeServer = new NamedPipeServerStream("fmbtwindows_uiautomation", PipeDirection.InOut);
+        public static void RunServer()
+        {
+            while (true)
+            {
+                var pipeServer = new NamedPipeServerStream("fmbtwindows_uiautomation", PipeDirection.InOut);
                 pipeServer.WaitForConnection();
-                StreamReader sr = new StreamReader(pipeServer);
+                var sw = new StreamWriter(pipeServer);
+                var sr = new StreamReader(pipeServer);
+                try
+                {
+                    // read call parameters
+                    var hwnd = UInt32.Parse(sr.ReadLine());
+                    var fromPath = sr.ReadLine();
+                    var properties = sr.ReadLine();
+                    var bboxString = sr.ReadLine();
+                    var walkerString = sr.ReadLine();
+                    var filterTypeString = sr.ReadLine();
+                    var filterConditionString = sr.ReadLine();
 
-                // read call parameters
-                UInt32 hwnd = UInt32.Parse(sr.ReadLine());
-                string fromPath = sr.ReadLine();
-                string properties = sr.ReadLine();
-                string bboxString = sr.ReadLine();
-                string walkerString = sr.ReadLine();
-
-                StreamWriter sw = new StreamWriter(pipeServer);
-                DumpWindow(hwnd, fromPath, properties, bboxString, walkerString, sw);
-
-                sw.Write("end-of-dump-window");
-                sw.Flush();
-                sw.Close();
-                sr.Close();
+                    DumpWindow(hwnd, fromPath, properties, bboxString, walkerString, filterTypeString, filterConditionString, sw);
+                }
+                catch (Exception e)
+                {
+                    ReportFail(sw, "Unhandled exception: " + e);
+                }
+                finally
+                {
+                    sw.Write("end-of-dump-window");
+                    sw.Flush();
+                    sw.Close();
+                    sr.Close();
+                }
                 pipeServer.Close();
             }
         }
@@ -1024,21 +1187,17 @@ Add-Type -ReferencedAssemblies $assemblies -TypeDefinition $source -Language CSh
 """
     fd, filename = tempfile.mkstemp(prefix="fmbtwindows-dumpwindow-", suffix=".ps1")
     _g_rmAtExit.append(filename)
-    try:
-        os.write(fd, powershellCode)
-        os.close(fd)
-        run_script = ["powershell.exe", "-ExecutionPolicy", "Unrestricted", filename]
-        server_process = subprocess.Popen(run_script)
-    except:
-        raise
+    os.write(fd, powershellCode)
+    os.close(fd)
+    run_script = ["powershell.exe", "-ExecutionPolicy", "Unrestricted", filename]
+    server_process = subprocess.Popen(run_script)
 
-def dumpUIAutomationElements(window=None, fromPath=[], properties=[], area=None, walker="raw"):
-    if window == None:
-        window = topWindow()
+def dumpUIAutomationElements(window=None, fromPath=[], properties=[], area=None, walker="raw", filterType="none", filterCondition=""):
+    window = window or topWindow()
     f = None
     serverLaunched = False
     endTime = time.time() + 30
-    while f == None:
+    while not f:
         try:
             f = open(r"\\.\pipe\fmbtwindows_uiautomation", "r+")
             break
@@ -1049,16 +1208,15 @@ def dumpUIAutomationElements(window=None, fromPath=[], properties=[], area=None,
             time.sleep(0.5)
             if time.time() > endTime:
                 raise Exception("dump timed out: cannot connect to uiautomation server")
-    if area == None:
-        areaBbox = (-1, -1, -1, -1)
-    else:
-        areaBbox = area
-    f.write("%s\n%s\n%s\n%s\n%s\n" % (
+    areaBbox = area or (-1, -1, -1, -1)
+    f.write("%s\n%s\n%s\n%s\n%s\n%s\n%s\n" % (
         window,
         ",".join(["-1"] + fromPath),
         ",".join(["nonemptylist"] + properties),
-        ",".join([str(i) for i in areaBbox]),
-        walker))
+        ",".join(str(i) for i in areaBbox),
+        walker,
+        filterType,
+        filterCondition))
     f.flush()
     rv = f.read()
     f.close()
