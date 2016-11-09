@@ -941,6 +941,11 @@ namespace FmbtWindows
             string pName;
             var supportedProps = elt.GetSupportedProperties();
 
+            if (fromPath.Length > depth && fromPath[depth] != eltHash)
+            {
+                return;
+            }
+
             // If location filtering is requested, skip element after reading only BoundingRectangle
             if (bbox[0] > -1)
             {
@@ -975,10 +980,6 @@ namespace FmbtWindows
             }
 
             // Print element properties
-            if (fromPath.Length > depth && fromPath[depth] != eltHash)
-            {
-                return;
-            }
             outStream.Write('\0');
             outStream.Write("hash=" + eltHash.ToString() + '\0');
             outStream.Write("parent=" + parent.ToString() + '\0');
@@ -1002,6 +1003,11 @@ namespace FmbtWindows
         {
             long eltHash = elt.GetHashCode();
             eltHash = (parent << 32) + eltHash;
+
+            if (fromPath.Length > depth && fromPath[depth] != eltHash)
+            {
+                return;
+            }
 
             DumpElement(elt, eltHash, depth, parent, fromPath, properties, bbox, outStream);
 
