@@ -1051,6 +1051,10 @@ namespace FmbtWindows
                     }
                     else if (filterConditionString.IndexOf("and ", lastPosition) == lastPosition)
                     {
+                        if (condition == null) {
+                            return ReportFail(outStream,
+                                String.Format("and operator found (around position {0}) without left argument in the filter condition: {1}", lastPosition, filterConditionString));
+                        }
                         lastOperator = "and";
                         lastPosition += 4;
                     }
