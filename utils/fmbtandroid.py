@@ -1873,6 +1873,8 @@ class ViewItem(fmbtgti.GUIItem):
     def content_desc(self):
         if "content-desc" in self._p:
             return self._p["content-desc"]
+        elif "accessibility:getContentDescription()" in self._p:
+            return self._p["accessibility:getContentDescription()"]
         else:
             return None
     def visible(self):
