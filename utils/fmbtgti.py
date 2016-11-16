@@ -2502,6 +2502,62 @@ class GUITestInterface(object):
                 return True
         return False
 
+    def waitAny(self, listOfFuncs, waitTime=5.0, pollDelay=1.0):
+        """
+        Wait until any function returns True (or equivalent)
+
+        Parameters:
+
+          listOfFuncs (enumerable set of functions):
+                  functions that will be called without parameters.
+
+          waitTime (float, optional):
+                  max. time to wait in seconds. If None, the call
+                  is blocked until a function returns True or
+                  equivalent. The default is 5.0.
+
+          pollDelay (float, optional):
+                  time in seconds to sleep before calling
+                  functions again, if no function returned True.
+                  The default is 1.0.
+
+        Returns tuple [(function index, function, return value), ...]
+        of functions in the list that returned True or equivalent.
+        Returns empty list in case of timeout.
+        Exceptions raised by functions are not catched.
+
+        Example: run an async cmd on Windows, wait for it to finish
+          or dialog X or Y to appear:
+
+          sut.shellSOE(cmd, asyncStatus="c:/temp/cmd.async.status")
+          detected = sut.waitAny(
+              [lambda: sut.topWindowProperties()["title"] == "Dialog X",
+               lambda: sut.topWindowProperties()["title"] == "Dialog Y",
+               lambda: sut.pycosh("cat c:/temp/cmd.async.status")],
+              waitTime=60)
+          if not detected:
+              ...waiting was timed out...
+          else:
+              index, func, retval = detected[0]
+              if index == 2:
+                  ...c:/temp/cmd.async.status contents are in retval...
+        """
+        startTime = time.time()
+        if waitTime is None:
+            endTime = float("inf")
+        else:
+            endTime = startTime + waitTime
+        now = startTime
+        rv = []
+        while now <= endTime and not rv:
+            for index, func in enumerate(listOfFuncs):
+                retval = func()
+                if retval:
+                    rv.append((index, func, retval))
+            time.sleep(min(pollDelay, (endTime - now)))
+            now = time.time()
+        return rv
+
     def waitAnyBitmap(self, listOfBitmaps, **waitAndOirArgs):
         """
         Wait until any of given bitmaps appears on screen.
