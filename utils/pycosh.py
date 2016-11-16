@@ -373,10 +373,15 @@ def nl(*filenames):
             rv.append("%5s  %s" % (line_no, line))
     return "".join(rv)
 
-def mkdir(dirname):
-    """mkdir DIRNAME
-    make directory"""
-    os.mkdir(dirname)
+def mkdir(*args):
+    """mkdir [-p] DIRNAME...
+    make directories, -p: intermediates if necessary"""
+    args, dirnames = _getopts(args, "-p")
+    for dirname in dirnames:
+        if "-p" in args:
+            os.makedirs(dirname)
+        else:
+            os.mkdir(dirname)
     return ""
 
 def redir(dst_filename):
