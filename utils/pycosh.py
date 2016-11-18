@@ -398,7 +398,7 @@ def rm(*args):
     args, filenames = _getopts(args, "-r")
     filenames = expand(*filenames, accept_pipe=False, min=1).splitlines()
     for filename in filenames:
-        if "-r" in args:
+        if "-r" in args and os.path.isdir(filename):
             shutil.rmtree(filename)
         else:
             os.remove(filename)
