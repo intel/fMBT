@@ -197,15 +197,48 @@ class ViewItem(fmbtgti.GUIItem):
             self._properties = rawProperties
         else:
             self._properties = {}
+        self._patterns = frozenset()
         fmbtgti.GUIItem.__init__(self, self._className, bbox, dumpFilename)
+
+    def __getattr__(self, attr):
+        """Allows to access a item's property as a normal attribute.
+        It also tries to guess the type, converting the value to it."""
+        value = self._properties.get(attr, None)
+        if value is None:
+            raise AttributeError, attr
+        lowered_value = value.lower()
+        if lowered_value in ('false', 'true'):
+            return lowered_value == 'true'
+        try:
+            return int(value)
+        except ValueError:
+            pass
+        try:
+            return float(value)
+        except ValueError:
+            pass
+        if ';' in value or ',' in value:
+            try:
+                return [int(item) for item in value.split(';' if ';' in value else ',')]
+            except ValueError:
+                pass
+        return value
+
+    def __setattr__(self, attr, value):
+        """Allows to set an item's property as a normal attribute.
+        Currently only the Value property is handled."""
+        if attr == 'Value':
+            self.setValue(value)
+        object.__setattr__(self, attr, value)
+
+    def _checkUIautomation(self):
+        self._view._checkUIautomation()
 
     def branch(self):
         """Returns list of view items from the root down to this item
 
         Note: works only for UIAutomation backend"""
-        if not self._view._viewSource.startswith("uiautomation"):
-            raise NotImplementedError(
-                "branch() works only for uiautomation at the moment")
+        self._checkUIautomation()
         rv = []
         itemId = self._itemId
         while itemId:
@@ -227,6 +260,12 @@ class ViewItem(fmbtgti.GUIItem):
                     for itemHash in items
                     if items[itemHash]._parentId == self._itemId]
 
+    def dump(self):
+        """Dumps the most important attributes"""
+        return "id=%s autid=%s cls=%s text=%r bbox=%s" % (
+            self._itemId, self._properties.get('AutomationId', None),
+            self._className, self._text, self._bbox)
+
     def parent(self):
         return self._parentId
 
@@ -246,22 +285,183 @@ class ViewItem(fmbtgti.GUIItem):
         return self._text
 
     def dumpProperties(self):
-        rv = []
-        if self._properties:
-            for key in sorted(self._properties.keys()):
-                rv.append("%s=%s" % (key, self._properties[key]))
-        return "\n".join(rv)
+        """Dumps the properties"""
+        return "\n".join("%s=%s" % (key, self._properties[key])
+                         for key in sorted(self._properties))
 
     def __str__(self):
-        return "ViewItem(%s)" % (self._view._dumpItem(self),)
+        return "ViewItem(%s)" % self.dump()
+
+    def cachedParentItem(self):
+        """
+        Returns the parent's viewitem which is cached by the server.
+        """
+        return self._view.cachedItem(self._parentId)
+
+    def refresh(self):
+        """Updates the properties taking their current values.
+        It returns self, so other operations can chained together.
+        For example, to wait until a widget is enabled:
+            while not widget.refresh().IsEnabled:
+                time.sleep(0.1)"""
+        self._checkUIautomation()
+        data = self._view._device._conn.recvViewItemProperties(self.id())
+        if data:
+            self._properties.update(data[0])
+        return self
+
+    def patterns(self):
+        """
+        Returns a frozenset of the supported patterns.
+        """
+        self._checkUIautomation()
+        if not self._patterns:
+            data = self._view._device._conn.recvViewItemPatterns(self.id())
+            if data:
+                self._patterns = frozenset(data[0])
+        return self._patterns
+
+    def setFocus(self):
+        """
+        Sets the focus to the widget.
+        """
+        self._checkUIautomation()
+        self._view._device._conn.sendSetFocus(self.id())
+
+    def items(self, propertyName, separator="\n", filterSubChildClassName="", maxSubChildren=0):
+        """
+        Returns a list of the given property from all widget's direct children.
+        Only the rendered / shown / displayed widgets will be considered.
+        If, for example, a ListView widget has thousands of ListViewItems, but only 50 are
+        displayed, this methods retrieves only the properties values (of the sub-children which
+        compose the ListViewItems) from such 50 widgets will be reported as a string list of
+        exactly 50 elements.
+
+        Parameters:
+
+          propertyName (string):
+                  the property name to be retrieved.
+
+          separator (string, optional):
+                  the separator to be used for all values, when a child is composed of
+                  other (sub-)children. All properties values will be collected from the
+                  sub-children, and joined using this separator.
+
+          filterSubChildClassName (string, optional):
+                  Only the sub-children of this class will be dumped. All sub-children will
+                  be collected, if it's not defined.
+
+          maxSubChildren (int, optional):
+                  How many sub-children values will be collected (and joined), at maximum.
+                  If a child has many sub-children, but only the first ones are wanted,
+                  using this parameter limits the properties collection.
+                  By default (0), all sub-children's properties values will be collected.
+        """
+        self._checkUIautomation()
+        data = self._view._device._conn.recvViewItemItems(
+            self.id(), propertyName, separator, filterSubChildClassName, maxSubChildren)
+        return data[0]
+
+    def collapse(self):
+        """
+        Collapses a widget which supports this kind of operation, like a TreeView.
+        """
+        self._checkUIautomation()
+        self._view._device._conn.sendCollapse(self.id())
+
+    def expand(self):
+        """
+        Expands a widget which supports this kind of operation, like a TreeView.
+        """
+        self._checkUIautomation()
+        self._view._device._conn.sendExpand(self.id())
+
+    def containerItems(self, propertyName, separator="\n", filterSubChildClassName="", maxSubChildren="0", scroll=False):
+        """
+        Returns a list of the given property from all widget's direct
+        children.
+
+        Like the items() method, but all children, even the currently
+        not displayed ones, will be reported.
+
+        If a child isn't displayed when it's evaluated, it will
+        have no sub-children, so no information about them will be
+        reported. To fully render/display a child, the new scroll
+        parameter should be used, so the item display area will be
+        scrolled until the child is finally rendered. After that, all
+        information about its sub-children are available and will be
+        retrieved.
+
+        Parameters:
+
+          propertyName, separator, filterSubChildClassName, maxSubChildren:
+                  refer to ViewItem.items() documentation.
+
+          scroll (bool, optional):
+                  Allows children scrolling, to make them visible.
+                  By default (false), no children scrolling is made.
+
+        Note: If a widget has many children, scrolling all of them will be slow.
+        """
+
+        self._checkUIautomation()
+        data = self._view._device._conn.recvViewItemContainerItems(
+            self.id(), propertyName, separator, filterSubChildClassName, maxSubChildren, scroll)
+        return data[0]
+
+    def selectedItems(self, propertyName, separator="\n", filterSubChildClassName="", maxSubChildren="0", scroll=False):
+        """
+        Returns a list of the given property from all widget's direct
+        children which are selected.
+
+        Like containerItems(), but only selected children will be
+        reported.
+        """
+        self._checkUIautomation()
+        data = self._view._device._conn.recvViewItemSelectedItems(
+            self.id(), propertyName, separator, filterSubChildClassName, maxSubChildren, scroll)
+        return data[0]
+
+    def longText(self, maxLength=65536):
+        """
+        Returns the text from widgets like a RichTextEdit or a Document,
+        that normally don't allow to report the text using the usual text() method.
+
+        Parameters:
+
+          maxLength (integer, optional):
+                  The maximum number of characters to be reported, to
+                  limit the transferred data.  The default is 64K characters.
+        """
+        self._checkUIautomation()
+        data = self._view._device._conn.recvViewItemText(self.id(), maxLength)
+        return data[0].popitem()[1] if data else None
+
+    def setValue(self, value):
+        """
+        Sets the value of a widget. For example the text for a TextBlock,
+        or the text of a ComboBox.
+        It doesn't work for more complex widgets like a RichTextEdit or a Document.
+
+        Parameters:
+
+          value (string):
+                  The value to be set.
+        """
+
+        self._checkUIautomation()
+        self._view._device._conn.recvViewItemSetValue(self.id(), value)
+        self._properties['Value'] = str(value)
 
 class View(object):
-    def __init__(self, dumpFilename, itemTree, itemOnScreen=None):
+    def __init__(self, dumpFilename, itemTree, itemOnScreen=None, device=None, freeDumps=False):
         self._dumpFilename = dumpFilename
         self._itemTree = itemTree
         self._rootItem = None
         self._rootItems = []
         self._viewItems = {}
+        self._device = device
+        self._freeDumps = freeDumps
         if itemOnScreen == None:
             self._itemOnScreen = lambda item: True
         else:
@@ -281,34 +481,48 @@ class View(object):
             # list of dictionaries, each of which contains properties of an item
             self._viewSource = "uiautomation"
             for elt in itemTree:
-                bboxString = elt.get("BoundingRectangle", "0;0;0;0")
-                if ";" in bboxString:
-                    bboxSeparator = ";"
-                else:
-                    bboxSeparator = ","
-                try:
-                    bbox = [int(coord) for coord in bboxString.split(bboxSeparator)]
-                    bbox[2] = bbox[0] + bbox[2] # width to right
-                    bbox[3] = bbox[1] + bbox[3] # height to bottom
-                    bbox = tuple(bbox)
-                except Exception, e:
-                    bbox = (0, 0, 0, 0)
-                text = elt.get("Value", "")
-                if text == "":
-                    text = elt.get("Name", "")
-                vi = ViewItem(
-                    self, int(elt["hash"]), int(elt["parent"]),
-                    elt.get("ClassName", ""),
-                    text,
-                    bbox,
-                    dumpFilename,
-                    elt)
-                self._viewItems[int(elt["hash"])] = vi
-                if vi.parent() == 0:
-                    self._rootItem = vi
-                    self._rootItems.append(vi)
-            if not self._rootItem:
+                self._insertItem(elt)
+            if not self._rootItem and not freeDumps:
                 raise ValueError("no root item in view data")
+
+    def _insertItem(self, elt):
+        bboxString = elt.get("BoundingRectangle", "0;0;0;0")
+        bboxSeparator = ";" if ";" in bboxString else ","
+        try:
+            bbox = [int(coord) for coord in bboxString.split(bboxSeparator)]
+            bbox[2] = bbox[0] + bbox[2] # width to right
+            bbox[3] = bbox[1] + bbox[3] # height to bottom
+            bbox = tuple(bbox)
+        except Exception, e:
+            bbox = 0, 0, 0, 0
+        text = elt.get("Value") or elt.get("Name", "")
+        vi = ViewItem(
+            self, int(elt["hash"]), int(elt["parent"]),
+            elt.get("ClassName", ""),
+            text,
+            bbox,
+            self._dumpFilename,
+            elt)
+        self._viewItems[int(elt["hash"])] = vi
+        if not vi.parent():
+            self._rootItem = vi
+            self._rootItems.append(vi)
+        return vi
+
+    def _checkUIautomation(self):
+        if not self._viewSource.startswith("uiautomation"):
+            raise NotImplementedError(
+                "This method works only for uiautomation at the moment")
+
+    def cachedItem(self, id_):
+        """
+        Retrieves an automation element from the server cache, passing its id.
+        If the item was already into the view, it's updated.
+        """
+        self._checkUIautomation()
+        data = self._device._conn.recvViewCachedItem(id_)
+        if data:
+            return self._insertItem(data[0])
 
     def _intCoords(self, *args):
         # TODO: relative coordinates like (0.5, 0.9)
@@ -320,13 +534,8 @@ class View(object):
     def rootItem(self):
         return self._rootItem
 
-    def _dumpItem(self, viewItem):
-        return "id=%s autid=%s cls=%s text=%r bbox=%s" % (
-            viewItem._itemId, viewItem._properties.get('AutomationId'),
-            viewItem._className, viewItem._text, viewItem._bbox)
-
     def _dumpTree(self, rootItem, indentation=''):
-        yield "%s|-- %s" % (indentation, self._dumpItem(rootItem))
+        yield "%s|-- %s" % (indentation, rootItem.dump())
         indentation += '|   '
         for child in rootItem.children():
             for dump in self._dumpTree(child, indentation):
@@ -339,11 +548,14 @@ class View(object):
         if rootItem:
             return "\n".join(self._dumpTree(rootItem))
         else:
-            rootsDumps = ("\n".join(self._dumpTree(rootItem)) for rootItem in self._rootItems)
+            if self._rootItems:
+                rootsDumps = ("\n".join(self._dumpTree(rootItem)) for rootItem in self._rootItems)
+            else:
+                rootsDumps = ("\n".join(self._dumpTree(rootItem)) for rootItem in self._viewItems.itervalues())
             return "\n".join(rootsDumps)
 
     def __str__(self):
-        return "View(%s, %s items)" % (repr(self._dumpFilename), len(self._viewItems))
+        return "View(%r, %s items)" % (self._dumpFilename, len(self._viewItems))
 
     def findItems(self, comparator, count=-1, searchRootItem=None, searchItems=None, onScreen=False):
         foundItems = []
@@ -483,7 +695,7 @@ class Device(fmbtgti.GUITestInterface):
         self._password = password
         if connect:
             self.setConnection(WindowsConnection(
-                self._connspec, self._password))
+                self._connspec, self._password, self))
         else:
             self.setConnection(None)
 
@@ -499,6 +711,32 @@ class Device(fmbtgti.GUITestInterface):
         Returns True on success, otherwise False.
         """
         return self.existingConnection().sendCloseWindow(window)
+
+    def setCacheMode(self, mode="lastwindow"):
+        """
+        Sets the server policy for caching AutomationElements.
+
+        Parameters:
+
+          mode (string, optional. Default is "lastwindow"):
+                  Defines the cache policy, and can be one of:
+                      "none", "lastdump", "lastwindow", "all".
+                  "none" disables caching.
+                  "lastdump" caches only the last dump.
+                  "lastwindow" caches all elements of a window.
+                      If a new window is dumped, the cache is
+                      cleared.
+                  "all" caches all element of all windows.
+        """
+        if mode not in ("none", "lastdump", "lastwindow", "all"):
+            raise FMBTWindowsError("Unknown cache mode: %s" % mode)
+        return self.existingConnection().sendSetCacheMode(mode)
+
+    def clearCache(self):
+        """
+        Clears the server AutomationElements cache.
+        """
+        return self.existingConnection().sendClearCache()
 
     def errorReporting(self):
         """
@@ -827,15 +1065,24 @@ class Device(fmbtgti.GUITestInterface):
             return False
         try:
             self.setConnection(WindowsConnection(
-                self._connspec, self._password))
+                self._connspec, self._password, self))
             return True
         except Exception, e:
             _adapterLog("reconnect failed: %s" % (e,))
             return False
 
+    def getDumpFilename(self, suffix):
+        if self.screenshotDir() == None:
+            self.setScreenshotDir(self._screenshotDirDefault)
+        if self.screenshotSubdir() == None:
+            self.setScreenshotSubdir(self._screenshotSubdirDefault)
+        return self._newScreenshotFilepath()[:-3] + suffix
+
+
     def refreshView(self, window=None, forcedView=None, viewSource=None,
                     items=None, properties=None, area=None,
-                    filterType="none", filterCondition=""):
+                    filterType="none", filterCondition="",
+                    dumpChildClass="", dumpChildName="", doNotDump=False):
         """
         (Re)reads widgets on the top window and updates the latest view.
 
@@ -907,6 +1154,46 @@ class Device(fmbtgti.GUITestInterface):
                   The list of currently allowed properties is the following:
                   AutomationId, ClassName, HelpText, LabeledBy, Name.
 
+          dumpChildClass (string, optional):
+                if specified, only widgets of this class will be dumped /
+                reported. Otherwise all widgets will be dumped (if no other
+                dumping option is given. See below).
+                For example, setting dumpChildClass to "TextBlock" will
+                return only this kind of widgets.
+                Imagine a big ListView, where a single ListViewItem is a
+                complex container / panel which incorporates several widgets,
+                but you don't want to dump all of them, and you're interested
+                only to the ones which carry textual information.
+                You can do this using the filtering options to catch the
+                ListView widget and visiting all its children/descendants,
+                but setting dumpChildClass will give back only the TextBlocks.
+                So, this is quite different from the above filtering options,
+                because filtering only defines how the UI widgets are
+                traversed (and eventually cached), whereas dumping defines
+                what widgets will be really reported back and collected by
+                the view.
+                Filtering reduces the amount of widgets that will be
+                evaluated. On top of that, dumping reduces the number of
+                widgets that will be returned back to the view.
+
+          dumpChildName (string, optional):
+                if specified, only widgets with this name will be dumped /
+                reported. Otherwise all widgets will be dumped (if no other
+                dumping option is given).
+                It works exactly like dumpChildClass, but works on the Name
+                property. So, the same logic applies.
+                It can be combined with dumpChildClass to further reduce the
+                number of returned widgets.
+                For example, dumpChildName = "Foo" will give back all widgets
+                which have "Foo" as Name.
+
+          doNotDump (boolean, optional):
+                if specified, no widgets will be dumped / reported, regarding
+                of all other dump options.
+                It's used to only cache the widgets in the server. All widgets
+                will be traversed and cached (if a cache option is defined).
+
+
         See also setRefreshViewDefaults().
 
         Returns View object.
@@ -935,16 +1222,14 @@ class Device(fmbtgti.GUITestInterface):
                 self._lastView = forcedView
             elif type(forcedView) in [str, unicode]:
                 try:
-                    self._lastView = View(forcedView, ast.literal_eval(file(viewFilename).read()))
+                    self._lastView = View(
+                        forcedView, ast.literal_eval(file(viewFilename).read()),
+                        device=self, freeDumps=dumpChildClass or dumpChildName or doNotDump)
                 except Exception:
                     self._lastView = None
             endTime = time.time()
         else:
-            if self.screenshotDir() == None:
-                self.setScreenshotDir(self._screenshotDirDefault)
-            if self.screenshotSubdir() == None:
-                self.setScreenshotSubdir(self._screenshotSubdirDefault)
-            viewFilename = self._newScreenshotFilepath()[:-3] + "view"
+            viewFilename = self.getDumpFilename("view")
             retryCount = 0
             startTime = time.time()
             lastStartTime = startTime
@@ -988,12 +1273,13 @@ class Device(fmbtgti.GUITestInterface):
                         viewItemProperties = properties
                     viewData = self._conn.recvViewUIAutomation(
                         window, items, viewItemProperties, leftTopRightBottom, walker,
-                        filterType, filterCondition)
+                        filterType, filterCondition, dumpChildClass, dumpChildName, doNotDump)
                 file(viewFilename, "w").write(repr(viewData))
                 try:
                     self._lastView = View(
                         viewFilename, viewData,
-                        itemOnScreen=lambda i: self.itemOnScreen(i, topWindowBbox=topWindowBbox))
+                        itemOnScreen=lambda i: self.itemOnScreen(i, topWindowBbox=topWindowBbox),
+                        device=self, freeDumps=dumpChildClass or dumpChildName or doNotDump)
                     break
                 except Exception, e:
                     self._lastView = None
@@ -1571,8 +1857,9 @@ class _NoPythonshareConnection(object):
         return self._ns
 
 class WindowsConnection(fmbtgti.GUITestConnection):
-    def __init__(self, connspec, password):
+    def __init__(self, connspec, password, device):
         fmbtgti.GUITestConnection.__init__(self)
+        self._device = device
         self._screenshotSize = (None, None) # autodetect
         self._pycosh_sent_to_dut = False
         if connspec != None:
@@ -1738,7 +2025,44 @@ class WindowsConnection(fmbtgti.GUITestConnection):
             raise ValueError('illegal window "%s", expected integer or string (hWnd or title)' % (window,))
         return rv
 
-    def recvViewUIAutomation(self, window=None, items=[], properties=None, area=None, walker="raw", filterType="none", filterCondition=""):
+    def _parseDumps(self, dumps, dump_suffix, error_template):
+        dumpFilename = self._device.getDumpFilename(dump_suffix) + '.log'
+        error_message = ''
+        rv = []
+        prop_data = {}
+        items = None
+        with open(dumpFilename, 'w') as f:
+            for dump in dumps:
+                f.write(dump + '\n')
+                for line in dump.split('\0'):
+                    if line.startswith('!'):
+                        error_message = line[1:]
+                        continue
+                    if line.startswith('#'):  # It's a comment / debug output: skip it!
+                        continue
+                    if line == '[':
+                        items = []
+                        continue
+                    if line == ']':
+                        rv.append(items)
+                        continue
+                    if items is not None:
+                        items.append(line)
+                    if "=" not in line:
+                        continue
+                    prop_name, prop_value = line.split("=", 1)
+                    if prop_name == "hash" and prop_data:
+                        rv.append(prop_data)
+                        prop_data = {}
+                    prop_data[prop_name] = prop_value.replace(r"\r\n", "\n").replace(r"\\", "\\")
+        if prop_data:
+            rv.append(prop_data)
+        if error_message:
+            raise FMBTWindowsError(error_template % error_message)
+        return rv
+
+    def recvViewUIAutomation(self, window=None, items=[], properties=None, area=None, walker="raw",
+        filterType="none", filterCondition="", dumpChildClass="", dumpChildName="", doNotDump=False):
         """returns list of dictionaries, each of which contains properties of
         an item"""
         if not walker in ["raw", "control", "content"]:
@@ -1752,43 +2076,99 @@ class WindowsConnection(fmbtgti.GUITestConnection):
         dumps = []
         if items:
             for item in items:
-                dumps.append(self.evalPython("dumpUIAutomationElements(%r, %r, %r, %r, %r, %r, %r)" % (
+                dumps.append(self.evalPython("dumpUIAutomationElements(%r, %r, %r, %r, %r, %r, %r, %r, %r, %r)" % (
                     hwnd,
                     [str(item.id()) for item in item.branch()],
                     properties,
                     area,
                     walker,
                     filterType,
-                    filterCondition)))
+                    filterCondition,
+                    dumpChildClass,
+                    dumpChildName,
+                    doNotDump)))
         else:
-            dumps.append(self.evalPython("dumpUIAutomationElements(%r, %r, %r, %r, %r, %r, %r)" % (
+            dumps.append(self.evalPython("dumpUIAutomationElements(%r, %r, %r, %r, %r, %r, %r, %r, %r, %r)" % (
                 hwnd,
                 [],
                 properties,
                 area,
                 walker,
                 filterType,
-                filterCondition)))
-        error_message = ''
-        rv = []
-        prop_data = {}
-        for dump in dumps:
-            for line in dump.split('\0'):
-                if line.startswith('!'):
-                    error_message = line[1:]
-                    continue
-                if "=" not in line:
-                    continue
-                prop_name, prop_value = line.split("=", 1)
-                if prop_name == "hash" and prop_data:
-                    rv.append(prop_data)
-                    prop_data = {}
-                prop_data[prop_name] = prop_value.replace(r"\r\n", "\n").replace(r"\\", "\\")
-        if prop_data:
-            rv.append(prop_data)
-        if error_message:
-            raise FMBTWindowsError("view is not available. An error happened while collecting UI elements with refreshView().\n%s" % error_message)
-        return rv
+                filterCondition,
+                dumpChildClass,
+                dumpChildName,
+                doNotDump)))
+        return self._parseDumps(dumps, "dumpUIAutomationElements",
+            "view is not available. An error happened while collecting UI elements with refreshView().\n%s")
+
+    def sendSetCacheMode(self, mode):
+        dump = self.evalPython("serverSetCacheMode(%r)" % mode)
+        self._parseDumps([dump], "serverSetCacheMode",
+            "An error happened while setting the cache mode.\n%s")
+
+    def sendClearCache(self):
+        dump = self.evalPython("serverClearCache()")
+        self._parseDumps([dump], "serverClearCache",
+            "An error happened while clearing the cache.\n%s")
+
+    def sendSetFocus(self, eltHash):
+        dump = self.evalPython("setAutomationElementFocus(%s)" % eltHash)
+        self._parseDumps([dump], "setAutomationElementFocus",
+            "An error happened while setting the focus.\n%s")
+
+    def sendCollapse(self, eltHash):
+        dump = self.evalPython("AutomationElementCollapse(%s)" % eltHash)
+        self._parseDumps([dump], "AutomationElementCollapse",
+            "An error happened while collapsing the viewitem.\n%s")
+
+    def sendExpand(self, eltHash):
+        dump = self.evalPython("AutomationElementExpand(%s)" % eltHash)
+        self._parseDumps([dump], "AutomationElementExpand",
+            "An error happened while expanding the viewitem.\n%s")
+
+    def recvViewCachedItem(self, eltHash):
+        dump = self.evalPython("getCachedAutomationElement(%s)" % eltHash)
+        return self._parseDumps([dump], "getCachedAutomationElement",
+            "viewitem is not available. An error happened while dumping it with cachedElement().\n%s")
+
+    def recvViewItemPatterns(self, eltHash):
+        dump = self.evalPython("getAutomationElementPatterns(%s)" % eltHash)
+        return self._parseDumps([dump], "getAutomationElementPatterns",
+            "viewitem patterns are not available. An error happened while collecting them with patterns().\n%s")
+
+    def recvViewItemProperties(self, eltHash):
+        dump = self.evalPython("getAutomationElementProperties(%s)" % eltHash)
+        return self._parseDumps([dump], "getAutomationElementProperties",
+            "viewitem properties are not available. An error happened while collecting them with refresh().\n%s")
+
+    def recvViewItemItems(self, eltHash, propertyName, separator, filterSubChildClassName, maxSubChildren):
+        dump = self.evalPython("getAutomationElementItems(%s, %r, %r, %r, %r)" % (
+            eltHash, propertyName, separator, filterSubChildClassName, maxSubChildren))
+        return self._parseDumps([dump], "getAutomationElementItems",
+            "viewitem items aren't available. An error happened while getting it with items().\n%s")
+
+    def recvViewItemContainerItems(self, eltHash, propertyName, separator, filterSubChildClassName, maxSubChildren, scroll):
+        dump = self.evalPython("getAutomationElementContainerItems(%s, %r, %r, %r, %r, %r)" % (
+            eltHash, propertyName, separator, filterSubChildClassName, maxSubChildren, scroll))
+        return self._parseDumps([dump], "getAutomationElementContainerItems",
+            "viewitem items aren't available. An error happened while getting it with containerItems().\n%s")
+
+    def recvViewItemSelectedItems(self, eltHash, propertyName, separator, filterSubChildClassName, maxSubChildren, scroll):
+        dump = self.evalPython("getAutomationElementSelectedItems(%s, %r, %r, %r, %r, %r)" % (
+            eltHash, propertyName, separator, filterSubChildClassName, maxSubChildren, scroll))
+        return self._parseDumps([dump], "getAutomationElementSelectedItems",
+            "viewitem selected items aren't available. An error happened while getting it with selectedItems().\n%s")
+
+    def recvViewItemText(self, eltHash, maxLength):
+        dump = self.evalPython("getAutomationElementText(%s, %s)" % (eltHash, maxLength))
+        return self._parseDumps([dump], "getAutomationElementText",
+            "viewitem text isn't available. An error happened while getting it with longText().\n%s")
+
+    def recvViewItemSetValue(self, eltHash, value):
+        dump = self.evalPython("setAutomationElementValue(%s, %r)" % (eltHash, value))
+        return self._parseDumps([dump], "setAutomationElementValue",
+            "viewitem value isn't editable. An error happened while setting it with setValue().\n%s")
 
     def recvWindowList(self):
         return self.evalPython("windowList()")
@@ -1833,25 +2213,25 @@ class WindowsConnection(fmbtgti.GUITestConnection):
 
     def sendPress(self, keyCode, modifiers=None):
         if modifiers == None:
-            command = 'sendKey("%s",[])' % (keyCode,)
+            command = 'sendKey(%r,[])' % (keyCode,)
         else:
-            command = 'sendKey("%s",%s)' % (keyCode, repr(modifiers))
+            command = 'sendKey(%r,%s)' % (keyCode, repr(modifiers))
         self._agent.eval_in(self._agent_ns, command)
         return True
 
     def sendKeyDown(self, keyCode, modifiers=None):
         if modifiers == None:
-            command = 'sendKeyDown("%s",[])' % (keyCode,)
+            command = 'sendKeyDown(%r,[])' % (keyCode,)
         else:
-            command = 'sendKeyDown("%s",%s)' % (keyCode, repr(modifiers))
+            command = 'sendKeyDown(%r,%s)' % (keyCode, repr(modifiers))
         self._agent.eval_in(self._agent_ns, command)
         return True
 
     def sendKeyUp(self, keyCode, modifiers=None):
         if modifiers == None:
-            command = 'sendKeyUp("%s",[])' % (keyCode,)
+            command = 'sendKeyUp(%r,[])' % (keyCode,)
         else:
-            command = 'sendKeyUp("%s",%s)' % (keyCode, repr(modifiers))
+            command = 'sendKeyUp(%r,%s)' % (keyCode, repr(modifiers))
         self._agent.eval_in(self._agent_ns, command)
         return True
 

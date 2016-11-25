@@ -929,23 +929,48 @@ namespace FmbtWindows
             { "Name", AutomationElement.NameProperty },
         };
 
-        private static int ReportFail(StreamWriter outStream, string message)
+        // Common variables, shared by all requests.
+        private static StreamWriter outStream;
+        private static Dictionary<long, AutomationElement> elements = new Dictionary<long, AutomationElement>();
+        private static Dictionary<long, long> parents = new Dictionary<long, long>();
+        private static bool cacheElements = true;
+        private static string cacheMode = "lastwindow"; // It can only be: "none", "lastdump", "lastwindow", "all"
+        private static IntPtr lastWindow = new IntPtr(0);
+
+        private static int ReportFail(string message)
         {
             outStream.Write("\0!" + message + '\0');
-            return 0;
+            return -1;
         }
 
-        public static void DumpElement(AutomationElement elt, long eltHash, int depth, long parent, long[] fromPath, string[] properties, int[] bbox, StreamWriter outStream)
+        private static void DumpElementProperties(AutomationElement elt, AutomationProperty[] supportedProps, string[] properties = null)
         {
-            string pValue;
-            string pName;
-            var supportedProps = elt.GetSupportedProperties();
+            foreach (var p in supportedProps)
+            {
+                var pName = p.ProgrammaticName.Substring(p.ProgrammaticName.IndexOf(".") + 1);
+                if (pName.EndsWith("Property"))
+                {
+                    pName = pName.Substring(0, pName.LastIndexOf("Property"));
+                    if (properties == null || properties.Length == 1 || (properties.Length > 1 && properties.Contains(pName)))
+                    {
+                        var pValue = "" + elt.GetCurrentPropertyValue(p);
+                        outStream.Write(pName + "=" + pValue.Replace("\\", "\\\\").Replace("\r\n", "\\r\\n") + '\0');
+                    }
+                }
+            }
+        }
 
+        public static void DumpElementInfo(AutomationElement elt, long eltHash, int depth, long parent, long[] fromPath, string[] properties, int[] bbox,
+            string dumpChildClass, string dumpChildName, bool doNotDump)
+        {
             if (fromPath.Length > depth && fromPath[depth] != eltHash)
             {
                 return;
             }
 
+            string pValue;
+            string pName;
+            var supportedProps = elt.GetSupportedProperties();
             // If location filtering is requested, skip element after reading only BoundingRectangle
             if (bbox[0] > -1)
             {
@@ -975,117 +1000,125 @@ namespace FmbtWindows
                         {
                             return; // Skip this element and its descendants
                         }
+                        break; // Skip all other properties, since we have nothing else to check.
                     }
                 }
             }
 
-            // Print element properties
-            outStream.Write('\0');
-            outStream.Write("hash=" + eltHash.ToString() + '\0');
-            outStream.Write("parent=" + parent.ToString() + '\0');
-
-            foreach (var p in supportedProps)
+            // Print element properties, if dump is allowed and child conditions are satified (if any).
+            var dump = !doNotDump;
+            if (dump && dumpChildClass != "")
             {
-                pName = p.ProgrammaticName.Substring(p.ProgrammaticName.IndexOf(".") + 1);
-                if (pName.EndsWith("Property"))
-                {
-                    pName = pName.Substring(0, pName.LastIndexOf("Property"));
-                    if (properties.Length == 1 || (properties.Length > 1 && properties.Contains(pName)))
-                    {
-                        pValue = "" + elt.GetCurrentPropertyValue(p);
-                        outStream.Write(pName + "=" + pValue.Replace("\\", "\\\\").Replace("\r\n", "\\r\\n") + '\0');
-                    }
-                }
+                var className = elt.GetCurrentPropertyValue(AutomationElement.ClassNameProperty, true);
+                dump = className != AutomationElement.NotSupported && (className as string) == dumpChildClass;
+            }
+            if (dump && dumpChildName != "")
+            {
+                var name = elt.GetCurrentPropertyValue(AutomationElement.NameProperty, true);
+                dump = name != AutomationElement.NotSupported && (name as string) == dumpChildName;
+            }
+            if (dump)
+            {
+                outStream.Write('\0');
+                outStream.Write("hash=" + eltHash.ToString() + '\0');
+                outStream.Write("parent=" + parent.ToString() + '\0');
+                DumpElementProperties(elt, supportedProps, properties);
+            }
+
+            if (cacheElements)
+            {
+                elements[eltHash] = elt;
+                parents[eltHash] = parent;
             }
         }
 
-        public static void DumpElement(AutomationElement elt, int depth, long parent, long[] fromPath, string[] properties, int[] bbox, TreeWalker walker, StreamWriter outStream)
+        public static void DumpElement(AutomationElement elt, int depth, long parent, long[] fromPath, string[] properties, int[] bbox, TreeWalker walker,
+            string dumpChildClass, string dumpChildName, bool doNotDump)
         {
             long eltHash = elt.GetHashCode();
             eltHash = (parent << 32) + eltHash;
 
-            if (fromPath.Length > depth && fromPath[depth] != eltHash)
-            {
-                return;
-            }
-
-            DumpElement(elt, eltHash, depth, parent, fromPath, properties, bbox, outStream);
+            DumpElementInfo(elt, eltHash, depth, parent, fromPath, properties, bbox, dumpChildClass, dumpChildName, doNotDump);
 
             // Print child elements
             var eltChild = walker.GetFirstChild(elt);
 
             while (eltChild != null)
             {
-                DumpElement(eltChild, depth + 1, eltHash, fromPath, properties, bbox, walker, outStream);
+                DumpElement(eltChild, depth + 1, eltHash, fromPath, properties, bbox, walker, dumpChildClass, dumpChildName, doNotDump);
                 eltChild = walker.GetNextSibling(eltChild);
             }
         }
 
-        public static int DumpWindow(UInt32 arg, string fromPathString, string properties, string bboxString, string walkerString, string filterTypeString, string filterConditionString, StreamWriter outStream)
+        public static int DumpWindow(string hwndString, string fromPathString, string properties, string bboxString, string walkerString,
+            string filterType, string filterCondition, string dumpChildClass, string dumpChildName, string doNotDumpString)
         {
-            var hwnd = new IntPtr(arg);
+            var hwnd = new IntPtr(UInt32.Parse(hwndString));
+            if (cacheMode == "none" || cacheMode == "lastdump" || ((cacheMode == "lastwindow") && (lastWindow != hwnd)))
+            {
+                ClearCache();
+            }
+            lastWindow = hwnd;
             var fromPath = Array.ConvertAll(fromPathString.Split(','), long.Parse);
             var bbox = Array.ConvertAll(bboxString.Split(','), int.Parse);
+            var doNotDump = bool.Parse(doNotDumpString.ToLower());
 
             TreeWalker walker;
-            if (!stringToTreeWalker.TryGetValue(walkerString, out walker)) {
-                return ReportFail(outStream, "Unknown walker: " + walker);
+            if (!stringToTreeWalker.TryGetValue(walkerString, out walker))
+            {
+                return ReportFail("Unknown walker: " + walker);
             }
 
             var windowElement = AutomationElement.FromHandle(hwnd);
             var splittedProperties = properties.Split(',');
-            if (filterTypeString == "none")
+            if (filterType == "none")
             {
-                DumpElement(windowElement, 1, 0, fromPath, splittedProperties, bbox, walker, outStream);
+                DumpElement(windowElement, 1, 0, fromPath, splittedProperties, bbox, walker, dumpChildClass, dumpChildName, doNotDump);
             }
             else
             {
                 Condition condition = null;
                 string lastOperator = "";
                 var lastPosition = 0;
-                while (lastPosition < filterConditionString.Length)
+                while (lastPosition < filterCondition.Length)
                 {
-                    if (filterConditionString[lastPosition] == ' ')
+                    if (filterCondition[lastPosition] == ' ')
                     {
                         lastPosition++;
                     }
-                    else if (filterConditionString.IndexOf("and ", lastPosition) == lastPosition)
+                    else if (filterCondition.IndexOf("and ", lastPosition) == lastPosition)
                     {
-                        if (condition == null) {
-                            return ReportFail(outStream,
-                                String.Format("and operator found (around position {0}) without left argument in the filter condition: {1}", lastPosition, filterConditionString));
+                        if (condition == null)
+                        {
+                            return ReportFail(String.Format("and operator found (around position {0}) without left argument in the filter condition: {1}", lastPosition, filterCondition));
                         }
                         lastOperator = "and";
                         lastPosition += 4;
                     }
                     else {
-                        var position = filterConditionString.IndexOf("==", lastPosition);
+                        var position = filterCondition.IndexOf("==", lastPosition);
                         if (position < 0)
                         {
-                            return ReportFail(outStream,
-                                String.Format("== operator not found (around position {0}) in the filter condition: {1}", lastPosition, filterConditionString));
+                            return ReportFail(String.Format("== operator not found (around position {0}) in the filter condition: {1}", lastPosition, filterCondition));
                         }
-                        var propName = filterConditionString.Substring(lastPosition, position - lastPosition).Trim();
+                        var propName = filterCondition.Substring(lastPosition, position - lastPosition).Trim();
                         AutomationProperty propertyField;
                         if (!stringToAutomationProperty.TryGetValue(propName, out propertyField))
                         {
-                            return ReportFail(outStream,
-                                String.Format("Unknown property \"{0}\" (around position {1}) in the filter condition: {2}", propName, lastPosition, filterConditionString));
+                            return ReportFail(String.Format("Unknown property \"{0}\" (around position {1}) in the filter condition: {2}", propName, lastPosition, filterCondition));
                         }
 
-                        lastPosition = filterConditionString.IndexOf("\"", position + 2); ;  // Skip ==, search first "
+                        lastPosition = filterCondition.IndexOf("\"", position + 2); ;  // Skip ==, search first "
                         if (lastPosition < 0)
                         {
-                            return ReportFail(outStream,
-                                String.Format("The value in the filter condition doesn't start with a double quote (around position {0}): {1}", position + 2, filterConditionString));
+                            return ReportFail(String.Format("The value in the filter condition doesn't start with a double quote (around position {0}): {1}", position + 2, filterCondition));
                         }
-                        position = filterConditionString.IndexOf("\"", lastPosition + 1); ;  // Skip the first ", search second one
+                        position = filterCondition.IndexOf("\"", lastPosition + 1); ;  // Skip the first ", search second one
                         if (position < 0)
                         {
-                            return ReportFail(outStream,
-                                String.Format("The value in the filter condition doesn't end with a double quote (around position {0}): {1}", lastPosition + 1, filterConditionString));
+                            return ReportFail(String.Format("The value in the filter condition doesn't end with a double quote (around position {0}): {1}", lastPosition + 1, filterCondition));
                         }
-                        var propValue = filterConditionString.Substring(lastPosition + 1, position - lastPosition - 1);  // Skip double quotes
+                        var propValue = filterCondition.Substring(lastPosition + 1, position - lastPosition - 1);  // Skip double quotes
                         lastPosition = position + 1;
 
                         var new_condition = new PropertyCondition(propertyField, propValue);
@@ -1102,53 +1135,417 @@ namespace FmbtWindows
                 }
                 if (condition == null)
                 {
-                    return ReportFail(outStream, "Invalid condition: " + filterConditionString);
+                    return ReportFail("Invalid condition: " + filterCondition);
                 }
 
                 AutomationElement finding = null;
                 AutomationElementCollection findings = null;
-                if (filterTypeString.StartsWith("all"))
+                if (filterType.StartsWith("all"))
                 {
                     findings = windowElement.FindAll(TreeScope.Element | TreeScope.Descendants | TreeScope.Subtree, condition);
                 }
-                else if (filterTypeString.StartsWith("first"))
+                else if (filterType.StartsWith("first"))
                 {
                     finding = windowElement.FindFirst(TreeScope.Element | TreeScope.Descendants | TreeScope.Subtree, condition);
                 }
                 else
                 {
-                    return ReportFail(outStream, "Unknown filter type: " + filterTypeString);
+                    return ReportFail("Unknown filter type: " + filterType);
                 }
 
                 if (finding != null)
                 {
-                    if (filterTypeString.Contains("children"))
+                    if (filterType.Contains("children"))
                     {
-                        DumpElement(finding, 1, 0, fromPath, splittedProperties, bbox, walker, outStream);
+                        DumpElement(finding, 1, 0, fromPath, splittedProperties, bbox, walker, dumpChildClass, dumpChildName, doNotDump);
                     }
                     else
                     {
-                        DumpElement(finding, finding.GetHashCode(), 1, 0, fromPath, splittedProperties, bbox, outStream);
+                        DumpElementInfo(finding, finding.GetHashCode(), 1, 0, fromPath, splittedProperties, bbox, dumpChildClass, dumpChildName, doNotDump);
                     }
                 }
                 if (findings != null)
                 {
-                    if (filterTypeString.Contains("children"))
+                    if (filterType.Contains("children"))
                     {
                         foreach (AutomationElement elt in findings)
                         {
-                            DumpElement(elt, 1, 0, fromPath, splittedProperties, bbox, walker, outStream);
+                            DumpElement(elt, 1, 0, fromPath, splittedProperties, bbox, walker, dumpChildClass, dumpChildName, doNotDump);
                         }
                     }
                     else
                     {
                         foreach (AutomationElement elt in findings)
                         {
-                            DumpElement(elt, elt.GetHashCode(), 1, 0, fromPath, splittedProperties, bbox, outStream);
+                            DumpElementInfo(elt, elt.GetHashCode(), 1, 0, fromPath, splittedProperties, bbox, dumpChildClass, dumpChildName, doNotDump);
                         }
                     }
                 }
             }
+            return 0;
+        }
+
+        // AutomationElement methods
+
+        private static bool GetElementFromHash(string eltHashString, out long eltHash, out AutomationElement elt)
+        {
+            eltHash = long.Parse(eltHashString);
+            if (!elements.TryGetValue(eltHash, out elt))
+            {
+                return ReportFail("Element not found: " + eltHash) != -1;
+            }
+
+            return true;
+        }
+
+        public static int DumpCachedElement(string eltHashString)
+        {
+            long eltHash;
+            AutomationElement elt;
+            if (!GetElementFromHash(eltHashString, out eltHash, out elt))
+                return -1;
+            long parent = 0;
+            parents.TryGetValue(eltHash, out parent);
+
+            DumpElementInfo(elt, eltHash, 0, parent, new long[0], null, new int[] {-1, -1, -1, -1}, "", "", false);
+            return 0;
+        }
+
+        private static object GetPattern(AutomationElement elt, AutomationPattern patternType)
+        {
+            // For a list of supported patterns: https://msdn.microsoft.com/en-us/library/ms752056(v=vs.110).aspx
+            object pattern;
+            if (!elt.TryGetCurrentPattern(patternType, out pattern))
+            {
+                ReportFail("This element doesn't support the " + Automation.PatternName(patternType) + " pattern: " + elt.GetHashCode());
+                return null;
+            }
+
+            return pattern;
+        }
+
+        public static int GetProperties(string eltHashString)
+        {
+            long eltHash;
+            AutomationElement elt;
+            if (!GetElementFromHash(eltHashString, out eltHash, out elt))
+                return -1;
+
+            DumpElementProperties(elt, elt.GetSupportedProperties());
+
+            return 0;
+        }
+
+        public static int GetPatterns(string eltHashString)
+        {
+            long eltHash;
+            AutomationElement elt;
+            if (!GetElementFromHash(eltHashString, out eltHash, out elt))
+                return -1;
+
+            outStream.Write("[\0");
+            foreach (var pattern in elt.GetSupportedPatterns())
+            {
+                outStream.Write(Automation.PatternName(pattern) + '\0');
+            }
+            outStream.Write("]\0");
+
+            return 0;
+        }
+
+        public static int SetFocus(string eltHashString)
+        {
+            long eltHash;
+            AutomationElement elt;
+            if (!GetElementFromHash(eltHashString, out eltHash, out elt))
+                return -1;
+
+            elt.SetFocus();
+
+            return 0;
+        }
+
+        private static void CollectAllTexts(AutomationElement elt, AutomationProperty propertyField,
+            string filterSubChildClassName, int maxSubChildren, List<string> texts, TreeWalker walker)
+        {
+            if (maxSubChildren != 0 && texts.Count >= maxSubChildren)
+            {
+                return;
+            }
+            if (filterSubChildClassName == "" || elt.Current.ClassName == filterSubChildClassName)
+            {
+                texts.Add("" + elt.GetCurrentPropertyValue(propertyField));
+            }
+
+            // Collect all child elements
+            var eltChild = walker.GetFirstChild(elt);
+            while (eltChild != null)
+            {
+                CollectAllTexts(eltChild, propertyField, filterSubChildClassName, maxSubChildren, texts, walker);
+                eltChild = walker.GetNextSibling(eltChild);
+            }
+        }
+
+        private static void CollectAllTextsCached(AutomationElement elt, AutomationProperty propertyField,
+            string filterSubChildClassName, int maxSubChildren, List<string> texts)
+        {
+            if (maxSubChildren != 0 && texts.Count >= maxSubChildren)
+            {
+                return;
+            }
+            if (filterSubChildClassName == "" || elt.Cached.ClassName == filterSubChildClassName)
+            {
+                texts.Add("" + elt.GetCachedPropertyValue(propertyField));
+            }
+
+            // Collect all child elements
+            foreach (AutomationElement child in elt.CachedChildren)
+            {
+                CollectAllTextsCached(child, propertyField, filterSubChildClassName, maxSubChildren, texts);
+            }
+        }
+
+        public static int GetItems(string eltHashString, string propertyName, string separator,
+            string filterSubChildClassName, string maxSubChildrenString)
+        {
+            long eltHash;
+            AutomationElement elt;
+            if (!GetElementFromHash(eltHashString, out eltHash, out elt))
+                return -1;
+
+            AutomationProperty propertyField;
+            if (!stringToAutomationProperty.TryGetValue(propertyName, out propertyField))
+            {
+                return ReportFail(String.Format("Unknown property: \"{0}\"", propertyName));
+            }
+
+            var maxSubChildren = int.Parse(maxSubChildrenString);
+
+            var cacheRequest = new CacheRequest();
+            cacheRequest.Add(propertyField);
+            if (filterSubChildClassName != "")
+            {
+                cacheRequest.Add(AutomationElement.ClassNameProperty);
+            }
+            cacheRequest.TreeScope = TreeScope.Element | TreeScope.Descendants | TreeScope.Subtree;
+            AutomationElement element;
+            using (cacheRequest.Activate())
+            {
+                // Load the element caching the specified properties for all its descendants.
+                var condition = new PropertyCondition(AutomationElement.ControlTypeProperty, elt.Current.ControlType);
+                element = elt.FindFirst(cacheRequest.TreeScope, condition);
+                if (element == null)
+                {
+                    return ReportFail("Cannot find the element : " + eltHash);
+                }
+            }
+
+            var texts = new List<string>();
+            outStream.Write("[\0");
+            foreach (AutomationElement item in element.CachedChildren)
+            {
+                CollectAllTextsCached(item, propertyField, filterSubChildClassName, maxSubChildren, texts);
+                outStream.Write(String.Join(separator, texts) + '\0');
+                texts.Clear();
+            }
+            outStream.Write("]\0");
+
+            return 0;
+        }
+
+        // ExpandCollapsePattern methods
+
+        public static int Collapse(string eltHashString)
+        {
+            long eltHash;
+            AutomationElement elt;
+            if (!GetElementFromHash(eltHashString, out eltHash, out elt))
+                return -1;
+
+            var pattern = GetPattern(elt, ExpandCollapsePattern.Pattern) as ExpandCollapsePattern;
+            if (pattern == null)
+                return -1;
+
+            var state = pattern.Current.ExpandCollapseState;
+            if (state == ExpandCollapseState.Expanded || state == ExpandCollapseState.PartiallyExpanded)
+            {
+                pattern.Collapse();
+            }
+
+            return 0;
+        }
+
+        public static int Expand(string eltHashString)
+        {
+            long eltHash;
+            AutomationElement elt;
+            if (!GetElementFromHash(eltHashString, out eltHash, out elt))
+                return -1;
+
+            var pattern = GetPattern(elt, ExpandCollapsePattern.Pattern) as ExpandCollapsePattern;
+            if (pattern == null)
+                return -1;
+
+            var state = pattern.Current.ExpandCollapseState;
+            if (state == ExpandCollapseState.Collapsed || state == ExpandCollapseState.PartiallyExpanded)
+            {
+                pattern.Expand();
+            }
+
+            return 0;
+        }
+
+        // ItemContainerPattern methods
+
+        public static int GetContainerItems(string eltHashString, string propertyName, string separator,
+            string filterSubChildClassName, string maxSubChildrenString, string scrollString)
+        {
+            long eltHash;
+            AutomationElement elt;
+            if (!GetElementFromHash(eltHashString, out eltHash, out elt))
+                return -1;
+
+            AutomationProperty propertyField;
+            if (!stringToAutomationProperty.TryGetValue(propertyName, out propertyField))
+            {
+                return ReportFail(String.Format("Unknown property: \"{0}\"", propertyName));
+            }
+
+            var maxSubChildren = int.Parse(maxSubChildrenString);
+            var scroll = bool.Parse(scrollString.ToLower());
+
+            var pattern = GetPattern(elt, ItemContainerPattern.Pattern) as ItemContainerPattern;
+            if (pattern == null)
+                return -1;
+
+            var texts = new List<string>();
+            outStream.Write("[\0");
+            AutomationElement item = null;
+            while ((item = pattern.FindItemByProperty(item, null, null)) != null)
+            {
+                if (!ScrolledItem(item, scroll))
+                    return -1;
+                CollectAllTexts(item, propertyField, filterSubChildClassName, maxSubChildren, texts, TreeWalker.RawViewWalker);
+                outStream.Write(String.Join(separator, texts) + '\0');
+                texts.Clear();
+            }
+            outStream.Write("]\0");
+
+            return 0;
+        }
+
+        // ScrollItemPattern methods
+
+        private static bool ScrolledItem(AutomationElement elt, bool scroll)
+        {
+            if (scroll)
+            {
+                var scrollPattern = GetPattern(elt, ScrollItemPattern.Pattern) as ScrollItemPattern;
+                if (scrollPattern == null)
+                {
+                    return false;
+                }
+                else
+                {
+                    scrollPattern.ScrollIntoView();
+                }
+            }
+            return true;
+        }
+
+        // SelectionPattern methods
+
+        public static int GetSelectedItems(string eltHashString, string propertyName, string separator,
+            string filterSubChildClassName, string maxSubChildrenString, string scrollString)
+        {
+            long eltHash;
+            AutomationElement elt;
+            if (!GetElementFromHash(eltHashString, out eltHash, out elt))
+                return -1;
+
+            AutomationProperty propertyField;
+            if (!stringToAutomationProperty.TryGetValue(propertyName, out propertyField))
+            {
+                return ReportFail(String.Format("Unknown property: \"{0}\"", propertyName));
+            }
+
+            var maxSubChildren = int.Parse(maxSubChildrenString);
+            var scroll = bool.Parse(scrollString.ToLower());
+
+            var pattern = GetPattern(elt, SelectionPatternIdentifiers.Pattern) as SelectionPattern;
+            if (pattern == null)
+                return -1;
+
+            var current = pattern.Current;
+            var selection = current.GetSelection();
+
+            var texts = new List<string>();
+            outStream.Write("[\0");
+            foreach(AutomationElement item in selection)
+            {
+                if (!ScrolledItem(item, scroll))
+                    return -1;
+                CollectAllTexts(item, propertyField, filterSubChildClassName, maxSubChildren, texts, TreeWalker.RawViewWalker);
+                outStream.Write(String.Join(separator, texts) + '\0');
+                texts.Clear();
+            }
+            outStream.Write("]\0");
+
+            return 0;
+        }
+
+        // TextPattern methods
+
+        public static int GetText(string eltHashString, string maxLengthString)
+        {
+            long eltHash;
+            AutomationElement elt;
+            if (!GetElementFromHash(eltHashString, out eltHash, out elt))
+                return -1;
+
+            var pattern = GetPattern(elt, TextPattern.Pattern) as TextPattern;
+            if (pattern == null)
+                return -1;
+
+            var text = pattern.DocumentRange.GetText(int.Parse(maxLengthString));
+            outStream.Write("text=" + text + '\0');
+
+            return 0;
+        }
+
+        // ValuePattern methods
+
+        public static int SetValue(string eltHashString, string value)
+        {
+            long eltHash;
+            AutomationElement elt;
+            if (!GetElementFromHash(eltHashString, out eltHash, out elt))
+                return -1;
+
+            var pattern = GetPattern(elt, ValuePattern.Pattern) as ValuePattern;
+            if (pattern == null)
+                return -1;
+
+            pattern.SetValue(value);
+
+            return 0;
+        }
+
+        // Server methods
+
+        public static int SetCacheMode(string mode)
+        {
+            cacheMode = mode;
+            cacheElements = mode != "none";
+
+            return 0;
+        }
+
+        public static int ClearCache()
+        {
+            elements.Clear();
+            parents.Clear();
+
             return 0;
         }
 
@@ -1158,30 +1555,57 @@ namespace FmbtWindows
             {
                 var pipeServer = new NamedPipeServerStream("fmbtwindows_uiautomation", PipeDirection.InOut);
                 pipeServer.WaitForConnection();
-                var sw = new StreamWriter(pipeServer);
+                outStream = new StreamWriter(pipeServer);
                 var sr = new StreamReader(pipeServer);
                 try
                 {
-                    // read call parameters
-                    var hwnd = UInt32.Parse(sr.ReadLine());
-                    var fromPath = sr.ReadLine();
-                    var properties = sr.ReadLine();
-                    var bboxString = sr.ReadLine();
-                    var walkerString = sr.ReadLine();
-                    var filterTypeString = sr.ReadLine();
-                    var filterConditionString = sr.ReadLine();
+                    // Read parameters size and function name
+                    var s = sr.ReadLine();
+                    var index = s.IndexOf('\0');
+                    var requestSize = int.Parse(s.Substring(0, index));
+                    outStream.Write("#requestSize: " + requestSize + '\0');
+                    var functionName = s.Substring(index + 1);
+                    outStream.Write("#functionName: " + functionName + '\0');
 
-                    DumpWindow(hwnd, fromPath, properties, bboxString, walkerString, filterTypeString, filterConditionString, sw);
+                    // Read parameters in a single chunk of data
+                    var charBuffer = new Char[requestSize];
+                    var currLen = 0;
+                    while (currLen < requestSize)
+                    {
+                        currLen += sr.Read(charBuffer, currLen, requestSize - currLen);
+                    }
+
+                    s = new String(charBuffer);
+                    // Each parameter is separated by the special \0 character
+                    var parameters = (s == "") ? null : s.Split('\0');
+                    outStream.Write("#parameters:\0");
+                    if (parameters != null)
+                    {
+                        foreach(var param in parameters)
+                        {
+                            outStream.Write('#' + param + '\0');
+                        }
+                    }
+                    outStream.Write("#end-of-parameters\0");
+
+                    var method = typeof(UI).GetMethod(functionName);
+                    if (method == null)
+                    {
+                        ReportFail("Unknown function name: " + functionName);
+                    }
+                    else {
+                        method.Invoke(null, parameters);
+                    }
                 }
                 catch (Exception e)
                 {
-                    ReportFail(sw, "Unhandled exception: " + e);
+                    ReportFail("Unhandled exception: " + e);
                 }
                 finally
                 {
-                    sw.Write("end-of-dump-window");
-                    sw.Flush();
-                    sw.Close();
+                    outStream.Write("#end-of-dump");
+                    outStream.Flush();
+                    outStream.Close();
                     sr.Close();
                 }
                 pipeServer.Close();
@@ -1202,12 +1626,17 @@ Add-Type -ReferencedAssemblies $assemblies -TypeDefinition $source -Language CSh
     run_script = ["powershell.exe", "-ExecutionPolicy", "Unrestricted", filename]
     server_process = subprocess.Popen(run_script)
 
-def dumpUIAutomationElements(window=None, fromPath=[], properties=[], area=None, walker="raw", filterType="none", filterCondition=""):
-    window = window or topWindow()
-    f = None
+
+def _callServer(functionName, *args):
+    def toString(value):
+        if isinstance(value, (list, tuple)):
+            return ",".join(str(item) for item in value)
+        else:
+            return str(value)
+
     serverLaunched = False
     endTime = time.time() + 30
-    while not f:
+    while True:
         try:
             f = open(r"\\.\pipe\fmbtwindows_uiautomation", "r+")
             break
@@ -1218,19 +1647,60 @@ def dumpUIAutomationElements(window=None, fromPath=[], properties=[], area=None,
             time.sleep(0.5)
             if time.time() > endTime:
                 raise Exception("dump timed out: cannot connect to uiautomation server")
-    areaBbox = area or (-1, -1, -1, -1)
-    f.write("%s\n%s\n%s\n%s\n%s\n%s\n%s\n" % (
-        window,
-        ",".join(["-1"] + fromPath),
-        ",".join(["nonemptylist"] + properties),
-        ",".join(str(i) for i in areaBbox),
-        walker,
-        filterType,
-        filterCondition))
+
+    buf = "\0".join(toString(arg) for arg in args)
+    # \n counts as two characters on Windows!
+    request = "%s\0%s\n%s" % (len(buf) + buf.count('\n'), functionName, buf)
+    f.write(request)
     f.flush()
     rv = f.read()
     f.close()
     return rv
+
+def dumpUIAutomationElements(window=None, fromPath=[], properties=[], area=None, walker="raw",
+  filterType="none", filterCondition="", dumpChildClass="", dumpChildName="", doNotDump=False):
+    return _callServer("DumpWindow",
+        window or topWindow(), ["-1"] + fromPath, ["nonemptylist"] + properties, area or (-1, -1, -1, -1), walker,
+        filterType, filterCondition, dumpChildClass, dumpChildName, doNotDump)
+
+def serverSetCacheMode(mode):
+    return _callServer("SetCacheMode", mode)
+
+def serverClearCache():
+    return _callServer("ClearCache")
+
+def getCachedAutomationElement(eltHash):
+    return _callServer("DumpCachedElement", eltHash)
+
+def getAutomationElementPatterns(eltHash):
+    return _callServer("GetPatterns", eltHash)
+
+def getAutomationElementProperties(eltHash):
+    return _callServer("GetProperties", eltHash)
+
+def setAutomationElementFocus(eltHash):
+    return _callServer("SetFocus", eltHash)
+
+def getAutomationElementItems(eltHash, propertyName, separator, filterSubChildClassName, maxSubChildren):
+    return _callServer("GetItems", eltHash, propertyName, separator, filterSubChildClassName, maxSubChildren)
+
+def AutomationElementCollapse(eltHash):
+    return _callServer("Collapse", eltHash)
+
+def AutomationElementExpand(eltHash):
+    return _callServer("Expand", eltHash)
+
+def getAutomationElementContainerItems(eltHash, propertyName, separator, filterSubChildClassName, maxSubChildren, scroll):
+    return _callServer("GetContainerItems", eltHash, propertyName, separator, filterSubChildClassName, maxSubChildren, scroll)
+
+def getAutomationElementSelectedItems(eltHash, propertyName, separator, filterSubChildClassName, maxSubChildren, scroll):
+    return _callServer("GetSelectedItems", eltHash, propertyName, separator, filterSubChildClassName, maxSubChildren, scroll)
+
+def getAutomationElementText(eltHash, maxLength):
+    return _callServer("GetText", eltHash, maxLength)
+
+def setAutomationElementValue(eltHash, value):
+    return _callServer("SetValue", eltHash, value)
 
 def _openRegistryKey(key, accessRights):
     firstKey = key.split("\\", 1)[0]
