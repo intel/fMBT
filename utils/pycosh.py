@@ -188,10 +188,16 @@ def find(*args):
             root = root.replace("\\", "/")
         for name in dirs:
             if fnmatch.fnmatch(name, findname):
-                rv.append(os.path.join(root[len(dirname):], name))
+                if slash_only:
+                    rv.append(root[len(dirname):] + "/" + name)
+                else:
+                    rv.append(os.path.join(root[len(dirname):], name))
         for name in files:
             if fnmatch.fnmatch(name, findname):
-                rv.append(os.path.join(root[len(dirname):], name))
+                if slash_only:
+                    rv.append(root[len(dirname):] + "/" + name)
+                else:
+                    rv.append(os.path.join(root[len(dirname):], name))
     return "\n".join(rv)
 
 def date():
