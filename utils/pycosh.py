@@ -181,8 +181,11 @@ def find(*args):
         findname = opts["-n"]
     else:
         findname = "*"
+    slash_only = not "\\" in dirname
     rv = []
     for root, dirs, files in os.walk(dirname):
+        if slash_only:
+            root = root.replace("\\", "/")
         for name in dirs:
             if fnmatch.fnmatch(name, findname):
                 rv.append(os.path.join(root[len(dirname):], name))
