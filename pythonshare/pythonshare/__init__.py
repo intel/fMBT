@@ -83,6 +83,35 @@ def _recv(source):
             return messages.Unloadable("load error %s: %s" % (type(e).__name__, e))
 _recv.locks = {}
 
+_g_hooks = {}
+
+def _check_hook(signature, context):
+    """Check if callbacks have been registered for a signature.
+    If so, call them with the context"""
+    if _g_hooks and signature in _g_hooks:
+        for callback in _g_hooks[signature]:
+            callback(signature, context)
+
+def hook(event, callback):
+    """Call callback function with traceback when event occurs.
+
+    Parameters:
+
+      event (string):
+              supported event signatures:
+              "before:client.socket.connect",
+              "before:client.socket.close",
+              "before:client.exec_in"
+
+      callback (function):
+              function that takes at least two parameters:
+              signature and context.
+    """
+    if event in _g_hooks:
+        _g_hooks[event].append(callback)
+    else:
+        _g_hooks[event] = [callback]
+
 def connect(hostspec, password=None, namespace=None):
     """Returns Connection to pythonshare server at hostspec.
 

@@ -79,6 +79,7 @@ class Connection(object):
         if isinstance(host_or_from_server, str) and isinstance(port_or_to_server, int):
             host = host_or_from_server
             port = port_or_to_server
+            pythonshare._check_hook("before:client.socket.connect", {"host": host, "port": port})
             self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._s.connect((host, port))
             self._from_server = self._s.makefile("r")
@@ -150,6 +151,7 @@ class Connection(object):
         """
         if namespace == None:
             namespace = self.namespace()
+        pythonshare._check_hook("before:client.exec_in", {"code": code, "expr": expr, "namespace": namespace, "async": async, "lock": lock})
         try:
             pythonshare._send(Exec(namespace, code, expr, async=async, lock=lock), self._to_server)
             return self.make_local(pythonshare._recv(self._from_server))
@@ -298,6 +300,7 @@ class Connection(object):
                             async=False, lock=False)
 
     def close(self):
+        pythonshare._check_hook("before:client.socket.close", {"socket": self._s})
         pythonshare._close(self._to_server, self._from_server, self._s)
 
     def kill_server(self, namespace=None):
