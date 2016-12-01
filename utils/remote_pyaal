@@ -38,6 +38,10 @@ Options:
         Write log to the given file. By default no log is written.
         -l , --log-file overwrites the file, -L appends.
 
+    --log-unbuffered
+        Write log entries to log file on every log function call.
+        Slows down high-speed test runs.
+
     -t, --timeout s
         Event observation timeout in seconds.
 
@@ -99,13 +103,14 @@ sys.path.append(os.getcwd())
 
 opt_debug = 0
 opt_profile = None
+opt_log_unbuffered = False
 filter_tags = []
 log_filename = None
 log_flush_interval = 1.0 # in seconds
 
 def _log(msg, flush=False):
     global log_filename
-    if opt_debug:
+    if opt_debug or opt_log_unbuffered:
         fmbt._adapterlogWriter(file(log_filename,"a"), fmbt.formatAdapterLogMessage(msg))
         return
     current_time = time.time()
@@ -549,6 +554,7 @@ if __name__ == "__main__":
         ["debug", "help", "log-file=", "timeout=", "output=",
          "verbose-fmbt-log", "accel-drop-outputs",
          "lsts-depth=", "lsts-hide-var=", "lsts-show-var=",
+         "log-unbuffered",
          "list-state-vars", "profile=", "version"])
 
     for opt, arg in opts:
@@ -575,6 +581,8 @@ if __name__ == "__main__":
         elif opt in ["-l", "-L", "--log-file"]:
             log_filename = arg
             if opt != "-L": file(log_filename, "w") # overwrite
+        elif opt in ["--log-unbuffered"]:
+            opt_log_unbuffered = True
         elif opt in ["-t", "--timeout"]:
             opt_timeout = float(arg)
             _log("observe timeout: %2.6f" % (opt_timeout,))
