@@ -916,26 +916,89 @@ namespace FmbtWindows
 {
     public class UI
     {
-        private static Dictionary<string, TreeWalker> stringToTreeWalker = new Dictionary<string, TreeWalker>  {
-            { "raw", TreeWalker.RawViewWalker },
-            { "control", TreeWalker.ControlViewWalker },
-            { "content", TreeWalker.ContentViewWalker },
-        };
-        private static Dictionary<string, AutomationProperty> stringToAutomationProperty = new Dictionary<string, AutomationProperty>  {
-            { "AutomationId", AutomationElement.AutomationIdProperty },
-            { "ClassName", AutomationElement.ClassNameProperty },
-            { "HelpText", AutomationElement.HelpTextProperty },
-            { "LabeledBy", AutomationElement.LabeledByProperty },
-            { "Name", AutomationElement.NameProperty },
-        };
-
         // Common variables, shared by all requests.
+        private static Dictionary<string, TreeWalker> stringToTreeWalker;
+        private static Dictionary<string, AutomationProperty> stringToAutomationProperty;
         private static StreamWriter outStream;
-        private static Dictionary<long, AutomationElement> elements = new Dictionary<long, AutomationElement>();
-        private static Dictionary<long, long> parents = new Dictionary<long, long>();
-        private static bool cacheElements = true;
-        private static string cacheMode = "lastwindow"; // It can only be: "none", "lastdump", "lastwindow", "all"
-        private static IntPtr lastWindow = new IntPtr(0);
+        private static Dictionary<long, AutomationElement> elements;
+        private static Dictionary<long, long> parents;
+        private static bool cacheElements;
+        private static string cacheMode;
+        private static IntPtr lastWindow;
+
+        // A static constructor is a nicer way to initialize static fields, when there's complicated code.
+        static UI()
+        {
+            stringToTreeWalker = new Dictionary<string, TreeWalker>  {
+                { "raw", TreeWalker.RawViewWalker },
+                { "control", TreeWalker.ControlViewWalker },
+                { "content", TreeWalker.ContentViewWalker },
+            };
+            stringToAutomationProperty = new Dictionary<string, AutomationProperty>
+            {
+                { "AcceleratorKey", AutomationElement.AcceleratorKeyProperty},
+                { "AccessKey", AutomationElement.AccessKeyProperty},
+                { "AutomationId", AutomationElement.AutomationIdProperty},
+                { "BoundingRectangle", AutomationElement.BoundingRectangleProperty},
+                { "CanSelectMultiple", SelectionPattern.CanSelectMultipleProperty},
+                { "ClassName", AutomationElement.ClassNameProperty},
+                { "ControlType", AutomationElement.ControlTypeProperty},
+                { "CultureProperty", AutomationElement.CultureProperty},
+                { "ExpandCollapseState", ExpandCollapsePattern.ExpandCollapseStateProperty},
+                { "FrameworkId", AutomationElement.FrameworkIdProperty},
+                { "HasKeyboardFocus", AutomationElement.HasKeyboardFocusProperty},
+                { "HelpText", AutomationElement.HelpTextProperty},
+                { "HorizontalScrollPercent", ScrollPattern.HorizontalScrollPercentProperty},
+                { "HorizontalViewSize", ScrollPattern.HorizontalViewSizeProperty},
+                { "HorizontallyScrollable", ScrollPattern.HorizontallyScrollableProperty},
+                { "IsContentElement", AutomationElement.IsContentElementProperty},
+                { "IsControlElement", AutomationElement.IsControlElementProperty},
+                { "IsDockPatternAvailable", AutomationElement.IsDockPatternAvailableProperty},
+                { "IsEnabled", AutomationElement.IsEnabledProperty},
+                { "IsGridItemPatternAvailable", AutomationElement.IsGridItemPatternAvailableProperty},
+                { "IsGridPatternAvailable", AutomationElement.IsGridPatternAvailableProperty},
+                { "IsInvokePatternAvailable", AutomationElement.IsInvokePatternAvailableProperty},
+                { "IsItemContainerPatternAvailable", AutomationElement.IsItemContainerPatternAvailableProperty},
+                { "IsKeyboardFocusable", AutomationElement.IsKeyboardFocusableProperty},
+                { "IsMultipleViewPatternAvailable", AutomationElement.IsMultipleViewPatternAvailableProperty},
+                { "IsOffscreen", AutomationElement.IsOffscreenProperty},
+                { "IsPassword", AutomationElement.IsPasswordProperty},
+                { "IsRangeValuePatternAvailable", AutomationElement.IsRangeValuePatternAvailableProperty},
+                { "IsReadOnly", ValuePattern.IsReadOnlyProperty},
+                { "IsScrollItemPatternAvailable", AutomationElement.IsScrollItemPatternAvailableProperty},
+                { "IsScrollPatternAvailable", AutomationElement.IsScrollPatternAvailableProperty},
+                { "IsSelectionItemPatternAvailable", AutomationElement.IsSelectionItemPatternAvailableProperty},
+                { "IsSelectionPatternAvailable", AutomationElement.IsSelectionPatternAvailableProperty},
+                { "IsSelectionRequired", SelectionPattern.IsSelectionRequiredProperty},
+                { "IsSynchronizedInputPatternAvailable", AutomationElement.IsSynchronizedInputPatternAvailableProperty},
+                { "IsTableItemPatternAvailable", AutomationElement.IsTableItemPatternAvailableProperty},
+                { "IsTablePatternAvailable", AutomationElement.IsTablePatternAvailableProperty},
+                { "IsTextPatternAvailable", AutomationElement.IsTextPatternAvailableProperty},
+                { "IsTogglePatternAvailable", AutomationElement.IsTogglePatternAvailableProperty},
+                { "IsTransformPatternAvailable", AutomationElement.IsTransformPatternAvailableProperty},
+                { "IsValuePatternAvailable", AutomationElement.IsValuePatternAvailableProperty},
+                { "IsVirtualizedItemPatternAvailable", AutomationElement.IsVirtualizedItemPatternAvailableProperty},
+                { "IsWindowPatternAvailable", AutomationElement.IsWindowPatternAvailableProperty},
+                { "ItemStatus", AutomationElement.ItemStatusProperty},
+                { "ItemType", AutomationElement.ItemTypeProperty},
+                { "LabeledBy", AutomationElement.LabeledByProperty},
+                { "LocalizedControlType", AutomationElement.LocalizedControlTypeProperty},
+                { "Name", AutomationElement.NameProperty},
+                { "Orientation", AutomationElement.OrientationProperty},
+                { "ProcessId", AutomationElement.ProcessIdProperty},
+                { "RuntimeId", AutomationElement.RuntimeIdProperty},
+                { "Selection", SelectionPattern.SelectionProperty},
+                { "ToggleState", TogglePattern.ToggleStateProperty},
+                { "Value", ValuePattern.ValueProperty},
+                { "VerticalViewSize", ScrollPattern.VerticalViewSizeProperty},
+                { "VerticallyScrollable", ScrollPattern.VerticallyScrollableProperty},
+            };
+            elements = new Dictionary<long, AutomationElement>();
+            parents = new Dictionary<long, long>();
+            cacheElements = true;
+            cacheMode = "lastwindow"; // It can only be: "none", "lastdump", "lastwindow", "all"
+            lastWindow = new IntPtr(0);
+        }
 
         private static int ReportFail(string message)
         {
@@ -1274,7 +1337,11 @@ namespace FmbtWindows
             }
             if (filterSubChildClassName == "" || elt.Current.ClassName == filterSubChildClassName)
             {
-                texts.Add("" + elt.GetCurrentPropertyValue(propertyField));
+                var value = elt.GetCurrentPropertyValue(propertyField, true);
+                if (value != AutomationElement.NotSupported)
+                {
+                    texts.Add("" + value);
+                }
             }
 
             // Collect all child elements
@@ -1295,7 +1362,11 @@ namespace FmbtWindows
             }
             if (filterSubChildClassName == "" || elt.Cached.ClassName == filterSubChildClassName)
             {
-                texts.Add("" + elt.GetCachedPropertyValue(propertyField));
+                var value = elt.GetCachedPropertyValue(propertyField, true);
+                if (value != AutomationElement.NotSupported) {
+                    texts.Add("" + value);
+                }
+
             }
 
             // Collect all child elements
