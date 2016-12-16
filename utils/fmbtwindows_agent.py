@@ -1026,11 +1026,6 @@ namespace FmbtWindows
         public static void DumpElementInfo(AutomationElement elt, long eltHash, int depth, long parent, long[] fromPath, string[] properties, int[] bbox,
             string dumpChildClass, string dumpChildName, bool doNotDump)
         {
-            if (fromPath.Length > depth && fromPath[depth] != eltHash)
-            {
-                return;
-            }
-
             string pValue;
             string pName;
             var supportedProps = elt.GetSupportedProperties();
@@ -1100,6 +1095,11 @@ namespace FmbtWindows
         {
             long eltHash = elt.GetHashCode();
             eltHash = (parent << 32) + eltHash;
+
+            if (fromPath.Length > depth && fromPath[depth] != eltHash)
+            {
+                return;
+            }
 
             DumpElementInfo(elt, eltHash, depth, parent, fromPath, properties, bbox, dumpChildClass, dumpChildName, doNotDump);
 
