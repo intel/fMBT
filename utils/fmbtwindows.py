@@ -1908,7 +1908,7 @@ class WindowsConnection(fmbtgti.GUITestConnection):
                 self._agent_ns,
                 "base64.b64encode(zlib.compress(file(%s, 'rb').read(), %s))" % (
                     repr(remoteFilename), compressLevel))
-            data = base64.b64decode(zlib.decompress(data_b64_z))
+            data = zlib.decompress(base64.b64decode(data_b64_z))
         else:
             data_b64 = self._agent.eval_in(
                 self._agent_ns,
