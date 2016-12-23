@@ -1904,15 +1904,16 @@ class WindowsConnection(fmbtgti.GUITestConnection):
                 compressLevel = compress
             else:
                 compressLevel = 3
-            data = self._agent.eval_in(
+            data_b64_z = self._agent.eval_in(
                 self._agent_ns,
-                "zlib.compress(file(%s, 'rb').read(), %s)" % (
+                "base64.b64encode(zlib.compress(file(%s, 'rb').read(), %s))" % (
                     repr(remoteFilename), compressLevel))
-            data = zlib.decompress(data)
+            data = base64.b64decode(zlib.decompress(data_b64_z))
         else:
-            data = self._agent.eval_in(
+            data_b64 = self._agent.eval_in(
                 self._agent_ns,
-                "file(%s, 'rb').read()" % (repr(remoteFilename),))
+                "base64.b64encode(file(%s, 'rb').read())" % (repr(remoteFilename),))
+            data = base64.b64decode(data_b64)
         if localFilename:
             file(localFilename, "wb").write(data)
             return True
