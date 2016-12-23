@@ -103,7 +103,10 @@ class Connection(object):
                 raise pythonshare.AuthenticationError("Permission denied")
 
     def __del__(self):
-        self.close()
+        try:
+            self.close()
+        except:
+            pass
 
     def make_local(self, rv):
         if isinstance(rv, Exec_rv):
