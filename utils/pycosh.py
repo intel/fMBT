@@ -228,23 +228,26 @@ def find(*args):
         findname = opts["-n"]
     else:
         findname = "*"
+    dirname_ends_with_sep = dirname[-1] in ["/", "\\"]
     slash_only = not "\\" in dirname
+    if slash_only:
+        sep = "/"
+    else:
+        sep = os.path.sep
     rv = []
+    # DIR + NAME forms a path without duplicate path separators
     for root, dirs, files in os.walk(dirname):
         if slash_only:
             root = root.replace("\\", "/")
-        for name in dirs:
+        for name in dirs + files:
             if fnmatch.fnmatch(name, findname):
-                if slash_only:
-                    rv.append(root[len(dirname):] + "/" + name)
+                if root == dirname:
+                    if dirname_ends_with_sep:
+                        rv.append(name)
+                    else:
+                        rv.append(sep + name)
                 else:
-                    rv.append(os.path.join(root[len(dirname):], name))
-        for name in files:
-            if fnmatch.fnmatch(name, findname):
-                if slash_only:
-                    rv.append(root[len(dirname):] + "/" + name)
-                else:
-                    rv.append(os.path.join(root[len(dirname):], name))
+                    rv.append(root[len(dirname):] + sep + name)
     return "\n".join(rv)
 
 def date():
