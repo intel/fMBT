@@ -1,8 +1,34 @@
-fmbt (0.37-0.rc0) unstable; urgency=low
+fmbt (0.37-1) unstable; urgency=low
+  * fmbtwindows:
+    - Device.refreshView() filterType and filterCondition parameters added:
+      does view item filtering inside the UIAutomation framework, enables
+      finding widgets in a fraction of the time it might otherwise take.
+    - ViewItem.patterns(), setValue(), expand(), collapse() added.
+    - Device.setErrorReporting() / errorReporting() added for WER settings:
+      setErrorReporting({"DontShowUI": 1}) disables showing
+      interactive crash dialogs, for instance.
+    - Device.findRegistry() added for searching registry keys and values.
+    - Device.putFile() can create a new file with given string as content.
+    - Device.putFile() works with large files (several gigabytes).
+    - Device.shellSOE() has now timeout parameter.
+    - Device.enableVisualLog() logs (traces) now many new methods.
+  * pycosh:
+    - psput and psget added for file transfer to/from pythonshare servers.
+    - pspycosh added for remote login on pythonshare servers.
+    - rm -r option added.
+    - mkdir -p option added.
+    - "awk" added (very very pycoscopic version).
+  * fmbtandroid/chromiumos/tizen/vnc/windows/x11:
+    - Device.waitAny() / Screen.waitAny() added, waits for one
+      or more changes to happen.
+  * AAL/Python:
+    - remote_pyaal --log-unbuffered added for keeping log in tight sync.
+  * pythonshare:
+    - hook(event_signature, callback) added, helps tracing and debugging
+      which routines open/close connections and execute code remotely.
+  * Many minor fixes and improvements.
 
-  * Development version.
-
- -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 10 Oct 2016 10:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 30 Dec 2016 13:42:00 +0300
 
 fmbt (0.36-1) unstable; urgency=low
 
