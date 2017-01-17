@@ -188,7 +188,10 @@ def awk(prog, *args):
 def cd(dirname):
     """cd DIRNAME
     change current working directory"""
-    os.chdir(os.path.join(os.getcwd(), dirname))
+    d = expand(dirname, accept_pipe=False, min=1, exist=True).splitlines()
+    if len(d) > 1:
+        raise ValueError("unambiguous directory name")
+    os.chdir(os.path.join(os.getcwd(), d[0]))
     return ""
 
 def curl(*args):
