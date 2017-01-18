@@ -1,3 +1,9 @@
+fmbt (0.38-0.rc0) unstable; urgency=low
+
+  * Development version.
+
+ -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 18 Jan 2017 13:42:00 +0300
+
 fmbt (0.37-1) unstable; urgency=low
   * fmbtwindows:
     - Device.refreshView() filterType and filterCondition parameters added:
