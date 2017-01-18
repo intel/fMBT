@@ -20,6 +20,7 @@ import client
 import cPickle
 import server
 import messages
+import os
 import socket
 import subprocess
 import urlparse as _urlparse
@@ -176,6 +177,10 @@ def connect(hostspec, password=None, namespace=None):
                              shell=True,
                              stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE)
+        if os.name == "nt":
+            import msvcrt
+            msvcrt.setmode(p.stdin.fileno(), os.O_BINARY)
+            msvcrt.setmode(p.stdout.fileno(), os.O_BINARY)
         rv = client.Connection(p.stdout, p.stdin, **kwargs)
     else:
         raise ValueError('invalid URI "%s"' % (hostspec,))

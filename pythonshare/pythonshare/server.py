@@ -608,6 +608,10 @@ def start_server(host, port,
                 pass
     elif port == "stdin":
         opt_debug_limit = 0
+        if os.name == "nt":
+            import msvcrt
+            msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
+            msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
         conn = client.Connection(sys.stdin, sys.stdout)
         _serve_connection(conn, conn_opts)
     for ns in sorted(_g_remote_namespaces.keys()):
