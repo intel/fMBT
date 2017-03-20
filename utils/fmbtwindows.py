@@ -1879,7 +1879,10 @@ class WindowsConnection(fmbtgti.GUITestConnection):
     def pycosh(self, command):
         if not self._pycosh_sent_to_dut:
             # upload pycosh module to DUT
-            self.execPython(file(inspect.getsourcefile(pycosh)).read())
+            try:
+                self.evalPython("len(_g_pycosh_source)")
+            except pythonshare.RemoteEvalError:
+                self.execPython(file(inspect.getsourcefile(pycosh)).read())
             self._pycosh_sent_to_dut = True
         return self.evalPython("pycosh_eval(%s)" % (repr(command),))
 
