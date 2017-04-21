@@ -1,5 +1,5 @@
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2012 Intel Corporation.
+# Copyright (c) 2012-2017 Intel Corporation.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU Lesser General Public License,
@@ -39,6 +39,8 @@ _g_actionName = "undefined"
 _g_lastExecutedActionName = "undefined"
 _g_testStep = -1
 _g_simulated_actions = []
+_g_adapterlogFilename = "/tmp/fmbt.adapterlog"
+
 
 def _fmbt_call_helper(func,param = ""):
     if simulated():
@@ -92,7 +94,7 @@ def fmbtlograw(msg, flush=True):
 
 def adapterlog(msg, flush=True):
     try:
-        _adapterlogWriter(file("/tmp/fmbt.adapterlog", "a"),
+        _adapterlogWriter(file(_g_adapterlogFilename, "a"),
                           formatAdapterLogMessage(msg,))
     except: pass
 
@@ -107,6 +109,21 @@ def setAdapterLogWriter(func):
     """
     global _adapterlogWriter
     _adapterlogWriter = func
+
+def adapterLogFilename():
+    """
+    Returns the filename to which the default fmbt.adapterlog() is
+    writing.
+    """
+    return _g_adapterlogFilename
+
+def setAdapterLogFilename(filename):
+    """
+    Set filename to which the default fmbt.adapterlog() function will
+    write messages
+    """
+    global _g_adapterlogFilename
+    _g_adapterlogFilename = filename
 
 def adapterLogWriter():
     """
