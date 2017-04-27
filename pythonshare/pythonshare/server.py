@@ -314,13 +314,9 @@ def _local_async_execute(async_rv, exec_msg):
 def _remote_execute(ns, exec_msg):
     rns = _g_remote_namespaces[ns]
     pythonshare._send(exec_msg, rns.to_remote)
-    try:
-        return pythonshare._recv(rns.from_remote)
-    except AttributeError:
-        # If another thread closes the connection between send/recv,
-        # cPickle.load() may raise "'NoneType' has no attribute 'recv'".
-        # Make this look like EOF (connection lost)
-        raise EOFError()
+    # _recv raises EOFError() if disconnected,
+    # let it raise through.
+    return pythonshare._recv(rns.from_remote)
 
 def _connection_lost(conn_id, *closables):
     if closables:

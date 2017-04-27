@@ -80,6 +80,13 @@ def _recv(source):
             return messages.Unloadable(str(e))
         except EOFError:
             raise
+        except socket.error, e:
+            raise EOFError("socket.error: " + str(e))
+        except AttributeError, e:
+            # If another thread closes the connection between send/recv,
+            # cPickle.load() may raise "'NoneType' has no attribute 'recv'".
+            # Make this look like EOF (connection lost)
+            raise EOFError(str(e))
         except Exception, e:
             return messages.Unloadable("load error %s: %s" % (type(e).__name__, e))
 _recv.locks = {}
