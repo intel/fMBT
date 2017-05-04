@@ -28,7 +28,7 @@ import socket
 import pythonshare
 from pythonshare.messages import \
     Exec, Exec_rv, Async_rv, Register_ns,\
-    Request_ns, Drop_ns, Ns_rv, Server_ctl, Server_ctl_rv
+    Request_ns, Drop_ns, Ns_rv, Server_ctl, Server_ctl_rv, Data_info
 
 class Connection(object):
     """Connection to a Pythonshare server.
@@ -159,8 +159,11 @@ class Connection(object):
             namespace = self.namespace()
         pythonshare._check_hook("before:client.exec_in", {"code": code, "expr": expr, "namespace": namespace, "async": async, "lock": lock})
         try:
-            pythonshare._send(Exec(namespace, code, expr, async=async, lock=lock), self._to_server)
-            return self.make_local(pythonshare._recv(self._from_server))
+            pythonshare._send(Exec(
+                namespace, code, expr, async=async, lock=lock,
+                recv_caps=pythonshare.messages.RECV_CAP_COMPRESSION), self._to_server)
+            response = pythonshare._recv_with_info(self._from_server)
+            return self.make_local(response)
         except EOFError:
             raise pythonshare.PythonShareError(
                 'No connection to namespace "%s"' % (namespace,))

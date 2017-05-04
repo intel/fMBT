@@ -25,11 +25,19 @@ import socket
 import subprocess
 import urlparse as _urlparse
 import thread
+import zlib
 
 from messages import Exec, Exec_rv
 
+# Minimum string length for optimized sending
+_SEND_OPT_MESSAGE_MIN = 1024*128    # optimize sending msgs of at least 128 kB
+_SEND_OPT_BLOCK_SIZE = 1024*64      # flush between 64 kB blocks when sending
+_SEND_OPT_COMPRESS_TRIAL = 1024*128 # size of compress test block
+_SEND_OPT_COMPRESS_MIN = 0.8        # compress at least 0.8 * orig or smaller
+_SEND_OPT_COMPRESSION_LEVEL = 3     # zlib compression level, speed over size
+
 # Connection = client.Connection
-default_port = 8089 # PY
+default_port = 8089 # str(ord("P")) + str(ord("Y"))
 
 class PythonShareError(Exception):
     pass
@@ -62,18 +70,72 @@ def _close(*args):
             except (socket.error, IOError):
                 pass
 
-def _send(msg, destination):
-    if not destination in _send.locks:
-        _send.locks[destination] = thread.allocate_lock()
-    with _send.locks[destination]:
-        cPickle.dump(msg, destination, 2)
+def _send(msg, destination, acquire_send_lock=True, pickle=True):
+    if acquire_send_lock:
+        _acquire_send_lock(destination)
+    try:
+        if pickle:
+            cPickle.dump(msg, destination, 2)
+        else:
+            destination.write(msg)
         destination.flush()
+    finally:
+        if acquire_send_lock:
+            _release_send_lock(destination)
 _send.locks = {}
 
-def _recv(source):
-    if not source in _recv.locks:
-        _recv.locks[source] = thread.allocate_lock()
-    with _recv.locks[source]:
+def _send_opt(msg, destination, recv_caps, acquire_send_lock=True):
+    data = cPickle.dumps(msg, 2)
+    data_length = len(data)
+    if data_length < _SEND_OPT_MESSAGE_MIN:
+        _send(data, destination, acquire_send_lock=acquire_send_lock, pickle=False)
+        return None
+    if recv_caps & messages.RECV_CAP_COMPRESSION:
+        # Try if compressing makes sense. For instance, at least 20 %
+        # compression could be required for the first block to compress
+        # everything.
+        compress_block_len = min(data_length, _SEND_OPT_COMPRESS_TRIAL)
+        compressed_block = zlib.compress(data[:compress_block_len],
+                                         _SEND_OPT_COMPRESSION_LEVEL)
+        if len(compressed_block) < compress_block_len * _SEND_OPT_COMPRESS_MIN:
+            _uncompressed_data_length = data_length
+            if compress_block_len == data_length:
+                # everything got compressed for trial
+                data = compressed_block
+            else:
+                # only first bytes were compressed in trial, compress all now
+                data = zlib.compress(data, _SEND_OPT_COMPRESSION_LEVEL)
+            data_length = len(data)
+            compression_info = "compressed(%s)" % (_uncompressed_data_length,)
+        else:
+            compression_info = "no_compression"
+    else:
+        compression_info = "no_compression"
+    data_info = messages.Data_info(
+        data_type="Exec_rv",
+        data_length=data_length,
+        data_format=compression_info + ",pickled,allinone")
+    if acquire_send_lock:
+        _acquire_send_lock(destination)
+    try:
+        _send(data_info, destination, acquire_send_lock=False)
+        bytes_sent = 0
+        while bytes_sent < data_length:
+            block_len = min(_SEND_OPT_BLOCK_SIZE, data_length-bytes_sent)
+            data_block = data[bytes_sent:bytes_sent+block_len]
+            # this may raise socket.error, let it raise through
+            destination.write(data_block)
+            destination.flush()
+            bytes_sent += block_len
+    finally:
+        _release_send_lock(destination)
+    return data_info
+
+def _recv(source, acquire_recv_lock=True):
+    """returns the first message from source"""
+    if acquire_recv_lock:
+        _acquire_recv_lock(source)
+    try:
         try:
             return cPickle.load(source)
         except (ValueError, cPickle.UnpicklingError), e:
@@ -89,7 +151,91 @@ def _recv(source):
             raise EOFError(str(e))
         except Exception, e:
             return messages.Unloadable("load error %s: %s" % (type(e).__name__, e))
+    finally:
+        if acquire_recv_lock:
+            _release_recv_lock(source)
 _recv.locks = {}
+
+def _recv_with_info(source, acquire_recv_lock=True):
+    """returns the first payload message from source that may/may not be
+    preceded by Data_info
+    """
+    if acquire_recv_lock:
+        _acquire_recv_lock(source)
+    try:
+        msg = _recv(source, False)
+        if not isinstance(msg, messages.Data_info):
+            return msg
+        data = source.read(msg.data_length)
+        if len(data) != msg.data_length:
+            raise EOFError()
+        if "compressed(" in msg.data_format:
+            data = zlib.decompress(data)
+        try:
+            return cPickle.loads(data)
+        except (ValueError, cPickle.UnpicklingError), e:
+            return messages.Unloadable(str(e))
+        except Exception, e:
+            return messages.Unloadable("load error %s: %s" % (type(e).__name__, e))
+    finally:
+        if acquire_recv_lock:
+            _release_recv_lock(source)
+
+def _forward(source, destination, data_length,
+             acquire_send_lock=True,
+             acquire_recv_lock=True):
+    if acquire_recv_lock:
+        _acquire_recv_lock(source)
+    if acquire_send_lock:
+        _acquire_send_lock(destination)
+    destination_ok = True
+    try:
+        bytes_sent = 0
+        bytes_read = 0
+        forward_block_size = _SEND_OPT_BLOCK_SIZE
+        while bytes_read < data_length:
+            forward_block = source.read(
+                min(forward_block_size, data_length - bytes_read))
+            bytes_read += len(forward_block)
+            if forward_block:
+                if destination_ok:
+                    try:
+                        destination.write(forward_block)
+                        destination.flush()
+                        bytes_sent += len(forward_block)
+                    except socket.error:
+                        destination_ok = False
+                        # must still keep reading everything from the source
+            else:
+                raise EOFError() # source run out of data
+        return bytes_sent
+    finally:
+        if acquire_recv_lock:
+            _release_recv_lock(source)
+        if acquire_send_lock:
+            _release_send_lock(destination)
+
+def _acquire_recv_lock(source):
+    if not source in _recv.locks:
+        _recv.locks[source] = thread.allocate_lock()
+    _recv.locks[source].acquire()
+
+def _acquire_send_lock(destination):
+    if not destination in _send.locks:
+        _send.locks[destination] = thread.allocate_lock()
+    _send.locks[destination].acquire()
+
+def _release_recv_lock(source):
+    try:
+        _recv.locks[source].release()
+    except thread.error:
+        pass # already released
+
+def _release_send_lock(destination):
+    try:
+        _send.locks[destination].release()
+    except thread.error:
+        pass # already released
 
 _g_hooks = {}
 
