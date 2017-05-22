@@ -825,6 +825,26 @@ def unzip(*args):
             rv.extend(zf.namelist())
     return "\n".join(rv)
 
+def xargs(*args):
+    """xargs CMD
+    run CMD with args from stdin"""
+    if not args:
+        raise ValueError("xargs: CMD missing")
+    if not _g_pipe_has_data:
+        raise ValueError("xargs: no get arguments in pipe")
+    retval = []
+    for arg in open(_g_pipe_filename):
+        arg = arg.strip()
+        funccall = args[0] + repr(tuple(args[1:]) + (arg,))
+        try:
+            func_rv = eval(funccall)
+            if func_rv and not func_rv.endswith("\n"):
+                func_rv += "\n"
+            retval.append(func_rv)
+        except Exception, e:
+            retval.append(str(e).splitlines()[-1] + "\n")
+    return "".join(retval)
+
 def xxd(*args):
     """xxd [FILE...]
     make a hexdump"""
