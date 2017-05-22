@@ -1,8 +1,22 @@
-fmbt (0.38-0.rc2) unstable; urgency=low
+fmbt (0.38-1) unstable; urgency=low
 
-  * Development version.
+  * pythonshare:
+    - Connecting via shell://COMMAND supported on Windows.
+    - Fixed handling broken socket connections on pythonshare-server.
+    - Fast forwarding return values from exported/imported namespaces.
+    - Automatic compression of return values where it helps.
+    - Debug mode logging performance improved.
+  * pycosh:
+    - cd: support expanding wildcards
+    - xargs added.
+  * fmbtwindows:
+    - Fixed agent memory usage when running pycosh() after reconnecting.
+  * fmbtlogger:
+    - Support logging method/function calls from any module and object.
+  * fmbt.py:
+    - setAdapterLogFilename() added, controls fmbt.adapterlog(msg) destination.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 18 Jan 2017 13:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 22 May 2017 13:42:00 +0300
 
 fmbt (0.37-1) unstable; urgency=low
   * fmbtwindows:
