@@ -41,6 +41,7 @@ client = pythonshare.client
 on_windows = (os.name == "nt")
 has_os_fdatasync = hasattr(os, "fdatasync")
 
+opt_debug = False
 opt_debug_limit = 240
 opt_log_fd = None
 opt_allow_new_namespaces = True
