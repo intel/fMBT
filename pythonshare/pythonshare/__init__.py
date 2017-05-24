@@ -24,6 +24,7 @@ import os
 import socket
 import subprocess
 import urlparse as _urlparse
+import time
 import thread
 import zlib
 
@@ -118,6 +119,10 @@ def _send_opt(msg, destination, recv_caps, acquire_send_lock=True):
     if acquire_send_lock:
         _acquire_send_lock(destination)
     try:
+        send_delay = float(os.getenv("PYTHONSHARE_SEND_DELAY","0.0"))
+    except:
+        send_delay = 0.0
+    try:
         _send(data_info, destination, acquire_send_lock=False)
         bytes_sent = 0
         while bytes_sent < data_length:
@@ -125,6 +130,8 @@ def _send_opt(msg, destination, recv_caps, acquire_send_lock=True):
             data_block = data[bytes_sent:bytes_sent+block_len]
             # this may raise socket.error, let it raise through
             destination.write(data_block)
+            if send_delay > 0.0:
+                time.sleep(send_delay)
             destination.flush()
             bytes_sent += block_len
     finally:
