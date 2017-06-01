@@ -435,7 +435,10 @@ class SimulatedGUITestConnection(GUITestConnection):
             self._nextScreenshotFilename += 1
             if not os.access(fakeFilename, os.R_OK):
                 raise IOError('screenshot file not found: "%s"' % (fakeFilename,))
-            shutil.copy(fakeFilename, filename)
+            if fakeFilename.lower().endswith(".jpg"):
+                _convert(fakeFilename, [], filename)
+            else:
+                shutil.copy(fakeFilename, filename)
             return True
         else:
             return False
