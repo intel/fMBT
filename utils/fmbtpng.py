@@ -18,6 +18,8 @@
 # Converts raw images into PNG, based on libpng.
 
 import ctypes
+import os
+
 try:
     import fmbtgti
 except ImportError:
@@ -37,9 +39,14 @@ PNG_TRANSFORM_IDENTITY = 0
 
 NULL = ctypes.c_void_p(0)
 
+if os.name == "nt":
+    libpng_filenames = ["libpng16-16.dll"]
+else:
+    libpng_filenames = ["libpng.so", "libpng12.so.0", "libpng15.so.15",
+                        "libpng16.so.16"]
+
 libpng = None
-for libpng_filename in ["libpng.so", "libpng12.so.0", "libpng15.so.15",
-                        "libpng16.so.16"]:
+for libpng_filename in libpng_filenames:
     try:
         libpng = ctypes.CDLL(libpng_filename)
         break
