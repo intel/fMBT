@@ -475,7 +475,7 @@ def rmdir(dirname):
 def cat(*filenames):
     """cat FILE...
     concatenate contents of listed files"""
-    return "".join([file(f).read() for f in expand(*filenames).splitlines()])
+    return "".join([_file(f).read() for f in expand(*filenames).splitlines()])
 
 def df(*args):
     """df [-h] DIRNAME
@@ -618,7 +618,7 @@ def psput(psconn, pattern):
     conn.exec_("import base64")
     rv = []
     for filename in expand(pattern, accept_pipe=False).splitlines():
-        data = file(filename).read()
+        data = file(filename, "rb").read()
         conn.eval_('file(%s, "wb").write(base64.b64decode(%s))' %
                    (repr(os.path.basename(filename)),
                     repr(base64.b64encode(data))))
@@ -641,7 +641,7 @@ def psget(psconn, pattern):
     rv = []
     for filename in conn.eval_('expand(%s, accept_pipe=False)' %
                                repr(pattern)).splitlines():
-        file(os.path.basename(filename), "w").write(
+        file(os.path.basename(filename), "wb").write(
             conn.eval_("file(%s, 'rb').read()" % (repr(filename),)))
         rv.append(filename)
     return "\n".join(rv)
