@@ -221,9 +221,9 @@ def curl(*args):
     return "".join(rv)
 
 def find(*args):
-    """find [-n FILE] DIR
-    find file(s) in directory"""
-    opts, remainder = _getopts(args, "n:")
+    """find [-n FILE] [-t T] DIR
+    find file(s) in a directory, T=f(ile) or d(ir)"""
+    opts, remainder = _getopts(args, "n:t:")
     if not remainder:
         raise ValueError("missing DIR")
     dirname = remainder[0]
@@ -231,6 +231,12 @@ def find(*args):
         findname = opts["-n"]
     else:
         findname = "*"
+    if "-t" in opts:
+        findtype = opts["-t"].lower()
+        if findtype not in ["f", "d"]:
+            raise ValueError("find type must be 'f' (file) or 'd' (directory)")
+    else:
+        findtype = None
     dirname_ends_with_sep = dirname[-1] in ["/", "\\"]
     slash_only = not "\\" in dirname
     if slash_only:
@@ -242,8 +248,15 @@ def find(*args):
     for root, dirs, files in os.walk(dirname):
         if slash_only:
             root = root.replace("\\", "/")
+        if findtype:
+            dirs_set = set(dirs)
+            files_set = set(files)
         for name in dirs + files:
             if fnmatch.fnmatch(name, findname):
+                if (findtype == "f" and name not in files_set):
+                    continue # skip not-a-file from find -t f ...
+                elif (findtype == "d" and name not in dirs_set):
+                    continue # skip not-a-dir from find -t d ...
                 if root == dirname:
                     if dirname_ends_with_sep:
                         rv.append(name)
