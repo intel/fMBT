@@ -608,49 +608,84 @@ def psh(*cmd):
     return o + e
 
 _g_pspycosh_conn = None
-def pspycosh(psconn):
-    """pspycosh HOSTSPEC
-    open pycosh shell on a pythonshare server"""
+def pspycosh(psconn, *cmdlines):
+    """pspycosh CONNSPEC [CMD...]
+    open remote pycosh shell or run CMDs on it"""
     global _g_pspycosh_conn
     if isinstance(psconn, pythonshare.client.Connection):
         _g_pspycosh_conn = psconn
+        close_connection = False
     else:
         _g_pspycosh_conn = pythonshare.connect(psconn)
+        close_connection = True
     _g_pspycosh_conn.exec_(_g_pycosh_source)
+    if cmdlines:
+        rv = []
+        try:
+            for cmdline in cmdlines:
+                rv.append(pycosh_eval(cmdline))
+        finally:
+            if close_connection:
+                _g_pspycosh_conn.close()
+                _g_pspycosh_conn = None
+        return "".join(rv)
     return ""
 
-def _psput_singlefile(conn, src_filename, dst_filename):
+def _psput_file(conn, src_filename, dst_filename):
     data = file(src_filename, "rb").read()
     conn.eval_('file(%s, "wb").write(base64.b64decode(%s))' %
                (repr(dst_filename),
                 repr(base64.b64encode(data))))
 
+def _psput_dir(conn, dirname, dest_dir):
+    rv = []
+    for root, dirs, files in os.walk(dirname):
+        filedir = root.replace('\\', '/')
+        try:
+            conn.eval_('os.makedirs(%r)' % (dest_dir + "/" + filedir,))
+        except:
+            pass
+        for f in files:
+            _psput_file(conn,
+                        filedir + "/" + f,
+                        dest_dir + "/" + filedir + "/" + f)
+            rv.append(filedir + "/" + f)
+    return rv
+
 def psput(psconn, pattern):
-    """psput CONNSPEC FILE|DIR...
+    """psput CONNSPEC[//DEST] FILE...
     upload files to pythonshare server"""
+    # Examples:
+    # Put files to current working directory on host:
+    #     psput passwd@host:port files
+    # Put localdir under cwd/relative/path on host:
+    #     psput passwd@host:port//relative/path localdir
+    # Put localdir under /abs/path on host on Linux host:
+    #     psput passwd@host:port///abs/path localdir
+    # Put localdir under c:/abs/winpath on Windows host:
+    #     psput passwd@host:port//c:/abs/winpath localdir
+    # Put localdir to /abs/path on Linux host via hub/namespace:
+    #     psput passwd@hub:port/namespace///abs/path localdir
+    # Check cwd on host:
+    #     pspycosh passwd@host:port pwd
     if isinstance(psconn, pythonshare.client.Connection):
+        dest_dir = "."
         conn = psconn
         close_connection = False
     else:
+        if "//" in psconn:
+            psconn, dest_dir = psconn.split("//", 1)
+        else:
+            dest_dir = "."
         conn = pythonshare.connect(psconn)
         close_connection = True
     conn.exec_("import base64, os")
     rv = []
     for filename in expand(pattern, accept_pipe=False).splitlines():
         if os.path.isdir(filename):
-            for root, dirs, files in os.walk(filename):
-                filedir = root.replace('\\', '/')
-                try:
-                    conn.eval_('os.makedirs(%r)' % (filedir,))
-                except:
-                    pass
-                for f in files:
-                    _psput_singlefile(conn,
-                                      filedir + "/" + f,
-                                      filedir + "/" + f)
-                    rv.append(filedir + "/" + f)
+            rv.extend(_psput_dir(conn, filename, dest_dir))
         else:
-            _psput_singlefile(conn, filename, os.path.basename(filename))
+            _psput_file(conn, filename, dest_dir + "/" + os.path.basename(filename))
             rv.append(filename)
     if close_connection:
         conn.close()
@@ -678,7 +713,7 @@ def psget(psconn, pattern):
 def pwd():
     """pwd
     print current working directory"""
-    return os.getcwd()
+    return os.getcwd().replace("\\", "/")
 
 def pye(*code):
     """pye CODE
