@@ -639,17 +639,23 @@ def _psput_file(conn, src_filename, dst_filename):
 
 def _psput_dir(conn, dirname, dest_dir):
     rv = []
+    dirname = dirname.replace("\\", "/")
+    dir_dest_dir = dest_dir.replace("\\", "/") + "/" + os.path.basename(dirname)
     for root, dirs, files in os.walk(dirname):
-        filedir = root.replace('\\', '/')
+        file_src_dir = root.replace('\\', '/')
+        if file_src_dir[len(dirname):]:
+            file_dest_dir = (dir_dest_dir + "/" + file_src_dir[len(dirname):])
+        else:
+            file_dest_dir = dir_dest_dir
         try:
-            conn.eval_('os.makedirs(%r)' % (dest_dir + "/" + filedir,))
+            conn.eval_('os.makedirs(%r)' % (file_dest_dir,))
         except:
             pass
         for f in files:
             _psput_file(conn,
-                        filedir + "/" + f,
-                        dest_dir + "/" + filedir + "/" + f)
-            rv.append(filedir + "/" + f)
+                        file_src_dir + "/" + f,
+                        file_dest_dir + "/" + f)
+            rv.append(file_src_dir + "/" + f)
     return rv
 
 def psput(psconn, pattern):
