@@ -619,8 +619,14 @@ def pspycosh(psconn):
     _g_pspycosh_conn.exec_(_g_pycosh_source)
     return ""
 
+def _psput_singlefile(conn, src_filename, dst_filename):
+    data = file(src_filename, "rb").read()
+    conn.eval_('file(%s, "wb").write(base64.b64decode(%s))' %
+               (repr(dst_filename),
+                repr(base64.b64encode(data))))
+
 def psput(psconn, pattern):
-    """psput CONNSPEC FILE...
+    """psput CONNSPEC FILE|DIR...
     upload files to pythonshare server"""
     if isinstance(psconn, pythonshare.client.Connection):
         conn = psconn
@@ -628,14 +634,24 @@ def psput(psconn, pattern):
     else:
         conn = pythonshare.connect(psconn)
         close_connection = True
-    conn.exec_("import base64")
+    conn.exec_("import base64, os")
     rv = []
     for filename in expand(pattern, accept_pipe=False).splitlines():
-        data = file(filename, "rb").read()
-        conn.eval_('file(%s, "wb").write(base64.b64decode(%s))' %
-                   (repr(os.path.basename(filename)),
-                    repr(base64.b64encode(data))))
-        rv.append(filename)
+        if os.path.isdir(filename):
+            for root, dirs, files in os.walk(filename):
+                filedir = root.replace('\\', '/')
+                try:
+                    conn.eval_('os.makedirs(%r)' % (filedir,))
+                except:
+                    pass
+                for f in files:
+                    _psput_singlefile(conn,
+                                      filedir + "/" + f,
+                                      filedir + "/" + f)
+                    rv.append(filedir + "/" + f)
+        else:
+            _psput_singlefile(conn, filename, os.path.basename(filename))
+            rv.append(filename)
     if close_connection:
         conn.close()
     return "\n".join(rv)
