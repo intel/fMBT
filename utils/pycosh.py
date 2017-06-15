@@ -419,21 +419,36 @@ def ls(*args):
     """ls [-l]
     list files on current working directory"""
     opts, filenames = _getopts(args, "l")
+    files = []
     if filenames:
-        files = sorted([f for f in expand(*filenames, exist=True).splitlines()])
+        for filename in expand(*filenames, exist=True).splitlines():
+            if os.path.isdir(filename):
+                root, subdirs, subfiles = os.walk(filename).next()
+                root = root.replace('\\', '/')
+                files.extend(sorted([root + "/" + d + "/" for d in subdirs]) +
+                             sorted([root + "/" + f for f in subfiles]))
+            else:
+                files.append(filename)
     else:
         _, subdirs, files = os.walk(".").next()
         files = sorted([d + "/" for d in subdirs]) + sorted(files)
+    files_outnames = []
+    for f in files:
+        if f.endswith("/"):
+            outname = os.path.basename(f[:-1]) + "/"
+        else:
+            outname = os.path.basename(f)
+        files_outnames.append((f, outname))
     if "-l" in opts:
         rv = []
-        for f in files:
+        for f, o in files_outnames:
             fstat = os.stat(f)
             rv.append("%10s  %s  %s" % (
                 fstat.st_size,
                 time.strftime("%Y-%m-%d %H:%M", time.localtime(fstat.st_mtime)),
-                f))
+                o))
     else:
-        rv = files
+        rv = [o for f, o in files_outnames]
     return "\n".join(rv)
 
 def nl(*filenames):
@@ -470,7 +485,7 @@ def redir(dst_filename):
 def rm(*args):
     """rm [-r] FILE...
     remove file"""
-    args, filenames = _getopts(args, "-r")
+    args, filenames = _getopts(args, "rf")
     filenames = expand(*filenames, accept_pipe=False, min=1).splitlines()
     for filename in filenames:
         if "-r" in args and os.path.isdir(filename):
@@ -894,6 +909,14 @@ def unzip(*args):
             zf.extractall(path=dest_dir)
             rv.extend(zf.namelist())
     return "\n".join(rv)
+
+def whoami():
+    """whoami
+    print user name"""
+    try:
+        return getpass.getuser()
+    except Exception:
+        return ""
 
 def xargs(*args):
     """xargs CMD
