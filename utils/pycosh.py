@@ -416,13 +416,13 @@ def kill(*pids):
     return ""
 
 def ls(*args):
-    """ls [-l]
+    """ls [-ld]
     list files on current working directory"""
-    opts, filenames = _getopts(args, "l")
+    opts, filenames = _getopts(args, "ld")
     files = []
     if filenames:
         for filename in expand(*filenames, exist=True).splitlines():
-            if os.path.isdir(filename):
+            if os.path.isdir(filename) and not "-d" in opts:
                 root, subdirs, subfiles = os.walk(filename).next()
                 root = root.replace('\\', '/')
                 files.extend(sorted([root + "/" + d + "/" for d in subdirs]) +
