@@ -1,5 +1,5 @@
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2013-2015, Intel Corporation.
+# Copyright (c) 2013-2017, Intel Corporation.
 #
 # Author: antti.kervinen@intel.com
 #
@@ -232,11 +232,20 @@ def _init_local_namespace(ns, init_code=None, force=False):
         else:
             raise ValueError('Unknown namespace "%s"' % (ns,))
     if init_code != None:
-        try:
-            exec init_code in _g_local_namespaces[ns]
-        except Exception, e:
-            daemon_log('namespace "%s" init error in <string>:\n%s\n\n%s' % (
-                ns, code2string(init_code), exception2string(sys.exc_info())))
+        if isinstance(init_code, basestring):
+            try:
+                exec init_code in _g_local_namespaces[ns]
+            except Exception, e:
+                daemon_log('namespace "%s" init error in <string>:\n%s\n\n%s' % (
+                    ns, code2string(init_code), exception2string(sys.exc_info())))
+        elif isinstance(init_code, dict):
+            # Directly use the dictionary (locals() or globals(), for
+            # instance) as a Pythonshare namespace.
+            clean_ns = _g_local_namespaces[ns]
+            _g_local_namespaces[ns] = init_code
+            _g_local_namespaces[ns].update(clean_ns) # copy pythonshare defaults
+        else:
+            raise TypeError("unsupported init_code type")
 
 def _drop_local_namespace(ns):
     daemon_log('drop local namespace "%s"' % (ns,))
@@ -609,9 +618,12 @@ def start_server(host, port,
     # Initialise, import and export namespaces
     for task, ns, arg in ns_init_import_export:
         if task == "init":
+            # If arg is a string, it will be executed in ns.
+            # If arg is a dict, it will be used as ns.
             _init_local_namespace(ns, arg, force=True)
 
         elif task == "export":
+            # Make sure ns exists before exporting.
             _init_local_namespace(ns, None, force=True)
             daemon_log('exporting "%s" to %s' % (ns, arg))
             try:
