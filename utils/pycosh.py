@@ -732,8 +732,12 @@ def psget(psconn, pattern):
     rv = []
     for filename in conn.eval_('expand(%s, accept_pipe=False)' %
                                repr(pattern)).splitlines():
-        file(os.path.basename(filename), "wb").write(
-            conn.eval_("file(%s, 'rb').read()" % (repr(filename),)))
+        try:
+            data = conn.eval_("file(%r, 'rb').read()" % (filename,))
+        except:
+            rv.append("! error reading %r" % (filename,))
+            continue
+        file(os.path.basename(filename), "wb").write(data)
         rv.append(filename)
     return "\n".join(rv)
 
