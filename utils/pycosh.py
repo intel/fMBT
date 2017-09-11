@@ -221,16 +221,29 @@ def curl(*args):
     return "".join(rv)
 
 def find(*args):
-    """find [-n FILE][-i][-t T] DIR
-    find under DIR, -i(gnore case), T=f(ile)/d(ir)"""
-    opts, remainder = _getopts(args, "n:t:i")
-    if not remainder:
+    """find [-n NAME][-i][-t T][-p a] DIR...
+    find under DIR(s), see help(find)"""
+    # -n NAME: search entries matching wildcard pattern NAME
+    # -i: ignore case
+    # -t f: (type=file) match only files
+    # -t d: (type=dir) match only directories
+    # -p a: print absolute paths
+    opts, remainder = _getopts(args, "n:t:ip:")
+    dirnames = expand(*remainder, exist=True, accept_pipe=False).splitlines()
+    if not dirnames:
         raise ValueError("missing DIR")
-    dirname = remainder[0]
     if "-n" in opts:
         findname = opts["-n"]
     else:
         findname = "*"
+    if "-p" in opts:
+        if opts["-p"] == "a":
+            print_absolute_names = True
+        else:
+            raise ValueError("invalid print option -p %r, supported: 'a'" %
+                             (opts["-p"],))
+    else:
+        print_absolute_names = False
     if "-i" in opts:
         ignore_case = True
     else:
@@ -241,35 +254,39 @@ def find(*args):
             raise ValueError("find type must be 'f' (file) or 'd' (directory)")
     else:
         findtype = None
-    dirname_ends_with_sep = dirname[-1] in ["/", "\\"]
-    slash_only = not "\\" in dirname
-    if slash_only:
-        sep = "/"
-    else:
-        sep = os.path.sep
     rv = []
-    # DIR + NAME forms a path without duplicate path separators
-    for root, dirs, files in os.walk(dirname):
+    for dirname in dirnames:
+        dirname_ends_with_sep = dirname[-1] in ["/", "\\"]
+        slash_only = not "\\" in dirname
         if slash_only:
-            root = root.replace("\\", "/")
-        if findtype:
-            dirs_set = set(dirs)
-            files_set = set(files)
-        for name in dirs + files:
-            if ((ignore_case == False and fnmatch.fnmatch(name, findname)) or
-                 (ignore_case == True and fnmatch.fnmatch(name.lower(), findname.lower()))):
-
-                if (findtype == "f" and name not in files_set):
-                    continue # skip not-a-file from find -t f ...
-                elif (findtype == "d" and name not in dirs_set):
-                    continue # skip not-a-dir from find -t d ...
-                if root == dirname:
-                    if dirname_ends_with_sep:
-                        rv.append(name)
+            sep = "/"
+        else:
+            sep = os.path.sep
+        # DIR + NAME forms a path without duplicate path separators:
+        # if (and only if) DIR ends with /, then NAME does not start with /
+        for root, dirs, files in os.walk(dirname):
+            if slash_only:
+                root = root.replace("\\", "/")
+            if findtype:
+                dirs_set = set(dirs)
+                files_set = set(files)
+            for name in dirs + files:
+                if ((ignore_case == False and fnmatch.fnmatch(name, findname)) or
+                     (ignore_case == True and fnmatch.fnmatch(name.lower(), findname.lower()))):
+                    if (findtype == "f" and name not in files_set):
+                        continue # skip not-a-file from find -t f ...
+                    elif (findtype == "d" and name not in dirs_set):
+                        continue # skip not-a-dir from find -t d ...
+                    if print_absolute_names:
+                        rv.append(os.path.abspath(root + sep + name))
                     else:
-                        rv.append(sep + name)
-                else:
-                    rv.append(root[len(dirname):] + sep + name)
+                        if root == dirname:
+                            if dirname_ends_with_sep:
+                                rv.append(name)
+                            else:
+                                rv.append(sep + name)
+                        else:
+                            rv.append(root[len(dirname):] + sep + name)
     return "\n".join(rv)
 
 def date():
