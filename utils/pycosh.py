@@ -112,10 +112,13 @@ def cmd2py(cmdline):
         funccall = "pipe(%s, %s)" % (repr(cmd2py(cmd_left)),
                                      repr(cmd2py(cmd_right)))
     elif ">" in cmdline:
-        cmd_left, filename = cmdline.split(">", 1)
+        cmd_left, cmd_right = cmdline.split(">", 1)
+        filenames = shlex.split(cmd_right)
+        if len(filenames) != 1:
+            raise ValueError('right side of > must have single filename')
         funccall = "pipe(%s, %s)" % (
             repr(cmd2py(cmd_left)),
-            repr("redir('%s')" % (filename.strip(),)))
+            repr("redir(%r)" % (filenames[0],)))
     else:
         cmdline_list = shlex.split(cmdline.strip())
         funcname = cmdline_list[0]
@@ -190,7 +193,7 @@ def cd(dirname):
     change current working directory"""
     d = expand(dirname, accept_pipe=False, min=1, exist=True).splitlines()
     if len(d) > 1:
-        raise ValueError("unambiguous directory name")
+        raise ValueError("ambiguous directory name")
     os.chdir(os.path.join(os.getcwd(), d[0]))
     return ""
 
@@ -278,7 +281,7 @@ def find(*args):
                     elif (findtype == "d" and name not in dirs_set):
                         continue # skip not-a-dir from find -t d ...
                     if print_absolute_names:
-                        rv.append(os.path.abspath(root + sep + name))
+                        rv.append(os.path.abspath(root + sep + name).replace('\\','/'))
                     else:
                         if root == dirname:
                             if dirname_ends_with_sep:
@@ -1050,8 +1053,14 @@ def _main():
             retval = pycosh_eval(cmdline)
         _output(str(retval))
 
-if "__file__" in globals() and __file__.endswith("pycosh.py"):
-    _g_pycosh_source = open(__file__, "r").read()
+if "__file__" in globals() and "pycosh.py" in __file__:
+    if __file__.endswith("pycosh.py"):
+        _g_pycosh_source = open(__file__, "r").read()
+    elif __file__.endswith("pycosh.pyc"):
+        try:
+            _g_pycosh_source = open(__file__[:-1], "r").read()
+        except:
+            pass
 
 if "_g_pycosh_source" in globals():
     _g_pycosh_source = "_g_pycosh_source = %s\n%s" % (repr(_g_pycosh_source), _g_pycosh_source)
