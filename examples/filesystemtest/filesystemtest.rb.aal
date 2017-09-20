@@ -1,0 +1,146 @@
+# preview-show-vars dir_exists
+aal "filesystemtest" {
+    language "ruby" {
+        require 'tempfile'
+        require 'fileutils'
+        
+        DIRNAME = "/root/temp/fmbt.filesystemtest"
+        SUBDIRNAME = DIRNAME + "/subdir"
+    }
+    variables { dir_exists, subdir_exists }
+    initial_state {
+        dir_exists = false
+        subdir_exists = false
+    }
+    adapter_init {
+        begin
+            FileUtils.rm_rf("#{DIRNAME}/.")
+        rescue Exception => e;end
+    }
+    adapter_exit {
+        if verdict == "pass" and dir_exists
+            log("cleaning up " + DIRNAME)
+            begin
+                FileUtils.rm_rf("#{DIRNAME}/.")
+            rescue Exception => e;end
+        end
+    }
+    input "mkdir ok" {
+        guard()   { return ! dir_exists }
+        adapter() { Dir.mkdir(DIRNAME) }
+        body()    { dir_exists = true }
+    }
+    input "rmdir ok" {
+        guard()   { return dir_exists && ! subdir_exists }
+        adapter() { Dir.rmdir(DIRNAME) }
+        body()    { dir_exists = false }
+    }
+    input "mksubdir ok" {
+        guard()   { return dir_exists && ! subdir_exists}
+        adapter() { Dir.mkdir(SUBDIRNAME) }
+        body()    { subdir_exists = true }
+    }
+    input "rmsubdir ok" {
+        guard()   { return subdir_exists }
+        adapter() { Dir.rmdir(SUBDIRNAME) }
+        body()    { subdir_exists = false }
+    }
+    input "mkdir already exists" {
+        guard()   { return dir_exists }
+        adapter() {
+            begin 
+                os.mkdir(DIRNAME)
+            rescue Errno::EEXIST => e
+                if e.to_s.include?("File exists")
+                    return
+                end
+            end
+            raise(StandardError,"Exception expected")
+        }
+    }
+    input "mksubdir already exists" {
+        guard()   { return subdir_exists }
+        adapter() {
+            begin
+                Dir.mkdir(SUBDIRNAME)
+            rescue Errno::EEXIST => e
+                if e.to_s.include?("File exists")
+                    return
+                end
+            end
+            raise(StandardError,"Exception expected")
+        }
+    }
+    input "rmdir no such file" {
+        guard()   { return ! dir_exists }
+        adapter() {
+            begin
+                Dir.rmdir(DIRNAME)
+            rescue Errno::ENOENT => e
+                if e.to_s.include?("No such file or directory")
+                    return
+                end
+            end
+            raise(StandardError,"Exception expected")
+        }
+    }
+    input "rmdir not empty" {
+        guard()   { return subdir_exists }
+        adapter() {
+            begin
+                Dir.rmdir(DIRNAME)
+            rescue Errno::ENOTEMPTY => e
+                if e.to_s.include?("Directory not empty")
+                    return
+                end
+            end
+            raise(StandardError,"Exception expected")
+        }
+    }
+    input "rmsubdir no such file" {
+        guard()   { return ! subdir_exists }
+        adapter() {
+            begin
+                Dir.rmdir(SUBDIRNAME)
+            rescue Errno::ENOENT => e
+                if e.to_s.include?("No such file or directory")
+                    return
+                end
+            end
+            raise(StandardError,"Exception expected")
+        }
+    }
+
+    tag "dir exists" {
+        guard()   { return dir_exists }
+        adapter() { 
+            if not Dir.exists?(DIRNAME)
+                raise(StandardError,"#{DIRNAME} not accessible")
+            end
+        }
+    }
+    tag "no dir" {
+        guard()   { return ! dir_exists }
+        adapter() {
+            if Dir.exists?(DIRNAME)
+                raise(StandardError,"#{DIRNAME}  accessible")
+            end
+        }
+    }
+    tag "subdir exists" {
+        guard()   { return subdir_exists }
+        adapter() { 
+            if not Dir.exists?(SUBDIRNAME)
+                raise(StandardError,"#{SUBDIRNAME} not accessible")
+            end
+        }
+    }
+    tag "no subdir" {
+        guard()   { return ! subdir_exists }
+        adapter() { 
+            if Dir.exists?(SUBDIRNAME)
+                raise(StandardError,"#{SUBDIRNAME}  accessible")
+            end
+        }
+    }
+}

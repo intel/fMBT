@@ -18,84 +18,11 @@
  *
  */
 
+#include "aalang_rb.hh"
 #include "aalang_py.hh"
 #include "helper.hh"
 
-std::string to_list(std::list<std::string>& l) {
-  if (l.begin()==l.end()) {
-    return "";
-  }
-  std::string ret="\"" +  l.back() + "\"";
-  return ret;
-}
-
-std::string indent(int depth, const std::string &s)
-{
-  std::string rv;
-
-  int offset = 0; // original indentation
-  int first_linebreak = s.find('\n');
-  int first_nonspace = s.find_first_not_of(" \t\n\r");
-  int line_start = 0;
-  int line_end = 0;
-
-  /* search the first non-empty line, the indentation offset is
-   * calculated based on that. */
-  while (first_linebreak < first_nonspace) {
-    line_start = first_linebreak + 1;
-    first_linebreak = s.find('\n', first_linebreak + 1);
-    if (first_linebreak == (int)s.npos) first_linebreak = s.length() - 1;
-  }
-  offset = first_nonspace - line_start;
-
-  do {
-    line_end = s.find('\n', line_start);
-    if (line_end == (int)s.npos) line_end = s.length() - 1;
-    if (offset > depth) {
-      // orig indentation is too deep, cut off (depth - offset)
-      // spaces
-      if (line_end - line_start > offset - depth) {
-        rv += s.substr(line_start + offset - depth,
-                       line_end - line_start - offset + depth + 1);
-      } else {
-        // there is not enough spaces to cut
-        rv += "\n";
-      }
-    } else {
-      // orig indentation is too shallow, add (depth - offset) spaces
-      for (int i = 0; i < depth - offset; i++) rv += " ";
-      rv += s.substr(line_start, line_end - line_start + 1);
-    }
-    line_start = line_end + 1;
-  } while (line_end < (int)s.length() - 1);
-
-  // right-strip
-  rv.erase(rv.find_last_not_of(" \t\n\r")+1);
-
-  return rv;
-}
-
-std::string python_lineno_wrapper(const std::string& filename,int lineno,
-                                  const std::string& funcname,int trim,int ind,
-                                  const std::string& human)
-{
-  if (lineno) {
-    return indent(ind,funcname + ".func_code = aalmodel.setCodeFileLine(" +
-                  funcname + ".func_code, '''" + filename + "''', " +
-                  to_string(lineno-trim) + human ) + "\n";
-  }
-  return "";
-}
-
-std::string python_lineno_wrapper(const codefileline& cfl,
-                                  const std::string& funcname,int trim,int ind,
-                                  const std::string& human)
-{
-  return python_lineno_wrapper(cfl.second.first,cfl.second.second,funcname,
-                               trim,ind,human);
-}
-
-std::string aalang_py::action_helper(const codefileline& cfl,std::string s,
+std::string aalang_rb::action_helper(const codefileline& cfl,std::string s,
 				     std::string& funcname,int i,std::string& acnt)
 {
   funcname = "action" + acnt + s;
@@ -113,12 +40,12 @@ std::string aalang_py::action_helper(const codefileline& cfl,std::string s,
     +    indent(8,cfl.first)+"\n";
 }
 
-const std::string aalang_py::class_name() const
+const std::string aalang_rb::class_name() const
 {
   return "_gen_" + *name;
 }
 
-const std::string aalang_py::serialN(const std::string postfix, bool cls) const
+const std::string aalang_rb::serialN(const std::string postfix, bool cls) const
 {
   // returns [cls.]serial(currentblock)<postfix>
   std::string full_name = "serial" + to_string(abs(serial_stack.back())) + postfix;
@@ -126,7 +53,7 @@ const std::string aalang_py::serialN(const std::string postfix, bool cls) const
   else return full_name;
 }
 
-const std::string aalang_py::serialN_1(const std::string postfix, bool cls) const
+const std::string aalang_rb::serialN_1(const std::string postfix, bool cls) const
 {
   // returns [cls.]serial(outerblock "N-1")<postfix>
   std::list<int>::const_iterator outer_serial = serial_stack.end();
@@ -136,27 +63,21 @@ const std::string aalang_py::serialN_1(const std::string postfix, bool cls) cons
   else return full_name;
 }
 
-const int aalang_py::serial_stackN_1() const
+const int aalang_rb::serial_stackN_1() const
 {
   std::list<int>::const_iterator outer_serial = serial_stack.end();
   --outer_serial; --outer_serial;
   return *outer_serial;
 }
 
-void default_if_empty(std::string& s, const std::string& default_value)
-{
-  size_t first_nonspace = s.find_first_not_of(" \t\n\r");
-  if (first_nonspace == std::string::npos) s = default_value;
-}
-
-void aalang_py::set_starter(std::string* st,const char* file,int line,int col)
+void aalang_rb::set_starter(std::string* st,const char* file,int line,int col)
 {
   s+=indent(0, *st)+"\n";
   delete st;
 }
 
 
-void aalang_py::set_name(std::string* name,bool first,ANAMETYPE t)
+void aalang_rb::set_name(std::string* name,bool first,ANAMETYPE t)
 {
   if (first) {
     ma_save.push(m_guard);
@@ -184,26 +105,27 @@ void aalang_py::set_name(std::string* name,bool first,ANAMETYPE t)
 
 }
 
-aalang_py::~aalang_py()
+aalang_rb::~aalang_rb()
 {
   if (name)
     delete name;
 }
 
-void aalang_py::set_namestr(std::string* _name)
+void aalang_rb::set_namestr(std::string* _name)
 {
   name=_name;
   s+="import aalmodel\n"
     "class " + class_name() + "(aalmodel.AALModel):\n"
     "    def __init__(self):\n"
-    "        aalmodel.AALModel.__init__(self, globals())\n";
+    "        aalmodel.AALModel.__init__(self, globals())\n"
+    "    end\n";
   s+="    adapter_init_list = []\n";
   s+="    initial_state_list = []\n";
   s+="    adapter_exit_list = []\n";
   s+="    push_variables_set = set()\n";
 }
 
-void aalang_py::set_variables(std::string* var,const char* file,int line,int col)
+void aalang_rb::set_variables(std::string* var,const char* file,int line,int col)
 {
   std::string ivar = indent(0,*var);
   if (ivar!="") {
@@ -213,45 +135,46 @@ void aalang_py::set_variables(std::string* var,const char* file,int line,int col
   delete var;
 }
 
-void aalang_py::set_istate(std::string* ist,const char* file,int line,int col)
+void aalang_rb::set_istate(std::string* ist,const char* file,int line,int col)
 {
   model_init_counter++;
   const std::string funcname("initial_state"+to_string(model_init_counter));
   s += "\n    def " + funcname + "():\n" + variables +
     indent(8, *ist) + "\n" +
-    indent(8, "pass") + "\n";
+    indent(8, "pass") + "\n" +
+    indent(4, "end") + "\n";
   s += python_lineno_wrapper(file,line,funcname,1+m_lines_in_vars,4);
   s += indent(4,"initial_state_list.append("+funcname+")")+"\n";
   s += indent(4,"push_variables_set.update("+funcname+".func_code.co_names)")+"\n";
   delete ist;
 }
 
-void aalang_py::set_ainit(std::string* iai,const char* file,int line,int col)
+void aalang_rb::set_ainit(std::string* iai,const char* file,int line,int col)
 {
   adapter_init_counter++;
   const std::string r("return 1");
   const std::string funcname("adapter_init"+to_string(adapter_init_counter));
   s += "\n    def " + funcname + "():\n" + variables +
-    indent(8, *iai) + "\n" + indent(8, r) + "\n";
+    indent(8, *iai) + "\n" + indent(8, r) + "\n" + indent(4, "end") + "\n";
   s += python_lineno_wrapper(file,line,funcname,1+m_lines_in_vars,4);
 
   s += indent(4,"adapter_init_list.append("+funcname+")")+"\n";
   delete iai;
 }
 
-void aalang_py::set_aexit(std::string* iai,const char* file,int line,int col)
+void aalang_rb::set_aexit(std::string* iai,const char* file,int line,int col)
 {
   adapter_exit_counter++;
   const std::string funcname("adapter_exit"+to_string(adapter_exit_counter));
   s += "\n    def " + funcname + "(verdict,reason):\n" + variables +
-    indent(8, *iai) + "\n" + indent(8, "pass\n") + "\n";
+    indent(8, *iai) + "\n" + indent(8, "pass\n") + "\n"+indent(4, "end")+"\n";
   s += python_lineno_wrapper(file,line,funcname,1+m_lines_in_vars,4);
 
   s += indent(4,"adapter_exit_list.append("+funcname+")")+"\n";
   delete iai;
 }
 
-void aalang_py::set_tagname(std::string* name,bool first)
+void aalang_rb::set_tagname(std::string* name,bool first)
 {
   if (first) {
     ma_save.push(m_guard);
@@ -275,7 +198,7 @@ void aalang_py::set_tagname(std::string* name,bool first)
   delete name;
 }
 
-void aalang_py::next_tag()
+void aalang_rb::next_tag()
 {
   std::string tcnt;
   guard_requires.pop_back();
@@ -291,7 +214,7 @@ void aalang_py::next_tag()
     s+="    def " + funcname + "():\n" + variables;
     s+="        tag_name = \"" + multiname[i].first + "\"\n";
     s+=indent(8,m_guard.first)+"\n";
-
+    s+="    end\n";
     // tag?guard.requires=[...];
     s+="    tag" + tcnt + "guard.requires=[" + requires + "]\n";
 
@@ -305,7 +228,7 @@ void aalang_py::next_tag()
       s+="    def " + funcname + "():\n" + variables;
       s+="        tag_name = \"" + multiname[i].first + "\"\n";
       s+=indent(8,m_adapter.first)+"\n";
-
+      s+="    end\n";
       s+=python_lineno_wrapper(m_adapter,funcname,2+m_lines_in_vars,4,
 			       ", \"adapter of tag \\\"" + multiname[i].first
 			       + "\\\"\")");
@@ -325,7 +248,7 @@ void aalang_py::next_tag()
   m_guard  =ma_save.top();ma_save.pop();
 }
 
-void aalang_py::set_guard(std::string* gua,const char* file,int line,int col)
+void aalang_rb::set_guard(std::string* gua,const char* file,int line,int col)
 {
   std::string tmp=*gua;
   if (gua!=&default_guard)
@@ -334,7 +257,7 @@ void aalang_py::set_guard(std::string* gua,const char* file,int line,int col)
   m_guard = codefileline(tmp,fileline(file,line));
 }
 
-void aalang_py::parallel(bool start,std::list<std::string>* __params) {
+void aalang_rb::parallel(bool start,std::list<std::string>* __params) {
   bool single=false;
 
   /* debug... print params  */
@@ -405,7 +328,7 @@ void aalang_py::parallel(bool start,std::list<std::string>* __params) {
   }
 }
 
-void aalang_py::serial(bool start,std::list<std::string>* __params) {
+void aalang_rb::serial(bool start,std::list<std::string>* __params) {
 
   bool single=false;
 
@@ -469,19 +392,19 @@ void aalang_py::serial(bool start,std::list<std::string>* __params) {
   }
 }
 
-void aalang_py::set_push(std::string* p,const char* file,int line,int col)
+void aalang_rb::set_push(std::string* p,const char* file,int line,int col)
 {
   push=*p;
   delete p;
 }
 
-void aalang_py::set_pop(std::string* p,const char* file,int line,int col)
+void aalang_rb::set_pop(std::string* p,const char* file,int line,int col)
 {
   pop=*p;
   delete p;
 }
 
-void aalang_py::set_body(std::string* bod,const char* file,int line,int col)
+void aalang_rb::set_body(std::string* bod,const char* file,int line,int col)
 {
   std::string tmp=*bod;
   if (bod!=&default_body)
@@ -490,7 +413,7 @@ void aalang_py::set_body(std::string* bod,const char* file,int line,int col)
   m_body = codefileline(tmp,fileline(file,line));
 }
 
-void aalang_py::set_adapter(std::string* ada,const char* file,int line,int col)
+void aalang_rb::set_adapter(std::string* ada,const char* file,int line,int col)
 {
   adapter = true;
   std::string tmp=*ada;
@@ -500,7 +423,7 @@ void aalang_py::set_adapter(std::string* ada,const char* file,int line,int col)
   m_adapter = codefileline(tmp,fileline(file,line));
 }
 
-void aalang_py::next_action()
+void aalang_rb::next_action()
 {
   std::string acnt;
   guard_requires.pop_back();
@@ -536,7 +459,7 @@ void aalang_py::next_action()
     /* actionXguard */
 
     s+=action_helper(m_guard,"guard",funcname,i,acnt);
-
+    s+="    end\n";
     // action + acnt + guard.requires=[...];
     s+="    action" + acnt + "guard.requires = [" + requires + "]\n";
     if (!serial_stack.empty() && serial_stack.back() != 0) {
@@ -549,6 +472,7 @@ void aalang_py::next_action()
 
     /* actionXbody */
     s+=action_helper(m_body,"body",funcname,i,acnt);
+    s+="    end\n";
     s+=python_lineno_wrapper(m_body,funcname,4+m_lines_in_vars,4,
                              ", \"body of action \\\"" + multiname[i].first +
                              "\\\"\")");
@@ -563,6 +487,7 @@ void aalang_py::next_action()
     } else {
       s+="        return False\n";
     }
+    s+="    end\n";
     s+=python_lineno_wrapper(m_adapter,funcname,4+m_lines_in_vars,4,
                              ", \"adapter of action \\\"" + multiname[i].first
                              + "\\\"\")");
@@ -582,7 +507,7 @@ void aalang_py::next_action()
   m_guard  =ma_save.top();ma_save.pop();
 }
 
-std::string aalang_py::stringify()
+std::string aalang_rb::stringify()
 {
   s += indent(4,"\n    def adapter_init():\n") + "\n" +
     indent(8,"for x in "+class_name()+".adapter_init_list:\n"
@@ -590,18 +515,21 @@ std::string aalang_py::stringify()
 	   "    if not ret and ret != None:\n"
 	   "        return ret\n"
 	   "return True\n") + "\n" +
+    indent(4,"\n    end") + "\n" 
     indent(4,"\n    def initial_state():\n") + "\n" +
     indent(8,"for x in "+class_name()+".initial_state_list:\n"
 	   "    ret = x()\n"
 	   "    if not ret and ret != None:\n"
 	   "        return ret\n"
 	   "return True\n") +"\n" +
+    indent(4,"\n    end") + "\n" + 
     indent(4,"\n    def adapter_exit(verdict,reason):\n") + "\n" +
     indent(8,"for x in "+class_name()+".adapter_exit_list:\n"
 	   "    ret = x(verdict,reason)\n"
 	   "    if not ret and ret != None:\n"
 	   "        return ret\n"
-	   "return True\n")+ "\n" ;
+	   "return True\n")+ "\n" +
+    indent(4,"\n    end") + "\n";
 
   return s + "\nModel = _gen_" + *name + "\n";
 }
