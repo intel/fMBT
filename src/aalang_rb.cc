@@ -515,7 +515,7 @@ std::string aalang_rb::stringify()
 	   "    if not ret and ret != None:\n"
 	   "        return ret\n"
 	   "return True\n") + "\n" +
-    indent(4,"\n    end") + "\n" 
+    indent(4,"\n    end") + "\n" +
     indent(4,"\n    def initial_state():\n") + "\n" +
     indent(8,"for x in "+class_name()+".initial_state_list:\n"
 	   "    ret = x()\n"
