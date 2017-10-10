@@ -1918,7 +1918,7 @@ class View(object):
         self._propRegEx = re.compile("(?P<prop>(?P<name>[^=]+)=(?P<len>\d+),)(?P<data>[^\s]* ?)")
         self._dump = dump
         self._rawDumpFilename = self.screenshotDir + os.sep + fmbtgti._filenameTimestamp() + "-" + self.serialNumber + ".view"
-        file(self._rawDumpFilename, "w").write(self._dump)
+        file(self._rawDumpFilename, "wb").write(self._dump)
         if displayToScreen == None:
             displayToScreen = lambda x, y: (x, y)
         if itemOnScreen == None:
@@ -2406,9 +2406,11 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
             self._shellUid0 = True
         else:
             self._shellUid0 = False
-
-        outputLines = self._runAdb(["shell", "su", "root", "id"],
-                                   timeout=_SHORT_TIMEOUT)[1].splitlines()
+        try:
+            outputLines = self._runAdb(["shell", "su", "root", "id"],
+                                       timeout=_SHORT_TIMEOUT)[1].splitlines()
+        except:
+            outputLines = [] # Probably "su" cannot be executed => no su support
         if len(outputLines) == 1 and "uid=0" in outputLines[0]:
             self._shellSupportsSu = True
         else:
@@ -3062,7 +3064,7 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
                 depth, colorspace = None, None
 
             if depth != None:
-                file(filename, "w").write(fmbtpng.raw2png(
+                file(filename, "wb").write(fmbtpng.raw2png(
                     data[12:], width, height, depth, colorspace))
                 return True
             else:
@@ -3138,10 +3140,10 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
                 status, output, error = None, None, None
             if status != None:
                 if self._shellSupportsUuencode:
-                    file(filename, "w").write(output)
+                    file(filename, "wb").write(output)
                     uu.decode(filename, out_file=filename + ".tar.gz")
                 else:
-                    file(filename + ".tar.gz", "w").write(
+                    file(filename + ".tar.gz", "wb").write(
                         base64.b64decode(output))
                 import tarfile
                 tar = tarfile.open(filename + ".tar.gz")
