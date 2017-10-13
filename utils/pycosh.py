@@ -396,11 +396,14 @@ def grep(*args):
         pattern = pattern.lower()
     matching_lines = []
     all_files = expand(*filenames).splitlines()
+    prefix = ""
     for filename in all_files:
+        if len(all_files) > 1:
+            prefix = filename.replace("\\", "/") + ": "
         for line in file(filename).xreadlines():
             if ((not ignore_case and pattern in line) or
                 (ignore_case and pattern in line.lower())):
-                matching_lines.append(line)
+                matching_lines.append(prefix + line)
     return "".join(matching_lines)
 
 def head(*args):
