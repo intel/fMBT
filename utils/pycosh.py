@@ -382,14 +382,24 @@ def export(assignment):
     _g_pyenv.__setitem__(*assignment.split("=", 1))
     return ""
 
-def grep(pattern, *filenames):
-    """grep PATTERN [FILE...]
+def grep(*args):
+    """grep [-i] PATTERN [FILE...]
     show matching lines in file(s)"""
+    opts, pattern_filenames = _getopts(args, "i")
+    ignore_case = "-i" in opts
+    try:
+        pattern = pattern_filenames[0]
+        filenames = pattern_filenames[1:]
+    except:
+        raise ValueError("grep pattern missing")
+    if ignore_case:
+        pattern = pattern.lower()
     matching_lines = []
     all_files = expand(*filenames).splitlines()
     for filename in all_files:
         for line in file(filename).xreadlines():
-            if pattern in line:
+            if ((not ignore_case and pattern in line) or
+                (ignore_case and pattern in line.lower())):
                 matching_lines.append(line)
     return "".join(matching_lines)
 
