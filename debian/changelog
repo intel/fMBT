@@ -1,8 +1,22 @@
-fmbt (0.39-0.rc0) unstable; urgency=low
+fmbt (0.39-1) unstable; urgency=low
 
-  * Development version.
+  * fmbtandroid:
+    - Fixed refreshScreenshot() on Windows 10.
+  * fmbt-scripter:
+    - Added JPG support in simulated GUI connection screenshots.
+  * fmbtpng:
+    - Added Windows support.
+  * pycosh:
+    - Fixed psput/psget transferring files to/from Windows.
+    - psput supports setting destination directory.
+    - Added commands: whoami
+    - Added parameters: find -t -i -p, grep -i, ls -d, rm -f.
+  * pythonshare:
+    - Enabled pausing any Python script for remote debugging by calling
+      pythonshare.server.start_server().
+  * Other fixes and improvements.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Tue, 23 May 2017 15:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Sat, 21 Oct 2017 19:42:00 +0300
 
 fmbt (0.38-1) unstable; urgency=low
 

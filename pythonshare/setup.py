@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 setup(name         = 'pythonshare',
-      version      = '0.38',
+      version      = '0.39',
       description  = 'Persistent, shared and distributed Python namespaces',
       author       = 'Antti Kervinen',
       author_email = 'antti.kervinen@intel.com',
