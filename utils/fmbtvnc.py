@@ -69,6 +69,8 @@ class Screen(fmbtgti.GUITestInterface):
                   rotation).
         """
         autoUpdate = kwargs.get("autoUpdate", True)
+        if "autoUpdate" in kwargs:
+            del kwargs["autoUpdate"]
         fmbtgti.GUITestInterface.__init__(self, **kwargs)
         self.setConnection(VNCConnection(hostspec, port, password, autoUpdate))
 

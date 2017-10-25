@@ -277,7 +277,10 @@ for _dirname in _libpath:
             ctypes.c_int]
         eye4graphics.openImage.argtypes = [ctypes.c_char_p]
         eye4graphics.openImage.restype = ctypes.c_void_p
+        eye4graphics.openedImageIsBlank.argtypes = [ctypes.c_void_p]
+        eye4graphics.openedImageIsBlank.restype = ctypes.c_int
         eye4graphics.openedImageDimensions.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        eye4graphics.openedImageDimensions.restype = ctypes.c_int
         eye4graphics.closeImage.argtypes = [ctypes.c_void_p]
         eye4graphics.rgb5652rgb.restype = ctypes.c_int
         eye4graphics.rgb5652rgb.argtypes = [
