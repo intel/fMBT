@@ -251,7 +251,7 @@ def init_plotting(plot_filename, plot_data_table):
     if plot_output_format in ['gif', 'png']:
         plot_output_format = 'set term ' + plot_output_format + (' size %d,768 10 xffffff' % (plot_opt_width,))
     elif plot_output_format in ['svg']:
-        plot_output_format = 'set term ' + plot_output_format + (' size %d,768 fsize 10' % (plot_opt_width,))
+        plot_output_format = 'set term ' + plot_output_format + (' size %d,768 font "Arial,10"' % (plot_opt_width,))
     elif plot_output_format in ['ps', 'eps']:
         plot_output_format = 'set term postscript landscape "Helvetica" 10'
     elif plot_output_format in ['pdf']:
