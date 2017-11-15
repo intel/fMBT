@@ -383,10 +383,11 @@ def export(assignment):
     return ""
 
 def grep(*args):
-    """grep [-i] PATTERN [FILE...]
+    """grep [-iH] PATTERN [FILE...]
     show matching lines in file(s)"""
-    opts, pattern_filenames = _getopts(args, "i")
+    opts, pattern_filenames = _getopts(args, "iH")
     ignore_case = "-i" in opts
+    always_print_filename = "-H" in opts
     try:
         pattern = pattern_filenames[0]
         filenames = pattern_filenames[1:]
@@ -396,14 +397,22 @@ def grep(*args):
         pattern = pattern.lower()
     matching_lines = []
     all_files = expand(*filenames).splitlines()
+    if len(all_files) > 1:
+           always_print_filename = True
     prefix = ""
     for filename in all_files:
-        if len(all_files) > 1:
+        if always_print_filename:
             prefix = filename.replace("\\", "/") + ": "
-        for line in file(filename).xreadlines():
-            if ((not ignore_case and pattern in line) or
-                (ignore_case and pattern in line.lower())):
-                matching_lines.append(prefix + line)
+        if os.path.isdir(filename):
+           matching_lines.append("grep: %s: is a directory\n" % (filename,))
+           continue
+        try:
+            for line in file(filename).xreadlines():
+                if ((not ignore_case and pattern in line) or
+                    (ignore_case and pattern in line.lower())):
+                    matching_lines.append(prefix + line)
+        except IOError, e:
+           matching_lines.append("grep: %s: %s\n" % (filename, e))
     return "".join(matching_lines)
 
 def head(*args):
