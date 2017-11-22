@@ -347,13 +347,13 @@ def _remote_execute_and_forward(ns, exec_msg, to_client, peername=None):
     client_supports_rv_info = exec_msg.recv_cap_data_info()
     exec_msg.set_recv_cap_data_info(True)
     rns = _g_remote_namespaces[ns]
-    pythonshare._send(exec_msg, rns.to_remote)
     from_remote = rns.from_remote
     # Must keep simultaneously two locks:
     # - send lock on to_client
     # - recv lock on from_remote
     pythonshare._acquire_recv_lock(from_remote)
     try:
+        pythonshare._send(exec_msg, rns.to_remote)
         response = pythonshare._recv(from_remote, acquire_recv_lock=False)
         if not isinstance(response, messages.Data_info):
             # Got direct response without forward mode
