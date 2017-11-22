@@ -61,7 +61,9 @@ def timestamp():
 def daemon_log(msg):
     if opt_debug_limit >= 0:
         if len(msg) > opt_debug_limit:
-            msg = msg[:opt_debug_limit] + "... [%s B]" % (len(msg),)
+            msg = (msg[:opt_debug_limit/2] +
+                   ("...[%s B, log CRC %s]..." % (len(msg), messages.crc(msg))) +
+                   msg[-opt_debug_limit/2:])
     formatted_msg = "%s %s\n" % (timestamp(), msg)
     if opt_log_fd != None:
         os.write(opt_log_fd, formatted_msg)
@@ -712,7 +714,7 @@ def start_daemon(host="localhost", port=8089, debug=False,
     if debug_limit != None:
         opt_debug_limit = debug_limit
     if opt_debug_limit > 0:
-        messages.MSG_STRING_FIELD_MAX_LEN = opt_debug_limit/2
+        messages.MSG_STRING_FIELD_MAX_LEN = max(opt_debug_limit/3-40, 40)
     else:
         messages.MSG_STRING_FIELD_MAX_LEN = None
     if opt_debug == False and not on_windows and isinstance(port, int):
