@@ -61,15 +61,27 @@ class InProgress(AsyncStatus):
 # Misc helpers for client and server
 def _close(*args):
     for a in args:
-        if a in _send.locks:
-            del _send.locks[a]
-        if a in _recv.locks:
-            del _recv.locks[a]
         if a:
             try:
                 a.close()
             except (socket.error, IOError):
                 pass
+        if a in _send.locks:
+            try:
+                while _send.locks[a].locked():
+                    _send.locks[a].release()
+                    time.sleep(0.1)
+            except:
+                pass
+            del _send.locks[a]
+        if a in _recv.locks:
+            try:
+                while _recv.locks[a].locked():
+                    _recv.locks[a].release()
+                    time.sleep(0.1)
+            except:
+                pass
+            del _recv.locks[a]
 
 def _send(msg, destination, acquire_send_lock=True, pickle=True):
     if acquire_send_lock:
