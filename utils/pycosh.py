@@ -1046,8 +1046,23 @@ def pycosh_eval(cmdline):
         retval = str(e).splitlines()[-1]
     return retval
 
+def _parse_pycoshrc(contents):
+    """returns rc settings in a dictionary"""
+    for line in contents.splitlines():
+        retval = str(pycosh_eval(line))
+        if retval:
+            _output(retval)
+
 def _main():
     histfile = os.path.join(os.path.expanduser("~"), ".pycosh_history")
+    rcfile = os.path.join(os.path.expanduser("~"), ".pycoshrc")
+    try:
+        rccontents = open(rcfile).read()
+    except:
+        rccontents = None
+    if rccontents:
+        _parse_pycoshrc(rccontents)
+
     try:
         import readline
         try:
