@@ -16,6 +16,7 @@
 # this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
+import ast
 import client
 import cPickle
 import server
@@ -29,6 +30,12 @@ import thread
 import zlib
 
 from messages import Exec, Exec_rv
+
+try:
+    _PYTHONSHARE_HOSTSPECS = ast.literal_eval(
+        os.getenv("PYTHONSHARE_HOSTSPECS", "{}"))
+except Exception:
+    _PYTHONSHARE_HOSTSPECS = {}
 
 # Minimum string length for optimized sending
 _SEND_OPT_MESSAGE_MIN = 1024*128    # optimize sending msgs of at least 128 kB
@@ -298,6 +305,9 @@ def connect(hostspec, password=None, namespace=None):
               hostname equals socket://hostname:8089
               host:port equals socket://host:port
               host/namespace equals socket://host:8089/namespace
+              hostspec can also be a key in PYTHONSHARE_HOSTSPECS
+              environment variable (a Python dictionary that maps
+              shorthands to real hostspecs).
 
       password (string, optional):
               use password to log in to the server. Overrides
@@ -307,6 +317,8 @@ def connect(hostspec, password=None, namespace=None):
               send code to the namespace on server by default.
               Overrides hostspec namespace.
     """
+    if hostspec in _PYTHONSHARE_HOSTSPECS:
+        hostspec = _PYTHONSHARE_HOSTSPECS[hostspec]
     if not "://" in hostspec:
         hostspec = "socket://" + hostspec
     scheme, netloc, path, _, _ = _urlparse.urlsplit(hostspec)
