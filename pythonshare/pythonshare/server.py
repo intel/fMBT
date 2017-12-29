@@ -412,7 +412,11 @@ def _serve_connection(conn, conn_opts):
     kill_server_on_close = conn_opts.get("kill-server-on-close", False)
     if passwords:
         # password authentication is required for this connection
-        received_password = pythonshare._recv(from_client)
+        try:
+            received_password = pythonshare._recv(from_client)
+        except Exception, e:
+            daemon_log('error receiving password: %r' % (e,))
+            received_password = None
         for password_type in passwords:
             algorithm = password_type.split(".")[1]
             if type(received_password) == str:
@@ -428,7 +432,7 @@ def _serve_connection(conn, conn_opts):
                 pythonshare._send(messages.Auth_rv(True), to_client)
                 if opt_debug:
                     daemon_log("%s:%s authentication ok" % peername)
-            else:
+            elif not received_password is None:
                 pythonshare._send(messages.Auth_rv(False), to_client)
                 if opt_debug:
                     daemon_log("%s:%s authentication failed" % peername)
