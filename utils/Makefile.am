@@ -48,6 +48,12 @@ utils_installer: $(dist_noinst_SCRIPTS)
 	cp $(addprefix $(VPATH)/,$(dist_noinst_SCRIPTS)) . || true
 	touch $@
 
+if HAVE_MAGICK
+with_imagemagick = yes
+else
+with_imagemagick = no
+endif
+
 if MINGW
 if HAVE_MAGICK
 lib_LTLIBRARIES = eye4graphics.la
@@ -62,8 +68,8 @@ dist_noinst_SCRIPTS += \
 	eye4graphics.h
 # end of extensions
 all-local: utils_installer eye4graphics.cc eye4graphics.h
-	VPATH='$(VPATH)' CC='$(CXX)' PKG_CONFIG='$(PKG_CONFIG)' $(PYTHON) setup.py build
+	VPATH='$(VPATH)' CC='$(CXX)' PKG_CONFIG='$(PKG_CONFIG)' with_imagemagick='$(with_imagemagick)' $(PYTHON) setup.py build
 
 install-exec-local:
-	$(PYTHON) setup.py install --root=$(DESTDIR)/ --prefix=$(PYTHON_PREFIX)
+	with_imagemagick='$(with_imagemagick)' $(PYTHON) setup.py install --root=$(DESTDIR)/ --prefix=$(PYTHON_PREFIX)
 endif

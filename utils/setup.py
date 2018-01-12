@@ -89,10 +89,13 @@ modules = [module.replace(".py","")
 scripts = lines[lines.index("# scripts")+1:
                 lines.index("# end of scripts")]
 
-eye4graphcs_buildflags = pkg_config("MagickCore")
-ext_eye4graphics = Extension('eye4graphics',
-                             sources = ['eye4graphics.cc'],
-                             **eye4graphcs_buildflags)
+ext_modules = []
+if os.getenv("with_imagemagick", "yes").lower() != "no":
+    eye4graphcs_buildflags = pkg_config("MagickCore")
+    ext_eye4graphics = Extension('eye4graphics',
+                                 sources = ['eye4graphics.cc'],
+                                 **eye4graphcs_buildflags)
+    ext_modules.append(ext_eye4graphics)
 
 setup(name         = 'fmbt-python',
       version      = version,
@@ -101,5 +104,5 @@ setup(name         = 'fmbt-python',
       author_email = 'antti.kervinen@intel.com',
       py_modules   = modules,
       scripts      = scripts,
-      ext_modules  = [ext_eye4graphics]
+      ext_modules  = ext_modules
   )

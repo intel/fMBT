@@ -291,7 +291,10 @@ for _dirname in _libpath:
         break
     except: pass
 else:
-    raise ImportError("%s cannot load eye4graphics%s" % (__file__, _suffix))
+    class Eye4graphics_lazyimporterror(object):
+        def __getattribute__(self, name):
+            raise ImportError("%s cannot load eye4graphics%s" % (__file__, _suffix))
+    eye4graphics = Eye4graphics_lazyimporterror()
 
 def _e4gOpenImage(filename):
     image = eye4graphics.openImage(filename)
