@@ -128,7 +128,7 @@ def fmbtlograw(msg, flush=True)
     sys.stdout.write(CGI::escape(to_fmbt.encode("utf-8")) + "\n")
 end
 def fmbtstderr(msg)
-    to_fmbt = "fmbtmagice%s" % (msg,)
+    to_fmbt = "fmbtmagice#{msg}"
     sys.stdout.write(CGI::escape(to_fmbt.encode("utf-8")) + "\n")
     _log(msg)
 end
@@ -150,7 +150,7 @@ def atexit_remove_file(filename)
         begin
             os.remove(filename)
         rescue RuntimeError
-            _log("remote_rbaal error removing file %s failed when exiting\n" % (repr(filename),))
+            _log("remote_rbaal error removing file #{filename} failed when exiting\n")
             _log(traceback.format_exc(), flush=True)
         end
     rescue
@@ -173,16 +173,16 @@ end
 
 def put(msg)
     if opt_debug    
-        _log("sending '%s'" % (msg,))
+        _log("sending '#{msg}'")
     end
     sys.stdout.write("fmbtmagic " + str(msg) + "\n")
     sys.stdout.flush()
 end
 
 def put_list(list_of_integers)
-    msg = " ".join([str(i) for i in list_of_integers])
+    msg = list_of_integers.join(" ")
     if opt_debug 
-        _log("sending '%s'" % (msg,))
+        _log("sending 'msg'")
     end
     sys.stdout.write("fmbtmagic " + msg + "\n")
     sys.stdout.flush()
@@ -193,17 +193,17 @@ def put_lts(lts_string)
         if opt_debug == 1
             _log("sending lts (add another --debug to see it)")
         elsif opt_debug > 1
-            _log("sending lts\n%s\n" % (lts_string,))
+            _log("sending lts\n#{lts_string}\n")
         end
     end
-    sys.stdout.write("fmbtmagic %s\n%s" % (len(lts_string), lts_string))
+    sys.stdout.write("fmbtmagic #{lts_string.length}\n#{lts_string}")
     sys.stdout.flush()
 end
 
 def get()
     cmd = sys.stdin.readline().rstrip()
     if opt_debug 
-        _log("received '%s'" % (cmd,))
+        _log("received '#{cmd}'")
     end
     return cmd
 end
@@ -219,20 +219,20 @@ def log_version()
 end
 
 class RemoteAALBridge
-    def __init__(self, aal)
-        self._aal = aal
+    def __init__(aal)
+        _aal = aal
     end
     
-    def communicate(self)
+    def communicate()
         # send all action names
-        action_names = self._aal.getActionNames()
+        action_names = _aal.getActionNames()
         for name in action_names
             put(name)
         end
         put("")
 
         # send all state tags
-        tag_names = self._aal.getSPNames()
+        tag_names = _aal.getSPNames()
         for name in tag_names
             put(name)
         end
@@ -247,53 +247,53 @@ class RemoteAALBridge
         while cmd != ""
             if cmd == "ma"
                 begin
-                    put_list(self._aal.getActions())
-                rescue rescueion=>e
-                    report_simulation_error(self._aal)
-                    fmbtstderr('Error when evaluating guards of actions %s %s\n%s' % (type(e).__name__, e, format_pythonaalrescueion()))
-                    error(str(e))
+                    put_list(_aal.getActions())
+                rescue Exception=>e
+                    report_simulation_error(_aal)
+                    fmbtstderr("Error when evaluating guards of actions #{e.class} #{e.message}\n#{format_rubyaalrescueion()}")
+                    raise Exception.new(e.message)
                 end
             elsif cmd == "mp"
                 begin    
-                    put_list(self._aal.getprops())
-                rescue rescueion=>e
-                    report_simulation_error(self._aal)
-                    fmbtstderr('Error at a tag %s %s\n%s' % (type(e).__name__, e, format_pythonaalrescueion()))
-                    error(str(e))
+                    put_list(_aal.getprops())
+                rescue Exception=>e
+                    report_simulation_error(_aal)
+                    fmbtstderr('Error at a tag #{e.class} #{e.message}\n#{format_rubyaalrescueion()}')
+                    raise Exception.new(e.message)
                 end
             elsif cmd == "mr"
                 begin
-                    self._aal.reset()
-                rescue rescueion=>e
-                    fmbtstderr('Error at initial_state() %s %s\n%s' % (type(e).__name__, e, format_pythonaalrescueion()))
+                    _aal.reset()
+                rescue Exception=>e
+                    fmbtstderr('Error at initial_state() #{e.class} #{e.message}\n#{format_rubyaalrescueion()}')
                     put(0)
                 else   
                     put(1)
                 end
             elsif cmd == "mu"
-                self._aal.push()
+                _aal.push()
             elsif cmd == "mo"
-                self._aal.pop()
+                _aal.pop()
             elsif cmd.startswith("ae")
                 begin
                     args = cmd[3]
-                    if " " in args 
+                    if args.include?(" ")
                         verdict, reason = args.split(" ", 1)
                     else 
                         verdict, reason = args, ""
                     end
-                    self._aal.aexit(verdict, urllib.unquote(reason))
-                rescue rescueion=>e
-                    fmbtstderr('Error at adapter_exit() %s %s\n%s' % (type(e).__name__, e, format_pythonaalrescueion()))
+                    _aal.aexit(verdict, urllib.unquote(reason))
+                rescue Exception=>e
+                    fmbtstderr('Error at adapter_exit() #{e.class} #{e.message}\n#{format_rubyaalrescueion()}')
                     put(0)
                 else
                     put(1)
                 end
             elsif cmd == "ai"
                 begin
-                 rv = self._aal.init()
-                rescue rescueion=>e
-                    fmbtstderr('Error at adapter_init() %s %s\n%s' % (type(e).__name__, e, format_pythonaalrescueion()))
+                 rv = _aal.init()
+                rescue Exception=>e
+                    fmbtstderr('Error at adapter_init() #{e.class} #{e.message}\n#{format_rubyaalrescueion()}')
                     put(0)
                 else
                     if rv or rv == nil 
@@ -305,70 +305,63 @@ class RemoteAALBridge
             elsif cmd == "aop"
                 begin
                 
-                    put_list(self._aal.observe(false))
-                rescue rescueion=>e
-                    fmbtstderr('Error when polling outputs %s %s\n%s' % (type(e).__name__, e, format_pythonaalrescueion()))
-                    error(str(e))
+                    put_list(_aal.observe(false))
+                rescue Exception=>e
+                    fmbtstderr('Error when polling outputs #{e.class} #{e.message}\n#{format_rubyaalrescueion()}')
+                    raise Exception.new(e.message)
                 end
             elsif cmd == "aob"
                 begin
-                    put_list(self._aal.observe(True))
-                rescue rescueion=>e
-                    fmbtstderr('Error when waiting for outputs %s %s\n%s' % (type(e).__name__, e, format_pythonaalrescueion()))
-                    error(str(e))
+                    put_list(_aal.observe(True))
+                rescue Exception=>e
+                    fmbtstderr('Error when waiting for outputs #{e.class} #{e.message}\n#{format_rubyaalrescueion()}')
+                    raise Exception.new(e.message)
                 end
             elsif cmd.startswith("act") # adapter check tags
                 # If the adapter of a tag does not return "True" or
                 # nil, report the number of the first failing tag.
                 failing_tags = []
                 # Tags must not change model state
-                _state_before_tag = self._aal.state()
-                for tag_number in [int(n) for n in cmd[3].strip().split()]
+                _state_before_tag = _aal.state()
+                for tag_number in cmd[3].strip().split()
+                    tag_number = tag_number.to_i
                     begin
-                        rv = self._aal.tag_execute(tag_number)
+                        rv = _aal.tag_execute(tag_number)
                         if not (rv or rv == nil)
-                            fmbtstderr('adapter() of tag "%s" returned %s' % (tag_names[tag_number-1], rv))
+                            fmbtstderr("adapter() of tag \"#{tag_names[tag_number-1]}\" returned #{rv}")
                             failing_tags.append(tag_number)
                         end
-                        if self._aal.state() != _state_before_tag
-                            raise rescueion('model state changed by tag adapter')
+                        if _aal.state() != _state_before_tag
+                            raise Exception.new('model state changed by tag adapter')
                         end
-                    rescue rescueion=>e
-                        if isinstance(e, AssertionError) 
-                            msg = "Assertion failure"
-                        else
-                            msg = "Error"
-                        end
-                        fmbtstderr('%s at adapter() of tag "%s" %s\n%s' % (msg, tag_names[tag_number-1], e, format_pythonaalrescueion()))
-                        if isinstance(e, AssertionError)
-                            failing_tags.append(tag_number)
-                        else
-                            error(str(e))
-                        end
+                    rescue Exception=>e
+                        #todo: find  what is Assertion for
+                        msg = "Assertion failure"
+                        fmbtstderr("#{msg} at adapter() of tag \"#{tag_names[tag_number-1]}\" #{e.message}\n#{format_rubyaalrescueion()}")
+                        failing_tags.append(tag_number)
                     end
                 end
                 put_list(failing_tags)
             elsif cmd[0] == "m"
                 if opt_verbose_fmbt_log and not fmbt.simulated()
                     # write variable values to fmbt log
-                    state_str = self._aal.state()
-                    log_str = "AAL state %s\n%s" % (state_str.count("\n") + 1, state_str)
+                    state_str = _aal.state()
+                    log_str = "AAL state #{state_str.count("\n") + 1}\n#{state_str}"
                     # write enabled actions to fmbt log
                     begin
                 
-                        log_str += "\nAAL enabled " + " ".join(
-                            [str(s) for s in self._aal._enabled_actions_stack[-1]])
-                    rescue IndexError
+                        log_str += "\nAAL enabled " + _aal._enabled_actions_stack[-1].join(" ")
+                    rescue Exception=>e
                     end
                     fmbtlog(log_str)
                 end
                 action_number = int(cmd[1])
                 begin
-                    rv = self._aal.model_execute(action_number)
-                rescue rescueion=>e
-                    report_simulation_error(self._aal)
-                    fmbtstderr('Error at body() of "%s" %s %s\n%s' % (action_names[action_number-1], type(e).__name__, e, format_pythonaalrescueion()))
-                    error(str(e))
+                    rv = _aal.model_execute(action_number)
+                rescue Exception=>e
+                    report_simulation_error(_aal)
+                    fmbtstderr("Error at body() of \"#{action_names[action_number-1]}\" #{e.class} #{e.message}\n#{format_rubyaalrescueion}")
+                    raise Exception.new(e.message)
                 else
                     put(rv)
                 end
@@ -377,26 +370,19 @@ class RemoteAALBridge
             elsif cmd[0] == "a"
                 action_number = int(cmd[1])
                 begin
-                    rv = self._aal.adapter_execute(action_number,adapter_call_arguments)
+                    rv = _aal.adapter_execute(action_number,adapter_call_arguments)
                     if rv == nil or rv is True
                         rv = action_number
                     end
                     if (type(rv) == int and (rv == 0 or rv > len(action_names))) or (type(rv) != int)
-                        fmbtstderr('adapter() of action "%s" returned %s' % (action_names[action_number-1], rv))
+                        fmbtstderr("adapter() of action \"#{action_names[action_number-1]}\" returned #{rv}")
                         rv = 0
                     end
-                rescue rescueion=>e
-                    if isinstance(e, AssertionError) 
-                        msg = "Assertion failure"
-                    else 
-                        msg = "Error"
-                    end
-                    fmbtstderr('%s at adapter() of "%s" %s %s\n%s' % (msg, action_names[action_number-1], type(e).__name__, e, format_pythonaalrescueion()))
-                    if isinstance(e, AssertionError)
-                        rv = 0
-                    else
-                        error(str(e))
-                    end
+                rescue Exception=>e
+                    #todo: find  what is Assertion for
+                    msg = "Assertion failure"
+                    fmbtstderr("#{msg} at adapter() of \"#{action_names[action_number-1]}\" #{e.class} #{e.message}\n#{format_pythonaalrescueion()}")
+                    rv = 0
                 end
                 put(rv)
                 adapter_call_arguments = []
@@ -404,26 +390,26 @@ class RemoteAALBridge
                 lsts_depth = int(cmd[3])
                 outfilestring = StringIO.StringIO()
                 begin
-                    aal2lsts(self._aal, outfilestring, lsts_depth,
+                    aal2lsts(_aal, outfilestring, lsts_depth,
                              include_generation_discontinued_tag=false,
                              drop_outputs=opt_accel_drop_outputs)
-                rescue rescueion=>e
-                    report_simulation_error(self._aal)
-                    fmbtstderr('Error on simulation %s %s\n%s' % (type(e).__name__, e, format_pythonaalrescueion()))
-                    error(str(e))
+                rescue Exception=>e
+                    report_simulation_error(_aal)
+                    fmbtstderr("Error on simulation #{e.class} #{e.message}\n#{format_rubyaalrescueion()}")
+                    raise Exception.new(e.message)
                 end
                 outfilestring.seek(0)
                 put_lts(outfilestring.read())
 
             else
-                error("Unexpected command \"" + cmd + "\". remote_rbaal works with \"aal_remote\" model.")
+                raise Exception.new("Unexpected command \"" + cmd + "\". remote_rbaal works with \"aal_remote\" model.")
             end
             cmd = get().rstrip()
        end
     end
 end
 
-def format_pythonaalrescueion()
+def format_rubyaalrescueion()
     if opt_debug
         # return full tracebacks including framework code
         return traceback.format_exc()
@@ -460,8 +446,7 @@ def format_syntaxerror()
         aalblocklineno = syntaxerrorlineno - deflineno
         exc_value.lineno = int(aalblockstart) + aalblocklineno
         exc_value.filename = codefile
-        exc_value.args = (exc_value.args[0],
-                          (exc_value.filename, exc_value.lineno, exc_value.args[1][2], exc_value.args[1][3]))
+        exc_value.args = [exc_value.args[0],[exc_value.filename, exc_value.lineno, exc_value.args[1][2], exc_value.args[1][3]]]
         sys.last_value = exc_value
     rescue
     end
@@ -480,7 +465,7 @@ end
 def tagfilter(state, tags)
     global filter_tags
     for tag in filter_tags
-        if tag in tags
+        if tags.include?(tag)
             return tag
         end
     end
@@ -491,16 +476,12 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=nil,
              include_variables=nil, include_generation_discontinued_tag=True,
              _filter_tags=nil, drop_outputs=false)
     global filter_tags
-    begin
-        import lsts
-    rescue
-        import fmbt.lsts as lsts
-    end
+    require "lsts.rb"
     def update_generated_tags(aal, include_variables,
                               generated_tagnames, tags, new_lsts_state_num)
         for v in include_variables
-            t = "var%s = %s" % (v, repr(aal._variables[v])[42])
-            if not t in generated_tagnames
+            t = "var#{v} = #{aal._variables[v][42]}"
+            if !generated_tagnames.include?(t) 
                 generated_tagnames.add(t)
                 tags[t] = []
             end
@@ -513,19 +494,22 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=nil,
         get_actions = aal.getActions
     end
     aal.push()
-    generation_discontinued_tag = "AAL-depth%s" % (depth,)
+    generation_discontinued_tag = "AAL-depth#{depth}"
 
     new_lsts = lsts.writer()
     actionnames = ["tau"] + aal.getActionNames()
     transitions = [[]]
-    tags = {generation_discontinued_tag []}
+    tags = {generation_discontinued_tag:[]}
     tagnames = aal.getSPNames()
     generated_tagnames = set([])
-    tags.update([(name, []) for name in tagnames])
-    tagnum_to_name = dict([(num+1, name) for num, name in enumerate(tagnames)])
+    index = 1 
+    for name in tagnames
+        tagnum_to_name[index] = name
+        tags[name] = []
+    end
 
     for num,_t in enumerate(tagnames,1)
-        if _filter_tags and _t in _filter_tags
+        if _filter_tags.include?(_filter_tags) and _filter_tags.include?(_t)
             filter_tags.append(num)
         end
     end
