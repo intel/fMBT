@@ -85,6 +85,7 @@
 
 require "fmbt"
 require 'getoptlong'
+require 'cgi'
 
 $opt_debug = 0
 $opt_profile = nil
@@ -119,16 +120,16 @@ end
 def fmbtlog(msg, flush=True)
     current_time = time.time()
     timestamped = "fmbtmagicl#{current_time} #{msg}"
-    sys.stdout.write(urllib.quote(timestamped)+"\n")
+    sys.stdout.write(CGI::escape(timestamped)+"\n")
 end
 
 def fmbtlograw(msg, flush=True)
-    to_fmbt = "fmbtmagicL %s" % (msg,)
-    sys.stdout.write(urllib.quote(to_fmbt.encode("utf-8")) + "\n")
+    to_fmbt = "fmbtmagicL #{msg}"
+    sys.stdout.write(CGI::escape(to_fmbt.encode("utf-8")) + "\n")
 end
 def fmbtstderr(msg)
     to_fmbt = "fmbtmagice%s" % (msg,)
-    sys.stdout.write(urllib.quote(to_fmbt.encode("utf-8")) + "\n")
+    sys.stdout.write(CGI::escape(to_fmbt.encode("utf-8")) + "\n")
     _log(msg)
 end
 
