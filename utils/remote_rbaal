@@ -102,14 +102,19 @@ module MyLog
     attr_accessor :last_flush
 
     def initial(msg, flush=false)
-        if opt_debug or opt_log_unbuffered
+        _log.messages = []
+        _log.last_flush = DateTime.new()
+    end
+
+    def log(msg, flush=false)
+        if $opt_debug or $opt_log_unbuffered
             fmbt._adapterlogWriter(file($log_filename,"a"), fmbt.formatAdapterLogMessage(msg))
             return
         end
         current_time = DateTime.new()
         if $log_filename
             self.messages.push(fmbt.formatAdapterLogMessage(msg))
-            if flush or current_time - self.last_flush > log_flush_interval
+            if flush or current_time - self.last_flush > $log_flush_interval
                 log_fileobj = file($log_filename, "a")
                 for formatted_msg in self.messages
                     fmbt._adapterlogWriter(log_fileobj, formatted_msg)
@@ -132,10 +137,11 @@ def fmbtlograw(msg, flush=True)
     to_fmbt = "fmbtmagicL #{msg}"
     sys.stdout.write(CGI::escape(to_fmbt.encode("utf-8")) + "\n")
 end
+
 def fmbtstderr(msg)
     to_fmbt = "fmbtmagice#{msg}"
-    sys.stdout.write(CGI::escape(to_fmbt.encode("utf-8")) + "\n")
-    MyLog(msg)
+    print CGI::escape(to_fmbt.encode("utf-8")) + "\n"
+    MyLog.log(msg)
 end
 
 # fmbt.fmbtlog = fmbtlog
@@ -177,7 +183,7 @@ def bye()
 end
 
 def put(msg)
-    if opt_debug    
+    if $opt_debug    
         MyLog("sending '#{msg}'")
     end
     sys.stdout.write("fmbtmagic " + str(msg) + "\n")
@@ -186,7 +192,7 @@ end
 
 def put_list(list_of_integers)
     msg = list_of_integers.join(" ")
-    if opt_debug 
+    if $opt_debug 
         MyLog("sending 'msg'")
     end
     sys.stdout.write("fmbtmagic " + msg + "\n")
@@ -194,10 +200,10 @@ def put_list(list_of_integers)
 end
 
 def put_lts(lts_string)
-    if opt_debug
-        if opt_debug == 1
+    if $opt_debug
+        if $opt_debug == 1
             MyLog("sending lts (add another --debug to see it)")
-        elsif opt_debug > 1
+        elsif $opt_debug > 1
             MyLog("sending lts\n#{lts_string}\n")
         end
     end
@@ -207,7 +213,7 @@ end
 
 def get()
     cmd = sys.stdin.readline().rstrip()
-    if opt_debug 
+    if $opt_debug 
         MyLog("received '#{cmd}'")
     end
     return cmd
@@ -415,7 +421,7 @@ class RemoteAALBridge
 end
 
 def format_rubyaalrescueion()
-    if opt_debug
+    if $opt_debug
         # return full tracebacks including framework code
         return traceback.format_exc()
     end
@@ -468,8 +474,8 @@ def report_simulation_error(aal)
 end
 
 def tagfilter(state, tags)
-    global filter_tags
-    for tag in filter_tags
+    global $filter_tags
+    for tag in $filter_tags
         if tags.include?(tag)
             return tag
         end
@@ -479,8 +485,8 @@ end
 
 def aal2lsts(aal, output_fileobj, depth=5, discard_variables=nil,
              include_variables=nil, include_generation_discontinued_tag=True,
-             _filter_tags=nil, drop_outputs=false)
-    global filter_tags
+             _$filter_tags=nil, drop_outputs=false)
+    global $filter_tags
     require "lsts.rb"
     def update_generated_tags(aal, include_variables,
                               generated_tagnames, tags, new_lsts_state_num)
@@ -514,8 +520,8 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=nil,
     end
 
     for num,_t in enumerate(tagnames,1)
-        if _filter_tags.include?(_filter_tags) and _filter_tags.include?(_t)
-            filter_tags.push(num)
+        if _$filter_tags.include?(_$filter_tags) and _$filter_tags.include?(_t)
+            $filter_tags.push(num)
         end
     end
 
@@ -531,7 +537,7 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=nil,
 
     no_filtering_nor_abstracting = (not discard_variables and
                                     not include_variables and
-                                    not _filter_tags)
+                                    not _$filter_tags)
 
     # initial state tags
     for tag in current_tags
@@ -708,7 +714,7 @@ opts.each do |opt, arg|
     if ["-T"].include?(opt)
         opt_lsts_hide_tags.push(arg)
     elsif ["-d", "--debug"].include?(opt) 
-        opt_debug += 1
+        $opt_debug += 1
     elsif ["-c"].include?(opt) 
         opt_c_exec_statements.push(arg)
     elsif ["-D"].include?(opt) 
@@ -732,7 +738,7 @@ opts.each do |opt, arg|
             file($log_filename, "w") # overwrite
             end
     elsif ["--log-unbuffered"].include?(opt) 
-        opt_log_unbuffered = True
+        $opt_log_unbuffered = True
     elsif ["-t", "--timeout"].include?(opt) 
         opt_timeout = float(arg)
         MyLog("observe timeout #{opt_timeout}")
@@ -758,7 +764,7 @@ opts.each do |opt, arg|
     elsif ["--accel-drop-outputs"].include?(opt)  
         opt_accel_drop_outputs = True
     elsif ["--profile"].include?(opt)  
-        opt_profile = arg
+        $opt_profile = arg
     end
 end
 
@@ -771,15 +777,12 @@ aal_filename = ARGV[0]
 
 if aal_filename.endswith(".aal")
     cmd = ["fmbt-aalc", "-l", "python"] + opt_ppflags + [ aal_filename ]
-    subout = subprocess.PIPE
-    p = subprocess.Popen(cmd,shell=false, stdout=subout,stderr=subout)
-    aal_code = p.stdout.read()
-    status = p.wait()
+    aal_code = %x(#{cmd})
     if status != 0
-        if not os.access(aal_filename, os.R_OK)
+        if not File.exist?(aal_filename)
             errmsg = "is file \"#{aal_filename}\" readable?"
         else
-            errmsg = ("converting aal to python with command\n    #{cmd}\n failed. status=#{status}\n#{p.stderr.read()}\n")
+            errmsg = ("converting aal to python with command\n    #{cmd}\n failed. status=#{aal_code}\n")
         end
         fmbtstderr(errmsg)
         raise Exception.new(errmsg)
@@ -838,7 +841,7 @@ aal._variables['fmbtlog'] = fmbtlog
 aal._variables['fmbtlograw'] = fmbtlograw
 aal._variables['__file__'] = aal_filename
 
-if opt_profile
+if $opt_profile
     import cProfile
     profiler = cProfile.Profile()
     profiler.enable()
@@ -864,7 +867,7 @@ elsif opt_list_state_vars
 else # output LSTS
     aal.reset()
     begin
-        aal2lsts(aal, opt_output_fileobj, depth=opt_lsts_depth, discard_variables=set(opt_lsts_hide_vars), include_variables=set(opt_lsts_show_vars),_filter_tags=opt_lsts_hide_tags)
+        aal2lsts(aal, opt_output_fileobj, depth=opt_lsts_depth, discard_variables=set(opt_lsts_hide_vars), include_variables=set(opt_lsts_show_vars),_$filter_tags=opt_lsts_hide_tags)
     rescue rescueion=>e
         report_simulation_error(aal)
         fmbtstderr("Error on simulation #{e.class} #{e.message}\n#{format_pythonaalrescueion()}")
@@ -872,7 +875,7 @@ else # output LSTS
     opt_output_fileobj.close()
 end
 
-if opt_profile
+if $opt_profile
     profiler.disable()
-    s = profiler.dump_stats(opt_profile)
+    s = profiler.dump_stats($opt_profile)
 end
