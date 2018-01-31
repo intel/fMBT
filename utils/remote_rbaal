@@ -83,7 +83,7 @@
 #        Run with profiler, write statistics to FILE.
 #        Print statistics from FILE with
 
-# require 'G:\programming\MBT\fMBT\utils\Fmbt.rb'
+require '/root/tools/fMBT/utils/fmbt.rb'
 require 'getoptlong'
 require 'cgi'
 require 'date'
@@ -485,7 +485,7 @@ end
 
 def aal2lsts(aal, output_fileobj, depth=5, discard_variables=nil,
              include_variables=nil, include_generation_discontinued_tag=True,
-             _$filter_tags=nil, drop_outputs=false)
+             _filter_tags=nil, drop_outputs=false)
     global $filter_tags
     require "lsts.rb"
     def update_generated_tags(aal, include_variables,
@@ -867,7 +867,7 @@ elsif opt_list_state_vars
 else # output LSTS
     aal.reset()
     begin
-        aal2lsts(aal, opt_output_fileobj, depth=opt_lsts_depth, discard_variables=set(opt_lsts_hide_vars), include_variables=set(opt_lsts_show_vars),_$filter_tags=opt_lsts_hide_tags)
+        aal2lsts(aal, opt_output_fileobj, depth=opt_lsts_depth, discard_variables=set(opt_lsts_hide_vars), include_variables=set(opt_lsts_show_vars),_filter_tags=opt_lsts_hide_tags)
     rescue rescueion=>e
         report_simulation_error(aal)
         fmbtstderr("Error on simulation #{e.class} #{e.message}\n#{format_pythonaalrescueion()}")
