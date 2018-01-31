@@ -27,7 +27,7 @@
 # Log function implementations are provided by the adapter
 # component such as remote_python or remote_pyaal.
 
-module fmbt 
+module Fmbt 
 
 $_g_fmbt_adapterlogtimeformat="%s.%f"
 $_g_actionName = "undefined"
@@ -52,6 +52,7 @@ def _fmbt_call_helper(func,param = ""):
     end
     return ""
 end
+
 def formatTime(timeformat="%s", timestamp=None):
     if timestamp == None:
         timestamp = datetime.datetime.now()
@@ -70,6 +71,7 @@ def formatTime(timeformat="%s", timestamp=None):
         end
     end
     return timestamp.strftime(timeformat)
+end
 
 def heuristic():
     return _fmbt_call_helper("heuristic.get")
@@ -81,6 +83,7 @@ end
 
 def coverage():
     return _fmbt_call_helper("coverage.get")
+end
 
 def setCoverage(coverage):
     return _fmbt_call_helper("coverage.set",coverage)
@@ -357,4 +360,6 @@ def debug(session=0):
     connfile = SocketToFile($_g_debug_conn)
     debugger = pdb.Pdb(stdin=connfile, stdout=connfile)
     debugger.set_trace(inspect.currentframe().f_back)
+end
+
 end

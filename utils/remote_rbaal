@@ -37,7 +37,7 @@
 #
 #    -l, -L, --log-file= filename
 #        Write log to the given file. By default no log is written.
-#        -l , --log-file overwrites the file, -L appends.
+#        -l , --log-file overwrites the file, -L pushs.
 #
 #    --log-unbuffered
 #        Write log entries to log file on every log function call.
@@ -83,9 +83,10 @@
 #        Run with profiler, write statistics to FILE.
 #        Print statistics from FILE with
 
-require "fmbt"
+# require 'G:\programming\MBT\fMBT\utils\fmbt.rb'
 require 'getoptlong'
 require 'cgi'
+require 'date'
 
 $opt_debug = 0
 $opt_profile = nil
@@ -94,25 +95,29 @@ $filter_tags = []
 $log_filename = nil
 $log_flush_interval = 1.0 # in seconds
 
-_log.messages = []
-_log.last_flush = time.time()
 
-def _log(msg, flush=false)
-    if opt_debug or opt_log_unbuffered
-        fmbt._adapterlogWriter(file($log_filename,"a"), fmbt.formatAdapterLogMessage(msg))
-        return
-    end
-    current_time = time.time()
-    if $log_filename
-        _log.messages.append(fmbt.formatAdapterLogMessage(msg))
-        if flush or current_time - _log.last_flush > log_flush_interval
-            log_fileobj = file($log_filename, "a")
-            for formatted_msg in _log.messages
-                fmbt._adapterlogWriter(log_fileobj, formatted_msg)
+
+module MyLog
+    attr_accessor :messages
+    attr_accessor :last_flush
+
+    def initial(msg, flush=false)
+        if opt_debug or opt_log_unbuffered
+            fmbt._adapterlogWriter(file($log_filename,"a"), fmbt.formatAdapterLogMessage(msg))
+            return
+        end
+        current_time = DateTime.new()
+        if $log_filename
+            self.messages.push(fmbt.formatAdapterLogMessage(msg))
+            if flush or current_time - self.last_flush > log_flush_interval
+                log_fileobj = file($log_filename, "a")
+                for formatted_msg in self.messages
+                    fmbt._adapterlogWriter(log_fileobj, formatted_msg)
+                end
+                log_fileobj.close()
+                self.last_flush = current_time
+                self.messages = []
             end
-            log_fileobj.close()
-            _log.last_flush = current_time
-            _log.messages = []
         end
     end
 end
@@ -130,17 +135,17 @@ end
 def fmbtstderr(msg)
     to_fmbt = "fmbtmagice#{msg}"
     sys.stdout.write(CGI::escape(to_fmbt.encode("utf-8")) + "\n")
-    _log(msg)
+    MyLog(msg)
 end
 
-fmbt.fmbtlog = fmbtlog
-fmbt.fmbtlograw = fmbtlograw
-fmbt.adapterlog = _log
-log = _log
+# fmbt.fmbtlog = fmbtlog
+# fmbt.fmbtlograw = fmbtlograw
+# fmbt.adapterlog = MyLog
+log = MyLog
 
 def error(msg)
     msg = "remote_rbaal error " + msg + "\n"
-    _log(msg)
+    MyLog(msg)
     sys.stderr.write(msg)
     sys.exit(1)
 end
@@ -150,8 +155,8 @@ def atexit_remove_file(filename)
         begin
             os.remove(filename)
         rescue RuntimeError
-            _log("remote_rbaal error removing file #{filename} failed when exiting\n")
-            _log(traceback.format_exc(), flush=True)
+            MyLog("remote_rbaal error removing file #{filename} failed when exiting\n")
+            MyLog(traceback.format_exc(), flush=True)
         end
     rescue
     end
@@ -163,17 +168,17 @@ def bye()
         begin
             _g_bridge._aal.aexit(nil, nil)
         rescue
-            _log("remote_rbaal error rescueion at AAL adapter_exit failed when exiting\n")
-            _log(format_pythonaalrescueion())
+            MyLog("remote_rbaal error rescueion at AAL adapter_exit failed when exiting\n")
+            MyLog(format_pythonaalrescueion())
         end
-        _log("quitting", flush=True)
+        MyLog("quitting", flush=True)
     rescue
     end
 end
 
 def put(msg)
     if opt_debug    
-        _log("sending '#{msg}'")
+        MyLog("sending '#{msg}'")
     end
     sys.stdout.write("fmbtmagic " + str(msg) + "\n")
     sys.stdout.flush()
@@ -182,7 +187,7 @@ end
 def put_list(list_of_integers)
     msg = list_of_integers.join(" ")
     if opt_debug 
-        _log("sending 'msg'")
+        MyLog("sending 'msg'")
     end
     sys.stdout.write("fmbtmagic " + msg + "\n")
     sys.stdout.flush()
@@ -191,9 +196,9 @@ end
 def put_lts(lts_string)
     if opt_debug
         if opt_debug == 1
-            _log("sending lts (add another --debug to see it)")
+            MyLog("sending lts (add another --debug to see it)")
         elsif opt_debug > 1
-            _log("sending lts\n#{lts_string}\n")
+            MyLog("sending lts\n#{lts_string}\n")
         end
     end
     sys.stdout.write("fmbtmagic #{lts_string.length}\n#{lts_string}")
@@ -203,7 +208,7 @@ end
 def get()
     cmd = sys.stdin.readline().rstrip()
     if opt_debug 
-        _log("received '#{cmd}'")
+        MyLog("received '#{cmd}'")
     end
     return cmd
 end
@@ -329,7 +334,7 @@ class RemoteAALBridge
                         rv = _aal.tag_execute(tag_number)
                         if not (rv or rv == nil)
                             fmbtstderr("adapter() of tag \"#{tag_names[tag_number-1]}\" returned #{rv}")
-                            failing_tags.append(tag_number)
+                            failing_tags.push(tag_number)
                         end
                         if _aal.state() != _state_before_tag
                             raise Exception.new('model state changed by tag adapter')
@@ -338,7 +343,7 @@ class RemoteAALBridge
                         #todo: find  what is Assertion for
                         msg = "Assertion failure"
                         fmbtstderr("#{msg} at adapter() of tag \"#{tag_names[tag_number-1]}\" #{e.message}\n#{format_rubyaalrescueion()}")
-                        failing_tags.append(tag_number)
+                        failing_tags.push(tag_number)
                     end
                 end
                 put_list(failing_tags)
@@ -366,7 +371,7 @@ class RemoteAALBridge
                     put(rv)
                 end
             elsif cmd[2] == "ap"
-                adapter_call_arguments.append(cmd[2])
+                adapter_call_arguments.push(cmd[2])
             elsif cmd[0] == "a"
                 action_number = int(cmd[1])
                 begin
@@ -422,7 +427,7 @@ def format_rubyaalrescueion()
         if file_line_module_code[0].endswith("aalmodel.py")
             break
         end
-        new_tb.append(file_line_module_code)
+        new_tb.push(file_line_module_code)
     end
     new_tb.reverse()
     return 'Traceback (most recent call last)\n' + ''.join(traceback.format_list(new_tb))
@@ -485,7 +490,7 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=nil,
                 generated_tagnames.add(t)
                 tags[t] = []
             end
-            tags[t].append(new_lsts_state_num)
+            tags[t].push(new_lsts_state_num)
         end
     end
     if drop_outputs
@@ -499,7 +504,7 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=nil,
     new_lsts = lsts.writer()
     actionnames = ["tau"] + aal.getActionNames()
     transitions = [[]]
-    tags = {generation_discontinued_tag:[]}
+    tags = {generation_discontinued_tag=>[]}
     tagnames = aal.getSPNames()
     generated_tagnames = set([])
     index = 1 
@@ -510,7 +515,7 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=nil,
 
     for num,_t in enumerate(tagnames,1)
         if _filter_tags.include?(_filter_tags) and _filter_tags.include?(_t)
-            filter_tags.append(num)
+            filter_tags.push(num)
         end
     end
 
@@ -519,9 +524,9 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=nil,
     initial_state_real = aal.state()
     # unhandled states is a list of
     # (state-string, state-obj, len(shortest path from the initial state))
-    unhandled_states = [(initial_state_real, aal.state_obj(), 0)]
-    found_states_real = {initial_state_real initial_state_hidden} # real to hidden states
-    lsts_states = {initial_state_hidden 0} # state to LSTS state number
+    unhandled_states = [[initial_state_real, aal.state_obj(), 0]]
+    found_states_real = {initial_state_real=>initial_state_hidden} # real to hidden states
+    lsts_states = {initial_state_hidden=>0} # state to LSTS state number
     states = 1
 
     no_filtering_nor_abstracting = (not discard_variables and
@@ -530,7 +535,7 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=nil,
 
     # initial state tags
     for tag in current_tags
-        tags[tagnum_to_name[tag]].append(lsts_states[initial_state_hidden])
+        tags[tagnum_to_name[tag]].push(lsts_states[initial_state_hidden])
     end
     if include_variables
         update_generated_tags(aal, include_variables, generated_tagnames, tags, 0)
@@ -540,9 +545,8 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=nil,
         source_lsts_state = lsts_states[found_states_real[source_state]]
 
         if source_state_depth >= depth
-            if (include_generation_discontinued_tag and
-                not source_lsts_state in tags[generation_discontinued_tag])
-                tags[generation_discontinued_tag].append(source_lsts_state)
+            if (include_generation_discontinued_tag and !tags[generation_discontinued_tag].include?(source_lsts_state))
+                tags[generation_discontinued_tag].push(source_lsts_state)
             end
             continue
         end
@@ -563,28 +567,27 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=nil,
             end
             next_state_obj = aal.state_obj()
             # new state?
-            if not next_state_hidden in lsts_states
-                transitions.append([])
+            if not lsts_states.include?(next_state_hidden)
+                transitions.push([])
                 new_lsts_state_num = len(transitions) - 1
                 lsts_states[next_state_hidden] = new_lsts_state_num
                 if include_variables
                     update_generated_tags(aal, include_variables, generated_tagnames, tags, new_lsts_state_num)
                 end
             end
-            if not next_state_real in found_states_real
-                unhandled_states.append(
-                    (next_state_real, next_state_obj, source_state_depth + 1))
+            if not found_states_real.include?(next_state_real)
+                unhandled_states.push([next_state_real, next_state_obj, source_state_depth + 1])
                 found_states_real[next_state_real] = next_state_hidden
                 next_lsts_state_num = lsts_states[next_state_hidden]
                 for tag in current_tags
                     tagname = tagnum_to_name[tag]
-                    if not next_lsts_state_num in tags[tagname]
-                        tags[tagname].append(next_lsts_state_num)
+                    if not tags[tagname].include?(next_lsts_state_num) 
+                        tags[tagname].push(next_lsts_state_num)
                     end
                 end
             end
-            if (lsts_states[next_state_hidden],action) not in transitions[source_lsts_state]
-                transitions[source_lsts_state].append((lsts_states[next_state_hidden],action))
+            if not transitions[source_lsts_state].include?([lsts_states[next_state_hidden],action])
+                transitions[source_lsts_state].push([lsts_states[next_state_hidden],action])
             end
         end
     end
@@ -594,18 +597,17 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=nil,
     new_lsts.set_stateprops(tags)
     stateprop_order = aal.getSPNames() + sorted(generated_tagnames)
     if include_generation_discontinued_tag
-        stateprop_order.append(generation_discontinued_tag)
+        stateprop_order.push(generation_discontinued_tag)
     end
     new_lsts.write(output_fileobj, stateprop_order=stateprop_order)
     aal.pop()
 end
 
-if __name__ == "__main__"
-    doc_string = "Usage: remote_pyaal [options] aalfile
 
+doc_string = %{
+Usage: remote_pyaal [options] aalfile 
 Runs remote model & adapter written in AAL/Python. aalfile is a
-AAL/Python file or Python generated by fmbt-aalc.
-
+AAL/Python file or Python generated by fmbt-aalc. 
 Options:
     -c <string>
         execute the string in the Python interpreter before loading
@@ -616,12 +618,12 @@ Options:
 
     -I include-dir
         Pass -I include-dir to AAL compiler and preprocessor. If AAL
-        contains ^include "filename"'s, filename will be looked for in
+        contains ^include \"filename\"'s, filename will be looked for in
         include-dir.
 
     -l, -L, --log-file= filename
         Write log to the given file. By default no log is written.
-        -l , --log-file overwrites the file, -L appends.
+        -l , --log-file overwrites the file, -L pushs.
 
     --log-unbuffered
         Write log entries to log file on every log function call.
@@ -666,219 +668,211 @@ Options:
     --profile FILE
         Run with profiler, write statistics to FILE.
         Print statistics from FILE with:
-        python -c 'import pstats; pstats.Stats("FILE").print_stats()'
-"
-    # Default values for commandline arguments
-    $log_filename = nil
-    opt_timeout = 1.0
-    opt_ppflags = []
-    opt_output_fileobj = nil
-    opt_verbose_fmbt_log = 0
-    opt_lsts_depth = 5
-    opt_lsts_hide_vars = []
-    opt_lsts_show_vars = []
-    opt_c_exec_statements = []
-    opt_lsts_hide_tags = []
-    opt_list_state_vars = false
-    opt_accel_drop_outputs = false
+        python -c 'import pstats; pstats.Stats(\"FILE\").print_stats()'
+}
+# Default values for commandline arguments
+$log_filename = nil
+opt_timeout = 1.0
+opt_ppflags = []
+opt_output_fileobj = nil
+opt_verbose_fmbt_log = 0
+opt_lsts_depth = 5
+opt_lsts_hide_vars = []
+opt_lsts_show_vars = []
+opt_c_exec_statements = []
+opt_lsts_hide_tags = []
+opt_list_state_vars = false
+opt_accel_drop_outputs = false
 
-    # Parse arguments
-    opts = GetoptLong.new(
-        [ "--c","-c",GetoptLong::REQUIRED_ARGUMENT ],
-        [ "--D","-D",GetoptLong::REQUIRED_ARGUMENT ],
-        [ "--help","-h",GetoptLong::NO_ARGUMENT ],
-        [ "--log-file=","-l",GetoptLong::REQUIRED_ARGUMENT ],
-        [ "--log-file=","-L",GetoptLong::REQUIRED_ARGUMENT ],
-        [ "--timeout=","-t",GetoptLong::REQUIRED_ARGUMENT ],
-        [ "--output=","-o",GetoptLong::REQUIRED_ARGUMENT ],
-        [ "--debug","-d",GetoptLong::NO_ARGUMENT ],
-        [ "--lsts-hide-var=","-H",GetoptLong::REQUIRED_ARGUMENT ],
-        [ "--lsts-show-var=","-S",GetoptLong::REQUIRED_ARGUMENT ]
-        [ "--version","-V",GetoptLong::REQUIRED_ARGUMENT ]
-        [ "--T","-T",GetoptLong::REQUIRED_ARGUMENT ]
-        [ "--I","-I",GetoptLong::REQUIRED_ARGUMENT ]
-        [ "--verbose-fmbt-log",'',GetoptLong::REQUIRED_ARGUMENT ],
-        [ "--accel-drop-outputs",'',GetoptLong::REQUIRED_ARGUMENT ],
-        [ "--lsts-depth=",'',GetoptLong::REQUIRED_ARGUMENT ],
-        [ "--log-unbuffered",'',GetoptLong::REQUIRED_ARGUMENT ],
-        [ "--list-state-vars",'',GetoptLong::REQUIRED_ARGUMENT ],
-        [ "--profile=",'',GetoptLong::REQUIRED_ARGUMENT ])
-    opts = getopt.gnu_getopt(
-        sys.argv[1], 'cdhlLtoDHSVTI',
-        ["debug", "help", "log-file=", "timeout=", "output=",
-         "verbose-fmbt-log", "accel-drop-outputs",
-         "lsts-depth=", "lsts-hide-var=", "lsts-show-var=",
-         "log-unbuffered",
-         "list-state-vars", "profile=", "version"])
-
-    opts.each do |opt, arg|
-        if opt in ["-T"]
-            opt_lsts_hide_tags.append(arg)
-        elsif opt in ["-d", "--debug"]
-            opt_debug += 1
-        elsif opt in ["-c"]
-            opt_c_exec_statements.append(arg)
-        elsif opt in ["-D"]
-            opt_ppflags += ['-D' , arg]
-        elsif opt in ["-I"]
-            opt_ppflags += ['-I' , arg]
-        elsif opt in ['-V', '--version']
-            begin
-                import fmbt_config
-                print "Version " + fmbt_config.fmbt_version + fmbt_config.fmbt_build_info
-            rescue
-                print "Version N/A"
-            end
-            sys.exit(0)
-        elsif opt in ["-h", "--help"]
-            print doc_string
-            sys.exit(0)
-        elsif opt in ["-l", "-L", "--log-file"]
-            $log_filename = arg
-            if opt != "-L"
-                file($log_filename, "w") # overwrite
-             end
-        elsif opt in ["--log-unbuffered"]
-            opt_log_unbuffered = True
-        elsif opt in ["-t", "--timeout"]
-            opt_timeout = float(arg)
-            _log("observe timeout %2.6f" % (opt_timeout,))
-        elsif opt in ["--verbose-fmbt-log"]
-            opt_verbose_fmbt_log += 1
-        elsif opt in ["-o", "--output"]
-            if arg == "-"
-                opt_output_fileobj = sys.stdout
-            else
-                opt_output_fileobj = file(arg, "w")
-            end
-        elsif opt in ["--lsts-depth"]
-            opt_lsts_depth = int(arg)
-        elsif opt in ["-H", "--lsts-hide-var"]
-            opt_lsts_hide_vars.append(arg)
-        elsif opt in ["-S", "--lsts-show-var"]
-            opt_lsts_show_vars.append(arg)
-        elsif opt in ["--list-state-vars"]
-            opt_list_state_vars = True
-            if not opt_output_fileobj
-                opt_output_fileobj = sys.stdout
-            end
-        elsif opt in ["--accel-drop-outputs"]
-            opt_accel_drop_outputs = True
-        elsif opt in ["--profile"]
-            opt_profile = arg
+# Parse arguments
+opts = GetoptLong.new(
+    [ "--help", "-h", GetoptLong::NO_ARGUMENT ],
+    [ "--c", "-c", GetoptLong::REQUIRED_ARGUMENT ],
+    [ "--D", "-D", GetoptLong::REQUIRED_ARGUMENT ],
+    [ "--log-file=", "-l", GetoptLong::REQUIRED_ARGUMENT ],
+    [ "--timeout=", "-t", GetoptLong::REQUIRED_ARGUMENT ],
+    [ "--output=", "-o", GetoptLong::REQUIRED_ARGUMENT ],
+    [ "--debug", "-d", GetoptLong::NO_ARGUMENT ],
+    [ "--lsts-hide-var=", "-H", GetoptLong::REQUIRED_ARGUMENT ],
+    [ "--lsts-show-var=", "-S", GetoptLong::REQUIRED_ARGUMENT ],
+    [ "--version", "-V", GetoptLong::REQUIRED_ARGUMENT ],
+    [ "--T", "-T", GetoptLong::REQUIRED_ARGUMENT ], 
+    [ "--I", "-I", GetoptLong::REQUIRED_ARGUMENT ],
+    [ "--verbose-fmbt-log",  GetoptLong::REQUIRED_ARGUMENT ], 
+    [ "--accel-drop-outputs", GetoptLong::REQUIRED_ARGUMENT ],
+    [ "--lsts-depth=", GetoptLong::REQUIRED_ARGUMENT ], 
+    [ "--log-unbuffered", GetoptLong::REQUIRED_ARGUMENT ], 
+    [ "--list-state-vars",  GetoptLong::REQUIRED_ARGUMENT ], 
+    [ "--profile=", GetoptLong::REQUIRED_ARGUMENT ])
+opts.each do |opt, arg|
+    if ["-T"].include?(opt)
+        opt_lsts_hide_tags.push(arg)
+    elsif ["-d", "--debug"].include?(opt) 
+        opt_debug += 1
+    elsif ["-c"].include?(opt) 
+        opt_c_exec_statements.push(arg)
+    elsif ["-D"].include?(opt) 
+        opt_ppflags += ['-D' , arg]
+    elsif ["-I"].include?(opt) 
+        opt_ppflags += ['-I' , arg]
+    elsif ['-V', '--version'].include?(opt) 
+        begin
+            import fmbt_config
+            print "Version " + fmbt_config.fmbt_version + fmbt_config.fmbt_build_info
+        rescue
+            print "Version N/A"
         end
-    end
-
-    if ARGV.length != 1
+        sys.exit(0)
+    elsif ["-h", "--help"].include?(opt) 
         print doc_string
-        raise Exception.new("aal filename missing")
-    end
-    
-    aal_filename = ARGV[0]
-
-    if aal_filename.endswith(".aal")
-        cmd = ["fmbt-aalc", "-l", "python"] + opt_ppflags + [ aal_filename ]
-        subout = subprocess.PIPE
-        p = subprocess.Popen(cmd,shell=false, stdout=subout,stderr=subout)
-        aal_code = p.stdout.read()
-        status = p.wait()
-        if status != 0
-            if not os.access(aal_filename, os.R_OK)
-                errmsg = 'is file "%s" readable?' % (aal_filename,)
-            else
-                errmsg = ("converting aal to python with command\n    %s\n"
-                          "failed. status=%s\n%s\n" % (cmd, status, p.stderr.read()))
+        exit(0)
+    elsif ["-l", "-L", "--log-file"].include?(opt) 
+        $log_filename = arg
+        if opt != "-L"
+            file($log_filename, "w") # overwrite
             end
-            fmbtstderr(errmsg)
-            error(errmsg)
+    elsif ["--log-unbuffered"].include?(opt) 
+        opt_log_unbuffered = True
+    elsif ["-t", "--timeout"].include?(opt) 
+        opt_timeout = float(arg)
+        MyLog("observe timeout #{opt_timeout}")
+    elsif ["--verbose-fmbt-log"].include?(opt) 
+        opt_verbose_fmbt_log += 1
+    elsif ["-o", "--output"].include?(opt) 
+        if arg == "-"
+            opt_output_fileobj = sys.stdout
+        else
+            opt_output_fileobj = file(arg, "w")
         end
-    else
-        begin
-            aal_code = file(aal_filename).read()
-        rescue rescueion as e
-            error("reading file '%s' failed %s" % (aal_filename, e))
+    elsif ["--lsts-depth"].include?(opt) 
+        opt_lsts_depth = int(arg)
+    elsif ["-H", "--lsts-hide-var"].include?(opt)  
+        opt_lsts_hide_vars.push(arg)
+    elsif ["-S", "--lsts-show-var"].include?(opt)  
+        opt_lsts_show_vars.push(arg)
+    elsif ["--list-state-vars"].include?(opt)  
+        opt_list_state_vars = True
+        if not opt_output_fileobj
+            opt_output_fileobj = sys.stdout
         end
+    elsif ["--accel-drop-outputs"].include?(opt)  
+        opt_accel_drop_outputs = True
+    elsif ["--profile"].include?(opt)  
+        opt_profile = arg
     end
-    for statement in opt_c_exec_statements
-        begin
-            _log("Executing command line argument '%s'" % statement)
-            exec statement
-        rescue rescueion=>e
-            fmbtstderr('rescueion from command line argument "%s"\n%s' %
-                       (statement, traceback.format_exc()))
-            error("No rescueions allowed, got '%s'\n%s" %
-                  (e, traceback.format_exc()))
-        end
-    end
-    aalpy_fd, aalpy_filename = tempfile.mkstemp(suffix='.py', prefix='remote_rbaal.')
-    aal_code = aal_code.replace("\r\n", "\n")
-    os.write(aalpy_fd, aal_code)
-    os.close(aalpy_fd)
-    atexit.register(lambda atexit_remove_file(aalpy_filename))
+end
 
-    begin
-        exec file(aalpy_filename)
-    rescue rescueion as e
-        if isinstance(e, SyntaxError)
-            format_syntaxerror()
-        end
-        code_lines = aal_code.split('\n')
-        code_with_line_nums = ['%4s %s' % (num+1, line) for num,line in enumerate(code_lines)]
-        _log('\n'.join(code_with_line_nums))
-        fmbtstderr("Executing %s failed %s %s\n%s" %
-                   (aal_filename, type(e).__name__, e, traceback.format_exc()))
-        error("executing aal code failed\n%s\n%s" % (e, traceback.format_exc()))
-    end
+if ARGV.length != 1
+    print doc_string
+    raise Exception.new("aal filename missing")
+end
     
-    begin
-        # Generated AAL code exports generated AAL class as "Model".
-        # Model is inherited from AALModel in aalmodel.py.
-        aal = Model()
-    rescue rescueion as e
-        error("Error when instantiating Model() %s\n%s" % (e, traceback.format_exc()))
-    end
-    aal._log = _log
-    aal.timeout = opt_timeout
-    aal._variables['fmbtlog'] = fmbtlog
-    aal._variables['fmbtlograw'] = fmbtlograw
-    aal._variables['__file__'] = aal_filename
+aal_filename = ARGV[0]
 
-    if opt_profile
-        import cProfile
-        profiler = cProfile.Profile()
-        profiler.enable()
-    end
-    
-    if not opt_output_fileobj
-        _g_bridge = RemoteAALBridge(aal)
-        _log("starting")
-        atexit.register(bye)
-        if sys.platform == "win32"
-            import os, msvcrt
-            msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
-            msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
-            msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
-            suffix=".dll"
-         end
-        _g_bridge.communicate()
-    elsif opt_list_state_vars
-        aal.reset()
-        opt_output_fileobj.write( "\n".join([l.split(" = ",1)[0] for l in sorted(aal.state().splitlines())]))
-        opt_output_fileobj.write("\n")
-        opt_output_fileobj.close()
-    else # output LSTS
-        aal.reset()
-        begin
-            aal2lsts(aal, opt_output_fileobj, depth=opt_lsts_depth, discard_variables=set(opt_lsts_hide_vars), include_variables=set(opt_lsts_show_vars),_filter_tags=opt_lsts_hide_tags)
-        rescue rescueion=>e
-            report_simulation_error(aal)
-            fmbtstderr('Error on simulation %s %s\n%s' % (type(e).__name__, e, format_pythonaalrescueion()))
+if aal_filename.endswith(".aal")
+    cmd = ["fmbt-aalc", "-l", "python"] + opt_ppflags + [ aal_filename ]
+    subout = subprocess.PIPE
+    p = subprocess.Popen(cmd,shell=false, stdout=subout,stderr=subout)
+    aal_code = p.stdout.read()
+    status = p.wait()
+    if status != 0
+        if not os.access(aal_filename, os.R_OK)
+            errmsg = "is file \"#{aal_filename}\" readable?"
+        else
+            errmsg = ("converting aal to python with command\n    #{cmd}\n failed. status=#{status}\n#{p.stderr.read()}\n")
         end
-        opt_output_fileobj.close()
+        fmbtstderr(errmsg)
+        raise Exception.new(errmsg)
     end
-    
-    if opt_profile
-        profiler.disable()
-        s = profiler.dump_stats(opt_profile)
+else
+    begin
+        aal_code = file(aal_filename).read()
+    rescue Exception=>e
+        raise Exception.new("reading file '#{aal_filename}' failed #{e.message}")
     end
+end
+for statement in opt_c_exec_statements
+    begin
+        MyLog("Executing command line argument '%s'" % statement)
+        exec statement
+    rescue Exception=>e
+        fmbtstderr("rescueion from command line argument \"#{statement}\"\n#{traceback.format_exc()}")
+        raise Exception.new("No rescueions allowed, got '#{e}'\n#{traceback.format_exc()}")
+    end
+end
+aalpy_fd, aalpy_filename = tempfile.mkstemp(suffix='.py', prefix='remote_rbaal.')
+aal_code = aal_code.replace("\r\n", "\n")
+os.write(aalpy_fd, aal_code)
+os.close(aalpy_fd)
+at_exit do
+    atexit_remove_file(aalpy_filename)
+end
+
+begin
+    exec file(aalpy_filename)
+rescue Exception=>e
+    if e.class == "sytaxerror"
+        format_syntaxerror()
+    end
+    code_lines = aal_code.split('\n')
+    index = 1
+    for line in code_lines
+        code_with_line_nums.push = "#{index+1}  #{line}"
+        index += 1
+    end
+    MyLog(code_with_line_nums.join("\n"))
+    fmbtstderr("Executing #{aal_filename} failed #{e.class} #{e.message}\n#{traceback.format_exc()}")
+    raise Exception.new("executing aal code failed\n#{e.message}\n#{traceback.format_exc()}")
+end
+
+begin
+    # Generated AAL code exports generated AAL class as "Model".
+    # Model is inherited from AALModel in aalmodel.py.
+    aal = Model()
+rescue Exception=>e
+    raise Exception.new("Error when instantiating Model() #{e.message}\n#{traceback.format_exc()}")
+end
+aal._log = MyLog
+aal.timeout = opt_timeout
+aal._variables['fmbtlog'] = fmbtlog
+aal._variables['fmbtlograw'] = fmbtlograw
+aal._variables['__file__'] = aal_filename
+
+if opt_profile
+    import cProfile
+    profiler = cProfile.Profile()
+    profiler.enable()
+end
+
+if not opt_output_fileobj
+    _g_bridge = RemoteAALBridge(aal)
+    MyLog("starting")
+    atexit.register(bye)
+    if sys.platform == "win32"
+        import os, msvcrt
+        msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
+        msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+        msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
+        suffix=".dll"
+        end
+    _g_bridge.communicate()
+elsif opt_list_state_vars
+    aal.reset()
+    # opt_output_fileobj.write( "\n".join([l.split(" = ",1)[0] for l in sorted(aal.state().splitlines())]))
+    opt_output_fileobj.write("\n")
+    opt_output_fileobj.close()
+else # output LSTS
+    aal.reset()
+    begin
+        aal2lsts(aal, opt_output_fileobj, depth=opt_lsts_depth, discard_variables=set(opt_lsts_hide_vars), include_variables=set(opt_lsts_show_vars),_filter_tags=opt_lsts_hide_tags)
+    rescue rescueion=>e
+        report_simulation_error(aal)
+        fmbtstderr("Error on simulation #{e.class} #{e.message}\n#{format_pythonaalrescueion()}")
+    end
+    opt_output_fileobj.close()
+end
+
+if opt_profile
+    profiler.disable()
+    s = profiler.dump_stats(opt_profile)
 end
