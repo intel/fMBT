@@ -83,7 +83,7 @@
 #        Run with profiler, write statistics to FILE.
 #        Print statistics from FILE with
 
-# require 'G:\programming\MBT\fMBT\utils\fmbt.rb'
+# require 'G:\programming\MBT\fMBT\utils\Fmbt.rb'
 require 'getoptlong'
 require 'cgi'
 require 'date'
@@ -108,16 +108,16 @@ module MyLog
 
     def log(msg, flush=false)
         if $opt_debug or $opt_log_unbuffered
-            fmbt._adapterlogWriter(file($log_filename,"a"), fmbt.formatAdapterLogMessage(msg))
+            Fmbt._adapterlogWriter(file($log_filename,"a"), Fmbt.formatAdapterLogMessage(msg))
             return
         end
         current_time = DateTime.new()
         if $log_filename
-            self.messages.push(fmbt.formatAdapterLogMessage(msg))
+            self.messages.push(Fmbt.formatAdapterLogMessage(msg))
             if flush or current_time - self.last_flush > $log_flush_interval
                 log_fileobj = file($log_filename, "a")
                 for formatted_msg in self.messages
-                    fmbt._adapterlogWriter(log_fileobj, formatted_msg)
+                    Fmbt._adapterlogWriter(log_fileobj, formatted_msg)
                 end
                 log_fileobj.close()
                 self.last_flush = current_time
@@ -135,18 +135,18 @@ end
 
 def fmbtlograw(msg, flush=True)
     to_fmbt = "fmbtmagicL #{msg}"
-    sys.stdout.write(CGI::escape(to_fmbt.encode("utf-8")) + "\n")
+    sys.stdout.write(CGI::escape(to_Fmbt.encode("utf-8")) + "\n")
 end
 
 def fmbtstderr(msg)
     to_fmbt = "fmbtmagice#{msg}"
-    print CGI::escape(to_fmbt.encode("utf-8")) + "\n"
+    print CGI::escape(to_Fmbt.encode("utf-8")) + "\n"
     MyLog.log(msg)
 end
 
-# fmbt.fmbtlog = fmbtlog
-# fmbt.fmbtlograw = fmbtlograw
-# fmbt.adapterlog = MyLog
+# Fmbt.fmbtlog = fmbtlog
+# Fmbt.fmbtlograw = fmbtlograw
+# Fmbt.adapterlog = MyLog
 log = MyLog
 
 def error(msg)
@@ -354,7 +354,7 @@ class RemoteAALBridge
                 end
                 put_list(failing_tags)
             elsif cmd[0] == "m"
-                if opt_verbose_fmbt_log and not fmbt.simulated()
+                if opt_verbose_fmbt_log and not Fmbt.simulated()
                     # write variable values to fmbt log
                     state_str = _aal.state()
                     log_str = "AAL state #{state_str.count("\n") + 1}\n#{state_str}"
