@@ -130,12 +130,12 @@ end
 def fmbtlog(msg, flush=True)
     current_time = time.time()
     timestamped = "fmbtmagicl#{current_time} #{msg}"
-    sys.stdout.write(CGI::escape(timestamped)+"\n")
+    $stdout.write(CGI::escape(timestamped)+"\n")
 end
 
 def fmbtlograw(msg, flush=True)
     to_fmbt = "fmbtmagicL #{msg}"
-    sys.stdout.write(CGI::escape(to_Fmbt.encode("utf-8")) + "\n")
+    $stdout.write(CGI::escape(to_Fmbt.encode("utf-8")) + "\n")
 end
 
 def fmbtstderr(msg)
@@ -186,7 +186,7 @@ def put(msg)
     if $opt_debug    
         MyLog("sending '#{msg}'")
     end
-    sys.stdout.write("fmbtmagic " + str(msg) + "\n")
+    $stdout.write("fmbtmagic " + str(msg) + "\n")
     sys.stdout.flush()
 end
 
@@ -195,7 +195,7 @@ def put_list(list_of_integers)
     if $opt_debug 
         MyLog("sending 'msg'")
     end
-    sys.stdout.write("fmbtmagic " + msg + "\n")
+    $stdout.write("fmbtmagic " + msg + "\n")
     sys.stdout.flush()
 end
 
@@ -207,7 +207,7 @@ def put_lts(lts_string)
             MyLog("sending lts\n#{lts_string}\n")
         end
     end
-    sys.stdout.write("fmbtmagic #{lts_string.length}\n#{lts_string}")
+    $stdout.write("fmbtmagic #{lts_string.length}\n#{lts_string}")
     sys.stdout.flush()
 end
 
