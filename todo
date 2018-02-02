@@ -1,0 +1,6 @@
+1 fix func_code
+2 make aalang_ruby get expected code as G:\programming\MBT\fMBT\remote_rbaal_generated_code.rb
+	initial_state1.func_code = 
+	push_variables_set.merge(initial_state1.func_code.co_names)
+	action1guard.requires = []
+3 log_version()
