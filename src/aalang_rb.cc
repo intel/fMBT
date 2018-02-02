@@ -33,7 +33,7 @@ std::string aalang_rb::action_helper(const codefileline& cfl,std::string s,
       extra_name = "output_name =\"" + multiname[i].first.substr(2)  + "\"";
 
 
-  return "    def " + funcname + "():\n" + variables
+  return "    def " + funcname + "()\n" + variables
     +    "        action_name = \"" + multiname[i].first + "\"\n"
     +    "        " + extra_name + "\n"
     +    "        action_index = " + to_string(i) + "\n"
@@ -114,10 +114,10 @@ aalang_rb::~aalang_rb()
 void aalang_rb::set_namestr(std::string* _name)
 {
   name=_name;
-  s+="import aalmodel\n"
-    "class " + class_name() + "(aalmodel.AALModel):\n"
-    "    def __init__(self):\n"
-    "        aalmodel.AALModel.__init__(self, globals())\n"
+  s+="require aalmodel\n"
+    "class " + class_name() + "< AALModel\n"
+    "    def initialize()\n"
+    "        super()\n"
     "    end\n";
   s+="    adapter_init_list = []\n";
   s+="    initial_state_list = []\n";
@@ -139,7 +139,7 @@ void aalang_rb::set_istate(std::string* ist,const char* file,int line,int col)
 {
   model_init_counter++;
   const std::string funcname("initial_state"+to_string(model_init_counter));
-  s += "\n    def " + funcname + "():\n" + variables +
+  s += "\n    def " + funcname + "()\n" + variables +
     indent(8, *ist) + "\n" +
     indent(8, "pass") + "\n" +
     indent(4, "end") + "\n";
@@ -154,7 +154,7 @@ void aalang_rb::set_ainit(std::string* iai,const char* file,int line,int col)
   adapter_init_counter++;
   const std::string r("return 1");
   const std::string funcname("adapter_init"+to_string(adapter_init_counter));
-  s += "\n    def " + funcname + "():\n" + variables +
+  s += "\n    def " + funcname + "()\n" + variables +
     indent(8, *iai) + "\n" + indent(8, r) + "\n" + indent(4, "end") + "\n";
   s += python_lineno_wrapper(file,line,funcname,1+m_lines_in_vars,4);
 
@@ -166,7 +166,7 @@ void aalang_rb::set_aexit(std::string* iai,const char* file,int line,int col)
 {
   adapter_exit_counter++;
   const std::string funcname("adapter_exit"+to_string(adapter_exit_counter));
-  s += "\n    def " + funcname + "(verdict,reason):\n" + variables +
+  s += "\n    def " + funcname + "(verdict,reason)\n" + variables +
     indent(8, *iai) + "\n" + indent(8, "pass\n") + "\n"+indent(4, "end")+"\n";
   s += python_lineno_wrapper(file,line,funcname,1+m_lines_in_vars,4);
 
@@ -211,7 +211,7 @@ void aalang_rb::next_tag()
     s+="\n    tag" + tcnt + "name = \""+multiname[i].first+"\"\n";
     /* tagXguard */
     const std::string funcname("tag" + tcnt + "guard");
-    s+="    def " + funcname + "():\n" + variables;
+    s+="    def " + funcname + "()\n" + variables;
     s+="        tag_name = \"" + multiname[i].first + "\"\n";
     s+=indent(8,m_guard.first)+"\n";
     s+="    end\n";
@@ -225,7 +225,7 @@ void aalang_rb::next_tag()
     if (adapter) {
       const std::string funcname("tag" + tcnt + "adapter");
 
-      s+="    def " + funcname + "():\n" + variables;
+      s+="    def " + funcname + "()\n" + variables;
       s+="        tag_name = \"" + multiname[i].first + "\"\n";
       s+=indent(8,m_adapter.first)+"\n";
       s+="    end\n";
@@ -280,13 +280,13 @@ void aalang_rb::parallel(bool start,std::list<std::string>* __params) {
     std::string sNg =
     s += "\n"
       "    " + serialN("name") + " = \"" + serialN("") + "\"\n"
-      "    def " + serialN("guard") + "():\n"
+      "    def " + serialN("guard") + "()\n"
       "        return guard_list[-2] in " + serialN("guard", true) +
       "_next_block\n"
       "    " + serialN("guard") + ".requires = []\n"
       "    " + serialN("guard") + ".blocks = []\n"
       "    " + serialN("guard") + "_next_block = set()\n"
-      "    def " + serialN("step") + "(self, upper):\n"
+      "    def " + serialN("step") + "(self, upper)\n"
       "        " + serialN("guard", true) + "_next_block.remove("
       "upper)\n"
       "        if not " + serialN("guard", true) + "_next_block:\n" +
@@ -303,7 +303,7 @@ void aalang_rb::parallel(bool start,std::list<std::string>* __params) {
       // - executing subblocks requires outer block permission.
       s +=
         "        if len(" + serialN("guard", true) + "_next_block) == len(" +
-        serialN("guard", true) + ".blocks):\n"
+        serialN("guard", true) + ".blocks)\n"
         "            self." + serialN_1("step") + "(\"" + serialN("") + "\")\n"
         "    " + serialN("guard") + ".requires = [\"" + serialN_1("guard") +
         "\"]\n"
@@ -350,13 +350,13 @@ void aalang_rb::serial(bool start,std::list<std::string>* __params) {
     serial_stack.push_back(serial_cnt);
     s += "\n"
       "    " + serialN("name") + " = \"" + serialN("") + "\"\n"
-      "    def " + serialN("guard") + "():\n"
+      "    def " + serialN("guard") + "()\n"
       "        return " + serialN("guard", true) +
       "_next_block[-1] == guard_list[-2]\n"
       "    " + serialN("guard") + ".requires = []\n"
       "    " + serialN("guard") + ".blocks = []\n"
       "    " + serialN("guard") + "_next_block = []\n"
-      "    def " + serialN("step") + "(self, upper):\n"
+      "    def " + serialN("step") + "(self, upper)\n"
       "        " + serialN("guard", true) + "_next_block.pop()\n"
       "        if not " + serialN("guard", true) + "_next_block:\n"
       "            " + serialN("guard", true) + "_next_block";
@@ -509,21 +509,21 @@ void aalang_rb::next_action()
 
 std::string aalang_rb::stringify()
 {
-  s += indent(4,"\n    def adapter_init():\n") + "\n" +
+  s += indent(4,"\n    def adapter_init()\n") + "\n" +
     indent(8,"for x in "+class_name()+".adapter_init_list:\n"
 	   "    ret = x()\n"
 	   "    if not ret and ret != None:\n"
 	   "        return ret\n"
 	   "return True\n") + "\n" +
     indent(4,"\n    end") + "\n" +
-    indent(4,"\n    def initial_state():\n") + "\n" +
+    indent(4,"\n    def initial_state()\n") + "\n" +
     indent(8,"for x in "+class_name()+".initial_state_list:\n"
 	   "    ret = x()\n"
 	   "    if not ret and ret != None:\n"
 	   "        return ret\n"
 	   "return True\n") +"\n" +
     indent(4,"\n    end") + "\n" + 
-    indent(4,"\n    def adapter_exit(verdict,reason):\n") + "\n" +
+    indent(4,"\n    def adapter_exit(verdict,reason)\n") + "\n" +
     indent(8,"for x in "+class_name()+".adapter_exit_list:\n"
 	   "    ret = x(verdict,reason)\n"
 	   "    if not ret and ret != None:\n"
