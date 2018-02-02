@@ -114,7 +114,7 @@ aalang_rb::~aalang_rb()
 void aalang_rb::set_namestr(std::string* _name)
 {
   name=_name;
-  s+="require aalmodel\n"
+  s+="require 'aalmodel'\n"
     "class " + class_name() + "< AALModel\n"
     "    def initialize()\n"
     "        super()\n"
