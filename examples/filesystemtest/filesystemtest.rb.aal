@@ -17,7 +17,8 @@ aal "filesystemtest" {
     adapter_init {
         begin
             FileUtils.rm_rf("#{DIRNAME}/.")
-        rescue Exception => e;end
+        rescue Exception => e
+        end
     }
     adapter_exit {
         if verdict == "pass" and dir_exists
