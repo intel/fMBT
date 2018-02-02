@@ -141,7 +141,6 @@ void aalang_rb::set_istate(std::string* ist,const char* file,int line,int col)
   const std::string funcname("initial_state"+to_string(model_init_counter));
   s += "\n    def " + funcname + "()\n" + variables +
     indent(8, *ist) + "\n" +
-    indent(8, "pass") + "\n" +
     indent(4, "end") + "\n";
   s += python_lineno_wrapper(file,line,funcname,1+m_lines_in_vars,4);
   s += indent(4,"initial_state_list.append("+funcname+")")+"\n";
@@ -167,7 +166,7 @@ void aalang_rb::set_aexit(std::string* iai,const char* file,int line,int col)
   adapter_exit_counter++;
   const std::string funcname("adapter_exit"+to_string(adapter_exit_counter));
   s += "\n    def " + funcname + "(verdict,reason)\n" + variables +
-    indent(8, *iai) + "\n" + indent(8, "pass\n") + "\n"+indent(4, "end")+"\n";
+    indent(8, *iai) + "\n" + "\n"+indent(4, "end")+"\n";
   s += python_lineno_wrapper(file,line,funcname,1+m_lines_in_vars,4);
 
   s += indent(4,"adapter_exit_list.append("+funcname+")")+"\n";
@@ -409,7 +408,7 @@ void aalang_rb::set_body(std::string* bod,const char* file,int line,int col)
   std::string tmp=*bod;
   if (bod!=&default_body)
     delete bod;
-  default_if_empty(tmp, "pass");
+  default_if_empty(tmp, "");
   m_body = codefileline(tmp,fileline(file,line));
 }
 
@@ -419,7 +418,7 @@ void aalang_rb::set_adapter(std::string* ada,const char* file,int line,int col)
   std::string tmp=*ada;
   if (ada!=&default_adapter)
     delete ada;
-  default_if_empty(tmp, "pass");
+  default_if_empty(tmp, "");
   m_adapter = codefileline(tmp,fileline(file,line));
 }
 
