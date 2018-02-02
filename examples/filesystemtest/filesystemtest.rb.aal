@@ -4,7 +4,9 @@ aal "filesystemtest" {
         require 'tempfile'
         require 'fileutils'
         
-        DIRNAME = "/root/temp/fmbt.filesystemtest"
+        DIRNAME = Tempfile.new("test").path
+        dir_array = DIRNAME.split("/")
+        DIRNAME = dir_array[0..dir_array.length-2].join("/") + "/fmbt.filesystemtest"
         SUBDIRNAME = DIRNAME + "/subdir"
     }
     variables { dir_exists, subdir_exists }
