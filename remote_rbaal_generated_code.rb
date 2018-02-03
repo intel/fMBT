@@ -4,13 +4,13 @@ require 'fileutils'
 
 
 
-DIRNAME = Tempfile.new("test").path
+$DIRNAME = Tempfile.new("test").path
 
-dir_array = DIRNAME.split("/")
+dir_array = $DIRNAME.split("/")
 
-DIRNAME = dir_array[0..dir_array.length-2].join("/") + "/fmbt.filesystemtest"
+$DIRNAME = dir_array[0..dir_array.length-2].join("/") + "/fmbt.filesystemtest"
 
-SUBDIRNAME = DIRNAME + "/subdir"
+$SUBDIRNAME = $DIRNAME + "/subdir"
 require 'g:/programming/MBT/fMBT/utils/aalmodel.rb'
 require 'set'
 
@@ -45,25 +45,29 @@ class Gen_filesystemtest < AALModel
         @tag2name = "no dir"
         @tag3name = "subdir exists"
         @tag4name = "no subdir"
+
+        @initial_state_list.push('initial_state1')
+        @adapter_init_list.push('adapter_init1')
         super()
     end
     
     def initial_state1()
-        global dir_exists, subdir_exists
         dir_exists = false
         subdir_exists = false
-        @initial_state_list.push(initial_state1)
+        user_definedd_variable = local_variables
+        user_definedd_variable.pop() # remove "_" from ["dir_exists", "subdir_exists", "_"]
+        user_definedd_variable.each do |item|
+            @push_variables_set.add(item)
+            @variables[item] = "#{eval(item)}"
+        end
+        
     end
 
     def adapter_init1()
-        global dir_exists, subdir_exists
         begin
-
-            FileUtils.rm_rf("#{DIRNAME}/.")
-
+            FileUtils.rm_rf("#{$DIRNAME}/.")
         rescue Exception => e
         end
-        @adapter_init_list.push(adapter_init1)
         return 1
     end
 
@@ -71,11 +75,11 @@ class Gen_filesystemtest < AALModel
         global dir_exists, subdir_exists
         if verdict == "" and dir_exists
 
-            log("cleaning up " + DIRNAME)
+            log("cleaning up " + $DIRNAME)
 
             begin
 
-                FileUtils.rm_rf("#{DIRNAME}/.")
+                FileUtils.rm_rf("#{$DIRNAME}/.")
 
             rescue Exception => e
             end
@@ -103,7 +107,7 @@ class Gen_filesystemtest < AALModel
         action_name = "i:mkdir ok"
         input_name ="mkdir ok"
         action_index = 0
-        Dir.mkdir(DIRNAME)
+        Dir.mkdir($DIRNAME)
         return 1
     end
 
@@ -128,7 +132,7 @@ class Gen_filesystemtest < AALModel
         action_name = "i:rmdir ok"
         input_name ="rmdir ok"
         action_index = 0
-        Dir.rmdir(DIRNAME)
+        Dir.rmdir($DIRNAME)
         return 2
     end
 
@@ -151,7 +155,7 @@ class Gen_filesystemtest < AALModel
         action_name = "i:mksubdir ok"
         input_name ="mksubdir ok"
         action_index = 0
-        Dir.mkdir(SUBDIRNAME)
+        Dir.mkdir($SUBDIRNAME)
         return 3
     end
 
@@ -175,7 +179,7 @@ class Gen_filesystemtest < AALModel
         action_name = "i:rmsubdir ok"
         input_name ="rmsubdir ok"
         action_index = 0
-        Dir.rmdir(SUBDIRNAME)
+        Dir.rmdir($SUBDIRNAME)
         return 4
     end
     
@@ -200,7 +204,7 @@ class Gen_filesystemtest < AALModel
         action_index = 0
         begin 
 
-            os.mkdir(DIRNAME)
+            os.mkdir($DIRNAME)
 
         rescue Errno::EEXIST => e
 
@@ -239,7 +243,7 @@ class Gen_filesystemtest < AALModel
         action_index = 0
         begin
 
-            Dir.mkdir(SUBDIRNAME)
+            Dir.mkdir($SUBDIRNAME)
 
         rescue Errno::EEXIST => e
 
@@ -276,7 +280,7 @@ class Gen_filesystemtest < AALModel
         action_index = 0
         begin
 
-            Dir.rmdir(DIRNAME)
+            Dir.rmdir($DIRNAME)
 
         rescue Errno::ENOENT => e
 
@@ -315,7 +319,7 @@ class Gen_filesystemtest < AALModel
         action_index = 0
         begin
 
-            Dir.rmdir(DIRNAME)
+            Dir.rmdir($DIRNAME)
 
         rescue Errno::ENOTEMPTY => e
 
@@ -352,7 +356,7 @@ class Gen_filesystemtest < AALModel
         action_index = 0
         begin
 
-            Dir.rmdir(SUBDIRNAME)
+            Dir.rmdir($SUBDIRNAME)
 
         rescue Errno::ENOENT => e
 
@@ -371,82 +375,66 @@ class Gen_filesystemtest < AALModel
 
     
     def tag1guard()
-        global dir_exists, subdir_exists
         tag_name = "dir exists"
-        return dir_exists
+        return $dir_exists
     end
     def tag1adapter()
-        global dir_exists, subdir_exists
         tag_name = "dir exists"
-        if not Dir.exists?(DIRNAME)
-
-            raise(StandardError,"#{DIRNAME} not accessible")
-
+        if not File.directory?($DIRNAME)
+            raise("#{$DIRNAME} not accessible")
         end
     end
 
     def tag2guard()
-        global dir_exists, subdir_exists
         tag_name = "no dir"
-        return ! dir_exists
+        return ! $dir_exists
     end
     def tag2adapter()
-        global dir_exists, subdir_exists
         tag_name = "no dir"
-        if Dir.exists?(DIRNAME)
-
-            raise(StandardError,"#{DIRNAME}  accessible")
-
+        if File.directory?($DIRNAME)
+            raise("#{$DIRNAME}  accessible")
         end
     end
  
     def tag3guard()
-        global dir_exists, subdir_exists
         tag_name = "subdir exists"
-        return subdir_exists
+        return $subdir_exists
     end
     def tag3adapter()
-        global dir_exists, subdir_exists
         tag_name = "subdir exists"
-        if not Dir.exists?(SUBDIRNAME)
-
-            raise(StandardError,"#{SUBDIRNAME} not accessible")
-
+        if not File.directory?($SUBDIRNAME)
+            raise("#{$SUBDIRNAME} not accessible")
         end
     end
 
     def tag4guard()
-        global dir_exists, subdir_exists
         tag_name = "no subdir"
-        return ! subdir_exists
+        return ! $subdir_exists
     end
     def tag4adapter()
-        global dir_exists, subdir_exists
         tag_name = "no subdir"
-        if Dir.exists?(SUBDIRNAME)
-
-            raise(StandardError,"#{SUBDIRNAME}  accessible")
-
+        if File.directory?($SUBDIRNAME)
+            raise("#{$SUBDIRNAME}  accessible")
         end
     end
 
     def adapter_init()
         for x in @adapter_init_list
-            ret = x()
-            if not ret and ret != None:
+            ret = self.send(x)
+            if not ret and ret != nil
                 return ret
             end
         end
-        return True
+        return true
     end
     def initial_state()
         for x in @initial_state_list
-            ret = x()
-            if not ret and ret != None:
+            ret = self.send(x)
+            if not ret and ret != nil
                 return ret
             end
         end
-        return True
+        return true
     end
     def adapter_exit(verdict,reason)
         for x in @adapter_exit_list
@@ -460,6 +448,7 @@ class Gen_filesystemtest < AALModel
 end
 
 class Model < Gen_filesystemtest
-
+    def initialize()
+        super()
+    end
 end
-

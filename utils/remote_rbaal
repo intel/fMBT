@@ -197,7 +197,7 @@ module RemoteRBAAL
             MyLog("sending 'msg'")
         end
         $stdout.write("fmbtmagic " + msg + "\n")
-        sys.stdout.flush()
+        $stdout.flush()
     end
 
     def put_lts(lts_string)
@@ -254,8 +254,9 @@ module RemoteRBAAL
             # log_version()
 
             # protocol loop
+            ARGF.read() #clear input
             adapter_call_arguments = []
-            cmd = gets()
+            cmd = $stdin.gets.chomp
             while cmd != ""
                 if cmd == "ma"
                     begin
@@ -267,7 +268,7 @@ module RemoteRBAAL
                     end
                 elsif cmd == "mp"
                     begin    
-                        put_list(@aal.getprops())
+                        RemoteRBAAL.put_list(@aal.getprops())
                     rescue Exception=>e
                         report_simulation_error(@aal)
                         fmbtstderr('Error at a tag #{e.class} #{e.message}\n#{format_rubyaalrescueion()}')
@@ -278,15 +279,15 @@ module RemoteRBAAL
                         @aal.reset()
                     rescue Exception=>e
                         fmbtstderr('Error at initial_state() #{e.class} #{e.message}\n#{format_rubyaalrescueion()}')
-                        put(0)
+                        RemoteRBAAL.put(0)
                     else   
-                        put(1)
+                        RemoteRBAAL.put(1)
                     end
                 elsif cmd == "mu"
                     @aal.push()
                 elsif cmd == "mo"
                     @aal.pop()
-                elsif cmd.startswith("ae")
+                elsif cmd[0..1] == "ae"
                     begin
                         args = cmd[3]
                         if args.include?(" ")
@@ -303,20 +304,19 @@ module RemoteRBAAL
                     end
                 elsif cmd == "ai"
                     begin
-                    rv = @aal.init()
+                        rv = @aal.init()
                     rescue Exception=>e
                         fmbtstderr('Error at adapter_init() #{e.class} #{e.message}\n#{format_rubyaalrescueion()}')
-                        put(0)
+                        RemoteRBAAL.put(0)
                     else
                         if rv or rv == nil 
-                            put(1)
+                            RemoteRBAAL.put(1)
                         else 
-                            put(0)
+                            RemoteRBAAL.put(0)
                         end
                     end
                 elsif cmd == "aop"
                     begin
-                    
                         put_list(@aal.observe(false))
                     rescue Exception=>e
                         fmbtstderr('Error when polling outputs #{e.class} #{e.message}\n#{format_rubyaalrescueion()}')
@@ -329,18 +329,18 @@ module RemoteRBAAL
                         fmbtstderr('Error when waiting for outputs #{e.class} #{e.message}\n#{format_rubyaalrescueion()}')
                         raise Exception.new(e.message)
                     end
-                elsif cmd.startswith("act") # adapter check tags
+                elsif cmd[0..2] == "act" # adapter check tags
                     # If the adapter of a tag does not return "True" or
                     # nil, report the number of the first failing tag.
                     failing_tags = []
                     # Tags must not change model state
                     _state_before_tag = @aal.state()
-                    for tag_number in cmd[3].strip().split()
+                    for tag_number in cmd.split()[1..-1]
                         tag_number = tag_number.to_i
                         begin
                             rv = @aal.tag_execute(tag_number)
                             if not (rv or rv == nil)
-                                fmbtstderr("adapter() of tag \"#{tag_names[tag_number-1]}\" returned #{rv}")
+                                RemoteRBAAL.fmbtstderr("adapter() of tag \"#{tag_names[tag_number-1]}\" returned #{rv}")
                                 failing_tags.push(tag_number)
                             end
                             if @aal.state() != _state_before_tag
@@ -349,11 +349,11 @@ module RemoteRBAAL
                         rescue Exception=>e
                             #todo: find  what is Assertion for
                             msg = "Assertion failure"
-                            fmbtstderr("#{msg} at adapter() of tag \"#{tag_names[tag_number-1]}\" #{e.message}\n#{format_rubyaalrescueion()}")
+                            RemoteRBAAL.fmbtstderr("#{msg} at adapter() of tag \"#{tag_names[tag_number-1]}\" #{e.message}\n#{format_rubyaalrescueion()}")
                             failing_tags.push(tag_number)
                         end
                     end
-                    put_list(failing_tags)
+                    RemoteRBAAL.put_list(failing_tags)
                 elsif cmd[0] == "m"
                     if opt_verbose_fmbt_log and not Fmbt.simulated()
                         # write variable values to fmbt log
@@ -398,7 +398,7 @@ module RemoteRBAAL
                     end
                     put(rv)
                     adapter_call_arguments = []
-                elsif cmd.startswith("lts")
+                elsif cmd[0..2] == "lts"
                     lsts_depth = int(cmd[3])
                     outfilestring = StringIO.StringIO()
                     begin
@@ -416,7 +416,7 @@ module RemoteRBAAL
                 else
                     raise Exception.new("Unexpected command \"" + cmd + "\". remote_rbaal works with \"aal_remote\" model.")
                 end
-                cmd = get().rstrip()
+                cmd = $stdin.gets.chomp
         end
         end
     end
@@ -816,7 +816,7 @@ begin
     aalpy_filename = "G:\\programming\\MBT\\fMBT\\remote_rbaal_generated_code.rb"
     load(aalpy_filename)
 rescue Exception=>e
-    # todo: havn't run yet
+    # todo: haven't run yet
     if e.class == "SyntaxError"
         format_syntaxerror()
     end
@@ -839,7 +839,7 @@ begin
 rescue Exception=>e
     raise Exception.new("Error when instantiating Model() #{e.message}\n#{traceback.format_exc()}")
 end
-aal._log = RemoteRBAAL::MyLog
+aal.log = RemoteRBAAL::MyLog
 aal.timeout = opt_timeout
 aal.instance_variable_get(:@variables)['fmbtlog'] = 'fmbtlog'
 aal.instance_variable_get(:@variables)['fmbtlograw'] = 'fmbtlograw'

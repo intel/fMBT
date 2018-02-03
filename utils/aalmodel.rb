@@ -1,22 +1,86 @@
 class AALModel
-    attr_accessor :_log 
+    attr_accessor :log 
     attr_accessor :timeout
 
     def initialize()
         @variables = {}
+        @variables['guard_list'] = []
         @all_names = get_all("name", "action")
+        @aal_block_name = {}
         @all_tagnames = get_all("name", "tag")
+        @all_tagguards = get_all("guard", "tag")
+        @all_tagadapters = get_all("adapter", "tag")
+        
+        if get_all("guard_next_block", "serial").length > 0
+            @has_serial = true
+        else
+            @has_serial = false
+        end
+        @stack_executed_actions = []
+        @push_variables = []
+    end
+
+    def call(func_name, call_arguments=nil)
+        guard_list = nil
+        begin
+            Fmbt.simulated_actions = @stack_executed_actions
+            if func_name[-1,1] == "d" # faster than func_name.endswith("guard")
+                guard_list = @variables['guard_list']
+                guard_list.push(@aal_block_name[func_name])
+                #todo : dont konw what is it
+                # for prerequisite in func.requires
+                    # if not self.call(getattr(self, prerequisite))
+                    #     return False
+                    # end
+                # end
+            end
+            if call_arguments
+                args = []
+                for arg in call_arguments
+                    if arg == ''
+                        args.push('')
+                    else
+                        args.push(eval(arg, self._variables))
+                    end
+                end
+                @variables['args'] = args
+            else
+                @variables['args'] = []
+            end
+            rv = self.send(func_name)
+            if guard_list
+                guard_list.pop()
+            end
+            return rv
+        rescue Exception, e
+            @log.log("Exception #{e.class} in #{func.func_name} #{e.message}")
+            @log.log(traceback.format_exc())
+            if guard_list
+                guard_list.pop()
+            raise
+            end
+        end
     end
 
     def get_all(property_name, itemtype)
         plist = []
         i = 1
         while true
-            obj = self.instance_variable_get(:"@#{itemtype}#{i}#{property_name}")
+            obj = self.instance_variable_get("@#{itemtype}#{i}#{property_name}")
             if obj != nil
                 plist.push(obj)
             else 
-                return plist
+                obj = self.methods.include?("#{itemtype}#{i}#{property_name}")
+                if obj
+                    if ["guard", "body", "adapter"].include?(property_name) and ["action", "tag"].include?(itemtype)
+                        @aal_block_name["#{itemtype}#{i}#{property_name}"] = self.instance_variable_get("@#{itemtype}#{i}name")
+                    elsif itemtype == "serial"
+                        @aal_block_name["serial#{i}#{property_name}"] = self.instance_variable_get("@serial#{i}name")
+                    end
+                    plist.push("#{itemtype}#{i}#{property_name}")
+                else
+                    return plist
+                end
             end
             i += 1
         end
@@ -29,4 +93,68 @@ class AALModel
     def getSPNames()
         return @all_tagnames
     end
+
+    def reset()
+        # initialize model
+        Fmbt.actionName = "AAL initial_state"
+        rv = call('initial_state')
+        for v in @push_variables_set
+            @push_variables.push(v)
+        end
+        return rv
+    end
+
+    def init()
+        # initialize adapter
+        Fmbt.actionName = "AAL: adapter_init"
+        rv = call('adapter_init')
+        return rv
+    end
+    #getting enabled tags
+    def getprops()
+        enabled_tags = []
+        @all_tagguards.each_with_index do |guard,index|
+            Fmbt.actionName = "tag: " + @all_tagnames[index]
+            if call(guard)
+                enabled_tags.push(index + 1)
+            end
+        end
+        return enabled_tags
+    end
+
+    def tag_execute(i)
+        if not (i > 0 and i <= @all_tagnames.length)
+            raise IndexError.new("Cannot execute tag #{i} adapter code")
+        end
+        Fmbt.actionName = "tag: " + @all_tagnames[i-1]
+        begin
+            rv = call(@all_tagadapters[i-1])
+        rescue Exception => e
+            if  @variables.include?('adapter_exception_handler')
+                return call_tagexception_handler('adapter_exception_handler', @all_tagnames[i-1], exc)
+            else
+                raise
+            end
+        end
+        return rv
+    end
+
+    def state(discard_variables=nil, include_variables=nil)
+        """
+        Return the current state of the model as a string.
+        By comparing strings one can check if the state is already seen.
+        """
+        rv_list = []
+        for varname in @push_variables:
+            if (include_variables and not include_variables.include?(varname)) or (discard_variables and discard_variables.include?(varname))
+                next
+            end
+            rv_list.push("#{varname} = #{@variables[varname]}")
+        end
+        if @has_serial
+            rv_list.push("!serial = #{get_all("guard_next_block", "serial")}")
+        end
+        return rv_list.join('\n')
+    end
+        
 end

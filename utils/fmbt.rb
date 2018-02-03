@@ -29,13 +29,12 @@
 
 module Fmbt 
 
-    $_g_fmbt_adapterlogtimeformat="%s.%f"
-    $_g_actionName = "undefined"
-    $_g_lastExecutedActionName = "undefined"
-    $_g_testStep = -1
-    $_g_simulated_actions = []
-    $_g_adapterlogFilename = "/tmp/fmbt.adapterlog"
-
+    fmbt_adapterlogtimeformat="%s.%f"
+    actionName = "undefined"
+    lastExecutedActionName = "undefined"
+    testStep = -1
+    simulated_actions = []
+    adapterlogFilename = "/tmp/fmbt.adapterlog"
 
     def _fmbt_call_helper(func,param = "")
         if simulated()
@@ -255,4 +254,19 @@ module Fmbt
         end
         return funcspec
     end
+
+    module_function
+    def fmbt_adapterlogtimeformat; @fmbt_adapterlogtimeformat end
+    def fmbt_adapterlogtimeformat= v; @fmbt_adapterlogtimeformat = v end
+    def actionName; @actionName end
+    def actionName= v; @actionName = v end
+    def lastExecutedActionName; @lastExecutedActionName end
+    def lastExecutedActionName= v; @lastExecutedActionName = v end
+    def testStep; @testStep end
+    def testStep= v; @testStep = v end
+    def simulated_actions; @simulated_actions end
+    def simulated_actions= v; @simulated_actions = v end
+    def adapterlogFilename; @adapterlogFilename end
+    def adapterlogFilename= v; @adapterlogFilename = v end
+
 end
