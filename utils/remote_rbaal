@@ -84,7 +84,7 @@ Options
        Print statistics from FILE with
 =end
 
-require 'G:\programming\MBT\fMBT\utils\fmbt.rb'
+require '/home/danny/programming/fMBT/utils/fmbt.rb'
 require 'getoptlong'
 require 'cgi'
 require 'date'
@@ -260,7 +260,7 @@ module RemoteRBAAL
             while cmd != ""
                 if cmd == "ma"
                     begin
-                        put_list(@aal.getActions())
+                        RemoteRBAAL.put_list(@aal.getActions())
                     rescue Exception=>e
                         report_simulation_error(@aal)
                         fmbtstderr("Error when evaluating guards of actions #{e.class} #{e.message}\n#{format_rubyaalrescueion()}")
@@ -317,7 +317,7 @@ module RemoteRBAAL
                     end
                 elsif cmd == "aop"
                     begin
-                        put_list(@aal.observe(false))
+                        RemoteRBAAL.put_list(@aal.observe(false))
                     rescue Exception=>e
                         fmbtstderr('Error when polling outputs #{e.class} #{e.message}\n#{format_rubyaalrescueion()}')
                         raise Exception.new(e.message)
@@ -813,7 +813,7 @@ aalpy_file.close()
 aalpy_filename = aalpy_file.path.split('/')[-1]
 
 begin
-    aalpy_filename = "G:\\programming\\MBT\\fMBT\\remote_rbaal_generated_code.rb"
+    aalpy_filename = "/home/danny/programming/fMBT/remote_rbaal_generated_code.rb"
     load(aalpy_filename)
 rescue Exception=>e
     # todo: haven't run yet

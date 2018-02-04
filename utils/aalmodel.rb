@@ -1,12 +1,19 @@
 class AALModel
     attr_accessor :log 
     attr_accessor :timeout
+    @@SILENCE = -3
 
     def initialize()
         @variables = {}
         @variables['guard_list'] = []
-        @all_names = get_all("name", "action")
+
         @aal_block_name = {}
+        @all_guards = get_all("guard", "action")
+        @all_bodies = get_all("body", "action")
+        @all_adapters = get_all("adapter", "action")
+        @all_names = get_all("name", "action")
+        @all_types = get_all("type","action")
+
         @all_tagnames = get_all("name", "tag")
         @all_tagguards = get_all("guard", "tag")
         @all_tagadapters = get_all("adapter", "tag")
@@ -16,6 +23,8 @@ class AALModel
         else
             @has_serial = false
         end
+
+        @enabled_actions_stack = [Set.new()]
         @stack_executed_actions = []
         @push_variables = []
     end
@@ -70,8 +79,11 @@ class AALModel
             if obj != nil
                 plist.push(obj)
             else 
+                #methos in ruby 1.8.6 returns string
                 obj = self.methods.include?("#{itemtype}#{i}#{property_name}")
-                if obj
+                #methods in ruby 2.3 returns symbol
+                obj_symbol_check = self.methods.include?("#{itemtype}#{i}#{property_name}".to_sym)
+                if obj or obj_symbol_check
                     if ["guard", "body", "adapter"].include?(property_name) and ["action", "tag"].include?(itemtype)
                         @aal_block_name["#{itemtype}#{i}#{property_name}"] = self.instance_variable_get("@#{itemtype}#{i}name")
                     elsif itemtype == "serial"
@@ -86,6 +98,18 @@ class AALModel
         end
     end
 
+    def getActions()
+        enabled_actions = []
+        @all_guards.each_with_index do |guard,index|
+            Fmbt.actionName = @all_names[index]
+            if call(guard)
+                enabled_actions.push(index + 1)
+            end
+        end
+        @enabled_actions_stack[-1] = Set.new(enabled_actions)
+        return enabled_actions
+    end
+    
     def getActionNames()
         return @all_names
     end
@@ -113,6 +137,7 @@ class AALModel
     #getting enabled tags
     def getprops()
         enabled_tags = []
+        @all_tagguards = get_all("guard", "tag")
         @all_tagguards.each_with_index do |guard,index|
             Fmbt.actionName = "tag: " + @all_tagnames[index]
             if call(guard)
@@ -145,7 +170,7 @@ class AALModel
         By comparing strings one can check if the state is already seen.
         """
         rv_list = []
-        for varname in @push_variables:
+        for varname in @push_variables
             if (include_variables and not include_variables.include?(varname)) or (discard_variables and discard_variables.include?(varname))
                 next
             end
@@ -156,5 +181,70 @@ class AALModel
         end
         return rv_list.join('\n')
     end
+       
+    def observe(block)
+        poll_more = true
+        start_time = 0
         
+        # Executing adapter blocks of output actions is allowed to
+        # change the state of the model. Allow execution of outputs
+        # whose guards are true both before executing adapter blocks*
+        # or after it. For that purpose, add currently enabled output
+        # actions to enabled_actions_stack.
+        enabled_oactions = []
+        @all_guards.each_with_index do |guard,index|
+            Fmbt.actionName = @all_names[index]
+            if @all_types[index] == "output" and not @enabled_actions_stack[-1].include?(index + 1)  and call(guard)
+                enabled_oactions.append(index + 1)
+            end
+        end
+        @enabled_actions_stack[-1].merge(enabled_oactions)
+
+        while poll_more
+            @all_adapters.each_with_index do |adapter,index|
+                if @all_types[index] != "output"
+                    next
+                end
+                Fmbt.actionName = @all_names[index]
+                begin
+                    fmbt._g_testStep += 1
+                    output_action = self.call(adapter)
+                rescue Exception => e
+                    if @variables.include?('adapter_exception_handler')
+                        output_action = call_exception_handler(
+                            'adapter_exception_handler',
+                            @all_names[index], exc,
+                            pass_through_rv = [False])
+                    else
+                        raise
+                    end
+                ensure
+                    Fmbt.testStep -= 1
+                end
+                observed_action = None
+                if type(output_action) == str
+                    observed_action = @all_names.index(output_action) + 1
+                elsif type(output_action) == type(True) and output_action
+                    observed_action = index + 1
+                elsif type(output_action) == int and output_action > 0
+                    observed_action = output_action
+                end
+                if observed_action
+                    log.log("observe: action \"#{@all_names[index]}\" adapter() returned #{output_action}. Reporting \"#{@all_names[observed_action-1]}\"")
+                    Fmbt.lastExecutedActionName = @all_names[observed_action-1]
+                    return [observed_action]
+                end
+            end
+            if block
+                if not start_time
+                     start_time = time.time()
+                elsif time.time() - start_time > timeout
+                    return [@@SILENCE]
+                end
+            else
+                poll_more = false
+            end
+        end
+        return [@@SILENCE]
+    end
 end
