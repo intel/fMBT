@@ -4,6 +4,8 @@ class AALModel
     @@SILENCE = -3
 
     def initialize()
+        @immutable_types = Set.new(["String", "Fixnum", "Long", "Float", "TrueClass", "NilClass", "Array"])
+
         @variables = {}
         @variables['guard_list'] = []
 
@@ -24,11 +26,11 @@ class AALModel
             @has_serial = false
         end
 
+        @stack = []
         @enabled_actions_stack = [Set.new()]
         @stack_executed_actions = []
         @push_variables = []
     end
-
     def call(func_name, call_arguments=nil)
         guard_list = nil
         begin
@@ -36,7 +38,7 @@ class AALModel
             if func_name[-1,1] == "d" # faster than func_name.endswith("guard")
                 guard_list = @variables['guard_list']
                 guard_list.push(@aal_block_name[func_name])
-                #todo : dont konw what is it
+                #todo  dont konw what is it
                 # for prerequisite in func.requires
                     # if not self.call(getattr(self, prerequisite))
                     #     return False
@@ -118,6 +120,94 @@ class AALModel
         return @all_tagnames
     end
 
+    def push(obj=nil)
+        """
+        Push current state (or optional parameter obj) to the stack.
+
+        See also pop(), state_obj().
+        """
+        if obj != nil
+            @stack.push(obj[0])
+            @stack_executed_actions.push(obj[1])
+            @enabled_actions_stack.push(obj[2])
+            return
+        end
+        # initial state must reset all variables.
+        # automatic push saves only their states
+        stack_element = {}
+        for varname in @push_variables
+            val = @variables[varname]
+            if @immutable_types.include?(val.class)
+                stack_element[varname] = val
+            else
+                #todo  deep copy
+                stack_element[varname] = val
+            end 
+        end
+        if @has_serial
+            #todo  deep copy
+            stack_element["!serial_abn"] = get_all("guard_next_block", "serial")
+        end
+        @stack.push(stack_element)
+        @stack_executed_actions.push([])
+        @enabled_actions_stack.push(Set.new(@enabled_actions_stack[-1]))
+    end
+
+    def pop()
+        """
+        Pop the topmost state in the stack and start using it as the
+        current state.
+
+        See also push()
+        """
+        stack_element = @stack.pop()
+        @stack_executed_actions.pop()
+        for varname in stack_element
+            if varname[0..1] == "!"
+                 next 
+            end
+            @variables[varname] = stack_element[varname]
+        end
+        if @has_serial
+            set_all_class("guard_next_block", "serial", stack_element["!serial_abn"])
+        end
+        @enabled_actions_stack.pop() 
+    end
+    
+    def stack_top()
+        return @stack[-1], @stack_executed_actions[-1], @enabled_actions_stack[-1]
+    end
+    
+    def stack_discard()
+        @stack.pop()
+        @stack_executed_actions.pop()
+        @enabled_actions_stack.pop()
+    end
+
+    def state_obj()
+        """
+        Return current state as a Python object
+        """
+        push()
+        obj = stack_top()
+        stack_discard()
+        return obj
+    end
+
+    def set_all_class(property_name, itemtype, value_array)
+        i = 1
+        cls = self.class
+        while true
+            itemname = itemtype + i.to_s + property_name
+            if self.instance_variable.include?(itemname)
+                self.instance_variable_set(itemname, value_array[i-1])
+            else
+                return
+            end
+            i += 1
+        end 
+    end
+
     def reset()
         # initialize model
         Fmbt.actionName = "AAL initial_state"
@@ -130,16 +220,17 @@ class AALModel
 
     def init()
         # initialize adapter
-        Fmbt.actionName = "AAL: adapter_init"
+        Fmbt.actionName = "AAL adapter_init"
         rv = call('adapter_init')
         return rv
     end
+    
     #getting enabled tags
     def getprops()
         enabled_tags = []
         @all_tagguards = get_all("guard", "tag")
         @all_tagguards.each_with_index do |guard,index|
-            Fmbt.actionName = "tag: " + @all_tagnames[index]
+            Fmbt.actionName = "tag " + @all_tagnames[index]
             if call(guard)
                 enabled_tags.push(index + 1)
             end
@@ -151,7 +242,7 @@ class AALModel
         if not (i > 0 and i <= @all_tagnames.length)
             raise IndexError.new("Cannot execute tag #{i} adapter code")
         end
-        Fmbt.actionName = "tag: " + @all_tagnames[i-1]
+        Fmbt.actionName = "tag " + @all_tagnames[i-1]
         begin
             rv = call(@all_tagadapters[i-1])
         rescue Exception => e
@@ -174,7 +265,7 @@ class AALModel
             if (include_variables and not include_variables.include?(varname)) or (discard_variables and discard_variables.include?(varname))
                 next
             end
-            rv_list.push("#{varname} = #{@variables[varname]}")
+            rv_list.push("#{varname} = '#{eval("$#{varname}")}'")
         end
         if @has_serial
             rv_list.push("!serial = #{get_all("guard_next_block", "serial")}")
@@ -230,7 +321,7 @@ class AALModel
                     observed_action = output_action
                 end
                 if observed_action
-                    log.log("observe: action \"#{@all_names[index]}\" adapter() returned #{output_action}. Reporting \"#{@all_names[observed_action-1]}\"")
+                    log.log("observe action \"#{@all_names[index]}\" adapter() returned #{output_action}. Reporting \"#{@all_names[observed_action-1]}\"")
                     Fmbt.lastExecutedActionName = @all_names[observed_action-1]
                     return [observed_action]
                 end
@@ -247,4 +338,6 @@ class AALModel
         end
         return [@@SILENCE]
     end
+     
+    
 end

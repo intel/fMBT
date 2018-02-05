@@ -11,7 +11,7 @@ dir_array = $DIRNAME.split("/")
 $DIRNAME = dir_array[0..dir_array.length-2].join("/") + "/fmbt.filesystemtest"
 
 $SUBDIRNAME = $DIRNAME + "/subdir"
-require '/home/danny/programming/fMBT/utils/aalmodel.rb'
+require 'g:\\programming\\MBT\\fMBT\\utils\\aalmodel.rb'
 require 'set'
 
 class Gen_filesystemtest < AALModel

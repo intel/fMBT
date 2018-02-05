@@ -84,7 +84,7 @@ Options
        Print statistics from FILE with
 =end
 
-require '/home/danny/programming/fMBT/utils/fmbt.rb'
+require 'g:\\programming\\MBT\\fMBT\\utils\\fmbt.rb'
 require 'getoptlong'
 require 'cgi'
 require 'date'
@@ -128,13 +128,13 @@ module RemoteRBAAL
         end
     end
 
-    def fmbtlog(msg, flush=True)
+    def fmbtlog(msg, flush=true)
         current_time = time.time()
         timestamped = "fmbtmagicl#{current_time} #{msg}"
         $stdout.write(CGI::escape(timestamped)+"\n")
     end
 
-    def fmbtlograw(msg, flush=True)
+    def fmbtlograw(msg, flush=true)
         to_fmbt = "fmbtmagicL #{msg}"
         $stdout.write(CGI::escape(to_Fmbt.encode("utf-8")) + "\n")
     end
@@ -163,7 +163,7 @@ module RemoteRBAAL
                 os.remove(filename)
             rescue RuntimeError
                 MyLog("remote_rbaal error removing file #{filename} failed when exiting\n")
-                MyLog(traceback.format_exc(), flush=True)
+                MyLog(traceback.format_exc(), flush=true)
             end
         rescue
         end
@@ -178,7 +178,7 @@ module RemoteRBAAL
                 MyLog("remote_rbaal error rescueion at AAL adapter_exit failed when exiting\n")
                 MyLog(format_pythonaalrescueion())
             end
-            MyLog("quitting", flush=True)
+            MyLog("quitting", flush=true)
         rescue
         end
     end
@@ -324,13 +324,13 @@ module RemoteRBAAL
                     end
                 elsif cmd == "aob"
                     begin
-                        put_list(@aal.observe(True))
+                        put_list(@aal.observe(true))
                     rescue Exception=>e
                         fmbtstderr('Error when waiting for outputs #{e.class} #{e.message}\n#{format_rubyaalrescueion()}')
                         raise Exception.new(e.message)
                     end
                 elsif cmd[0..2] == "act" # adapter check tags
-                    # If the adapter of a tag does not return "True" or
+                    # If the adapter of a tag does not return "true" or
                     # nil, report the number of the first failing tag.
                     failing_tags = []
                     # Tags must not change model state
@@ -383,7 +383,7 @@ module RemoteRBAAL
                     action_number = int(cmd[1])
                     begin
                         rv = @aal.adapter_execute(action_number,adapter_call_arguments)
-                        if rv == nil or rv is True
+                        if rv == nil or rv is true
                             rv = action_number
                         end
                         if (type(rv) == int and (rv == 0 or rv > len(action_names))) or (type(rv) != int)
@@ -399,15 +399,13 @@ module RemoteRBAAL
                     put(rv)
                     adapter_call_arguments = []
                 elsif cmd[0..2] == "lts"
-                    lsts_depth = int(cmd[3])
-                    outfilestring = StringIO.StringIO()
+                    lsts_depth = cmd.split()[1].to_i
+                    outfilestring = StringIO.new()
                     begin
-                        aal2lsts(@aal, outfilestring, lsts_depth,
-                                include_generation_discontinued_tag=false,
-                                drop_outputs=opt_accel_drop_outputs)
+                        RemoteRBAAL.aal2lsts(@aal, outfilestring, lsts_depth, include_generation_discontinued_tag=false,drop_outputs=$opt_accel_drop_outputs)
                     rescue Exception=>e
-                        report_simulation_error(@aal)
-                        fmbtstderr("Error on simulation #{e.class} #{e.message}\n#{format_rubyaalrescueion()}")
+                        RemoteRBAAL.report_simulation_error(@aal)
+                        RemoteRBAAL.fmbtstderr("Error on simulation #{e.class} #{e.message}\n#{RemoteRBAAL.format_rubyaalrescueion()}")
                         raise Exception.new(e.message)
                     end
                     outfilestring.seek(0)
@@ -475,7 +473,6 @@ module RemoteRBAAL
     end
 
     def tagfilter(state, tags)
-        global $filter_tags
         for tag in $filter_tags
             if tags.include?(tag)
                 return tag
@@ -485,10 +482,9 @@ module RemoteRBAAL
     end
 
     def aal2lsts(aal, output_fileobj, depth=5, discard_variables=nil,
-                include_variables=nil, include_generation_discontinued_tag=True,
+                include_variables=nil, include_generation_discontinued_tag=true,
                 _filter_tags=nil, drop_outputs=false)
-        global $filter_tags
-        require "lsts.rb"
+        require "g:\\programming\\MBT\\fMBT\\utils\\lsts.rb"
         def update_generated_tags(aal, include_variables,
                                 generated_tagnames, tags, new_lsts_state_num)
             for v in include_variables
@@ -501,33 +497,34 @@ module RemoteRBAAL
             end
         end
         if drop_outputs
-            get_actions = aal.getIActions
+            get_actions = 'getIActions'
         else
-            get_actions = aal.getActions
+            get_actions = 'getActions'
         end
         aal.push()
         generation_discontinued_tag = "AAL-depth#{depth}"
 
-        new_lsts = lsts.writer()
+        new_lsts = Lsts::Writer.new()
         actionnames = ["tau"] + aal.getActionNames()
         transitions = [[]]
         tags = {generation_discontinued_tag=>[]}
         tagnames = aal.getSPNames()
-        generated_tagnames = set([])
+        generated_tagnames = Set.new([])
         index = 1 
+        tagnum_to_name ={}
         for name in tagnames
             tagnum_to_name[index] = name
             tags[name] = []
         end
 
-        for num,_t in enumerate(tagnames,1)
-            if _$filter_tags.include?(_$filter_tags) and _$filter_tags.include?(_t)
-                $filter_tags.push(num)
+        tagnames.each_with_index{|_t,num|
+            num += 1
+            if _filter_tags and _filter_tags.include?(_t)
+                _filter_tags.push(num)
             end
-        end
-
+        }
         current_tags = aal.getprops()
-        initial_state_hidden = tagfilter(aal.state(discard_variables, include_variables), current_tags)
+        initial_state_hidden = RemoteRBAAL.tagfilter(aal.state(discard_variables, include_variables), current_tags)
         initial_state_real = aal.state()
         # unhandled states is a list of
         # (state-string, state-obj, len(shortest path from the initial state))
@@ -538,7 +535,7 @@ module RemoteRBAAL
 
         no_filtering_nor_abstracting = (not discard_variables and
                                         not include_variables and
-                                        not _$filter_tags)
+                                        not _filter_tags)
 
         # initial state tags
         for tag in current_tags
@@ -690,7 +687,7 @@ opt_lsts_show_vars = []
 opt_c_exec_statements = []
 opt_lsts_hide_tags = []
 opt_list_state_vars = false
-opt_accel_drop_outputs = false
+$opt_accel_drop_outputs = false
 
 # Parse arguments
 opts = GetoptLong.new(
@@ -740,7 +737,7 @@ opts.each do |opt, arg|
             file($log_filename, "w") # overwrite
             end
     elsif ["--log-unbuffered"].include?(opt) 
-        $opt_log_unbuffered = True
+        $opt_log_unbuffered = true
     elsif ["-t", "--timeout"].include?(opt) 
         opt_timeout = float(arg)
         RemoteRBAAL::MyLog("observe timeout #{opt_timeout}")
@@ -759,12 +756,12 @@ opts.each do |opt, arg|
     elsif ["-S", "--lsts-show-var"].include?(opt)  
         opt_lsts_show_vars.push(arg)
     elsif ["--list-state-vars"].include?(opt)  
-        opt_list_state_vars = True
+        opt_list_state_vars = true
         if not opt_output_fileobj
             opt_output_fileobj = sys.stdout
         end
     elsif ["--accel-drop-outputs"].include?(opt)  
-        opt_accel_drop_outputs = True
+        $opt_accel_drop_outputs = true
     elsif ["--profile"].include?(opt)  
         $opt_profile = arg
     end
@@ -813,7 +810,7 @@ aalpy_file.close()
 aalpy_filename = aalpy_file.path.split('/')[-1]
 
 begin
-    aalpy_filename = "/home/danny/programming/fMBT/remote_rbaal_generated_code.rb"
+    aalpy_filename = "g:\\programming\\MBT\\fMBT\\remote_rbaal_generated_code.rb"
     load(aalpy_filename)
 rescue Exception=>e
     # todo: haven't run yet
