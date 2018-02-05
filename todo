@@ -6,3 +6,4 @@
 	action1guard.requires = []
 3 log_version()
 4: considering remove "tag_name = "no dir""
+5: fix lsts reader
