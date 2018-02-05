@@ -84,7 +84,7 @@ Options
        Print statistics from FILE with
 =end
 
-require 'g:\\programming\\MBT\\fMBT\\utils\\fmbt.rb'
+require '/home/danny/programming/fMBT/utils/fmbt.rb'
 require 'getoptlong'
 require 'cgi'
 require 'date'
@@ -484,7 +484,7 @@ module RemoteRBAAL
     def aal2lsts(aal, output_fileobj, depth=5, discard_variables=nil,
                 include_variables=nil, include_generation_discontinued_tag=true,
                 _filter_tags=nil, drop_outputs=false)
-        require "g:\\programming\\MBT\\fMBT\\utils\\lsts.rb"
+        require "/home/danny/programming/fMBT/utils/lsts.rb"
         def update_generated_tags(aal, include_variables,
                                 generated_tagnames, tags, new_lsts_state_num)
             for v in include_variables
@@ -515,6 +515,7 @@ module RemoteRBAAL
         for name in tagnames
             tagnum_to_name[index] = name
             tags[name] = []
+            index += 1
         end
 
         tagnames.each_with_index{|_t,num|
@@ -545,7 +546,7 @@ module RemoteRBAAL
             update_generated_tags(aal, include_variables, generated_tagnames, tags, 0)
         end
         while unhandled_states
-            source_state, source_state_obj, source_state_depth = unhandled_states.pop(0)
+            source_state, source_state_obj, source_state_depth = unhandled_states.pop()
             source_lsts_state = lsts_states[found_states_real[source_state]]
 
             if source_state_depth >= depth
@@ -810,7 +811,7 @@ aalpy_file.close()
 aalpy_filename = aalpy_file.path.split('/')[-1]
 
 begin
-    aalpy_filename = "g:\\programming\\MBT\\fMBT\\remote_rbaal_generated_code.rb"
+    aalpy_filename = "/home/danny/programming/fMBT/remote_rbaal_generated_code.rb"
     load(aalpy_filename)
 rescue Exception=>e
     # todo: haven't run yet

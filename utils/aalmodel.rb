@@ -208,6 +208,42 @@ class AALModel
         end 
     end
 
+    def set_state_obj(obj):
+        """
+        Set obj as current state. See also state_obj().
+        """
+        push(obj)
+        pop() 
+    end
+
+    def state_obj_copy(obj=nil):
+        """
+        Return copy of a state_obj.
+        Faster than copy.deepcopy(self.state_obj())
+        """
+        if obj == nil:
+            obj = state_obj()
+        end
+        stack_top, stack_executed_top, stack_enabled_top = obj
+        copy_stack_top = {}
+        for varname in @push_variables
+            val = stack_top[varname]
+            if @immutable_types.include?(val.class)
+                copy_stack_top[varname] = val
+            else
+                #todo : deepcopy
+                copy_stack_top[varname] = copy.deepcopy(val)
+            end
+        end
+        if @has_serial:
+            #todo : ddeepcopy
+            copy_stack_top["!serial_abn"] = stack_top["!serial_abn"]
+        end
+        copy_stack_executed_top = list(stack_executed_top)
+        copy_stack_enabled_top = Set.new(stack_enabled_top)
+        return copy_stack_top, copy_stack_executed_top, copy_stack_enabled_top
+    end 
+    
     def reset()
         # initialize model
         Fmbt.actionName = "AAL initial_state"

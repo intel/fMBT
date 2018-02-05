@@ -599,31 +599,31 @@ module Lsts
                         raise IndexError("Illegal state number in layout section #{statenum}")
                     end
                 end
-            end
-            if sidx == len(secs) # we are ready
-                break
-            else
-                l=file.readline()
-                while l.strip()==""
-                    if not l 
-                        break
-                    end
+                if sidx == secs.length # we are ready
+                    break
+                else
                     l=file.readline()
-                end
-                if secs[sidx]=="begin state_props" or secs[sidx]=="begin transitions"
-                    while not secs.include?(l.lower().strip()) and not l.include?(";")
-                        newline=file.readline()
-                        if not newline 
+                    while l.strip()==""
+                        if not l 
                             break
                         end
-                        # if there is only one white space in the front of the new row,
-                        # delete it... it may be that there should not be white space
-                        if l[-3-1]==".." or newline[3]==" .."
-                            newline=newline.lstrip()
-                        end
-                        l=l.rstrip()+newline
+                        l=file.readline()
                     end
-                end 
+                    if secs[sidx]=="begin state_props" or secs[sidx]=="begin transitions"
+                        while not secs.include?(l.lower().strip()) and not l.include?(";")
+                            newline=file.readline()
+                            if not newline 
+                                break
+                            end
+                            # if there is only one white space in the front of the new row,
+                            # delete it... it may be that there should not be white space
+                            if l[-3-1]==".." or newline[3]==" .."
+                                newline=newline.lstrip()
+                            end
+                            l=l.rstrip()+newline
+                        end
+                    end 
+                end
             end
         end 
     end
