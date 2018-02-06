@@ -21,6 +21,7 @@
 #include "aalang_rb.hh"
 #include "aalang_py.hh"
 #include "helper.hh"
+#include <algorithm>
 
 std::string aalang_rb::action_helper(const codefileline& cfl,std::string s,
 				     std::string& funcname,int i,std::string& acnt)
@@ -133,20 +134,22 @@ void aalang_rb::set_variables(std::string* var,const char* file,int line,int col
   delete var;
 }
 
-void ruby_global_variables(std::string* variables)
+std::string ruby_global_variables(std::string variables)
 {
   // define ruby gloable variables
-  std::string delimiter = "\r\n";
+  std::string delimiter = "\n";
   size_t last = 0; 
   size_t next = 0; 
   std::string ruby_global_variables = "";
-  while ((next = *variables.find(delimiter, last)) != string::npos) 
+  std::string variables_temp = variables;
+  variables_temp.erase(std::remove(variables_temp.begin(), variables_temp.end(), ' '), variables_temp.end());
+  while ((next = variables_temp.find(delimiter, last)) != std::string::npos) 
   { 
-      ruby_global_variables += "$" + s.substr(last, next-last) + "\n"; 
+      ruby_global_variables += "$" + variables_temp.substr(last, next-last) + "\n"; 
       last = next + 2;
-  } 
-  ruby_global_variables += "$" + s.substr(last, next-last) + "\n";
-  return ruby_global_variables
+  }
+  ruby_global_variables += "$" + variables_temp.substr(last, next-last) + "\n";
+  return ruby_global_variables;
 }
 
 void aalang_rb::set_istate(std::string* ist,const char* file,int line,int col)
@@ -156,7 +159,7 @@ void aalang_rb::set_istate(std::string* ist,const char* file,int line,int col)
   const std::string funcname("initial_state"+to_string(model_init_counter));
   s += "\n    def " + funcname + "()\n" + variables +
     indent(8, *ist) + "\n" +
-    indent(8, ruby_global_variables(*ist) +
+    indent(8, ruby_global_variables(*ist)) +
     indent(8, "user_definedd_variable = local_variables") + "\n" +
     indent(8, "user_definedd_variable.pop()") + "\n" +
     indent(8, "@push_variables_set.add(item)") + "\n" +
