@@ -42,7 +42,7 @@ std::string aalang_rb::action_helper(const codefileline& cfl,std::string s,
 
 const std::string aalang_rb::class_name() const
 {
-  return "_gen_" + *name;
+  return "Gen_" + *name;
 }
 
 const std::string aalang_rb::serialN(const std::string postfix, bool cls) const
@@ -115,6 +115,7 @@ void aalang_rb::set_namestr(std::string* _name)
 {
   name=_name;
   s+="require 'aalmodel'\n"
+    "require 'set'\n"
     "class " + class_name() + "< AALModel\n"
     "    def initialize()\n"
     "        super()\n"
@@ -122,25 +123,44 @@ void aalang_rb::set_namestr(std::string* _name)
   s+="    adapter_init_list = []\n";
   s+="    initial_state_list = []\n";
   s+="    adapter_exit_list = []\n";
-  s+="    push_variables_set = set()\n";
+  s+="    push_variables_set = Set.new()\n";
 }
 
 void aalang_rb::set_variables(std::string* var,const char* file,int line,int col)
 {
   std::string ivar = indent(0,*var);
-  if (ivar!="") {
-    variables+="        global " + indent(0,*var) + "\n";
-  }
   m_lines_in_vars = std::count(variables.begin(), variables.end(), '\n');
   delete var;
+}
+
+void ruby_global_variables(std::string* variables)
+{
+  // define ruby gloable variables
+  std::string delimiter = "\r\n";
+  size_t last = 0; 
+  size_t next = 0; 
+  std::string ruby_global_variables = "";
+  while ((next = *variables.find(delimiter, last)) != string::npos) 
+  { 
+      ruby_global_variables += "$" + s.substr(last, next-last) + "\n"; 
+      last = next + 2;
+  } 
+  ruby_global_variables += "$" + s.substr(last, next-last) + "\n";
+  return ruby_global_variables
 }
 
 void aalang_rb::set_istate(std::string* ist,const char* file,int line,int col)
 {
   model_init_counter++;
+  
   const std::string funcname("initial_state"+to_string(model_init_counter));
   s += "\n    def " + funcname + "()\n" + variables +
     indent(8, *ist) + "\n" +
+    indent(8, ruby_global_variables(*ist) +
+    indent(8, "user_definedd_variable = local_variables") + "\n" +
+    indent(8, "user_definedd_variable.pop()") + "\n" +
+    indent(8, "@push_variables_set.add(item)") + "\n" +
+    indent(8, "@variables[item] = \"#{eval(item.to_s)}\"") + "\n" +
     indent(4, "end") + "\n";
   s += python_lineno_wrapper(file,line,funcname,1+m_lines_in_vars,4);
   s += indent(4,"initial_state_list.append("+funcname+")")+"\n";
@@ -509,26 +529,34 @@ void aalang_rb::next_action()
 std::string aalang_rb::stringify()
 {
   s += indent(4,"\n    def adapter_init()\n") + "\n" +
-    indent(8,"for x in "+class_name()+".adapter_init_list:\n"
-	   "    ret = x()\n"
-	   "    if not ret and ret != None:\n"
+    indent(8,"for x in @adapter_init_list\n"
+	   "    ret = self.send(x)\n"
+	   "    if not ret and ret != nil\n"
 	   "        return ret\n"
+     "    end ret\n"
 	   "return True\n") + "\n" +
     indent(4,"\n    end") + "\n" +
     indent(4,"\n    def initial_state()\n") + "\n" +
-    indent(8,"for x in "+class_name()+".initial_state_list:\n"
+    indent(8,"for x in @initial_state_list\n"
 	   "    ret = x()\n"
-	   "    if not ret and ret != None:\n"
-	   "        return ret\n"
+	   "    if not ret and ret != nil\n"
+     "        return ret\n"
+	   "    end\n"
 	   "return True\n") +"\n" +
     indent(4,"\n    end") + "\n" + 
     indent(4,"\n    def adapter_exit(verdict,reason)\n") + "\n" +
-    indent(8,"for x in "+class_name()+".adapter_exit_list:\n"
+    indent(8,"for x in @adapter_exit_list\n"
 	   "    ret = x(verdict,reason)\n"
-	   "    if not ret and ret != None:\n"
+	   "    if not ret and ret != nil\n"
 	   "        return ret\n"
+     "    end\n"
 	   "return True\n")+ "\n" +
-    indent(4,"\n    end") + "\n";
+    indent(4,"\n    end") + "\n" +
+    "\nclass Model < "+ class_name() + "\n" +
+    indent(4,"def initialize()") + "\n" +
+    indent(8,"super()") + "\n" +
+    indent(4,"end") + "\n" + 
+    "end";
 
   return s + "\nModel = _gen_" + *name + "\n";
 }
