@@ -30,6 +30,8 @@ class AALModel
         @enabled_actions_stack = [Set.new()]
         @stack_executed_actions = []
         @push_variables = []
+
+        @adapter_exit_executed = false
     end
     
     def call(func_name, call_arguments=nil)
@@ -100,6 +102,22 @@ class AALModel
             i += 1
         end
     end
+
+    def getIActions()
+        enabled_iactions = []
+        begin
+            @all_guards.each_with_index do |guard,index|
+                Fmbt.actionName = @all_names[index]
+                if @all_types[index] == "input" and call(guard)
+                    enabled_iactions.push(index + 1)
+                end 
+            end
+        rescue Exception => e
+            raise Exception.new("Error at guard() of \"#{@all_names[index]}\": #{e.class}: #{e.message}")
+        end
+        @enabled_actions_stack[-1].merge(enabled_iactions)
+        return enabled_iactions
+    end 
 
     def getActions()
         enabled_actions = []
@@ -288,6 +306,67 @@ class AALModel
             return 0
         end 
     end
+    
+    def tag_execute(i)
+        if not (i > 0 and i <= @all_tagnames.length)
+            raise IndexError.new("Cannot execute tag #{i} adapter code")
+        end
+        Fmbt.actionName = "tag " + @all_tagnames[i-1]
+        begin
+            rv = call(@all_tagadapters[i-1])
+        rescue Exception => e
+            if  @variables.include?('adapter_exception_handler')
+                return call_tagexception_handler('adapter_exception_handler', @all_tagnames[i-1], exc)
+            else
+                raise
+            end
+        end
+        return rv
+    end
+    
+    def adapter_exit(verdict, reason)
+        return
+    end 
+
+    def aexit(verdict, reason)
+        if not @adapter_exit_executed
+            @adapter_exit_executed = true
+            Fmbt.actionName = "AAL: adapter_exit"
+            adapter_exit(verdict, reason) 
+        end 
+    end 
+
+    def adapter_execute(i, adapter_call_arguments = [])
+        if not (i > 0 and i <= @all_tagnames.length)
+            raise IndexError.new("Cannot execute tag #{i} adapter code")
+        end
+        if @all_types[i-1] == "input"
+            begin
+                Fmbt.testStep += 1
+                Fmbt.actionName = @all_names[i-1]
+                rv = call(@all_adapters[i-1], adapter_call_arguments)
+                if rv == nil
+                    return i
+                else
+                    return rv
+                end
+            rescue Exception=>e
+                #todo : adapter_exception_handler
+                if @variables.include?('adapter_exception_handler')
+                    return call_exception_handler('adapter_exception_handler', @all_names[i-1], e)
+                else
+                    raise
+                end
+            ensure
+                Fmbt.testStep -= 1
+                Fmbt.lastExecutedActionName = Fmbt.actionName
+            end
+        else
+            log.log("AAL model: adapter_execute for an output action in AAL." +
+                      "This should take place in observe().\n")
+            return 0
+        end
+    end
 
     def reset()
         # initialize model
@@ -319,22 +398,10 @@ class AALModel
         return enabled_tags
     end
 
-    def tag_execute(i)
-        if not (i > 0 and i <= @all_tagnames.length)
-            raise IndexError.new("Cannot execute tag #{i} adapter code")
-        end
-        Fmbt.actionName = "tag " + @all_tagnames[i-1]
-        begin
-            rv = call(@all_tagadapters[i-1])
-        rescue Exception => e
-            if  @variables.include?('adapter_exception_handler')
-                return call_tagexception_handler('adapter_exception_handler', @all_tagnames[i-1], exc)
-            else
-                raise
-            end
-        end
-        return rv
+    def call_exception_handler()
     end
+
+    
 
     def state(discard_variables=nil, include_variables=nil)
         """

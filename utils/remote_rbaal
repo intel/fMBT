@@ -289,7 +289,7 @@ module RemoteRBAAL
                     @aal.pop()
                 elsif cmd[0..1] == "ae"
                     begin
-                        args = cmd[3]
+                        args = cmd.split()[1]
                         if args.include?(" ")
                             verdict, reason = args.split(" ", 1)
                         else 
@@ -297,10 +297,10 @@ module RemoteRBAAL
                         end
                         @aal.aexit(verdict, urllib.unquote(reason))
                     rescue Exception=>e
-                        fmbtstderr('Error at adapter_exit() #{e.class} #{e.message}\n#{format_rubyaalrescueion()}')
-                        put(0)
+                        RemoteRBAAL.fmbtstderr('Error at adapter_exit() #{e.class} #{e.message}\n#{format_rubyaalrescueion()}')
+                        RemoteRBAAL.put(0)
                     else
-                        put(1)
+                        RemoteRBAAL.put(1)
                     end
                 elsif cmd == "ai"
                     begin
@@ -324,9 +324,9 @@ module RemoteRBAAL
                     end
                 elsif cmd == "aob"
                     begin
-                        put_list(@aal.observe(true))
+                        RemoteRBAAL.put_list(@aal.observe(true))
                     rescue Exception=>e
-                        fmbtstderr('Error when waiting for outputs #{e.class} #{e.message}\n#{format_rubyaalrescueion()}')
+                        RemoteRBAAL.fmbtstderr('Error when waiting for outputs #{e.class} #{e.message}\n#{format_rubyaalrescueion()}')
                         raise Exception.new(e.message)
                     end
                 elsif cmd[0..2] == "act" # adapter check tags
@@ -354,7 +354,7 @@ module RemoteRBAAL
                         end
                     end
                     RemoteRBAAL.put_list(failing_tags)
-                elsif cmd[0] == "m"
+                elsif cmd[0..0] == "m"
                     if opt_verbose_fmbt_log and not Fmbt.simulated()
                         # write variable values to fmbt log
                         state_str = @aal.state()
@@ -365,29 +365,29 @@ module RemoteRBAAL
                             log_str += "\nAAL enabled " + @aal._enabled_actions_stack[-1].join(" ")
                         rescue Exception=>e
                         end
-                        fmbtlog(log_str)
+                        RemoteRBAAL.fmbtlog(log_str)
                     end
-                    action_number = int(cmd[1])
+                    action_number = cmd.split()[1].to_i
                     begin
                         rv = @aal.model_execute(action_number)
                     rescue Exception=>e
-                        report_simulation_error(@aal)
-                        fmbtstderr("Error at body() of \"#{action_names[action_number-1]}\" #{e.class} #{e.message}\n#{format_rubyaalrescueion}")
+                        RemoteRBAAL.report_simulation_error(@aal)
+                        RemoteRBAAL.fmbtstderr("Error at body() of \"#{action_names[action_number-1]}\" #{e.class} #{e.message}\n#{format_rubyaalrescueion}")
                         raise Exception.new(e.message)
                     else
-                        put(rv)
+                        RemoteRBAAL.put(rv)
                     end
-                elsif cmd[2] == "ap"
-                    adapter_call_arguments.push(cmd[2])
-                elsif cmd[0] == "a"
-                    action_number = int(cmd[1])
+                elsif cmd[0..1] == "ap"
+                    adapter_call_arguments.push(cmd[2..-1])
+                elsif cmd[0..0] == "a"
+                    action_number = cmd.split()[1].to_i
                     begin
                         rv = @aal.adapter_execute(action_number,adapter_call_arguments)
-                        if rv == nil or rv is true
+                        if rv == nil or rv == true
                             rv = action_number
                         end
-                        if (type(rv) == int and (rv == 0 or rv > len(action_names))) or (type(rv) != int)
-                            fmbtstderr("adapter() of action \"#{action_names[action_number-1]}\" returned #{rv}")
+                        if (rv.class.to_s == "Fixnum" and (rv == 0 or rv > action_names.length)) or (rv.class.to_s != "Fixnum")
+                            RemoteRBAAL.fmbtstderr("adapter() of action \"#{action_names[action_number-1]}\" returned #{rv}")
                             rv = 0
                         end
                     rescue Exception=>e
@@ -396,7 +396,7 @@ module RemoteRBAAL
                         fmbtstderr("#{msg} at adapter() of \"#{action_names[action_number-1]}\" #{e.class} #{e.message}\n#{format_pythonaalrescueion()}")
                         rv = 0
                     end
-                    put(rv)
+                    RemoteRBAAL.put(rv)
                     adapter_call_arguments = []
                 elsif cmd[0..2] == "lts"
                     lsts_depth = cmd.split()[1].to_i

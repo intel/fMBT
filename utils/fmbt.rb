@@ -29,13 +29,6 @@
 
 module Fmbt 
 
-    fmbt_adapterlogtimeformat="%s.%f"
-    actionName = "undefined"
-    lastExecutedActionName = "undefined"
-    testStep = -1
-    simulated_actions = []
-    adapterlogFilename = "/tmp/fmbt.adapterlog"
-
     def _fmbt_call_helper(func,param = "")
         if simulated()
             return ""
@@ -176,47 +169,6 @@ module Fmbt
         return s
     end
 
-    def getActionName()
-        """deprecated, use actionName()"""
-        return $_g_actionName
-    end
-
-    def actionName()
-        """
-        Return the name of currently executed action (input or output).
-        """
-        return $_g_actionName
-    end
-
-    def lastExecutedActionName()
-        """
-        Return the name of the previously executed action.
-
-        Counts only really executed actions, not simulated.
-        """
-        return $_g_lastExecutedActionName
-    end
-
-    def getTestStep()
-        """deprecated, use testStep()"""
-        return $_g_testStep
-    end
-
-    def testStep()
-        """
-        Return the number of currently executed test step.
-        """
-        return $_g_testStep
-    end
-
-    def simulated()
-        """
-        Returns True if fMBT is simulating execution of an action (guard
-        or body block) instead of really executing it.
-        """
-        return len($_g_simulated_actions) > 0
-    end
-
     def adapterlogWriter(fileObj, formattedMsg)
         fileObj.write(formattedMsg)
     end
@@ -256,17 +208,47 @@ module Fmbt
     end
 
     module_function
-    def fmbt_adapterlogtimeformat; @fmbt_adapterlogtimeformat end
+    def fmbt_adapterlogtimeformat
+        if @fmbt_adapterlogtimeformat ==  nil 
+            @fmbt_adapterlogtimeformat="%s.%f" 
+        end
+        return @fmbt_adapterlogtimeformat
+    end
     def fmbt_adapterlogtimeformat= v; @fmbt_adapterlogtimeformat = v end
-    def actionName; @actionName end
+    def actionName 
+        if @actionName == nil 
+            @actionName = "undefined"
+        end 
+        return @actionName 
+    end
     def actionName= v; @actionName = v end
-    def lastExecutedActionName; @lastExecutedActionName end
+    def lastExecutedActionName
+        if  @lastExecutedActionName == nil 
+            @lastExecutedActionName = "undefined"
+        end 
+        return @lastExecutedActionName 
+    end
     def lastExecutedActionName= v; @lastExecutedActionName = v end
-    def testStep; @testStep end
+    def testStep 
+        if @testStep == nil
+            @testStep = -1
+        end 
+        return @testStep
+    end
     def testStep= v; @testStep = v end
-    def simulated_actions; @simulated_actions end
+    def simulated_actions
+        if @simulated_actions == nil 
+            @simulated_actions = []
+        end 
+        return @simulated_actions 
+    end
     def simulated_actions= v; @simulated_actions = v end
-    def adapterlogFilename; @adapterlogFilename end
+    def adapterlogFilename
+        if  @adapterlogFilename == nil 
+            @adapterlogFilename = "fmbt.adapterlog"
+        end
+        return @adapterlogFilename 
+    end
     def adapterlogFilename= v; @adapterlogFilename = v end
 
 end
