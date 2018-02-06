@@ -84,7 +84,7 @@ Options
        Print statistics from FILE with
 =end
 
-require '/home/danny/programming/fMBT/utils/fmbt.rb'
+require 'g:\\programming\\MBT\\fMBT\\utils\\fmbt.rb'
 require 'getoptlong'
 require 'cgi'
 require 'date'
@@ -209,7 +209,7 @@ module RemoteRBAAL
             end
         end
         $stdout.write("fmbtmagic #{lts_string.length}\n#{lts_string}")
-        sys.stdout.flush()
+        $stdout.flush()
     end
 
     def get()
@@ -402,15 +402,17 @@ module RemoteRBAAL
                     lsts_depth = cmd.split()[1].to_i
                     outfilestring = StringIO.new()
                     begin
-                        RemoteRBAAL.aal2lsts(@aal, outfilestring, lsts_depth, include_generation_discontinued_tag=false,drop_outputs=$opt_accel_drop_outputs)
+                        RemoteRBAAL.aal2lsts(@aal, outfilestring, lsts_depth, 
+                            discard_variables=nil,include_variables=nil,
+                            include_generation_discontinued_tag=false,
+                            drop_outputs=$opt_accel_drop_outputs)
                     rescue Exception=>e
                         RemoteRBAAL.report_simulation_error(@aal)
                         RemoteRBAAL.fmbtstderr("Error on simulation #{e.class} #{e.message}\n#{RemoteRBAAL.format_rubyaalrescueion()}")
                         raise Exception.new(e.message)
                     end
                     outfilestring.seek(0)
-                    put_lts(outfilestring.read())
-
+                    RemoteRBAAL.put_lts(outfilestring.read())
                 else
                     raise Exception.new("Unexpected command \"" + cmd + "\". remote_rbaal works with \"aal_remote\" model.")
                 end
@@ -484,7 +486,7 @@ module RemoteRBAAL
     def aal2lsts(aal, output_fileobj, depth=5, discard_variables=nil,
                 include_variables=nil, include_generation_discontinued_tag=true,
                 _filter_tags=nil, drop_outputs=false)
-        require "/home/danny/programming/fMBT/utils/lsts.rb"
+        require "g:\\programming\\MBT\\fMBT\\utils\\lsts.rb"
         def update_generated_tags(aal, include_variables,
                                 generated_tagnames, tags, new_lsts_state_num)
             for v in include_variables
@@ -545,7 +547,8 @@ module RemoteRBAAL
         if include_variables
             update_generated_tags(aal, include_variables, generated_tagnames, tags, 0)
         end
-        while unhandled_states
+        #find State_props(tags) and transitions
+        while unhandled_states.length > 0
             source_state, source_state_obj, source_state_depth = unhandled_states.pop()
             source_lsts_state = lsts_states[found_states_real[source_state]]
 
@@ -553,11 +556,12 @@ module RemoteRBAAL
                 if (include_generation_discontinued_tag and !tags[generation_discontinued_tag].include?(source_lsts_state))
                     tags[generation_discontinued_tag].push(source_lsts_state)
                 end
-                continue
+                next
             end
             aal.set_state_obj(source_state_obj)
-            for action in get_actions()
-                aal.set_state_obj(aal.state_obj_copy(source_state_obj))
+            for action in aal.send(get_actions)
+                copied_source_state_obj = aal.state_obj_copy(source_state_obj)
+                aal.set_state_obj(copied_source_state_obj)
                 aal.model_execute(action)
                 current_tags = aal.getprops()
                 next_state_real = aal.state()
@@ -574,7 +578,7 @@ module RemoteRBAAL
                 # new state?
                 if not lsts_states.include?(next_state_hidden)
                     transitions.push([])
-                    new_lsts_state_num = len(transitions) - 1
+                    new_lsts_state_num = transitions.length - 1
                     lsts_states[next_state_hidden] = new_lsts_state_num
                     if include_variables
                         update_generated_tags(aal, include_variables, generated_tagnames, tags, new_lsts_state_num)
@@ -600,7 +604,7 @@ module RemoteRBAAL
         new_lsts.set_actionnames(actionnames)
         new_lsts.set_transitions(transitions)
         new_lsts.set_stateprops(tags)
-        stateprop_order = aal.getSPNames() + sorted(generated_tagnames)
+        stateprop_order = aal.getSPNames() + generated_tagnames.sort()
         if include_generation_discontinued_tag
             stateprop_order.push(generation_discontinued_tag)
         end
@@ -746,7 +750,7 @@ opts.each do |opt, arg|
         opt_verbose_fmbt_log += 1
     elsif ["-o", "--output"].include?(opt) 
         if arg == "-"
-            opt_output_fileobj = sys.stdout
+            opt_output_fileobj = $stdout
         else
             opt_output_fileobj = file(arg, "w")
         end
@@ -759,7 +763,7 @@ opts.each do |opt, arg|
     elsif ["--list-state-vars"].include?(opt)  
         opt_list_state_vars = true
         if not opt_output_fileobj
-            opt_output_fileobj = sys.stdout
+            opt_output_fileobj = $stdout
         end
     elsif ["--accel-drop-outputs"].include?(opt)  
         $opt_accel_drop_outputs = true
@@ -811,7 +815,7 @@ aalpy_file.close()
 aalpy_filename = aalpy_file.path.split('/')[-1]
 
 begin
-    aalpy_filename = "/home/danny/programming/fMBT/remote_rbaal_generated_code.rb"
+    aalpy_filename = "g:\\programming\\MBT\\fMBT\\remote_rbaal_generated_code.rb"
     load(aalpy_filename)
 rescue Exception=>e
     # todo: haven't run yet

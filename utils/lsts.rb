@@ -370,19 +370,19 @@ module Lsts
             file.write(" State_cnt = #{@header.state_cnt}\n")
             file.write(" Action_cnt = #{@header.action_cnt}\n")
             file.write(" Transition_cnt = #{@header.transition_cnt}\n")
-            if @stateprops
+            if @stateprops.length > 0
                 file.write(" State_prop_cnt = #{@header.state_prop_cnt}\n")
             end
             file.write(" Initial_states = #{@header.initial_states+1};\n")
             file.write("End Header\n\n")
 
             file.write("Begin Action_names\n")
-            @actionnames[1].each_with_index{|a,ai|
-                file.write(" #{ai+1} = \""+a.gsub('"','\\"')+'"\n')
+            @actionnames[1..-1].each_with_index{|a,ai|
+                file.write(" #{ai+1} = \"#{a.gsub('"','\\"')}\"\n")
             } 
-            file.write("End Action_names\n\\n")
+            file.write("End Action_names\n\n")
 
-            if @stateprops
+            if @stateprops.length > 0
                 file.write("Begin State_props\n")
                 if stateprop_order == nil
                     propnames=@stateprops.keys()
@@ -395,7 +395,7 @@ module Lsts
                     for v in @stateprops[key]
                         file.write(" #{v+1}")
                     end
-                    file.write(';\n')
+                    file.write(";\n")
                 end
                 file.write("End State_props\n\n")
             end
@@ -409,7 +409,7 @@ module Lsts
             }
             file.write("End Transitions\n\n")
 
-            if @layout
+            if @layout.length > 0
                 file.write("Begin Layout\n")
                 for statenum, xcoor, ycoord in []
                     file.write(" #{statenum+1} #{xcoor} #{ycoord}\n")

@@ -11,7 +11,7 @@ dir_array = $DIRNAME.split("/")
 $DIRNAME = dir_array[0..dir_array.length-2].join("/") + "/fmbt.filesystemtest"
 
 $SUBDIRNAME = $DIRNAME + "/subdir"
-require '/home/danny/programming/fMBT/utils/aalmodel.rb'
+require 'g:\\programming\\MBT\\fMBT\\utils\\aalmodel.rb'
 require 'set'
 
 class Gen_filesystemtest < AALModel
@@ -25,21 +25,21 @@ class Gen_filesystemtest < AALModel
         
         @action1name = "i:mkdir: ok"
         @action1type = "input"
-        @action2name = "i:rmdir ok"
+        @action2name = "i:rmdir: ok"
         @action2type = "input"
-        @action3name = "i:mksubdir ok"
+        @action3name = "i:mksubdir: ok"
         @action3type = "input"
-        @action4name = "i:rmsubdir ok"
+        @action4name = "i:rmsubdir: ok"
         @action4type = "input"
-        @action5name = "i:mkdir already exists"
+        @action5name = "i:mkdir: already exists"
         @action5type = "input"
-        @action6name = "i:mksubdir already exists"
+        @action6name = "i:mksubdir: already exists"
         @action6type = "input"
-        @action7name = "i:rmdir no such file"
+        @action7name = "i:rmdir: no such file"
         @action7type = "input"
-        @action8name = "i:rmdir not empty"
+        @action8name = "i:rmdir: not empty"
         @action8type = "input"
-        @action9name = "i:rmsubdir no such file"
+        @action9name = "i:rmsubdir: no such file"
         @action9type = "input"
         @tag1name = "dir exists"
         @tag2name = "no dir"

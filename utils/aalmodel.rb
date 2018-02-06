@@ -4,7 +4,7 @@ class AALModel
     @@SILENCE = -3
 
     def initialize()
-        @immutable_types = Set.new(["String", "Fixnum", "Long", "Float", "TrueClass", "NilClass", "Array"])
+        @immutable_types = Set.new(["String", "Fixnum", "FalseClass", "Float", "TrueClass", "NilClass", "Array"])
 
         @variables = {}
         @variables['guard_list'] = []
@@ -31,6 +31,7 @@ class AALModel
         @stack_executed_actions = []
         @push_variables = []
     end
+    
     def call(func_name, call_arguments=nil)
         guard_list = nil
         begin
@@ -136,12 +137,11 @@ class AALModel
         # automatic push saves only their states
         stack_element = {}
         for varname in @push_variables
-            val = @variables[varname]
-            if @immutable_types.include?(val.class)
+            val = eval("$#{varname}")
+            if @immutable_types.include?(val.class.to_s)
                 stack_element[varname] = val
             else
-                #todo  deep copy
-                stack_element[varname] = val
+                stack_element[varname] = val.clone
             end 
         end
         if @has_serial
@@ -162,11 +162,11 @@ class AALModel
         """
         stack_element = @stack.pop()
         @stack_executed_actions.pop()
-        for varname in stack_element
+        for varname in stack_element.keys
             if varname[0..1] == "!"
                  next 
             end
-            @variables[varname] = stack_element[varname]
+            eval("$#{varname} = #{stack_element[varname]}") 
         end
         if @has_serial
             set_all_class("guard_next_block", "serial", stack_element["!serial_abn"])
@@ -184,6 +184,24 @@ class AALModel
         @enabled_actions_stack.pop()
     end
 
+    def state(discard_variables=nil, include_variables=nil)
+        """
+        Return the current state of the model as a string.
+        By comparing strings one can check if the state is already seen.
+        """
+        rv_list = []
+        for varname in @push_variables
+            if (include_variables and not include_variables.include?(varname)) or (discard_variables and discard_variables.include?(varname))
+                next
+            end
+            rv_list.push("#{varname} = '#{eval("$#{varname}")}'")
+        end
+        if @has_serial
+            rv_list.push("!serial = #{get_all("guard_next_block", "serial")}")
+        end
+        return rv_list.join('\n')
+    end
+
     def state_obj()
         """
         Return current state as a Python object
@@ -192,6 +210,14 @@ class AALModel
         obj = stack_top()
         stack_discard()
         return obj
+    end
+
+    def set_state_obj(obj)
+        """
+        Set obj as current state. See also state_obj().
+        """
+        push(obj)
+        pop() 
     end
 
     def set_all_class(property_name, itemtype, value_array)
@@ -208,42 +234,61 @@ class AALModel
         end 
     end
 
-    def set_state_obj(obj):
-        """
-        Set obj as current state. See also state_obj().
-        """
-        push(obj)
-        pop() 
-    end
-
-    def state_obj_copy(obj=nil):
+    def state_obj_copy(obj=nil)
         """
         Return copy of a state_obj.
         Faster than copy.deepcopy(self.state_obj())
         """
-        if obj == nil:
+        if obj == nil
             obj = state_obj()
         end
         stack_top, stack_executed_top, stack_enabled_top = obj
         copy_stack_top = {}
         for varname in @push_variables
             val = stack_top[varname]
-            if @immutable_types.include?(val.class)
+            if @immutable_types.include?(val.class.to_s)
                 copy_stack_top[varname] = val
             else
-                #todo : deepcopy
-                copy_stack_top[varname] = copy.deepcopy(val)
+                copy_stack_top[varname] = val.clone
             end
         end
-        if @has_serial:
+        if @has_serial
             #todo : ddeepcopy
             copy_stack_top["!serial_abn"] = stack_top["!serial_abn"]
         end
-        copy_stack_executed_top = list(stack_executed_top)
+        copy_stack_executed_top = stack_executed_top.clone
         copy_stack_enabled_top = Set.new(stack_enabled_top)
         return copy_stack_top, copy_stack_executed_top, copy_stack_enabled_top
     end 
     
+    def model_execute(i)
+        if not i > 0 and not i <= @all_names.length
+            # If adapter execute returns 0, that is reports unidentified action,
+            # test engine checks if executing an unidentified action is ok by
+            # calling model_execute(0). In AAL/Python it is never ok.
+            return 0
+        end
+        Fmbt.actionName = @all_names[i-1]
+        if @enabled_actions_stack[-1].include?(i) or call(@all_guards[i-1])
+            call(@all_bodies[i-1])
+            # if @has_serial:
+                #todo : don't know what is it
+                # for postfunc in getattr(self, self._all_bodies[i-1].__name__ + "_postcall", []):
+                #     getattr(self, postfunc)(Fmbt.actionName)
+            if @stack.length == 0
+                Fmbt.testStep += 1
+            end
+            if @stack_executed_actions.length > 0
+                @stack_executed_actions[-1].push(Fmbt.actionName)
+            end
+            @enabled_actions_stack[-1] = Set.new()
+            return i
+        else
+            @enabled_actions_stack[-1] = Set.new()
+            return 0
+        end 
+    end
+
     def reset()
         # initialize model
         Fmbt.actionName = "AAL initial_state"
