@@ -22,7 +22,6 @@ aal "filesystemtest" {
     }
     adapter_exit {
         if verdict == "pass" and @dir_exists
-            log("cleaning up " + $DIRNAME)
             begin
                 FileUtils.rm_rf("#{$DIRNAME}/.")
             rescue Exception => e;end
@@ -52,7 +51,7 @@ aal "filesystemtest" {
         guard()   { return @dir_exists }
         adapter() {
             begin 
-                os.mkdir($DIRNAME)
+                Dir.mkdir($DIRNAME)
             rescue Errno::EEXIST => e
                 if e.to_s.include?("File exists")
                     return

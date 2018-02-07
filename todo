@@ -7,3 +7,5 @@
 3 log_version()
 4: considering remove "tag_name = "no dir""
 5: fix lsts reader
+6: using Dir.exists? to check how to format erro
+7: fixing ruby require dir issue

@@ -52,7 +52,7 @@ page directory
 Page instfiles
 
 Section -Prerequisites
-  StrCpy $PYTHONDIR "C:\Python27"
+  StrCpy $PYTHONDIR "D:\Python27"
   StrCpy $GRAPHVIZDIR "$PROGRAMFILES\Graphviz2.38\bin"
   StrCpy $GNUPLOTDIR "$PROGRAMFILES\gnuplot\bin"
 

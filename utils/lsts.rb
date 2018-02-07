@@ -402,7 +402,7 @@ module Lsts
             file.write("Begin Transitions\n")
             @transitions.each_with_index{|s,si|
                 file.write(" #{si+1}:")
-                for (dest_state,action_index) in s
+                for dest_state,action_index in s
                     file.write(" #{dest_state+1},#{action_index}")
                 end
                 file.write(";\n")
