@@ -324,9 +324,6 @@ class AALModel
         return rv
     end
     
-    def adapter_exit(verdict, reason)
-        return
-    end 
 
     def aexit(verdict, reason)
         if not @adapter_exit_executed
@@ -337,7 +334,7 @@ class AALModel
     end 
 
     def adapter_execute(i, adapter_call_arguments = [])
-        if not (i > 0 and i <= @all_tagnames.length)
+        if not (i > 0 and i <= @all_names.length)
             raise IndexError.new("Cannot execute tag #{i} adapter code")
         end
         if @all_types[i-1] == "input"

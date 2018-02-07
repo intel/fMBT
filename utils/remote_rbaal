@@ -91,6 +91,7 @@ require 'date'
 require 'time'
 require 'iconv'
 require 'tempfile'
+require "stringio"
 
 $opt_debug = false
 $opt_profile = nil
@@ -188,7 +189,7 @@ module RemoteRBAAL
         if $opt_debug    
             MyLog("sending '#{msg}'")
         end
-        $stdout.write("fmbtmagic #{msg} \n")
+        $stdout.write("fmbtmagic #{msg}\n")
         $stdout.flush()
     end
 
@@ -257,8 +258,10 @@ module RemoteRBAAL
             # protocol loop
             ARGF.read() #clear input
             adapter_call_arguments = []
-            cmd = $stdin.gets.chomp
-            while cmd != ""
+            cmd = $stdin.gets
+            while cmd != "" and cmd != nil
+                cmd = cmd.chomp
+                cmd = cmd.strip
                 if cmd == "ma"
                     begin
                         RemoteRBAAL.put_list(@aal.getActions())
@@ -276,6 +279,7 @@ module RemoteRBAAL
                         raise Exception.new(e.message)
                     end
                 elsif cmd == "mr"
+                    
                     begin
                         @aal.reset()
                     rescue Exception=>e
@@ -296,7 +300,7 @@ module RemoteRBAAL
                         else 
                             verdict, reason = args, ""
                         end
-                        @aal.aexit(verdict, urllib.unquote(reason))
+                        @aal.aexit(verdict, CGI::unescape(reason))
                     rescue Exception=>e
                         RemoteRBAAL.fmbtstderr('Error at adapter_exit() #{e.class} #{e.message}\n#{format_rubyaalrescueion()}')
                         RemoteRBAAL.put(0)
@@ -368,7 +372,7 @@ module RemoteRBAAL
                         end
                         RemoteRBAAL.fmbtlog(log_str)
                     end
-                    action_number = cmd.split()[1].to_i
+                    action_number = cmd[1..-1].to_i
                     begin
                         rv = @aal.model_execute(action_number)
                     rescue Exception=>e
@@ -381,7 +385,7 @@ module RemoteRBAAL
                 elsif cmd[0..1] == "ap"
                     adapter_call_arguments.push(cmd[2..-1])
                 elsif cmd[0..0] == "a"
-                    action_number = cmd.split()[1].to_i
+                    action_number = cmd[1..-1].to_i
                     begin
                         rv = @aal.adapter_execute(action_number,adapter_call_arguments)
                         if rv == nil or rv == true
@@ -400,7 +404,7 @@ module RemoteRBAAL
                     RemoteRBAAL.put(rv)
                     adapter_call_arguments = []
                 elsif cmd[0..2] == "lts"
-                    lsts_depth = cmd.split()[1].to_i
+                    lsts_depth = cmd[3..3].to_i
                     outfilestring = StringIO.new()
                     begin
                         RemoteRBAAL.aal2lsts(@aal, outfilestring, lsts_depth, 
@@ -417,7 +421,7 @@ module RemoteRBAAL
                 else
                     raise Exception.new("Unexpected command \"" + cmd + "\". remote_rbaal works with \"aal_remote\" model.")
                 end
-                cmd = $stdin.gets.chomp
+                cmd = $stdin.gets
         end
         end
     end
@@ -813,10 +817,9 @@ aalpy_file = Tempfile.new(["remote_pyaal",".rb"])
 aal_code = aal_code.gsub("\r\n", "\n")
 aalpy_file.write(aal_code)
 aalpy_file.close()
-aalpy_filename = aalpy_file.path.split('/')[-1]
+aalpy_filename = aalpy_file.path
 
 begin
-    aalpy_filename = "g:\\programming\\MBT\\fMBT\\remote_rbaal_generated_code.rb"
     load(aalpy_filename)
 rescue Exception=>e
     # todo: haven't run yet
@@ -855,6 +858,7 @@ if $opt_profile
 end
 
 if not opt_output_fileobj
+    $stdout.binmode
     g_bridge = RemoteRBAAL::RemoteAALBridge.new(aal)
     RemoteRBAAL::MyLog.log("starting")
     at_exit do

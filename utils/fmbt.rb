@@ -208,6 +208,9 @@ module Fmbt
     end
 
     def simulated()
+        if @simulated_actions == nil 
+            return false 
+        end
         return @simulated_actions.length > 0
     end
     
