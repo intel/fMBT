@@ -4,10 +4,10 @@ aal "filesystemtest" {
         require 'tempfile'
         require 'fileutils'
         
-        DIRNAME = Tempfile.new("test").path
-        dir_array = DIRNAME.split("/")
-        DIRNAME = dir_array[0..dir_array.length-2].join("/") + "/fmbt.filesystemtest"
-        SUBDIRNAME = DIRNAME + "/subdir"
+        $DIRNAME = Tempfile.new("test").path
+        dir_array = $DIRNAME.split("/")
+        $DIRNAME = dir_array[0..dir_array.length-2].join("/") + "/fmbt.filesystemtest"
+        $SUBDIRNAME = $DIRNAME + "/subdir"
     }
     variables { @dir_exists, @subdir_exists }
     initial_state {
@@ -16,43 +16,43 @@ aal "filesystemtest" {
     }
     adapter_init {
         begin
-            FileUtils.rm_rf("#{DIRNAME}/.")
+            FileUtils.rm_rf("#{$DIRNAME}/.")
         rescue Exception => e
         end
     }
     adapter_exit {
         if verdict == "pass" and @dir_exists
-            log("cleaning up " + DIRNAME)
+            log("cleaning up " + $DIRNAME)
             begin
-                FileUtils.rm_rf("#{DIRNAME}/.")
+                FileUtils.rm_rf("#{$DIRNAME}/.")
             rescue Exception => e;end
         end
     }
     input "mkdir ok" {
         guard()   { return ! @dir_exists }
-        adapter() { Dir.mkdir(DIRNAME) }
+        adapter() { Dir.mkdir($DIRNAME) }
         body()    { @dir_exists = true }
     }
     input "rmdir ok" {
         guard()   { return @dir_exists && ! @subdir_exists }
-        adapter() { Dir.rmdir(DIRNAME) }
+        adapter() { Dir.rmdir($DIRNAME) }
         body()    { @dir_exists = false }
     }
     input "mksubdir ok" {
         guard()   { return @dir_exists && ! @subdir_exists}
-        adapter() { Dir.mkdir(SUBDIRNAME) }
+        adapter() { Dir.mkdir($SUBDIRNAME) }
         body()    { @subdir_exists = true }
     }
     input "rmsubdir ok" {
         guard()   { return @subdir_exists }
-        adapter() { Dir.rmdir(SUBDIRNAME) }
+        adapter() { Dir.rmdir($SUBDIRNAME) }
         body()    { @subdir_exists = false }
     }
     input "mkdir already exists" {
         guard()   { return @dir_exists }
         adapter() {
             begin 
-                os.mkdir(DIRNAME)
+                os.mkdir($DIRNAME)
             rescue Errno::EEXIST => e
                 if e.to_s.include?("File exists")
                     return
@@ -65,7 +65,7 @@ aal "filesystemtest" {
         guard()   { return @subdir_exists }
         adapter() {
             begin
-                Dir.mkdir(SUBDIRNAME)
+                Dir.mkdir($SUBDIRNAME)
             rescue Errno::EEXIST => e
                 if e.to_s.include?("File exists")
                     return
@@ -78,7 +78,7 @@ aal "filesystemtest" {
         guard()   { return ! @dir_exists }
         adapter() {
             begin
-                Dir.rmdir(DIRNAME)
+                Dir.rmdir($DIRNAME)
             rescue Errno::ENOENT => e
                 if e.to_s.include?("No such file or directory")
                     return
@@ -91,7 +91,7 @@ aal "filesystemtest" {
         guard()   { return @subdir_exists }
         adapter() {
             begin
-                Dir.rmdir(DIRNAME)
+                Dir.rmdir($DIRNAME)
             rescue Errno::ENOTEMPTY => e
                 if e.to_s.include?("Directory not empty")
                     return
@@ -104,7 +104,7 @@ aal "filesystemtest" {
         guard()   { return ! @subdir_exists }
         adapter() {
             begin
-                Dir.rmdir(SUBDIRNAME)
+                Dir.rmdir($SUBDIRNAME)
             rescue Errno::ENOENT => e
                 if e.to_s.include?("No such file or directory")
                     return
@@ -117,32 +117,32 @@ aal "filesystemtest" {
     tag "dir exists" {
         guard()   { return @dir_exists }
         adapter() { 
-            if not Dir.exists?(DIRNAME)
-                raise(StandardError,"#{DIRNAME} not accessible")
+            if not Dir.exists?($DIRNAME)
+                raise(StandardError,"#{$DIRNAME} not accessible")
             end
         }
     }
     tag "no dir" {
         guard()   { return ! @dir_exists }
         adapter() {
-            if Dir.exists?(DIRNAME)
-                raise(StandardError,"#{DIRNAME}  accessible")
+            if Dir.exists?($DIRNAME)
+                raise(StandardError,"#{$DIRNAME}  accessible")
             end
         }
     }
     tag "subdir exists" {
         guard()   { return @subdir_exists }
         adapter() { 
-            if not Dir.exists?(SUBDIRNAME)
-                raise(StandardError,"#{SUBDIRNAME} not accessible")
+            if not Dir.exists?($SUBDIRNAME)
+                raise(StandardError,"#{$SUBDIRNAME} not accessible")
             end
         }
     }
     tag "no subdir" {
         guard()   { return ! @subdir_exists }
         adapter() { 
-            if Dir.exists?(SUBDIRNAME)
-                raise(StandardError,"#{SUBDIRNAME}  accessible")
+            if Dir.exists?($SUBDIRNAME)
+                raise(StandardError,"#{$SUBDIRNAME}  accessible")
             end
         }
     }
