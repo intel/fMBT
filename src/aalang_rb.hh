@@ -35,9 +35,9 @@ public:
     m_lines_in_vars(0), tag(false),
     adapter(false),adapter_init_counter(0),model_init_counter(0),
     adapter_exit_counter(0) {
-        default_body   ="pass";
-        default_guard  ="return 1";
-        default_adapter="pass";
+        default_body   ="";
+        default_guard  ="return true";
+        default_adapter="";
     };
 
     ~aalang_rb();
@@ -75,6 +75,7 @@ protected:
     //std::string acnt;
     //std::string tcnt;
     std::string s;
+    std::string instance_variables;
     std::string push;
     std::string pop;
     std::string variables;
@@ -84,6 +85,8 @@ protected:
     bool this_is_input;
     ANAMETYPE action_name_type;
     std::list<std::string> guard_requires;
+    std::string action_names_types;
+    std::string tag_names;
 
     std::string requires;
 
