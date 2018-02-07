@@ -117,7 +117,7 @@ aal "filesystemtest" {
     tag "dir exists" {
         guard()   { return @dir_exists }
         adapter() { 
-            if not Dir.exists?($DIRNAME)
+            if not File.directory?($DIRNAME)
                 raise(StandardError,"#{$DIRNAME} not accessible")
             end
         }
@@ -125,7 +125,7 @@ aal "filesystemtest" {
     tag "no dir" {
         guard()   { return ! @dir_exists }
         adapter() {
-            if Dir.exists?($DIRNAME)
+            if File.directory?($DIRNAME)
                 raise(StandardError,"#{$DIRNAME}  accessible")
             end
         }
@@ -133,7 +133,7 @@ aal "filesystemtest" {
     tag "subdir exists" {
         guard()   { return @subdir_exists }
         adapter() { 
-            if not Dir.exists?($SUBDIRNAME)
+            if not File.directory?($SUBDIRNAME)
                 raise(StandardError,"#{$SUBDIRNAME} not accessible")
             end
         }
@@ -141,7 +141,7 @@ aal "filesystemtest" {
     tag "no subdir" {
         guard()   { return ! @subdir_exists }
         adapter() { 
-            if Dir.exists?($SUBDIRNAME)
+            if File.directory?($SUBDIRNAME)
                 raise(StandardError,"#{$SUBDIRNAME}  accessible")
             end
         }
