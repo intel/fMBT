@@ -155,7 +155,7 @@ class AALModel
         # automatic push saves only their states
         stack_element = {}
         for varname in @push_variables
-            val = eval("$#{varname}")
+            val = eval("@#{varname}")
             if @immutable_types.include?(val.class.to_s)
                 stack_element[varname] = val
             else
@@ -184,7 +184,7 @@ class AALModel
             if varname[0..1] == "!"
                  next 
             end
-            eval("$#{varname} = #{stack_element[varname]}") 
+            eval("@#{varname} = #{stack_element[varname]}") 
         end
         if @has_serial
             set_all_class("guard_next_block", "serial", stack_element["!serial_abn"])
@@ -212,7 +212,7 @@ class AALModel
             if (include_variables and not include_variables.include?(varname)) or (discard_variables and discard_variables.include?(varname))
                 next
             end
-            rv_list.push("#{varname} = '#{eval("$#{varname}")}'")
+            rv_list.push("#{varname} = '#{eval("@#{varname}")}'")
         end
         if @has_serial
             rv_list.push("!serial = #{get_all("guard_next_block", "serial")}")

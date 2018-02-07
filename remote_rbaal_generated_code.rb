@@ -54,10 +54,10 @@ class Gen_filesystemtest < AALModel
     def initial_state1()
         dir_exists = false
         subdir_exists = false
-        $dir_exists = false
-        $subdir_exists = false
+        @dir_exists = false
+        @subdir_exists = false
         user_definedd_variable = local_variables
-        user_definedd_variable.pop() # remove "_" from ["$dir_exists", "$subdir_exists", "_"]
+        user_definedd_variable.pop() # remove "_" from ["@dir_exists", "@subdir_exists", "_"]
         user_definedd_variable.each do |item|
             @push_variables_set.add(item)
             @variables[item] = "#{eval(item.to_s)}"
@@ -75,7 +75,7 @@ class Gen_filesystemtest < AALModel
 
     def adapter_exit1(verdict,reason)
         
-        if verdict == "" and $dir_exists
+        if verdict == "" and @dir_exists
 
             log("cleaning up " + $DIRNAME)
 
@@ -94,14 +94,14 @@ class Gen_filesystemtest < AALModel
         action_name = "i:mkdir ok"
         input_name ="mkdir ok"
         action_index = 0
-        return ! $dir_exists
+        return ! @dir_exists
     end
     def action1body()
         
         action_name = "i:mkdir ok"
         input_name ="mkdir ok"
         action_index = 0
-        $dir_exists = true
+        @dir_exists = true
     end
     def action1adapter()
         
@@ -119,14 +119,14 @@ class Gen_filesystemtest < AALModel
         action_name = "i:rmdir ok"
         input_name ="rmdir ok"
         action_index = 0
-        return $dir_exists && ! $subdir_exists
+        return @dir_exists && ! @subdir_exists
     end
     def action2body()
         
         action_name = "i:rmdir ok"
         input_name ="rmdir ok"
         action_index = 0
-        $dir_exists = false
+        @dir_exists = false
     end
     def action2adapter()
         
@@ -142,14 +142,14 @@ class Gen_filesystemtest < AALModel
         action_name = "i:mksubdir ok"
         input_name ="mksubdir ok"
         action_index = 0
-        return $dir_exists && ! $subdir_exists
+        return @dir_exists && ! @subdir_exists
     end
     def action3body()
         
         action_name = "i:mksubdir ok"
         input_name ="mksubdir ok"
         action_index = 0
-        $subdir_exists = true
+        @subdir_exists = true
     end
     def action3adapter()
         
@@ -166,14 +166,14 @@ class Gen_filesystemtest < AALModel
         action_name = "i:rmsubdir ok"
         input_name ="rmsubdir ok"
         action_index = 0
-        return $subdir_exists
+        return @subdir_exists
     end
     def action4body()
         
         action_name = "i:rmsubdir ok"
         input_name ="rmsubdir ok"
         action_index = 0
-        $subdir_exists = false
+        @subdir_exists = false
     end
     def action4adapter()
         
@@ -189,7 +189,7 @@ class Gen_filesystemtest < AALModel
         action_name = "i:mkdir already exists"
         input_name ="mkdir already exists"
         action_index = 0
-        return $dir_exists
+        return @dir_exists
     end
     def action5body()
         
@@ -228,7 +228,7 @@ class Gen_filesystemtest < AALModel
         action_name = "i:mksubdir already exists"
         input_name ="mksubdir already exists"
         action_index = 0
-        return $subdir_exists
+        return @subdir_exists
     end
     def action6body()
         
@@ -265,7 +265,7 @@ class Gen_filesystemtest < AALModel
         action_name = "i:rmdir no such file"
         input_name ="rmdir no such file"
         action_index = 0
-        return ! $dir_exists
+        return ! @dir_exists
     end
     def action7body()
         
@@ -304,7 +304,7 @@ class Gen_filesystemtest < AALModel
         action_name = "i:rmdir not empty"
         input_name ="rmdir not empty"
         action_index = 0
-        return $subdir_exists
+        return @subdir_exists
     end
     def action8body()
         
@@ -341,7 +341,7 @@ class Gen_filesystemtest < AALModel
         action_name = "i:rmsubdir no such file"
         input_name ="rmsubdir no such file"
         action_index = 0
-        return ! $subdir_exists
+        return ! @subdir_exists
     end
     def action9body()
         
@@ -377,7 +377,7 @@ class Gen_filesystemtest < AALModel
     
     def tag1guard()
         tag_name = "dir exists"
-        return $dir_exists
+        return @dir_exists
     end
     def tag1adapter()
         tag_name = "dir exists"
@@ -388,7 +388,7 @@ class Gen_filesystemtest < AALModel
 
     def tag2guard()
         tag_name = "no dir"
-        return ! $dir_exists
+        return ! @dir_exists
     end
     def tag2adapter()
         tag_name = "no dir"
@@ -399,7 +399,7 @@ class Gen_filesystemtest < AALModel
  
     def tag3guard()
         tag_name = "subdir exists"
-        return $subdir_exists
+        return @subdir_exists
     end
     def tag3adapter()
         tag_name = "subdir exists"
@@ -410,7 +410,7 @@ class Gen_filesystemtest < AALModel
 
     def tag4guard()
         tag_name = "no subdir"
-        return ! $subdir_exists
+        return ! @subdir_exists
     end
     def tag4adapter()
         tag_name = "no subdir"
