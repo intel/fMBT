@@ -28,27 +28,27 @@ aal "filesystemtest" {
             rescue Exception => e;end
         end
     }
-    input "mkdir ok" {
+    input "mkdir: ok" {
         guard()   { return ! @dir_exists }
         adapter() { Dir.mkdir($DIRNAME) }
         body()    { @dir_exists = true }
     }
-    input "rmdir ok" {
+    input "rmdir: ok" {
         guard()   { return @dir_exists && ! @subdir_exists }
         adapter() { Dir.rmdir($DIRNAME) }
         body()    { @dir_exists = false }
     }
-    input "mksubdir ok" {
+    input "mksubdir: ok" {
         guard()   { return @dir_exists && ! @subdir_exists}
         adapter() { Dir.mkdir($SUBDIRNAME) }
         body()    { @subdir_exists = true }
     }
-    input "rmsubdir ok" {
+    input "rmsubdir: ok" {
         guard()   { return @subdir_exists }
         adapter() { Dir.rmdir($SUBDIRNAME) }
         body()    { @subdir_exists = false }
     }
-    input "mkdir already exists" {
+    input "mkdir: already exists" {
         guard()   { return @dir_exists }
         adapter() {
             begin 
@@ -61,7 +61,7 @@ aal "filesystemtest" {
             raise(StandardError,"Exception expected")
         }
     }
-    input "mksubdir already exists" {
+    input "mksubdir: already exists" {
         guard()   { return @subdir_exists }
         adapter() {
             begin
@@ -74,7 +74,7 @@ aal "filesystemtest" {
             raise(StandardError,"Exception expected")
         }
     }
-    input "rmdir no such file" {
+    input "rmdir: no such file" {
         guard()   { return ! @dir_exists }
         adapter() {
             begin
@@ -87,7 +87,7 @@ aal "filesystemtest" {
             raise(StandardError,"Exception expected")
         }
     }
-    input "rmdir not empty" {
+    input "rmdir: not empty" {
         guard()   { return @subdir_exists }
         adapter() {
             begin
@@ -100,7 +100,7 @@ aal "filesystemtest" {
             raise(StandardError,"Exception expected")
         }
     }
-    input "rmsubdir no such file" {
+    input "rmsubdir: no such file" {
         guard()   { return ! @subdir_exists }
         adapter() {
             begin
