@@ -400,26 +400,6 @@ class AALModel
 
     def call_exception_handler()
     end
-
-    
-
-    def state(discard_variables=nil, include_variables=nil)
-        """
-        Return the current state of the model as a string.
-        By comparing strings one can check if the state is already seen.
-        """
-        rv_list = []
-        for varname in @push_variables
-            if (include_variables and not include_variables.include?(varname)) or (discard_variables and discard_variables.include?(varname))
-                next
-            end
-            rv_list.push("#{varname} = '#{eval("$#{varname}")}'")
-        end
-        if @has_serial
-            rv_list.push("!serial = #{get_all("guard_next_block", "serial")}")
-        end
-        return rv_list.join('\n')
-    end
        
     def observe(block)
         poll_more = true
