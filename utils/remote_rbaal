@@ -88,6 +88,7 @@ require 'g:\\programming\\MBT\\fMBT\\utils\\fmbt.rb'
 require 'getoptlong'
 require 'cgi'
 require 'date'
+require 'time'
 require 'iconv'
 require 'tempfile'
 
@@ -129,7 +130,7 @@ module RemoteRBAAL
     end
 
     def fmbtlog(msg, flush=true)
-        current_time = time.time()
+        current_time = Time.now.to_i
         timestamped = "fmbtmagicl#{current_time} #{msg}"
         $stdout.write(CGI::escape(timestamped)+"\n")
     end
@@ -355,7 +356,7 @@ module RemoteRBAAL
                     end
                     RemoteRBAAL.put_list(failing_tags)
                 elsif cmd[0..0] == "m"
-                    if opt_verbose_fmbt_log and not Fmbt.simulated()
+                    if $opt_verbose_fmbt_log and not Fmbt.simulated()
                         # write variable values to fmbt log
                         state_str = @aal.state()
                         log_str = "AAL state #{state_str.count("\n") + 1}\n#{state_str}"
@@ -685,7 +686,7 @@ $log_filename = nil
 opt_timeout = 1.0
 opt_ppflags = []
 opt_output_fileobj = nil
-opt_verbose_fmbt_log = 0
+$opt_verbose_fmbt_log = 0
 opt_lsts_depth = 5
 opt_lsts_hide_vars = []
 opt_lsts_show_vars = []
@@ -747,7 +748,7 @@ opts.each do |opt, arg|
         opt_timeout = float(arg)
         RemoteRBAAL::MyLog("observe timeout #{opt_timeout}")
     elsif ["--verbose-fmbt-log"].include?(opt) 
-        opt_verbose_fmbt_log += 1
+        $opt_verbose_fmbt_log += 1
     elsif ["-o", "--output"].include?(opt) 
         if arg == "-"
             opt_output_fileobj = $stdout

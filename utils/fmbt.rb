@@ -28,7 +28,7 @@
 # component such as remote_python or remote_pyaal.
 
 module Fmbt 
-
+    module_function
     def _fmbt_call_helper(func,param = "")
         if simulated()
             return ""
@@ -207,7 +207,11 @@ module Fmbt
         return funcspec
     end
 
-    module_function
+    def simulated()
+        return @simulated_actions.length > 0
+    end
+    
+    
     def fmbt_adapterlogtimeformat
         if @fmbt_adapterlogtimeformat ==  nil 
             @fmbt_adapterlogtimeformat="%s.%f" 
