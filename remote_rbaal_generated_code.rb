@@ -60,7 +60,7 @@ class Gen_filesystemtest < AALModel
         user_definedd_variable.pop() # remove "_" from ["@dir_exists", "@subdir_exists", "_"]
         user_definedd_variable.each do |item|
             @push_variables_set.add(item)
-            @variables[item] = "#{eval(item.to_s)}"
+            @variables[item] = "#{item.to_s}"
         end
         
     end
