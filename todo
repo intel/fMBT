@@ -9,3 +9,4 @@
 5: fix lsts reader
 6: using Dir.exists? to check how to format erro
 7: fixing ruby require dir issue
+8: remove windows build script compile debug flags
