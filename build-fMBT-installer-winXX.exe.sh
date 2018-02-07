@@ -1,5 +1,9 @@
 #!/bin/bash
 
+export MINGW64_CFLAGS='-g -O0'  
+export MINGW64_CXXFLAGS='-g -O0'  
+
+
 XX=$1
 WINDOWS_DEPENDENCY_MIRROR=$2
 
