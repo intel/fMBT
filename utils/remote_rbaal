@@ -84,7 +84,7 @@ Options
        Print statistics from FILE with
 =end
 
-require 'g:\\programming\\MBT\\fMBT\\utils\\fmbt.rb'
+require 'fmbt.rb'
 require 'getoptlong'
 require 'cgi'
 require 'date'
@@ -491,7 +491,7 @@ module RemoteRBAAL
     def aal2lsts(aal, output_fileobj, depth=5, discard_variables=nil,
                 include_variables=nil, include_generation_discontinued_tag=true,
                 _filter_tags=nil, drop_outputs=false)
-        require "g:\\programming\\MBT\\fMBT\\utils\\lsts.rb"
+        require "lsts.rb"
         def update_generated_tags(aal, include_variables,
                                 generated_tagnames, tags, new_lsts_state_num)
             for v in include_variables
