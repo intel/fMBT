@@ -142,6 +142,9 @@ section "install"
 # parts implemented in python
 	file "utils/remote_pyaal"
 	file ".libs/remote_pyaal.exe"
+	
+	file "utils/remote_rbaal"
+	file ".libs/remote_rbaal.exe"
 
 	file "utils/fmbt-view"
 	file ".libs/fmbt-view.exe"
