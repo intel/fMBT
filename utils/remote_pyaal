@@ -628,6 +628,13 @@ if __name__ == "__main__":
                           "failed. status=%s\n%s\n" % (cmd, status, p.stderr.read()))
             fmbtstderr(errmsg)
             error(errmsg)
+        else:
+            if not os.access(aal_filename, os.R_OK):
+                errmsg = 'is file "%s" readable?' % (aal_filename,)
+                fmbtstderr(errmsg)
+            fmbtstderr(cmd)
+            fmbtstderr(os.path.dirname(os.path.realpath(__file__)))
+            
     else:
         try:
             aal_code = file(aal_filename).read()

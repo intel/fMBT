@@ -143,7 +143,7 @@ module RemoteRBAAL
 
     def fmbtstderr(msg)
         to_fmbt = "fmbtmagice#{msg}"
-        print CGI::escape(Iconv.iconv('UTF-8//IGNORE', 'UTF-8',to_fmbt)[0]) + "\n"
+        $stdout.write(CGI::escape(Iconv.iconv('UTF-8//IGNORE', 'UTF-8',to_fmbt)[0]) + "\n")
         MyLog.log(msg)
     end
 
@@ -155,7 +155,7 @@ module RemoteRBAAL
     def error(msg)
         msg = "remote_rbaal error " + msg + "\n"
         MyLog(msg)
-        sys.stderr.write(msg)
+        $stderr.write(msg)
         sys.exit(1)
     end
 
@@ -165,7 +165,6 @@ module RemoteRBAAL
                 os.remove(filename)
             rescue RuntimeError
                 MyLog("remote_rbaal error removing file #{filename} failed when exiting\n")
-                MyLog(traceback.format_exc(), flush=true)
             end
         rescue
         end
@@ -785,17 +784,18 @@ end
 aal_filename = ARGV[0]
 
 if aal_filename[aal_filename.length-4,aal_filename.length] == '.aal'
-    cmd = ["fmbt-aalc "] + opt_ppflags + [ aal_filename ]
-    begin
-        aal_code = %x(#{cmd})
-    rescue Exception => e
-        if not File.exist?(aal_filename)
-            errmsg = "is file \"#{aal_filename}\" readable?"
-        else
-            errmsg = ("converting aal to python with command\n    #{cmd}\n failed. status=#{aal_code}\n")
-        end
-        fmbtstderr(errmsg)
+    if not File.exist?(aal_filename)
+        errmsg = "is file \"#{aal_filename}\" readable?"
+        RemoteRBAAL.fmbtstderr(errmsg)
         raise Exception.new(errmsg)
+    else
+        cmd = ["fmbt-aalc "] + opt_ppflags + [ aal_filename ]
+        begin
+            aal_code = %x(#{cmd})
+        rescue Exception => e
+            errmsg = ("converting aal to python with command\n    #{cmd}\n failed. status=#{aal_code}\n")
+            raise Exception.new(errmsg)
+        end
     end
 else
     begin
@@ -843,7 +843,7 @@ begin
     # Model is inherited from AALModel in aalmodel.py.
     aal = Model.new()
 rescue Exception=>e
-    raise Exception.new("Error when instantiating Model() #{e.message}\n#{traceback.format_exc()}")
+    raise Exception.new("Error when instantiating Model() #{e.class}\n#{e.message}")
 end
 aal.log = RemoteRBAAL::MyLog
 aal.timeout = opt_timeout
