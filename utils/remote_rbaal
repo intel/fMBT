@@ -255,7 +255,6 @@ module RemoteRBAAL
             # log_version()
 
             # protocol loop
-            ARGF.read() #clear input
             adapter_call_arguments = []
             cmd = $stdin.gets
             while cmd != "" and cmd != nil
@@ -784,16 +783,19 @@ end
 aal_filename = ARGV[0]
 
 if aal_filename[aal_filename.length-4,aal_filename.length] == '.aal'
-    if not File.exist?(aal_filename)
-        errmsg = "is file \"#{aal_filename}\" readable?"
-        RemoteRBAAL.fmbtstderr(errmsg)
+    cmd = "fmbt-aalc -l ruby #{opt_ppflags} #{aal_filename}"
+    begin
+        aal_code = `#{cmd}`
+    rescue Exception => e
+        errmsg = ("converting aal to ruby with command #{cmd} failed. status=#{e.message}\n")
+        RemoteRBAAL.fmbtstderr()
         raise Exception.new(errmsg)
-    else
-        cmd = ["fmbt-aalc "] + opt_ppflags + [ aal_filename ]
-        begin
-            aal_code = %x(#{cmd})
-        rescue Exception => e
-            errmsg = ("converting aal to python with command\n    #{cmd}\n failed. status=#{aal_code}\n")
+    end
+    if not aal_code
+        aalfile_full_path = ENV['AAL_INCLUDE_PREFIX'] + "/" + aal_filename
+        if not File.exist?(aalfile_full_path)
+            errmsg = "is file \"#{aalfile_full_path}\" readable?"
+            RemoteRBAAL.fmbtstderr(aal_code)
             raise Exception.new(errmsg)
         end
     end
@@ -834,22 +836,25 @@ rescue Exception=>e
         index += 1
     end
     RemoteRBAAL::MyLog(@code_with_line_nums.join("\n"))
-    fmbtstderr("Executing #{aal_filename} failed #{e.class} #{e.message}\n#{traceback.format_exc()}")
-    raise Exception.new("executing aal code failed\n#{e.message}\n#{traceback.format_exc()}")
+    RemoteRBAAL.fmbtstderr("Executing #{aal_filename} failed #{e.class} #{e.message}\n")
+    raise Exception.new("executing aal code failed\n#{e.message}\n")
 end
 
 begin
     # Generated AAL code exports generated AAL class as "Model".
     # Model is inherited from AALModel in aalmodel.py.
     aal = Model.new()
+    aal.log = RemoteRBAAL::MyLog
+    aal.timeout = opt_timeout
+    aal.instance_variable_get(:@variables)['fmbtlog'] = 'fmbtlog'
+    aal.instance_variable_get(:@variables)['fmbtlograw'] = 'fmbtlograw'
+    aal.instance_variable_get(:@variables)['__file__'] = aal_filename
 rescue Exception=>e
+    RemoteRBAAL.fmbtstderr("Error when instantiating Model() #{e.class}\n#{e.message}")
     raise Exception.new("Error when instantiating Model() #{e.class}\n#{e.message}")
 end
-aal.log = RemoteRBAAL::MyLog
-aal.timeout = opt_timeout
-aal.instance_variable_get(:@variables)['fmbtlog'] = 'fmbtlog'
-aal.instance_variable_get(:@variables)['fmbtlograw'] = 'fmbtlograw'
-aal.instance_variable_get(:@variables)['__file__'] = aal_filename
+
+
 
 if $opt_profile
     import cProfile
