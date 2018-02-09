@@ -16,7 +16,7 @@ dist_noinst_SCRIPTS +=		\
 	fmbt-stats		\
 	fmbt-view		\
 	remote_pyaal		\
-    remote_rbaal		\
+    .ruby/bin/remote_rbaal		\
 	remote_python           \
 	remote_exec.sh
 # end of scripts
