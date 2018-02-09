@@ -37,6 +37,7 @@
 #include "aalang_action.hh"
 #include "aalang_cpp.hh"
 #include "aalang_py.hh"
+#include "aalang_rb.hh"
 
 extern aalang* obj;
 
@@ -140,23 +141,22 @@ int main(int argc,char** argv) {
       case 'I': {
         if (prep_command != "")
           prep_command=prep_command+" -I"+optarg+" ";
-	break;
+	        break;
       }
-
       case 'l':
-	if (obj) {
-	  printf("Only one -l parameter supported\n");
-	  print_usage();
-	  return 3;
-	}
-	if (strcmp(optarg,"tag")==0) {
-	  obj=new aalang_tag;
-	  break;
-	}
-	if (strcmp(optarg,"action")==0) {
-	  obj=new aalang_action;
-	  break;
-	}
+        if (obj) {
+          printf("Only one -l parameter supported\n");
+          print_usage();
+          return 3;
+        }
+        if (strcmp(optarg,"tag")==0) {
+          obj=new aalang_tag;
+          break;
+        }
+        if (strcmp(optarg,"action")==0) {
+          obj=new aalang_action;
+          break;
+        }
         if (strcmp(optarg,"C++")==0
             || strcmp(optarg,"cpp")==0
             || strcmp(optarg,"c++")==0) {
@@ -169,7 +169,13 @@ int main(int argc,char** argv) {
           obj=new aalang_py;
           break;
         }
-	break;
+        if (strcmp(optarg,"Ruby")==0
+            || strcmp(optarg,"ruby")==0
+            || strcmp(optarg,"rb")==0) {
+          obj=new aalang_rb;
+          break;
+        }
+	      break;
       case 'V':
         printf("Version: " VERSION FMBTBUILDINFO "\n");
         return 0;
@@ -183,7 +189,7 @@ int main(int argc,char** argv) {
         break;
       case 'O':
         opt_arg=opt_arg+" "+optarg;
-	break;
+	      break;
       case 'c':
         lib=true;
         break;
