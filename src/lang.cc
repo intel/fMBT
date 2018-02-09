@@ -230,9 +230,9 @@ int main(int argc,char** argv) {
     s=readfile(argv[optind],prep_command.c_str(),status);
     if (status) {
       if (s) {
-	      error(1,0,"Preprocessing failure \"%s\" %s envion %s.",argv[optind],s,getenv("AAL_INCLUDE_PREFIX"));
+	      error(1,0,"Preprocessing failure \"%s\" %s.",argv[optind],s);
       }
-        error(1,0,"Preprocessing failure \"%s\" envion %s.",argv[optind],getenv("AAL_INCLUDE_PREFIX"));
+        error(1,0,"Preprocessing failure \"%s\".");
     }
   }
 
