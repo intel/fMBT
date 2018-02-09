@@ -143,7 +143,7 @@ section "install"
 	file "utils/remote_pyaal"
 	file ".libs/remote_pyaal.exe"
 	
-	file "utils/remote_rbaal"
+	file "utils/ruby/bin/remote_rbaal"
 	file ".libs/remote_rbaal.exe"
 
 	file "utils/fmbt-view"
