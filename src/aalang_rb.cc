@@ -115,10 +115,10 @@ aalang_rb::~aalang_rb()
 void aalang_rb::set_namestr(std::string* _name)
 {
   name=_name;
-  s+="require 'rubygems'\n" +
-    "require 'fmbt-ruby'\n" +
-    "require 'aalmodel'\n" +
-    "require 'set'\n" +
+  s+="require 'rubygems'\n" 
+    "require 'fmbt-ruby'\n" 
+    "require 'aalmodel'\n" 
+    "require 'set'\n" 
     "class " + class_name() + "< AALModel\n"
     "    def initialize()\n";
   s+="        @adapter_init_list = []\n";
