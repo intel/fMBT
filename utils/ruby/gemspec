@@ -1,0 +1,22 @@
+require 'rubygems'
+
+fmbt_dir = File.expand_path('../../../',__FILE__)
+
+configure_ac_filename = File.join(fmbt_dir, "configure.ac")
+version = File.new(configure_ac_filename).readline()
+version_name = version.split(",")[1]
+version_name.gsub!(' ','').gsub!('[','').gsub!(']','').gsub!("-",".")
+
+SPEC = Gem::Specification.new do |s|
+    s.name = "fmbt-ruby"
+    s.version = "#{version_name}"
+    s.author = "xiangbin.li"
+    s.email = "dassio@icloud.com"
+    s.homepage = "https://github.com/intel/fMBT"
+    s.platform = Gem::Platform::RUBY
+    s.summary = "fMBT Ruby tools and libraries"
+    candidates = Dir.glob("{bin,docs,lib,tests}/**/*")
+    s.files = candidates
+    s.require_path = "lib"
+    s.autorequire = "fmbt"
+end

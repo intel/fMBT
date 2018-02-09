@@ -89,9 +89,11 @@ require 'getoptlong'
 require 'cgi'
 require 'date'
 require 'time'
-require 'iconv'
 require 'tempfile'
 require "stringio"
+if RUBY_VERSION.include?('1.8') or RUBY_VERSION.include?('1.9')
+    require 'iconv'
+end
 
 $opt_debug = false
 $opt_profile = nil
@@ -143,7 +145,11 @@ module RemoteRBAAL
 
     def fmbtstderr(msg)
         to_fmbt = "fmbtmagice#{msg}"
-        $stdout.write(CGI::escape(Iconv.iconv('UTF-8//IGNORE', 'UTF-8',to_fmbt)[0]) + "\n")
+        if RUBY_VERSION.include?('1.8') or RUBY_VERSION.include?('1.9')
+            $stdout.write(CGI::escape(Iconv.iconv('UTF-8//IGNORE', 'UTF-8',to_fmbt)[0]) + "\n")
+        else
+            $stdout.write(CGI::escape(to_fmbt.encode("UTF-8")[0]) + "\n")
+        end
         MyLog.log(msg)
     end
 
