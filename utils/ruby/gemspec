@@ -18,5 +18,5 @@ SPEC = Gem::Specification.new do |s|
     candidates = Dir.glob("{bin,docs,lib,tests}/**/*")
     s.files = candidates
     s.require_path = "lib"
-    s.autorequire = "fmbt"
+    executables = "bin/remote_rbaal"
 end
