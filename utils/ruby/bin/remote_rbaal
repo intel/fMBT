@@ -84,7 +84,9 @@ Options
        Print statistics from FILE with
 =end
 
-require 'fmbt.rb'
+require 'rubygems'
+require 'fmbt-ruby'
+require 'fmbt'
 require 'getoptlong'
 require 'cgi'
 require 'date'
