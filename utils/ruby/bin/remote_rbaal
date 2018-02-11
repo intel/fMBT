@@ -785,6 +785,7 @@ end
 
 if ARGV.length != 1
     print doc_string
+    exit
 end
     
 aal_filename = ARGV[0]
