@@ -232,7 +232,7 @@ int main(int argc,char** argv) {
       if (s) {
 	      error(1,0,"Preprocessing failure \"%s\" %s.",argv[optind],s);
       }
-        error(1,0,"Preprocessing failure \"%s\". %s",argv[optind],getenv("AAL_INCLUDE_PREFIX"));
+        error(1,0,"Preprocessing failure \"%s\".",argv[optind]);
     }
   }
 
