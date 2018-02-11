@@ -795,7 +795,7 @@ if aal_filename[aal_filename.length-4,aal_filename.length] == '.aal'
         aal_code = `#{cmd}`
     rescue Exception => e
         errmsg = ("converting aal to ruby with command #{cmd} failed. status=#{e.message}\n")
-        RemoteRBAAL.fmbtstderr()
+        RemoteRBAAL.fmbtstderr(errmsg)
         raise Exception.new(errmsg)
     end
     if not aal_code
@@ -822,14 +822,21 @@ for statement in opt_c_exec_statements
         raise Exception.new("No rescueions allowed, got '#{e}'\n#{traceback.format_exc()}")
     end
 end
-aalpy_file = Tempfile.new(["remote_pyaal",".rb"])
-aal_code = aal_code.gsub("\r\n", "\n")
-aalpy_file.write(aal_code)
-aalpy_file.close()
-aalpy_filename = aalpy_file.path
 
 begin
-    load(aalpy_filename)
+    aalrb_file = Tempfile.new(["remote_rbaal",".rb"])
+    aal_code = aal_code.gsub("\r\n", "\n")
+    aalrb_file.write(aal_code)
+    aalrb_file.close()
+    aalrb_filename = aalrb_file.path
+rescue Exception=>e
+    RemoteRBAAL.fmbtstderr('error in creating file')
+    RemoteRBAAL.fmbtstderr(e.class + " " + e.message)
+    $stdout.flush
+end
+
+begin
+    load(aalrb_filename)
 rescue Exception=>e
     # todo: haven't run yet
     if e.class == "SyntaxError"
@@ -842,14 +849,14 @@ rescue Exception=>e
         @code_with_line_nums.push("#{index+1}  #{line}")
         index += 1
     end
-    RemoteRBAAL::MyLog(@code_with_line_nums.join("\n"))
+    RemoteRBAAL::MyLog.log(@code_with_line_nums.join("\n"))
     RemoteRBAAL.fmbtstderr("Executing #{aal_filename} failed #{e.class} #{e.message}\n")
     raise Exception.new("executing aal code failed\n#{e.message}\n")
 end
 
 begin
     # Generated AAL code exports generated AAL class as "Model".
-    # Model is inherited from AALModel in aalmodel.py.
+    # Model is inherited from AALModel in aalmodel.rb.
     aal = Model.new()
     aal.log = RemoteRBAAL::MyLog
     aal.timeout = opt_timeout
@@ -857,6 +864,7 @@ begin
     aal.instance_variable_get(:@variables)['fmbtlograw'] = 'fmbtlograw'
     aal.instance_variable_get(:@variables)['__file__'] = aal_filename
 rescue Exception=>e
+    RemoteRBAAL.fmbtstderr(aalrb_filename)
     RemoteRBAAL.fmbtstderr("Error when instantiating Model() #{e.class}\n#{e.message}")
     raise Exception.new("Error when instantiating Model() #{e.class}\n#{e.message}")
 end
