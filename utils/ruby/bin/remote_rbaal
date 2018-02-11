@@ -791,7 +791,7 @@ end
 aal_filename = ARGV[0]
 
 if aal_filename[aal_filename.length-4,aal_filename.length] == '.aal'
-    cmd = "fmbt-aalc -l ruby #{opt_ppflags} #{aal_filename}"
+    cmd = "fmbt-aalc -l ruby #{opt_ppflags.join(" ")} #{aal_filename}"
     begin
         aal_code = `#{cmd}`
     rescue Exception => e
