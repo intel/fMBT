@@ -1,5 +1,6 @@
 class AALModel
     attr_accessor :log 
+    attr_accessor :stack_executed_actions 
     attr_accessor :timeout
     @@SILENCE = -3
 
