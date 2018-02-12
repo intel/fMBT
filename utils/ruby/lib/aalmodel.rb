@@ -66,7 +66,7 @@ class AALModel
                 guard_list.pop()
             end
             return rv
-        rescue Exception, e
+        rescue Exception=>e
             @log.log("Exception #{e.class} in #{func.func_name} #{e.message}")
             @log.log(traceback.format_exc())
             if guard_list
