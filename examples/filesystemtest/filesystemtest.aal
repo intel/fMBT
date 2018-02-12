@@ -15,7 +15,7 @@ aal "filesystemtest" {
     }
     adapter_init {
         try: shutil.rmtree(DIRNAME)
-        except (WindowsError,OSError): pass
+        except (OSError): pass
     }
     adapter_exit {
         if verdict == "pass" and dir_exists:
@@ -46,7 +46,7 @@ aal "filesystemtest" {
         guard()   { return dir_exists }
         adapter() {
             try: os.mkdir(DIRNAME)
-            except (WindowsError,OSError), e:
+            except (OSError), e:
                 assert ("File exists" in str(e) or e.winerror == 183), "Wrong exception: %s" % (e,)
                 return
             assert False, "Exception expected"
@@ -56,7 +56,7 @@ aal "filesystemtest" {
         guard()   { return subdir_exists }
         adapter() {
             try: os.mkdir(SUBDIRNAME)
-            except (WindowsError,OSError), e:
+            except (OSError), e:
                 assert ("File exists" in str(e) or e.winerror == 183), "Wrong exception: %s" % (e,)
                 return
             assert False, "Exception expected"
@@ -66,7 +66,7 @@ aal "filesystemtest" {
         guard()   { return not dir_exists }
         adapter() {
             try: os.rmdir(DIRNAME)
-            except (WindowsError,OSError), e:
+            except (OSError), e:
                 assert ("No such file" in str(e) or e.winerror == 2), "Wrong exception %s" % (e,)
                 return
             assert False, "Exception expected"
@@ -76,7 +76,7 @@ aal "filesystemtest" {
         guard()   { return subdir_exists }
         adapter() {
             try: os.rmdir(DIRNAME)
-            except (WindowsError,OSError), e:
+            except (OSError), e:
                 assert ("not empty" in str(e) or e.winerror == 145), "Wrong exception: %s" % (e,)
                 return
             assert False, "Exception expected"
@@ -86,7 +86,7 @@ aal "filesystemtest" {
         guard()   { return not subdir_exists }
         adapter() {
             try: os.rmdir(SUBDIRNAME)
-            except (WindowsError,OSError), e:
+            except (OSError), e:
                 assert ("No such file" in str(e) or e.winerror == 2 or e.winerror == 3), "Wrong exception %s" % (e,)
                 return
             assert False, "Exception expected"
