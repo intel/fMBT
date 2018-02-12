@@ -162,9 +162,9 @@ module RemoteRBAAL
 
     def error(msg)
         msg = "remote_rbaal error " + msg + "\n"
-        MyLog(msg)
+        MyLog.log(msg)
         $stderr.write(msg)
-        sys.exit(1)
+        exit(1)
     end
 
     def atexit_remove_file(filename)
@@ -217,7 +217,7 @@ module RemoteRBAAL
                 MyLog("sending lts\n#{lts_string}\n")
             end
         end
-        $stdout.write("fmbtmagic #{lts_string.length}\n#{lts_string}")
+        $stdout.write("fmbtmagic #{lts_string.bytes.length}\n#{lts_string}")
         $stdout.flush()
     end
 
@@ -419,8 +419,8 @@ module RemoteRBAAL
                             drop_outputs=$opt_accel_drop_outputs)
                     rescue Exception=>e
                         RemoteRBAAL.report_simulation_error(@aal)
-                        RemoteRBAAL.fmbtstderr("Error on simulation #{e.class} #{e.message}\n#{RemoteRBAAL.format_rubyaalrescueion()}")
-                        raise Exception.new(e.message)
+                        RemoteRBAAL.fmbtstderr("Error on simulation #{e.class} #{e.message}\n#{RemoteRBAAL.format_rubyaalrescueion(e)}")
+                        RemoteRBAAL.error(e.to_s)
                     end
                     outfilestring.seek(0)
                     RemoteRBAAL.put_lts(outfilestring.read())
@@ -432,23 +432,18 @@ module RemoteRBAAL
         end
     end
 
-    def format_rubyaalrescueion()
-        if $opt_debug
-            # return full tracebacks including framework code
-            return traceback.format_exc()
-        end
-        exc_type, exc_value, exc_tb = sys.exc_info()
-        tb = traceback.extract_tb(exc_tb)
-        tb.reverse()
+    def format_rubyaalrescueion(exception)
+        tb = exception.backtrace
+        tb = tb.reverse()
         new_tb = []
         for file_line_module_code in tb
-            if file_line_module_code[0].endswith("aalmodel.py")
+            if file_line_module_code[0].end_with?("aalmodel.rb")
                 break
             end
             new_tb.push(file_line_module_code)
         end
-        new_tb.reverse()
-        return 'Traceback (most recent call last)\n' + ''.join(traceback.format_list(new_tb))
+        new_tb = new_tb.reverse()
+        return 'Traceback (most recent call last)\n' + new_tb.join(" ")
     end
 
     def format_syntaxerror()
@@ -476,12 +471,12 @@ module RemoteRBAAL
     end
 
     def report_simulation_error(aal)
-        if len(aal._stack_executed_actions) > 0
+        if aal.stack_executed_actions.length > 0
             executed_actions = []
-            for l in aal._stack_executed_actions
-                executed_actions.extend(l)
+            for l in aal.stack_executed_actions
+                executed_actions.push(l)
             end
-            RemoteRBAAL.fmbtstderr("Error after simulated execution\n    %s" % ('\n    '.join(executed_actions)))
+            RemoteRBAAL.fmbtstderr("Error after simulated execution\n    #{executed_actions.join('\n    ')}")
         end
     end
 
@@ -624,7 +619,9 @@ module RemoteRBAAL
     end
 end
 
-
+STDOUT.sync = true
+$stdout.binmode
+$stderr.binmode
 doc_string = %{
 Usage: remote_pyaal [options] aalfile 
 Runs remote model & adapter written in AAL/Python. aalfile is a
@@ -835,12 +832,20 @@ begin
 rescue Exception=>e
     RemoteRBAAL.fmbtstderr('error in creating file')
     RemoteRBAAL.fmbtstderr(e.class + " " + e.message)
-    $stdout.flush
 end
 
 #load temp class file generated from aal file
 begin
+    #discard loaded module output string
+    old_output = $stdout
+    $stdout = StringIO.new
+    old_stderr = $stderr
+    $stderr = StringIO.new
+
     load(aalrb_filename)
+
+    $stdout = old_output
+    $stderr = old_stderr
 rescue Exception=>e
     # todo: haven't run yet
     if e.class == "SyntaxError"
@@ -882,7 +887,6 @@ if $opt_profile
 end
 
 if not opt_output_fileobj
-    $stdout.binmode
     g_bridge = RemoteRBAAL::RemoteAALBridge.new(aal)
     RemoteRBAAL::MyLog.log("starting")
     at_exit do
