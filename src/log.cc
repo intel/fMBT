@@ -21,10 +21,6 @@
 #include <cstdlib>
 #include "helper.hh"
 
-#include <locale>
-#include <codecvt>
-#include <string>
-
 #ifndef DROI
 #include <glib.h>
 #include <glib/gprintf.h>
@@ -56,8 +52,6 @@ void Log::vprint(const char* format,va_list ap,FILE* f,bool urldecode)
   char* msg=NULL;
 
   if (g_vasprintf(&msg,format,ap)>0) {
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    std::wstring wide = converter.from_bytes(msg);
     if (urldecode) {
       write(unescape_string(msg), f);
     } else {
