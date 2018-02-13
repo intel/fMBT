@@ -214,7 +214,7 @@ void log_strarray(Log&l,
                   std::vector<std::string>& array,
                   unsigned first_element) {
   for(unsigned i=first_element;i<array.size();i++) {
-    char* s=escape_string(array[i].c_str());
+    char* s=array[i].c_str();
     l.print("<%s\"%s\"/>\n",tag,s);
     escape_free(s);
   }
