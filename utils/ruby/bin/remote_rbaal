@@ -619,9 +619,9 @@ module RemoteRBAAL
     end
 end
 
-STDOUT.sync = true
 $stdout.binmode
 $stderr.binmode
+STDOUT.set_encoding("UTF-8")
 doc_string = %{
 Usage: remote_pyaal [options] aalfile 
 Runs remote model & adapter written in AAL/Python. aalfile is a
@@ -836,16 +836,11 @@ end
 
 #load temp class file generated from aal file
 begin
-    #discard loaded module output string
-    old_output = $stdout
-    $stdout = StringIO.new
-    old_stderr = $stderr
-    $stderr = StringIO.new
-
+    # $stdout.write("internal encoding #{STDOUT.internal_encoding} \n")
+    # $stdout.write("external encoding #{STDOUT.external_encoding} \n")
+    # $stdout.write("Navigator2 MML自动化组件 v1.1.7.1\n")
+    # $stdout.flush
     load(aalrb_filename)
-
-    $stdout = old_output
-    $stderr = old_stderr
 rescue Exception=>e
     # todo: haven't run yet
     if e.class == "SyntaxError"
