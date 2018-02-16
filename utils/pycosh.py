@@ -139,7 +139,7 @@ def prompt():
         hostname = ""
     return (user + "@" +
             hostname + ":" +
-            os.getcwd() + ": ")
+            os.getcwd().replace("\\", "/") + ": ")
 
 def awk(prog, *args):
     """awk PROG [FILE...]
