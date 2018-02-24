@@ -11,3 +11,5 @@
 7: fixing ruby require dir issue
 8: remove windows build script compile debug flags
 9: lsts7 error , not getting the full message, splited by newline
+10: ruby debug framework
+11: generate and run offline testcases
