@@ -619,9 +619,7 @@ module RemoteRBAAL
     end
 end
 
-$stdout.binmode
-$stderr.binmode
-STDOUT.set_encoding("UTF-8")
+
 doc_string = %{
 Usage: remote_pyaal [options] aalfile 
 Runs remote model & adapter written in AAL/Python. aalfile is a
@@ -861,6 +859,9 @@ end
 # Generated AAL code exports generated AAL class as "Model".
 # Model is inherited from AALModel in aalmodel.rb.
 begin
+    $stdout.binmode
+    $stderr.binmode
+    STDOUT.set_encoding("UTF-8")
     aal = Model.new()
     aal.log = RemoteRBAAL::MyLog
     aal.timeout = opt_timeout
