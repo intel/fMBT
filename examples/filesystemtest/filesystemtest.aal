@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 # preview-show-vars: dir_exists
 aal "filesystemtest" {
     language "python" {
+        # -*- coding: utf-8 -*-
         import os
         import shutil
         import tempfile
@@ -22,7 +24,7 @@ aal "filesystemtest" {
             log("cleaning up " + DIRNAME)
             shutil.rmtree(DIRNAME)
     }
-    input "mkdir: ok" {
+    input "自动化组件: ok" {
         guard()   { return not dir_exists }
         adapter() { os.mkdir(DIRNAME) }
         body()    { dir_exists = True }
