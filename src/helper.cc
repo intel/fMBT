@@ -865,6 +865,7 @@ ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,GIOChan
 	  // We have something to stdout
     char* lineptr_gbk = UTF8ToGBK(lineptr)
 	  fprintf(stdout,"%s\n",*lineptr_gbk);
+    log.print("%s",*lineptr_gbk);
 	  g_free(*lineptr);
 	  *lineptr = NULL;
 	  log_redirect = true;
