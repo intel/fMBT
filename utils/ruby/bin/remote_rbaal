@@ -217,7 +217,7 @@ module RemoteRBAAL
                 MyLog("sending lts\n#{lts_string}\n")
             end
         end
-        $stdout.write("fmbtmagic #{lts_string.bytes.length}\n#{lts_string}")
+        $stdout.write("fmbtmagic #{lts_string.encode("UTF-8").bytes.length}\n#{lts_string}")
         $stdout.flush()
     end
 
@@ -619,6 +619,9 @@ module RemoteRBAAL
     end
 end
 
+$stdout.binmode
+$stderr.binmode
+STDOUT.set_encoding("UTF-8")
 
 doc_string = %{
 Usage: remote_pyaal [options] aalfile 
@@ -859,9 +862,7 @@ end
 # Generated AAL code exports generated AAL class as "Model".
 # Model is inherited from AALModel in aalmodel.rb.
 begin
-    $stdout.binmode
-    $stderr.binmode
-    STDOUT.set_encoding("UTF-8")
+    
     aal = Model.new()
     aal.log = RemoteRBAAL::MyLog
     aal.timeout = opt_timeout
