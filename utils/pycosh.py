@@ -1107,4 +1107,7 @@ if __name__ == "__main__":
         _main()
     else:
         for cmdline in sys.argv[1:]:
-            _output(pycosh_eval(cmdline))
+            if cmdline != "interactive":
+                _output(pycosh_eval(cmdline))
+            else:
+                _main()
