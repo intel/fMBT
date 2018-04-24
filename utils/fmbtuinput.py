@@ -472,6 +472,22 @@ mscCodes = {
     "MSC_CNT":                 0x08,
 }
 
+ledCodes = {
+    "LED_NUML":                0x00,
+    "LED_CAPSL":               0x01,
+    "LED_SCROLLL":             0x02,
+    "LED_COMPOSE":             0x03,
+    "LED_KANA":                0x04,
+    "LED_SLEEP":               0x05,
+    "LED_SUSPEND":             0x06,
+    "LED_MUTE":                0x07,
+    "LED_MISC":                0x08,
+    "LED_MAIL":                0x09,
+    "LED_CHARGING":            0x0a,
+    "LED_MAX":                 0x0f,
+    "LED_CNT":                 0x10,
+}
+
 abs_count = absCodes['ABS_MAX'] + 1
 
 event_codetables = {
@@ -479,6 +495,7 @@ event_codetables = {
     eventTypes["EV_KEY"]: keyCodes,
     eventTypes["EV_REL"]: relCodes,
     eventTypes["EV_ABS"]: absCodes,
+    eventTypes["EV_LED"]: ledCodes,
 }
 
 BUS_PCI       = 0x01
@@ -1082,6 +1099,13 @@ class Keyboard(InputDevice):
         keyCode = toKeyCode(keyCodeOrName)
         self.press(keyCode)
         self.release(keyCode)
+
+    def led(self, ledCode, value):
+        """switch LED on or off.
+        Example: led("LED_SCROLLL", 1) switches on scroll lock LED
+        """
+        self.send("EV_LED", ledCode, value)
+        self.sync()
 
 def sendInputSync(devFd):
     return sendInputEvent(devFd, 0, 0, 0)
