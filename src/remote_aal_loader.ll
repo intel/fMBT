@@ -3,6 +3,7 @@
 #include <vector>
 #include <map>
 #include <sstream>
+#include <cstring>
 #define DROI
 #include "log_null.hh"
 #include "aal.hh"

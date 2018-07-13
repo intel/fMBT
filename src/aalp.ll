@@ -353,7 +353,7 @@ int main(int argc,char** argv)
       break;
     }
     case 'V':
-      printf("Version: "VERSION FMBTBUILDINFO"\n");
+      printf("Version: " VERSION FMBTBUILDINFO "\n");
       return 0;
       break;
     case 'D':
