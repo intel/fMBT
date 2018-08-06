@@ -109,9 +109,12 @@ class Pythonshare_ns(object):
         """
         return _g_local_namespaces.keys()
 
-    def remote_nss(self):
+    def remote_nss(self, ls_opts={}):
         """List remote namespaces
         """
+        if "ip" in ls_opts and ls_opts["ip"] == True:
+            return {k: _g_remote_namespaces[k].conn.getpeername()
+                    for k in _g_remote_namespaces.keys()}
         return _g_remote_namespaces.keys()
 
     def on_disconnect(self):

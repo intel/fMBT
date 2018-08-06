@@ -323,9 +323,9 @@ class Connection(object):
         """List local namespaces on the server"""
         return self.eval_("pythonshare_ns.local_nss()")
 
-    def ls_remote(self):
+    def ls_remote(self, **kwargs):
         """List remote namespaces on the server"""
-        return self.eval_("pythonshare_ns.remote_nss()")
+        return self.eval_("pythonshare_ns.remote_nss(%r)" % (kwargs,))
 
     def ns_type(self, ns):
         return self.eval_("pythonshare_ns.ns_type(%s)" % (repr(ns),))

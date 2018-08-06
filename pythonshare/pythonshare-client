@@ -77,6 +77,10 @@ Options when connected:
   --ls-remote
           List remote namespaces.
 
+  --ls-remote-ip
+          List remote namespaces with namespace registerer's IP
+          address and port.
+
   --ns-type=ns
           Returns type of a namespace ("local", "remote" or "" if it
           does not exist).
@@ -200,7 +204,7 @@ if __name__ == "__main__":
              "password=", "password-file=",
              "namespace=", "code=", "eval=", "read=",
              "output=", "format=", "interact",
-             "ls-local", "ls-remote", "ns-type=",
+             "ls-local", "ls-remote", "ls-remote-ip", "ns-type=",
              "drop", "unlock", "kill"])
     except getopt.GetoptError, e:
         error(str(e))
@@ -290,6 +294,12 @@ if __name__ == "__main__":
                 error("cannot list namespaces - not connected")
             remote_nss = conn.ls_remote()
             print "\n".join(remote_nss)
+        elif opt in ["--ls-remote-ip"]:
+            if conn == None:
+                error("cannot list namespaces - not connected")
+            remote_nss = conn.ls_remote(ip=True)
+            for name in sorted(remote_nss.keys()):
+                print name, remote_nss[name][0], remote_nss[name][1]
         elif opt in ["--ns-type"]:
             if conn == None:
                 error("cannot query namespace - not connected")
