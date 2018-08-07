@@ -103,6 +103,8 @@ _g_words = None
 
 _g_lastWindow = None
 
+_g_tesseractPSM = "-psm"
+
 _g_defaultClickDryRun = False
 _g_defaultDelayedDrawing = False
 _g_defaultIconMatch = 1.0
@@ -522,6 +524,7 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
     global _g_words
     global _g_readImage
     global _g_origImage
+    global _g_tesseractPSM
 
     _g_words = None
     _g_readImage = None
@@ -588,7 +591,7 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
                        shlex.split(preprocess) +
                        [_g_readImage])
         tesseract_cmd = ["tesseract", _g_readImage, SCREENSHOT_FILENAME,
-                         "-l", lang, "-psm", str(psm), "hocr"]
+                         "-l", lang, _g_tesseractPSM, str(psm), "hocr"]
         if isinstance(configfile, basestring):
             tesseract_cmd += [configfile]
         elif isinstance(configfile, list) or isinstance(configfile, tuple):
@@ -599,6 +602,14 @@ def iRead(windowId = None, source = None, preprocess = None, ocr=None, capture=N
                                % (exit_status, _g_last_runcmd_error))
 
         exit_status, output = _runcmd(tesseract_cmd)
+        if (exit_status == 1 and "'-psm'" in _g_last_runcmd_error
+            and _g_tesseractPSM == "-psm"):
+            # Tesseract versions up to 4.x.x beta take "-psm", but
+            # from some point on they want "--psm". Detect the error
+            # due to wrong format and switch to another, if needed.
+            _g_tesseractPSM = "--psm"
+            tesseract_cmd[tesseract_cmd.index("-psm")] = _g_tesseractPSM
+            exit_status, output = _runcmd(tesseract_cmd)
         if exit_status != 0:
             raise NoOCRResults("Tesseract returned exit status (%s): %s"
                                % (exit_status, _g_last_runcmd_error))
