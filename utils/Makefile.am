@@ -58,8 +58,8 @@ if MINGW
 if HAVE_MAGICK
 lib_LTLIBRARIES = eye4graphics.la
 eye4graphics_la_SOURCES = eye4graphics.cc
-eye4graphics_la_CPPFLAGS = $(MAGIC_CFLAGS)
-eye4graphics_la_LDFLAGS = -module  $(MAGIC_LIBS) -no-undefined -avoid-version -shared
+eye4graphics_la_CPPFLAGS = $(MAGICK_CFLAGS)
+eye4graphics_la_LDFLAGS = -module  $(MAGICK_LIBS) -no-undefined -avoid-version -shared
 endif
 else
 # extensions
