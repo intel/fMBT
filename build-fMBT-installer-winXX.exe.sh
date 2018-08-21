@@ -14,7 +14,7 @@ BUILD_OUTPUT="build-win$XX/fMBT-installer-win$XX.exe"
 
 if [ -z "$WINDOWS_DEPENDENCY_MIRROR" ]; then
     IMAGEMAGICK_URL=http://www.imagemagick.org/download/releases/ImageMagick-6.9.0-0.tar.xz
-    GRAPHVIZ_URL=http://www.graphviz.org/pub/graphviz/stable/windows/graphviz-2.38.msi
+    GRAPHVIZ_URL=https://graphviz.gitlab.io/_pages/Download/windows/graphviz-2.38.msi
     PYTHON32_URL=https://www.python.org/ftp/python/2.7.11/python-2.7.11.msi
     PYTHON64_URL=https://www.python.org/ftp/python/2.7.11/python-2.7.11.amd64.msi
     PYSIDE32_URL=http://ftp.vim.org/languages/qt/official_releases/pyside/PySide-1.2.2.win32-py2.7.exe
