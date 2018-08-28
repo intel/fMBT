@@ -87,7 +87,6 @@ def _human_readable_size(size):
 
 def _output(s):
     sys.stdout.write(s)
-    sys.stdout.write("\n")
     sys.stdout.flush()
 
 def _shell_soe(cmd):
@@ -763,17 +762,33 @@ def psput(psconn, pattern):
 def psget(psconn, pattern):
     """psget CONNSPEC FILE...
     download files from pythonshare server"""
+    # Get *.txt from host to current working directory:
+    #     psget passwd@host:port *.txt
+    # Get * from host via hub to current working directory:
+    #     psget passwd@hub/host *
+    # Get * from HOSTDIR on host, via hub, to current working directory:
+    #     psget passwd@hub/host//HOSTDIR *
     if isinstance(psconn, pythonshare.client.Connection):
         conn = psconn
+        remotedir = ""
         close_connection = False
+    elif "//" in psconn:
+        hostspec, remotedir = psconn.split("//", 1)
+        conn = pythonshare.connect(hostspec)
+        close_connection = True
     else:
+        remotedir = ""
         conn = pythonshare.connect(psconn)
         close_connection = True
     conn.exec_("".join(inspect.getsourcelines(expand)[0]))
     conn.exec_("import glob")
+    if remotedir:
+        remotedir = remotedir.replace("\\", "/")
+        if not remotedir.endswith("/"):
+            remotedir = remotedir + "/"
     rv = []
     for filename in conn.eval_('expand(%s, accept_pipe=False)' %
-                               repr(pattern)).splitlines():
+                               repr(remotedir + pattern)).splitlines():
         try:
             data = conn.eval_("file(%r, 'rb').read()" % (filename,))
         except:
@@ -1075,7 +1090,7 @@ def _main():
 
     while True:
         try:
-            cmdline = raw_input(pycosh_eval("prompt"))
+            cmdline = raw_input("\n" + pycosh_eval("prompt"))
         except EOFError:
             cmdline = None
 
