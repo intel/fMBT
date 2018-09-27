@@ -19,7 +19,7 @@ BuildRequires:  libicu-devel
 BuildRequires:  python
 BuildRequires:  python-devel
 BuildRequires:  automake autoconf libtool
-BuildRequires:  ImageMagick-devel
+BuildRequires:  ImageMagick-devel < 7.0
 %if 0%{?suse_version}
 BuildRequires:  boost-devel
 %else
@@ -48,7 +48,7 @@ Requires: %{name}-python
 Requires: python
 Requires: graphviz
 Requires: gnuplot
-Requires: ImageMagick
+Requires: ImageMagick < 7.0
 
 %description utils
 Tools for visualising models, inspecting logs, statistics and reporting
