@@ -54,6 +54,11 @@ try:
 except ImportError:
     pythonshare = None
 
+try:
+    import recb
+except ImportError:
+    recb = None
+
 if os.name == "nt":
     import ctypes
 
@@ -124,6 +129,71 @@ def cmd2py(cmdline):
         args = cmdline_list[1:]
         funccall = funcname + repr(tuple(args))
     return funccall
+
+if not recb is None:
+    _parsed_call = []
+    _parsed_calls = []
+    _parsed_oper = []
+    def _prog_args_parsed(*args):
+        _parsed_calls.append("%s%s" % (
+            _parsed_call[0], repr(tuple(_parsed_call[1:]))))
+        _parsed_call[:] = []
+    def _call_seq_parsed(*args):
+        if _parsed_oper:
+            for oper in _parsed_oper:
+                if oper == ";":
+                    _parsed_calls[0:2] = ["cat_eval(%s, %s)" % (repr(_parsed_calls[0]), repr(_parsed_calls[1]))]
+                elif oper == "|":
+                    _parsed_calls[0:2] = ["pipe(%s, %s)" % (repr(_parsed_calls[0]), repr(_parsed_calls[1]))]
+        _parsed_oper[:] = []
+    _PROG = recb.pattern(r"(?P<func>[a-zA-Z_0-9]+)\s*",
+                         cb=lambda _1, m, _2: _parsed_call.append(m.groupdict()['func']))
+    _ARG_QUOTED = recb.pattern(r"'(?P<arg>[^']*)'\s*")
+    _ARG_DOUBLE_QUOTED = recb.pattern(r'"(?P<arg>[^"]*)"\s*')
+    _ARG_SPACE_SEP = recb.pattern(r"(?P<arg>[^\s;|()]+)\s*")
+    _CMD_CALL = (
+        _PROG + recb.many(
+            recb.any(_ARG_QUOTED, _ARG_DOUBLE_QUOTED, _ARG_SPACE_SEP).set_cb(
+                lambda _1, m, _2: _parsed_call.append(m[1].groupdict()['arg'])))
+    ).set_ca(_prog_args_parsed)
+    _CMD_CONT = (recb.pattern(r"(?P<oper>[|;])\s*").set_cb(
+        lambda _1, m, _2: _parsed_oper.append(m.groupdict()['oper']))
+                 + _CMD_CALL)
+
+    _CMD_PIPE_SEQ = (_CMD_CALL + recb.many(_CMD_CONT)).set_ca(_call_seq_parsed)
+    _CMD_GROUP = (recb.pattern(r"\(\s*") +
+                  _CMD_PIPE_SEQ +
+                  recb.pattern(r"\)\s*") + recb.many(_CMD_CONT))
+    _CMD = (_CMD_GROUP | _CMD_PIPE_SEQ).set_patterns({'GROUP': _CMD_GROUP})
+
+def _test_cmd2py_newparser(cmdline):
+    if recb is None:
+        raise ImportError('recb required')
+    _CMD.debug(interactive=False).parse("")
+    _CMD.debug(interactive=False).parse("ls 'i'")
+    _CMD.debug(interactive=False).parse('ls I "I"')
+    _CMD.debug(interactive=False).parse('echo I "i I" | grep i')
+    _CMD.debug(interactive=False).parse('echo I "i I" | grep I | grep i')
+    _CMD.debug(interactive=False).parse("(echo test.txt; ls) | grep '1 2 3'")
+
+def cmd2py_newparser(cmdline):
+    _parsed_call[:] = []
+    _parsed_calls[:] = []
+    _parsed_oper[:] = []
+    _, unparsed = _CMD.parse(cmdline)
+    if unparsed:
+        view_chars = 10 # how many chars around syntax error is shown in error message
+        error_pos = len(cmdline) - len(unparsed) + 1
+        str_at_pos = (repr(cmdline[max(error_pos-view_chars, 0):error_pos]) +
+                      "<--[error pos]" +
+                      repr(cmdline[error_pos:min(len(cmdline)-1, error_pos+view_chars)]))
+        raise ValueError('syntax error at pos %s: %s' % (
+            len(cmdline) - len(unparsed),
+            str_at_pos))
+    if len(_parsed_calls) == 1:
+        return _parsed_calls[0]
+    else:
+        raise ValueError('parse error')
 
 def prompt():
     """prompt
@@ -616,6 +686,11 @@ def pipe(expr_left, expr_right):
             pass
         _g_pipe_has_data = False
     return rv
+
+def cat_eval(expr_left, expr_right):
+    left_data = eval(expr_left)
+    right_data = eval(expr_right)
+    return left_data + right_data
 
 def ps(*args):
     """ps [-v] [PID...]
