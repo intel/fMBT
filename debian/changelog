@@ -1,8 +1,31 @@
-fmbt (0.40-0.rc0) unstable; urgency=low
+fmbt (0.40-1) unstable; urgency=low
 
-  * Development version.
-
- -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 25 Oct 2017 12:42:00 +0300
+  * pycosh:
+    - grep: added -H option, prints "is a directory".
+    - Support configuring with ~/.pycoshrc.
+    - Uniform directory separator on all platforms: "/".
+  * pythonshare:
+    - Support PYTHONSHARE_HOSTSPECS environment variable for shorthands.
+    - Server logging improved (show head and tail of lon messages + crc32).
+    - Clients can --ls-remote-ip addresses of registered remote namespaces.
+    - Fix concurrency issue on mixing up return values.
+    - Fix threads piling up on busy pythonshare hubs.
+    - Fix unhandled exception on authentication.
+  * fmbt-stats:
+    - Support latest gnuplot.
+  * fmbtuinput:
+    - Added LED control on USB keyboards.
+  * fmbtvnc:
+    - Fixed autoUpdate=False/black screenshot issue.
+  * fmbtgui:
+    - Support latest Tesseract.
+  * packaging / building:
+    - Moved to using newer libpng (libpng16).
+    - Fixed building ./configure --without-imagemagick.
+    - Fixed compilation issue on certain C compilers.
+    - Fixed Windows build on Fedora 23.
+    - Added build check and error on too new ImageMagick.
+ -- Antti Kervinen <antti.kervinen@intel.com>  Thu, 11 Oct 2018 10:42:00 +0300
 
 fmbt (0.39-1) unstable; urgency=low
 
