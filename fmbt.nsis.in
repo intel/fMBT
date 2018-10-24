@@ -7,7 +7,7 @@
 
 # These three must be integers
 !define VERSIONMAJOR 0
-!define VERSIONMINOR 40
+!define VERSIONMINOR 41
 !define VERSIONBUILD 0
 
 # These will be displayed by the "Click here for support information"
