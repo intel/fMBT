@@ -1,5 +1,5 @@
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2013-2017, Intel Corporation.
+# Copyright (c) 2013-2018, Intel Corporation.
 #
 # Author: antti.kervinen@intel.com
 #
@@ -509,7 +509,7 @@ def _serve_connection(conn, conn_opts):
                     elif _fwd_status is None:
                         # nothing forwarded, send return value by normal means
                         exec_rv = _fwd_info
-                except EOFError:
+                except (EOFError, socket.error):
                     daemon_log('connection lost to "%s"' % (ns,))
                     _drop_remote_namespace(ns)
                     break
