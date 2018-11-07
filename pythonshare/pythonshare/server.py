@@ -519,8 +519,7 @@ def _serve_connection(conn, conn_opts):
                 if obj.async:
                     # asynchronous execution, return handle (Async_rv)
                     _g_async_rv_counter += 1
-                    rvid = datetime.datetime.now().strftime(
-                        "%s.%f") + str(_g_async_rv_counter)
+                    rvid = timestamp() + str(_g_async_rv_counter)
                     exec_rv = messages.Async_rv(ns, rvid)
                     _g_async_rvs[ns][rvid] = pythonshare.InProgress()
                     thread.start_new_thread(_local_async_execute, (exec_rv, obj))
