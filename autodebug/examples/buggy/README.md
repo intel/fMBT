@@ -22,13 +22,14 @@ gcc -O0 -g -fsanitize=address -fsanitize-recover=address -o buggy-s buggy.c
 Find and debug the errors
 -------------------------
 
-1. Invalid pointer. Easy to find by just running the program:
+1. **Invalid pointer**. Easy to find by just running the program:
    ```
    $ ./buggy p
    Segmentation fault
    ```
 
    Debug with:
+   ```
    $ autodebug ./buggy p
    ========================================================================
    error 1: Program received signal SIGSEGV, Segmentation fault.
@@ -51,7 +52,7 @@ Find and debug the errors
        ...
    ```
 
-2. Stack underflow. Cannot be foundby running the program:
+2. **Stack underflow**. Cannot be foundby running the program:
    ```
    $ ./buggy s
    $
@@ -122,7 +123,7 @@ Find and debug the errors
            ...
    ```
 
-3. Uninitialized value in condition. Cannot be found by running the program or the instrumented version:
+3. **Uninitialized value in condition**. Cannot be found by running the program or the instrumented version:
    ```
    $ ./buggy u
    $ ./buggy-s u
