@@ -1,0 +1,495 @@
+#!/usr/bin/env python
+#
+# fMBT, free Model Based Testing tool
+# Copyright (c) 2018, Intel Corporation.
+#
+# Author: antti.kervinen@intel.com
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms and conditions of the GNU Lesser General Public
+# License, version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA
+# 02110-1301 USA.
+
+"""Usage (run-and-debug): autodebug [options] /path/to/program [arg...]
+Usage (post-mortem):   autodebug --core /path/to/core [/path/to/program]
+
+Options:
+  -h, --help              print help.
+  -c, --core COREFILE     post-mortem autodebug from core.
+  -o, --output OUTFILE    save autodebug output to OUTFILE, the default
+                          is "stdout". You can give multiple outputs.
+  -t, --timeout TIMEOUT   timeout [s] for gdb communication.
+                          Stop debugging if gdb does not answer on time.
+                          The default is None (wait forever).
+  -x COMMAND              Run gdb command before running the program.
+
+  -d, --debug             increase debug output level.
+  --debug-pm              launch post-mortem debugger on exceptions.
+
+The program or libraries to be debugged must be built with debug information,
+gcc/g++ flag -g. autodebug has special support for AddressSanitizer
+findings. To get those, build the program/libraries with
+-fsanitize=address -fsanitize-recover=address -g.
+"""
+
+import getopt
+import os
+import re
+import select
+import subprocess
+import sys
+import thread
+import time
+
+g_command = "autodebug"
+opt_debug = 0
+opt_outputs = []
+opt_timeout = None
+opt_core = None
+
+def error(msg, exit_status=1):
+    """print error message and exit"""
+    if msg:
+        sys.stderr.write("%s: %s\n" % (g_command, msg))
+    if exit_status != None:
+        sys.exit(1)
+
+def debug(msg, level=1):
+    """print debug message"""
+    if level <= opt_debug:
+        time_since_launch = time.time() - debug.launch_time
+        sys.stderr.write("[DEBUG %s/%s %.2f]: %s\n" % (g_command, level, time_since_launch, msg))
+debug.launch_time = time.time()
+
+def output(msg):
+    """print output"""
+    for out_fileobj in opt_outputs:
+        out_fileobj.write(msg)
+        out_fileobj.flush()
+
+def gdb_read_response(gdb_process, maxlines=-1, timeout=None, read_until_sync=False):
+    """maxlines -1 means read until nothing to read until timeout"""
+    if timeout is None:
+        timeout = opt_timeout
+    out = gdb_process.stdout
+    err = gdb_process.stderr
+    connection_lost = False
+    lines = []
+    err_lines = gdb_read_response.err_lines
+    fds_to_read = [out, err]
+    while 1:
+        readable, _, _ = select.select(fds_to_read, [], [], timeout)
+        if not readable:
+            break
+        elif err in readable: # prioritize reading stderr over stdout
+            c = err.read(1) # keep stderr unblocked
+            if c:
+                if not err_lines: err_lines.append("")
+                err_lines[-1] += c
+                if err_lines[-1][-1] == "\n":
+                    debug('gdb stderr: %r' % (err_lines[-1],), 3)
+                    if "ERROR: AddressSanitizer:" in err_lines[-1]:
+                        gdb_read_response.runtime_errors.append(err_lines[-1].split("AddressSanitizer:", 1)[-1].strip())
+                    err_lines.append("")
+            else:
+                debug('gdb_read_response: EOF from gdb stderr', 3)
+                fds_to_read.remove(err)
+        elif out in readable:
+            if not lines: lines.append("")
+            c = out.read(1)
+            if not c:
+                debug('gdb_read_response: EOF', 3)
+                connection_lost = True
+                break
+            lines[-1] += c
+            if lines[-1][-1] == '\n':
+                if len(lines) == maxlines: break
+                else: lines.append("")
+            if lines[-1].endswith('(gdb) '):
+                break # got prompt, nothing more is coming
+            if '---Type <return> to continue, or q <return> to quit---' in lines[-1]:
+                # remove pagination line from response
+                lines = lines[:-1]
+                # quit pagination
+                lines_after_pagination = gdb_cmd(gdb_process, 'q\n')
+                lines.extend(lines_after_pagination)
+                break
+    debug("lines: %s, last line: %r" % (len(lines), repr(lines[-1] if lines else "N/A")), 3)
+    return lines
+gdb_read_response.err_lines = []
+gdb_read_response.runtime_errors = []
+
+def gdb_cmd(gdb_process, cmd, timeout=None):
+    """send command to gdb, return gdb response"""
+    if timeout is None:
+        timeout = opt_timeout
+    debug('gdb_cmd: %r' % (cmd,), 2)
+    gdb_process.stdin.write(cmd)
+    gdb_process.stdin.flush()
+    resp = gdb_read_response(gdb_process, timeout=timeout)
+    debug('gdb_cmd resp: %r' % (resp[:100],), 2)
+    return resp
+
+def gdb_inferior_running(gdb):
+    """returns true if and only if debugged process is still alive"""
+    gdb_ans = gdb_cmd(gdb, "frame\n")
+    if (len(gdb_ans) == 1 # only a prompt
+        or "No stack" in "".join(gdb_ans)):
+        return False
+    else:
+        return True
+
+def parse_array_indices(code):
+    """returns expressions with which arrays are indexed in the code"""
+    # Example:
+    # code: 'a[b[1+1]-2-c[x]]'
+    # return: ['b[1+1]-2-c[x]', '1+1', 'x']
+    indices = []
+    unfinished_indices = []
+    for c in code:
+        if c == ']':
+            try:
+                indices.append("".join(unfinished_indices.pop()))
+            except:
+                pass
+        for ufi in unfinished_indices:
+            ufi.append(c)
+        if c == '[':
+            unfinished_indices.append([])
+    return indices
+
+def frame_debug_info(gdb):
+    """returns frame debug information in a dictionary"""
+    MAX_LINE_LEN = 72
+    ret_vars = []
+    v_depth = None
+    v_file = None
+    v_lineno = None
+    v_line = None
+    v_func = None
+    v_args = []
+    v_locals = []
+    v_nearby_code = []
+    v_nearby_vars = []
+    v_args = [l.strip() for l in gdb_cmd(gdb, 'info args\n')[:-1]
+              if not l.startswith("    ")]
+    if "this" in " ".join(v_args):
+        query_local_attributes = True
+    else:
+        query_local_attributes = False
+    try:
+        frame = [l.strip() for l in gdb_cmd(gdb, 'frame\n')[:-1]]
+        v_depth = int(frame[0].split()[0][1:]) # stack frame depth
+        frame_oneline = " ".join(frame)
+        try:
+            v_func = re.findall("#[0-9]+ [ ]*0x[0-9a-fA-F]* [ ]*in ([a-zA-Z_][a-zA-Z_0-9:<>,.]*) ", frame_oneline)[0]
+        except IndexError:
+            v_func = re.findall("#[0-9]+ [ ]*([a-zA-Z_][a-zA-Z_0-9:<>,.]*) ", frame_oneline)[0]
+        try:
+            v_file, v_lineno = re.findall(r"\) at ([^:]*):([0-9]+)", frame_oneline)[0]
+        except IndexError:
+            v_file = None
+            v_line = None
+            v_lineno = -1
+        if not v_file is None:
+            if v_file in frame[-1]: # no source code available
+                v_line = None
+            else:
+                v_line = frame[-1]
+    except IndexError:
+        v_line = None
+        v_func = None
+        v_lineno = -1
+    if v_line: # source code is available
+        debug('debugging frame at depth %s' % (v_depth,), 2)
+        v_locals = [l.strip() for l in gdb_cmd(gdb, 'info locals\n')[:-1] if not l.startswith(" ") and  " = " in l]
+        v_nearby_vars = []
+        # find variables and array references in nearby code
+        v_nearby_code = [c.rstrip() for c in gdb_cmd(gdb, 'l\n')][:-1]
+        ss = " ".join(v_nearby_code)
+        ss = re.sub(r'[^a-zA-Z0-9_\[\]]', ' ', ss)
+        words = ss.split() + parse_array_indices("\n".join(v_nearby_code))
+        for word in sorted(set(words)):
+            try:
+                float(word) # if this is a number, don't print it
+                continue
+            except ValueError:
+                pass
+            res = gdb_cmd(gdb, 'print %s\n' % (word,))
+            if res and "=" in res[0]:
+                v_nearby_vars.append(word + " = " + res[0].split("=", 1)[-1].strip()[:MAX_LINE_LEN])
+            elif query_local_attributes:
+                res = gdb_cmd(gdb, 'print this.%s\n' % (word,))
+                if res and "=" in res[0]:
+                    v_nearby_vars.append(word + " = " + res[0].split("=", 1)[-1].strip())
+    return {
+        'depth': v_depth,
+        'file': v_file,
+        'lineno': int(v_lineno),
+        'line': v_line,
+        'func': v_func,
+        'args': v_args,
+        'locals': v_locals,
+        'nearby_code': v_nearby_code,
+        'nearby_vars': v_nearby_vars}
+
+def source_stack(frames):
+    """returns list of strings that contain only source
+    lines on frames where available"""
+    rv = []
+    for frame in frames:
+        if frame['line']:
+            rv.append("%(file)s:%(lineno)s\n%(line)s" % frame)
+    return rv
+
+_reported_source_stack = set()
+def report_frames(frames):
+    """print debug information on the stack of frames"""
+    report = []
+    for frameno, frame in enumerate([f for f in frames if f['func'] != None and not str(f['func']).startswith("__asan_report")]):
+        if frameno == 0:
+            report.append("error in %(func)s (%(file)s:%(lineno)s)" % frame)
+        else:
+            report.append("called from %(func)s (%(file)s:%(lineno)s)" % frame)
+        if frame['line']:
+            report.append("    arguments:")
+            report.extend(["        %s" % (arg,) for arg in frame['args']])
+            report.append("    local variables:")
+            report.extend(["        %s" % (v,) for v in sorted(frame['locals'])])
+            if frameno == 0:
+                report.append("    error at line %(lineno)s:" % frame)
+            else:
+                report.append("    error inside function called on line %(lineno)s:" % frame)
+            report.extend(["        %s" % (c,) for c in frame['nearby_code']])
+            report.append("    nearby expressions:")
+            report.extend(["        %s" % (v,) for v in frame['nearby_vars']])
+    _reported_source_stack.add("".join(source_stack(frames)))
+    return report
+
+def already_reported_source_stack(frames):
+    """returns true if similar stack is already reported"""
+    return "".join(source_stack(frames)) in _reported_source_stack
+
+def post_mortem_debug(gdb, first_gdb_output):
+    """report frames based on a core file"""
+    debug('post-mortem debugging a core file')
+    # detect error message that terminated program
+    error_name = "N/A"
+    for line in first_gdb_output:
+        if "Program terminated" in line:
+            error_name = line.strip()
+    # go through stack frames
+    last_depth = -1
+    frames = []
+    current_frame = frame_debug_info(gdb)
+    while last_depth != current_frame['depth']:
+        frames.append(current_frame)
+        last_depth = current_frame['depth']
+        gdb_cmd(gdb, 'up\n')
+        current_frame = frame_debug_info(gdb)
+    # report
+    output(("=" * 72) + "\n")
+    output("error: %s\n" % (error_name,))
+    output("\n".join(report_frames(frames)) + "\n")
+
+def detect_executable_from_core(core):
+    """find executable that generated a core"""
+    debug("detecting executable from core %r" % (opt_core,))
+    pre_gdb = subprocess.Popen(["gdb", "--core", opt_core],
+                               stdin=subprocess.PIPE,
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+    output = gdb_cmd(pre_gdb, "") # expect prompt
+    gdb_cmd(pre_gdb, "quit\n")
+    for line in output:
+        if "Core was generated by" in line:
+            program = line.rsplit("'", 1)[0].split("`", 1)[-1].split()[0]
+            debug("detected executable %r" % (program,))
+            return program
+    return None
+
+def main(program_argv):
+    """debug program and args executed as program_argv"""
+    if opt_core and not program_argv:
+        # post-mortem mode without /path/to/program,
+        # try to detect /path/to/program from gdb output
+        program = detect_executable_from_core(opt_core)
+        if program is None:
+            error('detecting executable from core %r failed' % (opt_core,))
+        if not os.access(program, os.R_OK):
+            error('cannot read executable %r that generated core %r' %
+                  (program, opt_core))
+        program_argv = [program]
+    elif not program_argv:
+        error('no program specified, see --help')
+
+    first_error_to_debug = 1
+    if opt_core is None:
+        gdb_argv = ['gdb', '--args'] + program_argv
+    else:
+        gdb_argv = ['gdb', program_argv[0], '--core', opt_core]
+    asan_env = {'ASAN_OPTIONS': 'halt_on_error=0'}
+
+    gdb_env = dict(os.environ)
+    gdb_env.update(asan_env)
+
+    debug("%s pid %s" % (g_command, os.getpid()))
+
+    try:
+        gdb = subprocess.Popen(
+            gdb_argv,
+            stdin=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            env=gdb_env)
+        debug("gdb process launched with %r" % (gdb_argv,))
+    except Exception, e:
+        error('cannot launch gdb with command %r: %s' % (gdb_argv, e))
+    debug("gdb pid %s" % (gdb.pid,))
+
+    first_gdb_output = gdb_cmd(gdb, "") # expect prompt
+    for x in opt_gdb_command_before_run:
+        gdb_cmd(gdb, x + "\n")
+    gdb_cmd(gdb, 'set non-stop off\n')
+    # for safety (never-ending print) use pagination and interrupt it
+    gdb_cmd(gdb, 'set pagination on\n')
+    gdb_cmd(gdb, 'set height 200\n')
+
+    if opt_core: # post-mortem debugging
+        return post_mortem_debug(gdb, first_gdb_output)
+
+    debug("run until main()")
+    gdb_cmd(gdb, 'break main\n')
+    gdb_cmd(gdb, 'run\n')
+    debug("set address sanitizer breakpoints and continue")
+    gdb_cmd(gdb, 'rbreak __asan_report.*\n')
+    gdb_ans = gdb_cmd(gdb, "continue\n", timeout=opt_timeout) # program should break before timeout
+    if not gdb_ans or not gdb_ans[-1].startswith("(gdb)"):
+        debug(str(gdb_ans))
+        error("Program did not break or stop before timeout (-t %s)" % (opt_timeout,))
+
+    error_count = 0
+    last_runtime_error = -1
+    while gdb_inferior_running(gdb):
+        error_name = None
+        if len([l for l in gdb_ans if "__asan_report" in l]) == 0:
+            # this is not a breakpoint in AddressSanitizer reporting
+            if [l for l in gdb_ans if "received signal" in l]:
+                error_name = [l for l in gdb_ans if "received signal" in l][0].strip()
+            else:
+                debug("stopping due to unknown gdb answer %r" % (gdb_ans,))
+                break
+        error_count += 1
+        if error_count < first_error_to_debug:
+            debug('skip debugging error %s' % (error_count,))
+            gdb_ans = gdb_cmd(gdb, "continue\n")
+        else:
+            debug('debugging error %s' % (error_count,))
+            # get debug info on all frames
+            last_depth = -1
+            frames = []
+            current_frame = frame_debug_info(gdb)
+            while last_depth != current_frame['depth']:
+                frames.append(current_frame)
+                last_depth = current_frame['depth']
+                gdb_cmd(gdb, 'up\n')
+                current_frame = frame_debug_info(gdb)
+
+            # let AddressSanitizer write report to stderr
+            # in order to find a name for the error
+            if error_name is None:
+                error_name = "N/A"
+            if frames:
+                for _ in xrange(len(frames)):
+                    gdb_cmd(gdb, "down\n")
+                bottom_frame = gdb_cmd(gdb, "frame\n")
+                gdb_read_response.runtime_errors = []
+                gdb_cmd(gdb, "finish\n")
+                time.sleep(0.1)
+                gdb_cmd(gdb, "finish\n")
+                if gdb_read_response.runtime_errors:
+                    error_name = "AddressSanitizer found " + gdb_read_response.runtime_errors[0].split(" ", 1)[0]
+
+            if not already_reported_source_stack(frames):
+                output(("=" * 72) + "\n")
+                output("error %s: %s\n" % (error_count, error_name))
+                output("\n".join(report_frames(frames)))
+                output("\n")
+            gdb_ans = gdb_cmd(gdb, 'continue\n') # let sanitizer go to next error
+        time.sleep(0.1)
+
+if __name__ == "__main__":
+    opt_debug_pm = False
+    opt_debug = 0
+    opt_gdb_command_before_run = []
+    try:
+        opts, remainder = getopt.getopt(
+            sys.argv[1:],
+            'hc:do:t:x:',
+            ['help', 'debug', 'debug-pm',
+             'core=', 'output=', 'timeout='])
+    except getopt.GetoptError, e:
+        error(str(e))
+
+    for opt, arg in opts:
+        if opt in ["-h", "--help"]:
+            print __doc__
+            error(None, exit_status=0)
+        elif opt in ["--debug-pm"]:
+            opt_debug_pm = True
+        elif opt in ["-d", "--debug"]:
+            opt_debug += 1
+        elif opt in ["-c", "--core"]:
+            opt_core = arg
+            if not os.access(opt_core, os.R_OK):
+                error('cannot read --core %r' % (opt_core,))
+        elif opt in ["-o", "--output"]:
+            out_filename = arg
+            if out_filename.lower() == "stdout":
+                opt_outputs.append(sys.stdout)
+            elif out_filename.lower() == "stderr":
+                opt_outputs.append(sys.stderr)
+            else:
+                try:
+                    opt_outputs.append(open(out_filename, "w"))
+                    debug('writing output to %r' % (out_filename,))
+                except IOError, e:
+                    error('cannot open %r for writing: %s' % (out_filename, e))
+        elif opt in ["-t", "--timeout"]:
+            try:
+                opt_timeout = int(arg)
+            except ValueError:
+                error('invalid timeout %r, integer expected' % (arg,))
+        elif opt in ["-x"]:
+            opt_gdb_command_before_run.append(arg)
+    argv = remainder
+    if not opt_outputs:
+        # print output to sys.stdout by default
+        opt_outputs.append(sys.stdout)
+
+    debug('debug level: %s' % (opt_debug,))
+    try:
+        main(argv)
+    except Exception, e:
+        if opt_debug_pm:
+            import traceback
+            tb_lines = traceback.format_exc().splitlines()
+            max_linelen = max([len(l) for l in tb_lines])
+            debug("=" * max_linelen, 0)
+            for line in tb_lines:
+                debug(line, 0)
+            debug("=" * max_linelen, 0)
+            debug("Entering post-mortem debugger", 0)
+            import pdb
+            pdb.post_mortem()
+        else:
+            error(str(e) + " (use --debug-pm to debug this error)")

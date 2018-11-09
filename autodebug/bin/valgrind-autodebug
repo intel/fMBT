@@ -1,0 +1,525 @@
+#!/usr/bin/env python
+#
+# fMBT, free Model Based Testing tool
+# Copyright (c) 2018, Intel Corporation.
+#
+# Author: antti.kervinen@intel.com
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms and conditions of the GNU Lesser General Public
+# License, version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA
+# 02110-1301 USA.
+
+"""Usage: valgrind-autodebug [options] /path/to/program [arg...]
+
+Options:
+  -h, --help              print help.
+  -o, --output OUTFILE    save autodebug output to OUTFILE, the default
+                          is "stdout". You can give multiple outputs.
+  -t, --timeout TIMEOUT   timeout [s] for gdb communication, the default is 10.
+                          Increase if the program does not crash the timeout.
+  -s, --start ERRORNUM    The first error to debug, the default is 1. Errors
+                          before this are skipped.
+  -x COMMAND              Run gdb command before running the program.
+  -i, --interactive       Show interactive gdb prompt instead of autodebug.
+
+  -d, --debug             increase debug output level.
+  --debug-pm              launch post mortem debugger on exceptions.
+
+Runs program under valgrind and automatically debugs valgrind errors
+with vgdb.
+"""
+
+import atexit
+import getopt
+import os
+import re
+import select
+import subprocess
+import sys
+import thread
+import time
+
+g_command = "valgrind-autodebug"
+opt_debug = 0
+opt_interactive = None
+opt_outputs = []
+opt_start = 1
+opt_timeout = 60
+
+def error(msg, exit_status=1):
+    """print error message and exit"""
+    if msg:
+        sys.stderr.write("%s: %s\n" % (g_command, msg))
+    if exit_status != None:
+        sys.exit(1)
+
+def debug(msg, level=1):
+    """print debug message"""
+    if level <= opt_debug:
+        sys.stderr.write("[DEBUG %s/%s]: %s\n" % (g_command, level, msg))
+
+def output(msg):
+    """print output"""
+    for out_fileobj in opt_outputs:
+        out_fileobj.write(msg)
+        out_fileobj.flush()
+
+def parse_valgrind_output(output):
+    """Parse error reported by Valgrind on output"""
+    debug('parsing valgrind output %r' % (output,))
+    if isinstance(output, basestring):
+        output_lines = output.splitlines()
+    else:
+        output_lines = output
+    r_valgrind_thread = re.compile("==[ 0-9]+== Thread [0-9]*:")
+    r_valgrind_error = re.compile("==[ 0-9]+== ([^ ].*[^:])$")
+    r_valgrind_stack = re.compile(r"==[ 0-9]+==    (at|by) 0x[^:]*: (.*) \((.*):([0-9]+)\)")
+    errors = []
+    error_count = 0
+    skip_lines = 0 # skip header
+    for line in output:
+        if skip_lines:
+            skip_lines -= 1
+            continue
+        if "TO DEBUG THIS PROCESS" in line:
+            skip_lines = 5 # skip GDB use instructions
+        elif "Memcheck, a memory error" in line:
+            skip_lines = 5
+        elif "More than 100 errors detected" in line:
+            skip_lines = 1
+        elif "Continuing ..." in line:
+            continue
+        elif r_valgrind_thread.match(line):
+            continue
+        elif "Rerun with --leak-check=full" in line:
+            break # all interesting lines parsed
+        elif "vgdb me" in line:
+            break
+        elif r_valgrind_error.match(line):
+            msg = r_valgrind_error.findall(line)[0]
+            errors.append({'msg': msg, 'stack': []})
+        elif r_valgrind_stack.match(line):
+            at_by, func, filename, lineno = r_valgrind_stack.findall(line)[0]
+            errors[-1]["stack"].append({
+                "func": func,
+                "filename": filename,
+                "lineno": int(lineno)})
+    return errors
+
+def gdb_read_response(gdb_process, maxlines=-1, timeout=None, read_until_sync=False):
+    """maxlines -1 means read until nothing to read until timeout"""
+    if timeout is None:
+        timeout = opt_timeout
+    out = gdb_process.stdout
+    err = gdb_process.stderr
+    connection_lost = False
+    lines = []
+    err_lines = []
+    fds_to_read = [out, err]
+    while 1:
+        readable, _, _ = select.select(fds_to_read, [], [], timeout)
+        if not readable:
+            break
+        elif err in readable: # prioritize reading stderr over stdout
+            c = err.read(1) # keeps gdb/inferior writing to stderr unblocked
+            if c:
+                if not err_lines: err_lines.append("")
+                err_lines[-1] += c
+                if err_lines[-1][-1] == "\n":
+                    debug('gdb stderr: %r' % (err_lines[-1],), 3)
+                    err_lines.append("")
+            else:
+                debug('gdb_read_response: EOF from gdb stderr', 3)
+                fds_to_read.remove(err)
+        elif out in readable:
+            if not lines: lines.append("")
+            c = out.read(1)
+            if not c:
+                debug('gdb_read_response: EOF from gdb stdout', 3)
+                connection_lost = True
+                break
+            lines[-1] += c
+            if lines[-1][-1] == '\n':
+                if len(lines) == maxlines: break
+                else: lines.append("")
+            if lines[-1].endswith('(gdb) '):
+                break # got prompt, nothing more is coming
+            if '---Type <return> to continue, or q <return> to quit---' in lines[-1]:
+                # remove pagination line from response
+                lines = lines[:-1]
+                # quit pagination
+                lines_after_pagination = gdb_cmd(gdb_process, 'q\n')
+                lines.extend(lines_after_pagination)
+                break
+    debug("lines: %s, last line: %r" % (len(lines), repr(lines[-1] if lines else "N/A")), 3)
+    return lines
+
+def gdb_cmd(gdb_process, cmd, timeout=None):
+    """send command to gdb, return gdb response"""
+    if timeout is None:
+        timeout = opt_timeout
+    debug('gdb_cmd: %r' % (cmd,), 2)
+    gdb_process.stdin.write(cmd)
+    gdb_process.stdin.flush()
+    resp = gdb_read_response(gdb_process, timeout=timeout)
+    debug('gdb_cmd resp: %r' % (resp[:100],), 2)
+    return resp
+
+def gdb_inferior_running(gdb):
+    """returns true if and only if debugged process is still alive"""
+    gdb_ans = gdb_cmd(gdb, "frame\n", timeout=1)
+    if (len(gdb_ans) <= 1 # only a prompt
+        or "No stack" in "".join(gdb_ans)):
+        return False
+    else:
+        return True
+
+def reader(fileobj, result):
+    result.append("")
+    current_line = []
+    s = fileobj.read(1)
+    while s:
+        if s == "\n":
+            result.append("".join(current_line))
+            current_line = []
+        else:
+            current_line.append(s)
+        s = fileobj.read(1)
+    result.append(None)
+
+def reader_writer(fileobj, out_fileobj):
+    s = fileobj.read(1)
+    while s:
+        out_fileobj.write(s)
+        s = fileobj.read(1)
+
+def parse_array_indices(code):
+    """returns expressions with which arrays are indexed in the code"""
+    # Example:
+    # code: 'a[b[1+1]-2-c[x]]'
+    # return: ['b[1+1]-2-c[x]', '1+1', 'x']
+    indices = []
+    unfinished_indices = []
+    for c in code:
+        if c == ']':
+            try:
+                indices.append("".join(unfinished_indices.pop()))
+            except:
+                pass
+        for ufi in unfinished_indices:
+            ufi.append(c)
+        if c == '[':
+            unfinished_indices.append([])
+    return indices
+
+def frame_debug_info(gdb):
+    MAX_LINE_LEN = 72
+    ret_vars = []
+    v_depth = None
+    v_file = None
+    v_lineno = None
+    v_line = None
+    v_func = None
+    v_args = []
+    v_locals = []
+    v_nearby_code = []
+    v_nearby_vars = []
+    v_args = [l.strip() for l in gdb_cmd(gdb, 'info args\n')[:-1]
+              if not l.startswith("    ")]
+    if "this" in " ".join(v_args):
+        query_local_attributes = True
+    else:
+        query_local_attributes = False
+    try:
+        frame = [l.strip() for l in gdb_cmd(gdb, 'frame\n')[:-1]]
+        v_depth = int(frame[0].split()[0][1:]) # stack frame depth
+        frame_oneline = " ".join(frame)
+        try:
+            v_func = re.findall("#[0-9]+ [ ]*0x[0-9a-fA-F]* [ ]*in ([a-zA-Z_][a-zA-Z_0-9:<>,.]*) ", frame_oneline)[0]
+        except IndexError:
+            v_func = re.findall("#[0-9]+ [ ]*([a-zA-Z_][a-zA-Z_0-9:<>,.]*) ", frame_oneline)[0]
+        try:
+            v_file, v_lineno = re.findall(r"\) at ([^:]*):([0-9]+)", frame_oneline)[0]
+        except IndexError:
+            v_file = None
+            v_line = None
+            v_lineno = -1
+        if not v_file is None:
+            if v_file in frame[-1]: # no source code available
+                v_line = None
+            else:
+                v_line = frame[-1]
+    except IndexError:
+        v_line = None
+        v_func = None
+        v_lineno = -1
+    if v_line: # source code is available
+        debug('debugging frame at depth %s' % (v_depth,), 2)
+        v_locals = [l.strip() for l in gdb_cmd(gdb, 'info locals\n')[:-1] if not l.startswith(" ") and  " = " in l]
+        v_nearby_vars = []
+        # find variables and array references in nearby code
+        v_nearby_code = [c.rstrip() for c in gdb_cmd(gdb, 'l\n')][:-1]
+        ss = " ".join(v_nearby_code)
+        ss = re.sub(r'[^a-zA-Z0-9_\[\]]', ' ', ss)
+        words = ss.split() + parse_array_indices("\n".join(v_nearby_code))
+        for word in sorted(set(words)):
+            try:
+                float(word) # if this is a number, don't print it
+                continue
+            except ValueError:
+                pass
+            res = gdb_cmd(gdb, 'print %s\n' % (word,))
+            if res and "=" in res[0]:
+                v_nearby_vars.append(word + " = " + res[0].split("=", 1)[-1].strip()[:MAX_LINE_LEN])
+            elif query_local_attributes:
+                res = gdb_cmd(gdb, 'print this.%s\n' % (word,))
+                if res and "=" in res[0]:
+                    v_nearby_vars.append(word + " = " + res[0].split("=", 1)[-1].strip())
+    return {
+        'depth': v_depth,
+        'file': v_file,
+        'lineno': int(v_lineno),
+        'line': v_line,
+        'func': v_func,
+        'args': v_args,
+        'locals': v_locals,
+        'nearby_code': v_nearby_code,
+        'nearby_vars': v_nearby_vars}
+
+def source_stack(frames):
+    """returns list of strings that contain only source
+    lines on frames where available"""
+    rv = []
+    for frame in frames:
+        if frame['line']:
+            rv.append("%(file)s:%(lineno)s\n%(line)s" % frame)
+    return rv
+
+_reported_source_stack = set()
+def report_frames(frames):
+    report = []
+    for frameno, frame in enumerate(frames):
+        if frameno == 0:
+            report.append("error in %(func)s (%(file)s:%(lineno)s)" % frame)
+        else:
+            report.append("called from %(func)s (%(file)s:%(lineno)s)" % frame)
+        if frame['line']:
+            report.append("    arguments:")
+            report.extend(["        %s" % (arg,) for arg in frame['args']])
+            report.append("    local variables:")
+            report.extend(["        %s" % (v,) for v in sorted(frame['locals'])])
+            if frameno == 0:
+                report.append("    error at line %(lineno)s:" % frame)
+            else:
+                report.append("    error inside function called on line %(lineno)s:" % frame)
+            report.extend(["        %s" % (c,) for c in frame['nearby_code']])
+            report.append("    nearby expressions:")
+            report.extend(["        %s" % (v,) for v in frame['nearby_vars']])
+    _reported_source_stack.add("".join(source_stack(frames)))
+    return report
+
+def already_reported_source_stack(frames):
+    return "".join(source_stack(frames)) in _reported_source_stack
+
+def main(program_argv):
+    """debug program and args executed as program_argv"""
+    global opt_interactive
+
+    if not program_argv:
+        error('no program specified, see --help')
+
+    val_argv = ['valgrind', '--vgdb=yes', '--vgdb-error=%s' % (opt_start,),
+                '--error-limit=no'] + program_argv
+
+    gdb_argv = ['gdb', program_argv[0]]
+
+    try:
+        val = subprocess.Popen(
+            val_argv,
+            stdin=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE)
+        debug("valgrind pid %s launched with %r" % (val.pid, val_argv))
+    except Exception, e:
+        error('failed to launch valgrind with %r: %s' % (val_argv, e))
+
+    val_err = []
+    thread.start_new_thread(reader, (val.stderr, val_err))
+
+    gdb = None # process handle
+    gdb_connected = False
+    error_count = opt_start - 1
+    while True:
+        if len(val_err) > 0 and val_err[-1] is None:
+            break
+        if [l for l in val_err if not l is None and 'vgdb me' in l]:
+            error_count += 1
+            debug('debugging error %s' % (error_count,))
+            current_error = parse_valgrind_output(val_err)[0]
+            val_err[:] = []
+            if not gdb_connected:
+                debug('connecting vgdb to valgrind pid %s' % (val.pid,))
+                try:
+                    gdb = subprocess.Popen(
+                        gdb_argv,
+                        stdin=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        stdout=subprocess.PIPE)
+                    debug('gdb pid %s' % (gdb.pid,))
+                except Exception, e:
+                    error('failed to launch gdb with %r: %s' % (gdb_argv, e))
+                # connect gdb to valgrind
+                gdb_cmd(gdb, "") # expect prompt
+                for x in opt_gdb_command_before_run:
+                    gdb_cmd(gdb, x + "\n")
+                gdb_cmd(gdb, 'set non-stop off\n')
+                # for safety (never-ending print) use pagination and interrupt it
+                gdb_cmd(gdb, 'set pagination on\n')
+                gdb_cmd(gdb, 'set height 200\n')
+                resp = gdb_cmd(gdb, 'target remote | vgdb --pid=%s\n' % (val.pid,),
+                               timeout=opt_timeout)
+                if not resp:
+                    error('remote connection with vgdb --pid=%s failed, no response within timeout (%s s)'
+                          % (val.pid, opt_timeout), exit_status=None)
+                    break
+                gdb_connected = True
+            if opt_interactive:
+                # go to interactive debugger
+                output("error %s: %s\n" % (error_count, current_error["msg"],))
+                output("".join(gdb_cmd(gdb, "bt\n")[:-1]))
+                if not interactive(gdb):
+                    gdb.terminate()
+                    break
+            else:
+                # autodebug:
+                # get debug info on all frames
+                last_depth = -1
+                frames = []
+                current_frame = frame_debug_info(gdb)
+                while last_depth != current_frame['depth']:
+                    frames.append(current_frame)
+                    last_depth = current_frame['depth']
+                    gdb_cmd(gdb, 'up\n')
+                    current_frame = frame_debug_info(gdb)
+                if not already_reported_source_stack(frames):
+                    output(("=" * 72) + "\n")
+                    output("error %s: %s\n" % (error_count, current_error['msg'],))
+                    output("\n".join(report_frames(frames)))
+                    output("\n")
+                #gdb_cmd(gdb, 'continue\n') # let valgrind go to next error
+
+                # shutdown gdb. this is better than continue?
+                gdb_cmd(gdb, 'quit\ny\n')
+            gdb.terminate()
+            gdb_connected = False
+        time.sleep(0.1)
+    os.kill(val.pid, 9)
+
+def interactive(gdb):
+    histfile = os.path.join(os.path.expanduser("~"), ".autodebug_history")
+    try:
+        import readline
+        try:
+            readline.read_history_file(histfile)
+        except IOError:
+            pass
+        atexit.register(readline.write_history_file, histfile)
+    except (ImportError, IOError):
+        pass
+    while gdb_inferior_running(gdb):
+        try:
+            cmdline = raw_input("(autodebug+gdb) ")
+        except EOFError:
+            cmdline = None
+        if cmdline in [None, "q", "quit", "exit"]:
+            output("end of interactive debug, quitting\n")
+            return False
+        elif cmdline in ["c", "cont", "continue"]:
+            output("quitting gdb, continuing to next error\n")
+            break
+        resp = gdb_cmd(gdb, cmdline + "\n")
+        if resp and resp[-1] == "(gdb) ":
+            output("".join(resp[:-1]))
+        else:
+            output("".join(resp) + "\n")
+    return True
+
+if __name__ == "__main__":
+    opt_debug_pm = False
+    opt_debug = 0
+    opt_gdb_command_before_run = []
+    try:
+        opts, remainder = getopt.getopt(
+            sys.argv[1:],
+            'hdio:s:t:x:',
+            ['help', 'debug', 'debug-pm', 'interactive', 'output=',
+             'start=', 'timeout='])
+    except getopt.GetoptError, e:
+        error(str(e))
+
+    for opt, arg in opts:
+        if opt in ["-h", "--help"]:
+            print __doc__
+            error(None, exit_status=0)
+        elif opt in ["--debug-pm"]:
+            opt_debug_pm = True
+        elif opt in ["-d", "--debug"]:
+            opt_debug += 1
+        elif opt in ["-i", "--interactive"]:
+            opt_interactive = True
+        elif opt in ["-o", "--output"]:
+            out_filename = arg
+            if out_filename.lower() == "stdout":
+                opt_outputs.append(sys.stdout)
+            elif out_filename.lower() == "stderr":
+                opt_outputs.append(sys.stderr)
+            else:
+                try:
+                    opt_outputs.append(open(out_filename, "w"))
+                    debug('writing output to %r' % (out_filename,))
+                except IOError, e:
+                    error('cannot open %r for writing: %s' % (out_filename, e))
+        elif opt in ["-s", "--start"]:
+            try:
+                opt_start = int(arg)
+            except ValueError:
+                error('invalid --start %r, integer expected')
+            if opt_start <= 0:
+                error('invalid --start %s, the first error must be > 0' % (opt_start,))
+        elif opt in ["-t", "--timeout"]:
+            try:
+                opt_timeout = int(arg)
+            except ValueError:
+                error('invalid timeout %r, integer expected' % (arg,))
+        elif opt in ["-x"]:
+            opt_gdb_command_before_run.append(arg)
+    argv = remainder
+    if not opt_outputs:
+        # print output to sys.stdout by default
+        opt_outputs.append(sys.stdout)
+    try:
+        main(argv)
+    except Exception, e:
+        if opt_debug_pm:
+            import traceback
+            tb_lines = traceback.format_exc().splitlines()
+            max_linelen = max([len(l) for l in tb_lines])
+            debug("=" * max_linelen, 0)
+            for line in tb_lines:
+                debug(line, 0)
+            debug("=" * max_linelen, 0)
+            debug("Entering post-mortem debugger", 0)
+            import pdb
+            pdb.post_mortem()
+        else:
+            error(str(e) + " (use --debug-pm to debug this error)")
