@@ -2060,7 +2060,7 @@ def _exitStatusWriter(process, statusFile, filesToBeCleaned):
         except: pass
 
 def shellSOE(command, asyncStatus=None, asyncOut=None, asyncError=None,
-             cwd=None, timeout=None):
+             cwd=None, timeout=None, env=None):
     filesToBeCleaned = []
     if isinstance(command, list):
         useShell = False
@@ -2076,6 +2076,23 @@ def shellSOE(command, asyncStatus=None, asyncOut=None, asyncError=None,
         else:
             useShell = True
 
+    fullEnv = dict(os.environ)
+    if env:
+        for var in env:
+            if env[var] is None:
+                if var in fullEnv:
+                    # {"foo": None} clears "foo" environment variable
+                    del fullEnv[var]
+                else:
+                    # var was not defined, keep it undefined
+                    pass
+            elif isinstance(env[var], basestring):
+                fullEnv[var] = env[var]
+            else:
+                raise TypeError(
+                    'invalid value type %r for environment variable %r, string or None expected'
+                    % (getattr(type(env[var]), "__name__", str(env[var])), var))
+
     if (asyncStatus, asyncOut, asyncError) != (None, None, None):
         # asynchronous execution
         if not asyncStatus or asyncStatus == True:
@@ -2088,10 +2105,11 @@ def shellSOE(command, asyncStatus=None, asyncOut=None, asyncError=None,
         oFile = file(os.path.expandvars(asyncOut), "w")
         eFile = file(os.path.expandvars(asyncError), "w")
         p = subprocess.Popen(command, shell=useShell,
-                             stdin = file(os.devnull),
-                             stdout = oFile,
-                             stderr = eFile,
-                             cwd = cwd)
+                             stdin=file(os.devnull),
+                             stdout=oFile,
+                             stderr=eFile,
+                             cwd=cwd,
+                             env=fullEnv)
         thread.start_new_thread(_exitStatusWriter, (p, sFile, filesToBeCleaned))
         return (None, None, None)
 
@@ -2099,10 +2117,11 @@ def shellSOE(command, asyncStatus=None, asyncOut=None, asyncError=None,
     p = None
     try:
         p = subprocess.Popen(command, shell=useShell,
-                             stdin = subprocess.PIPE,
-                             stdout = subprocess.PIPE,
-                             stderr = subprocess.PIPE,
-                             cwd = cwd)
+                             stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE,
+                             cwd=cwd,
+                             env=fullEnv)
     except OSError:
         status, out, err = None, None, None
     if p != None: # process successfully launched

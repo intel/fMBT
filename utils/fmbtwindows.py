@@ -1637,7 +1637,7 @@ class Device(fmbtgti.GUITestInterface):
         return self._conn.evalPython('shell(%s)' % (repr(command),))
 
     def shellSOE(self, command, asyncStatus=None, asyncOut=None,
-                 asyncError=None, cwd=None, timeout=None):
+                 asyncError=None, cwd=None, timeout=None, env=None):
         """Execute command on Windows.
 
         Parameters:
@@ -1690,6 +1690,21 @@ class Device(fmbtgti.GUITestInterface):
                   instance. Asynchronous executions cannot be timed out.
                   The default is None (no timeout).
 
+          env (dictionary, optional)
+                  defines variables and values for the environment
+                  where the command will be executed.
+                  - Variables that are not in the dictionary are
+                    inherited from the pythonshare-server environment on
+                    DUT.
+                  - Variables with value None are removed from
+                    inherited environment.
+                  - Variables with string values override inherited
+                    variables.
+                  The default is None (no changes to inherited
+                  environment).
+                  Example: unset TEMPDIR and override default PATH
+                  env={"TEMPDIR": None, "PATH": r"c:\windows\system32"}
+
         Returns triplet: exit status, standard output and standard error
         (int, str, str) from the command.
 
@@ -1704,10 +1719,10 @@ class Device(fmbtgti.GUITestInterface):
                 "timeout for asynchronous execution is not supported")
         s, o, e = self._conn.evalPython(
             'shellSOE(%s, asyncStatus=%s, asyncOut=%s, asyncError=%s, '
-            'cwd=%s, timeout=%s)'
+            'cwd=%s, timeout=%s, env=%s)'
             % (repr(command),
                repr(asyncStatus), repr(asyncOut), repr(asyncError),
-               repr(cwd), repr(timeout)))
+               repr(cwd), repr(timeout), repr(env)))
         if isinstance(s, str) and s.startswith("TIMEOUT"):
             s = Timeout(command=command[:1024*8],
                         pid=int(s.split()[-1]))
