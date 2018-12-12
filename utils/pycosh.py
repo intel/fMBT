@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2016, Intel Corporation.
+# Copyright (c) 2016-2018, Intel Corporation.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU Lesser General Public License,
@@ -989,9 +989,9 @@ def tail(*args):
     return "".join(rv)
 
 def tar(*args):
-    """tar [-ctxf] PKG [FILE...]
+    """tar [-ctxfC] PKG [FILE...]
     create/list/extract a tar package"""
-    opts, filenames = _getopts(args, "ctxf:")
+    opts, filenames = _getopts(args, "ctxf:C:")
     pkg = opts.get("-f", expand(accept_pipe=True))
     if not pkg:
         raise ValueError("package filename missing (-f)")
@@ -1001,13 +1001,13 @@ def tar(*args):
         rv.extend(tf.getnames())
     elif "-x" in opts:
         tf = tarfile.TarFile.open(pkg)
-        filenames = expand(*filenames, accept_pipe=False)
+        filenames = expand(*filenames, accept_pipe=False).splitlines()
         if filenames:
             for filename in filenames:
-                tf.extract(filename)
+                tf.extract(filename, path=opts.get('-C', os.getcwd()))
                 rv.append(filename)
         else:
-            tf.extractall()
+            tf.extractall(path=opts.get('-C', os.getcwd()))
     elif "-c" in opts:
         if pkg.endswith(".bz2"):
             mode = "w:bz2"
