@@ -1,5 +1,5 @@
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2013-2014, Intel Corporation.
+# Copyright (c) 2013-2018, Intel Corporation.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU Lesser General Public License,
@@ -1552,7 +1552,8 @@ class GUITestInterface(object):
     def enableVisualLog(self, filenameOrObj,
                         screenshotWidth="240", thumbnailWidth="",
                         timeFormat="%s.%f", delayedDrawing=False,
-                        copyBitmapsToScreenshotDir=False):
+                        copyBitmapsToScreenshotDir=False,
+                        userStyles=""):
         """
         Start writing visual HTML log on this device object.
 
@@ -1589,6 +1590,14 @@ class GUITestInterface(object):
                   If True, every logged bitmap file will be copied to
                   bitmaps directory in screenshotDir. The default is
                   False.
+
+          userStyles (string, optional)
+                  custom contents to be included at the end of
+                  <style>...</style> in the log.
+                  Example:
+                  d.enableVisualLog("mylog.html",
+                                    userStyles=".mybad { color: red; }")
+                  d.visualLog('<div class="mybad">BAD</div>\n', raw=True)
         """
         if type(filenameOrObj) == str:
             try:
@@ -1608,7 +1617,7 @@ class GUITestInterface(object):
                 self._visualLogFilenames.add(outFileObj.name)
         self._visualLog = _VisualLog(self, outFileObj, screenshotWidth,
                                      thumbnailWidth, timeFormat, delayedDrawing,
-                                     copyBitmapsToScreenshotDir)
+                                     copyBitmapsToScreenshotDir, userStyles)
 
     def existingConnection(self):
         """
@@ -3217,7 +3226,8 @@ class _VisualLog:
     def __init__(self, device, outFileObj,
                  screenshotWidth, thumbnailWidth,
                  timeFormat, delayedDrawing,
-                 copyBitmapsToScreenshotDir):
+                 copyBitmapsToScreenshotDir,
+                 userStyles=""):
         self._device = device
         self._outFileObj = outFileObj
         if hasattr(self._outFileObj, "name"):
@@ -3238,6 +3248,7 @@ class _VisualLog:
         self._userFrameId = 0
         self._userFunction = ""
         self._userCallCount = 0
+        self._userStyles = userStyles
         eyenfinger.iSetDefaultDelayedDrawing(delayedDrawing)
         device.refreshScreenshot = self.refreshScreenshotLogger(device.refreshScreenshot)
         device.tap = self.tapLogger(device.tap)
@@ -3414,7 +3425,10 @@ class _VisualLog:
             cgi.escape(str(traceback.format_exception_only(einfo[0], einfo[1])[0])))
         self.write(excHtml)
 
-    def logMessage(self, msg):
+    def logMessage(self, msg, **kwargs):
+        if kwargs.get("raw", False) == True:
+            self.write(msg)
+            return
         callerFrame = inspect.currentframe().f_back.f_back
         callerFilename = callerFrame.f_code.co_filename
         callerLineno = callerFrame.f_lineno
@@ -3427,7 +3441,7 @@ class _VisualLog:
     def logHeader(self):
         self.write(r'''
 <!DOCTYPE html><html>
-<head><meta charset="utf-8"><title>fmbtandroid visual log</title>
+<head><meta charset="utf-8"><title>visual log</title>
 <script>
 
 function showHide(eid){
@@ -3588,6 +3602,7 @@ function togglePaths(){
         color: red;
         z-index: 0;
     }
+''' + self._userStyles + '''
 </style>
 </head><body>
 
@@ -3634,7 +3649,7 @@ initializejQuery(function() {
 
     def messageLogger(loggerSelf, origMethod):
         def origMethodWRAP(*args, **kwargs):
-            loggerSelf.logMessage(" ".join([str(a) for a in args]))
+            loggerSelf.logMessage(" ".join([str(a) for a in args]), **kwargs)
             return True
         loggerSelf.changeCodeName(origMethodWRAP, origMethod.func_name + "WRAP")
         return origMethodWRAP
