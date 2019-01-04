@@ -1,8 +1,19 @@
-fmbt (0.41-0.rc0) unstable; urgency=low
+fmbt (0.41-1) unstable; urgency=low
 
-  * Development version.
+  * autodebug:
+    - Provides debug info on crash/AddressSanitizer/valgrind errors.
+  * pycosh:
+    - tar: support -C to set output directory when extracting a package.
+  * fmbtwindows:
+    - Device.shellSOE(env={...}) supports setting environment variables.
+  * pythonshare:
+    - Fixed asynchronous code execution on Windows.
+    - Improved error handling on lost connections.
+  * fmgtgti:
+    - Custom visual log styles.
+    - Enabled raw HTML writing to visual log.
 
- -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 24 Oct 2018 12:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 4 Jan 2019 15:42:00 +0300
 
 fmbt (0.40-1) unstable; urgency=low
 
