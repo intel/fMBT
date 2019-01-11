@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 #
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2014, Intel Corporation.
+# Copyright (c) 2014-2019, Intel Corporation.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU Lesser General Public License,
@@ -19,19 +19,22 @@
 """
 fMBT debugger
 
-Usage: fmbt-debug [session]
+Usage: fmbt-debug [options]
 
-Debug Python code that calls fmbt.debug([session]). Session is an
-integer, the default session is 0.
+Options:
+  -p, --port PORT                 listen to remote connection to PORT
+                                  instead of local connection to session.
+                                  If --port is given, session is not needed.
+                                  PORT >= 1024 does not require root
+                                  privileges.
+                                  Remote Python code to be debugged must call
+                                  fmbt.debug("HOST:PORT")
 
-If fmbt.debug() is called before fmbt-debug is launched, the call is
-blocked until fmbt-debug connects to the debug session.
+  -s, --session SESSION_ID        wait for local connection on SESSION_ID.
+                                  Local Python code to be debugged must call
+                                  fmbt.debug(SESSION_ID)
 
-If fmbt-debug is executed before fmbt.debug() is called, then
-fmbt-debug waits for connection from fmbt.debug() call.
-
-Only one fmbt-debug process and fmbt.debug() call can participate a
-session at a time.
+If no options are given, debug local Python code that calls fmbt.debug().
 """
 
 import getopt
@@ -96,23 +99,53 @@ else:
     read_input._files = set()
 
 if __name__ == "__main__":
-
-    opts, remainder = getopt.getopt(
-        sys.argv[1:], 'h',
-        ['help'])
+    opt_port = None
+    opt_session = None
+    try:
+        opts, remainder = getopt.getopt(
+            sys.argv[1:], 'hp:s:',
+            ['help', 'port=', 'session='])
+    except getopt.GetoptError, e:
+        error(str(e))
     for opt, arg in opts:
         if opt in ['-h', '--help']:
             print __doc__
             sys.exit(0)
+        elif opt in ['-p', '--port']:
+            if not opt_session is None:
+                error('give either --port or --session')
+            try:
+                opt_port = int(arg)
+            except ValueError:
+                error('invalid --port %r, integer expected' % (arg,))
+        elif opt in ['-s', '--session']:
+            if not opt_port is None:
+                error('give either --port or --session')
+            try:
+                opt_session = int(arg)
+            except ValueError:
+                error('invalid --session %r, integer expected' % (arg,))
+
     if len(remainder) > 1:
         error("illegal arguments, see --help")
     elif len(remainder) == 1:
+        if not (opt_session is None and opt_port is None):
+            error('give either --port or --session without extra arguments')
+        # backward-compatibility: -p and -s are missing, use remainder[0] as
+        # SESSION_ID.
         try:
-            port = PORTBASE + int(remainder[0])
+            opt_session = int(remainder[0])
         except ValueError:
             error('illegal session "%s", integer expected' % (remainder[0],))
+    else: # len(remainder) == 0
+        if opt_session is None:
+            opt_session = 0
+    if opt_port is None:
+        port = PORTBASE + opt_session
+        host = '127.0.0.1'
     else:
-        port = PORTBASE
+        port = opt_port
+        host = ''
 
     # Listen to connections from fmbt.debug() at host:port.
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -120,7 +153,12 @@ if __name__ == "__main__":
     try:
         s.bind((host, port))
         s.listen(1)
-        info("waiting for fmbt.debug(%s)" % (port-PORTBASE))
+        if opt_port:
+            info("waiting for fmbt.debug('THIS_HOST:%s')" % (opt_port,))
+        elif not opt_session is None:
+            info("waiting for local fmbt.debug(%s)" % (opt_session,))
+        else:
+            info("waiting for local fmbt.debug()")
         while True:
             (conn, addr) = s.accept()
             conn.sendall("fmbt-debug\n")

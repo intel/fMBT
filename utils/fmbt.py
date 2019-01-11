@@ -218,21 +218,20 @@ def funcSpec(func):
 _g_debug_socket = None
 _g_debug_conn = None
 
-def debug(session=0):
+def debug(spec=None):
     """
     Start debugging with fmbt-debug from the point where this function
     was called. Execution will stop until connection to fmbt-debug
-    [session] has been established.
+    has been established.
 
     Parameters:
 
-      session (integer, optional):
-              debug session that identifies which fmbt-debug should
-              connect to this process. The default is 0.
+      spec (session_id or "host:port", integer or string respectively, optional):
+              defines how to connect to fmbt-debug.
+              The default is session_id 0.
 
     Example:
-
-      - execute on command line "fmbt-debug 42"
+      - execute on command line "fmbt-debug --session 42"
       - add fmbt.debug(42) in your Python code
       - run the Python code so that it will call fmbt.debug(42)
       - when done the debugging on the fmbt-debug prompt, enter "c"
@@ -245,9 +244,32 @@ def debug(session=0):
 
     global _g_debug_conn, _g_debug_socket
 
+    if isinstance(spec, basestring):
+        host, port_s = spec.rsplit(":", 1)
+        port = int(port_s)
+        _g_debug_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            _g_debug_socket.connect((host, port))
+            _g_debug_conn = _g_debug_socket
+            whos_there = _g_debug_conn.recv(len("fmbt-debug\n"))
+            if not whos_there.startswith("fmbt-debug"):
+                _g_debug_conn.close()
+                _g_debug_socket = None
+                _g_debug_conn = None
+                raise ValueError(
+                    'unexpected answer "%s", fmbt-debug expected' %
+                    (whos_there.strip(),))
+            _g_debug_conn.sendall("fmbt.debug\n")
+        except socket.error:
+            raise ValueError('debugger cannot connect to %s:%s' % (host, port))
+
     if not _g_debug_socket:
         PORTBASE = 0xf4bd # 62653, fMBD
         host = "127.0.0.1" # accept local host only, by default
+        if spec is None:
+            session = 0
+        else:
+            session = spec
         port = PORTBASE + session
         _g_debug_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
