@@ -692,6 +692,14 @@ def cat_eval(expr_left, expr_right):
     right_data = eval(expr_right)
     return left_data + right_data
 
+def osenv():
+    """osenv
+    print operating system environment variables"""
+    rv = []
+    for key in sorted(os.environ.keys()):
+        rv.append("%s=%r" % (key, os.environ[key]))
+    return "\n".join(rv)
+
 def ps(*args):
     """ps [-v] [PID...]
     list processes (-v virtual memory)"""
