@@ -101,6 +101,9 @@ Options when connected:
           Poll which asynchronously return values are available for
           reading.
 
+  -r, --read ASYNC_RV
+          Read an asynchronous return value.
+
 Example:
 
   pythonshare-client -C socket://localhost:8089 -n myns -c 'a=41' -e 'a+1'

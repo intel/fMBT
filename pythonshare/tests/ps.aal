@@ -1,0 +1,128 @@
+# AAL/Python model for testing pythonshare server and client
+#
+# Choose pythonshare client and server versions/paths with
+# remote-pyaal -c 'PS_CLIENT="pythonshare-client"'
+#              -c 'PS_SERVER="pythonshare-server"'
+# in fMBT configuration file.
+
+language "python" {
+    import random
+    import time
+    import ps
+    port = random.randint(20000,50000)
+}
+
+# preview-hide-vars:
+# preview-depth: 5
+variables {
+    servers, hub, port
+}
+initial_state {
+    servers = {} # {port: {'pid': PID, 'ns': NAMESPACE, 'async': number of async requests}}
+    hub = []
+}
+adapter_init {
+}
+adapter_exit {
+    # kill servers that were launched and are still running after test run
+    for server_port in servers.keys():
+        s,o,e = ps.soe([PS_CLIENT, "-Clocalhost:%s" % (server_port,), "--kill"])
+}
+input "launch_server" {
+    guard { return len(servers) == 0 }
+    adapter {
+        ps.bg([PS_SERVER, "-d", "-p", str(port)])
+        time.sleep(0.2)
+    }
+    body  {
+        servers[port] = {'pid': ps.last_bg_pid, 'ns': {}, 'async': 0}
+        port += 1
+    }
+}
+input "kill_server_from_client" {
+    guard { return len(servers) > 0 }
+    adapter {
+        chosen_port = servers.keys()[0]
+        s,o,e = ps.soe([PS_CLIENT, "-Clocalhost:%s" % (chosen_port,), "--kill"])
+        assert o=="" and e=="", "no out/err expected, got out=%r err=%r" % (o, e)
+        # make sure the server is gone
+        s,o,e = ps.soe([PS_CLIENT, "-Clocalhost:%s" % (chosen_port,), "--kill"])
+        assert o=="" and "cannot connect to" in e, "'cannot connect' error expected, got out=%r err=%r" % (o, e)
+    }
+    body { del servers[servers.keys()[0]] }
+}
+input "assign_a" {
+    guard { return len(servers) > 0 }
+    adapter {
+        chosen_port = servers.keys()[0]
+        s,o,e = ps.soe([PS_CLIENT, "-Clocalhost:%s" % (chosen_port,), "-c", "a=42"])
+        assert s==0 and o=="" and e=="", "no status/out/err expected, got status=%r out=%r err=%r" % (s, o, e)
+    }
+    body {
+        chosen_port = servers.keys()[0]
+        servers[chosen_port]['ns']['a'] = 42
+    }
+}
+input "eval_a" {
+    guard { return len(servers) > 0 and 'a' in servers[servers.keys()[0]]['ns']}
+    adapter {
+        chosen_port = servers.keys()[0]
+        s,o,e = ps.soe([PS_CLIENT, "-Clocalhost:%s" % (chosen_port,), "-e", "a+a"])
+        assert s==0 and o=="84" and e=="", "no status/err expected, got status=%r out=%r (84 expected) err=%r" % (s, o, e)
+    }
+    body {
+    }
+}
+input "eval_a_nameerror" {
+    guard { return len(servers) > 0 and 'a' not in servers[servers.keys()[0]]['ns']}
+    adapter {
+        chosen_port = servers.keys()[0]
+        s,o,e = ps.soe([PS_CLIENT, "-Clocalhost:%s" % (chosen_port,), "-e", "a+a"])
+        assert s==0 and "NameError" in o and e=="", "no status/err expected, got status=%r out=%r (NameError expected) err=%r" % (s, o, e)
+    }
+    body {
+    }
+}
+input "import_time" {
+    guard { return len(servers) > 0 and not 'time' in servers[servers.keys()[0]]['ns']}
+    adapter {
+        chosen_port = servers.keys()[0]
+        s,o,e = ps.soe([PS_CLIENT, "-Clocalhost:%s/sleep" % (chosen_port,), "-c", "import time"])
+        assert s==0 and o=="" and e=="", "no status/out/err expected, got status=%r out=%r err=%r" % (s, o, e)
+    }
+    body {
+        chosen_port = servers.keys()[0]
+        servers[chosen_port]['ns']['time'] = 'library'
+    }
+}
+input "async_sleep" {
+    guard { return len(servers) > 0 and 'time' in servers[servers.keys()[0]]['ns']}
+    adapter {
+        chosen_port = servers.keys()[0]
+        s,o,e = ps.soe([PS_CLIENT, "-Clocalhost:%s/sleep" % (chosen_port,), "--async", "-e", "time.sleep(1)"])
+        assert s==0 and o.startswith('Async_rv(ns="sleep"') and e=="", "no status/err expected, got status=%r out=%r (expected Async_rv...) err=%r" % (s, o, e)
+    }
+    body {
+        chosen_port = servers.keys()[0]
+        servers[chosen_port]['async'] += 1
+    }
+}
+input "read_async_sleep" {
+    guard { return len(servers) > 0 and servers[servers.keys()[0]]['async'] > 0}
+    adapter {
+        chosen_port = servers.keys()[0]
+        poll_count = 0
+        while len(ps.soe([PS_CLIENT, "-Clocalhost:%s/sleep" % (chosen_port,), "--poll"])[1].strip().splitlines()) < 1:
+            time.sleep(0.2)
+            poll_count += 1
+            assert poll_count < 10, "read_async_ready timed out, expected Async_rv did not appear"
+        async_rv = ps.soe([PS_CLIENT, "-Clocalhost:%s/sleep" % (chosen_port,), "--poll"])[1].strip().splitlines()[0]
+        s,o,e = ps.soe([PS_CLIENT, "-Clocalhost:%s/sleep" % (chosen_port,), "--read", async_rv])
+        o = o.strip()
+        assert s==0 and o=="None" and e=="", "no status/err expected, got status=%r out=%r (expected None) err=%r" % (s, o, e)
+    }
+    body {
+        chosen_port = servers.keys()[0]
+        servers[chosen_port]['async'] -= 1
+    }
+}
