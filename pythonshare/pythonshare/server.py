@@ -1,5 +1,5 @@
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2013-2018, Intel Corporation.
+# Copyright (c) 2013-2019, Intel Corporation.
 #
 # Author: antti.kervinen@intel.com
 #
@@ -113,8 +113,13 @@ class Pythonshare_ns(object):
         """List remote namespaces
         """
         if "ip" in ls_opts and ls_opts["ip"] == True:
-            return {k: _g_remote_namespaces[k].conn.getpeername()
-                    for k in _g_remote_namespaces.keys()}
+            key_peername = {}
+            for k in _g_remote_namespaces.keys():
+                try:
+                    key_peername[k] = _g_remote_namespaces[k].conn.getpeername()
+                except Exception:
+                    key_peername[k] = ("?", "?")
+            return key_peername
         return _g_remote_namespaces.keys()
 
     def on_disconnect(self):
