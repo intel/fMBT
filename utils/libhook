@@ -73,31 +73,26 @@ c_real_func_decl_end = """    /* -- c_real_func_decl_end */
     ) = NULL;
 """
 
-c_init_start = """/* -- c_init_start */
-void libhook_init(void)
-{
-"""
-c_init_dlsym = """    /* -- c_init_dlsym */
-    _real_%(func)s = dlsym(RTLD_NEXT, "%(func)s");
-"""
-c_init_end = """    /* -- c_init_end */
-}
-"""
-
 c_hook_start = """/* -- c_hook_start */
 %(specifiers)s %(type)s %(pointer)s %(func)s("""
 c_hook_param = """    /* -- c_hook_param */
     %(const)s %(specifiers)s %(type)s p%(param_index)s"""
-c_hook_end = r"""    /* -- c_hook_end */
+c_hook_find_real = r"""    /* -- c_hook_find_real */
 ) {
-    fprintf(stderr, "libhook: calling %(func)s with %(param_count)s params\n");
+    /* Hooking is better here than in library init, because sometimes
+       init runs too late. */
+    if (_real_%(func)s == NULL) {
+        _real_%(func)s = dlsym(RTLD_NEXT, "%(func)s");
+    }
+    fprintf(stderr, "libhook: calling '%(func)s' at 0x%%x with %(param_count)s params\n", _real_%(func)s);
+"""
+c_hook_end = r"""    /* -- c_hook_end */
     %(type)s %(pointer)s rv = _real_%(func)s(%(param_names)s);
     return rv;
 }
 """
 c_hook_void_end = r"""    /* -- c_hook_void_end */
 ) {
-    fprintf(stderr, "libhook: calling void %(func)s with %(param_count)s params\n");
     _real_%(func)s(%(param_names)s);
 }
 """
@@ -246,7 +241,7 @@ def soe(cmd, stdin="", cwd=None, env=None, bg=False):
     run_env = dict(os.environ)
     if not env is None:
         run_env.update(env)
-    debug("run %r" % (cmd,))
+    debug("run %r" % (' '.join(cmd),))
     try:
         p = subprocess.Popen(
             cmd,
@@ -272,7 +267,7 @@ def parse_func_decls(headers, include_dirs):
     return _func_decls
 
 def build_so(file_c):
-    cmd = cc + ["-shared", "-Wl,-init,libhook_init", "-fPIC", file_c, "-ldl",
+    cmd = cc + ["-shared", "-fPIC", file_c, "-ldl",
                 "-o", file_c.rsplit(".", 1)[0] + ".so"]
     status, out, err = soe(cmd)
     if status != 0:
@@ -292,11 +287,6 @@ def hook_code(headers, func_decls):
                         "," if index < len(func_decl['params']) - 1 else ""),
                 'const': param.get('const', '')})
         c.append(c_real_func_decl_end)
-    # init (dlsym) code
-    c.append(c_init_start)
-    for func_decl in func_decls:
-        c.append(c_init_dlsym % func_decl)
-    c.append(c_init_end)
     # hook code
     for func_decl in func_decls:
         func_decl['param_names'] = ", ".join("p%s" % (i,) for i in xrange(len(func_decl['params'])))
@@ -310,6 +300,7 @@ def hook_code(headers, func_decls):
                       'type': param['type'] + (
                           "*" if param['pointer'] else "")
                      })
+        c.append(c_hook_find_real % func_decl)
         if func_decl['type'] == "void":
             c.append(c_hook_void_end % func_decl)
         else:
