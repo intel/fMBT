@@ -1,0 +1,442 @@
+#!/usr/bin/env python
+
+# libhook - C library call hook generator
+#
+# Copyright (c) 2019, Intel Corporation.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms and conditions of the GNU Lesser General Public
+# License, version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA
+# 02110-1301 USA.
+#
+# Author: antti.kervinen@intel.com
+
+"""libhook- C library call hook generator
+
+Usage: libhook [options]
+
+Options:
+  -h, --help                      print help.
+  -d, --debug                     increase debug output.
+  --debug-pm                      post-mortem debug on exceptions.
+
+  -I, --include-dir DIR           adds DIR to header search path.
+  -h, --header FILE_H             parse functions from FILE_H.
+  -f, --function REGEXP           hook functions matching REGEXP.
+
+  -o, --output FILE.C             write generated C code to FILE.C.
+                                  The default is stdout.
+  -b, --build                     Build shared library (FILE.so).
+
+Example:
+  $ libhook -h /usr/include/stdio.h -f fopen -f fclose -o openclose.c -b
+  $ LD_PRELOAD=./openclose.so cat /etc/motd
+"""
+
+import getopt
+import glob
+import os
+import pprint
+import re
+import subprocess
+import sys
+
+import recb
+
+c_start = """/* -- c_start */
+#define _GNU_SOURCE
+#include <dlfcn.h>
+#include <stdlib.h>
+#include <stdio.h>
+"""
+
+c_user_header = """/* -- c_user_header */
+#include <%(header)s>
+"""
+
+c_real_func_decl_start = """/* -- c_real_func_decl_start */
+static %(specifiers)s %(type)s %(pointer)s (*_real_%(func)s)(
+"""
+c_real_func_decl_param = """    /* -- c_real_func_decl_param */
+    %(const)s %(type)s
+"""
+c_real_func_decl_end = """    /* -- c_real_func_decl_end */
+    ) = NULL;
+"""
+
+c_init_start = """/* -- c_init_start */
+void libhook_init(void)
+{
+"""
+c_init_dlsym = """    /* -- c_init_dlsym */
+    _real_%(func)s = dlsym(RTLD_NEXT, "%(func)s");
+"""
+c_init_end = """    /* -- c_init_end */
+}
+"""
+
+c_hook_start = """/* -- c_hook_start */
+%(specifiers)s %(type)s %(pointer)s %(func)s("""
+c_hook_param = """    /* -- c_hook_param */
+    %(const)s %(specifiers)s %(type)s p%(param_index)s"""
+c_hook_end = r"""    /* -- c_hook_end */
+) {
+    fprintf(stderr, "libhook: calling %(func)s with %(param_count)s params\n");
+    %(type)s %(pointer)s rv = _real_%(func)s(%(param_names)s);
+    return rv;
+}
+"""
+c_hook_void_end = r"""    /* -- c_hook_void_end */
+) {
+    fprintf(stderr, "libhook: calling void %(func)s with %(param_count)s params\n");
+    _real_%(func)s(%(param_names)s);
+}
+"""
+
+DEBUG_MAXLEN = 4096
+tmp_dir = "/tmp"
+cpp = ["gcc", "-D", "_GNU_SOURCE", "-E"]
+cc = ["gcc", "-D", "_GNU_SOURCE"]
+g_command = os.path.basename(sys.argv[0])
+opt_debug = 0
+opt_debug_pm = False
+
+def error(msg, exitstatus=1):
+    """print error message and exit"""
+    if msg:
+        sys.stderr.write("%s: %s\n" % (g_command, msg))
+    if exitstatus != None:
+        sys.exit(1)
+
+def debug(msg, level=1):
+    """print debug message"""
+    if level <= opt_debug:
+        msg = "%s-debug: %s\n" % (g_command, msg)
+        if len(msg) > DEBUG_MAXLEN:
+            msg = (msg[:DEBUG_MAXLEN/2] +
+                   ("...[%s kB]..." % ((len(msg) - DEBUG_MAXLEN) / 1024,)) +
+                   msg[-DEBUG_MAXLEN/2:])
+        sys.stderr.write(msg)
+
+def output(msg):
+    sys.stdout.write(msg)
+
+### "Typedef struct" parser
+# Data structures for storing parsed results
+_g_typedef_structs_parsed = []
+_g_struct_fields_parsed = []
+
+# Callbacks than handle found patterns and store them to the data structures.
+def _typedef_struct_end_found(p, m, first_lineno):
+    # Store complete typedef with fields found earlier
+    global _g_struct_fields_parsed
+    typedef_dict = m.groupdict()
+    typedef_names_endpos = m.regs[p.regexp().groupindex["typedef_names"]][1]
+    typedef_names_lineno = first_lineno + m.string[:typedef_names_endpos].count("\n")
+    typedef_dict["fields"] = _g_struct_fields_parsed
+    typedef_dict["lineno"] = typedef_names_lineno
+    _g_typedef_structs_parsed.append(typedef_dict)
+    _g_struct_fields_parsed = []
+
+def _struct_field_found(p, m, first_lineno):
+    # Store a field definition
+    field_name_endpos = m.regs[p.regexp().groupindex["name"]][1]
+    field_name_lineno = first_lineno + m.string[:field_name_endpos].count("\n")
+    _g_struct_fields_parsed.append((m.groupdict(), field_name_lineno))
+
+# Typedef struct parser grammar
+_TYPEDEF_STRUCT_START = recb.pattern(
+    r"\s*typedef\s+struct\s+(?P<struct_name>[a-zA-Z0-9_]+)?\s*{")
+
+_STRUCT_FIELD = recb.pattern(
+    r'\s*(?P<const_data1>const\s)?\s*'
+    '(?P<type>((unsigned |signed |short |long )*?)?[0-9a-zA-Z_]+)\s*'
+    '(?P<const_data2>const\s)?\s*'
+    '[(]?(?P<pointer>\*\s*(?P<const_pointer>const\s)?)?\s*'
+    '(?P<name>[0-9a-zA-Z_]+)[)]?'
+    '(\[(?P<dim>.+)\])*;\s*'
+    '(?P<comment>(/\*(.|\n)*?\*/|//[^\n]*\n))?',
+    cb=_struct_field_found)
+
+_TYPEDEF_STRUCT_END = recb.pattern(
+    r"\s*}\s*(?P<typedef_names>[a-zA-Z0-9_*, ]+)\s*;",
+    cb=_typedef_struct_end_found)
+
+_COMMENT = recb.pattern('\s*(?P<comment>(/\*(.|\n)*?\*/|//[^\n]*\n))')
+
+_TYPEDEF_STRUCT = (_TYPEDEF_STRUCT_START
+                  + recb.many(_STRUCT_FIELD | _COMMENT)
+                  + _TYPEDEF_STRUCT_END)
+
+_TYPEDEF_HEADER_GRAMMAR = recb.many(recb.fast_forward("typedef")
+                                    | _TYPEDEF_STRUCT
+                                    | recb.fast_forward(";"))
+
+### "C function declaration" parser
+def _parse_cpp_line(pattern, match, lineno):
+    _parse_cpp_line.latest = match.groupdict()
+    _parse_cpp_line.latest['inputline'] = lineno
+_parse_cpp_line.latest = {'cppline': 0,
+                          'cppfile': "<undefined>",
+                          'inputline': 0}
+
+_func_decls = []
+def _parse_decl_start(pattern, match, lineno):
+    func_decl = {
+        'file': _parse_cpp_line.latest['cppfile'],
+        'line': int(_parse_cpp_line.latest['cppline']) + (
+            match.string[match.start():match.end()].count("\n") +
+            lineno - _parse_cpp_line.latest['inputline'] - 1),
+        'params': [],
+    }
+    d = match.groupdict()
+    func_decl.update({k: d[k].strip() for k in d if not d[k] is None})
+    _func_decls.append(func_decl)
+
+def _parse_func_param(pattern, match, lineno):
+    d = match.groupdict()
+    _func_decls[-1]['params'].append({k: d[k].strip() for k in d if not d[k] is None})
+
+_g_func_decls_parsed = []
+_g_func_args_parsed = []
+
+_FUNC_DECL_CPP_LINE = recb.pattern(r'^# (?P<cppline>[0-9]*) "(?P<cppfile>[^"]*)"[^\n]*\n')
+
+_FUNC_DECL_ATTRIBUTES = recb.pattern(r"__attribute__\s*\(\([^)]*\)\)\s*|__extension__\s*")
+
+_FUNC_DECL_START = recb.pattern(
+    r"\s*(?P<extern>extern\s*)?(?P<specifiers>(unsigned\s*|signed\s*|short\s*|long\s*)*)"
+    "(?P<type>(char|double|FILE|float|int|long|size_t|void)\s*)(?P<pointer>(\*\s*)*)"
+    "(?P<func>[a-zA-Z_][a-zA-Z_0-9]*\s*)\(\s*",
+    cb=_parse_decl_start)
+
+_FUNC_PARAM = recb.pattern(
+    r'\s*(?P<const>const\s)?\s*'
+    '(?P<specifiers>(unsigned\s*|signed\s*|short\s*|long\s*)*)?(?P<type>[0-9a-zA-Z_]+(?![0-9a-zA-Z_])\s*)'
+     '(?P<pointer>(\*\s*)*\s*)?'
+    '(?P<restrict>(__)?restrict\s+)?'
+    '(?P<const_pointer>const\s+)?'
+    '(?P<name>[0-9a-zA-Z_]+)'
+    '(\[(?P<dim>.+)\])*\s*(,\s*)?',
+    cb=_parse_func_param)
+
+_FUNC_DECL = _FUNC_DECL_START + recb.many(
+    _FUNC_PARAM
+    | _FUNC_DECL_CPP_LINE
+    | _FUNC_DECL_ATTRIBUTES
+    ) + recb.pattern(r"\s*\)")
+
+_FUNC_DECL_GRAMMAR = recb.many(_FUNC_DECL_CPP_LINE.set_cb(_parse_cpp_line)
+                               | _FUNC_DECL
+                               | recb.pattern("^[^\n]*\n") # empty line
+                               | recb.fast_forward(";"))
+
+
+def soe(cmd, stdin="", cwd=None, env=None, bg=False):
+    """Run cmd, return (status, stdout, stderr)"""
+    run_env = dict(os.environ)
+    if not env is None:
+        run_env.update(env)
+    debug("run %r" % (cmd,))
+    try:
+        p = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+            cwd=cwd,
+            env=run_env)
+        if bg:
+            return (p, None, None)
+        out, err = p.communicate(input=stdin)
+    except Exception, e:
+        return (None, None, str(e))
+    return (p.returncode, out, err)
+
+def parse_func_decls(headers, include_dirs):
+    cpp_args = []
+    for include_dir in include_dirs:
+        cpp_args.append("-I" + include_dir)
+    s, o, e = soe(cpp + cpp_args + headers)
+    _FUNC_DECL_GRAMMAR.parse(o)
+    return _func_decls
+
+def build_so(file_c):
+    cmd = cc + ["-shared", "-Wl,-init,libhook_init", "-fPIC", file_c, "-ldl",
+                "-o", file_c.rsplit(".", 1)[0] + ".so"]
+    status, out, err = soe(cmd)
+    if status != 0:
+        error('error running %r:\n%s' % (' '.join(cmd), err + out))
+
+def hook_code(headers, func_decls):
+    c = [c_start]
+    for header in headers:
+        c.append(c_user_header % {'header': os.path.basename(header)})
+    # declare function pointer variables
+    for func_decl in func_decls:
+        c.append(c_real_func_decl_start % func_decl)
+        for index, param in enumerate(func_decl['params']):
+            c.append(c_real_func_decl_param % {
+                'type': param['specifiers'] + " " + param['type'] + (
+                    "*" if param['pointer'] else "") + (
+                        "," if index < len(func_decl['params']) - 1 else ""),
+                'const': param.get('const', '')})
+        c.append(c_real_func_decl_end)
+    # init (dlsym) code
+    c.append(c_init_start)
+    for func_decl in func_decls:
+        c.append(c_init_dlsym % func_decl)
+    c.append(c_init_end)
+    # hook code
+    for func_decl in func_decls:
+        func_decl['param_names'] = ", ".join("p%s" % (i,) for i in xrange(len(func_decl['params'])))
+        func_decl['param_count'] = len(func_decl['params'])
+        c.append(c_hook_start % func_decl)
+        for index, param in enumerate(func_decl['params']):
+            c.append(c_hook_param %
+                     {'param_index': str(index) + ("," if index < len(func_decl['params']) - 1 else ""),
+                      'const': param.get('const', ''),
+                      'specifiers': param.get('specifiers', ''),
+                      'type': param['type'] + (
+                          "*" if param['pointer'] else "")
+                     })
+        if func_decl['type'] == "void":
+            c.append(c_hook_void_end % func_decl)
+        else:
+            c.append(c_hook_end % func_decl)
+    return "".join(c)
+
+def main(argv):
+    global opt_debug, opt_debug_pm
+    opt_include_dirs = []
+    opt_functions = []
+    opt_headers = []
+    opt_output = None
+    opt_build = None
+    try:
+        opts, remainder = getopt.gnu_getopt(
+            argv[1:], 'dI:f:h:o:b',
+            ['help', 'debug', 'debug-pm',
+             'include-dir=', 'header=',
+             'function=',
+             'output=',
+             'build'])
+    except getopt.GetoptError, e:
+        error(str(e))
+
+    for opt, arg in opts:
+        if opt in ["--help"]:
+            print __doc__
+            error(None, exitstatus=0)
+        elif opt in ["-d", "--debug"]:
+            opt_debug += 1
+        elif opt in ["--debug-pm"]:
+            opt_debug_pm = True
+        elif opt in ["-I", "--include-dir"]:
+            opt_include_dirs.append(arg)
+        elif opt in ["-f", "--function"]:
+            opt_functions.append(arg)
+        elif opt in ["-h", "--header"]:
+            opt_headers.append(arg)
+        elif opt in ["-o", "--output"]:
+            if arg in ["-", "stdout"]:
+                opt_output = sys.stdout
+            elif arg in ["stderr"]:
+                opt_output = sys.stderr
+            else:
+                try:
+                    opt_output = open(arg, "wb")
+                except Exception, e:
+                    error('failed to open --output %r for writing: %s' % (arg, e))
+        elif opt in ["-b", "--build"]:
+            opt_build = True
+
+    re_functions = []
+    headers = []
+    if not opt_functions:
+        error('missing --functions=REGEXP')
+    else:
+        for function in opt_functions:
+            try:
+                re_functions.append(re.compile(function))
+            except Exception, e:
+                error('invalid --function=%r: %s' % (function, e))
+    if not opt_headers and not opt_include_dirs:
+        error('missing --header=FILE_H and/or --include-dir=DIR')
+    elif not opt_headers and opt_include_dirs:
+        debug("including *.h from --include-dir's by default")
+        for include_dir in opt_include_dirs:
+            opt_headers.extend(glob.glob(include_dir + "/*.h"))
+
+    for header in opt_headers:
+        if os.access(header, os.R_OK):
+            headers.append(header)
+        else:
+            for include_dir in opt_include_dirs:
+                if os.access(include_dir + "/" + header, os.R_OK):
+                    headers.append(include_dir + "/" + header)
+                    break
+            else:
+                error('cannot find --header=%r' % (header,))
+        debug('including %r' % (headers[-1],))
+    func_decls = parse_func_decls(headers, opt_include_dirs)
+
+    matching_function_decls = []
+    for func_decl in func_decls:
+        for function_index, re_function in enumerate(re_functions):
+            if re_function.match(func_decl['func']):
+                debug('matching --function %r: %r in %r' %
+                      (opt_functions[function_index],
+                       func_decl['func'],
+                       os.path.basename(func_decl['file']) + ":" + str(func_decl['line'])))
+                matching_function_decls.append(func_decl)
+                break
+
+    if opt_output is None:
+        opt_output = sys.stdout
+
+    libhook_c = hook_code(headers, matching_function_decls)
+    opt_output.write(libhook_c)
+    opt_output.flush()
+    if opt_build:
+        if not opt_output.name.startswith("<"):
+            opt_output.close()
+            build_so(opt_output.name)
+        else:
+            error("cannot --build without --output=FILE_C")
+
+
+# How to debug the grammar:
+# s = """extern FILE *fopen (const char *__restrict __filename,
+#       const char *__restrict __modes) ;"""
+# (_FUNC_DECL_START + _FUNC_PARAM + _FUNC_PARAM).debug().parse(s)
+# error("debugging done")
+
+if __name__ == "__main__":
+    try:
+        main(sys.argv)
+    except (Exception, KeyboardInterrupt), e:
+        if opt_debug_pm:
+            import traceback
+            tb_lines = traceback.format_exc().splitlines()
+            max_linelen = max([len(l) for l in tb_lines])
+            debug("=" * max_linelen, 0)
+            for line in tb_lines:
+                debug(line, 0)
+            debug("=" * max_linelen, 0)
+            debug("Entering post-mortem debugger", 0)
+            import pdb
+            pdb.post_mortem()
+        else:
+            raise
+            error(str(e) + " (use --debug-pm to debug this error)")
