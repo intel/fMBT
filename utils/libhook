@@ -57,6 +57,44 @@ c_start = """/* -- c_start */
 #include <dlfcn.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+#include <time.h>
+#include <sys/resource.h>
+
+#define _libhook_stack_limit 1024
+static int _libhook_stack_index = 0;
+
+/* Following data is valid after libhook_stop_measuring() */
+static struct timespec _libhook_timer_start[_libhook_stack_limit] = {0, 0};
+static struct rusage _libhook_rusage_start[_libhook_stack_limit];
+static struct timespec _libhook_timer_end = {0, 0};
+static struct rusage _libhook_rusage_end;
+static int64_t _libhook_timestamp_start_ns = 0;
+static int64_t _libhook_timestamp_end_ns = 0;
+static pid_t _libhook_pid = 0;
+
+void libhook_start_measuring()
+{
+    if (_libhook_stack_index < _libhook_stack_limit) {
+        getrusage(RUSAGE_SELF, &_libhook_rusage_start[_libhook_stack_index]);
+        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &_libhook_timer_start[_libhook_stack_index]);
+    }
+    _libhook_stack_index++;
+}
+
+void libhook_stop_measuring()
+{
+    _libhook_stack_index--;
+    if (_libhook_stack_index < _libhook_stack_limit) {
+        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &_libhook_timer_end);
+        getrusage(RUSAGE_SELF, &_libhook_rusage_end);
+        _libhook_timestamp_start_ns = (1000000000 * _libhook_timer_start[_libhook_stack_index].tv_sec) + _libhook_timer_start[_libhook_stack_index].tv_nsec;
+        _libhook_timestamp_end_ns =   (1000000000 * _libhook_timer_end.tv_sec) + _libhook_timer_end.tv_nsec;
+    }
+    if (_libhook_pid == 0) {
+        _libhook_pid = getpid();
+    }
+}
 """
 
 c_user_header = """/* -- c_user_header */
@@ -84,10 +122,20 @@ c_hook_find_real = r"""    /* -- c_hook_find_real */
     if (_real_%(func)s == NULL) {
         _real_%(func)s = dlsym(RTLD_NEXT, "%(func)s");
     }
-    fprintf(stderr, "libhook: calling '%(func)s' at 0x%%x with %(param_count)s params\n", _real_%(func)s);
+    libhook_start_measuring();
 """
 c_hook_end = r"""    /* -- c_hook_end */
     %(type)s %(pointer)s rv = _real_%(func)s(%(param_names)s);
+    libhook_stop_measuring();
+    if (_libhook_stack_index < _libhook_stack_limit - 1) {
+        fprintf(stderr, "{\"cat\": \"libhook\", \"name\": \"%(func)s\", \"ph\": \"X\", "
+            "\"ts\": %%lld, "
+            "\"dur\": %%lld, "
+            "\"pid\": %%d}\n",
+            _libhook_timestamp_start_ns / 1000,
+            (_libhook_timestamp_end_ns - _libhook_timestamp_start_ns) / 1000,
+            _libhook_pid);
+    }
     return rv;
 }
 """
