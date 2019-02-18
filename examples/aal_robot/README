@@ -1,0 +1,152 @@
+This example demonstrates how to generate tests for Robot Framework from AAL model
+
+Files included in example:
+
+robot_adapter.py:
+    Python code to build a Robot test suite from single keywords and to run the suite.
+
+robot.aal:
+    AAL model to open browser in duckduckgo.com, search for a list of texts and close the browser.
+    Adapter blocks call functions from robot_adapter.py
+
+test.conf:
+    Test configuration for robot.aal. Stop testing after 10 test steps.
+
+browser.robot:
+    Robot Framework keyword implementation for browser control.
+
+test.robot:
+    Template for testing the Robot Framework test code without running it trough fMBT.
+
+Dependencies:
+    This example uses Selenium webdriver to control the web browser.
+    Webdrivers for different browsers can be downloaded from: https://www.seleniumhq.org/download/
+    Webdriver binary needs to be in the PATH to be usable by Robot.
+
+Running the example:
+    fmbt test.conf
+
+<fmbt_log>
+<version>
+    0.40-0.rc0-02651cc2
+</version>
+<conf_load>
+    <conf_file name="test.conf"/>
+     <remote_pyaal_version>0.42-0.rc0-ad207102</remote_pyaal_version>
+</conf_load>
+<conf_execute>
+    <action_name name="i%3AOpen%20page%20in%20browser"/>
+    <action_name name="i%3AClose%20browser"/>
+    <action_name name="i%3AMake%20a%20search"/>
+    <test_engine>
+        <tags enabled=""/>
+        <status steps="0" coverage="0.000000" scov="0.000000e+00"/>
+        <current_time time="1550475881.989602"/>
+        <suggested_action type="input" name="i%3AOpen%20page%20in%20browser" time="1550475881.990832"/>
+        <action type="input" name="i%3AOpen%20page%20in%20browser" time="1550475881.991010"/>
+        <adapter_executed>
+        </adapter_executed>
+        <tags enabled=""/>
+        <status steps="1" coverage="0.083333" scov="8.333334e-02"/>
+        <current_time time="1550475881.991101"/>
+        <suggested_action type="input" name="i%3AClose%20browser" time="1550475881.991930"/>
+        <action type="input" name="i%3AClose%20browser" time="1550475881.992039"/>
+        <adapter_executed>
+        </adapter_executed>
+        <tags enabled=""/>
+        <status steps="2" coverage="0.250000" scov="2.500000e-01"/>
+        <current_time time="1550475881.992118"/>
+        <suggested_action type="input" name="i%3AOpen%20page%20in%20browser" time="1550475881.992777"/>
+        <action type="input" name="i%3AOpen%20page%20in%20browser" time="1550475881.992848"/>
+        <adapter_executed>
+        </adapter_executed>
+        <tags enabled=""/>
+        <status steps="3" coverage="0.333333" scov="3.333333e-01"/>
+        <current_time time="1550475881.992924"/>
+        <suggested_action type="input" name="i%3AMake%20a%20search" time="1550475881.993613"/>
+        <action type="input" name="i%3AMake%20a%20search" time="1550475881.993683"/>
+        <adapter_executed>
+        </adapter_executed>
+        <tags enabled=""/>
+        <status steps="4" coverage="0.500000" scov="5.000000e-01"/>
+        <current_time time="1550475881.993757"/>
+        <suggested_action type="input" name="i%3AMake%20a%20search" time="1550475881.994370"/>
+        <action type="input" name="i%3AMake%20a%20search" time="1550475881.994440"/>
+        <adapter_executed>
+        </adapter_executed>
+        <tags enabled=""/>
+        <status steps="5" coverage="0.583333" scov="5.833333e-01"/>
+        <current_time time="1550475881.994513"/>
+        <suggested_action type="input" name="i%3AClose%20browser" time="1550475881.995033"/>
+        <action type="input" name="i%3AClose%20browser" time="1550475881.995098"/>
+        <adapter_executed>
+        </adapter_executed>
+        <tags enabled=""/>
+        <status steps="6" coverage="0.666667" scov="6.666667e-01"/>
+        <current_time time="1550475881.995172"/>
+        <suggested_action type="input" name="i%3AOpen%20page%20in%20browser" time="1550475881.995682"/>
+        <action type="input" name="i%3AOpen%20page%20in%20browser" time="1550475881.995749"/>
+        <adapter_executed>
+        </adapter_executed>
+        <tags enabled=""/>
+        <status steps="7" coverage="0.666667" scov="6.666667e-01"/>
+        <current_time time="1550475881.995823"/>
+        <suggested_action type="input" name="i%3AMake%20a%20search" time="1550475881.996364"/>
+        <action type="input" name="i%3AMake%20a%20search" time="1550475881.996433"/>
+        <adapter_executed>
+        </adapter_executed>
+        <tags enabled=""/>
+        <status steps="8" coverage="0.666667" scov="6.666667e-01"/>
+        <current_time time="1550475881.996510"/>
+        <suggested_action type="input" name="i%3AClose%20browser" time="1550475881.996927"/>
+        <action type="input" name="i%3AClose%20browser" time="1550475881.996993"/>
+        <adapter_executed>
+        </adapter_executed>
+        <tags enabled=""/>
+        <status steps="9" coverage="0.666667" scov="6.666667e-01"/>
+        <current_time time="1550475881.997066"/>
+        <suggested_action type="input" name="i%3AOpen%20page%20in%20browser" time="1550475881.997474"/>
+        <action type="input" name="i%3AOpen%20page%20in%20browser" time="1550475881.997540"/>
+        <adapter_executed>
+        </adapter_executed>
+        <tags enabled=""/>
+        <status steps="10" coverage="0.666667" scov="6.666667e-01"/>
+        <stop verdict="pass" reason="step%20limit%20reached"/>
+        <current_time time="1550475881.997622"/>
+        <elapsed_time time="0.008094"/>
+    </test_engine>
+</conf_execute>
+==============================================================================
+Run from FMBT
+==============================================================================
+open https://duckduckgo.com in browser                                | PASS |
+------------------------------------------------------------------------------
+Close Browser                                                         | PASS |
+------------------------------------------------------------------------------
+open https://duckduckgo.com in browser                                | PASS |
+------------------------------------------------------------------------------
+make search: legends of awesomeness                                   | PASS |
+------------------------------------------------------------------------------
+make search: no monkey business                                       | PASS |
+------------------------------------------------------------------------------
+Close Browser                                                         | PASS |
+------------------------------------------------------------------------------
+open https://duckduckgo.com in browser                                | PASS |
+------------------------------------------------------------------------------
+make search: meaning of life                                          | PASS |
+------------------------------------------------------------------------------
+Close Browser                                                         | PASS |
+------------------------------------------------------------------------------
+open https://duckduckgo.com in browser                                | PASS |
+------------------------------------------------------------------------------
+Run from FMBT                                                         | PASS |
+10 critical tests, 10 passed, 0 failed
+10 tests total, 10 passed, 0 failed
+==============================================================================
+Output:  /home/jukkalau/source/fmbt/fMBT/examples/aal_robot/robot_aal.xml
+pass: step limit reached
+</fmbt_log>
+
+
+
+Have Fun :)
