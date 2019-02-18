@@ -1,0 +1,367 @@
+#!/usr/bin/env python3
+# fMBT, free Model Based Testing tool
+# Copyright (c) 2013-2019, Intel Corporation.
+#
+# Author: antti.kervinen@intel.com
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU Lesser General Public License,
+# version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for
+# more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+# This executable implements a commandline interface for executing
+# Python code on pythonshare servers.
+
+"""Pythonshare client - connect to shared distributed namespaces
+
+Usage: pythonshare-client [options]
+
+Options:
+  -h, --help
+          Print this help.
+
+  -C, --connect=hostspec
+          Connect to pythonshare-server at hostspec. Options
+          when connected will be executed on this connection.
+
+  -n, --namespace=ns
+          Set namespace to be used in for code/eval/interact/drop.
+
+  -A, --async
+          Following python-code executions and evaluations
+          will be asynchronous.
+
+  -S, --sync
+          Following python-code executions and evaluations
+          will be synchronous. This is the default.
+
+  -o, --output=filename
+          Output from following successful python-code evaluations
+          will be written to filename. The default is standard output.
+
+  -f, --format=format
+          Evaluation return values will be converted to string with
+          given formatter. Valid options are str, repr, pickle, print
+          and raw.
+
+  --password=password
+          Authenticate to pythonshare server with password. The password
+          must be plain text.
+
+  --password-file=filename
+          Authenticate to pythonshare server with password from
+          filename. The password must be in filename in plain text.
+
+Options when connected:
+  -c, --code=python-code
+          Execute python-code in ns.
+
+  -e, --eval=python-expression
+          Evaluate python-expression in ns. Print return
+          value to standard output.
+
+  -i, --interact
+          Open interactive console for running code in ns.
+
+  --ls-local
+          List local namespaces.
+
+  --ls-remote
+          List remote namespaces.
+
+  --ls-remote-ip
+          List remote namespaces with namespace registerer's IP
+          address and port.
+
+  --ns-type=ns
+          Returns type of a namespace ("local", "remote" or "" if it
+          does not exist).
+
+  --drop
+          Drop namespace ns from the server.
+
+  --unlock
+          Unlock locked ns on the server.
+
+  -D, --disconnect
+          Disconnect from the pythonshare-server.
+
+  -k, --kill
+          Shutdown pythonshare-server.
+
+  -P, --poll
+          Poll which asynchronously return values are available for
+          reading.
+
+Example:
+
+  pythonshare-client -C socket://localhost:8089 -n myns -c 'a=41' -e 'a+1'
+"""
+
+import python3share
+import code
+import pickle
+import getopt
+import parser
+import sys
+import traceback
+
+opt_output_file = sys.stdout
+
+def error(msg, exit_status=1):
+    sys.stderr.write("pythonshare-client: %s\n" % (msg,))
+    sys.exit(1)
+
+def output(data):
+    opt_output_file.write(data)
+    opt_output_file.flush()
+
+formatter_str    = lambda o: str(o)
+formatter_repr   = lambda o: repr(o)
+formatter_raw    = lambda o: o
+formatter_pickle = lambda o: pickle.dumps(o)
+formatter_print  = lambda o: str(o) + "\n"
+
+def _pythonCode(code):
+    try:
+        parser.expr(code)
+        return "expression"
+    except SyntaxError:
+        try:
+            parser.suite(code.encode("utf8"))
+            return "suite"
+        except SyntaxError:
+            return None
+
+class PythonshareConsole(code.InteractiveConsole):
+    def __init__(self, *args, **kwargs):
+        try:
+            import readline
+        except:
+            pass
+        self._conn = kwargs.pop("conn")
+        self._ns = kwargs.pop("namespace", None)
+        if self._ns == None:
+            self._ns = conn.namespace()
+        code.InteractiveConsole.__init__(self, *args, **kwargs)
+        self.__class__.__name__ = "pythonshare namespace %s at %s" % (
+            self._ns, getattr(self._conn, "hostspec", "N/A"))
+        self._codelines = ""
+
+    def runsource(self, source, *args):
+        self._codelines = source
+        try:
+            need_more = code.InteractiveConsole.runsource(self, source, *args)
+        except:
+            self._codelines = ""
+            raise
+        return need_more
+
+    def runcode(self, code):
+        source = self._codelines
+        self._codelines = ""
+        code_type = _pythonCode(source)
+        try:
+            if code_type == "expression":
+                print(self._conn.eval_in(self._ns, source))
+            elif code_type == "suite":
+                self._conn.exec_in(self._ns, source)
+            else:
+                return
+        except python3share.PythonShareError as e:
+            tb_lines = traceback.format_exc().splitlines()
+            try:
+                i = tb_lines.index("RemoteEvalError: Traceback (most recent call last):")
+                print(tb_lines[i])
+            except ValueError:
+                try:
+                    i = tb_lines.index("RemoteExecError: Traceback (most recent call last):")
+                    print(tb_lines[i])
+                except ValueError:
+                    print("i=-2")
+                    i = -2
+            print("\n".join(tb_lines[i+3:]))
+
+    def showsyntaxerror(self, *args):
+        self._codelines = ""
+        return code.InteractiveConsole.showsyntaxerror(self, *args)
+
+if __name__ == "__main__":
+    try:
+        opts, remainder = getopt.gnu_getopt(
+            sys.argv[1:], "C:DAhSs:Pp:n:c:e:r:o:f:ik",
+            ["connect=", "disconnect",
+             "async", "sync", "poll",
+             "help", "server=", "port=",
+             "password=", "password-file=",
+             "namespace=", "code=", "eval=", "read=",
+             "output=", "format=", "interact",
+             "ls-local", "ls-remote", "ls-remote-ip", "ns-type=",
+             "drop", "unlock", "kill"])
+    except getopt.GetoptError as e:
+        error(str(e))
+    opt_server = "localhost"
+    opt_port = python3share.default_port
+    opt_namespace = None
+    opt_async = False
+    opt_formatter = formatter_str
+    opt_password = None
+
+    conn = None
+
+    if len(remainder) > 0:
+        error('unknown parameter(s): "%s"' %
+              '", "'.join(remainder))
+
+    for opt, arg in opts:
+        if opt in ["-h", "--help"]:
+            print(__doc__)
+            sys.exit(0)
+        elif opt in ["-s", "--server"]:
+            opt_server = arg
+        elif opt in ["-p", "--port"]:
+            try:
+                opt_port = int(arg)
+            except ValueError:
+                error('invalid port "%s", integer expected.' % (arg,))
+        elif opt in ["--password"]:
+            opt_password = arg
+        elif opt in ["--password-file"]:
+            try:
+                opt_password = file(arg).read().strip()
+            except IOError as err:
+                error('error reading password file "%s": %s' % (arg, err))
+        elif opt in ["-C", "--connect"]:
+            hostspec = arg
+            try:
+                conn = python3share.connection(hostspec, password=opt_password)
+            except python3share.socket.error as e:
+                error('cannot connect to "%s": %s' % (hostspec, e))
+        elif opt in ["-D", "--disconnect"]:
+            conn.close()
+            conn = None
+        elif opt in ["-n", "--namespace"]:
+            opt_namespace = arg
+            if conn:
+                conn.set_namespace(opt_namespace)
+        elif opt in ["-c", "--code"]:
+            if conn == None:
+                conn = python3share.connection("socket://%s:%s" %
+                                              (opt_server, opt_port),
+                                              password=opt_password)
+            try:
+                if opt_namespace:
+                    conn.set_namespace(opt_namespace)
+                conn.exec_(arg, async_=opt_async)
+            except python3share.PythonShareError as e:
+                print(type(e))
+                print(e)
+        elif opt in ["-e", "--eval"]:
+            if conn == None:
+                conn = python3share.connection("socket://%s:%s" %
+                                              (opt_server, opt_port),
+                                              password=opt_password)
+            try:
+                if opt_namespace:
+                    conn.set_namespace(opt_namespace)
+                output(opt_formatter(
+                    conn.eval_(arg, async_=opt_async)))
+            except python3share.PythonShareError as e:
+                print(type(e))
+                print(e)
+        elif opt in ["-i", "--interact"]:
+            if conn == None:
+                conn = python3share.connection("socket://%s:%s" %
+                                              (opt_server, opt_port),
+                                              password=opt_password)
+            console = PythonshareConsole(conn=conn, namespace=opt_namespace)
+            console.interact()
+        elif opt in ["--ls-local"]:
+            if conn == None:
+                error("cannot list namespaces - not connected")
+            local_nss = conn.ls_local()
+            print("\n".join(local_nss))
+        elif opt in ["--ls-remote"]:
+            if conn == None:
+                error("cannot list namespaces - not connected")
+            remote_nss = conn.ls_remote()
+            print("\n".join(remote_nss))
+        elif opt in ["--ls-remote-ip"]:
+            if conn == None:
+                error("cannot list namespaces - not connected")
+            remote_nss = conn.ls_remote(ip=True)
+            for name in sorted(remote_nss.keys()):
+                print(name, remote_nss[name][0], remote_nss[name][1])
+        elif opt in ["--ns-type"]:
+            if conn == None:
+                error("cannot query namespace - not connected")
+            ns_type = conn.ns_type(arg)
+            if ns_type != None:
+                print(ns_type)
+        elif opt in ["--drop"]:
+            if conn == None:
+                error("cannot drop namespace - not connected")
+            if not opt_namespace:
+                opt_namespace = conn.namespace()
+            try:
+                conn.drop_ns(opt_namespace)
+            except Exception as e:
+                error("cannot drop namespace: %s" % (
+                    str(e).strip().splitlines()[-1].split(":")[-1].strip(),))
+        elif opt in ["--unlock"]:
+            if conn == None:
+                error("cannot unlock namespace - not connected")
+            if not opt_namespace:
+                opt_namespace = conn.namespace()
+            try:
+                conn.unlock_ns(opt_namespace)
+            except Exception as e:
+                error("cannot unlock namespace: %s" % (
+                    str(e).strip().splitlines()[-1].split(":")[-1].strip(),))
+        elif opt in ["-k", "--kill"]:
+            if conn == None:
+                error("cannot kill server - not connected")
+            if not opt_namespace:
+                opt_namespace = conn.namespace()
+            try:
+                conn.kill_server(opt_namespace)
+            except Exception as e:
+                error("error on kill: %s" % (e,))
+        elif opt in ["-r", "--read"]:
+            try:
+                try:
+                    if not opt_namespace:
+                        opt_namespace = conn.namespace()
+                    index = int(arg)
+                    # arg is an index to the list of poll_rvs
+                    l = conn.poll_rvs(opt_namespace)
+                    print(conn.read_rv(l[index]))
+                except ValueError: # arg is a Async_rv string
+                    print(conn.read_rv(arg))
+            except python3share.PythonShareError as e:
+                print(type(e))
+                print(e)
+        elif opt in ["-A", "--async"]:
+            opt_async = True
+        elif opt in ["-S", "--sync"]:
+            opt_async = False
+        elif opt in ["-P", "--poll"]:
+            if not opt_namespace:
+                opt_namespace = conn.namespace()
+            async_rvs = conn.poll_rvs(opt_namespace)
+            print("\n".join([str(arv) for arv in async_rvs]))
+        elif opt in ["-o", "--output"]:
+            opt_output_file = file(arg, "w")
+        elif opt in ["-f", "--format"]:
+            try:
+                opt_formatter = globals()["formatter_%s" % (arg,)]
+            except KeyError:
+                error('invalid formatter "%s", see --help' % (arg,))
