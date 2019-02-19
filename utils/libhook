@@ -32,14 +32,21 @@ Options:
   -I, --include-dir DIR           adds DIR to header search path.
   -h, --header FILE_H             parse functions from FILE_H.
   -f, --function REGEXP           hook functions matching REGEXP.
+  -p, --print WHAT                available WHATs:
+                                   time - print wallclock time in functions
+                                   ru_FIELD - print rusage FIELD (man getrusage)
 
   -o, --output FILE.C             write generated C code to FILE.C.
                                   The default is stdout.
   -b, --build                     Build shared library (FILE.so).
 
-Example:
-  $ libhook -h /usr/include/stdio.h -f fopen -f fclose -o openclose.c -b
+Example: print time in fopen and fclose functions
+  $ libhook -h /usr/include/stdio.h -f fopen -f fclose -p time -o openclose.c -b
   $ LD_PRELOAD=./openclose.so cat /etc/motd
+
+Example: print major and minor page faults in any stdio function
+  $ libhook -h /usr/include/stdio.h -f '.*' -p ru_minflt -p ru_majflt -o flts.c -b
+  $ LD_PRELOAD=./flts.so python
 """
 
 import getopt
@@ -52,11 +59,14 @@ import sys
 
 import recb
 
-c_start = """/* -- c_start */
+c_start = r"""/* -- c_start */
 #define _GNU_SOURCE
 #include <dlfcn.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <execinfo.h>
 
 #include <time.h>
 #include <sys/resource.h>
@@ -95,6 +105,20 @@ void libhook_stop_measuring()
         _libhook_pid = getpid();
     }
 }
+
+void libhook_backtrace()
+{
+    void *array[10];
+    size_t size;
+    char **strings;
+    size_t i;
+    size = backtrace(array, 10);
+    strings = backtrace_symbols(array, size);
+    fprintf(stderr, "libhook: stacktrace: Obtained %zd stack frames.\n", size);
+    for (i = 0; i < size; i++)
+       fprintf(stderr, "libhook: stacktrace: %s\n", strings[i]);
+    free(strings);
+}
 """
 
 c_user_header = """/* -- c_user_header */
@@ -114,7 +138,7 @@ c_real_func_decl_end = """    /* -- c_real_func_decl_end */
 c_hook_start = """/* -- c_hook_start */
 %(specifiers)s %(type)s %(pointer)s %(func)s("""
 c_hook_param = """    /* -- c_hook_param */
-    %(const)s %(specifiers)s %(type)s p%(param_index)s"""
+    %(const)s %(specifiers)s %(type)s p%(param_index)s%(array)s%(param_sep)s"""
 c_hook_find_real = r"""    /* -- c_hook_find_real */
 ) {
     /* Hooking is better here than in library init, because sometimes
@@ -122,11 +146,18 @@ c_hook_find_real = r"""    /* -- c_hook_find_real */
     if (_real_%(func)s == NULL) {
         _real_%(func)s = dlsym(RTLD_NEXT, "%(func)s");
     }
-    libhook_start_measuring();
 """
-c_hook_end = r"""    /* -- c_hook_end */
+c_hook_call_orig_nonvoid = r"""    /* -- c_hook_call_orig_nonvoid */
+    libhook_start_measuring();
     %(type)s %(pointer)s rv = _real_%(func)s(%(param_names)s);
     libhook_stop_measuring();
+"""
+c_hook_call_orig_void = r"""    /* -- c_hook_call_orig_void */
+    libhook_start_measuring();
+    _real_%(func)s(%(param_names)s);
+    libhook_stop_measuring();
+"""
+c_hook_print_time = r"""    /* -- c_hook_print_time */
     if (_libhook_stack_index < _libhook_stack_limit - 1) {
         fprintf(stderr, "{\"cat\": \"libhook\", \"name\": \"%(func)s\", \"ph\": \"X\", "
             "\"ts\": %%lld, "
@@ -136,12 +167,18 @@ c_hook_end = r"""    /* -- c_hook_end */
             (_libhook_timestamp_end_ns - _libhook_timestamp_start_ns) / 1000,
             _libhook_pid);
     }
-    return rv;
-}
 """
-c_hook_void_end = r"""    /* -- c_hook_void_end */
-) {
-    _real_%(func)s(%(param_names)s);
+c_hook_print_rusage = r"""    /* -- c_hook_print_rusage */
+    if (_libhook_stack_index < _libhook_stack_limit - 1) {
+        fprintf(stderr, "%(func)s %(ru_field)s %%ld +-%%ld\n",
+            _libhook_rusage_end.%(ru_field)s,
+            _libhook_rusage_end.%(ru_field)s - _libhook_rusage_start[_libhook_stack_index].%(ru_field)s);
+    }
+"""
+c_hook_return = r"""    /* -- c_hook_return */
+    return rv;
+"""
+c_hook_end = r"""    /* -- c_hook_end */
 }
 """
 
@@ -257,15 +294,18 @@ _FUNC_DECL_CPP_LINE = recb.pattern(r'^# (?P<cppline>[0-9]*) "(?P<cppfile>[^"]*)"
 _FUNC_DECL_ATTRIBUTES = recb.pattern(r"__attribute__\s*\(\([^)]*\)\)\s*|__extension__\s*")
 
 _FUNC_DECL_START = recb.pattern(
-    r"\s*(?P<extern>extern\s*)?(?P<specifiers>(unsigned\s*|signed\s*|short\s*|long\s*)*)"
-    "(?P<type>(char|double|FILE|float|int|long|size_t|void)\s*)(?P<pointer>(\*\s*)*)"
-    "(?P<func>[a-zA-Z_][a-zA-Z_0-9]*\s*)\(\s*",
+    r'\s*(?P<extern>extern\s*)?'
+    '(?P<specifiers>(unsigned\s*|signed\s*|short\s*|long\s*)*)'
+    '(?P<type>([0-9a-zA-Z_]+(?![0-9a-zA-Z_])\s*))'
+    '(?P<pointer>(\*\s*)*)'
+    '(?P<func>[a-zA-Z_][a-zA-Z_0-9]*\s*)\(\s*',
     cb=_parse_decl_start)
 
 _FUNC_PARAM = recb.pattern(
     r'\s*(?P<const>const\s)?\s*'
-    '(?P<specifiers>(unsigned\s*|signed\s*|short\s*|long\s*)*)?(?P<type>[0-9a-zA-Z_]+(?![0-9a-zA-Z_])\s*)'
-     '(?P<pointer>(\*\s*)*\s*)?'
+    '(?P<specifiers>(unsigned\s*|signed\s*|short\s*|long\s*)*)?'
+    '(?P<type>[0-9a-zA-Z_]+(?![0-9a-zA-Z_])\s*)'
+    '(?P<pointer>(\*\s*)*\s*)?'
     '(?P<restrict>(__)?restrict\s+)?'
     '(?P<const_pointer>const\s+)?'
     '(?P<name>[0-9a-zA-Z_]+)'
@@ -314,14 +354,18 @@ def parse_func_decls(headers, include_dirs):
     _FUNC_DECL_GRAMMAR.parse(o)
     return _func_decls
 
-def build_so(file_c):
-    cmd = cc + ["-shared", "-fPIC", file_c, "-ldl",
-                "-o", file_c.rsplit(".", 1)[0] + ".so"]
+def build_so(file_c, include_dirs):
+    cc_args = []
+    for include_dir in include_dirs:
+        cc_args.append("-I" + include_dir)
+    cc_args.extend(["-shared", "-fPIC", file_c, "-ldl",
+                    "-o", file_c.rsplit(".", 1)[0] + ".so"])
+    cmd = cc + cc_args
     status, out, err = soe(cmd)
     if status != 0:
         error('error running %r:\n%s' % (' '.join(cmd), err + out))
 
-def hook_code(headers, func_decls):
+def hook_code(headers, func_decls, print_what):
     c = [c_start]
     for header in headers:
         c.append(c_user_header % {'header': os.path.basename(header)})
@@ -331,7 +375,7 @@ def hook_code(headers, func_decls):
         for index, param in enumerate(func_decl['params']):
             c.append(c_real_func_decl_param % {
                 'type': param['specifiers'] + " " + param['type'] + (
-                    "*" if param['pointer'] else "") + (
+                    param['pointer']) + (
                         "," if index < len(func_decl['params']) - 1 else ""),
                 'const': param.get('const', '')})
         c.append(c_real_func_decl_end)
@@ -342,32 +386,43 @@ def hook_code(headers, func_decls):
         c.append(c_hook_start % func_decl)
         for index, param in enumerate(func_decl['params']):
             c.append(c_hook_param %
-                     {'param_index': str(index) + ("," if index < len(func_decl['params']) - 1 else ""),
+                     {'param_index': str(index),
                       'const': param.get('const', ''),
                       'specifiers': param.get('specifiers', ''),
-                      'type': param['type'] + (
-                          "*" if param['pointer'] else "")
+                      'type': param['type'] + param['pointer'],
+                      'array': "" if not "dim" in param else ("[%s]" % param["dim"]),
+                      'param_sep': "," if index < len(func_decl['params']) - 1 else ""
                      })
         c.append(c_hook_find_real % func_decl)
-        if func_decl['type'] == "void":
-            c.append(c_hook_void_end % func_decl)
+        if func_decl['type'] != "void":
+            c.append(c_hook_call_orig_nonvoid % func_decl)
         else:
-            c.append(c_hook_end % func_decl)
+            c.append(c_hook_call_orig_void % func_decl)
+        if "time" in print_what:
+            c.append(c_hook_print_time % func_decl)
+        for ru_field in [ru for ru in print_what if ru.startswith("ru_")]:
+            func_decl["ru_field"] = ru_field
+            c.append(c_hook_print_rusage % func_decl)
+        if func_decl['type'] != "void":
+            c.append(c_hook_return % func_decl)
+        c.append(c_hook_end % func_decl)
+
     return "".join(c)
 
 def main(argv):
     global opt_debug, opt_debug_pm
     opt_include_dirs = []
     opt_functions = []
+    opt_print = []
     opt_headers = []
     opt_output = None
     opt_build = None
     try:
         opts, remainder = getopt.gnu_getopt(
-            argv[1:], 'dI:f:h:o:b',
+            argv[1:], 'dI:f:p:h:o:b',
             ['help', 'debug', 'debug-pm',
              'include-dir=', 'header=',
-             'function=',
+             'function=', 'print=',
              'output=',
              'build'])
     except getopt.GetoptError, e:
@@ -385,6 +440,8 @@ def main(argv):
             opt_include_dirs.append(arg)
         elif opt in ["-f", "--function"]:
             opt_functions.append(arg)
+        elif opt in ["-p", "--print"]:
+            opt_print.append(arg)
         elif opt in ["-h", "--header"]:
             opt_headers.append(arg)
         elif opt in ["-o", "--output"]:
@@ -444,13 +501,13 @@ def main(argv):
     if opt_output is None:
         opt_output = sys.stdout
 
-    libhook_c = hook_code(headers, matching_function_decls)
+    libhook_c = hook_code(headers, matching_function_decls, opt_print)
     opt_output.write(libhook_c)
     opt_output.flush()
     if opt_build:
         if not opt_output.name.startswith("<"):
             opt_output.close()
-            build_so(opt_output.name)
+            build_so(opt_output.name, opt_include_dirs)
         else:
             error("cannot --build without --output=FILE_C")
 
