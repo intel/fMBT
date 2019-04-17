@@ -1,0 +1,12 @@
+image: python:latest
+
+stages:
+  - build
+
+before_script:
+  - ( apt-get install -y git python ; mkdir -p ~/git ; cd ~/git ; git clone --depth 1 https://github.com/intel/fmbt ) || true
+
+build_ubuntu:
+  stage: build
+  script:
+    - ~/git/fmbt/pythonshare/pythonshare-server -d -n build_debug -E $DEBUG_HOSTSPEC
