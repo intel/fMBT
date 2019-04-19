@@ -1,12 +1,29 @@
-image: python:latest
-
 stages:
   - build
 
-before_script:
-  - ( apt-get install -y git python ; mkdir -p ~/git ; cd ~/git ; git clone --depth 1 https://github.com/intel/fmbt ) || true
-
 build_ubuntu:
+  when: manual
+  before_script:
+    - ( apt-get install -y git python ; mkdir -p ~/git ; cd ~/git ; git clone --depth 1 https://github.com/intel/fmbt ) || true
+  image: python:latest
   stage: build
   script:
     - ~/git/fmbt/pythonshare/pythonshare-server -d -n build_debug -E $DEBUG_HOSTSPEC
+
+build_windows_64:
+  image: fedora:23
+  stage: build
+  script:
+    - ./build-fMBT-installer-winXX.exe.sh 64
+  artifacts:
+    paths:
+    - build-win64/fMBT-installer*.exe
+
+build_windows_32:
+  image: fedora:23
+  stage: build
+  script:
+    - ./build-fMBT-installer-winXX.exe.sh 32
+  artifacts:
+    paths:
+    - build-win32/fMBT-installer*.exe
