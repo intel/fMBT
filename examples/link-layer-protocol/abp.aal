@@ -1,11 +1,12 @@
 # Alternating bit protocol
-# preview-show-vars: r_seq, t_seq, received, t2r, r2t, send_next
-# preview-depth: 30
+#
+# preview-show-vars: received, t2r, r2t
+# preview-depth: 10
 
 variables {
     t_seq, r_seq, t2r, r2t, \
-    TO_BE_SENT, send_next, received, \
-    SEQ_MAX, \
+    send_next, received, \
+    TO_BE_SENT, SEQ_MAX, \
     CHN_SIZE, CHN_LOSS, CHN_REORDER
 }
 initial_state {
@@ -17,33 +18,21 @@ initial_state {
     received = [] # received messages
     TO_BE_SENT = ['a', 'b', 'c'] # messages to be sent
     SEQ_MAX = 1 # reset t_seq and r_seq after reaching MAX
-    CHN_SIZE = 1 # how many messages can a channel hold
+    CHN_SIZE = 2 # how many messages can a channel hold
     CHN_LOSS = True
     CHN_REORDER = True
 }
+##########################################
+# Transmitter actions
+# send:    send next message that has not been acknowledged yet:
+#          Append the message to the transmitter-to-receiver channel.
 input "t:send" {
     guard { return len(t2r) < CHN_SIZE and send_next < len(TO_BE_SENT) }
     body { t2r.append((t_seq, TO_BE_SENT[send_next])) }
 }
-input "r:rec+ack" {
-    guard { return t2r and t2r[0][0] == r_seq and len(r2t) < CHN_SIZE }
-    body {
-        _, payload = t2r.pop(0) # read expected seq num from channel
-        # update "expected next" number
-        r_seq += 1
-        if r_seq > SEQ_MAX:
-          r_seq = 0
-        r2t.append(r_seq) # ack what is expected next
-        received.append(payload)
-    }
-}
-input "r:rec+nak" {
-    guard { return t2r and t2r[0] != r_seq and len(r2t) < CHN_SIZE }
-    body {
-        t2r.pop(0) # read unexpected seq num from channel and drop it
-        r2t.append(r_seq) # keep sending the same seq
-    }
-}
+# ack ok:  receive expected acknowledgement from the receiver.
+#          Consider acknowledged message successfully received.
+#          Increase sequence number for next messages.
 input "t:ack ok" {
     guard { return r2t and r2t[0] == (t_seq + 1 if t_seq + 1 <= SEQ_MAX else 0) }
     body {
@@ -60,26 +49,66 @@ input "t:ack nok" {
         r2t.pop(0)
     }
 }
-input "t2r: loss" {
+
+##########################################
+# Receiver actions
+# rec+ack: receive a message with expected seq number,
+#          send positive acknowledgment,
+#          add the message to received messages
+input "r:rec+ack" {
+    guard { return t2r and t2r[0][0] == r_seq and len(r2t) < CHN_SIZE }
+    body {
+        _, payload = t2r.pop(0) # read expected seq num from channel
+        # update "expected next" number
+        r_seq += 1
+        if r_seq > SEQ_MAX:
+          r_seq = 0
+        r2t.append(r_seq) # ack what is expected next
+        received.append(payload)
+    }
+}
+# rec+nak: receive a message with unexpected seq number,
+#          send negative acknowledgment,
+#          ignore the message
+input "r:rec+nak" {
+    guard { return t2r and t2r[0] != r_seq and len(r2t) < CHN_SIZE }
+    body {
+        t2r.pop(0) # read unexpected seq num from channel and drop it
+        r2t.append(r_seq) # keep sending the same seq
+    }
+}
+##########################################
+# Channel actions
+# loss:    drops the first message in the channel
+# reorder: reverses the order of messages in the channel
+input "t2r:loss" {
     guard { return t2r and CHN_LOSS }
     body { t2r.pop(0) }
 }
-input "r2t: loss" {
+input "r2t:loss" {
     guard { return r2t and CHN_LOSS }
     body { r2t.pop(0) }
 }
-input "t2r: reorder" {
+input "t2r:reorder" {
     guard { return len(t2r) > 1 and CHN_REORDER }
     body { t2r = t2r[::-1] }
 }
-input "r2t: reorder" {
+input "r2t:reorder" {
     guard { return len(r2t) > 1 and CHN_REORDER }
     body { r2t = r2t[::-1] }
 }
+##########################################
+# Tags on states
+# SUCCESS: all the messages have been successfully received.
+#          Correct order, no duplications or lost messages.
+# REC ERROR
 tag "SUCCESS" {
     guard { return received == ["a", "b", "c"] and t_seq == r_seq}
 }
-tag "REC ERROR" {
+tag "DUP ERROR" {
     guard { return received.count("a") > 1 or received.count("b") > 1 or received.count("c") > 1}
+}
+tag "LOST ERROR" {
+    guard { return ("b" in received or "c" in received) and not "a" in received}
 }
 
