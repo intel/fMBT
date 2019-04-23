@@ -267,6 +267,10 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
             continue
         props = state2props.get(state, [])
         _tags = [p for p in props if p.startswith("[")]
+        if _tags and _tags[0] == "[initial state]":
+            _tags = _tags[:1] + sorted(_tags[1:]) # keep [initial state] on top
+        else:
+            _tags = sorted(_tags)
         _loops = [p for p in props if not p.startswith("[")]
         colordata = ''
         if state_colors:
@@ -282,7 +286,7 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
         outfileobj.write(
             '    S%s [label=<%s<br align="left"/>>%s]\n'
             % (state,
-               "<br align=\"left\"/>".join(sorted(_tags) + sorted(_loops)),
+               "<br align=\"left\"/>".join(_tags + sorted(_loops)),
                colordata))
     outfileobj.write('}\n')
 

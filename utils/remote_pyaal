@@ -66,6 +66,10 @@ Options:
         Take variable varname into account when converting to
         LSTS. --lsts-show-var can be given several times.
 
+    --lsts-format-var FORMAT
+        How to format variable names and values in LSTS state propositions.
+        The default is 'var:%(name)s = %(value)s'
+
     --list-state-vars
         Output list of variables that saved for each state.
 
@@ -434,7 +438,8 @@ def aal2lsts(aal, output_fileobj, depth=5, discard_variables=None,
     def update_generated_tags(aal, include_variables,
                               generated_tagnames, tags, new_lsts_state_num):
         for v in include_variables:
-            t = "var:%s = %s" % (v, repr(aal._variables[v])[:42])
+            t = opt_lsts_format_var % {"name": v,
+                                       "value": repr(aal._variables[v])[:42]}
             if not t in generated_tagnames:
                 generated_tagnames.add(t)
                 tags[t] = []
@@ -543,6 +548,7 @@ if __name__ == "__main__":
     opt_lsts_depth = 5
     opt_lsts_hide_vars = []
     opt_lsts_show_vars = []
+    opt_lsts_format_var = "var:%(name)s = %(value)s"
     opt_c_exec_statements = []
     opt_lsts_hide_tags = []
     opt_list_state_vars = False
@@ -554,6 +560,7 @@ if __name__ == "__main__":
         ["debug", "help", "log-file=", "timeout=", "output=",
          "verbose-fmbt-log", "accel-drop-outputs",
          "lsts-depth=", "lsts-hide-var=", "lsts-show-var=",
+         "lsts-format-var=",
          "log-unbuffered",
          "list-state-vars", "profile=", "version"])
 
@@ -599,6 +606,8 @@ if __name__ == "__main__":
             opt_lsts_hide_vars.append(arg)
         elif opt in ["-S", "--lsts-show-var"]:
             opt_lsts_show_vars.append(arg)
+        elif opt in ["--lsts-format-var"]:
+            opt_lsts_format_var = arg
         elif opt in ["--list-state-vars"]:
             opt_list_state_vars = True
             if not opt_output_fileobj:
