@@ -1,14 +1,42 @@
 stages:
   - build
 
-build_ubuntu:
-  when: manual
-  before_script:
-    - ( apt-get install -y git python ; mkdir -p ~/git ; cd ~/git ; git clone --depth 1 https://github.com/intel/fmbt ) || true
-  image: python:latest
+build_ubuntu_bionic:
+  image: ubuntu:bionic
   stage: build
   script:
-    - ~/git/fmbt/pythonshare/pythonshare-server -d -n build_debug -E $DEBUG_HOSTSPEC
+    - ./build-fMBT-packages-linux.sh
+  artifacts:
+    when: always
+    paths:
+      - debs/*
+      - logs/*
+      - test/*/*.txt
+
+# disable trusty build for now, interactive test is failing
+#build_ubuntu_trusty:
+#  image: ubuntu:trusty
+#  stage: build
+#  script:
+#    - ./build-fMBT-packages-linux.sh
+#  artifacts:
+#    when: always
+#    paths:
+#      - debs/*
+#      - logs/*
+#      - test/*/*.txt
+
+build_ubuntu_xenial:
+  image: ubuntu:xenial
+  stage: build
+  script:
+    - ./build-fMBT-packages-linux.sh
+  artifacts:
+    when: always
+    paths:
+      - debs/*
+      - logs/*
+      - test/*/*.txt
 
 build_windows_64:
   image: fedora:23
