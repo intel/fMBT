@@ -4,7 +4,7 @@ aal "interactive_breakpoints" {
         import time
         fmbt_launch_command = "fmbt -i simple.conf"
 
-        def requireOutput(s, timeout=1):
+        def requireOutput(s, timeout=5):
             assert p.expect(s, timeout) == 0
 
         def command(c):
