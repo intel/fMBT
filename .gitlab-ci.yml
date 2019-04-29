@@ -37,6 +37,41 @@ build_ubuntu_xenial:
       - debs/*
       - logs/*
       - test/*/*.txt
+build_debian_stable:
+  image: debian:latest
+  stage: build
+  script:
+    - ./build-fMBT-packages-linux.sh
+  artifacts:
+    when: always
+    paths:
+      - debs/*
+      - logs/*
+      - test/*/*.txt
+
+build_debian_unstable:
+  image: debian:unstable
+  stage: build
+  script:
+    - ./build-fMBT-packages-linux.sh
+  artifacts:
+    when: always
+    paths:
+      - debs/*
+      - logs/*
+      - test/*/*.txt
+
+build_debian_testing:
+  image: debian:testing
+  stage: build
+  script:
+    - ./build-fMBT-packages-linux.sh
+  artifacts:
+    when: always
+    paths:
+      - debs/*
+      - logs/*
+      - test/*/*.txt
 
 build_windows_64:
   image: fedora:23
