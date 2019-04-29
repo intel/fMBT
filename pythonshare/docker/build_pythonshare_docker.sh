@@ -10,14 +10,15 @@ PYTHONSHARE_DOCKER_DIR="$(pwd)"
 
 cd ..
 
-# Destination
+# Destination where to install static Python and Pythonshare
+# and from which Docker filesystem will be created.
 INSTALL_ROOT=${PYTHONSHARE_DOCKER_DIR}/static-install
 
 # Install prefix under INSTALL_ROOT
 INSTALL_PREFIX=/usr
 INSTALL_DIR=$INSTALL_ROOT/$INSTALL_PREFIX
 
-# Sources
+# Sources where to find Pythonshare and Python
 PYTHONSHARE_DIR=$(pwd)
 if [ -z "$PYTHON_DIR" ]; then
     echo "PYTHON_DIR is not defined." >&2
@@ -35,7 +36,7 @@ fi
 
 ## Build and install static Python
 cd "$PYTHON_DIR"
-#./configure LINKFORSHARED=" " LDFLAGS="-static -static-libgcc -Wl,--no-export-dynamic" CPPFLAGS="-static -fpic" --disable-shared --prefix "$INSTALL_DIR"
+./configure LINKFORSHARED=" " LDFLAGS="-static -static-libgcc -Wl,--no-export-dynamic" CPPFLAGS="-static -fpic" --disable-shared --prefix "$INSTALL_DIR"
 ( nice make -j 16 install 2>&1 | tee make_static_build.log ) || {
     echo "building and installing static Python from '$PYTHON_DIR' to '$INSTALL_DIR' failed" >&2
     exit 1
