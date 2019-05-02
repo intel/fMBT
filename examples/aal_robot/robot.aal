@@ -19,6 +19,8 @@ variables {
 initial_state {
     browser_running = False
     s_index = len(search_texts) - 1
+    robot_adapter.addTestSuite("Generated testsuite")
+    robot_adapter.addTestCase("Test DuckDuckGo")
 }
 
 input "Open page in browser" {
