@@ -1,5 +1,8 @@
 This example demonstrates how to generate tests for Robot Framework from AAL model
 
+Example generates a browser test that navigates to duckduckgo.com and does some searching.
+It also produces robotfile.robot which can be executed directly with Robot Framework.
+
 Files included in example:
 
 robot_adapter.py:
@@ -19,9 +22,14 @@ test.robot:
     Template for testing the Robot Framework test code without running it trough fMBT.
 
 Dependencies:
-    This example uses Selenium webdriver to control the web browser.
-    Webdrivers for different browsers can be downloaded from: https://www.seleniumhq.org/download/
-    Webdriver binary needs to be in the PATH to be usable by Robot.
+
+    Robot Framework:
+        pip install --upgrade robotframework
+        pip install --upgrade robotframework-seleniumlibrary
+
+    Selenium Webdriver:
+        Webdrivers for different browsers can be downloaded from: https://www.seleniumhq.org/download/
+        Webdriver binary needs to be in the PATH to be usable by Robot.
 
 Running the example:
     fmbt test.conf
