@@ -1,0 +1,101 @@
+--- a/Modules/Setup.dist	2019-05-03 12:37:09.625289999 +0300
++++ b/Modules/Setup.dist	2019-05-03 12:28:18.048296992 +0300
+@@ -166 +166,3 @@
+-#readline readline.c -lreadline -ltermcap
++*static*
++
++readline readline.c -lreadline -ltermcap
+@@ -171,6 +173,6 @@
+-#array arraymodule.c	# array objects
+-#cmath cmathmodule.c _math.c # -lm # complex math library functions
+-#math mathmodule.c _math.c # -lm # math library functions, e.g. sin()
+-#_struct _struct.c	# binary structure packing/unpacking
+-#time timemodule.c # -lm # time operations and variables
+-#operator operator.c	# operator.add() and similar goodies
++array arraymodule.c	# array objects
++cmath cmathmodule.c _math.c # -lm # complex math library functions
++math mathmodule.c _math.c # -lm # math library functions, e.g. sin()
++_struct _struct.c	# binary structure packing/unpacking
++time timemodule.c # -lm # time operations and variables
++operator operator.c	# operator.add() and similar goodies
+@@ -178,7 +180,7 @@
+-#_random _randommodule.c	# Random number generator
+-#_collections _collectionsmodule.c # Container types
+-#_heapq _heapqmodule.c		# Heapq type
+-#itertools itertoolsmodule.c	# Functions creating iterators for efficient looping
+-#strop stropmodule.c		# String manipulations
+-#_functools _functoolsmodule.c	# Tools for working with functions and callable objects
+-#_elementtree -I$(srcdir)/Modules/expat -DHAVE_EXPAT_CONFIG_H -DUSE_PYEXPAT_CAPI _elementtree.c	# elementtree accelerator
++_random _randommodule.c	# Random number generator
++_collections _collectionsmodule.c # Container types
++_heapq _heapqmodule.c		# Heapq type
++itertools itertoolsmodule.c	# Functions creating iterators for efficient looping
++strop stropmodule.c		# String manipulations
++_functools _functoolsmodule.c	# Tools for working with functions and callable objects
++_elementtree -I$(srcdir)/Modules/expat -DHAVE_EXPAT_CONFIG_H -DUSE_PYEXPAT_CAPI _elementtree.c	# elementtree accelerator
+@@ -186,2 +188,2 @@
+-#datetime datetimemodule.c	# date/time type
+-#_bisect _bisectmodule.c	# Bisection algorithms
++datetime datetimemodule.c	# date/time type
++_bisect _bisectmodule.c	# Bisection algorithms
+@@ -189 +191 @@
+-#unicodedata unicodedata.c    # static Unicode character database
++unicodedata unicodedata.c    # static Unicode character database
+@@ -192 +194 @@
+-#_locale _localemodule.c  # -lintl
++_locale _localemodule.c  # -lintl
+@@ -195 +197 @@
+-#_io -I$(srcdir)/Modules/_io _io/bufferedio.c _io/bytesio.c _io/fileio.c _io/iobase.c _io/_iomodule.c _io/stringio.c _io/textio.c
++_io -I$(srcdir)/Modules/_io _io/bufferedio.c _io/bytesio.c _io/fileio.c _io/iobase.c _io/_iomodule.c _io/stringio.c _io/textio.c
+@@ -202,2 +204,2 @@
+-#fcntl fcntlmodule.c	# fcntl(2) and ioctl(2)
+-#spwd spwdmodule.c		# spwd(3)
++fcntl fcntlmodule.c	# fcntl(2) and ioctl(2)
++spwd spwdmodule.c		# spwd(3)
+@@ -205 +207 @@
+-#select selectmodule.c	# select(2); not on ancient System V
++select selectmodule.c	# select(2); not on ancient System V
+@@ -208 +210 @@
+-#mmap mmapmodule.c
++mmap mmapmodule.c
+@@ -214 +216 @@
+-#_socket socketmodule.c timemodule.c
++_socket socketmodule.c timemodule.c
+@@ -235,2 +237,2 @@
+-#termios termios.c	# Steen Lumholt's termios module
+-#resource resource.c	# Jeremy Hylton's rlimit interface
++termios termios.c	# Steen Lumholt's termios module
++resource resource.c	# Jeremy Hylton's rlimit interface
+@@ -255 +257 @@
+-#_md5 md5module.c md5.c
++_md5 md5module.c md5.c
+@@ -260,3 +262,3 @@
+-#_sha shamodule.c
+-#_sha256 sha256module.c
+-#_sha512 sha512module.c
++_sha shamodule.c
++_sha256 sha256module.c
++_sha512 sha512module.c
+@@ -314 +316 @@
+-#timing timingmodule.c
++timing timingmodule.c
+@@ -372 +374 @@
+-#_curses_panel _curses_panel.c -lpanel -lncurses
++#_curses_panel _curses_panel.c -lpanel -lncurses
+@@ -380 +382 @@
+-#dl dlmodule.c
++dl dlmodule.c
+@@ -437 +439 @@
+-#binascii binascii.c
++binascii binascii.c
+@@ -440 +442 @@
+-#parser parsermodule.c
++parser parsermodule.c
+@@ -443,2 +445,2 @@
+-#cStringIO cStringIO.c
+-#cPickle cPickle.c
++cStringIO cStringIO.c
++cPickle cPickle.c
+@@ -467 +469 @@
+-#zlib zlibmodule.c -I$(prefix)/include -L$(exec_prefix)/lib -lz
++zlib zlibmodule.c -I$(prefix)/include -L$(exec_prefix)/lib -lz

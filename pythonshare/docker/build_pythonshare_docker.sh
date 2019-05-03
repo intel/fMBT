@@ -36,6 +36,7 @@ fi
 
 ## Build and install static Python
 cd "$PYTHON_DIR"
+patch -p1 --ignore-whitespace --forward < $PYTHONSHARE_DOCKER_DIR/cpython.Modules.Setup.dist.patch
 ./configure LINKFORSHARED=" " LDFLAGS="-static -static-libgcc -Wl,--no-export-dynamic" CPPFLAGS="-static -fpic" --disable-shared --prefix "$INSTALL_DIR"
 ( nice make -j 16 install 2>&1 | tee make_static_build.log ) || {
     echo "building and installing static Python from '$PYTHON_DIR' to '$INSTALL_DIR' failed" >&2
