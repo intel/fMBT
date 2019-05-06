@@ -1,5 +1,6 @@
 stages:
   - build
+  - test
 
 build_ubuntu_bionic:
   image: ubuntu:bionic
@@ -13,19 +14,6 @@ build_ubuntu_bionic:
       - logs/*
       - test/*/*.txt
 
-# disable trusty build for now, interactive test is failing
-#build_ubuntu_trusty:
-#  image: ubuntu:trusty
-#  stage: build
-#  script:
-#    - ./build-fMBT-packages-linux.sh
-#  artifacts:
-#    when: always
-#    paths:
-#      - debs/*
-#      - logs/*
-#      - test/*/*.txt
-
 build_ubuntu_xenial:
   image: ubuntu:xenial
   stage: build
@@ -37,6 +25,7 @@ build_ubuntu_xenial:
       - debs/*
       - logs/*
       - test/*/*.txt
+
 build_debian_stable:
   image: debian:latest
   stage: build
@@ -90,3 +79,69 @@ build_windows_32:
   artifacts:
     paths:
     - build-win32/fMBT-installer*.exe
+
+# test stages
+test_ubuntu_bionic:
+  image: ubuntu:bionic
+  stage: test
+  dependencies:
+    - build_ubuntu_bionic
+  services:
+    - askervin/pythonshare-server
+  script:
+    - cd debs
+    - apt-get update
+    - DEBIAN_FRONTEND=noninteractive apt install -f -y ./fmbt-pythonshare*.deb
+    - pythonshare-client -C xyz@askervin-pythonshare-server --ls-remote
+
+test_ubuntu_xenial:
+  image: ubuntu:xenial
+  stage: test
+  dependencies:
+    - build_ubuntu_xenial
+  services:
+    - askervin/pythonshare-server
+  script:
+    - cd debs
+    - apt-get update
+    - DEBIAN_FRONTEND=noninteractive apt install -f -y ./fmbt-pythonshare*.deb
+    - pythonshare-client -C xyz@askervin-pythonshare-server --ls-remote
+
+test_debian_stable:
+  image: debian:stable
+  stage: test
+  dependencies:
+    - build_debian_stable
+  services:
+    - askervin/pythonshare-server
+  script:
+    - cd debs
+    - apt-get update
+    - DEBIAN_FRONTEND=noninteractive apt install -f -y ./fmbt-pythonshare*.deb
+    - pythonshare-client -C xyz@askervin-pythonshare-server --ls-remote
+
+test_debian_unstable:
+  image: debian:unstable
+  stage: test
+  dependencies:
+    - build_debian_unstable
+  services:
+    - askervin/pythonshare-server
+  script:
+    - cd debs
+    - apt-get update
+    - DEBIAN_FRONTEND=noninteractive apt install -f -y ./fmbt-pythonshare*.deb
+    - pythonshare-client -C xyz@askervin-pythonshare-server --ls-remote
+
+test_debian_testing:
+  image: debian:testing
+  stage: test
+  dependencies:
+    - build_debian_testing
+  services:
+    - askervin/pythonshare-server
+  script:
+    - cd debs
+    - apt-get update
+    - DEBIAN_FRONTEND=noninteractive apt install -f -y ./fmbt-pythonshare*.deb
+    - pythonshare-client -C xyz@askervin-pythonshare-server --ls-remote
