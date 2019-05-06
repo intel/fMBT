@@ -290,23 +290,35 @@ if __name__ == "__main__":
         elif opt in ["--ls-local"]:
             if conn == None:
                 error("cannot list namespaces - not connected")
-            local_nss = conn.ls_local()
+            try:
+                local_nss = conn.ls_local()
+            except Exception, e:
+                error('cannot list local namespaces: %s' % (e,))
             print "\n".join(local_nss)
         elif opt in ["--ls-remote"]:
             if conn == None:
                 error("cannot list namespaces - not connected")
-            remote_nss = conn.ls_remote()
+            try:
+                remote_nss = conn.ls_remote()
+            except Exception, e:
+                error('cannot list remote namespaces: %s' % (e,))
             print "\n".join(remote_nss)
         elif opt in ["--ls-remote-ip"]:
             if conn == None:
                 error("cannot list namespaces - not connected")
-            remote_nss = conn.ls_remote(ip=True)
+            try:
+                remote_nss = conn.ls_remote(ip=True)
+            except Exception, e:
+                error('cannot list remote namespaces and addresses: %s' % (e,))
             for name in sorted(remote_nss.keys()):
                 print name, remote_nss[name][0], remote_nss[name][1]
         elif opt in ["--ns-type"]:
             if conn == None:
                 error("cannot query namespace - not connected")
-            ns_type = conn.ns_type(arg)
+            try:
+                ns_type = conn.ns_type(arg)
+            except Exception, e:
+                error('cannot get namespaces type: %s' % (e,))
             if ns_type != None:
                 print ns_type
         elif opt in ["--drop"]:

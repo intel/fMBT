@@ -27,7 +27,7 @@ import socket
 
 import pythonshare
 from pythonshare.messages import \
-    Exec, Exec_rv, Async_rv, Register_ns,\
+    Exec, Exec_rv, Async_rv, Auth_rv, Register_ns,\
     Request_ns, Drop_ns, Ns_rv, Server_ctl, Server_ctl_rv, Data_info
 
 class Connection(object):
@@ -163,7 +163,11 @@ class Connection(object):
                 namespace, code, expr, async=async, lock=lock,
                 recv_caps=pythonshare.messages.RECV_CAP_COMPRESSION), self._to_server)
             response = pythonshare._recv_with_info(self._from_server)
-            return self.make_local(response)
+            obj = self.make_local(response)
+            if isinstance(obj, Auth_rv) and obj.success == False:
+                raise pythonshare.PythonShareError('Authentication failed: %s'
+                                                   % (obj.errormsg,))
+            return obj
         except EOFError:
             raise pythonshare.PythonShareError(
                 'No connection to namespace "%s"' % (namespace,))
