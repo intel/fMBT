@@ -2,6 +2,15 @@ stages:
   - build
   - test
 
+variables:
+  HUB_CONNSPEC: xyz@pythonshare-server
+  HUB_NS: logger
+
+services:
+- name: askervin/pythonshare-server
+  alias: pythonshare-server
+  entrypoint: ["pythonshare-server", "-d", "--interface=all", "--password=xyz", "-n", $HUB_NS]
+
 build_ubuntu_bionic:
   image: ubuntu:bionic
   stage: build
@@ -84,64 +93,69 @@ build_windows_32:
 test_ubuntu_bionic:
   image: ubuntu:bionic
   stage: test
+  variables:
+    TEST_ENV: ubuntu_bionic
   dependencies:
     - build_ubuntu_bionic
-  services:
-    - askervin/pythonshare-server
   script:
     - cd debs
     - apt-get update
     - DEBIAN_FRONTEND=noninteractive apt install -f -y ./fmbt-pythonshare*.deb
-    - pythonshare-client -C xyz@askervin-pythonshare-server --ls-remote
+    - pythonshare-client -C $HUB_CONNSPEC --ls-remote
+    - python ../pythonshare/tests/onlinetests.py
 
 test_ubuntu_xenial:
   image: ubuntu:xenial
   stage: test
+  variables:
+    TEST_ENV: ubuntu_xenial
   dependencies:
     - build_ubuntu_xenial
-  services:
-    - askervin/pythonshare-server
   script:
     - cd debs
     - apt-get update
     - DEBIAN_FRONTEND=noninteractive apt install -f -y ./fmbt-pythonshare*.deb
-    - pythonshare-client -C xyz@askervin-pythonshare-server --ls-remote
+    - pythonshare-client -C $HUB_CONNSPEC --ls-remote
+    - python ../pythonshare/tests/onlinetests.py
 
 test_debian_stable:
   image: debian:stable
   stage: test
+  variables:
+    TEST_ENV: debian_stable
   dependencies:
     - build_debian_stable
-  services:
-    - askervin/pythonshare-server
   script:
     - cd debs
     - apt-get update
     - DEBIAN_FRONTEND=noninteractive apt install -f -y ./fmbt-pythonshare*.deb
-    - pythonshare-client -C xyz@askervin-pythonshare-server --ls-remote
+    - pythonshare-client -C $HUB_CONNSPEC --ls-remote
+    - python ../pythonshare/tests/onlinetests.py
 
 test_debian_unstable:
   image: debian:unstable
   stage: test
+  variables:
+    TEST_ENV: debian_unstable
   dependencies:
     - build_debian_unstable
-  services:
-    - askervin/pythonshare-server
   script:
     - cd debs
     - apt-get update
     - DEBIAN_FRONTEND=noninteractive apt install -f -y ./fmbt-pythonshare*.deb
-    - pythonshare-client -C xyz@askervin-pythonshare-server --ls-remote
+    - pythonshare-client -C $HUB_CONNSPEC --ls-remote
+    - python ../pythonshare/tests/onlinetests.py
 
 test_debian_testing:
   image: debian:testing
   stage: test
+  variables:
+    TEST_ENV: debian_testing
   dependencies:
     - build_debian_testing
-  services:
-    - askervin/pythonshare-server
   script:
     - cd debs
     - apt-get update
     - DEBIAN_FRONTEND=noninteractive apt install -f -y ./fmbt-pythonshare*.deb
-    - pythonshare-client -C xyz@askervin-pythonshare-server --ls-remote
+    - pythonshare-client -C $HUB_CONNSPEC --ls-remote
+    - python ../pythonshare/tests/onlinetests.py
