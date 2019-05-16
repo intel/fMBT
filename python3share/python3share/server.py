@@ -720,7 +720,7 @@ def start_daemon(host="localhost", port=8089, debug=False,
     if debug_limit != None:
         opt_debug_limit = debug_limit
     if opt_debug_limit > 0:
-        messages.MSG_STRING_FIELD_MAX_LEN = max(opt_debug_limit/3-40, 40)
+        messages.MSG_STRING_FIELD_MAX_LEN = max(opt_debug_limit//3-40, 40)
     else:
         messages.MSG_STRING_FIELD_MAX_LEN = None
     if opt_debug == False and not on_windows and isinstance(port, int):

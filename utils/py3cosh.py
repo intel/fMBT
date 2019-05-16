@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # fMBT, free Model Based Testing tool
 # Copyright (c) 2016-2019, Intel Corporation.
 #
@@ -50,16 +50,16 @@ import urllib.request, urllib.error, urllib.parse
 import zipfile
 
 try:
-    import pythonshare
+    import python3share
 except ImportError:
-    pythonshare = None
+    python3share = None
 
 recb = None
 
 if os.name == "nt":
     import ctypes
 
-_g_pipe_filename = "pycosh.pipe.%s" % (os.getpid(),)
+_g_pipe_filename = "py3cosh.pipe.%s" % (os.getpid(),)
 _g_pipe_has_data = False
 _g_pyenv = {}
 
@@ -749,35 +749,35 @@ def psh(*cmd):
         ("powershell.exe",) + cmd)
     return o + e
 
-_g_pspycosh_conn = None
-def pspycosh(psconn, *cmdlines):
-    """pspycosh CONNSPEC [CMD...]
-    open remote pycosh shell or run CMDs on it"""
-    global _g_pspycosh_conn
-    if isinstance(psconn, pythonshare.client.Connection):
-        _g_pspycosh_conn = psconn
+_g_pspy3cosh_conn = None
+def pspy3cosh(psconn, *cmdlines):
+    """pspy3cosh CONNSPEC [CMD...]
+    open remote py3cosh shell or run CMDs on it"""
+    global _g_pspy3cosh_conn
+    if isinstance(psconn, python3share.client.Connection):
+        _g_pspy3cosh_conn = psconn
         close_connection = False
     else:
-        _g_pspycosh_conn = pythonshare.connect(psconn)
+        _g_pspy3cosh_conn = python3share.connect(psconn)
         close_connection = True
-    _g_pspycosh_conn.exec_(_g_pycosh_source)
+    _g_pspy3cosh_conn.exec_(_g_py3cosh_source)
     if cmdlines:
         rv = []
         try:
             for cmdline in cmdlines:
-                rv.append(pycosh_eval(cmdline))
+                rv.append(py3cosh_eval(cmdline))
         finally:
             if close_connection:
-                _g_pspycosh_conn.close()
-                _g_pspycosh_conn = None
+                _g_pspy3cosh_conn.close()
+                _g_pspy3cosh_conn = None
         return "".join(rv)
     return ""
 
 def _psput_file(conn, src_filename, dst_filename):
     data = _file(src_filename, "rb").read()
-    conn.eval_('open(%s, "wb").write(base64.b64decode(%s))' %
-               (repr(dst_filename),
-                repr(base64.b64encode(data))))
+    conn.eval_('open(%r, "wb").write(base64.b64decode(%r))' %
+               (dst_filename,
+                base64.b64encode(data)))
 
 def _psput_dir(conn, dirname, dest_dir):
     rv = []
@@ -802,7 +802,7 @@ def _psput_dir(conn, dirname, dest_dir):
 
 def psput(psconn, pattern):
     """psput CONNSPEC[//DEST] FILE...
-    upload files to pythonshare server"""
+    upload files to python3share server"""
     # Examples:
     # Put files to current working directory on host:
     #     psput passwd@host:port files
@@ -815,8 +815,8 @@ def psput(psconn, pattern):
     # Put localdir to /abs/path on Linux host via hub/namespace:
     #     psput passwd@hub:port/namespace///abs/path localdir
     # Check cwd on host:
-    #     pspycosh passwd@host:port pwd
-    if isinstance(psconn, pythonshare.client.Connection):
+    #     pspy3cosh passwd@host:port pwd
+    if isinstance(psconn, python3share.client.Connection):
         dest_dir = "."
         conn = psconn
         close_connection = False
@@ -825,7 +825,7 @@ def psput(psconn, pattern):
             psconn, dest_dir = psconn.split("//", 1)
         else:
             dest_dir = "."
-        conn = pythonshare.connect(psconn)
+        conn = python3share.connect(psconn)
         close_connection = True
     conn.exec_("import base64, os")
     rv = []
@@ -841,24 +841,24 @@ def psput(psconn, pattern):
 
 def psget(psconn, pattern):
     """psget CONNSPEC FILE...
-    download files from pythonshare server"""
+    download files from python3share server"""
     # Get *.txt from host to current working directory:
     #     psget passwd@host:port *.txt
     # Get * from host via hub to current working directory:
     #     psget passwd@hub/host *
     # Get * from HOSTDIR on host, via hub, to current working directory:
     #     psget passwd@hub/host//HOSTDIR *
-    if isinstance(psconn, pythonshare.client.Connection):
+    if isinstance(psconn, python3share.client.Connection):
         conn = psconn
         remotedir = ""
         close_connection = False
     elif "//" in psconn:
         hostspec, remotedir = psconn.split("//", 1)
-        conn = pythonshare.connect(hostspec)
+        conn = python3share.connect(hostspec)
         close_connection = True
     else:
         remotedir = ""
-        conn = pythonshare.connect(psconn)
+        conn = python3share.connect(psconn)
         close_connection = True
     conn.exec_("".join(inspect.getsourcelines(expand)[0]))
     conn.exec_("import glob")
@@ -1131,9 +1131,9 @@ def exit():
     else:
         raise Exception("Close connection with Ctrl-D")
 
-def pycosh_eval(cmdline):
-    if _g_pspycosh_conn:
-        return _g_pspycosh_conn.eval_("pycosh_eval(%s)" % (repr(cmdline,)))
+def py3cosh_eval(cmdline):
+    if _g_pspy3cosh_conn:
+        return _g_pspy3cosh_conn.eval_("py3cosh_eval(%s)" % (repr(cmdline,)))
     funccall = cmd2py(cmdline)
     try:
         retval = eval(funccall)
@@ -1141,22 +1141,22 @@ def pycosh_eval(cmdline):
         retval = str(e).splitlines()[-1]
     return retval
 
-def _parse_pycoshrc(contents):
+def _parse_py3coshrc(contents):
     """returns rc settings in a dictionary"""
     for line in contents.splitlines():
-        retval = str(pycosh_eval(line))
+        retval = str(py3cosh_eval(line))
         if retval:
             _output(retval)
 
 def _main():
-    histfile = os.path.join(os.path.expanduser("~"), ".pycosh_history")
-    rcfile = os.path.join(os.path.expanduser("~"), ".pycoshrc")
+    histfile = os.path.join(os.path.expanduser("~"), ".py3cosh_history")
+    rcfile = os.path.join(os.path.expanduser("~"), ".py3coshrc")
     try:
         rccontents = open(rcfile).read()
     except:
         rccontents = None
     if rccontents:
-        _parse_pycoshrc(rccontents)
+        _parse_py3coshrc(rccontents)
 
     try:
         import readline
@@ -1170,7 +1170,7 @@ def _main():
 
     while True:
         try:
-            cmdline = input("\n" + pycosh_eval("prompt"))
+            cmdline = input("\n" + py3cosh_eval("prompt"))
         except EOFError:
             cmdline = None
 
@@ -1182,20 +1182,20 @@ def _main():
         if cmdline.strip() == "":
             retval = ""
         else: # run cmdline
-            retval = pycosh_eval(cmdline)
+            retval = py3cosh_eval(cmdline)
         _output(str(retval))
 
-if "__file__" in globals() and "pycosh.py" in __file__:
-    if __file__.endswith("pycosh.py"):
-        _g_pycosh_source = open(__file__, "r").read()
-    elif __file__.endswith("pycosh.pyc"):
+if "__file__" in globals() and "py3cosh.py" in __file__:
+    if __file__.endswith("py3cosh.py"):
+        _g_py3cosh_source = open(__file__, "r").read()
+    elif __file__.endswith("py3cosh.pyc"):
         try:
-            _g_pycosh_source = open(__file__[:-1], "r").read()
+            _g_py3cosh_source = open(__file__[:-1], "r").read()
         except:
             pass
 
-if "_g_pycosh_source" in globals():
-    _g_pycosh_source = "_g_pycosh_source = %s\n%s" % (repr(_g_pycosh_source), _g_pycosh_source)
+if "_g_py3cosh_source" in globals():
+    _g_py3cosh_source = "_g_py3cosh_source = %s\n%s" % (repr(_g_py3cosh_source), _g_py3cosh_source)
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
@@ -1203,6 +1203,6 @@ if __name__ == "__main__":
     else:
         for cmdline in sys.argv[1:]:
             if cmdline != "interactive":
-                _output(pycosh_eval(cmdline))
+                _output(py3cosh_eval(cmdline))
             else:
                 _main()

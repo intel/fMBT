@@ -89,9 +89,9 @@ class Exec_rv(object):
         rv = self.expr_rv
         if not MSG_STRING_FIELD_MAX_LEN is None and isinstance(rv, str):
             if len(rv) > MSG_STRING_FIELD_MAX_LEN:
-                rv = (rv[:MSG_STRING_FIELD_MAX_LEN/2] +
+                rv = (rv[:MSG_STRING_FIELD_MAX_LEN//2] +
                       ("...[%s B, CRC %s]..." % (len(rv), crc(rv))) +
-                      rv[-MSG_STRING_FIELD_MAX_LEN/2:])
+                      rv[-MSG_STRING_FIELD_MAX_LEN//2:])
         return 'Exec_rv(code_exc="%s", expr_exc="%s", rv=%r)' % (
             self.code_exc, self.expr_exc, rv)
 
