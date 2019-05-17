@@ -84,6 +84,14 @@ def _store_return_value(func, queue):
     while True:
         queue.put(func())
 
+def _read_lines_from_stdin(queue):
+    while True:
+        line = sys.stdin.readline()
+        if not line:
+            break
+        queue.put(line)
+    daemon_log("stdin closed")
+
 class Pythonshare_ns(object):
     """Pythonshare services inside a namespace
     """
@@ -687,7 +695,7 @@ def start_server(host, port,
         thread.start_new_thread(_store_return_value, (_g_waker_lock.acquire, event_queue))
         if not sys.stdin.closed and listen_stdin:
             daemon_log("listening to stdin")
-            thread.start_new_thread(_store_return_value, (sys.stdin.readline, event_queue))
+            thread.start_new_thread(_read_lines_from_stdin, (event_queue,))
         else:
             daemon_log("not listening stdin")
         while 1:
