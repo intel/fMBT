@@ -27,11 +27,13 @@
 # Log function implementations are provided by the adapter
 # component such as remote_python or remote_pyaal.
 
+import atexit
 import datetime
 import inspect
 import os
 import sys
 import time
+import traceback
 import urllib
 
 _g_fmbt_adapterlogtimeformat="%s.%f"
@@ -218,7 +220,7 @@ def funcSpec(func):
 _g_debug_socket = None
 _g_debug_conn = None
 
-def debug(spec=None):
+def debug(spec=None, post_mortem=False):
     """
     Start debugging with fmbt-debug from the point where this function
     was called. Execution will stop until connection to fmbt-debug
@@ -229,6 +231,12 @@ def debug(spec=None):
       spec (session_id or "host:port", integer or string respectively, optional):
               defines how to connect to fmbt-debug.
               The default is session_id 0.
+
+      post_mortem (boolean, optional):
+              if True, do not start debugger immediately, but
+              launch post mortem debugger at process exit if an exception
+              has occured.
+              The default is False: start debugger now.
 
     Example:
       - execute on command line "fmbt-debug --session 42"
@@ -244,47 +252,12 @@ def debug(spec=None):
 
     global _g_debug_conn, _g_debug_socket
 
-    if isinstance(spec, basestring):
-        host, port_s = spec.rsplit(":", 1)
-        port = int(port_s)
-        _g_debug_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            _g_debug_socket.connect((host, port))
-            _g_debug_conn = _g_debug_socket
-            whos_there = _g_debug_conn.recv(len("fmbt-debug\n"))
-            if not whos_there.startswith("fmbt-debug"):
-                _g_debug_conn.close()
-                _g_debug_socket = None
-                _g_debug_conn = None
-                raise ValueError(
-                    'unexpected answer "%s", fmbt-debug expected' %
-                    (whos_there.strip(),))
-            _g_debug_conn.sendall("fmbt.debug\n")
-        except socket.error:
-            raise ValueError('debugger cannot connect to %s:%s' % (host, port))
-
-    if not _g_debug_socket:
-        PORTBASE = 0xf4bd # 62653, fMBD
-        host = "127.0.0.1" # accept local host only, by default
-        if spec is None:
-            session = 0
-        else:
-            session = spec
-        port = PORTBASE + session
-        _g_debug_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            _g_debug_socket.bind((host, port))
-            _g_debug_socket.listen(1)
-            while True:
-                (_g_debug_conn, addr) = _g_debug_socket.accept()
-                _g_debug_conn.sendall("fmbt.debug\n")
-                msg = _g_debug_conn.recv(len("fmbt-debug\n"))
-                if msg.startswith("fmbt-debug"):
-                    break
-                _g_debug_conn.close()
-        except socket.error:
-            # already in use, perhaps fmbt-debug is already listening to
-            # the socket and waiting for this process to connect
+    def _connect():
+        global _g_debug_conn, _g_debug_socket
+        if isinstance(spec, basestring):
+            host, port_s = spec.rsplit(":", 1)
+            port = int(port_s)
+            _g_debug_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             try:
                 _g_debug_socket.connect((host, port))
                 _g_debug_conn = _g_debug_socket
@@ -298,13 +271,52 @@ def debug(spec=None):
                         (whos_there.strip(),))
                 _g_debug_conn.sendall("fmbt.debug\n")
             except socket.error:
-                raise ValueError('debugger cannot listen or connect to %s:%s' % (host, port))
+                raise ValueError('debugger cannot connect to %s:%s' % (host, port))
 
-    if not _g_debug_conn:
-        fmbtlog("debugger waiting for connection at %s:%s" % (host, port))
+        if not _g_debug_socket:
+            PORTBASE = 0xf4bd # 62653, fMBD
+            host = "127.0.0.1" # accept local host only, by default
+            if spec is None:
+                session = 0
+            else:
+                session = spec
+            port = PORTBASE + session
+            _g_debug_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                _g_debug_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            except:
+                pass
+            try:
+                _g_debug_socket.bind((host, port))
+                _g_debug_socket.listen(1)
+                while True:
+                    (_g_debug_conn, addr) = _g_debug_socket.accept()
+                    _g_debug_conn.sendall("fmbt.debug\n")
+                    msg = _g_debug_conn.recv(len("fmbt-debug\n"))
+                    if msg.startswith("fmbt-debug"):
+                        break
+                    _g_debug_conn.close()
+            except socket.error:
+                # already in use, perhaps fmbt-debug is already listening to
+                # the socket and waiting for this process to connect
+                try:
+                    _g_debug_socket.connect((host, port))
+                    _g_debug_conn = _g_debug_socket
+                    whos_there = _g_debug_conn.recv(len("fmbt-debug\n"))
+                    if not whos_there.startswith("fmbt-debug"):
+                        _g_debug_conn.close()
+                        _g_debug_socket = None
+                        _g_debug_conn = None
+                        raise ValueError(
+                            'unexpected answer "%s", fmbt-debug expected' %
+                            (whos_there.strip(),))
+                    _g_debug_conn.sendall("fmbt.debug\n")
+                except socket.error:
+                    raise ValueError('debugger cannot listen or connect to %s:%s' % (host, port))
+        return _g_debug_conn
 
-    # socket.makefile does not work due to buffering issues
-    # therefore, use our own socket-to-file converter
+    # socket.makefile does not work due to buffering issues.
+    # Therefore, use our own socket-to-file converter
     class SocketToFile(object):
         def __init__(self, socket_conn):
             self._conn = socket_conn
@@ -334,6 +346,21 @@ def debug(spec=None):
         def flush(self):
             pass
 
-    connfile = SocketToFile(_g_debug_conn)
-    debugger = pdb.Pdb(stdin=connfile, stdout=connfile)
-    debugger.set_trace(inspect.currentframe().f_back)
+    if post_mortem:
+        def debug_last_exception_at_exit():
+            if not hasattr(sys, "last_traceback") or not sys.last_traceback:
+                # there is no exception to debug
+                return
+            _g_debug_conn = _connect()
+            exception_list = traceback.format_exception(sys.last_type, sys.last_value, sys.last_traceback)
+            _g_debug_conn.sendall("\n".join(exception_list))
+            connfile = SocketToFile(_g_debug_conn)
+            debugger = pdb.Pdb(stdin=connfile, stdout=connfile)
+            debugger.reset()
+            debugger.interaction(None, sys.last_traceback)
+        atexit.register(debug_last_exception_at_exit)
+    else:
+        _g_debug_conn = _connect()
+        connfile = SocketToFile(_g_debug_conn)
+        debugger = pdb.Pdb(stdin=connfile, stdout=connfile)
+        debugger.set_trace(inspect.currentframe().f_back)
