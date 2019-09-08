@@ -29,6 +29,7 @@ import python3share
 from python3share.messages import \
     Exec, Exec_rv, Async_rv, Register_ns,\
     Request_ns, Drop_ns, Ns_rv, Server_ctl, Server_ctl_rv, Data_info
+from io import IOBase
 
 class Connection(object):
     """Connection to a Pythonshare server.
@@ -84,7 +85,7 @@ class Connection(object):
             self._s.connect((host, port))
             self._from_server = self._s.makefile("rb")
             self._to_server = self._s.makefile("wb")
-        elif isinstance(host_or_from_server, file) and isinstance(port_or_to_server, file):
+        elif isinstance(host_or_from_server, IOBase) and isinstance(port_or_to_server, IOBase):
             self._s = None
             self._to_server = port_or_to_server
             self._from_server = host_or_from_server
