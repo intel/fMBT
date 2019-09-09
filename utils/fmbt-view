@@ -32,7 +32,8 @@ Options:
   -h      Print help.
   -l <logfile>
           Color states and transitions visited in the log.
-  -i      Invert coloring (highlights unvisited states)
+  -i      Invert coloring (highlights unvisited states).
+  -c      Add execution counter after every action in transitions.
   -o <outputfile>
           Write image to outputfile, do not display it.
   -e <regexp>
@@ -81,8 +82,9 @@ if __name__ == "__main__":
     try:
         opts, remainder = getopt.getopt(
             sys.argv[1:],
-            "df:hil:o:ve:E:s:S:OU",
-            ["debug", "help","version"])
+            "df:hicl:o:ve:E:s:S:OU",
+            ["debug", "help","version",
+             "invert-colors", "exec-count"])
     except getopt.GetoptError, e:
         error(str(e))
 
@@ -121,6 +123,8 @@ if __name__ == "__main__":
             FORMAT = arg
         elif opt in ["-i", "--invert-colors"]:
             lsts2dot_command.extend(["--invert-colors"])
+        elif opt in ["-c", "--exec-count"]:
+            lsts2dot_command.extend(["--exec-count"])
         elif opt in ["-l"]:
             lsts2dot_command.extend(["-l", arg])
         elif opt in ["-o"]:

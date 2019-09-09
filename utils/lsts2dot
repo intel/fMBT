@@ -33,6 +33,14 @@ Options:
           Read fMBT log from the file and color visited states in
           visualised model.
 
+  --invert-colors
+          Color parts of the state space that were not covered in
+          the log.
+
+  -c, --exec-count
+          Append number of executions in the log after each action
+          name in transitions.
+
   -e, --erase-transitions=<regexp>
           Erase transitions matching the regular expression.
 
@@ -100,6 +108,7 @@ def colors(lsts_obj, testlog_fileobj):
     # triplets to rgb colors
     tr_colors = {}
     state_colors = {}
+    tr_exec_counts = {}
 
     sugg_tr = None
 
@@ -136,6 +145,7 @@ def colors(lsts_obj, testlog_fileobj):
             exec_tr = find_transition(action_exec, lsts_obj, current_state)
             if exec_tr:
                 tr_colors[exec_tr] = COLOR_TR_EXEC
+                tr_exec_counts[exec_tr] = tr_exec_counts.get(exec_tr, 0) + 1
                 current_state = exec_tr[2]
                 state_colors[current_state] = COLOR_ST_VISITED
             else:
@@ -147,22 +157,23 @@ def colors(lsts_obj, testlog_fileobj):
         error('invalid line: "%s"' % (line[:-1],))
     try: p.stdout.close()
     except: pass
-    return tr_colors, state_colors
+    return tr_colors, state_colors, tr_exec_counts
 
 def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert_colors = False,
              erase_transitions = [], erase_untraversed = [],
              show_transitions = [], show_traversed = [],
              erase_orphaned_states = False, erase_unvisited_states = False,
-             opt_multilabel_transitions = True):
+             opt_multilabel_transitions = True,
+             exec_count = False):
     outfileobj.write('digraph g {\n')
     outfileobj.write('    node [shape=box fontname="sans-serif"];\n')
     outfileobj.write('    edge [fontname="sans-serif"];\n')
     l = lsts.reader(infileobj)
 
     if logfile != None:
-        tr_colors, state_colors = colors(l, logfile)
+        tr_colors, state_colors, tr_exec_counts = colors(l, logfile)
     else:
-        tr_colors, state_colors = {}, {}
+        tr_colors, state_colors, tr_exec_counts = {}, {}, {}
 
     state2props = {int(l.get_header().initial_states): ["[initial state]"]}
     actionnames = [a.replace('"','\\"') for a in l.get_actionnames()]
@@ -215,7 +226,9 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
             if erase_orphaned_states:
                 states_with_transitions.add(source)
                 states_with_transitions.add(dest)
-            a = actionnames[action]
+            action_in_dot = actionnames[action]
+            if exec_count:
+                action_in_dot = action_in_dot + " (%s)" % (tr_exec_counts.get((source, action, dest), '-'),)
             if loops_as_props and source==dest:
                 if tr_colors and (source, action, dest) in tr_colors:
                     colordata = ' color="%s"' % (tr_colors[(source, action, dest)],)
@@ -226,7 +239,7 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
                 if not source in state2props:
                     state2props[source] = []
                 state2props[source].append('<font%s>%s</font>' %
-                                           (colordata, a))
+                                           (colordata, action_in_dot))
             else:
                 if tr_colors and (source, action, dest) in tr_colors:
                     normal_color = tr_colors[(source, action, dest)]
@@ -250,9 +263,9 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
                     old_label = source2dest_transitions[0]
                     source2dest_transitions[0] = (
                         old_label +
-                        ("<br align=\"left\"/><font%s>%s</font>" % (colordata, a)))
+                        ("<br align=\"left\"/><font%s>%s</font>" % (colordata, action_in_dot)))
                 else:
-                    visible_transitions[(source, dest)].append("<font%s>%s</font>" % (colordata, a))
+                    visible_transitions[(source, dest)].append("<font%s>%s</font>" % (colordata, action_in_dot))
     for (source, dest) in sorted(visible_transitions.keys()):
         for label in visible_transitions[(source, dest)]:
             if COLOR_TR_EXEC in label:
@@ -293,6 +306,7 @@ def lsts2dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert
 if __name__=='__main__':
     loops_as_props = False
     invert_colors = False
+    exec_count = False
     infile = sys.stdin
     outfile = sys.stdout
     logfile = None
@@ -304,10 +318,10 @@ if __name__=='__main__':
     erase_orphaned_states = False
 
     opts, remainder = getopt.getopt(
-        sys.argv[1:], 'e:E:hi:l:o:Os:S:UV',
+        sys.argv[1:], 'ce:E:hi:l:o:Os:S:UV',
         ['help', 'erase-transitions=', 'erase-untraversed-transitions=',
          'erase-unvisited-states', 'erase-orphaned-states',
-         'input=', 'invert-colors', 'output=', 'show-transitions=',
+         'input=', 'invert-colors', 'exec-count', 'output=', 'show-transitions=',
          'show-traversed-transitions=', 'loops-in-states', 'log=', 'version'])
 
     for opt, arg in opts:
@@ -351,11 +365,15 @@ if __name__=='__main__':
             erase_unvisited_states = True
         elif opt in ['--invert-colors']:
             invert_colors = True
+        elif opt in ['-c', '--exec-count']:
+            exec_count = True
+        else:
+            error('implementation missing for %s' % (opt,))
 
     lsts2dot(infile, outfile, loops_as_props, logfile, invert_colors,
              erase_transitions, erase_untraversed, show_transitions, show_traversed,
              erase_orphaned_states, erase_unvisited_states,
-             True)
+             True, exec_count=exec_count)
 
     try: outfile.close()
     except: pass

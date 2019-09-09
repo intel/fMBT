@@ -1107,7 +1107,7 @@ Keyboard shortcuts:<br>
             if previewEraseUnvisitedStates:
                 hideparams.append("-U")
 
-            cmd = ["fmbt-view", "-f", "png"] + logparam + hideparams + ["-o", imgname, self._lstsFileName]
+            cmd = ["fmbt-view", "-f", "png", "--exec-count"] + logparam + hideparams + ["-o", imgname, self._lstsFileName]
             asyncRuncmd(cmd,
                         onThreadSuccess = self.pixmapLoader("model", imgname),
                         onSuccess = self.pixmapViewer("model"),
