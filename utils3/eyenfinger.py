@@ -85,7 +85,7 @@ import platform
 import struct
 import warnings
 
-import fmbt3_config as fmbt_config
+import fmbt_config
 
 def _DEPRECATED():
     warnings.warn("eyenfinger.py API is deprecated, use fmbtx11 instead.",
@@ -204,7 +204,7 @@ class NoOCRResults(EyenfingerError):
     pass
 
 try:
-    import fmbt3 as fmbt
+    import fmbt
     def _log(msg):
         fmbt.adapterlog("eyenfinger: %s" % (msg,))
 

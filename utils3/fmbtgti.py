@@ -114,9 +114,9 @@ import time
 import traceback
 import types
 
-import fmbt3 as fmbt
-import fmbt3_config as fmbt_config
-import eyen3finger as eyenfinger
+import fmbt
+import fmbt_config
+import eyenfinger
 
 # See imagemagick convert parameters.
 _OCRPREPROCESS = [

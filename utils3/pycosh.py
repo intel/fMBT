@@ -59,7 +59,7 @@ recb = None
 if os.name == "nt":
     import ctypes
 
-_g_pipe_filename = "py3cosh.pipe.%s" % (os.getpid(),)
+_g_pipe_filename = "pycosh.pipe.%s" % (os.getpid(),)
 _g_pipe_has_data = False
 _g_pyenv = {}
 
@@ -749,27 +749,27 @@ def psh(*cmd):
         ("powershell.exe",) + cmd)
     return o + e
 
-_g_pspy3cosh_conn = None
-def pspy3cosh(psconn, *cmdlines):
-    """pspy3cosh CONNSPEC [CMD...]
-    open remote py3cosh shell or run CMDs on it"""
-    global _g_pspy3cosh_conn
+_g_pspycosh_conn = None
+def pspycosh(psconn, *cmdlines):
+    """pspycosh CONNSPEC [CMD...]
+    open remote pycosh shell or run CMDs on it"""
+    global _g_pspycosh_conn
     if isinstance(psconn, python3share.client.Connection):
-        _g_pspy3cosh_conn = psconn
+        _g_pspycosh_conn = psconn
         close_connection = False
     else:
-        _g_pspy3cosh_conn = python3share.connect(psconn)
+        _g_pspycosh_conn = python3share.connect(psconn)
         close_connection = True
-    _g_pspy3cosh_conn.exec_(_g_py3cosh_source)
+    _g_pspycosh_conn.exec_(_g_pycosh_source)
     if cmdlines:
         rv = []
         try:
             for cmdline in cmdlines:
-                rv.append(py3cosh_eval(cmdline))
+                rv.append(pycosh_eval(cmdline))
         finally:
             if close_connection:
-                _g_pspy3cosh_conn.close()
-                _g_pspy3cosh_conn = None
+                _g_pspycosh_conn.close()
+                _g_pspycosh_conn = None
         return "".join(rv)
     return ""
 
@@ -815,7 +815,7 @@ def psput(psconn, pattern):
     # Put localdir to /abs/path on Linux host via hub/namespace:
     #     psput passwd@hub:port/namespace///abs/path localdir
     # Check cwd on host:
-    #     pspy3cosh passwd@host:port pwd
+    #     pspycosh passwd@host:port pwd
     if isinstance(psconn, python3share.client.Connection):
         dest_dir = "."
         conn = psconn
@@ -1131,9 +1131,9 @@ def exit():
     else:
         raise Exception("Close connection with Ctrl-D")
 
-def py3cosh_eval(cmdline):
-    if _g_pspy3cosh_conn:
-        return _g_pspy3cosh_conn.eval_("py3cosh_eval(%s)" % (repr(cmdline,)))
+def pycosh_eval(cmdline):
+    if _g_pspycosh_conn:
+        return _g_pspycosh_conn.eval_("pycosh_eval(%s)" % (repr(cmdline,)))
     funccall = cmd2py(cmdline)
     try:
         retval = eval(funccall)
@@ -1141,22 +1141,22 @@ def py3cosh_eval(cmdline):
         retval = str(e).splitlines()[-1]
     return retval
 
-def _parse_py3coshrc(contents):
+def _parse_pycoshrc(contents):
     """returns rc settings in a dictionary"""
     for line in contents.splitlines():
-        retval = str(py3cosh_eval(line))
+        retval = str(pycosh_eval(line))
         if retval:
             _output(retval)
 
 def _main():
-    histfile = os.path.join(os.path.expanduser("~"), ".py3cosh_history")
-    rcfile = os.path.join(os.path.expanduser("~"), ".py3coshrc")
+    histfile = os.path.join(os.path.expanduser("~"), ".pycosh_history")
+    rcfile = os.path.join(os.path.expanduser("~"), ".pycoshrc")
     try:
         rccontents = open(rcfile).read()
     except:
         rccontents = None
     if rccontents:
-        _parse_py3coshrc(rccontents)
+        _parse_pycoshrc(rccontents)
 
     try:
         import readline
@@ -1170,7 +1170,7 @@ def _main():
 
     while True:
         try:
-            cmdline = input("\n" + py3cosh_eval("prompt"))
+            cmdline = input("\n" + pycosh_eval("prompt"))
         except EOFError:
             cmdline = None
 
@@ -1182,20 +1182,20 @@ def _main():
         if cmdline.strip() == "":
             retval = ""
         else: # run cmdline
-            retval = py3cosh_eval(cmdline)
+            retval = pycosh_eval(cmdline)
         _output(str(retval))
 
-if "__file__" in globals() and "py3cosh.py" in __file__:
-    if __file__.endswith("py3cosh.py"):
-        _g_py3cosh_source = open(__file__, "r").read()
-    elif __file__.endswith("py3cosh.pyc"):
+if "__file__" in globals() and "pycosh.py" in __file__:
+    if __file__.endswith("pycosh.py"):
+        _g_pycosh_source = open(__file__, "r").read()
+    elif __file__.endswith("pycosh.pyc"):
         try:
-            _g_py3cosh_source = open(__file__[:-1], "r").read()
+            _g_pycosh_source = open(__file__[:-1], "r").read()
         except:
             pass
 
-if "_g_py3cosh_source" in globals():
-    _g_py3cosh_source = "_g_py3cosh_source = %s\n%s" % (repr(_g_py3cosh_source), _g_py3cosh_source)
+if "_g_pycosh_source" in globals():
+    _g_pycosh_source = "_g_pycosh_source = %s\n%s" % (repr(_g_pycosh_source), _g_pycosh_source)
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
@@ -1203,6 +1203,6 @@ if __name__ == "__main__":
     else:
         for cmdline in sys.argv[1:]:
             if cmdline != "interactive":
-                _output(py3cosh_eval(cmdline))
+                _output(pycosh_eval(cmdline))
             else:
                 _main()

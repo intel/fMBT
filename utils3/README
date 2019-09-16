@@ -1,0 +1,17 @@
+This directory contains Python 3 versions of fMBT Python 2 utils/*.
+
+Example: How to use Python 3 and fmbtwindows from the source tree on
+Linux:
+
+1. Create eye4grahics.so:
+   - python3 setup.py build
+   - ln -s build/lib.*/eye4graphics*so eye4graphics.so
+
+2. Launch python3share on a Windows DUT:
+   - Copy python3share on the DUT
+   - Launch python3share-server -d on the DUT
+
+3. You are ready to Python 3:
+   >>> import fmbtwindows
+   >>> dut = fmbtwindows.Device('dut-address')
+   >>> dut.refreshScreenshot().save("/tmp/dutscreen.png")

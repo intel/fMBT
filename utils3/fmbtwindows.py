@@ -34,15 +34,15 @@ How to setup Windows device under test
 
 How to connect to the device
 
-import fmbt3windows
-d = fmbt3windows.Device("IP-ADDRESS-OF-THE-DEVICE", password="xxxxxxxx")
+import fmbtwindows
+d = fmbtwindows.Device("IP-ADDRESS-OF-THE-DEVICE", password="xxxxxxxx")
 """
 
 import ast
 import base64
-import fmbt3 as fmbt
-import fmbt3_config as fmbt_config
-import fmbt3gti
+import fmbt
+import fmbt_config
+import fmbtgti
 import inspect
 import math
 import os
@@ -53,14 +53,14 @@ import time
 import zlib
 
 try:
-    import py3cosh as pycosh
+    import pycosh
 except ImportError:
     pycosh = None
 
 try:
-    import fmbt3png
+    import fmbtpng
 except ImportError:
-    fmbt3png = None
+    fmbtpng = None
 
 if os.name == "nt":
     _g_closeFds = False
@@ -157,7 +157,7 @@ SW_RESTORE       = 9
 SW_DEFAULT       = 10
 SW_FORCEMINIMIZE = 11
 
-sortItems = fmbt3gti.sortItems
+sortItems = fmbtgti.sortItems
 
 class Timeout(object):
     """Process status may be a Timeout instead of an integer
@@ -185,7 +185,7 @@ class Timeout(object):
         """Return process id of timed out process"""
         return self._pid
 
-class ViewItem(fmbt3gti.GUIItem):
+class ViewItem(fmbtgti.GUIItem):
     def __init__(self, view, itemId, parentId, className, text, bbox, dumpFilename,
                  rawProperties=None):
         self._view = view
@@ -198,7 +198,7 @@ class ViewItem(fmbt3gti.GUIItem):
         else:
             self._properties = {}
         self._patterns = frozenset()
-        fmbt3gti.GUIItem.__init__(self, self._className, bbox, dumpFilename)
+        fmbtgti.GUIItem.__init__(self, self._className, bbox, dumpFilename)
 
     def __getattr__(self, attr):
         """Allows to access a item's property as a normal attribute.
@@ -642,7 +642,7 @@ class View(object):
         """
         Returns list of all items in the view
         """
-        return fmbt3gti.sortItems(self._viewItems.values(), "topleft")
+        return fmbtgti.sortItems(self._viewItems.values(), "topleft")
 
     def save(self, fileOrDirName):
         """
@@ -651,7 +651,7 @@ class View(object):
         shutil.copy(self._dumpFilename, fileOrDirName)
 
 
-class Device(fmbt3gti.GUITestInterface):
+class Device(fmbtgti.GUITestInterface):
     def __init__(self, connspec=None, password=None, screenshotSize=(None, None),
                  connect=True, **kwargs):
         """Connect to windows device under test.
@@ -685,7 +685,7 @@ class Device(fmbt3gti.GUITestInterface):
         When not on trusted network, consider ssh port forward, for
         instance.
         """
-        fmbt3gti.GUITestInterface.__init__(self, **kwargs)
+        fmbtgti.GUITestInterface.__init__(self, **kwargs)
         self._defaultViewSource = _g_viewSources[1]
         self._refreshViewDefaults = kwargs
         self._lastView = None
@@ -862,8 +862,8 @@ class Device(fmbt3gti.GUITestInterface):
                 topWindowBbox = self.topWindowProperties()['bbox']
             except TypeError:
                 topWindowBbox = (0, 0, maxX, maxY)
-        return (fmbt3gti._boxOnRegion(itemBox, (0, 0, maxX, maxY), partial=partial) and
-                fmbt3gti._boxOnRegion(itemBox, topWindowBbox, partial=partial))
+        return (fmbtgti._boxOnRegion(itemBox, (0, 0, maxX, maxY), partial=partial) and
+                fmbtgti._boxOnRegion(itemBox, topWindowBbox, partial=partial))
 
     def kill(self, pid):
         """
@@ -938,16 +938,16 @@ class Device(fmbt3gti.GUITestInterface):
         if type(startDistance) == float and 0.0 <= startDistance <= 1.0:
             startDistanceInPixels = (
                 startDistance *
-                min(fmbt3gti._edgeDistanceInDirection((x, y), self.screenSize(), finger1Dir),
-                    fmbt3gti._edgeDistanceInDirection((x, y), self.screenSize(), finger2Dir)))
+                min(fmbtgti._edgeDistanceInDirection((x, y), self.screenSize(), finger1Dir),
+                    fmbtgti._edgeDistanceInDirection((x, y), self.screenSize(), finger2Dir)))
         else:
             startDistanceInPixels = int(startDistance)
 
         if type(endDistance) == float and 0.0 <= endDistance <= 1.0:
             endDistanceInPixels = (
                 endDistance *
-                min(fmbt3gti._edgeDistanceInDirection((x, y), self.screenSize(), finger1Dir),
-                    fmbt3gti._edgeDistanceInDirection((x, y), self.screenSize(), finger2Dir)))
+                min(fmbtgti._edgeDistanceInDirection((x, y), self.screenSize(), finger1Dir),
+                    fmbtgti._edgeDistanceInDirection((x, y), self.screenSize(), finger2Dir)))
         else:
             endDistanceInPixels = int(endDistance)
 
@@ -1872,9 +1872,9 @@ class _NoPythonshareConnection(object):
     def namespace(self):
         return self._ns
 
-class WindowsConnection(fmbt3gti.GUITestConnection):
+class WindowsConnection(fmbtgti.GUITestConnection):
     def __init__(self, connspec, password, device):
-        fmbt3gti.GUITestConnection.__init__(self)
+        fmbtgti.GUITestConnection.__init__(self)
         self._device = device
         self._screenshotSize = (None, None) # autodetect
         self._pycosh_sent_to_dut = False
@@ -1887,7 +1887,7 @@ class WindowsConnection(fmbt3gti.GUITestConnection):
         self._agent_ns = self._agent.namespace()
         agentFilename = os.path.join(
             os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))),
-            "fmbt3windows_agent.py")
+            "fmbtwindows_agent.py")
         self._agent.exec_in(self._agent_ns, open(agentFilename).read())
         self.setScreenToDisplayCoords(lambda x, y: (x, y))
         self.setDisplayToScreenCoords(lambda x, y: (x, y))
@@ -1900,7 +1900,7 @@ class WindowsConnection(fmbt3gti.GUITestConnection):
             except python3share.RemoteEvalError:
                 self.execPython(open(inspect.getsourcefile(pycosh)).read())
             self._pycosh_sent_to_dut = True
-        return self.evalPython("py3cosh_eval(%s)" % (repr(command),))
+        return self.evalPython("pycosh_eval(%s)" % (repr(command),))
 
     def setScreenshotSize(self, screenshotSize):
         self._screenshotSize = screenshotSize
@@ -1998,10 +1998,10 @@ class WindowsConnection(fmbt3gti.GUITestConnection):
         width, height, zdata = self._agent.eval_in(
             self._agent_ns, "screenshotZYBGR(%s)" % (repr(screenshotSize),))
         data = zlib.decompress(zdata)
-        fmbt3gti.eye4graphics.wbgr2rgb(data, width, height)
-        if fmbt3png != None:
+        fmbtgti.eye4graphics.wbgr2rgb(data, width, height)
+        if fmbtpng != None:
             open(filename, "wb").write(
-                fmbt3png.raw2png(data, width, height, 8, "RGB"))
+                fmbtpng.raw2png(data, width, height, 8, "RGB"))
         else:
             ppm_header = "P6\n%d %d\n%d\n" % (width, height, 255)
 
