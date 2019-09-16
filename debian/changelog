@@ -1,8 +1,30 @@
-fmbt (0.42-0.rc0) unstable; urgency=low
+fmbt (0.42-1) unstable; urgency=low
+  * fmbtwindows:
+    - New Python 3 version (utils3/fmbtwindows.py).
+  * pythonshare:
+    - New Python 3 version (python3share).
+    - New example (psmap.py) uses pythonshare for distributed computing.
+    - Dockerfile for creating tiny (< 7 MB) Pythonshare containers.
+    - New regression test suite - model-based, naturally.
+  * fmbt-debug:
+    - Remote debugging: debugged programs can call to developer.
+    - Post mortem debugging, local and remote.
+    - Debug Python 3 programs like Python 2 (utils3/fmbt.py).
+  * pycosh:
+    - Python 3 version available (utils3/pycosh.py)
+    - osenv: show operating system environment variables.
+  * CI/CD:
+    - Windows, Ubuntu and Debian binaries in Gitlab by community.
+  * libhook:
+    - Generate LD_PRELOAD hooks for chosen C library functions.
+  * fmbt-editor:
+    - Cleaner variable name presentations in visualization.
+    - Transition coverage count visible in visualization.
+  * Examples:
+    - Alternating bit protocol model debugging example (link-layer-protocol).
+    - New example generates Robot Framework test code (aal_robot).
 
-  * Development version.
-
- -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 14 Jan 2019 10:42:00 +0300
+ -- Antti Kervinen <antti.kervinen@intel.com>  Mon, 16 Sep 2019 14:42:00 +0300
 
 fmbt (0.41-1) unstable; urgency=low
 
