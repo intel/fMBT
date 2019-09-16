@@ -149,6 +149,10 @@ if __name__ == "__main__":
 
     # Listen to connections from fmbt.debug() at host:port.
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    except:
+        pass
     conn = None
     try:
         s.bind((host, port))

@@ -1,5 +1,5 @@
 # fMBT, free Model Based Testing tool
-# Copyright (c) 2012-2017 Intel Corporation.
+# Copyright (c) 2012-2019 Intel Corporation.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU Lesser General Public License,
@@ -261,15 +261,15 @@ def debug(spec=None, post_mortem=False):
             try:
                 _g_debug_socket.connect((host, port))
                 _g_debug_conn = _g_debug_socket
-                whos_there = _g_debug_conn.recv(len("fmbt-debug\n"))
-                if not whos_there.startswith("fmbt-debug"):
+                whos_there = _g_debug_conn.recv(len(b"fmbt-debug\n"))
+                if not whos_there.startswith(b"fmbt-debug"):
                     _g_debug_conn.close()
                     _g_debug_socket = None
                     _g_debug_conn = None
                     raise ValueError(
                         'unexpected answer "%s", fmbt-debug expected' %
                         (whos_there.strip(),))
-                _g_debug_conn.sendall("fmbt.debug\n")
+                _g_debug_conn.sendall(b"fmbt.debug\n")
             except socket.error:
                 raise ValueError('debugger cannot connect to %s:%s' % (host, port))
 
@@ -291,9 +291,9 @@ def debug(spec=None, post_mortem=False):
                 _g_debug_socket.listen(1)
                 while True:
                     (_g_debug_conn, addr) = _g_debug_socket.accept()
-                    _g_debug_conn.sendall("fmbt.debug\n")
-                    msg = _g_debug_conn.recv(len("fmbt-debug\n"))
-                    if msg.startswith("fmbt-debug"):
+                    _g_debug_conn.sendall(b"fmbt.debug\n")
+                    msg = _g_debug_conn.recv(len(b"fmbt-debug\n"))
+                    if msg.startswith(b"fmbt-debug"):
                         break
                     _g_debug_conn.close()
             except socket.error:
@@ -302,15 +302,15 @@ def debug(spec=None, post_mortem=False):
                 try:
                     _g_debug_socket.connect((host, port))
                     _g_debug_conn = _g_debug_socket
-                    whos_there = _g_debug_conn.recv(len("fmbt-debug\n"))
-                    if not whos_there.startswith("fmbt-debug"):
+                    whos_there = _g_debug_conn.recv(len(b"fmbt-debug\n"))
+                    if not whos_there.startswith(b"fmbt-debug"):
                         _g_debug_conn.close()
                         _g_debug_socket = None
                         _g_debug_conn = None
                         raise ValueError(
                             'unexpected answer "%s", fmbt-debug expected' %
                             (whos_there.strip(),))
-                    _g_debug_conn.sendall("fmbt.debug\n")
+                    _g_debug_conn.sendall(b"fmbt.debug\n")
                 except socket.error:
                     raise ValueError('debugger cannot listen or connect to %s:%s' % (host, port))
         return _g_debug_conn
@@ -322,7 +322,7 @@ def debug(spec=None, post_mortem=False):
             self._conn = socket_conn
         def read(self, bytes=-1):
             msg = []
-            rv = ""
+            rv = b""
             try:
                 c = self._conn.recv(1)
             except KeyboardInterrupt:
@@ -330,19 +330,19 @@ def debug(spec=None, post_mortem=False):
                 raise
             while c and not rv:
                 msg.append(c)
-                if c == "\r":
-                    rv = "".join(msg)
-                elif c == "\n":
-                    rv = "".join(msg)
+                if c == b"\r":
+                    rv = b"".join(msg)
+                elif c == b"\n":
+                    rv = b"".join(msg)
                 elif len(msg) == bytes:
-                    rv = "".join(msg)
+                    rv = b"".join(msg)
                 else:
                     c = self._conn.recv(1)
-            return rv
+            return rv.decode("utf-8")
         def readline(self):
             return self.read()
         def write(self, msg):
-            self._conn.sendall(msg)
+            self._conn.sendall(msg.encode('utf-8'))
         def flush(self):
             pass
 
@@ -353,7 +353,7 @@ def debug(spec=None, post_mortem=False):
                 return
             _g_debug_conn = _connect()
             exception_list = traceback.format_exception(sys.last_type, sys.last_value, sys.last_traceback)
-            _g_debug_conn.sendall("\n".join(exception_list))
+            _g_debug_conn.sendall(("\n".join(exception_list)).encode('utf-8'))
             connfile = SocketToFile(_g_debug_conn)
             debugger = pdb.Pdb(stdin=connfile, stdout=connfile)
             debugger.reset()
