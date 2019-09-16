@@ -3,6 +3,8 @@
 Pythonshare provides shared, persistent namespaces where Python
 processes can execute and evaluate Python code.
 
+Pythonshare is for Python 2, Python3share for Python 3.
+
 Example: Hello world
 --------------------
 

@@ -35,8 +35,15 @@ PYTHONPATH. Add them to the path:
 
 Windows users:
 
-fMBT is being ported to Windows, but the work is not ready yet. See
-README-windows.txt for current status and instructions.
+See README-windows.txt for building fMBT for Windows.
+
+
+Binary downloads
+----------------
+
+See artifacts built in gitlab CI/CD pipelines.
+
+https://gitlab.com/fmbt/fmbt_ci/pipelines
 
 
 Getting started
