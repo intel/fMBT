@@ -217,9 +217,25 @@ def funcSpec(func):
         funcspec = "%s(fmbt.funcSpec error)" % (func.func_name,)
     return funcspec
 
+### Self-contained code: debug()
+# How to debug your Python code without adding new files (like fmbt.py)
+# to the project being debugged:
+#
+# 1. Temporarily copy-paste code after this comment to any Python 2
+#    code file in your project.
+#
+# 2. Add debug() function call of to the code. Two examples:
+#    2.1 If you want your remote code to call home to debug a crash, add:
+#        debug("HOMEHOST:HOMEPORT", post_mortem=True)
+#    2.2 If you want to get (pdb) prompt right after the debug() line, add:
+#        debug("HOMEHOST:HOMEPORT")
+#
+# 3. Launch "fmbt-debug -p HOMEPORT" on the HOMEHOST.
+#
+# 4. Let your code run on any host.
+
 _g_debug_socket = None
 _g_debug_conn = None
-
 def debug(spec=None, post_mortem=False):
     """
     Start debugging with fmbt-debug from the point where this function
@@ -245,10 +261,13 @@ def debug(spec=None, post_mortem=False):
       - when done the debugging on the fmbt-debug prompt, enter "c"
         for continue.
     """
+    import atexit
     import bdb
     import inspect
     import pdb
     import socket
+    import sys
+    import traceback
 
     global _g_debug_conn, _g_debug_socket
 
@@ -364,3 +383,5 @@ def debug(spec=None, post_mortem=False):
         connfile = SocketToFile(_g_debug_conn)
         debugger = pdb.Pdb(stdin=connfile, stdout=connfile)
         debugger.set_trace(inspect.currentframe().f_back)
+#
+### end of self-contained code: debug()
