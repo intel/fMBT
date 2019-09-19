@@ -1,3 +1,9 @@
+fmbt (0.43-0.rc0) unstable; urgency=low
+
+  * Development version.
+
+ -- Antti Kervinen <antti.kervinen@intel.com>  Thu, 19 Sep 2019 13:42:00 +0300
+
 fmbt (0.42-1) unstable; urgency=low
   * fmbtwindows:
     - New Python 3 version (utils3/fmbtwindows.py).
