@@ -1,0 +1,19 @@
+Source: python3share
+Maintainer: Antti Kervinen <antti.kervinen@intel.com>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.3
+Build-Depends: dh-python (>= 3.2), python3 (>= 3.6)
+X-Python3-Version: >= 3.6
+
+Package: python3share
+Architecture: any
+Depends: ${python3:Depends}, ${misc:Depends}
+Description: Persistent, shared and distributed Python namespaces
+ Python3share enables executing Python code and evaluating
+ Python3 expressions in namespaces in pythonshare-servers.
+ Includes
+ - python3share-server (daemon, host and proxy namespaces)
+ - python3share-client (commandline utility for using namespaces
+   on pythonshare-servers)
+ - Python API for using pythonshare namespaces.
