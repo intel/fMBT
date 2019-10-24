@@ -66,7 +66,7 @@ def daemon_log(msg):
                    msg[-opt_debug_limit//2:])
     formatted_msg = "%s %s\n" % (timestamp(), msg)
     if opt_log_fd != None:
-        os.write(opt_log_fd, formatted_msg)
+        os.write(opt_log_fd, str.encode(formatted_msg))
         if has_os_fdatasync:
             os.fdatasync(opt_log_fd)
     if opt_debug and opt_debug_limit != 0:
@@ -742,9 +742,9 @@ def start_daemon(host="localhost", port=8089, debug=False,
 
         daemon_output_file = "/dev/null"
 
-        _in = file("/dev/null", 'r')
-        _out = file(daemon_output_file, 'a+')
-        _err = file(daemon_output_file, 'a+', 0)
+        _in = open("/dev/null", 'r')
+        _out = open(daemon_output_file, 'a+')
+        _err = open(daemon_output_file, 'r+b', 0)
         os.dup2(_in.fileno(), sys.stdin.fileno())
         os.dup2(_out.fileno(), sys.stdout.fileno())
         os.dup2(_err.fileno(), sys.stderr.fileno())
