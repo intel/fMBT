@@ -167,7 +167,7 @@ if __name__ == "__main__":
                 ns.strip() for ns in arg.split(",")]
         elif opt in ["-l", "--log"]:
             try:
-                log_file = file(arg, "w")
+                log_file = open(arg, "w")
             except IOError as e:
                 error('cannot open log file "%s" for writing. (%s)' % (arg, e))
             opt_log_fd = log_file.fileno()
@@ -184,7 +184,7 @@ if __name__ == "__main__":
             opt_conn_opts["password." + password_type] = password
         elif opt in ["--password-file"]:
             try:
-                password_type, password = _parse_password(file(arg).read().strip())
+                password_type, password = _parse_password(open(arg).read().strip())
             except IOError as err:
                 error('error reading password file "%s": %s' % (arg, err))
             opt_conn_opts["password." + password_type] = password
