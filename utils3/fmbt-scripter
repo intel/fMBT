@@ -619,11 +619,11 @@ class FilePickerWidget(QtWidgets.QWidget):
 class SettingsDialog(QtWidgets.QDialog):
     def __init__(self):
         QtWidgets.QDialog.__init__(self)
-        self.mainWidget = QtGui.QTabWidget(self)
+        self.mainWidget = QtWidgets.QTabWidget(self)
 
         self.pathsTab = QtWidgets.QWidget(self.mainWidget)
         self.pathsBitmapPathLabel = QtWidgets.QLabel("Bitmap path", self.pathsTab)
-        self.pathsBitmapPath = QtGui.QLineEdit(self.pathsTab)
+        self.pathsBitmapPath = QtWidgets.QLineEdit(self.pathsTab)
         self.pathsBitmapPath.setToolTip("Colon-separated list of directories. "
                                         "Use setBitmapPath() in scripts.")
         self.pathsBitmapPathAdd = QtWidgets.QPushButton("Add", self.pathsTab)
@@ -635,7 +635,7 @@ class SettingsDialog(QtWidgets.QDialog):
 
         self.pathsBitmapDirLabel = QtWidgets.QLabel("Bitmap save directory",
                                                 self.pathsTab)
-        self.pathsBitmapDir = QtGui.QLineEdit(self.pathsTab)
+        self.pathsBitmapDir = QtWidgets.QLineEdit(self.pathsTab)
         self.pathsBitmapDir.setToolTip(
             "If empty, new bitmaps are saved to "
             "the first directory in the bitmap path.")
@@ -648,7 +648,7 @@ class SettingsDialog(QtWidgets.QDialog):
 
         self.pathsScreenshotDirLabel = QtWidgets.QLabel(
             "Screenshot save directory", self.pathsTab)
-        self.pathsScreenshotDir = QtGui.QLineEdit(self.pathsTab)
+        self.pathsScreenshotDir = QtWidgets.QLineEdit(self.pathsTab)
         self.pathsScreenshotDirBrowse = QtWidgets.QPushButton("Browse",
                                                           self.pathsTab)
         self.pathsScreenshotDirBrowse.clicked.connect(
@@ -657,9 +657,9 @@ class SettingsDialog(QtWidgets.QDialog):
         self.pathsScreenshotDirLayout.addWidget(self.pathsScreenshotDir)
         self.pathsScreenshotDirLayout.addWidget(self.pathsScreenshotDirBrowse)
 
-        self.pathsBitmapAutoSelectSize = QtGui.QLineEdit(self.pathsTab)
+        self.pathsBitmapAutoSelectSize = QtWidgets.QLineEdit(self.pathsTab)
 
-        self.pathsTabLayout = QtGui.QFormLayout()
+        self.pathsTabLayout = QtWidgets.QFormLayout()
         self.pathsTabLayout.addRow(self.pathsBitmapPathLabel,
                                    self.pathsBitmapPathLayout)
         self.pathsTabLayout.addRow(self.pathsBitmapDirLabel,
@@ -679,9 +679,9 @@ class SettingsDialog(QtWidgets.QDialog):
         self.connConnect = QtWidgets.QTextEdit(self.connTab)
         self.connSutVarLabel = QtWidgets.QLabel("GUI (Screen or Device) accessed "
                                             "through variable", self.connTab)
-        self.connSutVar = QtGui.QLineEdit(self.connTab)
+        self.connSutVar = QtWidgets.QLineEdit(self.connTab)
 
-        self.connTabLayout = QtGui.QFormLayout()
+        self.connTabLayout = QtWidgets.QFormLayout()
         self.connTabLayout.addRow(self.connConnectLabel, self.connConnect)
         self.connTabLayout.addRow(self.connSutVarLabel, self.connSutVar)
         self.connTab.setLayout(self.connTabLayout)
@@ -697,7 +697,7 @@ class SettingsDialog(QtWidgets.QDialog):
             "Uses time.sleep and refreshScreenshot by default,\n"
             "Example: use a user-defined functions instead:\n"
             "myutils.delayAndRefresh(%(delay)s, %(sut)s)")
-        self.recordTabLayout = QtGui.QFormLayout()
+        self.recordTabLayout = QtWidgets.QFormLayout()
         self.recordTabLayout.addRow(self.recordTimingCodeLabel,
                                     self.recordTimingCode)
         self.recordTab.setLayout(self.recordTabLayout)
@@ -705,7 +705,7 @@ class SettingsDialog(QtWidgets.QDialog):
 
         # Input device list for hardware event recording
         self.hwRecordTab = QtWidgets.QWidget(self.mainWidget)
-        self.hwRecordTabLayout = QtGui.QFormLayout()
+        self.hwRecordTabLayout = QtWidgets.QFormLayout()
         self.hwRecordTab.setLayout(self.hwRecordTabLayout)
         self.mainWidget.addTab(self.hwRecordTab, "Input devices")
 
@@ -731,7 +731,7 @@ class SettingsDialog(QtWidgets.QDialog):
         index = self.mainWidget.currentIndex()
         self.mainWidget.removeTab(3)
         self.hwRecordTab = QtWidgets.QWidget(self.mainWidget)
-        self.hwRecordTabLayout = QtGui.QFormLayout()
+        self.hwRecordTabLayout = QtWidgets.QFormLayout()
         self.hwRecordTab.setLayout(self.hwRecordTabLayout)
         self.mainWidget.addTab(self.hwRecordTab, "Input devices")
         self.mainWidget.setCurrentIndex(index)
@@ -752,12 +752,12 @@ class SettingsDialog(QtWidgets.QDialog):
         return rv
 
     def browseDir(self, lineEdit):
-        d = QtGui.QFileDialog.getExistingDirectory()
+        d = QtWidgets.QFileDialog.getExistingDirectory()
         if d:
             lineEdit.setText(d)
 
     def addBitmapPath(self):
-        d = QtGui.QFileDialog.getExistingDirectory()
+        d = QtWidgets.QFileDialog.getExistingDirectory()
         if d:
             self.pathsBitmapPath.setText(
                 str(self.pathsBitmapPath.text()).strip() +
@@ -1606,12 +1606,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def save(self):
         if self.scriptFileOnDiskChanged():
-            reply = QtGui.QMessageBox.question(
+            reply = QtWidgets.QMessageBox.question(
                 _win, "fmbt-scripter",
                 '%s has changed on disk. Save changes?' % (
                     self._scriptFilename,),
-                QtGui.QMessageBox.Save | QtGui.QMessageBox.Cancel)
-            if reply != QtGui.QMessageBox.Save:
+                QtWidgets.QMessageBox.Save | QtWidgets.QMessageBox.Cancel)
+            if reply != QtWidgets.QMessageBox.Save:
                 return False
         if self._scriptFilename:
             codecs.open(self._scriptFilename, "w", encoding="utf8").write(
@@ -1628,7 +1628,7 @@ class MainWindow(QtWidgets.QMainWindow):
             deviceLines = []
         serialNumber = ""
         if len(deviceLines) > 1:
-            choice, ok = QtGui.QInputDialog.getItem(
+            choice, ok = QtWidgets.QInputDialog.getItem(
                 self,
                 "Android device selection",
                 "Choose device to connect to" + " " * 30,
@@ -1669,7 +1669,7 @@ class MainWindow(QtWidgets.QMainWindow):
             except IndexError:
                 deviceLines = []
             if len(deviceLines) > 1:
-                choice, ok = QtGui.QInputDialog.getItem(
+                choice, ok = QtWidgets.QInputDialog.getItem(
                     self,
                     "Tizen device selection",
                     "Choose device to connect to" + " " * 30,
@@ -1772,7 +1772,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 os.path.basename(self._scriptFilename),))
 
     def saveAs(self):
-        path = QtGui.QFileDialog.getSaveFileName(
+        path = QtWidgets.QFileDialog.getSaveFileName(
             self, "Save script", '', ";;".join(self._scriptFileFormats))
         newName = path[0]
         if str(newName) == "":
@@ -1782,7 +1782,7 @@ class MainWindow(QtWidgets.QMainWindow):
         return self.save()
 
     def askBitmapFilename(self, suggestion):
-        path = QtGui.QFileDialog.getSaveFileName(
+        path = QtWidgets.QFileDialog.getSaveFileName(
             self, "Save bitmap", suggestion, ";;".join(self._bitmapFileFormats))
         newName = path[0]
         if str(newName) == "":
@@ -1793,7 +1793,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def queryRenameBitmap(self, origFilename=None):
         if origFilename == None:
             origFilename = self.bitmapStringAt()
-        choice, ok = QtGui.QInputDialog.getText(
+        choice, ok = QtWidgets.QInputDialog.getText(
             self, "Rename bitmap", "New filename",
             text=origFilename)
         if ok and choice:
@@ -1914,7 +1914,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def autoSelectBitmap(self):
         if self.bitmapAutoSelect.isChecked():
             log("selecting bitmaps automatically when recording")
-            choice, ok = QtGui.QInputDialog.getText(
+            choice, ok = QtWidgets.QInputDialog.getText(
                 self, "Bitmap auto-selection",
                 "Auto-selected bitmap filename prefix",
                 text=self._autoBitmapPrefix)
@@ -1973,7 +1973,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def open(self, filename=None):
         if filename == None:
-            dialog = QtGui.QFileDialog()
+            dialog = QtWidgets.QFileDialog()
             dialog.setDirectory(os.getcwd())
             dialog.setWindowTitle("Open script")
             dialog.setNameFilters(self._scriptFileFormats)
@@ -2541,7 +2541,7 @@ class MainWindow(QtWidgets.QMainWindow):
             x1, y1, x2, y2 = (left/w, top/h, right/w, bottom/h)
             forcedLocation = "(%.3f, %.3f, %.3f, %.3f)" % (x1, y1, x2, y2)
             try:
-                file(forcedLocFilepath, "w").write("[%s]\n" % (forcedLocation,))
+                open(forcedLocFilepath, "w").write("[%s]\n" % (forcedLocation,))
                 log('saved forced location %s' % (forcedLocation,))
             except IOError:
                 log('saving forced location "%s" failed' % (forcedLocFilepath,))
@@ -2572,7 +2572,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.screenshotButtonSelect.setChecked(True)
             return None
 
-        if filepath == None:
+        if not isinstance(filepath, str):
             filename = self.bitmapStringAt()
             if filename:
                 filepath = self.bitmapFilepath(filename)
@@ -2774,7 +2774,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def showGotoLineDialog(self):
         currentLine = self.editor.textCursor().blockNumber() + 1
-        choice, ok = QtGui.QInputDialog.getText(
+        choice, ok = QtWidgets.QInputDialog.getText(
             self, "Goto line", "Goto line number",
             text=str(currentLine))
         if ok:
@@ -2835,7 +2835,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self._completer.activated.connect(self.completerInsert)
             self._completer.setWidget(self.editor)
 
-        self._completer.setModel(QtGui.QStringListModel(
+        self._completer.setModel(QtCore.QStringListModel(
             wordList, self._completer))
 
         self._completerPrefix = None
@@ -2975,7 +2975,7 @@ class MonitorDialog(QtWidgets.QDialog):
     """
     def __init__(self, *args):
         QtWidgets.QDialog.__init__(self, *args)
-        self.layout = QtGui.QGridLayout(self)
+        self.layout = QtWidgets.QGridLayout(self)
         self._monitors = []
         self._nextLine = 0
         self._update_interval_s = 1.0
@@ -3038,13 +3038,13 @@ class FindDialog(QtWidgets.QDialog):
     # fmbt-editor and fmbt-scripter, put it in a library
     def __init__(self, *args):
         QtWidgets.QDialog.__init__(self, *args)
-        self.layout = QtGui.QGridLayout(self)
+        self.layout = QtWidgets.QGridLayout(self)
         self.foundItemWidget = QtWidgets.QLabel("0 / 0", self)
-        self.textWidget = QtGui.QLineEdit(self)
+        self.textWidget = QtWidgets.QLineEdit(self)
         self.textWidget.textChanged.connect(self.textChanged)
         self.textWidget.returnPressed.connect(self.moveCursorAndQuit)
 
-        self.replaceTextWidget = QtGui.QLineEdit(self)
+        self.replaceTextWidget = QtWidgets.QLineEdit(self)
         self.replaceHelp = QtWidgets.QLabel("Ctrl+N: replace forward, "
                                         "Ctrl+P: replace backward", self)
         self.replaceCaption = QtWidgets.QLabel("Replace", self)
@@ -3271,7 +3271,7 @@ class HelpDialog(QtWidgets.QWidget):
     def __init__(self, parent, font):
         QtWidgets.QWidget.__init__(self)
         self.font = font
-        self.layout = QtGui.QGridLayout(self)
+        self.layout = QtWidgets.QGridLayout(self)
         self._texts = []
         self.text = _scalableEditor(parent, self, self.font)
         fm = self.text.fontMetrics()
@@ -3329,12 +3329,12 @@ def _checkUnsavedWork():
 
         save_to_target = ""
 
-    reply = QtGui.QMessageBox.question(
+    reply = QtWidgets.QMessageBox.question(
         _win, "fmbt-scripter",
         'Save changes%s?' % (save_to_target,),
-        QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+        QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
 
-    if reply == QtGui.QMessageBox.Yes:
+    if reply == QtWidgets.QMessageBox.Yes:
         _win.save()
 
 def _quitting():
@@ -3374,9 +3374,9 @@ def main():
 
     if scriptFilename:
         if not os.path.exists(scriptFilename):
-            file(scriptFilename, "w").close() # create empty file
+            open(scriptFilename, "w").close() # create empty file
         try:
-            file(scriptFilename).read()
+            open(scriptFilename).read()
         except IOError:
             error('cannot read file "%s"' % (remainder[0],))
 
