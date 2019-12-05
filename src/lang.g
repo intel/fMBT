@@ -39,6 +39,7 @@ typedef struct _node {
 #include "aalang_cpp.hh"
 #include "aalang_java.hh"
 #include "aalang_py.hh"
+#include "aalang_py3.hh"
 aalang* obj=NULL;
 
 int lang_node_size = sizeof(node);
@@ -311,9 +312,10 @@ push: 'push' opt_parentheses '{' bstr '}' {
 pop:  'pop' opt_parentheses '{' bstr '}' {
             obj->set_pop ($3.str,$n3.start_loc.pathname,$n3.start_loc.line,$n3.start_loc.col); } ;
 
-language: language_kw cpp    { if (!obj) obj=new aalang_cpp  ; obj->set_parser((Parser*)_parser); } starter ';'? |
-          language_kw java   { if (!obj) obj=new aalang_java ; obj->set_parser((Parser*)_parser); } starter ';'? |
-          language_kw python { if (!obj) obj=new aalang_py   ; obj->set_parser((Parser*)_parser); } starter ';'? ;
+language: language_kw cpp     { if (!obj) obj=new aalang_cpp  ; obj->set_parser((Parser*)_parser); } starter ';'? |
+          language_kw java    { if (!obj) obj=new aalang_java ; obj->set_parser((Parser*)_parser); } starter ';'? |
+          language_kw python3 { if (!obj) obj=new aalang_py3  ; obj->set_parser((Parser*)_parser); } starter ';'? |
+          language_kw python  { if (!obj) obj=new aalang_py   ; obj->set_parser((Parser*)_parser); } starter ';'? ;
 
 language_kw:  'language' | 'language:';
 
@@ -328,6 +330,10 @@ java_kw: 'oak' | 'green' | 'java' ;
 python: '"' python_kw '"' | python_kw ;
 
 python_kw: 'Python' | 'python' | 'py';
+
+python3: '"' python3_kw '"' | python3_kw ;
+
+python3_kw: 'Python3' | 'python3' | 'py3';
 
 starter: |
         '{' bstr '}' {

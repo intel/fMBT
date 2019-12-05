@@ -37,6 +37,7 @@
 #include "aalang_action.hh"
 #include "aalang_cpp.hh"
 #include "aalang_py.hh"
+#include "aalang_py3.hh"
 
 extern aalang* obj;
 
@@ -161,6 +162,12 @@ int main(int argc,char** argv) {
             || strcmp(optarg,"cpp")==0
             || strcmp(optarg,"c++")==0) {
           obj=new aalang_cpp;
+          break;
+        }
+        if (strcmp(optarg,"Python3")==0
+            || strcmp(optarg,"python3")==0
+            || strcmp(optarg,"py3")==0) {
+          obj=new aalang_py3;
           break;
         }
         if (strcmp(optarg,"Python")==0
