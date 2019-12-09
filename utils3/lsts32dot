@@ -1,0 +1,377 @@
+#!/usr/bin/env python3
+
+# fMBT, free Model Based Testing tool
+# Copyright (c) 2011, Intel Corporation.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU Lesser General Public License,
+# version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for
+# more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+# Example:
+# fmbt-gt 'P(s0,p)->T(s0,"foo",s1)T(s1,"bar",s0)P(s1,"hello")' | lsts32dot | dotty -
+
+"""
+Usage: lsts32dot [options]
+Options:
+  -h, --help
+          Print this help.
+
+  -i, --input=<filename>
+          Read lsts from the file. Default: standard input.
+
+  -l, --log=<filename>
+          Read fMBT log from the file and color visited states in
+          visualised model.
+
+  --invert-colors
+          Color parts of the state space that were not covered in
+          the log.
+
+  -c, --exec-count
+          Append number of executions in the log after each action
+          name in transitions.
+
+  -e, --erase-transitions=<regexp>
+          Erase transitions matching the regular expression.
+
+  -E, --erase-untraversed-transitions=<regexp>
+          Erase transitions matching the regular expression if they
+          have not been traversed in the log (see --log).
+
+  --loops-in-states
+          Print looping transitions as labels in states instead of
+          drawing the loops.
+
+  -o, --output=<filename>
+          Write dot output to the file. Default: standard output.
+
+  -O, --erase-orphaned-states
+          Erase states that do not have any transitions.
+
+  -s, --show-transitions=<regexp>
+          Show transitions matching the regular expression.
+
+  -S, --show-traversed-transitions=<regexp>
+          Show transitions that match the regular expression and
+          have been traversed in the log (see --log).
+
+  -U, --erase-unvisited-states
+          Erase states that have not been visited in the log (see
+          --log).
+"""
+
+import sys
+import getopt
+import lsts3
+import subprocess
+import re
+
+def error(msg, exit_status=1):
+    sys.stderr.write("lsts32dot: %s\n" % (msg,))
+    sys.exit(exit_status)
+
+COLOR_ST_CANNOT_SIMULATE = "#ffff80"
+COLOR_ST_PASS            = "#90e090"
+COLOR_ST_FAIL            = "#ffc0c0"
+COLOR_ST_INCONC          = "#e0e0e0"
+COLOR_ST_VISITED         = "#d0ffd0"
+COLOR_ST_INVERTED        = "#a0c0ff" # not visited state
+COLOR_TR_FAIL            = "#c00000"
+COLOR_TR_SUGG            = "#000080"
+COLOR_TR_EXEC            = "#008000"
+COLOR_TR_EXEC_LOOP       = "#006000"
+COLOR_TR_INVERTED        = "#00a0ff" # not exec'd transition
+
+def colors(lsts_obj, testlog_fileobj):
+    actionnames = lsts_obj.get_actionnames()
+
+    def find_transition(action_name, lsts_obj, current_state):
+        possible_transitions = lsts_obj.get_transitions()[current_state]
+        for (dest_state, action_index) in possible_transitions:
+            if action_name == actionnames[action_index]:
+                return (current_state, action_index, dest_state)
+
+    cmd = ["fmbt3-log", "-f", "$as*LSTS32DOT*$ax*LSTS32DOT*$tv"]
+    p = subprocess.Popen(cmd, shell=False, stdin=testlog_fileobj.fileno(), stdout=subprocess.PIPE)
+
+    # tr_colors dictionary maps transitions, that is (src, act, dst)
+    # triplets to rgb colors
+    tr_colors = {}
+    state_colors = {}
+    tr_exec_counts = {}
+
+    sugg_tr = None
+
+    # simulate traces found in the log file in the lsts
+    initial_state = int(lsts_obj.get_header().initial_states)
+    current_state = initial_state
+    state_colors[current_state] = COLOR_ST_VISITED
+    try:
+        line = (p.stdout.readline()).decode("utf-8")
+        while line:
+            action_sugg, action_exec, tv = line.strip().split('*LSTS32DOT*')
+            if action_sugg != action_exec:
+                sugg_tr = find_transition(action_sugg, lsts_obj, current_state)
+                if sugg_tr and not sugg_tr in tr_colors:
+                    tr_colors[sugg_tr] = COLOR_TR_SUGG
+
+            if tv != "":
+                if tv == "pass":
+                    state_colors[current_state] = COLOR_ST_PASS
+                    current_state = initial_state
+                elif tv == "inconclusive":
+                    state_colors[current_state] = COLOR_ST_INCONC
+                    current_state = initial_state
+                elif tv in ["fail", "error"]:
+                    if sugg_tr:
+                        tr_colors[sugg_tr] = COLOR_TR_FAIL
+                    state_colors[current_state] = COLOR_ST_FAIL
+                    current_state = initial_state
+                line = (p.stdout.readline()).decode("utf-8")
+                continue
+            next_state = None
+
+            exec_tr = find_transition(action_exec, lsts_obj, current_state)
+            if exec_tr:
+                tr_colors[exec_tr] = COLOR_TR_EXEC
+                tr_exec_counts[exec_tr] = tr_exec_counts.get(exec_tr, 0) + 1
+                current_state = exec_tr[2]
+                state_colors[current_state] = COLOR_ST_VISITED
+            else:
+               state_colors[current_state] = COLOR_ST_CANNOT_SIMULATE
+               break
+
+            line = (p.stdout.readline()).decode("utf-8")
+    except Exception as e:
+        error('invalid line: "%s"' % (line[:-1],))
+    try: p.stdout.close()
+    except: pass
+    return tr_colors, state_colors, tr_exec_counts
+
+def lsts32dot(infileobj, outfileobj, loops_as_props=False, logfile = None, invert_colors = False,
+             erase_transitions = [], erase_untraversed = [],
+             show_transitions = [], show_traversed = [],
+             erase_orphaned_states = False, erase_unvisited_states = False,
+             opt_multilabel_transitions = True,
+             exec_count = False):
+    outfileobj.write('digraph g {\n')
+    outfileobj.write('    node [shape=box fontname="sans-serif"];\n')
+    outfileobj.write('    edge [fontname="sans-serif"];\n')
+    l = lsts3.reader(infileobj)
+
+    if logfile != None:
+        tr_colors, state_colors, tr_exec_counts = colors(l, logfile)
+    else:
+        tr_colors, state_colors, tr_exec_counts = {}, {}, {}
+
+    state2props = {int(l.get_header().initial_states): ["[initial state]"]}
+    actionnames = [a.replace('"','\\"') for a in l.get_actionnames()]
+
+    erase_all_actions = set([])
+    erase_untraversed_actions = set([])
+    if erase_transitions or erase_untraversed or show_transitions or show_traversed:
+        for actionindex, actionname in enumerate(actionnames):
+            for erase_regexp in erase_transitions:
+                if erase_regexp.match(actionname):
+                    erase_all_actions.add(actionindex)
+            for erase_regexp in erase_untraversed:
+                if erase_regexp.match(actionname):
+                    erase_untraversed_actions.add(actionindex)
+            if show_transitions:
+                for show_regexp in show_transitions:
+                    if show_regexp.match(actionname):
+                        if actionindex in erase_all_actions:
+                            erase_all_actions.remove(actionindex)
+                        if actionindex in erase_untraversed:
+                            erase_untraversed_actions.remove(actionindex)
+                        break
+                else:
+                    erase_all_actions.add(actionindex)
+            if show_traversed:
+                for show_regexp in show_traversed:
+                    if show_regexp.match(actionname):
+                        if actionindex in erase_all_actions:
+                            erase_all_actions.remove(actionindex)
+                        erase_untraversed_actions.add(actionindex)
+                        break
+                else:
+                    erase_all_actions.add(actionindex)
+
+    for propname in l.get_stateprops():
+        prettyname = "[%s]" % (propname.replace('"','\\"').replace('&','&amp;',),)
+        for state in l.get_stateprops()[propname]:
+            if state in state2props:
+                state2props[state].append(prettyname)
+            else:
+                state2props[state]=[prettyname]
+
+    states_with_transitions = set([])
+    visible_transitions = {}
+    for source,outtrans in enumerate(l.get_transitions()):
+        for dest,action in outtrans:
+            if action in erase_all_actions: continue
+            if action in erase_untraversed_actions:
+                if not (source, action, dest) in tr_colors: continue
+            if erase_orphaned_states:
+                states_with_transitions.add(source)
+                states_with_transitions.add(dest)
+            action_in_dot = actionnames[action]
+            if exec_count:
+                action_in_dot = action_in_dot + " (%s)" % (tr_exec_counts.get((source, action, dest), '-'),)
+            if loops_as_props and source==dest:
+                if tr_colors and (source, action, dest) in tr_colors:
+                    colordata = ' color="%s"' % (tr_colors[(source, action, dest)],)
+                    if COLOR_TR_EXEC in colordata:
+                        colordata = colordata.replace(COLOR_TR_EXEC, COLOR_TR_EXEC_LOOP)
+                else:
+                    colordata = ''
+                if not source in state2props:
+                    state2props[source] = []
+                state2props[source].append('<font%s>%s</font>' %
+                                           (colordata, action_in_dot))
+            else:
+                if tr_colors and (source, action, dest) in tr_colors:
+                    normal_color = tr_colors[(source, action, dest)]
+                    if invert_colors:
+                        if normal_color == COLOR_TR_EXEC:
+                            colordata = ''
+                        else:
+                            colordata = ' color="%s"' % (COLOR_TR_INVERTED,)
+                    else:
+                        colordata = ' color="%s"' % (normal_color,)
+                else:
+                    if erase_unvisited_states: continue
+                    if tr_colors and invert_colors:
+                        colordata = ' color="%s"' % (COLOR_TR_INVERTED,)
+                    else:
+                        colordata = ''
+                if not (source, dest) in visible_transitions:
+                    visible_transitions[(source, dest)] = []
+                source2dest_transitions = visible_transitions[(source, dest)]
+                if opt_multilabel_transitions and source2dest_transitions:
+                    old_label = source2dest_transitions[0]
+                    source2dest_transitions[0] = (
+                        old_label +
+                        ("<br align=\"left\"/><font%s>%s</font>" % (colordata, action_in_dot)))
+                else:
+                    visible_transitions[(source, dest)].append("<font%s>%s</font>" % (colordata, action_in_dot))
+    for (source, dest) in sorted(visible_transitions.keys()):
+        for label in visible_transitions[(source, dest)]:
+            if COLOR_TR_EXEC in label:
+                edge_color = ' color="%s"' % (COLOR_TR_EXEC,)
+            else:
+                edge_color = ""
+            outfileobj.write('    S%s -> S%s [label=<%s>%s]\n'
+                             % (source, dest, label, edge_color))
+
+    for state in range(l.get_header().state_cnt):
+        if erase_orphaned_states and not state in states_with_transitions:
+            continue
+        props = state2props.get(state, [])
+        _tags = [p for p in props if p.startswith("[")]
+        if _tags and _tags[0] == "[initial state]":
+            _tags = _tags[:1] + sorted(_tags[1:]) # keep [initial state] on top
+        else:
+            _tags = sorted(_tags)
+        _loops = [p for p in props if not p.startswith("[")]
+        colordata = ''
+        if state_colors:
+            if state in state_colors:
+                normal_color = state_colors[state]
+                if not (invert_colors and normal_color == COLOR_ST_VISITED):
+                    colordata = ' fillcolor="%s" style="filled"' % (normal_color,)
+            else:
+                if erase_unvisited_states:
+                    continue
+                if invert_colors:
+                    colordata = ' fillcolor="%s" style="filled"' % (COLOR_ST_INVERTED,)
+        outfileobj.write(
+            '    S%s [label=<%s<br align="left"/>>%s]\n'
+            % (state,
+               "<br align=\"left\"/>".join(_tags + sorted(_loops)),
+               colordata))
+    outfileobj.write('}\n')
+
+if __name__=='__main__':
+    loops_as_props = False
+    invert_colors = False
+    exec_count = False
+    infile = sys.stdin
+    outfile = sys.stdout
+    logfile = None
+    erase_transitions = []
+    erase_untraversed = []
+    show_transitions = []
+    show_traversed = []
+    erase_unvisited_states = False
+    erase_orphaned_states = False
+
+    opts, remainder = getopt.getopt(
+        sys.argv[1:], 'ce:E:hi:l:o:Os:S:UV',
+        ['help', 'erase-transitions=', 'erase-untraversed-transitions=',
+         'erase-unvisited-states', 'erase-orphaned-states',
+         'input=', 'invert-colors', 'exec-count', 'output=', 'show-transitions=',
+         'show-traversed-transitions=', 'loops-in-states', 'log=', 'version'])
+
+    for opt, arg in opts:
+        if opt in ['-h', '--help']:
+            print(__doc__)
+            sys.exit(0)
+        elif opt in ['-V', '--version']:
+            print("Version")
+            sys.exit(0)
+        elif opt in ['-e', '--erase-transitions']:
+            try: erase_transitions.append(re.compile(arg))
+            except Exception as e:
+                error('bad regular expression for %s: "%s"' % (opt, arg))
+        elif opt in ['E', '--erase-untraversed-transitions']:
+            try: erase_untraversed.append(re.compile(arg))
+            except Exception as e:
+                error('bad regular expression for %s: "%s"' % (opt, arg))
+        elif opt in ['-i', '--input']:
+            if arg == "-": continue
+            try: infile = open(arg, 'r')
+            except Exception as e: error('cannot read file "%s": %s' % (arg, e))
+        elif opt in ['-l', '--log']:
+            try: logfile = open(arg, "r")
+            except Exception as e: error('cannot read file "%s": %s' % (arg, e))
+        elif opt == '--loops-in-states':
+            loops_as_props=True
+        elif opt in ['-o', '--output'] and not arg in ['', '-']:
+            try: outfile = open(arg, 'w')
+            except Exception as e: error('cannot open file for writing "%s": %s' % (arg, e))
+        elif opt in ['-O', '--erase-orphaned-states']:
+            erase_orphaned_states = True
+        elif opt in ['-s', '--show-transitions']:
+            try: show_transitions.append(re.compile(arg))
+            except Exception as e:
+                error('bad regular expression for %s: "%s"' % (opt, arg))
+        elif opt in ['-S', '--show-traversed-transitions']:
+            try: show_traversed.append(re.compile(arg))
+            except Exception as e:
+                error('bad regular expression for %s: "%s"' % (opt, arg))
+        elif opt in ['-U', '--erase-unvisited-states']:
+            erase_unvisited_states = True
+        elif opt in ['--invert-colors']:
+            invert_colors = True
+        elif opt in ['-c', '--exec-count']:
+            exec_count = True
+        else:
+            error('implementation missing for %s' % (opt,))
+    lsts32dot(infile, outfile, loops_as_props, logfile, invert_colors,
+             erase_transitions, erase_untraversed, show_transitions, show_traversed,
+             erase_orphaned_states, erase_unvisited_states,
+             True, exec_count=exec_count)
+
+    try: outfile.close()
+    except: pass

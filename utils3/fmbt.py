@@ -150,7 +150,7 @@ def formatAdapterLogMessage(msg, fmt="%s %s\n"):
     Return timestamped adapter log message as a string (not unicode)
     """
     s = fmt % (formatTime(_g_fmbt_adapterlogtimeformat), msg)
-    if type(s) == unicode:
+    if type(s) == str:
         s = s.encode("utf8")
     return s
 
@@ -212,9 +212,9 @@ def funcSpec(func):
     if argspec.keywords:
         arglist.append("**%s" % (argspec.keywords,))
     try:
-        funcspec = "%s(%s)" % (func.func_name, ", ".join(arglist))
+        funcspec = "%s(%s)" % (func.__name__, ", ".join(arglist))
     except:
-        funcspec = "%s(fmbt.funcSpec error)" % (func.func_name,)
+        funcspec = "%s(fmbt.funcSpec error)" % (func.__name__,)
     return funcspec
 
 ### Self-contained code: debug()

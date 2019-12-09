@@ -1,0 +1,417 @@
+#!/usr/bin/env python3
+#
+# fMBT, free Model Based Testing tool
+# Copyright (c) 2011-2012, Intel Corporation.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU Lesser General Public License,
+# version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for
+# more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+"""
+fMBT log tool
+
+Usage: fmbt3-log [options] [logfile...]
+
+Options:
+  -o, --output=<file>
+          output will be written to given file.
+          The default is standard output.
+
+  -f, --format=<fmt>
+          fmt defines output format. The default is '$tv$ax'.
+          Available fields:
+          $ab - action's adapter block execution begin timestamp
+          $ae - action's adapter block execution end timestamp
+          $al - adapter log message (timestamp included)
+          $aL - adapter log message payload (timestamp removed)
+          $am - actions recognised by the model
+          $as - action suggested to top-level adapter
+          $at - action's adapter block execution time
+          $ax - action actually executed in top-level adapter
+          $cf - test configuration filename
+          $mc - mapper adapter configuration
+          $mn - mapper adapter number
+          $ms - suggested action after renaming in mapper adapter
+          $sn - number of test step
+          $sb - coverage before the test step
+          $sc - coverage after the test step
+          $st - timestamp of test step (see option "-t")
+          $sT - time delta of test step from the start (see option "-T")
+          $tb - tags before executing the test step
+          $tg - tags after executing the test step
+          $tm - tags recognized by the model
+          $tv - test verdict: pass or fail
+          $tr - reason for the verdict
+          $tt - total test runtime [s]
+
+          Optional "!" after a field will print the line only if the
+          field content is non-empty.
+
+          Predefined formats:
+          xunit - use xunit XML output format
+
+  -u, --unbuffered
+          use unbuffered I/O. Example: read test log stream from file
+          while test is running:
+          $ fmbt -l test.log test.conf &
+          $ tail -f -n +0 test.log | fmbt3-log -u -f '$sT s $ax'
+
+  -s, --separator=<string>
+          separator between values of multivalue fields,
+          for instance $tg and $al. The default is '; '.
+
+  -S, --record-separator=<string>
+          separator between formatted records. The default
+          is new line.
+
+  -t, --time-format=<fmt>
+          fmt defines how timestamps are formatted. See
+          strftime manual for details. %f gives microseconds.
+
+  -T, --time-delta-format=<fmt>
+          fmt defines how time deltas are formatted. See
+          strftime manual for details. %f gives microseconds.
+
+  -r, --raw
+          do not decode escaped strings in the log.
+
+If logfile is not given, log is read from standard input.
+
+"""
+
+import io as StringIO
+import cgi
+import datetime
+import fmbt_config
+import getopt
+import re
+import sys
+import urllib.parse
+import fmbt
+
+VALUE_SEPARATOR = '; '
+RECORD_SEPARATOR = '\n'
+
+XUNIT_HEADER = '<?xml version="1.0" encoding="UTF-8" ?>\n'
+
+def identity_formatter(s):
+    return s
+
+def memorise_formatter_gen(name, formatter_func=identity_formatter):
+    def memorise_formatter(s):
+        memorise_formatter_gen.latest[name] = formatter_func(s)
+        return None
+    return memorise_formatter
+memorise_formatter_gen.latest = {}
+memorised_fields = ["$cf", "$eb", "$sb", "$tb"]
+for _f in memorised_fields:
+    memorise_formatter_gen.latest[_f] = "undefined"
+
+def TAU_formatter(s):
+    if s == "TAU": return "[unidentified action]"
+    return s
+
+def time_formatter(s):
+    return _g_time_formatter(s)
+
+def time_delta_formatter(s):
+    if time_delta_formatter.logstart is None:
+        time_delta_formatter.logstart = float(s)
+    return _g_time_delta_formatter(float(s) - time_delta_formatter.logstart)
+time_delta_formatter.logstart=None
+
+def starttime_formatter(s):
+    starttime_formatter.last = float(s)
+    return _g_time_formatter(s)
+
+def endtime_formatter(s):
+    endtime_formatter.last = float(s)
+    return _g_time_formatter(s)
+
+def duration_formatter(s):
+    endtime_formatter(s)
+    if (hasattr(starttime_formatter, "last") and
+        hasattr(endtime_formatter, "last")):
+        duration = endtime_formatter.last - starttime_formatter.last
+    else:
+        duration = float("NaN")
+    return "%.6f" % (duration,)
+
+def remove_preceding_timestamp_formatter(s):
+    m = remove_preceding_timestamp_formatter_re.match(s)
+    if not m:
+        return s
+    return s[m.end():]
+remove_preceding_timestamp_formatter_re=re.compile('[0-9]+\.[0-9]{4} ')
+
+def formatTimeDelta(s):
+    fmt = _g_time_delta_format
+    if "%s" in fmt:
+        fmt = fmt.replace("%s", str(int(float(s))))
+    return fmbt.formatTime(fmt, datetime.datetime.utcfromtimestamp(float(s)))
+
+_g_time_format = None
+_g_time_formatter = lambda s: str(identity_formatter(s))
+_g_time_delta_format = None
+_g_time_delta_formatter = lambda s: str(identity_formatter(s))
+
+fields = {
+    '$ab' : ['<suggested_action type=', '"', 5, starttime_formatter],
+    '$ae' : ['<action type=', '"', 5, endtime_formatter],
+    '$ax' : ['<action type=', '"', 3, TAU_formatter],
+    '$as' : ['<suggested_action type=', '"', 3, identity_formatter],
+    '$am' : ['<action_name name=', '"', 1, identity_formatter],
+    '$al' : ['<remote msg=', '"', 1, identity_formatter],
+    '$aL' : ['<remote msg=', '"', 1, remove_preceding_timestamp_formatter],
+    '$at' : ['<action type=', '"', 5, duration_formatter],
+    '$cf' : ['<conf_file name=', '"', 1, memorise_formatter_gen("$cf")],
+    '$ms' : ['<redirect id=', '"', 5, identity_formatter],
+    '$mc' : ['<redirect id=', '"', 3, identity_formatter],
+    '$mn' : ['<redirect id=', '"', 1, identity_formatter],
+    '$sb' : ['<status steps=', '"', 3, memorise_formatter_gen("$sb")],
+    '$sc' : ['<status steps=', '"', 3, identity_formatter],
+    '$eb' : ['<status steps=', '"', 5, memorise_formatter_gen("$eb")],
+    '$ec' : ['<status steps=', '"', 5, identity_formatter],
+    '$sn' : ['<status steps=', '"', 1, identity_formatter],
+    '$st' : ['<current_time time=', '"', 1, time_formatter],
+    '$sT' : ['<current_time time=', '"', 1, time_delta_formatter],
+    '$tb' : ['<tags enabled=', '"', 1, memorise_formatter_gen("$tb")],
+    '$tg' : ['<tags enabled=', '"', 1, identity_formatter],
+    '$tm' : ['<tag_name name=', '"', 1, identity_formatter],
+    '$tv' : ['<stop verdict=', '"', 1, identity_formatter],
+    '$tr' : ['<stop verdict=', '"', 3, identity_formatter],
+    '$tt' : ['<elapsed_time', '"', 1, identity_formatter]
+}
+
+def extract(input_file_obj, output_file_obj, output_format, raw=0,
+            must_be_nonempty=set(), value_separator=VALUE_SEPARATOR,
+            record_separator=RECORD_SEPARATOR, output_file_flush=False):
+    # FIXME: this is just a quick to get input action names
+    # printed. What this really should do is:
+    # 1. parse everything that is done during a single test step
+    # 2. write the stuff in requested format to output_file_obj
+
+    def pick(line, field_values):
+        unique_prefix, delimiter, fieldindex, formatter = field_values
+        if raw == 1:
+            contents = line.split(delimiter)[fieldindex]
+        else:
+            try:
+                if unique_prefix == "<tags enabled=":
+                    values = [ urllib.parse.unquote(v)
+                               for v in line.split(delimiter)[fieldindex].split(' ')]
+                    contents = formatter(value_separator.join(values))
+                else:
+                    contents = formatter(urllib.parse.unquote(line.split(delimiter)[fieldindex]))
+            except:
+                contents = None
+        return contents
+
+    def clean_data():
+        d = dict([(field, []) for field in fields])
+        for memorised in memorised_fields:
+            d[memorised] = [memorise_formatter_gen.latest[memorised]]
+        return d
+
+    empty_row = output_format % dict([(field, '') for field in fields])
+
+    parsed_data = clean_data()
+    first_output_line = True
+    for lineno, line in enumerate(input_file_obj):
+        for field in fields:
+            match = fields[field][0]
+            if match in line:
+                found_value = pick(line, fields[field])
+                if found_value != None:
+                    parsed_data[field].append(found_value)
+
+        # a test step done, print values
+        ppoutput = None
+        if (('<status steps=' in line) or
+            # ('<stop verdict' in line) or
+            ('</test_engine>' in line)):
+            printable_data = {}
+            for field in parsed_data:
+                if field != '$st': printable_data[field] = value_separator.join(parsed_data[field])
+                elif parsed_data[field]: printable_data[field] = parsed_data[field][0]
+            if not '<status steps="0"' in line:
+                ppoutput = output_format % printable_data
+
+            for field in must_be_nonempty:
+                if not field in parsed_data or not parsed_data[field]:
+                    ppoutput = None # print nothing, not all required fields present
+                    break
+            parsed_data = clean_data()
+        elif ((parsed_data['$al'] != [] and '%($al)' in output_format) or
+              (parsed_data['$aL'] != [] and '%($aL)' in output_format) or
+              (parsed_data['$am'] != [] and '%($am)' in output_format) or
+              (parsed_data['$tm'] != [] and '%($tm)' in output_format)):
+            # print immediately and only this
+            printable_data = {}
+            for field in parsed_data:
+                if field == '$al' and parsed_data['$al']: printable_data[field] = parsed_data['$al'][0]
+                elif field == '$aL' and parsed_data['$aL']: printable_data[field] = parsed_data['$aL'][0]
+                elif field == '$am' and parsed_data['$am']: printable_data[field] = parsed_data['$am'][0]
+                elif field == '$tm' and parsed_data['$tm']: printable_data[field] = parsed_data['$tm'][0]
+                else: printable_data[field] = ''
+            ppoutput = output_format % printable_data
+            parsed_data['$al'] = []
+            parsed_data['$aL'] = []
+            parsed_data['$am'] = []
+            parsed_data['$tm'] = []
+        if ppoutput != None and ppoutput != empty_row:
+            if first_output_line:
+                output_file_obj.write(ppoutput)
+                first_output_line = False
+            else:
+                output_file_obj.write(record_separator + ppoutput)
+            if output_file_flush:
+                output_file_obj.flush()
+    return not first_output_line # True if something was extracted
+
+def extract_xunit(input_file_obj, output_file_obj):
+    def extract_as_string(input_file_obj, output_format, must_be_nonempty=[]):
+        input_file_obj.seek(0)
+        temp_out = StringIO.StringIO()
+        extract(input_file_obj, temp_out, output_format, must_be_nonempty=must_be_nonempty)
+        temp_out.seek(0)
+        return temp_out.read()
+    s = extract_as_string(input_file_obj, "%($cf)s\x00%($tt)s\n", ["$tt"])
+    try:
+        conf_filename, total_time = s.strip().split('\x00')
+    except ValueError as e:
+        return False
+    s = extract_as_string(input_file_obj, "%($tv)s\x00%($tr)s\n")
+    try:
+        verdict, reason = s.strip().split('\x00')
+    except ValueError:
+        verdict = "unknown"
+        reason = "test verdict not available in the log"
+    if verdict != "pass":
+        failure = '<failure type="%s">%s</failure>' % (verdict, cgi.escape(reason))
+    else:
+        failure = ""
+    system_err = extract_as_string(input_file_obj, "%($al)s")
+    output_file_obj.write('''<testcase name="%s" time="%s">
+%s
+<system-err>%s</system-err>
+</testcase>\n''' % (conf_filename, total_time, failure, cgi.escape(system_err)))
+
+def unescape(s):
+    return s.replace('\\n', '\n').replace('\\t', '\t')
+
+class unbuffered:
+    def __init__(self, fileobj):
+        self._fileobj = fileobj
+    def __iter__(self):
+        return self
+    def next(self):
+        line = []
+        while True:
+            c = self._fileobj.read(1)
+            if len(c) == 0:
+                if not line:
+                    raise StopIteration
+                else:
+                    return "".join(line)
+            else:
+                line.append(c)
+                if c == "\n":
+                    return "".join(line)
+    def close(self):
+        self._fileobj.close()
+
+if __name__ == '__main__':
+    input_file_obj = sys.stdin
+    input_file_unbuffered = False
+    output_file_obj = sys.stdout
+    output_file_flush = False
+    output_format = '$tv$ax'
+    option_raw = 0
+    xunit_header_written = False
+
+    try:
+        opts, remainder = getopt.getopt(
+            sys.argv[1:], 'hrf:o:us:S:t:T:v',
+            ['help', 'raw', 'format=', 'output=', 'separator=', 'unbuffered',
+             'record-separator=', 'time-format=', 'time-delta-format=',
+             'version'])
+    except getopt.GetoptError as e:
+        sys.stderr.write("fmbt3-log: %s\n" % (e,))
+        sys.exit(1)
+
+    for opt, arg in opts:
+        if opt in ['-h', '--help']:
+            print(__doc__)
+            sys.exit(0)
+        elif opt in ['-V', '--version']:
+            print("Version " + fmbt_config.fmbt_version + fmbt_config.fmbt_build_info)
+            sys.exit(0)
+        elif opt in ['-r', '--raw']:
+            option_raw = 1
+        elif opt in ['-f', '--format']:
+            output_format = arg
+        elif opt in ['-u', '--unbuffered']:
+            output_file_flush = True
+            input_file_unbuffered = True
+        elif opt in ['-s', '--separator']:
+            VALUE_SEPARATOR = arg
+        elif opt in ['-S', '--record-separator']:
+            RECORD_SEPARATOR = arg
+        elif opt in ['-t', '--time-format']:
+            _g_time_format = arg
+            _g_time_formatter = lambda s: fmbt.formatTime(_g_time_format,datetime.datetime.fromtimestamp(float(s)))
+        elif opt in ['-T', '--time-delta-format']:
+            _g_time_delta_format = arg
+            _g_time_delta_formatter = lambda s: formatTimeDelta(s)
+        elif opt in ['-o', '--output'] and not arg in ['', '-']:
+            output_file_obj = open(arg, 'w')
+
+    output_format = unescape(output_format)
+    RECORD_SEPARATOR = unescape(RECORD_SEPARATOR)
+    VALUE_SEPARATOR = unescape(VALUE_SEPARATOR)
+
+    must_be_nonempty = set()
+    for field in fields:
+        if field + "!" in output_format:
+            must_be_nonempty.add(field)
+            output_format = output_format.replace(field + "!", field)
+        output_format = output_format.replace(field,
+                                              '%(' + field + ')s')
+    if not remainder:
+        remainder = ["-"]
+
+    for logfilename in remainder:
+        if logfilename != "-":
+            input_file_obj = open(logfilename, "r")
+        else:
+            input_file_obj = sys.stdin
+
+        if input_file_unbuffered:
+            input_file_obj = unbuffered(input_file_obj)
+
+        if output_format.strip() == "xunit":
+            if not xunit_header_written:
+                output_file_obj.write(XUNIT_HEADER)
+                xunit_header_written = True
+            extract_xunit(input_file_obj, output_file_obj)
+        else:
+            if extract(input_file_obj, output_file_obj, output_format,
+                       option_raw, must_be_nonempty,
+                       VALUE_SEPARATOR, RECORD_SEPARATOR, output_file_flush):
+                output_file_obj.write('\n')
+
+        try: input_file_obj.close()
+        except: pass
+
+    try: output_file_obj.close()
+    except: pass

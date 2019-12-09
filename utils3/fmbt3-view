@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+
+# fMBT, free Model Based Testing tool
+# Copyright (c) 2012-2014, Intel Corporation.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU Lesser General Public License,
+# version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA
+# 02110-1301 USA.
+
+"""
+Usage: fmbt3-view [options] modelname.lsts
+
+  modelname.lsts is a file containing a state machine in LSTS
+  format, or "-" for reading the lsts from standard input.
+  (You can convert AAL/Python to LSTS with remote_pyaal.)
+
+Options:
+  -d      Debug (don't remove temporary files).
+  -f <format>
+          Default format is pdf. Other supported formats are:
+          %(see dot -Thelp)s
+  -h      Print help.
+  -l <logfile>
+          Color states and transitions visited in the log.
+  -i      Invert coloring (highlights unvisited states).
+  -c      Add execution counter after every action in transitions.
+  -o <outputfile>
+          Write image to outputfile, do not display it.
+  -e <regexp>
+          Erase transitions matching the regular expression.
+  -E <regexp>
+          Erase transitions matching the regular expression
+          unless they have been traversed in the given log
+          (see -l).
+  -O      Erase orphaned states, that is, states without any
+          transitions.
+  -s <regexp>
+          Show only transitions matching the regular expression.
+  -S <regexp>
+          Show only transitions that match the regular
+          expression and have been traversed in the given log
+          (see -l).
+  -U      Erase unvisited states.
+"""
+
+import atexit
+import fmbt_config
+import getopt
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import textwrap
+
+def error(msg, exitstatus=1):
+    sys.stderr.write("fmbt3-view: " + msg + "\n")
+    sys.exit(exitstatus)
+
+def cmd_output(*args, **kwargs):
+    return "".join(
+        subprocess.Popen(
+            *args, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,**kwargs).communicate())
+
+def cleanup_on_exit():
+    if "DEBUG" in globals() and DEBUG == False:
+        shutil.rmtree(TMPDIR, ignore_errors=True)
+atexit.register(cleanup_on_exit)
+
+if __name__ == "__main__":
+    try:
+        opts, remainder = getopt.getopt(
+            sys.argv[1:],
+            "df:hicl:o:ve:E:s:S:OU",
+            ["debug", "help","version",
+             "invert-colors", "exec-count"])
+    except getopt.GetoptError as e:
+        error(str(e))
+
+    OUTPUTFILE       = None
+    FORMAT           = "pdf"
+
+    DISPLAY_RESULT   = False
+
+    TMPDIR           = tempfile.mkdtemp(prefix="fmbt3-view.")
+    DOTFILE          = os.path.join(TMPDIR, "1.dot")
+    ERRORFILE        = os.path.join(TMPDIR, "1.error")
+
+    DEBUG            = False
+
+    dot_command      = ["dot"]
+    lsts32dot_command = ["lsts32dot", "--loops-in-states"]
+
+    if len(remainder) > 0:
+        lsts32dot_command.extend(["-i", remainder[0]])
+
+    for opt, arg in opts:
+        if opt in ["-d", "--debug"]:
+            DEBUG = True
+        elif opt in ["-h", "--help"] or remainder == []:
+            try:
+                supported_formats = cmd_output(["dot", "-Thelp"]).split(':')[-1].strip()
+            except:
+                supported_formats = "*** error: graphviz dot not working! ***"
+            formatted_formats = ('\n' + 10 * " ").join(textwrap.wrap(supported_formats, 55))
+            print(__doc__ % {'see dot -Thelp': formatted_formats + "."})
+            sys.exit(0)
+        elif opt in ["-v", "--version"]:
+            print("Version " + fmbt_config.fmbt_version + fmbt_config.fmbt_build_info)
+            sys.exit(0)
+        elif opt in ["-f"]:
+            FORMAT = arg
+        elif opt in ["-i", "--invert-colors"]:
+            lsts32dot_command.extend(["--invert-colors"])
+        elif opt in ["-c", "--exec-count"]:
+            lsts32dot_command.extend(["--exec-count"])
+        elif opt in ["-l"]:
+            lsts32dot_command.extend(["-l", arg])
+        elif opt in ["-o"]:
+            OUTPUTFILE = arg
+        elif opt in ["-e"]:
+            lsts32dot_command.extend(["--erase-transitions", arg])
+        elif opt in ["-E"]:
+            lsts32dot_command.extend(["--erase-untraversed-transitions",arg])
+        elif opt in ["-s"]:
+            lsts32dot_command.extend(["--show-transitions", arg]) # genius!
+        elif opt in ["-S"]:
+            lsts32dot_command.extend(["--show-traversed-transitions=",arg])
+        elif opt in ["-O"]:
+            lsts32dot_command.extend(["-O"])
+        elif opt in ["-U"]:
+            lsts32dot_command.extend(["-U"])
+    p = subprocess.Popen(lsts32dot_command, shell=False,
+                         stdout=open(DOTFILE,"w"))
+    #p = p.stdout.read().decode("utf-8")
+    if p.wait() != 0:
+        print("Error in converting state machine (lsts) into digraph (dot)")
+        exit(1)
+
+    if not OUTPUTFILE:
+        OUTPUTFILE = os.path.join(TMPDIR,"1.dotout")
+        DISPLAY_RESULT = True
+    dot_command.extend(["-o", OUTPUTFILE])
+    dot_command.extend(["-T" + FORMAT])
+    print("dot command is: {0}".format(dot_command))
+    p = subprocess.Popen(dot_command, shell=False, stdin=open(DOTFILE))
+
+    if p.wait() != 0:
+        print("Error in layouting digraph with Graphviz dot.")
+        exit(2)
+
+    if DISPLAY_RESULT:
+        p = subprocess.Popen(["display", OUTPUTFILE], shell=False)
+        if p.wait() != 0:
+            print("Unexpected exit from display")
