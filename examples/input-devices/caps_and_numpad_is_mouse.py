@@ -35,22 +35,14 @@ Left mouse button:   CAPSLOCK + NUMPAD 7
 Middle mouse button: CAPSLOCK + NUMPAD 5
 Right mouse button:  CAPSLOCK + NUMPAD 9
 
-Disable CAPSLOCK + NUMPAD symbols with .Xmodmap:
-(This makes CAPSLOCK a modifier, SHIFT+CAPSLOCK will be the old CAPSLOCK.)
 
-remove Lock = Caps_Lock
-keycode 66 = Mode_switch Caps_Lock
-keycode 79 = KP_Home KP_7 VoidSymbol VoidSymbol VoidSymbol VoidSymbol
-keycode 80 = KP_Up KP_8 VoidSymbol VoidSymbol VoidSymbol VoidSymbol
-keycode 81 = KP_Prior KP_9 VoidSymbol VoidSymbol VoidSymbol VoidSymbol
-keycode 83 = KP_Left KP_4 VoidSymbol VoidSymbol VoidSymbol VoidSymbol
-keycode 84 = KP_Begin KP_5 VoidSymbol VoidSymbol VoidSymbol VoidSymbol
-keycode 85 = KP_Right KP_6 VoidSymbol VoidSymbol VoidSymbol VoidSymbol
-keycode 88 = KP_Down KP_2 VoidSymbol VoidSymbol VoidSymbol VoidSymbol
+Usage: caps_and_numpad_is_mouse.py KEYBOARD_DEVICE
 
+Example:
+  sudo caps_and_numpad_is_mouse.py /dev/input/by-id/*kbd
 """
 
-import glob
+import sys
 import Queue
 import thread
 import time
@@ -62,7 +54,11 @@ quit_lock.acquire()
 
 kbd_event_queue = Queue.Queue()
 
-kbd_dev_name = glob.glob("/dev/input/by-id/*-kbd")[0]
+try:
+    kbd_dev_name = sys.argv[1]
+except:
+    print __doc__
+    sys.exit(1)
 
 # Create new virtual mouse device
 mouse = fmbtuinput.Mouse()
