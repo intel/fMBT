@@ -1,0 +1,10 @@
+remove Lock = Caps_Lock
+keycode 66 = Mode_switch Caps_Lock
+
+keycode 79 = KP_Home KP_7 VoidSymbol VoidSymbol VoidSymbol VoidSymbol
+keycode 80 = KP_Up KP_8 VoidSymbol VoidSymbol VoidSymbol VoidSymbol
+keycode 81 = KP_Prior KP_9 VoidSymbol VoidSymbol VoidSymbol VoidSymbol
+keycode 83 = KP_Left KP_4 VoidSymbol VoidSymbol VoidSymbol VoidSymbol
+keycode 84 = KP_Begin KP_5 VoidSymbol VoidSymbol VoidSymbol VoidSymbol
+keycode 85 = KP_Right KP_6 VoidSymbol VoidSymbol VoidSymbol VoidSymbol
+keycode 88 = KP_Down KP_2 VoidSymbol VoidSymbol VoidSymbol VoidSymbol
