@@ -638,14 +638,14 @@ void Test_engine::interactive()
             // print numbers
             printf("Action breakpoints (%i)\n",(int)atags.size());
             for(unsigned i=0;i<atags.size();i++) {
-              if (atags[i]>0)
+              if (atags[i])
                 printf(" %i: %i\n",i+1,(int)atags[i]->param_long);
             }
           } else {
             // print names
             printf("Action breakpoints (%i)\n",(int)atags.size());
             for(unsigned i=0;i<atags.size();i++) {
-              if (atags[i]>0)
+              if (atags[i])
                 printf(" %i: %s\n",i+1,ana[atags[i]->param_long].c_str());
             }
           }
@@ -669,14 +669,14 @@ void Test_engine::interactive()
             // print numbers
             printf("Tag breakpoints (%i)\n",(int)etags.size());
             for(unsigned i=0;i<etags.size();i++) {
-              if (etags[i]>0)
+              if (etags[i])
                 printf(" %i: %i\n",i+1,(int)etags[i]->param_long);
             }
           } else {
             // print names
             printf("Tag breakpoints (%i)\n",(int)etags.size());
             for(unsigned i=0;i<etags.size();i++) {
-              if (etags[i]>0)
+              if (etags[i])
                 printf(" %i: %s\n",i+1,ana[etags[i]->param_long].c_str());
             }
           }
