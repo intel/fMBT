@@ -103,7 +103,8 @@ protected:
 	*(r->_status)=false;
       return;
     }
-    
+
+#ifdef WCOREDUMP
     if (WCOREDUMP(status)) {
       // dumped...
       fprintf(stderr,"%s dumped the core\n",r->prefix.c_str());
@@ -111,9 +112,10 @@ protected:
 	*(r->_status)=false;
       return;
     }
+#endif
 #else
     GError* g=NULL;
-    if (!g_spawn_check_exit_status (status,&g)) {      
+    if (!g_spawn_check_exit_status (status,&g)) {
       if (g && g->message) {
 	fprintf(stderr,"%s returned error %s\n",r->prefix.c_str(),g->message);
       } else {
@@ -126,7 +128,7 @@ protected:
 	g_error_free (g);
     }
 #endif
-    // Currently we don't care about the rest 
+    // Currently we don't care about the rest
     r->id=0;
     r->pid=0;
   }
