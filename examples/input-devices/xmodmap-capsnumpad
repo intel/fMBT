@@ -1,6 +1,10 @@
 remove Lock = Caps_Lock
 keycode 66 = Mode_switch Caps_Lock
 
+keycode 38 = a A VoidSymbol VoidSymbol NoSymbol NoSymbol
+keycode 39 = s S VoidSymbol VoidSymbol ssharp U1E9E
+keycode 40 = d D VoidSymbol VoidSymbol NoSymbol NoSymbol
+
 keycode 79 = KP_Home KP_7 VoidSymbol VoidSymbol VoidSymbol VoidSymbol
 keycode 80 = KP_Up KP_8 VoidSymbol VoidSymbol VoidSymbol VoidSymbol
 keycode 81 = KP_Prior KP_9 VoidSymbol VoidSymbol VoidSymbol VoidSymbol
@@ -8,3 +12,8 @@ keycode 83 = KP_Left KP_4 VoidSymbol VoidSymbol VoidSymbol VoidSymbol
 keycode 84 = KP_Begin KP_5 VoidSymbol VoidSymbol VoidSymbol VoidSymbol
 keycode 85 = KP_Right KP_6 VoidSymbol VoidSymbol VoidSymbol VoidSymbol
 keycode 88 = KP_Down KP_2 VoidSymbol VoidSymbol VoidSymbol VoidSymbol
+
+keycode 111 = Up Up VoidSymbol VoidSymbol Up Up
+keycode 113 = Left Left VoidSymbol VoidSymbol Left Left
+keycode 114 = Right Right VoidSymbol VoidSymbol Right Right
+keycode 116 = Down Down VoidSymbol VoidSymbol Down Down
