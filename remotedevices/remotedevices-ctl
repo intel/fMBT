@@ -1,0 +1,403 @@
+#!/usr/bin/env python
+# fMBT, free Model Based Testing tool
+# Copyright (c) Intel Corporation.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU Lesser General Public License,
+# version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for
+# more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+"""Remote device control
+
+Usage: remotedevices-ctl [options] command
+
+Options:
+
+  -s, --server [password@]server[:port]
+          remotedevice server that hosts devices. If not defined,
+          defaults to environment variable REMOTEDEVICES_SERVER or
+          "localhost".
+
+Commands:
+
+  ls [-l] [MATCH-REGEXP [MATCH-REGEXP...]]
+          list all devices shared by the server.
+          Example: ls free=True display="720x1280"
+          Example: ls busy=True id=emulator
+
+  info SERIALNUMBER
+          show device info.
+
+  acquire [-a ACQID] [MATCH-REGEXP [MATCH-REGEXP...]]
+          acquire a free device that matches MATCH-REGEXPS.
+          ACQID is the id of the acquirer.
+          The default for ACQID is REMOTEDEVICES_ACQID or
+          an empty string.
+          Example: acquire id=emulator-5554
+          Example: acquire sw="4\.2|4\.3" display="720x1280"
+
+  acquire-nb [-a ACQID] [MATCH-REGEXP [MATCH-REGEXP...]]
+          Non-blocking version of acquire.
+          ACQID is the id of the acquirer.
+
+  acquirers [-l]
+          list ACQIDs that have acquired devices on the server.
+          -l shows their acquisitions.
+
+  release [-a ACQID] SERIALNUMBER
+          force releasing busy device.
+          ACQID is the id of the acquirer.
+
+  release-all [-a ACQID]
+          force releasing all devices.
+          If ACQID (the id of the acquirer) is given, release
+          all devices acquired by ACQID. ACQID will be freed.
+
+  add SERIALNUMBER
+          add new device to the server.
+
+  remove [-f] SERIALNUMBER
+          remove a device from the server. "-f" is forces removing
+          even if the device is busy.
+
+  call [-r] [-a ACQID] SERIALNUMBER METHODCALL
+          call method from remote device. "-r" acquires and releases
+          the device for the call.
+          Example: remotedevices-ctl call emulator-5554 'pressKey("POWER")'
+
+  methods SERIALNUMBER
+          query remote object interface
+
+  blacklist
+          print blacklisted devices. Blacklisted devices cannot
+          be added to the server.
+
+  blacklist-add SERIALNUMBER
+          blacklist a device.
+
+  blacklist-rm SERIALNUMBER
+          remove a device from the blacklist.
+
+  reset   clear all device information from the server.
+          All connections wil be closed and free/busy
+          statuses forgotten.
+
+  rescan  rescan devices. New devices will be added. Listed
+          (free and busy) devices will be removed if they have been
+          detached from the host or blacklisted.
+
+  plugins-avail
+          list all available plugins in the system.
+
+  plugins-ls
+          list registered remotedevices_server plugins.
+
+  plugins-load PLUGIN
+          load plugin.
+
+  plugins-path
+          print directories where plugins are loaded from.
+"""
+
+import os
+import pythonshare
+import socket
+import sys
+import getopt
+
+def error(msg, exitstatus=1):
+    sys.stderr.write("remotedevices-ctl: %s\n" % (msg,))
+    if exitstatus != None:
+        sys.exit(exitstatus)
+
+def remote_exception_to_errormsg(e):
+    return str(e).rsplit(":",1)[-1].strip()
+
+def error_tbstr(tb_str, exitstatus=1):
+    try:
+        msg = tb_str.splitlines()[-1].split(": ",1)[-1]
+    except:
+        msg = "unknown"
+    error(msg, exitstatus)
+
+def output(msg):
+    sys.stdout.write(msg)
+    sys.stdout.write("\n")
+    sys.stdout.flush()
+
+def _remote_eval(expr):
+    global ps_conn
+    return ps_conn.eval_in("devices", expr, lock=False)
+
+def _matchCode(remainder):
+    matchList = []
+    while remainder:
+        match = remainder.pop()
+        try:
+            key, value = match.split("=", 1)
+        except ValueError:
+            error('invalid match spec: "%s", use syntax key=value' % (match,))
+        matchList.append((key, value))
+    matchCode = ", ".join(["%s=%s" % (k, repr(v)) for k, v in matchList])
+    return matchCode
+
+def _arg(args, accept, pickup):
+    try:
+        opts, remainder = getopt.getopt(args, accept)
+    except getopt.GetoptError, e:
+        error(str(e))
+
+    return_opt_arg = None
+    for opt, arg in opts:
+        if opt in pickup:
+            if not return_opt_arg:
+                return_opt_arg = opt, arg
+        else:
+            remainder.insert(0, "%s%s" % (opt, arg))
+    if return_opt_arg:
+        return return_opt_arg + (remainder, )
+
+    if "-a" in pickup:
+        acqid = os.getenv("REMOTEDEVICES_ACQID", None)
+        if acqid != None:
+            return "-a", acqid, remainder
+        else:
+            try:
+                acqid = socket.gethostname()
+            except Exception:
+                pass
+            if acqid != None:
+                return "-a", acqid, remainder
+    return None, None, remainder
+
+if __name__ == "__main__":
+    opt_server = os.getenv("REMOTEDEVICES_SERVER", "localhost")
+    opt_aid = ""
+
+    opts, remainder = getopt.getopt(
+        sys.argv[1:], 'hs:',
+        ['help', 'server='])
+
+    for opt, arg in opts:
+        if opt in ['-h', '--help']:
+            output(__doc__)
+            sys.exit(0)
+        elif opt in ['-s', '--server']:
+            opt_server = arg
+
+    if remainder:
+        try:
+            ps_conn = pythonshare.connection(opt_server)
+        except Exception, e:
+            error('connecting to "%s" failed: %s' % (opt_server, e))
+
+        command = remainder.pop(0)
+
+        if command == "ls" or command == "list":
+            showInfo, _, remainder = _arg(remainder, "l", ["-l"])
+            matchCode = _matchCode(remainder)
+            serials = _remote_eval(
+                "[(k, devices.available(k)) for k in devices.all()]")
+            busySerials = [s for (s, avail) in serials if avail==False]
+            freeSerials = [s for (s, avail) in serials if avail]
+
+            if matchCode:
+                matchingSerials = _remote_eval('devices.match(%s)' % (matchCode,))
+            else:
+                matchingSerials = busySerials + freeSerials
+            info = {}
+            for s in matchingSerials:
+                if showInfo:
+                    info[s] = _remote_eval("devices.info(%s)" % (repr(s),))
+                else:
+                    info[s] = {}
+                info[s]["free"] = s in freeSerials
+
+            lines = []
+            for s in info:
+                lines.append(s + " " + " ".join(["%s=%s" % (k, info[s][k]) for k in sorted(info[s].keys())]))
+            output("\n".join(sorted(lines)))
+
+        elif command == "info":
+            if remainder:
+                serial = remainder.pop(0)
+                try:
+                    info = _remote_eval("devices.info(%s)" % (repr(serial),))
+                except pythonshare.RemoteEvalError, e:
+                    error(remote_exception_to_errormsg(e))
+
+                if not info:
+                    error('no device has serial number "%s"' % (serial,))
+                lines = ["%s=%s" % (k, v) for k, v in info.iteritems()]
+                output("\n".join(sorted(lines)))
+            else:
+                error("missing serial number")
+
+        elif command in ["release", "release-all"]:
+            _, aid, remainder = _arg(remainder, "a:", ["-a"])
+            if remainder:
+                serial = remainder.pop(0)
+                try:
+                    _remote_eval("devices.release(%s, acquirer=%s)" % (repr(serial), repr(aid)))
+                except Exception, e:
+                    error_tbstr(str(e))
+            else:
+                if command == "release-all":
+                    try:
+                        _remote_eval("devices.release_all(%s)" % (repr(aid),))
+                    except Exception, e:
+                        error_tbstr(str(e))
+                else:
+                    error("missing serial number")
+
+        elif command == "acquire":
+            _, aid, remainder = _arg(remainder, "a:", ["-a"])
+            matchCode = _matchCode(remainder)
+            serial = _remote_eval("devices.acquire(%s, acquirer=%s)" % (matchCode, repr(aid)))
+            if serial == None:
+                error("no matching devices")
+            else:
+                output(serial)
+
+        elif command == "acquire-nb":
+            _, aid, remainder = _arg(remainder, "a:", ["-a"])
+            matchCode = _matchCode(remainder)
+            serial = _remote_eval("devices.acquire(%s, block=False, acquirer=%s)" % (matchCode, repr(aid)))
+            if serial == None:
+                error("matching devices not available")
+            else:
+                output(serial)
+
+        elif command == "acquirers":
+            showInfo, _, remainder = _arg(remainder, "l", ["-l"])
+            if not showInfo:
+                acqids = _remote_eval("devices.acquirers()")
+                if acqids:
+                    output("\n".join(acqids))
+            else:
+                current_ts, acquisitions = _remote_eval(
+                    "(time.time(), devices.acquisitions())")
+                for acquirer, serial, timestamps in acquisitions:
+                    first_ts = sorted(timestamps)[0]
+                    output("%s %s %.3f" %
+                           (acquirer, serial, current_ts - first_ts))
+
+        elif command == "add":
+            if remainder:
+                serial = remainder.pop(0)
+                try:
+                    _remote_eval("devices.add(%s)" % (repr(serial),))
+                except Exception, e:
+                    error_tbstr(str(e))
+            else:
+                error("missing serial number")
+
+        elif command == "rm" or command == "remove":
+            if remainder:
+                force, _, remainder = _arg(remainder, "f", ["-f"])
+                serial = remainder.pop(0)
+                try:
+                    _remote_eval("devices.remove(%s, force=%s)" % (repr(serial), True if force else False))
+                except Exception, e:
+                    error_tbstr(str(e))
+            else:
+                error("missing serial number")
+
+        elif command == "call":
+            if remainder:
+                _, aid, remainder = _arg(remainder, "ra:", ["-a"])
+                acq_rel, _, remainder = _arg(remainder, "ra:", ["-r"])
+                serial = remainder.pop(0)
+            else:
+                error("missing serial number")
+
+            if remainder:
+                method_call = remainder.pop(0)
+            else:
+                error("missing method call")
+
+            try:
+                output(str(_remote_eval("devices.acquired(%s).%s" % (repr(serial), method_call))))
+            except pythonshare.RemoteEvalError, e:
+                if acq_rel and ('device "%s" not acquired' % (serial,) in str(e) or "KeyError: " in str(e)):
+                    acq_serial = _remote_eval("devices.acquire(id=%s, block=False, acquirer=%s)" % (repr(serial) , repr(aid)))
+                    if acq_serial == None:
+                        error('acquiring device %s failed' % (repr(serial),))
+                    else:
+                        try:
+                            output(str(_remote_eval("devices.acquired(%s).%s" % (repr(acq_serial), method_call))))
+                        finally:
+                            _remote_eval("devices.release(%s, acquirer=%s)" % (repr(acq_serial), repr(aid)))
+                else:
+                    error(remote_exception_to_errormsg(e))
+
+        elif command == "methods":
+            if remainder:
+                serial = remainder.pop(0)
+            else:
+                error("missing serial number")
+            try:
+                output(str(_remote_eval("devices.api(%s)" % (repr(serial),))))
+            except pythonshare.RemoteEvalError, e:
+                error(str(e))
+
+        elif command == "bl" or command == "blacklist":
+            output("\n".join(_remote_eval("devices.blacklist()")))
+
+        elif command == "bl-add" or command == "blacklist-add":
+            if remainder:
+                serial = remainder.pop(0)
+                try:
+                    _remote_eval("devices.blacklist_include(%s)" % (repr(serial),))
+                except Exception, e:
+                    error_tbstr(str(e))
+            else:
+                error("missing serial number")
+
+        elif command in ["bl-rm", "blacklist-rm", "bl-remove", "blacklist-remove"]:
+            if remainder:
+                serial = remainder.pop(0)
+                try:
+                    _remote_eval("devices.blacklist_exclude(%s)" % (repr(serial),))
+                except Exception, e:
+                    error_tbstr(str(e))
+            else:
+                error("missing serial number")
+
+        elif command == "rescan":
+            _remote_eval("devices.rescan()")
+
+        elif command == "reset":
+            _remote_eval("devices.reset()")
+
+        elif command == "plugins-avail":
+            output("\n".join(_remote_eval("avail_plugins()")))
+
+        elif command == "plugins-ls":
+            output("\n".join(_remote_eval("list_plugins()")))
+
+        elif command == "plugins-load":
+            if remainder:
+                plugin_name = remainder.pop(0)
+            else:
+                error("missing plugin name")
+            _remote_eval("load_plugin(%s)" % (repr(plugin_name),))
+
+        elif command == "plugins-path":
+            output(_remote_eval("plugin_dir()"))
+
+        else:
+            error("unknown command: %s" % (command,))
+
+        if remainder:
+            error("ignored command: %s" % (" ".join(remainder),))
+    else:
+        error("missing command")

@@ -1,0 +1,60 @@
+remotedevices provides a server, command line utilities and Python API
+for acquiring, releasing and accessing remote devices.
+
+Remote devices can be fMBT GUI test interface devices, or generic
+devices controlled by Python plugins (see example_lightbulb).
+
+Prerequisites for clients and servers:
+
+    * fmbt-pythonshare
+
+    * fmbt-adapter-android
+
+
+Install
+
+    $ sudo python setup.py install
+
+    or
+
+    $ sudo dpkg -i remotedevices*deb
+
+    or use directly from the source tree (current working directory):
+
+    $ export PATH=$PATH:$(pwd) PYTHONPATH=$PYTHONPATH:$(pwd)
+
+
+Launch server (-d is for debug, does not fork daemon)
+
+    $ remotedevices-server -- -d --interface=all -p 8888 --password=xyz
+
+
+Access the server and devices from command line
+
+    $ export REMOTEDEVICES_SERVER=xyz@server:8888
+    $ remotedevices-ctl ls         # list devices on the server
+    $ remotedevices-ctl ls-busy    # list acquired devices
+    $ remotedevices-ctl ls-free    # list available devices
+
+    $ remotedevices-ctl acquire    # acquire a free device (will print ID)
+    $ remotedevices-ctl release ID # force releasing acquired (busy) device ID
+
+    $ remotedevices-ctl reset      # reset all reservations, forget devices
+    $ remotedevices-ctl rescan     # rescan all devices, implies reset
+
+    # call Device methods, the device must be acquired
+    $ remotedevices-ctl call emulator-5554 'pressPower()'
+
+
+Access the server and devices from Python
+
+    import remotedevices
+    # Get fmbtandroid.Device instance connected to a device on the server
+    # (this call will block until a device is acquired).
+    d = remotedevices.acquireDevice("xyz@server:8080", type="android")
+    try:
+        d.enableVisualLog("log.html")
+        d.refreshScreenshot()
+        d.swipeBitmap("lockscreen-lock.png", "east")
+    finally:
+        remotedevices.releaseDevice(d)

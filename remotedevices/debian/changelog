@@ -1,0 +1,11 @@
+remotedevices (0.1) unstable; urgency=low
+
+  * Plugin support.
+
+ -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 1 Oct 2014 16:42:00 +0300
+
+remotedevices (0.0) unstable; urgency=low
+
+  * Initial release.
+
+ -- Antti Kervinen <antti.kervinen@intel.com>  Fri, 29 Aug 2014 15:42:00 +0300

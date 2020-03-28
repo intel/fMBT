@@ -1,0 +1,430 @@
+language "python" {
+    import rd
+    import remotedevices
+    import os
+    _real_bulbs = []
+    _id2proxy = {} # acquired id -> proxy from remotedevices.acquire
+
+    test_server_terminate=os.getenv("TEST_SERVER_TERMINATE", "True")
+}
+
+# preview-show-vars: bulb0_blacklisted, bulb0_included
+# preview-hide-vars: sensor_refcount
+# preview-depth: 20
+variables {
+    server, reserved_bulbs, sensor_refcount, \
+    bulb0_included, bulb0_blacklisted, \
+    _real_bulbs, _id2proxy
+}
+initial_state {
+    server = False # server running?
+    bulb0_included = True
+    bulb0_blacklisted = False
+    reserved_bulbs = []
+    sensor_refcount = 0
+}
+
+adapter_init {
+    _real_bulbs = [] # really reserved lightbulb IDs
+}
+
+adapter_exit {
+    rd.server_terminate()
+}
+
+tag "no server" {
+    guard { return server == False }
+    adapter {
+        rd.ctl(["ls"], expected=["Connection refused"])
+    }
+    input "server_start" {
+        adapter { rd.server_start() }
+        body { server = True }
+    }
+    input "server_start_blacklisted_bulb0" {
+        adapter {
+            rd.server_start(cmdline_args=["-b", "example-lightbulb-0"])
+        }
+        body {
+            server = True
+            bulb0_included = False
+            bulb0_blacklisted = True
+        }
+    }
+}
+
+tag "server" {
+    guard { return server }
+    adapter {
+        lines = []
+        no_lines = []
+        if "example-lightbulb-0" in _real_bulbs:
+            lines.append("example-lightbulb-0.*free=False")
+        elif bulb0_included:
+            lines.append("example-lightbulb-0.*free=True")
+        else:
+            no_lines.append("example-lightbulb-0")
+        if "example-lightbulb-1" in _real_bulbs:
+            lines.append("example-lightbulb-1.*free=False")
+        else:
+            lines.append("example-lightbulb-1.*free=True")
+        lines.append("example-sensor-0.*free=True")
+        rd.ctl(["ls", "-l"],
+            expected=lines, not_expected=no_lines)
+    }
+
+    input "server_terminate" {
+        guard { return test_server_terminate.lower() in ["true", "yes", "1"] }
+        adapter {
+            rd.server_terminate()
+            _real_bulbs = []
+            _id2proxy = {}
+        }
+        body {
+            bulb0_included = True
+            bulb0_blacklisted = False
+            reserved_bulbs = []
+            sensor_refcount = 0
+            server = False
+        }
+    }
+
+    input "acquire_bulb_cli", "acquire_bulb_api" {
+        guard { return (len(reserved_bulbs) < 2 and bulb0_included) or not reserved_bulbs }
+        adapter {
+            if input_name.endswith("cli"):
+                _real_bulbs.extend(
+                    rd.ctl(["acquire", "type=example-lightbulb"],
+                        expected=["example-lightbulb-(0|1)"]))
+            else:
+                proxy = remotedevices.acquire(type="example-lightbulb")
+                _real_bulbs.append(proxy._id)
+                _id2proxy[proxy._id] = proxy
+        }
+        body {
+            reserved_bulbs.append("bulb")
+        }
+    }
+
+    input "acquire_nb_bulb_cli", "acquire_nb_bulb_api" {
+        guard { return len(reserved_bulbs) < 2 and bulb0_included or not reserved_bulbs }
+        adapter {
+            if input_name.endswith("cli"):
+                _real_bulbs.extend(
+                    rd.ctl(["acquire-nb", "type=example-lightbulb"],
+                        expected=["example-lightbulb-(0|1)"]))
+            else:
+                proxy = remotedevices.acquire(type="example-lightbulb", block=False)
+                assert proxy != None
+                _real_bulbs.append(proxy._id)
+                _id2proxy[proxy._id] = proxy
+        }
+        body {
+            reserved_bulbs.append("bulb")
+        }
+    }
+
+    input "acquire_fail_nb_bulb_cli", "acquire_fail_nb_bulb_api" {
+        guard { return (len(reserved_bulbs) == 1 and not bulb0_included) or len(reserved_bulbs) == 2 }
+        adapter {
+            if input_name.endswith("cli"):
+                rd.ctl(["acquire-nb", "type=example-lightbulb"],
+                    expected=["matching devices not available"],
+                    not_expected=["lightbulb"])
+            else:
+                proxy = remotedevices.acquire(type="example-lightbulb", block=False)
+                assert proxy == None, "failing acquire expected, got %s" % (proxy,)
+        }
+    }
+
+    input "release_bulb_cli" {
+        guard { return len(reserved_bulbs) > 0 }
+        adapter {
+            bulb = _real_bulbs.pop()
+            rd.ctl(["release", bulb],
+                not_expected=["."])
+            if bulb in _id2proxy: del _id2proxy[bulb]
+        }
+        body { reserved_bulbs.pop() }
+    }
+
+    input "release_bulb_api" {
+        guard { return reserved_bulbs and len(_id2proxy) > 0 }
+        adapter {
+            bulb = _id2proxy.keys()[0]
+            proxy = _id2proxy.pop(bulb)
+            _real_bulbs.remove(bulb)
+            remotedevices.release(proxy)
+        }
+        body { reserved_bulbs.pop() }
+    }
+
+    input "release_fail_unacquired_bulb" {
+        guard { return (len(reserved_bulbs) < 2 and bulb0_included) or not reserved_bulbs }
+        adapter {
+            if bulb0_included:
+                avail = set(["example-lightbulb-0", "example-lightbulb-1"])
+            else:
+                avail = set(["example-lightbulb-1"])
+            not_acquired_bulbs = (avail - set(_real_bulbs))
+            rd.ctl(["release", not_acquired_bulbs.pop()],
+                expected=["not acquired"])
+        }
+    }
+
+    input "acquire_sensor" {
+        guard { return sensor_refcount < 3 }
+        adapter {
+            rd.ctl(["acquire", "id=example-sensor-0"],
+                expected=["^example-sensor-0$"])
+        }
+        body { sensor_refcount += 1 }
+    }
+
+    input "release_sensor" {
+        guard { return sensor_refcount > 0 }
+        adapter {
+            rd.ctl(["release", "example-sensor-0"],
+                not_expected=["."])
+        }
+        body { sensor_refcount -= 1 }
+    }
+
+    input "remove_bulb0", "remove_bulb0_force" {
+        guard { return bulb0_included and reserved_bulbs and not "example-lightbulb-0" in _real_bulbs }
+        adapter {
+            if "force" in input_name:
+                force=["-f"]
+            else:
+                force=[]
+            rd.ctl(["remove"] + force + ["example-lightbulb-0"],
+                not_expected=["."])
+        }
+        body { bulb0_included = False }
+    }
+
+    input "remove_busy_bulb0_force" {
+        guard { return bulb0_included and reserved_bulbs and "example-lightbulb-0" in _real_bulbs }
+        adapter {
+            rd.ctl(["remove", "-f", "example-lightbulb-0"],
+                not_expected=["."])
+            _real_bulbs.remove("example-lightbulb-0")
+            if "example-lightbulb-0" in _id2proxy: del _id2proxy["example-lightbulb-0"]
+        }
+        body {
+            reserved_bulbs.pop()
+            bulb0_included = False
+        }
+    }
+
+    input "remove_fail_busy_bulb0" {
+        guard { return bulb0_included and reserved_bulbs and "example-lightbulb-0" in _real_bulbs }
+        adapter {
+            rd.ctl(["remove", "example-lightbulb-0"],
+                expected=['remotedevices-ctl: device "example-lightbulb-0" is busy'])
+        }
+    }
+
+    input "remove_fail_unknown_bulb" {
+        adapter {
+            rd.ctl(["remove", "example-lightbulb-x"],
+                expected=['remotedevices-ctl: unknown device "example-lightbulb-x"'])
+        }
+    }
+
+    input "add_bulb0" {
+        guard { return not bulb0_included and not bulb0_blacklisted }
+        adapter {
+            rd.ctl(["add", "example-lightbulb-0"],
+                not_expected=["."])
+        }
+        body { bulb0_included = True }
+    }
+
+    input "add_fail_bulb0_already_added" {
+        guard { return bulb0_included }
+        adapter {
+            if bulb0_blacklisted:
+                line = 'remotedevices-ctl: device "example-lightbulb-0" blacklisted'
+            else:
+                line = 'remotedevices-ctl: device "example-lightbulb-0" already added'
+            rd.ctl(["add", "example-lightbulb-0"],
+                expected=[line])
+        }
+    }
+
+    input "add_fail_blacklisted_bulb0" {
+        guard { return not bulb0_included and bulb0_blacklisted }
+        adapter {
+            rd.ctl(["add", "example-lightbulb-0"],
+                expected=['remotedevices-ctl: device "example-lightbulb-0" blacklisted'])
+        }
+    }
+
+    input "blacklist_empty" {
+        guard { return not bulb0_blacklisted }
+        adapter {
+            rd.ctl(["blacklist"],
+                not_expected=["."])
+        }
+    }
+
+    input "blacklist_includes_bulb0" {
+        guard { return bulb0_blacklisted }
+        adapter {
+            rd.ctl(["blacklist"],
+                expected=["example-lightbulb-0"])
+        }
+    }
+
+    input "blacklist_add_bulb0" {
+        guard { return not bulb0_blacklisted }
+        adapter {
+            rd.ctl(["blacklist-add", "example-lightbulb-0"],
+                not_expected=["."])
+        }
+        body {
+            bulb0_blacklisted = True
+        }
+    }
+
+    input "blacklist_fail_add_bulb0_already_added" {
+        guard { return bulb0_blacklisted }
+        adapter {
+            rd.ctl(["blacklist-add", "example-lightbulb-0"],
+                expected=['remotedevices-ctl: device "example-lightbulb-0" already blacklisted'])
+        }
+    }
+
+    input "blacklist_fail_rm_bulb0_not_blacklisted" {
+        guard { return not bulb0_blacklisted }
+        adapter {
+            rd.ctl(["blacklist-rm", "example-lightbulb-0"],
+                expected=['remotedevices-ctl: device "example-lightbulb-0" not blacklisted'])
+        }
+    }
+
+    input "blacklist_rm_bulb0" {
+        guard { return bulb0_blacklisted }
+        adapter {
+            rd.ctl(["blacklist-rm", "example-lightbulb-0"],
+                not_expected=["."])
+        }
+        body {
+            bulb0_blacklisted = False
+        }
+    }
+
+    input "rescan" {
+        adapter {
+            rd.ctl(["rescan"],
+                not_expected=["."])
+            if bulb0_blacklisted and "example-lightbulb-0" in _real_bulbs:
+                reserved_bulbs.pop()
+                _real_bulbs.remove("example-lightbulb-0")
+                if "example-lightbulb-0" in _id2proxy: del _id2proxy["example-lightbulb-0"]
+        }
+        body {
+            if bulb0_blacklisted:
+                bulb0_included = False
+            else:
+                bulb0_included = True
+        }
+    }
+
+    input "reset_and_rescan" {
+        adapter {
+            rd.ctl(["reset"],
+                not_expected=["."])
+            rd.ctl(["rescan"],
+                not_expected=["."])
+            _real_bulbs = []
+            _id2proxy = {}
+        }
+        body {
+            if bulb0_blacklisted:
+                bulb0_included = False
+            else:
+                bulb0_included = True
+            reserved_bulbs = []
+            sensor_refcount = 0
+        }
+    }
+
+    input "fail_add_unknown_bulb" {
+        adapter {
+            rd.ctl(["add", "example-lightbulb-x"],
+                expected=['remotedevices-ctl: device "example-lightbulb-x" not found'])
+        }
+    }
+
+    input "info_bulb0" {
+        guard { return bulb0_included }
+        adapter {
+            rd.ctl(["info", "example-lightbulb-0"],
+                expected=["id=example-lightbulb-0",
+                          "type=example-lightbulb"])
+        }
+    }
+
+    input "info_fail_removed_bulb0" {
+        guard { return not bulb0_included }
+        adapter {
+            rd.ctl(["info", "example-lightbulb-0"],
+                expected=['remotedevices-ctl: unknown device "example-lightbulb-0"'])
+        }
+    }
+
+    input "call_first_bulb_on_cli" {
+        guard { return reserved_bulbs }
+        adapter {
+            bulb = _real_bulbs[0]
+            rd.ctl(["call", bulb, "switchOn()"], expected=["True"])
+            rd.ctl(["call", bulb, "status()"], expected=["on"])
+        }
+    }
+
+    input "call_first_bulb_on_api" {
+        guard { return reserved_bulbs and _id2proxy }
+        adapter {
+            bulb = _id2proxy.keys()[0]
+            rv = _id2proxy[bulb].switchOn()
+            assert rv == True, "expected True, got %s" % (repr(rv),)
+            status = _id2proxy[bulb].status()
+            assert status == "on", "expected status 'on', got %s" % (repr(status),)
+        }
+    }
+
+    input "call_last_bulb_off" {
+        guard { return reserved_bulbs }
+        adapter {
+            bulb = _real_bulbs[-1]
+            rd.ctl(["call", bulb, "switchOff()"])
+            rd.ctl(["call", bulb, "status()"], expected=["off"])
+        }
+    }
+
+    input "call_fail_unacquired_bulb" {
+        guard { return not reserved_bulbs or sensor_refcount == 0 }
+        adapter {
+            if not reserved_bulbs:
+                rd.ctl(["call", "example-lightbulb-1", "switchOff()"],
+                    expected=['remotedevices-ctl: device "example-lightbulb-1" not acquired'])
+            if sensor_refcount == 0:
+                rd.ctl(["call", "example-sensor-0", "value()"],
+                    expected=['remotedevices-ctl: device "example-sensor-0" not acquired'])
+
+        }
+    }
+
+    input "methods_bulb" {
+        adapter {
+            if bulb0_included:
+                bulb = "example-lightbulb-0"
+            else:
+                bulb = "example-lightbulb-1"
+            rd.ctl(["methods", bulb], expected=[
+                "switchOn()", "switchOff()", "status()"])
+        }
+    }
+}
