@@ -173,8 +173,8 @@ class Devices(object):
             (not "sw" in matchArgs or re.match(matchArgs["sw"], i.sw)) and
             (not "hw" in matchArgs or re.match(matchArgs["hw"], i.hw)) and
             (not "display" in matchArgs or re.match(matchArgs["display"], i.display)) and
-            (not "free" in matchArgs or (matchArgs["free"].lower() == str(self.available(self._infos[i]).lower()))) and
-            (not "busy" in matchArgs or (matchArgs["busy"].lower() == str(not self.available(self._infos[i]).lower())))])
+            (not "free" in matchArgs or (matchArgs["free"].lower() == str(self.available(self._infos[i])).lower())) and
+            (not "busy" in matchArgs or (matchArgs["busy"].lower() == str(not self.available(self._infos[i])).lower()))])
         return matchingSerials
 
     def available(self, key):
