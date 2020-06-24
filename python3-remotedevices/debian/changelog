@@ -1,0 +1,5 @@
+python3-remotedevices (0.3) unstable; urgency=low
+
+  * Initial release for Python 3, ported from Python 2
+
+ -- Antti Kervinen <antti.kervinen@intel.com>  Wed, 24 Jun 2020 15:42:00 +0300

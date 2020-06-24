@@ -1,0 +1,13 @@
+Source: python3-remotedevices
+Maintainer: Antti Kervinen <antti.kervinen@intel.com>
+Priority: optional
+Standards-Version: 4.1.4
+Build-Depends: debhelper (>= 7.3.8), dh-python, python3
+X-Python3-Version: >= 3.0
+
+Package: python3-remotedevices
+Architecture: all
+Depends: ${python3:Depends}, python3share
+Description: Remote device sharing and access
+ Server, command line client and Python API for
+ sharing and accessing fMBT GUI test devices remotely.

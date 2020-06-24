@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+# fMBT, free Model Based Testing tool
+# Copyright (c) Intel Corporation.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU Lesser General Public License,
+# version 2.1, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for
+# more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+"""Remote device control
+
+Usage: remotedevices-server [OPTIONS] [-- PYTHONSHARE-SERVER-OPTIONS]
+
+Options:
+
+  -w, --whilelist SERIALNUMBER[,SERIALNUMBER]...
+          serve only devices with given serial numbers.
+
+  -b, --blacklist SERIALNUMBER[,SERIALNUMBER]...
+          exclude listed serial numbers. These devices will not
+          be served.
+
+  --skip-scan
+          skip scanning all devices at launch. Scan later with:
+          remotedevices-ctl rescan.
+
+Pythonshare-server options:
+
+  Refer to python3share-server --help.
+
+
+Example: launching the server
+
+# Launch server that shares Android devices attached to the host
+# -d switches runs the server in the debug mode,
+# -D -1 sets debug message length unlimited.
+server$ remotedevices-server -- -d -D -1 -l server.log -p 8080 --interface=all --password xyz
+
+
+Example: accessing devices on the server from command line
+
+# list devices
+client$ remotedevices-ctl -s xyz@server:8080 ls
+
+# Reset acquisitions acquired and rescan devices,
+# use environment variables
+client$ export REMOTEDEVICES_SERVER=xyz@server:8080
+client$ remotedevices-ctl reset
+client$ remotedevices-ctl rescan
+
+
+Example: accessing devices on the server from Python
+
+import remotedevices
+d = remotedevices.acquireDevice("xyz@server:8080", type="android", display="480x800")
+try:
+    d.refreshScreenshot()
+    d.swipe("lockscreen-lock.png", "east")
+finally:
+    remotedevices.releaseDevice(d)
+
+Note: remotedevices.acquireDevice uses the REMOTEDEVICES_SERVER
+environment variable. If it is set, the first parameter is not needed.
+"""
+
+import getopt
+import subprocess
+import os
+import sys
+
+if __name__ == "__main__":
+    whitelist_cmd = []
+    blacklist_cmd = []
+    scan_cmd = ["-i", "devices.rescan()"]
+
+    opts, remainder = getopt.getopt(
+        sys.argv[1:], "hw:b:",
+        ["help", "whitelist=", "blacklist=", "skip-scan"])
+
+    for opt, arg in opts:
+        if opt in ['-h', '--help']:
+            print(__doc__)
+            sys.exit(0)
+        elif opt in ['-w', '--whitelist']:
+            serials = "'%s'" % ("','".join(arg.split(",")))
+            whitelist_cmd = ["-i", "whitelist.extend([%s])" % (serials,)]
+        elif opt in ['-b', '--blacklist']:
+            serials = "'%s'" % ("','".join(arg.split(",")))
+            blacklist_cmd = ["-i", "blacklist.extend([%s])" % (serials,)]
+        elif opt in ['--skip-scan']:
+            scan_cmd = []
+
+    os.execvp(
+        "python3share-server",
+        ["python3share-server", "-n", "devices", "-i", "from remotedevices_server import *"] +
+        whitelist_cmd + blacklist_cmd +
+        ["-i", "devices = Devices()"] +
+        ["-i", "load_all_plugins()"] +
+        scan_cmd +
+        remainder)
