@@ -135,30 +135,30 @@ test_debian_stable:
     - pythonshare-client -C $HUB_CONNSPEC --ls-remote
     - python ../pythonshare/tests/onlinetests.py
 
-test_debian_unstable:
-  image: debian:unstable
-  stage: test
-  variables:
-    TEST_ENV: debian_unstable
-  dependencies:
-    - build_debian_unstable
-  script:
-    - cd debs
-    - apt-get update
-    - DEBIAN_FRONTEND=noninteractive apt install -f -y ./fmbt-pythonshare*.deb
-    - pythonshare-client -C $HUB_CONNSPEC --ls-remote
-    - python ../pythonshare/tests/onlinetests.py
+# test_debian_unstable:
+#   image: debian:unstable
+#   stage: test
+#   variables:
+#     TEST_ENV: debian_unstable
+#   dependencies:
+#     - build_debian_unstable
+#   script:
+#     - cd debs
+#     - apt-get update
+#     - DEBIAN_FRONTEND=noninteractive apt install -f -y ./fmbt-pythonshare*.deb
+#     - pythonshare-client -C $HUB_CONNSPEC --ls-remote
+#     - python ../pythonshare/tests/onlinetests.py
 
-test_debian_testing:
-  image: debian:testing
-  stage: test
-  variables:
-    TEST_ENV: debian_testing
-  dependencies:
-    - build_debian_testing
-  script:
-    - cd debs
-    - apt-get update
-    - DEBIAN_FRONTEND=noninteractive apt install -f -y ./fmbt-pythonshare*.deb
-    - pythonshare-client -C $HUB_CONNSPEC --ls-remote
-    - python ../pythonshare/tests/onlinetests.py
+# test_debian_testing:
+#   image: debian:testing
+#   stage: test
+#   variables:
+#     TEST_ENV: debian_testing
+#   dependencies:
+#     - build_debian_testing
+#   script:
+#     - cd debs
+#     - apt-get update
+#     - DEBIAN_FRONTEND=noninteractive apt install -f -y ./fmbt-pythonshare*.deb
+#     - pythonshare-client -C $HUB_CONNSPEC --ls-remote
+#     - python ../pythonshare/tests/onlinetests.py
