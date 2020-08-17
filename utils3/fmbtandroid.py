@@ -2675,9 +2675,17 @@ class _AndroidDeviceConnection(fmbtgti.GUITestConnection):
         _, output, _ = self._runAdb(["shell", "dumpsys", "display"], 0,
                                     timeout=_SHORT_TIMEOUT)
         try:
-            _, w, h = re.findall("mDefaultViewport(\[0\])?=DisplayViewport\{.*deviceWidth=([0-9]*), deviceHeight=([0-9]*)\}", output)[0]
-            width = int(w)
-            height = int(h)
+            if "mStableDisplaySize" in output:
+                # newer android versions (at least 9 and newer) have
+                # mStableDisplaySize=Point(1080, 2340) or similar in the dumpsys
+                # Use that if it exists.
+                w, h = re.findall("mStableDisplaySize=Point\(([0-9]*), ([0-9]*)\)", output)[0]
+                width = int(w)
+                height = int(h)
+            else:
+                _, w, h = re.findall("mDefaultViewport(\[0\])?=DisplayViewport\{.*deviceWidth=([0-9]*), deviceHeight=([0-9]*)\}", output)[0]
+                width = int(w)
+                height = int(h)
         except (IndexError, ValueError) as e:
             _adapterLog('recvScreenSize: cannot read size from "%s"' %
                         (output,))
