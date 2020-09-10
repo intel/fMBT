@@ -38,15 +38,15 @@ fmbt_aalp_CPPFLAGS	       = $(FMBTBUILDINFOCFLAGS) $(GLIB_CFLAGS)
 remote_aal_loader_CPPFLAGS     = -fPIC $(FMBTBUILDINFOCFLAGS) $(GLIB_CFLAGS) -I ./d
 fmbt_log2lsts_CPPFLAGS	       = -Wall -pedantic -fPIC -I d -I `pwd` $(LIBEDIT_CFLAGS) $(GLIB_CFLAGS) $(GOBJECT_CFLAGS) $(XML2_CFLAGS) $(FMBTBUILDINFOCFLAGS)
 
-fmbt_LDFLAGS                   = -g $(JVMLDFLAGS) $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E $(DLINK_OBJ)
-fmbt_ucheck_LDFLAGS            = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E $(DLINK_OBJ)
-fmbt_droid_LDFLAGS             = -Wl,-E $(DLINK_OBJ)
-remote_adapter_loader_LDFLAGS  = -g $(GLIB_LIBS) $(GOBJECT_LIBS) -Wl,-E $(DLINK_OBJ)
-fmbt_aalc_LDFLAGS	       = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) -lboost_regex -Wl,-E $(DLINK_OBJ)
+fmbt_LDFLAGS                   = -g $(JVMLDFLAGS) $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-export-dynamic $(DLINK_OBJ)
+fmbt_ucheck_LDFLAGS            = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-export-dynamic $(DLINK_OBJ)
+fmbt_droid_LDFLAGS             = -Wl,-export-dynamic $(DLINK_OBJ)
+remote_adapter_loader_LDFLAGS  = -g $(GLIB_LIBS) $(GOBJECT_LIBS) -Wl,-export-dynamic $(DLINK_OBJ)
+fmbt_aalc_LDFLAGS	       = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) -lboost_regex -Wl,-export-dynamic $(DLINK_OBJ)
 fmbt_aalp_LDFLAGS	       = -g $(GLIB_LIBS) -lboost_regex $(DLINK_OBJ)
-remote_aal_loader_LDFLAGS      = -g $(GLIB_LIBS) $(GOBJECT_LIBS) -lboost_regex -Wl,-E $(DLINK_OBJ)
+remote_aal_loader_LDFLAGS      = -g $(GLIB_LIBS) $(GOBJECT_LIBS) -lboost_regex -Wl,-export-dynamic $(DLINK_OBJ)
 #-g $(GLIB_LIBS) -lboost_regex $(DLINK_OBJ)
-fmbt_log2lsts_LDFLAGS 	       = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-E $(DLINK_OBJ)
+fmbt_log2lsts_LDFLAGS 	       = -g $(XML2_LIBS) $(GLIB_LIBS) $(GOBJECT_LIBS) $(LIBEDIT_LIBS) -lboost_regex -Wl,-export-dynamic $(DLINK_OBJ)
 
 fmbt_LDADD                     = d/libdparse.a
 fmbt_ucheck_LDADD              = d/libdparse.a
@@ -135,7 +135,7 @@ clean-local:
 # 	@echo 'LOCAL_CPPFLAGS  := -Ijni/d $(fmbt_droid_CPPFLAGS)'	>> $@
 # 	@echo 'LOCAL_STATIC_LIBRARIES := dparse_droid'			>> $@
 # 	@echo 'LOCAL_LDLIBS := -ldl -llog'				>> $@
-# 	@echo 'LOCAL_LDFLAGS := -Wl,-E -Wl,--no-gc-sections'		>> $@
+# 	@echo 'LOCAL_LDFLAGS := -Wl,-export-dynamic -Wl,--no-gc-sections'		>> $@
 # 	@echo 'LOCAL_CPP_EXTENSION := .cc'				>> $@
 # 	@echo 'include $$(BUILD_EXECUTABLE)'				>> $@
 
