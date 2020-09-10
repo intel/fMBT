@@ -62,11 +62,8 @@ def pkg_config(package):
                 ext_args["libraries"].append(arg[2:])
             elif arg.startswith("-I"):
                 ext_args["include_dirs"].append(arg[2:])
-            elif arg.startswith("-f") or arg.startswith("-D"):
-                ext_args["extra_compile_args"].append(arg)
             else:
-                raise ValueError('Unexpected pkg-config output: "%s" in "%s"'
-                                 % (arg, o))
+                ext_args["extra_compile_args"].append(arg)
     return ext_args
 
 fmbt_utils_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)),os.getenv("VPATH",""))
