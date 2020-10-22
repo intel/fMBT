@@ -99,6 +99,8 @@ class Pythonshare_ns(object):
         self.ns = ns
         self._on_disconnect = []
         self._on_drop = []
+        # thread-id -> conn-id on who is running eval/exec in this namespace
+        self._thread_conn_id = {}
 
     def ns_type(self, ns):
         """Query the type of a namespace.
@@ -111,6 +113,26 @@ class Pythonshare_ns(object):
             return "remote"
         else:
             return None
+
+    def conn_id(self):
+        """id of the connection currently calling this function"""
+        return self._thread_conn_id[thread.get_ident()]
+
+    def running_conn_ids(self):
+        """ids of connections currently running code in this namespace"""
+        return sorted(self._thread_conn_id.values())
+
+    def conn_ids(self):
+        """List alive connection ids that have used a namespace"""
+        conn_ids = []
+        for conn_id in sorted(_g_connections.keys()):
+            if self.ns in _g_namespace_users.get(conn_id, set()):
+                conn_ids.append(conn_id)
+        return conn_ids
+
+    def all_conn_ids(self):
+        """List of all alive connection ids"""
+        return sorted(_g_connections.keys())
 
     def local_nss(self):
         """List local namespaces
@@ -221,6 +243,9 @@ _g_local_namespaces = {}
 
 # client-id -> set of namespaces
 _g_namespace_users = {}
+# conn-id -> connection status
+_g_connections = {}
+
 _g_executing_pythonshare_conn_id = None
 
 # _g_remote_namespaces: namespace -> Connection to origin
@@ -310,6 +335,7 @@ def _local_execute(exec_msg, conn_id=None):
     code_exc, expr_exc, expr_rv = None, None, None
     if not exec_msg.lock or _g_local_namespace_locks[ns].acquire():
         _g_executing_pythonshare_conn_id = conn_id
+        _g_local_namespaces[ns]['pythonshare_ns']._thread_conn_id[thread.get_ident()] = conn_id
         try:
             if exec_msg.code not in [None, ""]:
                 try:
@@ -323,6 +349,7 @@ def _local_execute(exec_msg, conn_id=None):
                     expr_exc = exception2string(sys.exc_info())
         finally:
             _g_executing_pythonshare_conn_id = None
+            del _g_local_namespaces[ns]['pythonshare_ns']._thread_conn_id[thread.get_ident()]
             if exec_msg.lock:
                 try:
                     _g_local_namespace_locks[ns].release()
@@ -423,6 +450,7 @@ def _serve_connection(conn, conn_opts):
     if opt_debug:
         daemon_log("connected %s:%s" % peername)
     conn_id = "%s-%s" % (timestamp(), id(conn))
+    _g_connections[conn_id] = {"state": "established"}
     auth_ok = False
     passwords = [k for k in conn_opts.keys() if k.startswith("password.")]
     kill_server_on_close = conn_opts.get("kill-server-on-close", False)
@@ -457,6 +485,7 @@ def _serve_connection(conn, conn_opts):
             auth_ok = False
     else:
         auth_ok = True # no password required
+    _g_connections[conn_id]["state"] = "authenticated"
 
     whitelist_local = conn_opts.get("whitelist_local", None)
 
@@ -622,6 +651,7 @@ def _serve_connection(conn, conn_opts):
             auth_ok = False
     if opt_debug:
         daemon_log("disconnected %s:%s" % peername)
+    del _g_connections[conn_id]
     _connection_lost(conn_id, to_client, from_client, conn)
     if kill_server_on_close:
         _g_server_shutdown = True
