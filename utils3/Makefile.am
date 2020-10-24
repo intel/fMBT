@@ -4,17 +4,27 @@ dist_noinst_SCRIPTS = \
 	setup.py
 
 # scripts
+dist_noinst_SCRIPTS +=		\
+	fmbt3-editor		\
+	fmbt-scripter		\
+	fmbt3-log		\
+	lsts32dot		\
+	fmbt3-view		\
+	remote_py3aal
 # end of scripts
 
 # modules
 dist_noinst_SCRIPTS +=		\
-        eyenfinger.py           \
+	aalmodel.py		\
+	eyenfinger.py		\
 	fmbt.py			\
 	fmbt_config.py		\
+	fmbtandroid.py		\
 	fmbtgti.py		\
-	fmbtpng.py    	        \
+	fmbtpng.py     	        \
 	fmbtwindows.py		\
 	fmbtwindows_agent.py	\
+	lsts3.py                \
 	pycosh.py
 # end of modules
 
@@ -42,8 +52,8 @@ dist_noinst_SCRIPTS += \
 	eye4graphics.h
 # end of extensions
 all-local: utils_installer eye4graphics.cc eye4graphics.h
-	VPATH='$(VPATH)' CC='$(CXX)' PKG_CONFIG='$(PKG_CONFIG)' with_imagemagick='$(with_imagemagick)' $(PYTHON) setup.py build
+	VPATH='$(VPATH)' CC='$(CXX)' PKG_CONFIG='$(PKG_CONFIG)' with_imagemagick='$(with_imagemagick)' $(PYTHON3) setup.py build
 
 install-exec-local:
-	with_imagemagick='$(with_imagemagick)' $(PYTHON) setup.py install --root=$(DESTDIR)/ --prefix=$(PYTHON_PREFIX)
+	with_imagemagick='$(with_imagemagick)' $(PYTHON3) setup.py install --root=$(DESTDIR)/ --prefix=$(PYTHON3_PREFIX)
 endif
