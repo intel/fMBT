@@ -2379,17 +2379,17 @@ class FindDialog(QtWidgets.QDialog):
     # TODO: needs refactoring. This dialog is common to
     # fmbt-editor and fmbt-scripter, put it in a library
     def __init__(self, *args):
-        QtGui.QDialog.__init__(self, *args)
-        self.layout = QtGui.QGridLayout(self)
-        self.foundItemWidget = QtGui.QLabel("0 / 0", self)
-        self.textWidget = QtGui.QLineEdit(self)
+        QtWidgets.QDialog.__init__(self, *args)
+        self.layout = QtWidgets.QGridLayout(self)
+        self.foundItemWidget = QtWidgets.QLabel("0 / 0", self)
+        self.textWidget = QtWidgets.QLineEdit(self)
         self.textWidget.textChanged.connect(self.textChanged)
         self.textWidget.returnPressed.connect(self.moveCursorAndQuit)
 
-        self.replaceTextWidget = QtGui.QLineEdit(self)
-        self.replaceHelp = QtGui.QLabel("Ctrl+N: replace forward, "
+        self.replaceTextWidget = QtWidgets.QLineEdit(self)
+        self.replaceHelp = QtWidgets.QLabel("Ctrl+N: replace forward, "
                                         "Ctrl+P: replace backward", self)
-        self.replaceCaption = QtGui.QLabel("Replace", self)
+        self.replaceCaption = QtWidgets.QLabel("Replace", self)
 
         self.editor = None
         self.escaped = True
@@ -2400,10 +2400,10 @@ class FindDialog(QtWidgets.QDialog):
         self.plainText = ""
         self.searchedText = {}
 
-        self.layout.addWidget(QtGui.QLabel("Find", self), 0, 0)
+        self.layout.addWidget(QtWidgets.QLabel("Find", self), 0, 0)
         self.layout.addWidget(self.textWidget, 0, 1)
         self.layout.addWidget(self.foundItemWidget, 0, 2)
-        self.layout.addWidget(QtGui.QLabel("Ctrl+F: find forward, "
+        self.layout.addWidget(QtWidgets.QLabel("Ctrl+F: find forward, "
                                            "Ctrl+R: find backward"),
                               1, 1)
 
@@ -2444,7 +2444,7 @@ class FindDialog(QtWidgets.QDialog):
         elif event.type() == QtCore.QEvent.Type.Hide:
             if self.origCursor and self.editor:
                 self.editor.setTextCursor(self.origCursor)
-        return QtGui.QDialog.event(self, event)
+        return QtWidgets.QDialog.event(self, event)
 
     def show(self, editor, replaceMode=False):
         self.editor = editor
@@ -2454,7 +2454,7 @@ class FindDialog(QtWidgets.QDialog):
         self.textWidget.setText(self.searchedText.get(id(self.editor), ""))
         self.setReplaceVisibile(replaceMode)
 
-        QtGui.QDialog.show(self)
+        QtWidgets.QDialog.show(self)
         self.textWidget.setFocus()
         self.textChanged(self.textWidget.text())
 
