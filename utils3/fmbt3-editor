@@ -1275,7 +1275,9 @@ on_inconc = exit(2)
         if self.preview_test_action.isChecked():
             fmbt_log_format += "\t$ax$tr"
             if self.preview_test_tags.isChecked():
-                fmbt_log_format += '\t"$tg"'
+                fmbt_log_format += '\n\ttags: "$tg"'
+            if self.preview_test_vars.isChecked():
+                fmbt_log_format += '\n$aL\n'
         else:
             fmbt_log_format += "\t$tr"
             if self.preview_test_tags.isChecked():
@@ -1288,6 +1290,28 @@ on_inconc = exit(2)
             # clean up tags listed after the reason for test verdict
             try: lines[-1] = lines[-1][:-3].rstrip()
             except: pass
+        if '$aL' in fmbt_log_format:
+            # reformat lines with variable values
+            formatted_lines = []
+            is_a_variable_line = False
+            read_tags = False
+            for line in lines:
+                if line.startswith(b"AAL state:"):
+                    is_a_variable_line = True
+                    continue
+                elif line.startswith(b"AAL enabled:"):
+                    is_a_variable_line = False
+                    read_tags = True
+                    continue
+                if is_a_variable_line and b"=" in line:
+                    formatted_lines.append(b"\t" + line)
+                elif line.strip().startswith(b"tags:"):
+                    if read_tags:
+                        formatted_lines.append(line)
+                    read_tags = False
+                elif line.strip():
+                    formatted_lines.append(line)
+            lines = formatted_lines
         return lines
 
     def liveUpdatePreviewTest(self):
@@ -1673,6 +1697,12 @@ on_inconc = exit(2)
         self.preview_test_tags.setChecked(False)
         self.preview_test_menu.addAction(self.preview_test_tags)
         self.preview_test_tags.changed.connect(self.refreshImages)
+
+        self.preview_test_vars=QtWidgets.QAction("Variable values", self)
+        self.preview_test_vars.setCheckable(True)
+        self.preview_test_vars.setChecked(False)
+        self.preview_test_menu.addAction(self.preview_test_vars)
+        self.preview_test_vars.changed.connect(self.refreshImages)
 
     def setupCoverageMenu(self):
         self._previewCovMenu = QtWidgets.QMenu()
