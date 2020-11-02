@@ -5,11 +5,13 @@
 #              -c 'PS_SERVER="python3share-server"'
 # in fMBT configuration file.
 
-language "python" {
+language "python3" {
     import random
     import time
     import ps
     port = random.randint(20000,50000)
+    def first_server():
+        return sorted(servers.keys())[0]
 }
 
 # preview-hide-vars:
@@ -42,75 +44,75 @@ input "launch_server" {
 input "kill_server_from_client" {
     guard { return len(servers) > 0 }
     adapter {
-        chosen_port = servers.keys()[0]
+        chosen_port = first_server()
         s,o,e = ps.soe([PS_CLIENT, "-Clocalhost:%s" % (chosen_port,), "--kill"])
-        assert o=="" and e=="", "no out/err expected, got out=%r err=%r" % (o, e)
+        assert o==b"" and e==b"", "no out/err expected, got out=%r err=%r" % (o, e)
         # make sure the server is gone
         s,o,e = ps.soe([PS_CLIENT, "-Clocalhost:%s" % (chosen_port,), "--kill"])
-        assert o=="" and "cannot connect to" in e, "'cannot connect' error expected, got out=%r err=%r" % (o, e)
+        assert o==b"" and b"cannot connect to" in e, "'cannot connect' error expected, got out=%r err=%r" % (o, e)
     }
-    body { del servers[servers.keys()[0]] }
+    body { del servers[first_server()] }
 }
 input "assign_a" {
     guard { return len(servers) > 0 }
     adapter {
-        chosen_port = servers.keys()[0]
+        chosen_port = first_server()
         s,o,e = ps.soe([PS_CLIENT, "-Clocalhost:%s" % (chosen_port,), "-c", "a=42"])
-        assert s==0 and o=="" and e=="", "no status/out/err expected, got status=%r out=%r err=%r" % (s, o, e)
+        assert s==0 and o==b"" and e==b"", "no status/out/err expected, got status=%r out=%r err=%r" % (s, o, e)
     }
     body {
-        chosen_port = servers.keys()[0]
+        chosen_port = first_server()
         servers[chosen_port]['ns']['a'] = 42
     }
 }
 input "eval_a" {
-    guard { return len(servers) > 0 and 'a' in servers[servers.keys()[0]]['ns']}
+    guard { return len(servers) > 0 and 'a' in servers[first_server()]['ns']}
     adapter {
-        chosen_port = servers.keys()[0]
+        chosen_port = first_server()
         s,o,e = ps.soe([PS_CLIENT, "-Clocalhost:%s" % (chosen_port,), "-e", "a+a"])
-        assert s==0 and o=="84" and e=="", "no status/err expected, got status=%r out=%r (84 expected) err=%r" % (s, o, e)
+        assert s==0 and o==b"84" and e==b"", "no status/err expected, got status=%r out=%r (84 expected) err=%r" % (s, o, e)
     }
     body {
     }
 }
 input "eval_a_nameerror" {
-    guard { return len(servers) > 0 and 'a' not in servers[servers.keys()[0]]['ns']}
+    guard { return len(servers) > 0 and 'a' not in servers[first_server()]['ns']}
     adapter {
-        chosen_port = servers.keys()[0]
+        chosen_port = first_server()
         s,o,e = ps.soe([PS_CLIENT, "-Clocalhost:%s" % (chosen_port,), "-e", "a+a"])
-        assert s==0 and "NameError" in o and e=="", "no status/err expected, got status=%r out=%r (NameError expected) err=%r" % (s, o, e)
+        assert s==0 and b"NameError" in o and e==b"", "no status/err expected, got status=%r out=%r (NameError expected) err=%r" % (s, o, e)
     }
     body {
     }
 }
 input "import_time" {
-    guard { return len(servers) > 0 and not 'time' in servers[servers.keys()[0]]['ns']}
+    guard { return len(servers) > 0 and not 'time' in servers[first_server()]['ns']}
     adapter {
-        chosen_port = servers.keys()[0]
+        chosen_port = first_server()
         s,o,e = ps.soe([PS_CLIENT, "-Clocalhost:%s/sleep" % (chosen_port,), "-c", "import time"])
-        assert s==0 and o=="" and e=="", "no status/out/err expected, got status=%r out=%r err=%r" % (s, o, e)
+        assert s==0 and o==b"" and e==b"", "no status/out/err expected, got status=%r out=%r err=%r" % (s, o, e)
     }
     body {
-        chosen_port = servers.keys()[0]
+        chosen_port = first_server()
         servers[chosen_port]['ns']['time'] = 'library'
     }
 }
 input "async_sleep" {
-    guard { return len(servers) > 0 and 'time' in servers[servers.keys()[0]]['ns']}
+    guard { return len(servers) > 0 and 'time' in servers[first_server()]['ns']}
     adapter {
-        chosen_port = servers.keys()[0]
+        chosen_port = first_server()
         s,o,e = ps.soe([PS_CLIENT, "-Clocalhost:%s/sleep" % (chosen_port,), "--async", "-e", "time.sleep(1)"])
-        assert s==0 and o.startswith('Async_rv(ns="sleep"') and e=="", "no status/err expected, got status=%r out=%r (expected Async_rv...) err=%r" % (s, o, e)
+        assert s==0 and o.startswith(b'Async_rv(ns="sleep"') and e==b"", "no status/err expected, got status=%r out=%r (expected Async_rv...) err=%r" % (s, o, e)
     }
     body {
-        chosen_port = servers.keys()[0]
+        chosen_port = first_server()
         servers[chosen_port]['async'] += 1
     }
 }
 input "read_async_sleep" {
-    guard { return len(servers) > 0 and servers[servers.keys()[0]]['async'] > 0}
+    guard { return len(servers) > 0 and servers[first_server()]['async'] > 0}
     adapter {
-        chosen_port = servers.keys()[0]
+        chosen_port = first_server()
         poll_count = 0
         while len(ps.soe([PS_CLIENT, "-Clocalhost:%s/sleep" % (chosen_port,), "--poll"])[1].strip().splitlines()) < 1:
             time.sleep(0.2)
@@ -119,10 +121,10 @@ input "read_async_sleep" {
         async_rv = ps.soe([PS_CLIENT, "-Clocalhost:%s/sleep" % (chosen_port,), "--poll"])[1].strip().splitlines()[0]
         s,o,e = ps.soe([PS_CLIENT, "-Clocalhost:%s/sleep" % (chosen_port,), "--read", async_rv])
         o = o.strip()
-        assert s==0 and o=="None" and e=="", "no status/err expected, got status=%r out=%r (expected None) err=%r" % (s, o, e)
+        assert s==0 and o==b"None" and e==b"", "no status/err expected, got status=%r out=%r (expected None) err=%r" % (s, o, e)
     }
     body {
-        chosen_port = servers.keys()[0]
+        chosen_port = first_server()
         servers[chosen_port]['async'] -= 1
     }
 }

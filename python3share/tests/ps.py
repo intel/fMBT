@@ -2,7 +2,7 @@
 
 import os
 import subprocess
-import thread
+import _thread
 
 import fmbt
 
@@ -31,7 +31,7 @@ def soe(cmd, stdin="", cwd=None, env=None):
             cwd=cwd,
             env=run_env)
         out, err = p.communicate(input=stdin)
-    except Exception, e:
+    except Exception as e:
         return (None, None, str(e))
     fmbt.fmbtlog("%s: soe got status=%r out=%r err=%r" % (fmbt.actionName(), p.returncode, out, err))
     return (p.returncode, out, err)
@@ -44,6 +44,6 @@ def bg(cmd):
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
     fmbt.fmbtlog("%s: bg pid %s" % (fmbt.actionName(), p.pid))
-    thread.start_new_thread(readlines_to_adapterlog, (p.stdout, "%s out: " % (p.pid,)))
-    thread.start_new_thread(readlines_to_adapterlog, (p.stderr, "%s err: " % (p.pid,)))
+    _thread.start_new_thread(readlines_to_adapterlog, (p.stdout, "%s out: " % (p.pid,)))
+    _thread.start_new_thread(readlines_to_adapterlog, (p.stderr, "%s err: " % (p.pid,)))
     last_bg_pid = p.pid
