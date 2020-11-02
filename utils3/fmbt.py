@@ -150,8 +150,6 @@ def formatAdapterLogMessage(msg, fmt="%s %s\n"):
     Return timestamped adapter log message as a string (not unicode)
     """
     s = fmt % (formatTime(_g_fmbt_adapterlogtimeformat), msg)
-    if type(s) == str:
-        s = s.encode("utf8")
     return s
 
 def getActionName():

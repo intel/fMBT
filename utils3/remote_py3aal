@@ -123,7 +123,7 @@ def _log(msg, flush=False):
         if flush or current_time - _log.last_flush > log_flush_interval:
             log_fileobj = open(log_filename, "a")
             for formatted_msg in _log.messages:
-                fmbt._adapterlogWriter(log_fileobj, formatted_msg.decode("utf-8"))
+                fmbt._adapterlogWriter(log_fileobj, formatted_msg)
             log_fileobj.close()
             _log.last_flush = current_time
             _log.messages = []
