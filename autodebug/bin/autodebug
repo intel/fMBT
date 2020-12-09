@@ -27,6 +27,9 @@ Options:
   -c, --core COREFILE     post-mortem autodebug from core.
   -o, --output OUTFILE    save autodebug output to OUTFILE, the default
                           is "stdout". You can give multiple outputs.
+  -O PROGRAM_OUTFILE      save output of the program to PROGRAM_OUTFILE.
+                          If PROGRAM_OUTFILE is "-" then program output
+                          is interleaved with autodebug output.
   -t, --timeout TIMEOUT   timeout [s] for gdb communication.
                           Stop debugging if gdb does not answer on time.
                           The default is None (wait forever).
@@ -47,12 +50,15 @@ import re
 import select
 import subprocess
 import sys
+import tempfile
 import thread
 import time
 
 g_command = "autodebug"
 opt_debug = 0
 opt_outputs = []
+opt_program_output = None
+opt_program_output_filename = None
 opt_timeout = None
 opt_core = None
 
@@ -342,6 +348,11 @@ def main(program_argv):
     gdb_env = dict(os.environ)
     gdb_env.update(asan_env)
 
+    if opt_program_output:
+        run_redirect = "> " + opt_program_output
+    else:
+        run_redirect = ""
+
     debug("%s pid %s" % (g_command, os.getpid()))
 
     try:
@@ -369,7 +380,7 @@ def main(program_argv):
 
     debug("run until main()")
     gdb_cmd(gdb, 'break main\n')
-    gdb_cmd(gdb, 'run\n')
+    gdb_cmd(gdb, 'run ' + run_redirect + '\n')
     debug("set address sanitizer breakpoints and continue")
     gdb_cmd(gdb, 'rbreak __asan_report.*\n')
     gdb_ans = gdb_cmd(gdb, "continue\n", timeout=opt_timeout) # program should break before timeout
@@ -379,7 +390,20 @@ def main(program_argv):
 
     error_count = 0
     last_runtime_error = -1
+    output_file_pos = 0
     while gdb_inferior_running(gdb):
+        if opt_program_output:
+            _ = gdb_cmd(gdb, "call ((void(*)(int))fflush)(0)\n")
+            try:
+                program_output = ""
+                with open(opt_program_output) as f:
+                    f.seek(output_file_pos)
+                    program_output = f.read()
+                    output_file_pos += len(program_output)
+            except:
+                pass
+            if opt_program_output == "-" and program_output:
+                output(program_output)
         error_name = None
         if len([l for l in gdb_ans if "__asan_report" in l]) == 0:
             # this is not a breakpoint in AddressSanitizer reporting
@@ -434,9 +458,9 @@ if __name__ == "__main__":
     try:
         opts, remainder = getopt.getopt(
             sys.argv[1:],
-            'hc:do:t:x:',
+            'hc:do:O:t:x:',
             ['help', 'debug', 'debug-pm',
-             'core=', 'output=', 'timeout='])
+             'core=', 'program-output=', 'output=', 'timeout='])
     except getopt.GetoptError, e:
         error(str(e))
 
@@ -452,6 +476,12 @@ if __name__ == "__main__":
             opt_core = arg
             if not os.access(opt_core, os.R_OK):
                 error('cannot read --core %r' % (opt_core,))
+        elif opt in ["-O", "--program-output"]:
+            opt_program_output = arg
+            if opt_program_output == "-":
+                opt_program_output_filename = tempfile.NamedTemporaryFile(prefix="autodebug-")
+            else:
+                opt_program_output_filename = opt_program_output
         elif opt in ["-o", "--output"]:
             out_filename = arg
             if out_filename.lower() == "stdout":
