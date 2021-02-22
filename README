@@ -8,6 +8,14 @@ generator, adapters for various purposes and tools for analysing logs.
 Building & installing
 ---------------------
 
+Quick start for Docker users:
+
+    Build an image including commandline and GUI utilities:
+
+    docker build . -t fmbt-gui:latest -f Dockerfile.fmbt-gui
+
+    See Dockerfile.fmbt-gui on running fmbt3-editor from the image.
+
 Quick start for Debian/Ubuntu users:
 
     sudo apt-get install build-essential libglib2.0-dev libboost-regex-dev libedit-dev libmagickcore-dev python-dev python-pexpect python-dbus python-gobject gawk libtool autoconf automake debhelper libboost-dev flex libpng16-16 libxml2-dev graphviz imagemagick gnuplot python-pyside tesseract-ocr

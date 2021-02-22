@@ -1,40 +1,40 @@
-# This Dockerfile builds an fMBT image from which you can run
-# the fMBT test generator and python3 versions of utilities.
+# This Dockerfile builds fMBT development image.
+# fMBT is built and installed on the system with all dependencies.
+#
+# In order build a production image, consider building fmbt-gui or fmbt-cli:
+# see Dockerfile.fmbt-gui and Dockerfile.fmbt-cli.
 #
 # Usage:
-#   1. Build image:
+#   1. Build this image:
 #      $ docker build . -t fmbt:latest
-#   2. Launch fmbt3-editor with X forward:
-#      $ docker run -it --network=host -e DISPLAY=$DISPLAY -v ~/.Xauthority:/root/.Xauthority fmbt:latest
-#      # fmbt3-editor
-#
-# Tips:
-#   Use and modify test models on the host by adding another volume mount
-#   before the image (fmbt:latest) to the docker run command above:
-#       -v /path/to/your/models:/models
-#   Now you can run tests and edit models in /models inside the container:
-#   # fmbt3-editor /models/mymodel.aal
+#   2. Run:
+#      $ docker run -it fmbt:latest
+#      # fmbt --version
 
-FROM debian:buster
+FROM debian:buster AS builder
 
 RUN apt-get update
 RUN apt-get install -y \
         git build-essential libglib2.0-dev libboost-regex-dev libedit-dev libmagickcore-dev \
- 	python-dev python-pexpect python-dbus python-gobject gawk libtool autoconf automake debhelper \
- 	libboost-dev flex libpng16-16 libxml2-dev graphviz imagemagick gnuplot tesseract-ocr \
-        python3-pyside2.qtcore \
-        python3-pyside2.qtgui \
-        python3-pyside2.qtwidgets
-
+        python-dev python-pexpect python-dbus python-gobject gawk libtool autoconf automake debhelper \
+        libboost-dev flex libpng16-16 libxml2-dev graphviz imagemagick
 COPY . /usr/src/fmbt
-
 RUN cd /usr/src/fmbt && \
     ./autogen.sh && \
     ./configure && \
     make -j 4 && \
     make install
-
 RUN cd /usr/src/fmbt/utils3 && \
     python3 setup.py install
 
+FROM builder
+RUN apt-get update
+RUN apt-get install -y \
+        python python-pexpect python-dbus python-gobject gawk \
+        libpng16-16 libxml2 imagemagick graphviz \
+        gnuplot tesseract-ocr \
+        python3-distutils \
+        python3-pyside2.qtcore \
+        python3-pyside2.qtgui \
+        python3-pyside2.qtwidgets
 CMD ["/bin/bash"]

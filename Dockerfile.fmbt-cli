@@ -1,0 +1,36 @@
+# This Dockerfile builds an fMBT image from which you can run
+# the fMBT test generator and command line versions utilities.
+#
+# fmbt-cli image is significantly smaller than fmbt-gui image
+# that can run GUI editors.
+#
+# Usage:
+#   1. Build image:
+#      $ docker build . -t fmbt-cli:latest -f Dockerfile.fmbt-cli
+#   2. Generate an off-line test:
+#      $ docker run -it -v $(pwd):/models fmbt:latest bash -c 'cd /models && fmbt mytest.conf | fmbt-log -f $as'
+
+FROM debian:buster AS builder
+RUN apt-get update
+RUN apt-get install -y \
+        git build-essential libglib2.0-dev libboost-regex-dev libedit-dev libmagickcore-dev \
+ 	python-dev python-pexpect python-dbus python-gobject gawk libtool autoconf automake debhelper \
+ 	libboost-dev flex libpng16-16 libxml2-dev imagemagick graphviz
+COPY . /usr/src/fmbt
+RUN cd /usr/src/fmbt && \
+    ./autogen.sh && \
+    ./configure && \
+    make -j 4 && \
+    make install
+RUN cd /usr/src/fmbt/utils3 && \
+    python3 setup.py install
+CMD ["/bin/bash"]
+
+FROM debian:buster AS fmbt-cli
+RUN apt-get update
+RUN apt-get install -y \
+        libglib2.0-0 libboost-regex1.67.0 libedit2 \
+ 	python python-pexpect python-dbus python-gobject gawk \
+ 	libpng16-16 libxml2 imagemagick graphviz
+COPY --from=builder /usr/local /usr/local
+CMD ["/bin/bash"]
