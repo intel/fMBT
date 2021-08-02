@@ -16,7 +16,14 @@ Quick start for Docker users:
 
     See Dockerfile.fmbt-gui on running fmbt3-editor from the image.
 
-Quick start for Debian/Ubuntu users:
+Quick start for Debian 10 / Ubuntu 20.04 and later users:
+
+    ### Note: use fmbt3-editor instead of fmbt-editor.
+    sudo apt install -y autoconf automake build-essential debhelper flex gawk git-core gnuplot graphviz imagemagick libboost-dev libboost-regex-dev libedit-dev libglib2.0-dev libmagickcore-dev libpng16-16 libtool libxml2-dev python python-dbus python-dev python3-pexpect python3-distutils python3-pyside2.qtcore python3-pyside2.qtgui python3-pyside2.qtwidgets tesseract-ocr
+    ./autogen.sh && ./configure && make -j 4 && sudo make install
+    cd utils3 && sudo python3 setup.py install
+
+Quick start for Debian 9 / Ubuntu 18.04 and earlier users:
 
     sudo apt-get install build-essential libglib2.0-dev libboost-regex-dev libedit-dev libmagickcore-dev python-dev python-pexpect python-dbus python-gobject gawk libtool autoconf automake debhelper libboost-dev flex libpng16-16 libxml2-dev graphviz imagemagick gnuplot python-pyside tesseract-ocr
 
