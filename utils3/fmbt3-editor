@@ -1024,7 +1024,7 @@ Keyboard shortcuts:<br>
         elif validation_exitstatus == 127:
             error('Cannot execute "%s". Check your fMBT installation or PATH.' % (self.executed_program,), gui=1)
         else:
-            self.edit.setTabIcon(0, QtWidgets.qApp.style().standardIcon(QtWidgets.QStyle.SP_MessageBoxWarning))
+            self.edit.setTabIcon(0, QtWidgets.QApplication.style().standardIcon(QtWidgets.QStyle.SP_MessageBoxWarning))
             self._model_ok = False
         conf_contents = str(self.conf_editor.toPlainText()).strip()
         if conf_contents == "" or not self._confFileName:
@@ -1049,7 +1049,7 @@ Keyboard shortcuts:<br>
         # returns function that presents an image in a qlabel
         # must be run in UI thread
         self.preview.setTabIcon(eval("PREVIEWTAB_%s" % (previewtab.upper(),)),
-                                QtWidgets.qApp.style().standardIcon(QtWidgets.QStyle.SP_BrowserReload))
+                                QtWidgets.QApplication.style().standardIcon(QtWidgets.QStyle.SP_BrowserReload))
         def viewer():
             # for instance, with 'model' this calls:
             # self.preview_modelimage.setPixmap(fromImage(self.preview_modelqimage))
@@ -1068,13 +1068,13 @@ Keyboard shortcuts:<br>
     def pixmapUnviewable(self, previewtab):
         def errorhandler():
             self.preview.setTabIcon(eval("PREVIEWTAB_%s" % (previewtab.upper(),)),
-                                    QtWidgets.qApp.style().standardIcon(QtWidgets.QStyle.SP_MessageBoxWarning))
+                                    QtWidgets.QApplication.style().standardIcon(QtWidgets.QStyle.SP_MessageBoxWarning))
         return errorhandler
 
     def visualiseModel(self, change_tab = True):
         if change_tab:
             self.preview.setTabIcon(PREVIEWTAB_MODEL,
-                                    QtWidgets.qApp.style().standardIcon(QtWidgets.QStyle.SP_BrowserReload))
+                                    QtWidgets.QApplication.style().standardIcon(QtWidgets.QStyle.SP_BrowserReload))
         if not self.saveAndValidateModel():
             return
         asyncRuncmd(self._doGenerateTest,
@@ -1242,7 +1242,7 @@ on_inconc = exit(2)
     def generateTest(self, change_tab = True):
         if change_tab:
             self.preview.setTabIcon(PREVIEWTAB_TEST,
-                                    QtWidgets.qApp.style().standardIcon(QtWidgets.QStyle.SP_BrowserReload))
+                                    QtWidgets.QApplication.style().standardIcon(QtWidgets.QStyle.SP_BrowserReload))
         if not self.saveAndValidateModel():
             return
         asyncRuncmd(self._doGenerateTest,
@@ -1632,7 +1632,7 @@ on_inconc = exit(2)
         fileMenu.addAction("&Open...", self.openFile, "Ctrl+O")
         fileMenu.addAction("&Save", self.saveFile, "Ctrl+S")
         fileMenu.addAction("Save &As...", self.saveFileAs)
-        fileMenu.addAction("E&xit", QtWidgets.qApp.quit, "Ctrl+Q")
+        fileMenu.addAction("E&xit", QtWidgets.QApplication.quit, "Ctrl+Q")
 
     def setupEditMenu(self):
         editMenu = QtWidgets.QMenu("&Edit", self)

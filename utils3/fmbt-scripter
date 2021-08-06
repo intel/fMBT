@@ -1092,7 +1092,7 @@ class MainWindow(QtWidgets.QMainWindow):
         fileMenu.addAction("&Save", self.save, "Ctrl+S")
         fileMenu.addAction("Save &As", self.saveAs, "Shift+Ctrl+S")
         fileMenu.addSeparator()
-        fileMenu.addAction("E&xit", QtGui.qApp.quit, "Ctrl+Q")
+        fileMenu.addAction("E&xit", QtWidgets.QApplication.quit, "Ctrl+Q")
 
         editMenu = QtWidgets.QMenu("&Edit", self)
         self.menuBar().addMenu(editMenu)
