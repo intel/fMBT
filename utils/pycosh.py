@@ -138,10 +138,60 @@ def prompt():
             hostname + ":" +
             os.getcwd() + ": ")
 
+def awk(prog, *args):
+    """awk PROG [FILE...]
+    PROG syntax: [/REGEXP/]{print $N...}"""
+    filenames = expand(*args, accept_pipe=True).splitlines()
+    if not filenames:
+        raise ValueError("missing input")
+    rv = []
+    awk_syntax = re.compile('(/([^/]*)/)?\{([^}]*)\}')
+    parsed_prog = awk_syntax.match(prog)
+    if not parsed_prog:
+        raise ValueError('syntax error in awk program')
+    awk_pattern = parsed_prog.group(2)
+    if not awk_pattern is None:
+        awk_pattern_re = re.compile(awk_pattern)
+    else:
+        awk_pattern_re = re.compile("")
+    awk_statements = [s.strip() for s in parsed_prog.group(3).split(";")]
+    awk_fieldno_re = re.compile("\$([0-9]+)")
+    awk_fieldsep_re = re.compile("[ \n\t\r]*")
+    for filename in filenames:
+        for line in open(filename).xreadlines():
+            if awk_pattern_re.search(line):
+                for stmt in awk_statements:
+                    if stmt.startswith("print"):
+                        what = stmt[5:].strip()
+                        if not what:
+                            # plain "print" results in full line
+                            what = "$0"
+                        else:
+                            # no variable handling for now...
+                            what = what.replace('"', '')
+                        fields = [int(n) for n in awk_fieldno_re.findall(what)]
+                        translate = {}
+                        if fields:
+                            line_fields = [line.splitlines()[0]] + [
+                                l for l in awk_fieldsep_re.split(line) if l]
+                            for field in fields:
+                                if field < len(line_fields):
+                                    translate["$" + str(field)] = line_fields[field]
+                                else:
+                                    translate["$" + str(field)] = ""
+                            for rep in reversed(sorted(translate.keys())):
+                                # if not reversed, might replace $1 before $10
+                                what = what.replace(rep, translate[rep])
+                        rv.append(what)
+    return "\n".join(rv)
+
 def cd(dirname):
     """cd DIRNAME
     change current working directory"""
-    os.chdir(os.path.join(os.getcwd(), dirname))
+    d = expand(dirname, accept_pipe=False, min=1, exist=True).splitlines()
+    if len(d) > 1:
+        raise ValueError("unambiguous directory name")
+    os.chdir(os.path.join(os.getcwd(), d[0]))
     return ""
 
 def curl(*args):
@@ -181,14 +231,26 @@ def find(*args):
         findname = opts["-n"]
     else:
         findname = "*"
+    dirname_ends_with_sep = dirname[-1] in ["/", "\\"]
+    slash_only = not "\\" in dirname
+    if slash_only:
+        sep = "/"
+    else:
+        sep = os.path.sep
     rv = []
+    # DIR + NAME forms a path without duplicate path separators
     for root, dirs, files in os.walk(dirname):
-        for name in dirs:
+        if slash_only:
+            root = root.replace("\\", "/")
+        for name in dirs + files:
             if fnmatch.fnmatch(name, findname):
-                rv.append(os.path.join(root[len(dirname):], name))
-        for name in files:
-            if fnmatch.fnmatch(name, findname):
-                rv.append(os.path.join(root[len(dirname):], name))
+                if root == dirname:
+                    if dirname_ends_with_sep:
+                        rv.append(name)
+                    else:
+                        rv.append(sep + name)
+                else:
+                    rv.append(root[len(dirname):] + sep + name)
     return "\n".join(rv)
 
 def date():
@@ -763,6 +825,26 @@ def unzip(*args):
             rv.extend(zf.namelist())
     return "\n".join(rv)
 
+def xargs(*args):
+    """xargs CMD
+    run CMD with args from stdin"""
+    if not args:
+        raise ValueError("xargs: CMD missing")
+    if not _g_pipe_has_data:
+        raise ValueError("xargs: no get arguments in pipe")
+    retval = []
+    for arg in open(_g_pipe_filename):
+        arg = arg.strip()
+        funccall = args[0] + repr(tuple(args[1:]) + (arg,))
+        try:
+            func_rv = eval(funccall)
+            if func_rv and not func_rv.endswith("\n"):
+                func_rv += "\n"
+            retval.append(func_rv)
+        except Exception, e:
+            retval.append(str(e).splitlines()[-1] + "\n")
+    return "".join(retval)
+
 def xxd(*args):
     """xxd [FILE...]
     make a hexdump"""
@@ -855,4 +937,8 @@ if "_g_pycosh_source" in globals():
     _g_pycosh_source = "_g_pycosh_source = %s\n%s" % (repr(_g_pycosh_source), _g_pycosh_source)
 
 if __name__ == "__main__":
-    _main()
+    if len(sys.argv) == 1:
+        _main()
+    else:
+        for cmdline in sys.argv[1:]:
+            _output(pycosh_eval(cmdline))

@@ -107,4 +107,13 @@ protected:
 
 };
 
+std::string to_list(std::list<std::string>& l);
+std::string indent(int depth, const std::string &s);
+std::string python_lineno_wrapper(const std::string& filename, int,
+                                  const std::string& funcname, int, int,
+                                  const std::string& human=")");
+std::string python_lineno_wrapper(const codefileline& cfl,
+                                  const std::string& funcname, int, int,
+                                  const std::string& human=")");
+void default_if_empty(std::string& s, const std::string& default_value);
 #endif

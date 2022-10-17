@@ -229,6 +229,19 @@ void unescape_string(std::string& msg)
 }
 
 
+char* UTF8ToGBK(const char* strUTF8)  
+{  
+    int len = MultiByteToWideChar(CP_UTF8, 0, strUTF8, -1, NULL, 0);  
+    wchar_t* wszGBK = new wchar_t[len+1];  
+    memset(wszGBK, 0, len*2+2);  
+    MultiByteToWideChar(CP_UTF8, 0, strUTF8, -1, wszGBK, len);  
+    len = WideCharToMultiByte(CP_ACP, 0, wszGBK, -1, NULL, 0, NULL, NULL);  
+    char* szGBK = new char[len+1];  
+    memset(szGBK, 0, len+1);  
+    WideCharToMultiByte(CP_ACP, 0, wszGBK, -1, szGBK, len, NULL, NULL);  
+    return szGBK;
+}
+
 char* escape_string(const char* msg)
 {
 #ifdef DROI
@@ -250,7 +263,8 @@ char* escape_string(const char* msg)
 
   return ret;
 #else
-  return g_uri_escape_string(msg,NULL,TRUE);
+  char* ss = g_uri_escape_string(msg,NULL,TRUE);
+  return UTF8ToGBK(ss) ;
 #endif
 }
 
@@ -849,7 +863,8 @@ ssize_t bgetline(char **lineptr, size_t *n, GIOChannel* stream, Log& log,GIOChan
 	  }
 	} else {
 	  // We have something to stdout
-	  fprintf(stdout,"%s\n",*lineptr);
+      char* lineptr_gbk = UTF8ToGBK(*lineptr);
+      log.print("%s\n",lineptr_gbk);
 	  g_free(*lineptr);
 	  *lineptr = NULL;
 	  log_redirect = true;

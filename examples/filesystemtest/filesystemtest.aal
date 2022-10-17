@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 # preview-show-vars: dir_exists
 aal "filesystemtest" {
     language "python" {
+        # -*- coding: utf-8 -*-
         import os
         import shutil
         import tempfile
@@ -15,14 +17,14 @@ aal "filesystemtest" {
     }
     adapter_init {
         try: shutil.rmtree(DIRNAME)
-        except OSError: pass
+        except (OSError): pass
     }
     adapter_exit {
         if verdict == "pass" and dir_exists:
             log("cleaning up " + DIRNAME)
             shutil.rmtree(DIRNAME)
     }
-    input "mkdir: ok" {
+    input "自动化组件: ok" {
         guard()   { return not dir_exists }
         adapter() { os.mkdir(DIRNAME) }
         body()    { dir_exists = True }
@@ -46,8 +48,8 @@ aal "filesystemtest" {
         guard()   { return dir_exists }
         adapter() {
             try: os.mkdir(DIRNAME)
-            except OSError, e:
-                assert "File exists" in str(e), "Wrong exception: %s" % (e,)
+            except (OSError), e:
+                assert ("File exists" in str(e) or e.winerror == 183), "Wrong exception: %s" % (e,)
                 return
             assert False, "Exception expected"
         }
@@ -56,8 +58,8 @@ aal "filesystemtest" {
         guard()   { return subdir_exists }
         adapter() {
             try: os.mkdir(SUBDIRNAME)
-            except OSError, e:
-                assert "File exists" in str(e), "Wrong exception: %s" % (e,)
+            except (OSError), e:
+                assert ("File exists" in str(e) or e.winerror == 183), "Wrong exception: %s" % (e,)
                 return
             assert False, "Exception expected"
         }
@@ -66,8 +68,8 @@ aal "filesystemtest" {
         guard()   { return not dir_exists }
         adapter() {
             try: os.rmdir(DIRNAME)
-            except OSError, e:
-                assert "No such file" in str(e), "Wrong exception %s" % (e,)
+            except (OSError), e:
+                assert ("No such file" in str(e) or e.winerror == 2), "Wrong exception %s" % (e,)
                 return
             assert False, "Exception expected"
         }
@@ -76,8 +78,8 @@ aal "filesystemtest" {
         guard()   { return subdir_exists }
         adapter() {
             try: os.rmdir(DIRNAME)
-            except OSError, e:
-                assert "not empty" in str(e), "Wrong exception: %s" % (e,)
+            except (OSError), e:
+                assert ("not empty" in str(e) or e.winerror == 145), "Wrong exception: %s" % (e,)
                 return
             assert False, "Exception expected"
         }
@@ -86,8 +88,8 @@ aal "filesystemtest" {
         guard()   { return not subdir_exists }
         adapter() {
             try: os.rmdir(SUBDIRNAME)
-            except OSError, e:
-                assert "No such file" in str(e), "Wrong exception %s" % (e,)
+            except (OSError), e:
+                assert ("No such file" in str(e) or e.winerror == 2 or e.winerror == 3), "Wrong exception %s" % (e,)
                 return
             assert False, "Exception expected"
         }

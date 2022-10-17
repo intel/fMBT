@@ -18,7 +18,7 @@ fmbt_ucheck_SOURCES	      = uc.cc helper.cc log.cc xrules.g.d_parser.cc lts_xrul
 
 fmbt_droid_SOURCES            = $(COMMON_SOURCES)
 
-fmbt_aalc_SOURCES = lang.g.d_parser.cc lang.cc helper.cc aalang_cpp.cc aalang_py.cc aalang_java.cc params.cc
+fmbt_aalc_SOURCES = lang.g.d_parser.cc lang.cc helper.cc aalang_cpp.cc aalang_py.cc aalang_java.cc aalang_rb.cc params.cc
 
 remote_adapter_loader_SOURCES = remote_adapter_loader.cc adapter.cc log.cc adapter_dummy.cc adapter_model.cc adapter_v4l2.cc helper.cc model.cc random.cc function.cc random_c.cc params.cc function_const.cc function_array.cc
 

@@ -19,6 +19,11 @@
 # This library defines message types for pythonshare client-server
 # messaging.
 
+RECV_CAP_DATA_INFO = 1
+RECV_CAP_COMPRESSION = 1 << 1
+
+MSG_STRING_FIELD_MAX_LEN = 1024
+
 class Unpicklable(object):
     def __init__(self, obj):
         self._string = str(obj)
@@ -43,17 +48,32 @@ class Auth_rv(object):
             repr(self.success), repr(self.errormsg))
 
 class Exec(object):
-    def __init__(self, namespace, code, expr, lock=True, async=False):
+    def __init__(self, namespace, code, expr, lock=True, async=False, recv_caps=0):
         self.namespace = namespace
         self.code = code
         self.expr = expr
         self.lock = lock
         self.async = async
+        self.recv_caps = recv_caps # capabilities of the receiver of the Exec_rv
+    def recv_cap_data_info(self):
+        """returns True if Exec can be responded with Data_info+Exec_rv"""
+        # If this class has been unpickled from old pythonshare connection,
+        # the recv_caps attribute will not be present.
+        if not hasattr(self, "recv_caps"):
+            self.recv_caps = 0
+        return self.recv_caps
+    def set_recv_cap_data_info(self, value):
+        current_caps = getattr(self, "recv_caps", 0)
+        if value: # set to true
+            self.recv_caps = current_caps | RECV_CAP_DATA_INFO
+        elif self.recv_cap_data_info(): # set to false
+            self.recv_caps = current_caps - RECV_CAP_DATA_INFO
     def __str__(self):
-        return ('Exec(namespace="%s", code="%s", expr="%s", '
-                'lock=%s, async=%s)' % (
-                self.namespace, self.code, self.expr,
-                self.lock, self.async))
+        self.recv_cap_data_info() # make sure recv_caps exist
+        return ('Exec(namespace=%r, code=%r, expr=%r, '
+                'lock=%r, async=%r, recv_caps=%r)' % (
+                    self.namespace, self.code, self.expr,
+                    self.lock, self.async, self.recv_caps))
 
 class Exec_rv(object):
     def __init__(self, code_exc, expr_exc, expr_rv):
@@ -61,8 +81,25 @@ class Exec_rv(object):
         self.expr_exc = expr_exc
         self.expr_rv = expr_rv
     def __str__(self):
-        return 'Exec_rv(code_exc="%s", expr_exc="%s", rv=%s)' % (
-            self.code_exc, self.expr_exc, repr(self.expr_rv))
+        rv = self.expr_rv
+        if not MSG_STRING_FIELD_MAX_LEN is None and isinstance(rv, basestring):
+            if len(rv) > MSG_STRING_FIELD_MAX_LEN:
+                rv = rv[:MSG_STRING_FIELD_MAX_LEN] + (
+                    "... [%s B]" % (len(rv),))
+        return 'Exec_rv(code_exc="%s", expr_exc="%s", rv=%r)' % (
+            self.code_exc, self.expr_exc, rv)
+
+# Data_info messages precede large data transmissions (for example
+# before large Exec_rv:s) to allow hubs and senders/receivers optimize
+# their behavior.
+class Data_info(object):
+    def __init__(self, data_type, data_length, data_format):
+        self.data_type = data_type
+        self.data_length = data_length
+        self.data_format = data_format
+    def __str__(self):
+        return 'Data_info(data_type=%r, data_length=%r, data_format=%r)' % (
+            self.data_type, self.data_length, self.data_format)
 
 class Async_rv(object):
     def __init__(self, ns=None, rvid=None):

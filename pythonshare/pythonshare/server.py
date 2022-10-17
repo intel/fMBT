@@ -314,13 +314,58 @@ def _local_async_execute(async_rv, exec_msg):
 def _remote_execute(ns, exec_msg):
     rns = _g_remote_namespaces[ns]
     pythonshare._send(exec_msg, rns.to_remote)
+    # _recv raises EOFError() if disconnected,
+    # let it raise through.
+    return pythonshare._recv(rns.from_remote)
+
+def _remote_execute_and_forward(ns, exec_msg, to_client, peername=None):
+    """returns (forward_status, info)
+    forward_status values:
+       True:  everything successfully forwarded,
+              info contains pair (forwarded byte count, full length).
+       False: not everything forwarded,
+              info contains pair (forwarded byte count, full length).
+              to_client file/socket is not functional.
+       None:  no forwarding,
+              info contains Exec_rv that should be sent normally.
+    Raises EOFError if connection to remote namespace is not functional.
+
+    The peername parameter is used for logging only.
+    """
+    client_supports_rv_info = exec_msg.recv_cap_data_info()
+    exec_msg.set_recv_cap_data_info(True)
+    rns = _g_remote_namespaces[ns]
+    pythonshare._send(exec_msg, rns.to_remote)
+    from_remote = rns.from_remote
+    # Must keep simultaneously two locks:
+    # - send lock on to_client
+    # - recv lock on from_remote
+    pythonshare._acquire_recv_lock(from_remote)
     try:
-        return pythonshare._recv(rns.from_remote)
-    except AttributeError:
-        # If another thread closes the connection between send/recv,
-        # cPickle.load() may raise "'NoneType' has no attribute 'recv'".
-        # Make this look like EOF (connection lost)
-        raise EOFError()
+        response = pythonshare._recv(from_remote, acquire_recv_lock=False)
+        if not isinstance(response, messages.Data_info):
+            # Got direct response without forward mode
+            return (None, response)
+        pythonshare._acquire_send_lock(to_client)
+        if client_supports_rv_info:
+            # send data_info to client
+            pythonshare._send(response, to_client, acquire_send_lock=False)
+        try:
+            if opt_debug and peername:
+                daemon_log("%s:%s <= Exec_rv([forwarding %s B])" % (peername + (response.data_length,)))
+            forwarded_bytes = pythonshare._forward(
+                from_remote, to_client, response.data_length,
+                acquire_recv_lock=False,
+                acquire_send_lock=False)
+            if forwarded_bytes == response.data_length:
+                return (True, (forwarded_bytes, response.data_length))
+            else:
+                return (False, (forwarded_bytes, response.data_length))
+        finally:
+            pythonshare._release_send_lock(to_client)
+    finally:
+        exec_msg.set_recv_cap_data_info(client_supports_rv_info)
+        pythonshare._release_recv_lock(from_remote)
 
 def _connection_lost(conn_id, *closables):
     if closables:
@@ -430,8 +475,22 @@ def _serve_connection(conn, conn_opts):
             ns = obj.namespace
             if ns in _g_remote_namespaces: # execute in remote namespace
                 try:
-                    exec_rv = _remote_execute(ns, obj)
-                except (EOFError, socket.error): # connection lost
+                    _fwd_status, _fwd_info = _remote_execute_and_forward(
+                        ns, obj, to_client, peername)
+                    if _fwd_status == True:
+                        # successfully forwarded
+                        if opt_debug:
+                            daemon_log("%s:%s forwarded %s B" % (peername + (_fwd_info[0],)))
+                        exec_rv = None # return value fully forwarded
+                    elif _fwd_status == False:
+                        # connection to client is broken
+                        if opt_debug:
+                            daemon_log("%s:%s error after forwarding %s/%s B" % (peername + _fwd_info))
+                        break
+                    elif _fwd_status is None:
+                        # nothing forwarded, send return value by normal means
+                        exec_rv = _fwd_info
+                except EOFError:
                     daemon_log('connection lost to "%s"' % (ns,))
                     _drop_remote_namespace(ns)
                     break
@@ -449,19 +508,31 @@ def _serve_connection(conn, conn_opts):
                 else:
                     # synchronous execution, return true return value
                     exec_rv = _local_execute(obj, conn_id)
-            if opt_debug:
-                daemon_log("%s:%s <= %s" % (peername + (exec_rv,)))
-            try:
+            if not exec_rv is None:
+                if opt_debug:
+                    daemon_log("%s:%s <= %s" % (peername + (exec_rv,)))
                 try:
-                    pythonshare._send(exec_rv, to_client)
-                except (EOFError, socket.error):
-                    break
-            except (TypeError, ValueError, cPickle.PicklingError): # pickling rv fails
-                exec_rv.expr_rv = messages.Unpicklable(exec_rv.expr_rv)
-                try:
-                    pythonshare._send(exec_rv, to_client)
-                except (EOFError, socket.error):
-                    break
+                    try:
+                        if obj.recv_cap_data_info():
+                            info = pythonshare._send_opt(exec_rv, to_client, obj.recv_caps)
+                            if info:
+                                sent_info = " %s B, format:%s" % (
+                                    info.data_length, info.data_format)
+                            else:
+                                sent_info = ""
+                        else:
+                            pythonshare._send(exec_rv, to_client)
+                            sent_info = ""
+                        if opt_debug:
+                            daemon_log("%s:%s sent%s" % (peername + (sent_info,)))
+                    except (EOFError, socket.error):
+                        break
+                except (TypeError, ValueError, cPickle.PicklingError): # pickling rv fails
+                    exec_rv.expr_rv = messages.Unpicklable(exec_rv.expr_rv)
+                    try:
+                        pythonshare._send(exec_rv, to_client)
+                    except (EOFError, socket.error):
+                        break
 
         elif isinstance(obj, messages.Server_ctl):
             if obj.command == "die":
@@ -608,6 +679,10 @@ def start_server(host, port,
                 pass
     elif port == "stdin":
         opt_debug_limit = 0
+        if os.name == "nt":
+            import msvcrt
+            msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
+            msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
         conn = client.Connection(sys.stdin, sys.stdout)
         _serve_connection(conn, conn_opts)
     for ns in sorted(_g_remote_namespaces.keys()):
@@ -623,6 +698,10 @@ def start_daemon(host="localhost", port=8089, debug=False,
     opt_debug = debug
     if debug_limit != None:
         opt_debug_limit = debug_limit
+    if opt_debug_limit > 0:
+        messages.MSG_STRING_FIELD_MAX_LEN = opt_debug_limit/2
+    else:
+        messages.MSG_STRING_FIELD_MAX_LEN = None
     if opt_debug == False and not on_windows and isinstance(port, int):
         listen_stdin = False
         # The usual fork magic, cleaning up all connections to the parent process

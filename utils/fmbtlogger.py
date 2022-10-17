@@ -210,13 +210,12 @@ def csv(obj, logTarget, csvSeparator=";", formats=None, logDepth=1,
 
     Returns a proxy object for obj.
     """
-
-    if type(logTarget) == types.FunctionType:
-        logWriter = CSVLogWriter(logTarget, separator=csvSeparator,
-                                 callPrefix=callPrefix, linePrefix=linePrefix)
-    elif hasattr(logTarget, "write"):
+    if hasattr(logTarget, "write"):
         logWriter = CSVLogWriter(FileToLogFunc(logTarget),
                                  separator=csvSeparator, formats=formats,
+                                 callPrefix=callPrefix, linePrefix=linePrefix)
+    elif callable(logTarget):
+        logWriter = CSVLogWriter(logTarget, separator=csvSeparator,
                                  callPrefix=callPrefix, linePrefix=linePrefix)
     else:
         raise TypeError("logTarget must be a function or a writable file(-like) object")
@@ -311,18 +310,32 @@ def _logCalls(orig_self, report, logDepth_):
                 raise
             localVars.logDepth += 1
             return rv
-        fmbtlogger_wrap.func_name = func.func_name
-        fmbtlogger_wrap.__doc__ = "%s\n%s" % (
-            fmbt.funcSpec(func), func.__doc__)
+        try:
+            fmbtlogger_wrap.func_name = func.func_name
+        except AttributeError:
+            try:
+                fmbtlogger_wrap.func_name = func.im_func.func_name
+            except AttributeError:
+                fmbtlogger_wrap.func_name = repr(func)
+        try:
+            fmbtlogger_wrap.__doc__ = "%s\n%s" % (
+                fmbt.funcSpec(func), func.__doc__)
+        except:
+            fmbtlogger_wrap.__doc__ = None
         return fmbtlogger_wrap
-    class _detectCalls(orig_self.__class__):
+    if (hasattr(orig_self, "__class__") and
+        issubclass(orig_self.__class__, object)):
+        baseClass = orig_self.__class__
+    else:
+        baseClass = object
+    class _detectCalls(baseClass):
         __doc__ = orig_self.__class__.__doc__
         def __init__(self): pass
         def __del__(self): pass
         def __getattribute__(self, attr):
             attr = getattr(orig_self, attr)
-            if type(attr) == types.MethodType:
-                if localVars.logDepth == 0:
+            if callable(attr):
+                if localVars.logDepth == 0 or not isinstance(attr, types.MethodType):
                     rv = logMethodCall(attr)
                 else:
                     rv = logMethodCall(attr, throughInstance = self)

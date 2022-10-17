@@ -1879,7 +1879,10 @@ class WindowsConnection(fmbtgti.GUITestConnection):
     def pycosh(self, command):
         if not self._pycosh_sent_to_dut:
             # upload pycosh module to DUT
-            self.execPython(file(inspect.getsourcefile(pycosh)).read())
+            try:
+                self.evalPython("len(_g_pycosh_source)")
+            except pythonshare.RemoteEvalError:
+                self.execPython(file(inspect.getsourcefile(pycosh)).read())
             self._pycosh_sent_to_dut = True
         return self.evalPython("pycosh_eval(%s)" % (repr(command),))
 
@@ -1904,15 +1907,16 @@ class WindowsConnection(fmbtgti.GUITestConnection):
                 compressLevel = compress
             else:
                 compressLevel = 3
-            data = self._agent.eval_in(
+            data_b64_z = self._agent.eval_in(
                 self._agent_ns,
-                "zlib.compress(file(%s, 'rb').read(), %s)" % (
+                "base64.b64encode(zlib.compress(file(%s, 'rb').read(), %s))" % (
                     repr(remoteFilename), compressLevel))
-            data = zlib.decompress(data)
+            data = zlib.decompress(base64.b64decode(data_b64_z))
         else:
-            data = self._agent.eval_in(
+            data_b64 = self._agent.eval_in(
                 self._agent_ns,
-                "file(%s, 'rb').read()" % (repr(remoteFilename),))
+                "base64.b64encode(file(%s, 'rb').read())" % (repr(remoteFilename),))
+            data = base64.b64decode(data_b64)
         if localFilename:
             file(localFilename, "wb").write(data)
             return True

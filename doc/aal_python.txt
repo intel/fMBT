@@ -532,6 +532,18 @@ input_name - constant that contains the name of an input
         input name: play music
         action name: i:play music
 
+        Example: Embedding Python in input names
+
+        input "callee='Alice'", "callee='Bob'" {
+            body() {
+                exec input_name in globals()
+            }
+        }
+
+        defines actions i:callee='Alice' and i:callee='Bob'.
+        The actions set a value to the callee variable when
+        the body() block is executed.
+
 
 output_name - constant that contains the name of an output
 
@@ -542,7 +554,11 @@ tag_name - string that contains the name of a tag.
 
         Available: in guard() and adapter() blocks of tags.
 
-        Example: TODO
+        Example: Embedding Python in tag names
+
+        tag "songcount==0", "songcount==1", "songcount in [2,3,4]" {
+            guard() { return eval(tag_name) }
+        }
 
 
 action(name) - function that returns corresponding action (integer)

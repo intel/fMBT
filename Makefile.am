@@ -1,10 +1,11 @@
 if MINGW
-bin_PROGRAMS = remote_pyaal fmbt-editor fmbt-view fmbt-log fmbt-stats lsts2dot fmbt-scripter fmbt-debug fmbt-trace-share
+bin_PROGRAMS = remote_pyaal remote_rbaal fmbt-editor fmbt-view fmbt-log fmbt-stats lsts2dot fmbt-scripter fmbt-debug fmbt-trace-share
 
 AM_CFLAGS = $(GLIB_CFLAGS)
 AM_LDFLAGS = $(GLIB_LIBS)
 
 remote_pyaal_SOURCES		= exec_wrapper.c
+remote_rbaal_SOURCES		= exec_wrapper_ruby.c
 fmbt_editor_SOURCES		= exec_wrapper.c
 fmbt_view_SOURCES		= exec_wrapper.c
 fmbt_stats_SOURCES		= exec_wrapper.c

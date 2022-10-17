@@ -7,8 +7,8 @@
 
 # These three must be integers
 !define VERSIONMAJOR 0
-!define VERSIONMINOR 37
-!define VERSIONBUILD 0
+!define VERSIONMINOR 38
+!define VERSIONBUILD 1
 
 # These will be displayed by the "Click here for support information"
 # link in "Add/Remove Programs" It is possible to use "mailto:" links
@@ -52,7 +52,7 @@ page directory
 Page instfiles
 
 Section -Prerequisites
-  StrCpy $PYTHONDIR "C:\Python27"
+  StrCpy $PYTHONDIR "D:\Python27"
   StrCpy $GRAPHVIZDIR "$PROGRAMFILES\Graphviz2.38\bin"
   StrCpy $GNUPLOTDIR "$PROGRAMFILES\gnuplot\bin"
 
@@ -142,6 +142,9 @@ section "install"
 # parts implemented in python
 	file "utils/remote_pyaal"
 	file ".libs/remote_pyaal.exe"
+	
+	file "utils/remote_rbaal"
+	file ".libs/remote_rbaal.exe"
 
 	file "utils/fmbt-view"
 	file ".libs/fmbt-view.exe"
