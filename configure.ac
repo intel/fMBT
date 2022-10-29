@@ -94,11 +94,13 @@ AC_CONFIG_FILES([
         Makefile
         src/Makefile
         utils/Makefile
+        utils3/Makefile
         pythonshare/Makefile
         test/Makefile
         examples/Makefile
         fMBT.spec
 	utils/fmbt_config.py
+	utils3/fmbt_config.py
 	fmbt.nsis
         ])
 

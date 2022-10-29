@@ -52,8 +52,8 @@ dist_noinst_SCRIPTS += \
 	eye4graphics.h
 # end of extensions
 all-local: utils_installer eye4graphics.cc eye4graphics.h
-	VPATH='$(VPATH)' CC='$(CXX)' PKG_CONFIG='$(PKG_CONFIG)' with_imagemagick='$(with_imagemagick)' $(PYTHON3) setup.py build
+	VPATH='$(VPATH)' CC='$(CXX)' PKG_CONFIG='$(PKG_CONFIG)' with_imagemagick='$(with_imagemagick)' python3 setup.py build
 
 install-exec-local:
-	with_imagemagick='$(with_imagemagick)' $(PYTHON3) setup.py install --root=$(DESTDIR)/ --prefix=$(PYTHON3_PREFIX)
+	with_imagemagick='$(with_imagemagick)' python3 setup.py install --root=$(DESTDIR)/ --prefix=$(PYTHON_PREFIX)
 endif
