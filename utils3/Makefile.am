@@ -47,11 +47,8 @@ eye4graphics_la_LDFLAGS = -module  $(MAGICK_LIBS) -no-undefined -avoid-version -
 endif
 else
 # extensions
-dist_noinst_SCRIPTS += \
-	eye4graphics.cc \
-	eye4graphics.h
 # end of extensions
-all-local: utils_installer eye4graphics.cc eye4graphics.h
+all-local: utils_installer ../utils/eye4graphics.cc ../utils/eye4graphics.h
 	VPATH='$(VPATH)' CC='$(CXX)' PKG_CONFIG='$(PKG_CONFIG)' with_imagemagick='$(with_imagemagick)' python3 setup.py build
 
 install-exec-local:
