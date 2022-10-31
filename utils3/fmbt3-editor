@@ -1403,7 +1403,7 @@ on_inconc = exit(2)
             return editor
 
         self.editor_font = QtGui.QFont()
-        self.editor_font.setFamily('Courier')
+        self.editor_font.setFamily(os.getenv("FMBT_EDITOR_FONT", "Courier"))
         self.editor_font.setFixedPitch(True)
         self.editor_font.setPointSize(12)
 
@@ -1645,6 +1645,17 @@ on_inconc = exit(2)
         editMenu.addAction("Find (previous)", self.findPrev, "Ctrl+R")
         editMenu.addAction("Replace",
                            lambda: self.find(0, replaceMode=True), "Ctrl+H")
+        editMenu.addSeparator()
+        editMenu.addAction("Font...", self.chooseFont)
+
+    def chooseFont(self):
+        ok, font = QtWidgets.QFontDialog.getFont(self.editor_font)
+        if ok:
+            self.editor_font = font
+            self.editor.setFont(font)
+            self.conf_editor.setFont(font)
+            self.preview_test.setFont(font)
+            self.preview_error.setFont(font)
 
     def chooseTagFilter(self):
         # interactive choose between base model and included model files
