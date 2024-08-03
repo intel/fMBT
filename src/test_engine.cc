@@ -173,7 +173,7 @@ void Test_engine::verify_tags(const std::vector<std::string>& tnames)
     return;
   }
 
-  std::string s=to_string(cnt,tags,tnames);
+  std::string s = to_string(cnt, tags, std::vector<std::string>(++ tnames.begin(), tnames.end()));
   log.print("<tags enabled=\"%s\"/>\n",s.c_str());
 
   std::vector<int> t;

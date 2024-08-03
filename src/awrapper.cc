@@ -72,8 +72,8 @@ void Awrapper::set_tags(std::vector<std::string>* _tags)
       continue;
     }
     
-    tagaal2ada[i]=result;
-    tagada2aal[result]=i;
+    tagaal2ada[i - 1] = result;
+    tagada2aal[result] = i - 1;
 
   }
 }
