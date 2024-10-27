@@ -17,7 +17,7 @@ endif
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = utils src pythonshare test examples
+SUBDIRS = utils3 src python3share test examples
 
 dist_doc_DATA = \
 	README			\

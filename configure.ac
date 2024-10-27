@@ -1,4 +1,4 @@
-AC_INIT([fmbt], [0.43-0.rc0], [antti.kervinen@intel.com])
+AC_INIT([fmbt], [0.43.0rc0], [antti.kervinen@intel.com])
 AM_INIT_AUTOMAKE([foreign -Wall -Wno-portability -Werror])
 
 AC_CONFIG_MACRO_DIR([m4])
@@ -93,20 +93,18 @@ AC_SUBST([JVMCFLAGS])
 AC_CONFIG_FILES([
         Makefile
         src/Makefile
-        utils/Makefile
         utils3/Makefile
-        pythonshare/Makefile
+        python3share/Makefile
         test/Makefile
         examples/Makefile
         fMBT.spec
-	utils/fmbt_config.py
 	utils3/fmbt_config.py
 	fmbt.nsis
         ])
 
 
 AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
-AM_PATH_PYTHON([2.6],, [:])
+AM_PATH_PYTHON([3.0],, [:])
 
 AC_ARG_WITH([imagemagick],
   [AS_HELP_STRING([--without-imagemagick],
