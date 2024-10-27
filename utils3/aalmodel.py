@@ -12,7 +12,15 @@ _g_immutable_types = set(
 def setCodeFileLine(c, filename, lineno, funcname=None):
     if funcname == None:
         funcname = c.co_name
-    if hasattr(c, 'co_posonlyargcount'): # Python 3.8 onwards
+    if hasattr(c, 'co_qualname'): # Python 3.12 onwards
+        qualname = funcname
+        rv = types.CodeType(
+            c.co_argcount, c.co_posonlyargcount, c.co_kwonlyargcount,
+            c.co_nlocals, c.co_stacksize, c.co_flags,
+            c.co_code, c.co_consts, c.co_names, c.co_varnames,
+            filename, funcname, qualname, lineno, c.co_linetable,
+            c.co_exceptiontable, c.co_freevars, c.co_cellvars)
+    elif hasattr(c, 'co_posonlyargcount'): # Python 3.8 onwards
         rv = types.CodeType(
             c.co_argcount, c.co_posonlyargcount, c.co_kwonlyargcount,
             c.co_nlocals, c.co_stacksize, c.co_flags,
