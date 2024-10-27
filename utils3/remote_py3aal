@@ -390,8 +390,8 @@ def format_pythonaalexception():
 
 def format_syntaxerror():
     """modify last exception filename and line number if it's AAL"""
-    redefline = re.compile('    def [a-z0-9_]+\(\):')
-    recodefileline = re.compile('setCodeFileLine\(.*\'\'\'(.*)\'\'\', ([-0-9]+)[^0-9]')
+    redefline = re.compile(r'    def [a-z0-9_]+\(\):')
+    recodefileline = re.compile(r'setCodeFileLine\(.*\'\'\'(.*)\'\'\', ([-0-9]+)[^0-9]')
     exc_type, exc_value, exc_tb = sys.exc_info()
     tb_tuples = traceback.extract_tb(exc_tb)
     filename, syntaxerrorlineno = exc_value.filename, exc_value.lineno
