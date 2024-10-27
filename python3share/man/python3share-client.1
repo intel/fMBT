@@ -1,0 +1,65 @@
+.TH PYTHON3SHARE-CLIENT 1 "Mar 2014" Linux "User Manuals"
+.SH NAME
+python3share\-client \- Code mobility client for Python
+.SH SYNOPSIS
+.SY python3share\-client
+.OP \-\-password PASSWORD
+.OP \-\-password\-file FILE
+.OP \-C HOSTSPEC
+.OP \-D
+.OP \-o OUTFILE
+.OP \-f FORMAT
+.OP \-A
+.OP \-S
+.OP \-P
+.OP \-c CODE
+.OP \-e EXPR
+.OP \-l LOGFILE
+.OP \-p PORT
+.OP \-\-password ALG:HASH
+.OP \-\-password-file FILE
+.OP \-\-interface interface
+.OP \-n NS
+.OP \-E HOSTSPEC
+.OP \-I HOSTSPEC
+.OP \-i CODE
+.SY python3share\-client
+.B \-h
+|
+.B \-\-help
+.SH DESCRIPTION
+\fBpython3share\-client\fR offers commandline interface for executing
+Python code and evaluating Python expressions in \fBpython3share\-server\fRs.
+
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+print help, then exit.
+
+.TP
+\fB\-C\fR, \fB\-\-connect\fR=\fIHOSTSPEC\fR
+connect to \fBpython3share-server\fR. \fIHOSTSPEC\fR syntax is
+.nf
+.B socket://[password@]host[:port]
+.fi
+.nf
+.B shell://command-where-stdin-stdout-communicates-with-server
+.fi
+
+.TP
+\fB-c\fR \fICODE\fR
+execute Python \fICODE\fR on the server.
+
+.TP
+\fB-e\fR \fIEXPRESSION\fR
+evaluate Python \fIEXPRESSION\fR on the server. Prints the result to
+standard output.
+
+.SH AUTHOR
+Written by Antti Kervinen.
+.SH "REPORTING BUGS"
+Report bugs to https://github.com/01org/fMBT/issues
+.SH COPYRIGHT
+Copyright \(co 2014 Intel Corporation.
+.SH "SEE ALSO"
+.BR python3share\-server (1)
