@@ -79,47 +79,47 @@ EDITTAB_GT, EDITTAB_CONF = range(2)
 
 FORMAT_EDITTAB = "%s:%s - F%s"
 
-TR_RE = re.compile("([!]?)T\(\s*([^),]+)\s*,\s*([^\"),]+|\"[^\"]*\")\s*,\s*([^),]+)\s*\)")
-SP_RE = re.compile("([!]?)P\(\s*([^),]+)\s*,\s*([^)]+)\s*\)")
+TR_RE = re.compile(r"([!]?)T\(\s*([^),]+)\s*,\s*([^\"),]+|\"[^\"]*\")\s*,\s*([^),]+)\s*\)")
+SP_RE = re.compile(r"([!]?)P\(\s*([^),]+)\s*,\s*([^)]+)\s*\)")
 NEWRULE_RE = re.compile("[ ]*'[ ]*")
-AALP_RE = re.compile('^[ ]*(\^((ifdef|include)[ ]+"[^"]+")|\^endif)\s*$')
-CF_RE = re.compile('^(model|adapter|heuristic|default\[random\]|coverage|history|((on_)?(pass|fail|inconc)))\s*=.*$')
+AALP_RE = re.compile(r'^[ ]*(\^((ifdef|include)[ ]+"[^"]+")|\^endif)\s*$')
+CF_RE = re.compile(r'^(model|adapter|heuristic|default\[random\]|coverage|history|((on_)?(pass|fail|inconc)))\s*=.*$')
 
-AAL_AALRE     = re.compile('aal\s"[^"]*"\s*{')
-AAL_AALREI    = re.compile('{\s*"[^"]*"\s*laa')
-AAL_ACTIONRE  = re.compile('action\s"[^{]*"\s*{')
-AAL_ACTIONREI = re.compile('{\s*"[^"]*"\s*noitca')
+AAL_AALRE     = re.compile(r'aal\s"[^"]*"\s*{')
+AAL_AALREI    = re.compile(r'{\s*"[^"]*"\s*laa')
+AAL_ACTIONRE  = re.compile(r'action\s"[^{]*"\s*{')
+AAL_ACTIONREI = re.compile(r'{\s*"[^"]*"\s*noitca')
 
-AAL_INPUTRE   = re.compile('input\s"[^{]*"\s*{')
-AAL_INPUTREI  = re.compile('{\s*"[^"]*"\s*tupni')
-AAL_OUTPUTRE  = re.compile('output\s"[^"]*"\s*{')
-AAL_OUTPUTREI = re.compile('{\s*"[^"]*"\s*tuptuo')
+AAL_INPUTRE   = re.compile(r'input\s"[^{]*"\s*{')
+AAL_INPUTREI  = re.compile(r'{\s*"[^"]*"\s*tupni')
+AAL_OUTPUTRE  = re.compile(r'output\s"[^"]*"\s*{')
+AAL_OUTPUTREI = re.compile(r'{\s*"[^"]*"\s*tuptuo')
 
-AAL_TAGRE     = re.compile('tag\s"[^{]*"\s*{')
-AAL_TAGREI    = re.compile('{\s*"[^"]*"\s*gat')
+AAL_TAGRE     = re.compile(r'tag\s"[^{]*"\s*{')
+AAL_TAGREI    = re.compile(r'{\s*"[^"]*"\s*gat')
 
-AAL_SERIALRE  = re.compile('serial\s*{')
-AAL_SERIALREI = re.compile('{\s*laires')
-AAL_PARALLELRE  = re.compile('parallel\s*{')
-AAL_PARALLELREI = re.compile('{\s*lellarap')
+AAL_SERIALRE  = re.compile(r'serial\s*{')
+AAL_SERIALREI = re.compile(r'{\s*laires')
+AAL_PARALLELRE  = re.compile(r'parallel\s*{')
+AAL_PARALLELREI = re.compile(r'{\s*lellarap')
 
-AAL_GUARDRE   = re.compile('guard(?:\(\))?\s*{')
-AAL_GUARDREI  = re.compile('{\s*(?:\(\))?draug')
-AAL_BODYRE    = re.compile('body(?:\(\))?\s*{')
-AAL_BODYREI   = re.compile('{\s*(?:\(\))?ydob')
-AAL_ADAPTERRE = re.compile('adapter(?:\(\))?\s*{')
-AAL_ADAPTERREI = re.compile('{\s*(?:\(\))?retpada')
+AAL_GUARDRE   = re.compile(r'guard(?:\(\))?\s*{')
+AAL_GUARDREI  = re.compile(r'{\s*(?:\(\))?draug')
+AAL_BODYRE    = re.compile(r'body(?:\(\))?\s*{')
+AAL_BODYREI   = re.compile(r'{\s*(?:\(\))?ydob')
+AAL_ADAPTERRE = re.compile(r'adapter(?:\(\))?\s*{')
+AAL_ADAPTERREI = re.compile(r'{\s*(?:\(\))?retpada')
 
-AAL_LANGUAGERE  = re.compile('language\s"[^{]*"\s*{')
-AAL_LANGUAGEREI = re.compile('{\s*"[^"]*"\s*egaugnal')
-AAL_VARIABLESRE = re.compile('variables\s*{')
-AAL_VARIABLESREI = re.compile('{\s*selbairav')
-AAL_INITIALSTATE = re.compile('initial_state\s*{')
-AAL_INITIALSTATEI = re.compile('{\s*etats_laitini')
-AAL_ADAPTERINITRE = re.compile('adapter_init\s*{')
-AAL_ADAPTERINITREI = re.compile('{\s*tini_retpada')
-AAL_ADAPTEREXITRE = re.compile('adapter_exit\s*{')
-AAL_ADAPTEREXITREI = re.compile('{\s*tixe_retpada')
+AAL_LANGUAGERE  = re.compile(r'language\s"[^{]*"\s*{')
+AAL_LANGUAGEREI = re.compile(r'{\s*"[^"]*"\s*egaugnal')
+AAL_VARIABLESRE = re.compile(r'variables\s*{')
+AAL_VARIABLESREI = re.compile(r'{\s*selbairav')
+AAL_INITIALSTATE = re.compile(r'initial_state\s*{')
+AAL_INITIALSTATEI = re.compile(r'{\s*etats_laitini')
+AAL_ADAPTERINITRE = re.compile(r'adapter_init\s*{')
+AAL_ADAPTERINITREI = re.compile(r'{\s*tini_retpada')
+AAL_ADAPTEREXITRE = re.compile(r'adapter_exit\s*{')
+AAL_ADAPTEREXITREI = re.compile(r'{\s*tixe_retpada')
 
 AAL_KEYWORDS = sorted([
     "aal", "language", "variables",
@@ -149,24 +149,24 @@ PYTHON_KEYWORDS = [
     'type', 'unichr', 'unicode', 'vars', 'xrange', 'zip',
     "True", "False", "None", "enumerate"]
 
-GT_COLLAPSETAGS = re.compile('[ #]preview-collapse-tags:(.*)')
-GT_HIDESHOWRE = re.compile('[ #]preview-(show|hide)-(vars|variables):(.*)')
-GT_HIDESHOWTRANRE = re.compile('[ #]preview-(show|hide)-(trans|transitions):(.*)')
-GT_HIDEUNTRAVTRANRE = re.compile('[ #]preview-hide-untested-(trans|transitions):(.*)')
-GT_SHOWTRAVTRANRE = re.compile('[ #]preview-show-tested-(trans|transitions):(.*)')
-GT_HIDESTATES = re.compile('[ #]preview-hide-states:((unvisited)|(orphaned)|,| )*')
-GT_IMAGEPATHRE = re.compile('[ #]preview-image-path:(.*)')
+GT_COLLAPSETAGS = re.compile(r'[ #]preview-collapse-tags:(.*)')
+GT_HIDESHOWRE = re.compile(r'[ #]preview-(show|hide)-(vars|variables):(.*)')
+GT_HIDESHOWTRANRE = re.compile(r'[ #]preview-(show|hide)-(trans|transitions):(.*)')
+GT_HIDEUNTRAVTRANRE = re.compile(r'[ #]preview-hide-untested-(trans|transitions):(.*)')
+GT_SHOWTRAVTRANRE = re.compile(r'[ #]preview-show-tested-(trans|transitions):(.*)')
+GT_HIDESTATES = re.compile(r'[ #]preview-hide-states:((unvisited)|(orphaned)|,| )*')
+GT_IMAGEPATHRE = re.compile(r'[ #]preview-image-path:(.*)')
 
-GT_DEPTHRE = re.compile('[ #]preview-depth:(.*)')
-GT_LANGUAGE = re.compile('language\s"([^{]*)"\s*{')
-GT_AALNAME = re.compile('aal\s"([^"]*)"\s*{')
+GT_DEPTHRE = re.compile(r'[ #]preview-depth:(.*)')
+GT_LANGUAGE = re.compile(r'language\s"([^{]*)"\s*{')
+GT_AALNAME = re.compile(r'aal\s"([^"]*)"\s*{')
 
-GT_CXX_FLAGS = re.compile('[ #]preview-cxx-flags:(.*)')
+GT_CXX_FLAGS = re.compile(r'[ #]preview-cxx-flags:(.*)')
 
 _cpp_sources = ["c++","cxx","cpp","cc"]
 
 
-PP_INCLUDEFILE = r = re.compile('^\s*\^include\s*"([^"]*)"\s*$', re.MULTILINE)
+PP_INCLUDEFILE = r = re.compile(r'^\s*\^include\s*"([^"]*)"\s*$', re.MULTILINE)
 
 def isModelFile(filename):
     if filename.lower().endswith(".conf"):
@@ -978,7 +978,7 @@ Keyboard shortcuts:<br>
                     py2lsts_cmd = ["remote_py3aal"] + aal_ppflags + ["-o", self._lstsFileName] + show_hide_args + ["--lsts-depth", str(preview_depth), self._aalcFileName]
                     validation_exitstatus, output = self.runcmd(py2lsts_cmd)
                     if validation_exitstatus != 0:
-                        self.showError(output[1])
+                        self.showError(output[1].decode("utf-8"))
             else: # fmbt-aalc returned an error
                 self.showError(output[1])
         return validation_exitstatus
@@ -987,7 +987,7 @@ Keyboard shortcuts:<br>
         self._lstsFileName = _g_tempdir + os.sep + os.path.basename(self._modelFileName) + ".lsts"
         gt2lsts_cmd = ""
         if self._modelSpec().startswith("lsts_remote"):
-            try: gt2lsts_cmd = re.findall("lsts_remote[ ]*\((.*)\)", self._modelSpec())[0]
+            try: gt2lsts_cmd = re.findall(r"lsts_remote[ ]*\((.*)\)", self._modelSpec())[0]
             except: gt2lsts_cmd = ""
         if gt2lsts_cmd == "":
             gt2lsts_cmd = ["fmbt-gt", "-f", self._modelFileName, "-o", self._lstsFileName]
@@ -2095,7 +2095,7 @@ on_inconc = exit(2)
 
         prev_lfeed = pt[:pos].rfind('\n')
         next_lfeed = pt[pos:].find('\n') + pos + 1
-        word_prefix = re.split("\W+", pt[prev_lfeed+1:pos])
+        word_prefix = re.split(r"\W+", pt[prev_lfeed+1:pos])
         if word_prefix:
             word_prefix = word_prefix[-1]
         line_contents = pt[prev_lfeed:next_lfeed].strip()
@@ -2266,23 +2266,23 @@ class GTHighlighter(QtGui.QSyntaxHighlighter):
         keywordFormat.setForeground(QtCore.Qt.darkBlue)
         keywordFormat.setFontWeight(QtGui.QFont.Bold)
 
-        keywordPatterns = ["\\bT\\b", "\\bP\\b", "->", "\^ifdef\\b", "\^endif\\b", "\^include\\b"]
+        keywordPatterns = ["\\bT\\b", "\\bP\\b", "->", "\\^ifdef\\b", "\\^endif\\b", "\\^include\\b"]
         self.highlightingRules = [(QtCore.QRegExp(pattern), keywordFormat)
                 for pattern in keywordPatterns]
 
         quotationFormat = QtGui.QTextCharFormat()
         quotationFormat.setForeground(QtCore.Qt.darkGreen)
-        self.highlightingRules.append((QtCore.QRegExp("\".*\""),
+        self.highlightingRules.append((QtCore.QRegExp(r"\".*\""),
                 quotationFormat))
 
         singleLineCommentFormat = QtGui.QTextCharFormat()
         singleLineCommentFormat.setForeground(QtCore.Qt.darkMagenta)
-        self.highlightingRules.append((QtCore.QRegExp("^#[^\n]*"),
+        self.highlightingRules.append((QtCore.QRegExp(r"^#[^\n]*"),
                 singleLineCommentFormat))
 
         usualErrorsFormat = QtGui.QTextCharFormat()
         usualErrorsFormat.setForeground(QtCore.Qt.red)
-        self.highlightingRules.append((QtCore.QRegExp("[TP]\(\""),
+        self.highlightingRules.append((QtCore.QRegExp(r"[TP]\(\""),
                 usualErrorsFormat))
         self._usualErrorsFormat = usualErrorsFormat
 
@@ -2323,12 +2323,12 @@ class AALHighlighter(QtGui.QSyntaxHighlighter):
 
         quotationFormat = QtGui.QTextCharFormat()
         quotationFormat.setForeground(QtCore.Qt.darkGreen)
-        self.highlightingRules.append((QtCore.QRegExp("\"[^\"]*\""),
+        self.highlightingRules.append((QtCore.QRegExp(r"\"[^\"]*\""),
                 quotationFormat))
 
         singleLineCommentFormat = QtGui.QTextCharFormat()
         singleLineCommentFormat.setForeground(QtCore.Qt.darkMagenta)
-        self.highlightingRules.append((QtCore.QRegExp("#[^\n]*"),
+        self.highlightingRules.append((QtCore.QRegExp(r"#[^\n]*"),
                 singleLineCommentFormat))
         self._black = QtGui.QColor().black()
 
@@ -2368,13 +2368,13 @@ class ConfHighlighter(QtGui.QSyntaxHighlighter):
         quotationFormat = QtGui.QTextCharFormat()
         self._quotationFormat = quotationFormat
         quotationFormat.setForeground(QtCore.Qt.darkGreen)
-        self.highlightingRules.append((QtCore.QRegExp("\"[^\"]*\""),
+        self.highlightingRules.append((QtCore.QRegExp(r"\"[^\"]*\""),
                                        quotationFormat))
-        self.highlightingRules.append((QtCore.QRegExp("=[^\n]*"),
+        self.highlightingRules.append((QtCore.QRegExp(r"=[^\n]*"),
                                        quotationFormat))
         singleLineCommentFormat = QtGui.QTextCharFormat()
         singleLineCommentFormat.setForeground(QtCore.Qt.darkMagenta)
-        self.highlightingRules.append((QtCore.QRegExp("^#[^\n]*"),
+        self.highlightingRules.append((QtCore.QRegExp(r"^#[^\n]*"),
                                        singleLineCommentFormat))
 
         self._usualErrorsFormat = QtGui.QTextCharFormat()
@@ -2706,7 +2706,7 @@ if __name__ == '__main__':
             modelLine = [l.strip() for l in open(opt_conffile).readlines()
                          if l.strip().startswith("model")]
             if modelLine:
-                modelFiles = re.findall("([-_.a-zA-Z0-9]*\.(aal|gt|lsts))[^a-zA-Z0-9_.]",
+                modelFiles = re.findall(r"([-_.a-zA-Z0-9]*\.(aal|gt|lsts))[^a-zA-Z0-9_.]",
                                         '\n'.join(modelLine),
                                         flags=re.IGNORECASE)
                 modelFiles = sorted(list(set(modelFiles))) # unique
