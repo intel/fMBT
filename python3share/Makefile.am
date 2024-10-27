@@ -12,7 +12,7 @@ dist_noinst_SCRIPTS = \
 	python3share/messages.py
 
 install-exec-local:
-	$(PYTHON) setup.py install --root=$(DESTDIR)/ --prefix=$(PYTHON_PREFIX)
+	$(PYTHON) setup.py install --root=$(DESTDIR)/ --prefix=$(PYTHON_PREFIX) --install-layout=deb
 
 pythonshare_installer: $(dist_noinst_SCRIPTS)
 	cp $? . || true

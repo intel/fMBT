@@ -52,5 +52,5 @@ all-local: utils_installer ../utils/eye4graphics.cc ../utils/eye4graphics.h
 	VPATH='$(VPATH)' CC='$(CXX)' PKG_CONFIG='$(PKG_CONFIG)' with_imagemagick='$(with_imagemagick)' python3 setup.py build
 
 install-exec-local:
-	with_imagemagick='$(with_imagemagick)' python3 setup.py install --root=$(DESTDIR)/ --prefix=$(PYTHON_PREFIX)
+	with_imagemagick='$(with_imagemagick)' $(PYTHON) setup.py install --root=$(DESTDIR)/ --prefix=$(PYTHON_PREFIX) --install-layout=deb
 endif
