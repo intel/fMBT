@@ -53,4 +53,11 @@ all-local: utils_installer ../utils/eye4graphics.cc ../utils/eye4graphics.h
 
 install-exec-local:
 	with_imagemagick='$(with_imagemagick)' $(PYTHON) setup.py install --root=$(DESTDIR)/ --prefix=$(PYTHON_PREFIX) --install-layout=deb
+	for f in $(dist_noinst_SCRIPTS); do \
+		head -n 1 "$(PYTHON_PREFIX)/bin/$$f" 2>/dev/null | grep -q '#!python' && { \
+			echo "fix shebang in $(PYTHON_PREFIX)/bin/$$f"; \
+			sed -i '1s|^#!python|#!/usr/bin/env python|' "$(PYTHON_PREFIX)/bin/$$f"; \
+		}; \
+	done; \
+	true
 endif
