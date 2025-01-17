@@ -1,3 +1,16 @@
+==========================================
+INTEL/FMBT IS ARCHIVED
+
+github.com/intel/fMBT is archived.
+
+Please see other forks for updates,
+for instance:
+
+github.com/askervin/fMBT
+==========================================
+
+
+
 fMBT Windows version
 
 Install
